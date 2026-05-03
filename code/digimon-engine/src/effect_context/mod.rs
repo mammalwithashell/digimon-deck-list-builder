@@ -20,6 +20,7 @@ pub use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef};
 
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
+use crate::combat::AttackResult;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
 use crate::enums::{
@@ -2984,6 +2985,14 @@ impl<'a> EffectContext<'a> {
 
     pub fn cancel_pending_attack(&mut self) {
         self.game.cancel_pending_attack_from_effect();
+    }
+
+    pub fn battle_digimon(
+        &mut self,
+        attacker: PermanentHandle,
+        defender: PermanentHandle,
+    ) -> AttackResult {
+        self.game.battle_digimon(attacker, defender)
     }
 
     /// Move the top of `player`'s digitama deck into the breeding area.

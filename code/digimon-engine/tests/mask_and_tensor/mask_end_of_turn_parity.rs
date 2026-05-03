@@ -3,11 +3,12 @@
 //! Covers the Vortex slice of §4.6 from RUST_PYTHON_PARITY.md. When
 //! `current_phase == GamePhase::EndOfTurnAction`, the mask should emit:
 //!   - `PASS` (always, to decline the end-of-turn action)
-//!   - attack bits for any permanent with modifier-granted `Keyword::Vortex`
-//!     whose `can_attack(vortex=true)` returns true. Vortex bypasses both
-//!     summoning sickness (via §2.1 plumbing) and the Main-phase
-//!     "unsuspended targets require Raid / CAN_ATTACK_UNSUSPENDED" rule —
-//!     any enemy Digimon is a valid target.
+//!   - Digimon-target attack bits for any permanent with modifier-granted
+//!     `Keyword::Vortex` whose `can_attack(vortex=true)` returns true.
+//!     Vortex bypasses both summoning sickness (via §2.1 plumbing) and the
+//!     Main-phase "unsuspended targets require Raid / CAN_ATTACK_UNSUSPENDED"
+//!     rule — any enemy Digimon is a valid target. Player/security targets
+//!     require a separate `VortexCanAttackPlayer` extension.
 //!
 //! Phase-transition logic (deciding *when* to enter `EndOfTurnAction`),
 //! Overclock / MAY_ATTACK / FORCE_ATTACK bits, and the full interrupt-
@@ -47,8 +48,8 @@ fn make_digimon(id: &str, color: CardColor, dp: i32) -> CardData {
     }
 }
 
-/// Vortex grants the security-attack bit and a bit for every enemy Digimon
-/// (suspended or not) when the phase is active.
+/// Vortex grants a bit for every enemy Digimon (suspended or not) when the
+/// phase is active, but base Vortex does not grant player/security attacks.
 #[test]
 fn mask_vortex_emits_attacks_in_end_of_turn_phase() {
     let mut r = DebugRunner::builder()
@@ -78,13 +79,222 @@ fn mask_vortex_emits_attacks_in_end_of_turn_phase() {
     );
     assert_eq!(
         mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
-        1.0,
-        "Vortex permits attacking security",
+        0.0,
+        "base Vortex does not permit attacking security",
     );
     assert_eq!(
         mask[encode_attack(attacker.index as u16, def_idx as u16) as usize],
         1.0,
         "Vortex permits attacking enemy Digimon",
+    );
+}
+
+#[test]
+fn base_vortex_does_not_emit_security_target_without_player_extension() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red, 5000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        0.0,
+        "base Vortex should not emit a security/player target bit",
+    );
+}
+
+#[test]
+fn vortex_player_extension_emits_security_target() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red, 5000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(
+            ModifierType::VortexCanAttackPlayer,
+            1,
+            Expiry::EndOfTurn,
+            tp,
+        ),
+    );
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        1.0,
+        "VortexCanAttackPlayer should extend Vortex to player/security targets",
+    );
+}
+
+#[test]
+fn vortex_player_extension_respects_cannot_attack_player() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red, 5000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let attacker = r.place_on_field(tp, "ATK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(
+            ModifierType::VortexCanAttackPlayer,
+            1,
+            Expiry::EndOfTurn,
+            tp,
+        ),
+    );
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(ModifierType::CannotAttackPlayer, 1, Expiry::EndOfTurn, tp),
+    );
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        0.0,
+        "CannotAttackPlayer should suppress the Vortex player/security extension",
+    );
+}
+
+#[test]
+fn fresh_vortex_may_attack_without_player_extension_does_not_emit_security_target() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red, 5000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let attacker = r.place_on_field(tp, "ATK", None);
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
+    );
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        0.0,
+        "MayAttack must not borrow Vortex's summoning-sickness bypass for security targets",
+    );
+}
+
+#[test]
+fn fresh_vortex_may_attack_without_player_extension_does_not_decode_security_attack() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red, 5000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let attacker = r.place_on_field(tp, "ATK", None);
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
+    );
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    r.game
+        .decode_action(encode_attack(attacker.index as u16, SECURITY_TARGET), tp);
+
+    assert!(
+        !r.game.players[tp as usize].battle_area[attacker.index as usize].is_suspended,
+        "decode should not execute a fresh MayAttack security attack via Vortex bypass",
+    );
+}
+
+#[test]
+fn fresh_vortex_player_extension_emits_and_decodes_security_as_vortex() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red, 5000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let attacker = r.place_on_field(tp, "ATK", None);
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(
+            ModifierType::VortexCanAttackPlayer,
+            1,
+            Expiry::EndOfTurn,
+            tp,
+        ),
+    );
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let security_attack = encode_attack(attacker.index as u16, SECURITY_TARGET);
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[security_attack as usize], 1.0,
+        "VortexCanAttackPlayer should allow a fresh Vortex security attack",
+    );
+
+    r.game.decode_action(security_attack, tp);
+
+    assert!(
+        r.game.players[tp as usize].battle_area[attacker.index as usize].is_suspended,
+        "decoded fresh security attack should execute via Vortex and suspend the attacker",
+    );
+}
+
+#[test]
+fn fresh_vortex_may_attack_emits_and_decodes_digimon_target_as_vortex() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red, 5000))
+        .add_card(make_digimon("DEF", CardColor::Blue, 3000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let attacker = r.place_on_field(tp, "ATK", None);
+    let defender = r.place_on_field(opp, "DEF", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, tp),
+    );
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let digimon_attack = encode_attack(attacker.index as u16, defender.index as u16);
+    let mask = build_action_mask(&r.game, tp);
+    assert_eq!(
+        mask[digimon_attack as usize], 1.0,
+        "fresh Vortex + MayAttack should still expose Digimon targets via Vortex",
+    );
+
+    r.game.decode_action(digimon_attack, tp);
+
+    assert_eq!(
+        r.game.players[opp as usize].battle_area.len(),
+        0,
+        "decoded fresh Digimon attack should execute via Vortex and delete DEF",
     );
 }
 
@@ -133,7 +343,7 @@ fn mask_vortex_bypasses_summoning_sickness() {
     let opp = 1 - tp;
     // place_on_field with None uses current turn_count → summoning-sick.
     let attacker = r.place_on_field(tp, "ATK", None);
-    r.place_on_field(opp, "DEF", Some(0));
+    let defender = r.place_on_field(opp, "DEF", Some(0));
     r.game.players[opp as usize].battle_area[0].is_suspended = true;
 
     r.game
@@ -143,9 +353,35 @@ fn mask_vortex_bypasses_summoning_sickness() {
 
     let mask = build_action_mask(&r.game, tp);
     assert_eq!(
-        mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
+        mask[encode_attack(attacker.index as u16, defender.index as u16) as usize],
         1.0,
         "Vortex must bypass summoning sickness (relies on can_attack(vortex=true))",
+    );
+}
+
+#[test]
+fn decode_vortex_attack_uses_vortex_flag_for_fresh_attacker() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", CardColor::Red, 5000))
+        .add_card(make_digimon("DEF", CardColor::Blue, 3000))
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let attacker = r.place_on_field(tp, "ATK", None);
+    let defender = r.place_on_field(opp, "DEF", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(attacker, Keyword::Vortex, Expiry::EndOfTurn, tp);
+    r.game.current_phase = GamePhase::EndOfTurnAction;
+
+    let attack = encode_attack(attacker.index as u16, defender.index as u16);
+    r.game.decode_action(attack, tp);
+
+    assert_eq!(
+        r.game.players[opp as usize].battle_area.len(),
+        0,
+        "decoded EndOfTurnAction Vortex attack should bypass summoning sickness and delete DEF",
     );
 }
 
@@ -225,8 +461,8 @@ fn mask_vortex_respects_cannot_attack_target() {
     );
     assert_eq!(
         mask[encode_attack(attacker.index as u16, SECURITY_TARGET) as usize],
-        1.0,
-        "Vortex security attack is unaffected by CannotAttackTarget",
+        0.0,
+        "base Vortex still does not emit security when CannotAttackTarget is present",
     );
 }
 

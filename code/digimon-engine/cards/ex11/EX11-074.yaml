@@ -1,0 +1,49 @@
+card: EX11-074
+name: Vortexdramon
+kind: digimon
+level: 7
+color: [green]
+cost: 14
+dp: 14000
+traits: [Bird Dragon, Vortex Warriors, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_includes: green }
+    cost: 4
+
+# Readiness slice only.
+#
+# Printed text also includes:
+# - [Digivolve] While you have [Shoto Kazama], [GrandGalemon]: Cost 6.
+# - [When Digivolving]/[When Attacking] suspend 1 Digimon; if this effect
+#   suspended your Digimon, this Digimon gains effect immunity and +6000 DP
+#   until the opponent's turn ends.
+# - [All Turns] [Once Per Turn] When any Digimon suspend, this Digimon may
+#   unsuspend. Then, it may battle 1 opponent Digimon.
+#
+# The supported slice below keeps static keywords and proves that the effect
+# battle path uses `battle:` rather than an attack, so Piercing/security checks
+# do not fire. Remaining Zephagamon-specific gaps are tracked in docs.
+
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+
+  - kind: grant_keyword
+    keyword: Vortex
+
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: on_suspend
+    once_per_turn: true
+    summary: "Readiness slice: battle 1 opponent Digimon after a suspend event"
+    process:
+      - select_opponent_permanent:
+          bind_as: battle_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon for Vortexdramon to battle"
+          optional: true
+      - battle:
+          attacker: this
+          defender: battle_target
