@@ -57,3 +57,4 @@ These statuses are from the legacy Python QA lane. Rust YAML DSL readiness repor
 | [engine-api-reference.md](engine-api-reference.md) | Engine scripting API reference for card implementation agents |
 | [engine-gaps.md](engine-gaps.md) | Accumulated engine gaps found during reviews |
 | [dsl/bg-imperial.md](dsl/bg-imperial.md) | Rust YAML DSL readiness assessment for BG Imperial |
+| [dsl/royal-knights-2026-05-03-dsl-engine-gaps.md](dsl/royal-knights-2026-05-03-dsl-engine-gaps.md) | Royal Knights Rust DSL/engine gap rollup for cross-archetype spec planning |
