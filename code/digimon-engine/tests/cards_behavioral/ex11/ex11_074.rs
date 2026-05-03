@@ -10,6 +10,7 @@ mod dsl_card_data;
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::Keyword;
 use digimon_engine::{EffectTiming, TriggerSource};
@@ -91,6 +92,10 @@ fn ex11_074_effect_battle_deletes_defender_without_piercing_security_check() {
             .pending_selection
             .as_ref()
             .expect("battle target selection");
+        assert!(
+            pending.is_optional,
+            "printed EX11-074 battle choice is optional and must surface PASS"
+        );
         assert_eq!(pending.valid_action_ids.len(), 1);
         (pending.selecting_player, pending.valid_action_ids[0])
     };
@@ -108,4 +113,45 @@ fn ex11_074_effect_battle_deletes_defender_without_piercing_security_check() {
         runner.game.pending_attack.is_none(),
         "effect battle must not leave an attack pending"
     );
+}
+
+#[test]
+fn ex11_074_optional_battle_can_be_declined() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-074")
+        .expect("EX11-074 in embedded pack")
+        .add_card(fighter("EX11-074-DEF", 3000))
+        .start();
+
+    let attacker = runner.place_on_field(0, "EX11-074", Some(0));
+    runner.place_on_field(1, "EX11-074-DEF", Some(0));
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnSuspend, TriggerSource::Permanent(attacker));
+    runner.game.drain_effect_queue();
+
+    let selecting_player = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("optional battle target selection");
+        assert!(
+            pending.is_optional,
+            "printed EX11-074 battle choice must be declinable"
+        );
+        pending.selecting_player
+    };
+
+    runner
+        .execute_action(selecting_player, PASS)
+        .expect("decline optional battle");
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "declining EX11-074's optional battle should leave defender in play"
+    );
+    assert!(runner.game.pending_attack.is_none());
 }

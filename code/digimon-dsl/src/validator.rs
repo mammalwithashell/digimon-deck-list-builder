@@ -692,7 +692,15 @@ fn validate_binding_ref(
         return;
     };
 
-    let populated = [binding, permanent, source_permanent, of_permanent]
+    if source_permanent.is_some() {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: prefix.into(),
+            message: "source_permanent binding refs are not supported here".into(),
+        });
+    }
+
+    let populated = [binding, permanent, of_permanent]
         .iter()
         .filter(|field| field.is_some())
         .count();
@@ -953,5 +961,32 @@ effects:
         let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
         let reg = StubRegistry::with(["registered_formula_fn"]);
         assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
+    }
+
+    #[test]
+    fn battle_step_rejects_source_permanent_binding_ref_until_compiler_lowers_it() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 6
+color: [green]
+cost: 12
+dp: 12000
+effects:
+  - when: when_digivolving
+    process:
+      - battle:
+          attacker: { source_permanent: picked }
+          defender: target
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs.iter().any(|e| {
+            e.path.ends_with(".attacker")
+                && e.message
+                    .contains("source_permanent binding refs are not supported here")
+        }));
     }
 }

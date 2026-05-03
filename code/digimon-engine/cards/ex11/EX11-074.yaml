@@ -43,6 +43,7 @@ effects:
           bind_as: battle_target
           filter: { kind: digimon }
           prompt: "Choose 1 opponent Digimon for Vortexdramon to battle"
+          optional: true
       - battle:
           attacker: this
           defender: battle_target
