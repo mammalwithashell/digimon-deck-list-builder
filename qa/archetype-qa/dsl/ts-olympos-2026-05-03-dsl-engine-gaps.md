@@ -278,16 +278,18 @@ The most important blockers are reusable: top-security-to-hand costs/results, cr
 
 These items should not become cross-archetype gaps unless a failing Rust test proves current reusable primitives cannot express them.
 
+Task 10 production-authoring audit (2026-05-03): no TS Olympos candidate from the suggested batch is safe to promote yet. `BT24-031` is unblocked for its On Play multi-bucket reveal, but its printed inherited `[When Attacking] [Once Per Turn]` clause still needs `add_top_security_to_hand` plus a `Recovery +1 (Deck)` branch; authoring only the reveal clause would be partial validation. `BT24-040` and `BT24-101` still depend on the separate blockers named below, so production YAML and `validated_cards_dsl.json` updates are deferred.
+
 | Card(s) | Status | Next Rust test |
 |---|---|---|
 | `BT24-034` Aegiomon | blocked by top-security-to-hand + duplicate-name Tamer filter | Optional cost branch, non-duplicate TS Tamer selection, free play, OnMove/OnPlay/WhenDigivolving all share body |
 | `BT24-102` Homeros | blocked by cross-card effect re-firing | Start-main memory/draw, TS DP aura, EOT reactivation with Homeros suspend cost |
 | `BT24-100` In-Between Theater | authoring / test gap after generic Delay support | Ignore color with TS field presence, reveal-add TS, place as Delay, Delay gain 2, Security places in battle area |
-| `BT24-031`, `BT24-043`, `BT24-020` | reusable multi-bucket reveal search primitive closed; still blocked by card-specific YAML migration and top-security inherited variants | Reveal 3 with bucketed choices, no duplicate reveal card, correct bottom remainder |
+| `BT24-031`, `BT24-043`, `BT24-020` | reusable multi-bucket reveal search primitive closed; production authoring still blocked where printed inherited variants need top-security-to-hand and Recovery branches | Reveal 3 with bucketed choices, no duplicate reveal card, correct bottom remainder, then inherited security movement / Recovery once those primitives close |
 | `BT24-040` Venusmon | blocked by source-stack aggregate + timing suppression + replacement prevention | Trash all sources, select two locks, suppress WhenDigivolving, protect TS leave events with correct cost |
 | `BT24-041` Minervamon | blocked by dynamic De-Digivolve count + play-cost reduction + aura keywords | Free-play Iliad cost <=5, De-Digivolve count equals own Digimon count, Reboot/Blocker aura on opponent turn |
 | `BT24-030` Neptunemon | blocked by source-count aggregate + cross-permanent protection | Bottom-deck all fewest-source opponent Digimon, unsuspend self once, opponent-effect protection by suspending self |
-| `BT24-101` Jupitermon | partially blocked by top-security-to-hand and replacement prevention | Trash own security, -13000 DP target, Recovery +2 branch, security-removed observer, protect TS/Tamer leave |
+| `BT24-101` Jupitermon | partially blocked by Recovery/security-observer coverage and replacement prevention | Trash own security, -13000 DP target, Recovery +2 branch, security-removed observer, protect TS/Tamer leave |
 | `BT24-085` Dan Yuki & Kanan Yuki | blocked by Option use from hand and may-attack | End-turn suspend cost, dynamic Option use ceiling, then TS may-attack |
 | `BT24-037` Silphymon | blocked by immediate may-attack and DNA-origin riders | On Play/WD -5000 DP, may-attack, DNA-origin Security A.+1/+5000 DP |
 | `BT24-083`, `BT24-088` | authoring / test gap with existing play-from-hand/trash helpers | Return Tamer to deck as cost, free-play matching card, On Play search/trash-draw |

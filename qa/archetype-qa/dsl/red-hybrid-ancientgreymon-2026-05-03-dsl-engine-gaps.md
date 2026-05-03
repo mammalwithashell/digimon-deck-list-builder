@@ -178,10 +178,12 @@ The deck's core gameplay is Tamer-based Hybrid evolution, recursive Tamer play, 
 
 These items are required for archetype readiness but should remain card-authoring tasks unless they expose missing reusable primitives.
 
+Task 10 production-authoring audit (2026-05-03): `BT17-009` is not safe to promote as production YAML in this batch. Its On Play reveal/bottom-remainder shape is covered by the closed multi-bucket reveal primitive, but the printed inherited `[On Deletion]` free Tamer play still requires the inherited-play path in `RH-04`; authoring only the searcher clause would be partial validation.
+
 | Card(s) | Status | Next Rust test |
 |---|---|---|
 | `BT17-012` | Core card missing production YAML; depends on card-local use of resolved `RH-01`, plus `RH-02` and `RH-08` | Card-shaped Tamer-base digivolve regression, Raid selection, attack-window Hybrid digivolve with cost reduction. |
-| `BT17-009`, `BT18-010`, `BT7-008` | Searcher YAML missing; depends on `RH-05` and `RH-04` for inherited play | Reveal multi-pick and bottom remainder, then inherited free Tamer play on deletion. |
+| `BT17-009`, `BT18-010`, `BT7-008` | Searcher YAML missing; reveal primitive closed, but full production authoring still depends on `RH-04` for inherited play | Reveal multi-pick and bottom remainder, then inherited free Tamer play on deletion. |
 | `BT18-088` | Core Tamer missing YAML; depends on `RH-06` and `RH-07` | Start-turn memory setter, start-main count-scaled source placement, inherited end-turn player attack. |
 | `BT21-082` | Core Tamer missing YAML; depends on `RH-02`, `RH-04`, `RH-09` | Start-main Digimon/Tamer effect digivolve with dynamic reduction, inherited security-removed Tamer play. |
 | `BT17-017`, `BT4-113`, `BT12-017` | Top-end YAML missing | DP-based deletion, on-deletion category returns, free Tamer/Digimon play, Security Attack behavior. |
