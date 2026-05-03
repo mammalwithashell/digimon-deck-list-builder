@@ -172,4 +172,3 @@ A future spec should require each reusable gap to include:
 - action-mask or `PendingSelection` assertions for every player-visible choice;
 - no `ACTION_SPACE_SIZE` or tensor contract expansion unless the action/tensor specs are updated in the same change;
 - tracker updates in `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md`, and this file when a reusable gap closes or is split.
-
