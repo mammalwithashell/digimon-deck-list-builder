@@ -274,6 +274,13 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
         | CompiledStep::LinkToOwnDigimon { filter, .. } => {
             collect_predicate_raw_rust_fns(filter, names);
         }
+        CompiledStep::SelectRevealBuckets { buckets, .. } => {
+            for bucket in buckets {
+                if let Some(filter) = &bucket.filter {
+                    collect_predicate_raw_rust_fns(filter, names);
+                }
+            }
+        }
         CompiledStep::If {
             condition,
             then,

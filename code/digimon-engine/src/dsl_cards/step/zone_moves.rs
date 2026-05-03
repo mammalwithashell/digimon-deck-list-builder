@@ -9,6 +9,14 @@ use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::resolve_player;
 use crate::effect_context::EffectContext;
 
+fn singleton_card(resolved: ResolvedBinding) -> Option<crate::card_source::CardHandle> {
+    match resolved {
+        ResolvedBinding::Card(h) => Some(h),
+        ResolvedBinding::CardList(cards) if cards.len() == 1 => cards.first().copied(),
+        _ => None,
+    }
+}
+
 /// Returns `true` if `step` is a zone-move family handled here. Unknown
 /// steps fall through (the caller may try other families).
 ///
@@ -73,7 +81,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 return true;
             };
             let p = resolve_player(ctx, *of);
-            if let ResolvedBinding::Card(h) = resolved {
+            if let Some(h) = singleton_card(resolved) {
                 ctx.add_to_hand_from_reveal(p, h);
             }
             true
@@ -89,7 +97,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 return true;
             };
             let p = resolve_player(ctx, *of);
-            if let ResolvedBinding::Card(h) = resolved {
+            if let Some(h) = singleton_card(resolved) {
                 ctx.trash_from_reveal(p, h);
             }
             true
@@ -109,7 +117,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 return true;
             };
             let p = resolve_player(ctx, *of);
-            if let ResolvedBinding::Card(h) = resolved {
+            if let Some(h) = singleton_card(resolved) {
                 ctx.return_to_deck_from_reveal(p, h, super::map_stack_position(*position));
             }
             true
@@ -131,15 +139,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                         bindings.insert_card(name, h);
                     }
                 }
+            } else if let Some(name) = bind_as {
+                bindings.insert_card_list(name, handles);
             }
-            // Multi-card reveal (count > 1): the reveal pool is populated for
-            // subsequent SelectReveal steps, but Phase 2b does not support
-            // multi-bindings. The pool is observable via ctx.revealed() and
-            // subsequent PlaceRemainderOnDeck / AddToHandFromReveal steps can
-            // consume it. Multi-card bind_as support is deferred to Phase 2c.
-            // (The `zone` field selects which zone is revealed; the engine's
+            // The `zone` field selects which zone is revealed; the engine's
             // `reveal_top_deck` always reveals from the deck — full zone routing
-            // is likewise Phase 2c scope.)
+            // is Phase 2c scope.
             true
         }
 

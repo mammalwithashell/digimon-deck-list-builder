@@ -620,6 +620,49 @@ fn validate_step(
                 errors,
             );
         }
+        StepSpec::SelectRevealBuckets(args) => {
+            if args.buckets.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.buckets"),
+                    message: "select_reveal_buckets requires at least one bucket".into(),
+                });
+            }
+            let mut seen = std::collections::BTreeSet::new();
+            for (i, bucket) in args.buckets.iter().enumerate() {
+                if !seen.insert(bucket.bind_as.clone()) {
+                    errors.push(ValidationError {
+                        card_id: card_id.into(),
+                        path: format!("{prefix}.buckets[{i}].bind_as"),
+                        message: format!(
+                            "select_reveal_buckets duplicate bucket bind_as: {}",
+                            bucket.bind_as
+                        ),
+                    });
+                }
+                let min = bucket.min.unwrap_or(0);
+                let max = bucket.max.unwrap_or(1);
+                if min > max {
+                    errors.push(ValidationError {
+                        card_id: card_id.into(),
+                        path: format!("{prefix}.buckets[{i}]"),
+                        message: format!(
+                            "select_reveal_buckets bucket {} has min greater than max",
+                            bucket.bind_as
+                        ),
+                    });
+                }
+                if let Some(filter) = &bucket.filter {
+                    validate_predicate(
+                        filter,
+                        &format!("{prefix}.buckets[{i}].filter"),
+                        card_id,
+                        ctx,
+                        errors,
+                    );
+                }
+            }
+        }
         StepSpec::SelectMaterial(args) => {
             validate_predicate(
                 &args.filter,

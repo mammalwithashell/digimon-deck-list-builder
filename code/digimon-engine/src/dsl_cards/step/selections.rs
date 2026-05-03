@@ -21,7 +21,9 @@ use crate::dsl_cards::predicate::{eval_predicate, eval_predicate_with_bindings, 
 use crate::dsl_cards::step::{
     drain_dsl_outer_tail, resolve_player, run_steps_with_runtime, StepRuntime,
 };
-use crate::effect_context::{CountCappedZone, DistinctByMode, EffectContext};
+use crate::effect_context::{
+    CountCappedZone, DistinctByMode, EffectContext, RevealBucketSelection,
+};
 use crate::enums::GamePhase;
 use crate::permanent::PermanentHandle;
 use crate::selection::{PendingSelection, SelectionKind};
@@ -141,16 +143,35 @@ fn run_tail_preserving_trigger_context(
     cb_ctx.game.current_trigger_context = previous;
 }
 
-/// Returns `true` if `step` was a selection step and the remainder was
-/// installed as its callback. Returns `false` for any non-selection
-/// step, letting `run_steps` fall through to the synchronous path.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum InstallResult {
+    NotSelection,
+    Continue,
+    TailAlreadyRan,
+    Parked,
+}
+
+fn selection_result(ctx: &EffectContext<'_>) -> InstallResult {
+    if ctx.game.pending_selection.is_some() {
+        InstallResult::Parked
+    } else {
+        InstallResult::Continue
+    }
+}
+
+/// Installs a selection step or reports how the dispatcher should advance.
+///
+/// Most selection steps park by installing the remainder as their callback.
+/// Some unsupported or empty selections no-op and let the dispatcher continue
+/// with the next step. Reveal-bucket selections can complete synchronously and
+/// run the captured tail from inside their callback.
 pub fn try_install(
     step: &CompiledStep,
     tail: &[CompiledStep],
     ctx: &mut EffectContext<'_>,
     bindings: Bindings,
     runtime: &StepRuntime,
-) -> bool {
+) -> InstallResult {
     match step {
         CompiledStep::SelectHand {
             of,
@@ -171,7 +192,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectTrash {
             of,
@@ -192,7 +213,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectOwnPermanent {
             filter,
@@ -213,7 +234,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectOpponentPermanent {
             filter,
@@ -234,7 +255,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectAnyPermanent {
             filter,
@@ -256,7 +277,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectDnaPair {
             left_filter,
@@ -279,7 +300,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectCountCappedMulti {
             of,
@@ -291,6 +312,12 @@ pub fn try_install(
             distinct_by,
             ..
         } => {
+            let target_player = resolve_player(ctx, *of);
+            let Some(candidate_count) = count_capped_candidate_count(ctx, target_player, *zone)
+            else {
+                return InstallResult::Continue;
+            };
+            let completes_synchronously = candidate_count == 0;
             install_select_count_capped_multi(
                 ctx,
                 *of,
@@ -304,7 +331,13 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            if ctx.game.pending_selection.is_some() {
+                InstallResult::Parked
+            } else if completes_synchronously {
+                InstallResult::TailAlreadyRan
+            } else {
+                InstallResult::Continue
+            }
         }
         CompiledStep::SelectEffectChoice {
             labels,
@@ -321,7 +354,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectReveal {
             of,
@@ -331,13 +364,34 @@ pub fn try_install(
             optional,
             ..
         } => {
-            return install_select_reveal(
+            return if install_select_reveal(
                 ctx,
                 *of,
                 filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            ) {
+                InstallResult::Parked
+            } else {
+                InstallResult::Continue
+            };
+        }
+        CompiledStep::SelectRevealBuckets {
+            from,
+            buckets,
+            no_duplicate_cards,
+            prompt,
+        } => {
+            return install_select_reveal_buckets(
+                ctx,
+                from,
+                buckets,
+                *no_duplicate_cards,
+                prompt.clone(),
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
@@ -360,7 +414,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectMaterial {
             of_permanent,
@@ -373,11 +427,10 @@ pub fn try_install(
             let perm = match resolve_binding_ref(of_permanent, ctx, &bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
                 // Missing binding or wrong type: silent no-op (2b/2c convention).
-                // Return false so run_steps falls through and the tail runs synchronously.
-                _ => return false,
+                _ => return InstallResult::Continue,
             };
             if !has_material_candidates(ctx, perm) {
-                return false;
+                return InstallResult::Continue;
             }
             install_select_material(
                 ctx,
@@ -389,7 +442,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectOwnSources {
             min,
@@ -399,7 +452,7 @@ pub fn try_install(
             then,
         } => {
             if min > max || *max == 0 || !has_own_source_candidates(ctx) {
-                return false;
+                return InstallResult::Continue;
             }
             let mut inner_tail = then.clone();
             inner_tail.extend_from_slice(tail);
@@ -413,7 +466,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectOpponentDpBudget {
             dp_budget,
@@ -423,7 +476,7 @@ pub fn try_install(
             then,
         } => {
             if !has_opponent_dp_budget_candidates(ctx, *dp_budget) {
-                return false;
+                return InstallResult::Continue;
             }
             let mut inner_tail = then.clone();
             inner_tail.extend_from_slice(tail);
@@ -437,7 +490,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectOwnBreedingPermanent {
             bind_as,
@@ -445,7 +498,7 @@ pub fn try_install(
             then,
         } => {
             if !has_own_breeding_candidate(ctx) {
-                return false;
+                return InstallResult::Continue;
             }
             let mut inner_tail = then.clone();
             inner_tail.extend_from_slice(tail);
@@ -457,7 +510,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectUnionZone {
             of,
@@ -480,7 +533,7 @@ pub fn try_install(
             }
             if zoneset.0 == 0 {
                 // No supported zones: silent no-op; tail runs synchronously.
-                return false;
+                return InstallResult::Continue;
             }
             install_select_union_zone(
                 ctx,
@@ -493,7 +546,7 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            selection_result(ctx)
         }
         CompiledStep::SelectOrderedPermutation {
             items,
@@ -505,8 +558,9 @@ pub fn try_install(
             let item_list = match resolve_binding_ref(items, ctx, &bindings) {
                 Some(ResolvedBinding::CardList(v)) => v,
                 // Missing binding or wrong type: silent no-op.
-                _ => return false,
+                _ => return InstallResult::Continue,
             };
+            let completes_synchronously = item_list.is_empty();
             install_select_ordered_permutation(
                 ctx,
                 item_list,
@@ -516,9 +570,15 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            true
+            if ctx.game.pending_selection.is_some() {
+                InstallResult::Parked
+            } else if completes_synchronously {
+                InstallResult::TailAlreadyRan
+            } else {
+                InstallResult::Continue
+            }
         }
-        _ => false,
+        _ => InstallResult::NotSelection,
     }
 }
 
@@ -557,6 +617,18 @@ fn has_opponent_dp_budget_candidates(ctx: &EffectContext<'_>, dp_budget: i32) ->
 
 fn has_own_breeding_candidate(ctx: &EffectContext<'_>) -> bool {
     ctx.game.player(ctx.player).breeding_area.is_some()
+}
+
+fn count_capped_candidate_count(
+    ctx: &EffectContext<'_>,
+    of_player: u8,
+    zone: CompiledZone,
+) -> Option<usize> {
+    match zone {
+        CompiledZone::Hand => Some(ctx.game.player(of_player).hand.len()),
+        CompiledZone::Trash => Some(ctx.game.player(of_player).trash.len()),
+        _ => None,
+    }
 }
 
 fn install_select_hand(
@@ -1073,6 +1145,80 @@ fn install_select_reveal(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     )
+}
+
+fn install_select_reveal_buckets(
+    ctx: &mut EffectContext<'_>,
+    from: &str,
+    buckets: &[digimon_dsl::compiled::CompiledRevealBucket],
+    no_duplicate_cards: bool,
+    prompt: Option<String>,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) -> InstallResult {
+    let source_handles = if let Some(list) = bindings.get_card_list(from) {
+        list
+    } else if let Some(card) = bindings.get_card(from) {
+        vec![card]
+    } else {
+        return InstallResult::Continue;
+    };
+
+    let engine_buckets = {
+        let read_ctx = ctx.as_read();
+        buckets
+            .iter()
+            .map(|bucket| {
+                let candidates = source_handles
+                    .iter()
+                    .copied()
+                    .filter(|handle| {
+                        ctx.game
+                            .revealed_cards
+                            .iter()
+                            .any(|card| card.handle() == *handle)
+                    })
+                    .filter(|handle| {
+                        bucket.filter.as_ref().is_none_or(|filter| {
+                            eval_predicate_with_bindings(
+                                filter,
+                                &read_ctx,
+                                PredicateSubject::RevealedCard(*handle),
+                                Some(&bindings),
+                            )
+                        })
+                    })
+                    .collect::<Vec<_>>();
+                RevealBucketSelection {
+                    bind_as: bucket.bind_as.clone(),
+                    min: bucket.min,
+                    max: bucket.max,
+                    candidates,
+                }
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let prompt = prompt.unwrap_or_else(|| "Choose revealed cards".to_string());
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context;
+    if ctx.select_reveal_buckets(
+        engine_buckets,
+        &prompt,
+        no_duplicate_cards,
+        move |cb_ctx, picked| {
+            let mut b = bindings.clone();
+            for (name, cards) in picked {
+                b.insert_card_list(&name, cards);
+            }
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+        },
+    ) {
+        InstallResult::Parked
+    } else {
+        InstallResult::TailAlreadyRan
+    }
 }
 
 fn revealed_owner_matches(

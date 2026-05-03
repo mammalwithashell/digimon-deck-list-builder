@@ -132,6 +132,7 @@ pub enum StepSpec {
     SelectOpponentDpBudget(SelectOpponentDpBudgetArgs),
     SelectOwnBreedingPermanent(SelectOwnBreedingPermanentArgs),
     SelectReveal(SelectZoneArgs),
+    SelectRevealBuckets(SelectRevealBucketsArgs),
     SelectSecurity(SelectZoneArgs),
     SelectUnionZone(SelectUnionArgs),
     SelectOrderedPermutation(SelectPermutationArgs),
@@ -243,6 +244,7 @@ impl Serialize for StepSpec {
                 kv!(s, "select_own_breeding_permanent", v)
             }
             StepSpec::SelectReveal(v) => kv!(s, "select_reveal", v),
+            StepSpec::SelectRevealBuckets(v) => kv!(s, "select_reveal_buckets", v),
             StepSpec::SelectSecurity(v) => kv!(s, "select_security", v),
             StepSpec::SelectUnionZone(v) => kv!(s, "select_union_zone", v),
             StepSpec::SelectOrderedPermutation(v) => kv!(s, "select_ordered_permutation", v),
@@ -378,6 +380,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                 StepSpec::SelectOwnBreedingPermanent(map.next_value()?)
             }
             "select_reveal" => StepSpec::SelectReveal(map.next_value()?),
+            "select_reveal_buckets" => StepSpec::SelectRevealBuckets(map.next_value()?),
             "select_security" => StepSpec::SelectSecurity(map.next_value()?),
             "select_union_zone" => StepSpec::SelectUnionZone(map.next_value()?),
             "select_ordered_permutation" => StepSpec::SelectOrderedPermutation(map.next_value()?),
@@ -464,6 +467,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "select_opponent_dp_budget",
                         "select_own_breeding_permanent",
                         "select_reveal",
+                        "select_reveal_buckets",
                         "select_security",
                         "select_union_zone",
                         "select_ordered_permutation",
@@ -899,6 +903,29 @@ pub struct SelectZoneArgs {
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectRevealBucketsArgs {
+    pub from: String,
+    pub buckets: Vec<SelectRevealBucketArgs>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub no_duplicate_cards: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectRevealBucketArgs {
+    pub bind_as: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter: Option<PredicateSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min: Option<u8>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub max: Option<u8>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

@@ -13,6 +13,13 @@ Format per entry:
 - First reported: YYYY-MM-DD
 ```
 
+## Reveal-zone multi-bucket selection
+- Status: RESOLVED on 2026-05-03 for the reusable DSL/runtime primitive. `select_reveal_buckets` now parses and compiles named reveal buckets, validates empty/duplicate/malformed bucket shapes, evaluates bucket predicates against the reveal overlay, installs one `SelectionKind::RevealBucket` pending selection per bucket, and supports `no_duplicate_cards` across buckets without changing action-space or tensor contracts.
+- Bucket results bind as `CardList`; singleton bucket lists are compatible with reveal single-card consumers such as `add_to_hand_from_reveal`.
+- Lowers to engine API: `EffectContext::select_reveal_buckets(Vec<RevealBucketSelection>, prompt, no_duplicate_cards, callback)`.
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection -- reveal_buckets --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- reveal_buckets --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2e_select_reveal phase2e_select_ordered_permutation phase2b_zone_moves_extra --nocapture`.
+- Remaining related blockers: card-specific TS/Olympos YAML migration and any top-security inherited variants are tracked separately; the reusable multi-bucket reveal selection primitive is closed.
+
 ## Zephagamon / Vortexdramon — remaining battle-engine prep gaps
 - Status: partial readiness slice added 2026-05-03. `EX11-074.yaml` now covers static `<Piercing>`, `<Vortex>`, `<Blocker>`, and a focused `battle:` pathway. The regression in `tests/cards_behavioral/ex11/ex11_074.rs` proves that an effect battle deletes the defender through DP battle but is not an attack: it must not trigger Piercing/security and must not leave `pending_attack` populated.
 - Rule boundary: `battle:` is the correct DSL step for effects that say a Digimon battles another Digimon. Do not model these as `attack` or force-follow-up attack effects. Attack-only timings and Piercing security continuation remain tied to declared attacks, not effect battles.

@@ -14,7 +14,9 @@
 
 mod selections;
 
-pub use selections::{CountCappedZone, DistinctByMode, EffectContextSelectorScope};
+pub use selections::{
+    CountCappedZone, DistinctByMode, EffectContextSelectorScope, RevealBucketSelection,
+};
 
 pub use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef};
 

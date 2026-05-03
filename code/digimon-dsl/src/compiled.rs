@@ -814,6 +814,12 @@ pub enum CompiledStep {
         prompt_key: Option<String>,
         optional: bool,
     },
+    SelectRevealBuckets {
+        from: String,
+        buckets: Vec<CompiledRevealBucket>,
+        no_duplicate_cards: bool,
+        prompt: Option<String>,
+    },
     SelectSecurity {
         of: CompiledPlayerRef,
         filter: CompiledPredicate,
@@ -904,6 +910,14 @@ pub enum CompiledStep {
         consumes: Vec<String>,
         binds: Vec<String>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledRevealBucket {
+    pub bind_as: String,
+    pub filter: Option<CompiledPredicate>,
+    pub min: u8,
+    pub max: u8,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

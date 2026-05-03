@@ -69,11 +69,12 @@ The most important blockers are reusable: top-security-to-hand costs/results, cr
 ### G-TS-MULTI-BUCKET-REVEAL-SEARCH
 
 - **Type:** DSL selection / pending-selection gap
+- **Status:** Reusable primitive resolved on 2026-05-03. `select_reveal_buckets` now parses, compiles, validates, lowers to `EffectContext::select_reveal_buckets`, binds bucket results, and prevents duplicate reveal-card picks across buckets when `no_duplicate_cards: true`.
 - **Blocks TS Olympos cards:** `BT24-031`, `BT24-043`, `BT24-020`, `BT24-100`, `BT24-083`, and sibling TS searchers.
 - **Cross-archetype reuse:** searchers that say "add 1 A and 1 B", especially where a revealed card can satisfy more than one bucket and must not be selected twice.
 - **Printed shape:** reveal N cards, add one card matching bucket A and one card matching bucket B, then bottom the rest.
-- **Current evidence:** The DSL has reveal-zone selection primitives, count-capped selections, and ordered-selection work elsewhere, but the TS rookies need category-slot search with duplicate prevention and exact optionality matching printed text.
-- **Required capability:** a reveal selection form that presents bucketed choices, tracks already-selected reveal cards, supports mandatory/optional bucket semantics, and preserves remainder ordering rules where applicable.
+- **Current evidence:** Focused coverage exercises compile lowering, runtime bucket binding into `add_to_hand_from_reveal`, and action-mask duplicate prevention across buckets.
+- **Required capability:** closed for the reusable reveal-zone bucket selection primitive. Card-specific migration still needs to wire each TS/Olympos YAML body and verify remainder placement/card text details.
 - **Suggested DSL shape:**
 
   ```yaml
@@ -95,7 +96,8 @@ The most important blockers are reusable: top-security-to-hand costs/results, cr
   ```
 
 - **First test:** `BT24-031` reveals one Iliad-only card, one TS-only card, and one Iliad+TS card. Assert the player can choose legal non-duplicate bucket assignments and cannot add the same revealed card twice.
-- **Spec note:** This should be specified as a generic reveal-zone selection capability, not a TS-specific search macro.
+- **Passing focused tests:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection -- reveal_buckets --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- reveal_buckets --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2e_select_reveal phase2e_select_ordered_permutation phase2b_zone_moves_extra --nocapture`.
+- **Spec note:** The generic reveal-zone selection capability is implemented; keep future follow-up notes card-specific rather than reopening this reusable gap.
 
 ### G-TS-CROSS-CARD-EFFECT-REFIRING
 
@@ -281,7 +283,7 @@ These items should not become cross-archetype gaps unless a failing Rust test pr
 | `BT24-034` Aegiomon | blocked by top-security-to-hand + duplicate-name Tamer filter | Optional cost branch, non-duplicate TS Tamer selection, free play, OnMove/OnPlay/WhenDigivolving all share body |
 | `BT24-102` Homeros | blocked by cross-card effect re-firing | Start-main memory/draw, TS DP aura, EOT reactivation with Homeros suspend cost |
 | `BT24-100` In-Between Theater | authoring / test gap after generic Delay support | Ignore color with TS field presence, reveal-add TS, place as Delay, Delay gain 2, Security places in battle area |
-| `BT24-031`, `BT24-043`, `BT24-020` | blocked by multi-bucket reveal search and top-security inherited variants | Reveal 3 with bucketed choices, no duplicate reveal card, correct bottom remainder |
+| `BT24-031`, `BT24-043`, `BT24-020` | reusable multi-bucket reveal search primitive closed; still blocked by card-specific YAML migration and top-security inherited variants | Reveal 3 with bucketed choices, no duplicate reveal card, correct bottom remainder |
 | `BT24-040` Venusmon | blocked by source-stack aggregate + timing suppression + replacement prevention | Trash all sources, select two locks, suppress WhenDigivolving, protect TS leave events with correct cost |
 | `BT24-041` Minervamon | blocked by dynamic De-Digivolve count + play-cost reduction + aura keywords | Free-play Iliad cost <=5, De-Digivolve count equals own Digimon count, Reboot/Blocker aura on opponent turn |
 | `BT24-030` Neptunemon | blocked by source-count aggregate + cross-permanent protection | Bottom-deck all fewest-source opponent Digimon, unsuspend self once, opponent-effect protection by suspending self |
@@ -304,7 +306,7 @@ Before compiling the cross-archetype spec, review these older TS Olympos notes s
 ## Suggested Spec Compilation Order
 
 1. Promote `G-TS-TOP-SECURITY-TO-HAND` because it unblocks Aegiomon, rookies' inherited security flow, Jupitermon, and several non-TS archetypes.
-2. Promote `G-TS-MULTI-BUCKET-REVEAL-SEARCH` as reusable reveal-zone selection work.
+2. Migrate TS/Olympos searcher YAML to the closed `select_reveal_buckets` primitive and keep remaining blockers card-specific.
 3. Promote `G-TS-CROSS-CARD-EFFECT-REFIRING` with Homeros and Apocalymon-style cases in the same spec group.
 4. Promote `G-TS-CROSS-PERMANENT-REPLACEMENT-PREVENTION` with replacement-context subject/source/cause tests.
 5. Promote `G-TS-SOURCE-STACK-AGGREGATES` as three slices: trash-all-sources, source-count aggregate predicate, dynamic De-Digivolve amount.

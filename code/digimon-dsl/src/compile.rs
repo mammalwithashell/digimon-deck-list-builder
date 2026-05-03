@@ -1605,6 +1605,29 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
         },
+        S::SelectRevealBuckets(a) => CompiledStep::SelectRevealBuckets {
+            from: a.from.clone(),
+            buckets: a
+                .buckets
+                .iter()
+                .enumerate()
+                .map(|(i, bucket)| CompiledRevealBucket {
+                    bind_as: bucket.bind_as.clone(),
+                    filter: bucket.filter.as_ref().map(|filter| {
+                        compile_predicate(
+                            filter,
+                            &format!("{prefix}.buckets[{i}].filter"),
+                            card_id,
+                            errors,
+                        )
+                    }),
+                    min: bucket.min.unwrap_or(0),
+                    max: bucket.max.unwrap_or(1),
+                })
+                .collect(),
+            no_duplicate_cards: a.no_duplicate_cards,
+            prompt: a.prompt.clone(),
+        },
         S::SelectSecurity(a) => CompiledStep::SelectSecurity {
             of: compile_player_ref(a.of),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),

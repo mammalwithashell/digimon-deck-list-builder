@@ -99,6 +99,7 @@ mod pretty;
 mod raw_rust_registry;
 mod real_cards_json;
 mod replacement;
+mod reveal_buckets;
 mod roundtrip;
 mod schema_export;
 mod selection_dp_extrema;
