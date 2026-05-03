@@ -66,4 +66,3 @@ Do not claim this archetype is playable in Rust yet. The blockers are mostly aut
 
 - `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- ex9_013 ex10_010 bt16_082`
   - Result: 40 passed, 15 ignored, 0 failed.
-
