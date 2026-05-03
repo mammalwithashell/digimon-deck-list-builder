@@ -1,9 +1,9 @@
 //! Predicate evaluator. Phase 1c Task 3: leaf fields + combinators + existentials.
 
 use digimon_dsl::compiled::{
-    CompiledBindingCompare, CompiledCardKind, CompiledColor, CompiledDpConstraint,
-    CompiledExistential, CompiledPlayerRef, CompiledPredicate, CompiledReplacementCause,
-    CompiledZone,
+    CompiledAggregateSelector, CompiledBindingCompare, CompiledCardKind, CompiledColor,
+    CompiledDpConstraint, CompiledExistential, CompiledPlayerRef, CompiledPredicate,
+    CompiledReplacementCause, CompiledZone,
 };
 
 use crate::card_source::CardHandle;
@@ -85,6 +85,14 @@ pub fn eval_predicate_with_bindings(
     }
     if !eval_replacement_fields(pred, rctx) {
         return false;
+    }
+    if let Some(ref needle) = pred.self_digivolution_contains_name {
+        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+            return false;
+        };
+        if !perm.contains_card_name(needle, rctx.card_data()) {
+            return false;
+        }
     }
     if let Some(want) = pred.in_breeding {
         let is_in_breeding = match subject {
@@ -180,9 +188,9 @@ pub fn eval_predicate_with_bindings(
     match subject {
         PredicateSubject::Card(card) => eval_card_fields(pred, rctx, card, false),
         PredicateSubject::RevealedCard(card) => eval_card_fields(pred, rctx, card, true),
-        PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h),
+        PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h, bindings),
         PredicateSubject::BreedingPermanent(player) => {
-            eval_breeding_permanent_fields(pred, rctx, player)
+            eval_breeding_permanent_fields(pred, rctx, player, bindings)
         }
         PredicateSubject::None => eval_no_subject_fields(pred),
     }
@@ -370,8 +378,10 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.level_eq.is_none()
         && pred.level_lte.is_none()
         && pred.level_gte.is_none()
+        && pred.level_matches_aggregate.is_none()
         && pred.color_is.is_none()
         && pred.color_only.is_none()
+        && pred.color_matches_any_field_digimon.is_none()
         && pred.trait_has.is_none()
         && pred.form_is.is_none()
         && pred.attribute_is.is_none()
@@ -431,6 +441,14 @@ fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> 
             return false;
         }
     }
+    if let Some(want) = pred.event_target_owner {
+        let Some(owner) = event_target_owner(rctx) else {
+            return false;
+        };
+        if !player_ref_matches(want, owner, rctx) {
+            return false;
+        }
+    }
     if let Some(ref trait_name) = pred.event_card_trait_has {
         let Some(card) = rctx
             .game
@@ -455,7 +473,107 @@ fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> 
             return false;
         }
     }
+    if let Some(ref trait_name) = pred.host_permanent_trait_has {
+        let Some(host) = rctx.event_host_permanent() else {
+            return false;
+        };
+        let Some(perm) = permanent_for_handle(rctx, host) else {
+            return false;
+        };
+        if !perm.has_trait(trait_name, rctx.card_data()) {
+            return false;
+        }
+    }
+    if let Some(ref trait_name) = pred.trashed_source_trait_has {
+        let Some(card) = rctx.event_source_card() else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if !data
+            .traits
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case(trait_name))
+        {
+            return false;
+        }
+    }
+    if let Some(ref card_id) = pred.trashed_source_card_id_is {
+        let Some(card) = rctx.event_source_card() else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if data.card_id != *card_id {
+            return false;
+        }
+    }
     true
+}
+
+fn subject_or_source_permanent<'a>(
+    subject: PredicateSubject,
+    rctx: &'a EffectReadContext<'_>,
+) -> Option<&'a crate::permanent::Permanent> {
+    match subject {
+        PredicateSubject::Permanent(handle) => permanent_for_handle(rctx, handle),
+        PredicateSubject::BreedingPermanent(player) => {
+            rctx.game.player(player).breeding_area.as_ref()
+        }
+        PredicateSubject::Card(_) | PredicateSubject::RevealedCard(_) | PredicateSubject::None => {
+            rctx.source_permanent()
+        }
+    }
+}
+
+fn permanent_for_handle<'a>(
+    rctx: &'a EffectReadContext<'_>,
+    handle: PermanentHandle,
+) -> Option<&'a crate::permanent::Permanent> {
+    if handle.index == crate::action::space::BREEDING_TARGET as u8 {
+        return rctx.game.player(handle.player).breeding_area.as_ref();
+    }
+    rctx.game
+        .player(handle.player)
+        .battle_area
+        .get(handle.index as usize)
+}
+
+fn event_target_owner(rctx: &EffectReadContext<'_>) -> Option<PlayerId> {
+    let trigger = rctx.game.current_trigger_context?;
+    if let Some(handle) = trigger.event_permanent {
+        return Some(handle.player);
+    }
+    if let Some(handle) = trigger.event_host_permanent {
+        return Some(handle.player);
+    }
+    if let Some(handle) = trigger.target_permanent {
+        return Some(handle.player);
+    }
+    for card in [trigger.event_card, trigger.target_card]
+        .into_iter()
+        .flatten()
+    {
+        if let Some(source) = rctx.game.card_source_for_handle(card) {
+            return Some(source.owner);
+        }
+    }
+    trigger.source_player
+}
+
+fn player_ref_matches(
+    want: CompiledPlayerRef,
+    actual: PlayerId,
+    rctx: &EffectReadContext<'_>,
+) -> bool {
+    match want {
+        CompiledPlayerRef::You => actual == rctx.player(),
+        CompiledPlayerRef::Opponent => actual == rctx.opponent_id(),
+        CompiledPlayerRef::Active => actual == rctx.game.turn_player(),
+        CompiledPlayerRef::Any => true,
+    }
 }
 
 fn event_target_card(rctx: &EffectReadContext<'_>) -> Option<CardHandle> {
@@ -557,6 +675,11 @@ fn eval_card_fields(
             }
         }
     }
+    if let Some(of) = pred.color_matches_any_field_digimon {
+        if !card_shares_color_with_any_field_digimon(rctx, of, &data.colors) {
+            return false;
+        }
+    }
     if let Some(ref t) = pred.trait_has {
         if !data.traits.iter().any(|x| x.eq_ignore_ascii_case(t)) {
             return false;
@@ -609,10 +732,42 @@ fn eval_card_fields(
     true
 }
 
+fn card_shares_color_with_any_field_digimon(
+    rctx: &EffectReadContext<'_>,
+    of: CompiledPlayerRef,
+    colors: &[CardColor],
+) -> bool {
+    if colors.is_empty() {
+        return false;
+    }
+    for player in existential_players(of, rctx) {
+        for permanent in &rctx.game.player(player).battle_area {
+            let Some(data) = rctx
+                .game
+                .card_data_for_handle(permanent.top_card().handle())
+            else {
+                continue;
+            };
+            if !kind_matches_field(CompiledCardKind::Digimon, data.card_kind) {
+                continue;
+            }
+            if data
+                .digimon_colors()
+                .iter()
+                .any(|field_color| colors.iter().any(|card_color| card_color == field_color))
+            {
+                return true;
+            }
+        }
+    }
+    false
+}
+
 fn eval_permanent_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
     handle: PermanentHandle,
+    bindings: Option<&Bindings>,
 ) -> bool {
     if pred.other == Some(true) && rctx.source_permanent == Some(handle) {
         return false;
@@ -649,7 +804,10 @@ fn eval_permanent_fields(
             return false;
         }
     }
-    if !eval_dp_constraints(pred, rctx, handle) {
+    if !eval_level_aggregate_match(pred, rctx, perm.level(rctx.card_data())) {
+        return false;
+    }
+    if !eval_dp_constraints(pred, rctx, handle, bindings) {
         return false;
     }
     if let Some(want) = pred.is_suspended {
@@ -699,6 +857,7 @@ fn eval_dp_constraints(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
     handle: PermanentHandle,
+    bindings: Option<&Bindings>,
 ) -> bool {
     if pred.dp_eq.is_none() && pred.dp_lte.is_none() && pred.dp_gte.is_none() {
         return true;
@@ -707,31 +866,72 @@ fn eval_dp_constraints(
         return false;
     };
     if let Some(want) = &pred.dp_eq {
-        if dp != eval_dp_constraint(want, rctx, handle) {
+        if dp != eval_dp_constraint(want, rctx, handle, bindings) {
             return false;
         }
     }
     if let Some(cap) = &pred.dp_lte {
-        if dp > eval_dp_constraint(cap, rctx, handle) {
+        if dp > eval_dp_constraint(cap, rctx, handle, bindings) {
             return false;
         }
     }
     if let Some(floor) = &pred.dp_gte {
-        if dp < eval_dp_constraint(floor, rctx, handle) {
+        if dp < eval_dp_constraint(floor, rctx, handle, bindings) {
             return false;
         }
     }
     true
 }
 
+fn eval_level_aggregate_match(
+    pred: &CompiledPredicate,
+    rctx: &EffectReadContext<'_>,
+    level: Option<u8>,
+) -> bool {
+    let Some((selector, of)) = pred.level_matches_aggregate else {
+        return true;
+    };
+    let Some(level) = level else {
+        return false;
+    };
+    let Some(aggregate_level) = aggregate_level(selector, of, rctx) else {
+        return false;
+    };
+    i32::from(level) == aggregate_level
+}
+
+fn aggregate_level(
+    selector: CompiledAggregateSelector,
+    of: CompiledPlayerRef,
+    rctx: &EffectReadContext<'_>,
+) -> Option<i32> {
+    let levels = existential_players(of, rctx)
+        .into_iter()
+        .flat_map(|player| {
+            rctx.game
+                .player(player)
+                .battle_area
+                .iter()
+                .filter_map(|perm| perm.level(rctx.card_data()).map(i32::from))
+        });
+    match selector {
+        CompiledAggregateSelector::LowestLevel => levels.min(),
+        CompiledAggregateSelector::HighestLevel => levels.max(),
+        CompiledAggregateSelector::LowestDp | CompiledAggregateSelector::HighestDp => None,
+    }
+}
+
 fn eval_dp_constraint(
     constraint: &CompiledDpConstraint,
     rctx: &EffectReadContext<'_>,
     handle: PermanentHandle,
+    bindings: Option<&Bindings>,
 ) -> i32 {
     match constraint {
         CompiledDpConstraint::Literal(n) => *n,
-        CompiledDpConstraint::Formula(f) => formula_eval::evaluate_read(f, rctx, handle),
+        CompiledDpConstraint::Formula(f) => {
+            formula_eval::evaluate_read_with_bindings(f, rctx, handle, bindings)
+        }
     }
 }
 
@@ -739,6 +939,7 @@ fn eval_breeding_permanent_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
     player: PlayerId,
+    bindings: Option<&Bindings>,
 ) -> bool {
     let Some(perm) = rctx.game.player(player).breeding_area.as_ref() else {
         return false;
@@ -764,11 +965,14 @@ fn eval_breeding_permanent_fields(
             return false;
         }
     }
+    if !eval_level_aggregate_match(pred, rctx, perm.level(rctx.card_data())) {
+        return false;
+    }
     let handle = PermanentHandle {
         player,
         index: crate::action::space::BREEDING_TARGET as u8,
     };
-    if !eval_dp_constraints(pred, rctx, handle) {
+    if !eval_dp_constraints(pred, rctx, handle, bindings) {
         return false;
     }
     if let Some(want) = pred.in_breeding {

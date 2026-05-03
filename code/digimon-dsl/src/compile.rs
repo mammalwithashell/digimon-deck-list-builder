@@ -234,17 +234,39 @@ fn compile_distinct_by(d: crate::alt_path::DistinctBy) -> CompiledDistinctBy {
     }
 }
 
-fn compile_per_selector(p: crate::formula::PerSelector) -> CompiledPerSelector {
+fn compile_per_selector(
+    p: &crate::formula::PerSelector,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> CompiledPerSelector {
     use crate::formula::PerSelector as S;
     match p {
         S::MaterialCount => CompiledPerSelector::MaterialCount,
         S::StackSize => CompiledPerSelector::StackSize,
         S::AllyCount => CompiledPerSelector::AllyCount,
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
-        S::CardCountInZone(spec) => CompiledPerSelector::CardCountInZoneScoped {
-            zone: compile_zone(spec.zone),
-            of: compile_player_ref(spec.of),
-        },
+        S::SameLevelPairsInSources => CompiledPerSelector::SameLevelPairsInSources,
+        S::SharedTrashCount { bucket } => CompiledPerSelector::SharedTrashCount { bucket: *bucket },
+        S::CardCountInZone(spec) => {
+            if let Some(filter) = &spec.filter {
+                CompiledPerSelector::FilteredCardCountInZoneScoped {
+                    zone: compile_zone(spec.zone),
+                    of: compile_player_ref(spec.of),
+                    filter: Box::new(compile_predicate(
+                        filter,
+                        &format!("{prefix}.filter"),
+                        card_id,
+                        errors,
+                    )),
+                }
+            } else {
+                CompiledPerSelector::CardCountInZoneScoped {
+                    zone: compile_zone(spec.zone),
+                    of: compile_player_ref(spec.of),
+                }
+            }
+        }
     }
 }
 
@@ -295,24 +317,51 @@ fn compile_name_alias(a: &crate::identity::NameAliasSpec) -> CompiledNameAlias {
 
 // ── Formula ─────────────────────────────────────────────────────────
 
-fn compile_formula(f: &crate::formula::FormulaSpec) -> CompiledFormula {
+fn compile_formula(
+    f: &crate::formula::FormulaSpec,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> CompiledFormula {
     use crate::formula::{CompoundFormula, FormulaSpec};
     match f {
         FormulaSpec::Literal(n) => CompiledFormula::Literal(*n),
-        FormulaSpec::BasePerDelta { base, per, delta } => CompiledFormula::BasePerDelta {
+        FormulaSpec::BasePerDelta {
+            base,
+            per,
+            bucket,
+            delta,
+        } => CompiledFormula::BasePerDelta {
             base: *base,
-            per: compile_per_selector(*per),
+            per: compile_per_selector(
+                &per_with_bucket(per, *bucket),
+                &format!("{prefix}.per"),
+                card_id,
+                errors,
+            ),
             delta: *delta,
         },
-        FormulaSpec::Compound(CompoundFormula::FloorDiv(v)) => {
-            CompiledFormula::FloorDiv(v.iter().map(compile_formula).collect())
-        }
-        FormulaSpec::Compound(CompoundFormula::Max(v)) => {
-            CompiledFormula::Max(v.iter().map(compile_formula).collect())
-        }
-        FormulaSpec::Compound(CompoundFormula::Min(v)) => {
-            CompiledFormula::Min(v.iter().map(compile_formula).collect())
-        }
+        FormulaSpec::BindingDp { binding_dp } => CompiledFormula::BindingDp(binding_dp.clone()),
+        FormulaSpec::Compound(CompoundFormula::FloorDiv(v)) => CompiledFormula::FloorDiv(
+            v.iter()
+                .enumerate()
+                .map(|(i, f)| {
+                    compile_formula(f, &format!("{prefix}.floor_div[{i}]"), card_id, errors)
+                })
+                .collect(),
+        ),
+        FormulaSpec::Compound(CompoundFormula::Max(v)) => CompiledFormula::Max(
+            v.iter()
+                .enumerate()
+                .map(|(i, f)| compile_formula(f, &format!("{prefix}.max[{i}]"), card_id, errors))
+                .collect(),
+        ),
+        FormulaSpec::Compound(CompoundFormula::Min(v)) => CompiledFormula::Min(
+            v.iter()
+                .enumerate()
+                .map(|(i, f)| compile_formula(f, &format!("{prefix}.min[{i}]"), card_id, errors))
+                .collect(),
+        ),
         FormulaSpec::Compound(CompoundFormula::Aggregate(a)) => CompiledFormula::AggregateScoped {
             selector: compile_aggregate_selector(*a),
             scope: CompiledPlayerRef::You,
@@ -344,11 +393,20 @@ fn compile_predicate(
         level_eq: p.level_eq,
         level_lte: p.level_lte,
         level_gte: p.level_gte,
+        level_matches_aggregate: p.level_matches_aggregate.map(|m| {
+            (
+                compile_aggregate_selector(m.selector),
+                compile_player_ref(m.of),
+            )
+        }),
         color_is: p.color_is.map(compile_color),
         color_only: p
             .color_only
             .as_ref()
             .map(|v| v.iter().map(|c| compile_color(*c)).collect()),
+        color_matches_any_field_digimon: p
+            .color_matches_any_field_digimon
+            .map(|s| compile_player_ref(s.player())),
         trait_has: p.trait_has.clone(),
         form_is: p.form_is.clone(),
         attribute_is: p.attribute_is.clone(),
@@ -357,9 +415,18 @@ fn compile_predicate(
         name_in: p.name_in.clone(),
         card_number_is: p.card_number_is.clone(),
         play_cost_lte: p.play_cost_lte,
-        dp_eq: p.dp_eq.as_ref().map(compile_dp_constraint),
-        dp_lte: p.dp_lte.as_ref().map(compile_dp_constraint),
-        dp_gte: p.dp_gte.as_ref().map(compile_dp_constraint),
+        dp_eq: p
+            .dp_eq
+            .as_ref()
+            .map(|d| compile_dp_constraint(d, &format!("{prefix}.dp_eq"), card_id, errors)),
+        dp_lte: p
+            .dp_lte
+            .as_ref()
+            .map(|d| compile_dp_constraint(d, &format!("{prefix}.dp_lte"), card_id, errors)),
+        dp_gte: p
+            .dp_gte
+            .as_ref()
+            .map(|d| compile_dp_constraint(d, &format!("{prefix}.dp_gte"), card_id, errors)),
         stack_size_lte: p.stack_size_lte,
         stack_size_gte: p.stack_size_gte,
         materials_count_lte: p.materials_count_lte,
@@ -383,6 +450,7 @@ fn compile_predicate(
         source_is_tamer: p.source_is_tamer,
         source_name_contains: p.source_name_contains.clone(),
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
+        self_digivolution_contains_name: p.self_digivolution_contains_name.clone(),
         memory_lte: p.memory_lte,
         memory_gte: p.memory_gte,
         security_count_lte: p.security_count_lte,
@@ -395,8 +463,12 @@ fn compile_predicate(
         dna_origin: p.dna_origin,
         event_target_kind: p.event_target_kind.map(compile_card_kind),
         event_target_trait_has: p.event_target_trait_has.clone(),
+        event_target_owner: p.event_target_owner.map(compile_player_ref),
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
+        host_permanent_trait_has: p.host_permanent_trait_has.clone(),
+        trashed_source_trait_has: p.trashed_source_trait_has.clone(),
+        trashed_source_card_id_is: p.trashed_source_card_id_is.clone(),
         replacement_cause: p.replacement_cause.map(compile_replacement_cause),
         replacement_source_is_opponent: p.replacement_source_is_opponent,
         replacement_subject_is_mine: p.replacement_subject_is_mine,
@@ -522,11 +594,30 @@ fn compile_replacement_cause(
     }
 }
 
-fn compile_dp_constraint(d: &crate::predicate::DpConstraint) -> CompiledDpConstraint {
+fn compile_dp_constraint(
+    d: &crate::predicate::DpConstraint,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> CompiledDpConstraint {
     use crate::predicate::DpConstraint as S;
     match d {
         S::Literal(n) => CompiledDpConstraint::Literal(*n),
-        S::Formula(f) => CompiledDpConstraint::Formula(compile_formula(f)),
+        S::Formula(f) => CompiledDpConstraint::Formula(compile_formula(f, prefix, card_id, errors)),
+    }
+}
+
+fn per_with_bucket(
+    per: &crate::formula::PerSelector,
+    bucket: Option<u32>,
+) -> crate::formula::PerSelector {
+    match per {
+        crate::formula::PerSelector::SharedTrashCount { bucket: inner } => {
+            crate::formula::PerSelector::SharedTrashCount {
+                bucket: inner.or(bucket),
+            }
+        }
+        other => other.clone(),
     }
 }
 
@@ -562,7 +653,10 @@ fn compile_alt_path(
             .enumerate()
             .map(|(i, m)| compile_material(m, &format!("{prefix}.materials[{i}]"), card_id, errors))
             .collect(),
-        cost: ap.cost.as_ref().map(compile_cost),
+        cost: ap
+            .cost
+            .as_ref()
+            .map(|c| compile_cost(c, &format!("{prefix}.cost"), card_id, errors)),
         stacks_unsuspended: ap.stacks_unsuspended,
         ignore_requirements: ap.ignore_requirements,
         source_treated_as: ap.source_treated_as.clone(),
@@ -641,12 +735,17 @@ fn compile_repeat(r: &crate::alt_path::RepeatSpec) -> CompiledRepeat {
     }
 }
 
-fn compile_cost(c: &crate::alt_path::CostSpec) -> CompiledCost {
+fn compile_cost(
+    c: &crate::alt_path::CostSpec,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> CompiledCost {
     use crate::alt_path::{CostSpec, FormulaCost};
     match c {
         CostSpec::Literal(n) => CompiledCost::Literal(*n),
         CostSpec::Formula(FormulaCost { formula }) => {
-            CompiledCost::Formula(compile_formula(formula))
+            CompiledCost::Formula(compile_formula(formula, prefix, card_id, errors))
         }
     }
 }
@@ -874,8 +973,13 @@ fn compile_declarative(
                 .unwrap_or_default(),
             target_player: a.target_player.map(compile_player_ref),
             dp_modifier: a.dp_modifier,
-            dp_modifier_fn: a.dp_modifier_fn.as_ref().map(compile_formula),
-            security_attack_fn: a.security_attack_fn.as_ref().map(compile_formula),
+            dp_modifier_fn: a
+                .dp_modifier_fn
+                .as_ref()
+                .map(|f| compile_formula(f, &format!("{prefix}.dp_modifier_fn"), card_id, errors)),
+            security_attack_fn: a.security_attack_fn.as_ref().map(|f| {
+                compile_formula(f, &format!("{prefix}.security_attack_fn"), card_id, errors)
+            }),
             grant_keyword: a.grant_keyword.map(|gk| CompiledGrantKeywordValue {
                 keyword: gk.keyword,
                 value: gk.value,
@@ -904,7 +1008,10 @@ fn compile_declarative(
             optional: c.optional,
             once_per_turn: c.once_per_turn,
             amount: c.amount,
-            amount_fn: c.amount_fn.as_ref().map(compile_formula),
+            amount_fn: c
+                .amount_fn
+                .as_ref()
+                .map(|f| compile_formula(f, &format!("{prefix}.amount_fn"), card_id, errors)),
             pay_cost: c
                 .pay_cost
                 .as_ref()
@@ -1124,11 +1231,18 @@ fn compile_effect_controller(
     }
 }
 
-fn compile_modifier_value(v: &crate::step::ModifierValueSpec) -> CompiledModifierValue {
+fn compile_modifier_value(
+    v: &crate::step::ModifierValueSpec,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> CompiledModifierValue {
     use crate::step::ModifierValueSpec as S;
     match v {
         S::Literal(n) => CompiledModifierValue::Literal(*n),
-        S::Formula(fc) => CompiledModifierValue::Formula(compile_formula(&fc.formula)),
+        S::Formula(fc) => {
+            CompiledModifierValue::Formula(compile_formula(&fc.formula, prefix, card_id, errors))
+        }
     }
 }
 
@@ -1349,7 +1463,7 @@ fn compile_step(
 
         S::AddDpModifier(a) => CompiledStep::AddDpModifier {
             target: compile_binding_ref(&a.target),
-            value: compile_modifier_value(&a.value),
+            value: compile_modifier_value(&a.value, &format!("{prefix}.value"), card_id, errors),
             expiry: a.expiry.clone(),
         },
         S::AddModifier(a) => CompiledStep::AddModifier {
@@ -1360,7 +1474,7 @@ fn compile_step(
                 errors,
             ),
             modifier: a.modifier.clone(),
-            value: compile_modifier_value(&a.value),
+            value: compile_modifier_value(&a.value, &format!("{prefix}.value"), card_id, errors),
             expiry: a.expiry.clone(),
         },
         S::AddPlayerModifier(a) => CompiledStep::AddPlayerModifier {

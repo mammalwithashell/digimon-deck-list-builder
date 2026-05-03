@@ -92,13 +92,14 @@ pub fn lower_with_raw_and_option_use_requirement(
             let aw = active_when.clone();
             let cc = condition.clone();
             builder = builder.condition(move |rctx| {
+                let subject = predicate_subject_for_source(rctx);
                 if let Some(p) = &aw {
-                    if !eval_predicate(p, rctx, PredicateSubject::None) {
+                    if !eval_predicate(p, rctx, subject) {
                         return false;
                     }
                 }
                 if let Some(p) = &cc {
-                    if !eval_predicate(p, rctx, PredicateSubject::None) {
+                    if !eval_predicate(p, rctx, subject) {
                         return false;
                     }
                 }
@@ -119,6 +120,14 @@ pub fn lower_with_raw_and_option_use_requirement(
         out.push(builder.build());
     }
     out
+}
+
+fn predicate_subject_for_source(
+    rctx: &crate::effect_context::EffectReadContext<'_>,
+) -> PredicateSubject {
+    rctx.source_permanent
+        .map(PredicateSubject::Permanent)
+        .unwrap_or(PredicateSubject::None)
 }
 
 fn steps_provide_resource_flow(steps: &[CompiledStep]) -> bool {

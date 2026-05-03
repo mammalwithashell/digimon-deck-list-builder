@@ -30,6 +30,8 @@
 //!   controller (excludes the target itself).
 //! - `DigivolutionColorCount` — distinct colors across all `CardSource`s
 //!   in the target's stack.
+//! - `SameLevelPairsInSources` — counts source cards below the target's top
+//!   card by level and sums `count / 2` for each level bucket.
 //! - `CardCountInZoneScoped` — number of cards in the selected zone for
 //!   the selected player scope. The legacy payload-less variant returns
 //!   0 for compatibility with older malformed compiled packs.
@@ -43,13 +45,17 @@
 //!   — e.g. a Tamer or Option permanent — are skipped). The legacy
 //!   payload-less aggregate variant scans the controller for compatibility.
 
+use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
 use digimon_dsl::compiled::{
     CompiledAggregateSelector, CompiledFormula, CompiledPerSelector, CompiledPlayerRef,
-    CompiledZone,
+    CompiledPredicate, CompiledZone,
 };
 
+use crate::card_source::CardHandle;
+use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::predicate::{eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{CardColor, PlayerId};
@@ -73,10 +79,19 @@ const _: () = assert!(
 /// Scoped aggregate selectors ignore `target` and operate on the selected
 /// players' battle areas.
 pub fn evaluate(f: &CompiledFormula, ctx: &EffectContext<'_>, target: PermanentHandle) -> i32 {
+    evaluate_with_bindings(f, ctx, target, None)
+}
+
+pub fn evaluate_with_bindings(
+    f: &CompiledFormula,
+    ctx: &EffectContext<'_>,
+    target: PermanentHandle,
+    bindings: Option<&Bindings>,
+) -> i32 {
     match f {
         CompiledFormula::Literal(n) => *n,
         CompiledFormula::BasePerDelta { base, per, delta } => {
-            let count = evaluate_per(*per, ctx, target);
+            let count = evaluate_per(per, ctx, target, bindings);
             base + count * delta
         }
         CompiledFormula::FloorDiv(args) => {
@@ -93,8 +108,8 @@ pub fn evaluate(f: &CompiledFormula, ctx: &EffectContext<'_>, target: PermanentH
                 );
                 return 0;
             }
-            let l = evaluate(&args[0], ctx, target);
-            let r = evaluate(&args[1], ctx, target);
+            let l = evaluate_with_bindings(&args[0], ctx, target, bindings);
+            let r = evaluate_with_bindings(&args[1], ctx, target, bindings);
             if r == 0 {
                 0
             } else {
@@ -106,7 +121,7 @@ pub fn evaluate(f: &CompiledFormula, ctx: &EffectContext<'_>, target: PermanentH
                 return 0;
             }
             args.iter()
-                .map(|a| evaluate(a, ctx, target))
+                .map(|a| evaluate_with_bindings(a, ctx, target, bindings))
                 .max()
                 .unwrap_or(0)
         }
@@ -115,7 +130,7 @@ pub fn evaluate(f: &CompiledFormula, ctx: &EffectContext<'_>, target: PermanentH
                 return 0;
             }
             args.iter()
-                .map(|a| evaluate(a, ctx, target))
+                .map(|a| evaluate_with_bindings(a, ctx, target, bindings))
                 .min()
                 .unwrap_or(0)
         }
@@ -123,6 +138,10 @@ pub fn evaluate(f: &CompiledFormula, ctx: &EffectContext<'_>, target: PermanentH
         CompiledFormula::AggregateScoped { selector, scope } => {
             evaluate_aggregate(*selector, *scope, ctx)
         }
+        CompiledFormula::BindingDp(name) => bindings
+            .and_then(|b| b.get_permanent(name))
+            .and_then(|handle| ctx.game.effective_dp(handle))
+            .unwrap_or(0),
         CompiledFormula::RawRust(name) => {
             if let Some(value) = ctx.game.formula_extensions.evaluate(name, ctx, target) {
                 return value;
@@ -143,6 +162,16 @@ pub fn evaluate_with_raw(
     target: PermanentHandle,
     raw: &EngineRawRustRegistry,
 ) -> i32 {
+    evaluate_with_raw_and_bindings(f, ctx, target, raw, None)
+}
+
+pub fn evaluate_with_raw_and_bindings(
+    f: &CompiledFormula,
+    ctx: &EffectContext<'_>,
+    target: PermanentHandle,
+    raw: &EngineRawRustRegistry,
+    bindings: Option<&Bindings>,
+) -> i32 {
     if let CompiledFormula::RawRust(name) = f {
         if let Some(f) = raw.formula_fn(name) {
             let read = ctx.as_read();
@@ -153,7 +182,7 @@ pub fn evaluate_with_raw(
         }
     }
     let read = ctx.as_read();
-    evaluate_read_with_raw(f, &read, target, raw)
+    evaluate_read_with_raw_and_bindings(f, &read, target, raw, bindings)
 }
 
 pub fn evaluate_read(
@@ -161,7 +190,16 @@ pub fn evaluate_read(
     ctx: &EffectReadContext<'_>,
     target: PermanentHandle,
 ) -> i32 {
-    evaluate_read_with_raw(f, ctx, target, default_raw_registry())
+    evaluate_read_with_bindings(f, ctx, target, None)
+}
+
+pub fn evaluate_read_with_bindings(
+    f: &CompiledFormula,
+    ctx: &EffectReadContext<'_>,
+    target: PermanentHandle,
+    bindings: Option<&Bindings>,
+) -> i32 {
+    evaluate_read_with_raw_and_bindings(f, ctx, target, default_raw_registry(), bindings)
 }
 
 fn default_raw_registry() -> &'static EngineRawRustRegistry {
@@ -175,10 +213,20 @@ pub fn evaluate_read_with_raw(
     target: PermanentHandle,
     raw: &EngineRawRustRegistry,
 ) -> i32 {
+    evaluate_read_with_raw_and_bindings(f, ctx, target, raw, None)
+}
+
+fn evaluate_read_with_raw_and_bindings(
+    f: &CompiledFormula,
+    ctx: &EffectReadContext<'_>,
+    target: PermanentHandle,
+    raw: &EngineRawRustRegistry,
+    bindings: Option<&Bindings>,
+) -> i32 {
     match f {
         CompiledFormula::Literal(n) => *n,
         CompiledFormula::BasePerDelta { base, per, delta } => {
-            let count = evaluate_per_read(*per, ctx, target);
+            let count = evaluate_per_read(per, ctx, target, bindings);
             base + count * delta
         }
         CompiledFormula::FloorDiv(args) => {
@@ -190,8 +238,8 @@ pub fn evaluate_read_with_raw(
                 );
                 return 0;
             }
-            let l = evaluate_read_with_raw(&args[0], ctx, target, raw);
-            let r = evaluate_read_with_raw(&args[1], ctx, target, raw);
+            let l = evaluate_read_with_raw_and_bindings(&args[0], ctx, target, raw, bindings);
+            let r = evaluate_read_with_raw_and_bindings(&args[1], ctx, target, raw, bindings);
             if r == 0 {
                 0
             } else {
@@ -200,12 +248,12 @@ pub fn evaluate_read_with_raw(
         }
         CompiledFormula::Max(args) => args
             .iter()
-            .map(|a| evaluate_read_with_raw(a, ctx, target, raw))
+            .map(|a| evaluate_read_with_raw_and_bindings(a, ctx, target, raw, bindings))
             .max()
             .unwrap_or(0),
         CompiledFormula::Min(args) => args
             .iter()
-            .map(|a| evaluate_read_with_raw(a, ctx, target, raw))
+            .map(|a| evaluate_read_with_raw_and_bindings(a, ctx, target, raw, bindings))
             .min()
             .unwrap_or(0),
         CompiledFormula::Aggregate(sel) => {
@@ -214,6 +262,10 @@ pub fn evaluate_read_with_raw(
         CompiledFormula::AggregateScoped { selector, scope } => {
             evaluate_aggregate_read(*selector, *scope, ctx)
         }
+        CompiledFormula::BindingDp(name) => bindings
+            .and_then(|b| b.get_permanent(name))
+            .and_then(|handle| ctx.game.effective_dp(handle))
+            .unwrap_or(0),
         CompiledFormula::RawRust(name) => {
             if let Some(f) = raw.formula_fn(name) {
                 return f(ctx, target);
@@ -228,7 +280,12 @@ pub fn evaluate_read_with_raw(
     }
 }
 
-fn evaluate_per(sel: CompiledPerSelector, ctx: &EffectContext<'_>, target: PermanentHandle) -> i32 {
+fn evaluate_per(
+    sel: &CompiledPerSelector,
+    ctx: &EffectContext<'_>,
+    target: PermanentHandle,
+    bindings: Option<&Bindings>,
+) -> i32 {
     match sel {
         CompiledPerSelector::StackSize => {
             let Some(perm) = target_permanent(ctx, target) else {
@@ -266,22 +323,35 @@ fn evaluate_per(sel: CompiledPerSelector, ctx: &EffectContext<'_>, target: Perma
             }
             seen.count_ones() as i32
         }
+        CompiledPerSelector::SameLevelPairsInSources => target_permanent(ctx, target)
+            .map(|perm| same_level_pairs_in_sources(perm, &ctx.game.card_data))
+            .unwrap_or(0),
+        CompiledPerSelector::SharedTrashCount { bucket } => {
+            bucket_count(shared_trash_count(ctx), *bucket)
+        }
         CompiledPerSelector::CardCountInZone => {
             // Legacy compiled packs had no zone/player payload. Keep the
             // defensive no-op so old malformed packs do not crash.
             0
         }
-        CompiledPerSelector::CardCountInZoneScoped { zone, of } => players_for_ref(of, ctx)
+        CompiledPerSelector::CardCountInZoneScoped { zone, of } => players_for_ref(*of, ctx)
             .into_iter()
-            .map(|player| count_zone(zone, player, ctx))
+            .map(|player| count_zone(*zone, player, ctx, None, bindings))
             .sum(),
+        CompiledPerSelector::FilteredCardCountInZoneScoped { zone, of, filter } => {
+            players_for_ref(*of, ctx)
+                .into_iter()
+                .map(|player| count_zone(*zone, player, ctx, Some(filter), bindings))
+                .sum()
+        }
     }
 }
 
 fn evaluate_per_read(
-    sel: CompiledPerSelector,
+    sel: &CompiledPerSelector,
     ctx: &EffectReadContext<'_>,
     target: PermanentHandle,
+    bindings: Option<&Bindings>,
 ) -> i32 {
     match sel {
         CompiledPerSelector::StackSize => target_permanent_read(ctx, target)
@@ -309,11 +379,23 @@ fn evaluate_per_read(
             }
             seen.count_ones() as i32
         }
+        CompiledPerSelector::SameLevelPairsInSources => target_permanent_read(ctx, target)
+            .map(|perm| same_level_pairs_in_sources(perm, ctx.card_data()))
+            .unwrap_or(0),
+        CompiledPerSelector::SharedTrashCount { bucket } => {
+            bucket_count(shared_trash_count_read(ctx), *bucket)
+        }
         CompiledPerSelector::CardCountInZone => 0,
-        CompiledPerSelector::CardCountInZoneScoped { zone, of } => players_for_ref_read(of, ctx)
+        CompiledPerSelector::CardCountInZoneScoped { zone, of } => players_for_ref_read(*of, ctx)
             .into_iter()
-            .map(|player| count_zone_read(zone, player, ctx))
+            .map(|player| count_zone_read(*zone, player, ctx, None, bindings))
             .sum(),
+        CompiledPerSelector::FilteredCardCountInZoneScoped { zone, of, filter } => {
+            players_for_ref_read(*of, ctx)
+                .into_iter()
+                .map(|player| count_zone_read(*zone, player, ctx, Some(filter), bindings))
+                .sum()
+        }
     }
 }
 
@@ -343,6 +425,16 @@ fn target_permanent_read<'a>(
         .get(target.index as usize)
 }
 
+fn same_level_pairs_in_sources(perm: &Permanent, data: &[crate::card_data::CardData]) -> i32 {
+    let mut counts: BTreeMap<u8, i32> = BTreeMap::new();
+    for source in perm.card_sources.iter().rev().skip(1) {
+        if let Some(level) = source.level(data) {
+            *counts.entry(level).or_default() += 1;
+        }
+    }
+    counts.values().map(|count| count / 2).sum()
+}
+
 fn players_for_ref(of: CompiledPlayerRef, ctx: &EffectContext<'_>) -> Vec<PlayerId> {
     match of {
         CompiledPlayerRef::You => vec![ctx.player],
@@ -361,7 +453,41 @@ fn players_for_ref_read(of: CompiledPlayerRef, ctx: &EffectReadContext<'_>) -> V
     }
 }
 
-fn count_zone(zone: CompiledZone, player: PlayerId, ctx: &EffectContext<'_>) -> i32 {
+fn shared_trash_count(ctx: &EffectContext<'_>) -> i32 {
+    ctx.game
+        .players
+        .iter()
+        .map(|player| player.trash.len() as i32)
+        .sum()
+}
+
+fn shared_trash_count_read(ctx: &EffectReadContext<'_>) -> i32 {
+    ctx.game
+        .players
+        .iter()
+        .map(|player| player.trash.len() as i32)
+        .sum()
+}
+
+fn bucket_count(count: i32, bucket: Option<u32>) -> i32 {
+    match bucket {
+        Some(0) => 0,
+        Some(bucket) => count.div_euclid(bucket as i32),
+        None => count,
+    }
+}
+
+fn count_zone(
+    zone: CompiledZone,
+    player: PlayerId,
+    ctx: &EffectContext<'_>,
+    filter: Option<&CompiledPredicate>,
+    bindings: Option<&Bindings>,
+) -> i32 {
+    if filter.is_some() {
+        let read = ctx.as_read();
+        return count_zone_filtered_read(zone, player, &read, filter, bindings);
+    }
     let player_state = ctx.game.player(player);
     let count = match zone {
         CompiledZone::Hand => player_state.hand.len(),
@@ -394,7 +520,16 @@ fn count_zone(zone: CompiledZone, player: PlayerId, ctx: &EffectContext<'_>) -> 
     count as i32
 }
 
-fn count_zone_read(zone: CompiledZone, player: PlayerId, ctx: &EffectReadContext<'_>) -> i32 {
+fn count_zone_read(
+    zone: CompiledZone,
+    player: PlayerId,
+    ctx: &EffectReadContext<'_>,
+    filter: Option<&CompiledPredicate>,
+    bindings: Option<&Bindings>,
+) -> i32 {
+    if filter.is_some() {
+        return count_zone_filtered_read(zone, player, ctx, filter, bindings);
+    }
     let player_state = ctx.game.player(player);
     let count = match zone {
         CompiledZone::Hand => player_state.hand.len(),
@@ -425,6 +560,194 @@ fn count_zone_read(zone: CompiledZone, player: PlayerId, ctx: &EffectReadContext
         }
     };
     count as i32
+}
+
+fn count_zone_filtered_read(
+    zone: CompiledZone,
+    player: PlayerId,
+    ctx: &EffectReadContext<'_>,
+    filter: Option<&CompiledPredicate>,
+    bindings: Option<&Bindings>,
+) -> i32 {
+    let Some(filter) = filter else {
+        return 0;
+    };
+    let player_state = ctx.game.player(player);
+    match zone {
+        CompiledZone::BattleArea => player_state
+            .battle_area
+            .iter()
+            .enumerate()
+            .filter(|(index, _)| {
+                let handle = PermanentHandle {
+                    player,
+                    index: *index as u8,
+                };
+                eval_predicate_with_bindings(
+                    filter,
+                    ctx,
+                    PredicateSubject::Permanent(handle),
+                    bindings,
+                )
+            })
+            .count() as i32,
+        CompiledZone::Breeding => player_state.breeding_area.as_ref().is_some_and(|_| {
+            eval_predicate_with_bindings(
+                filter,
+                ctx,
+                PredicateSubject::BreedingPermanent(player),
+                bindings,
+            )
+        }) as i32,
+        CompiledZone::Hand => {
+            count_card_sources_filtered(&player_state.hand, filter, ctx, bindings)
+        }
+        CompiledZone::Deck => {
+            count_card_sources_filtered(&player_state.deck, filter, ctx, bindings)
+        }
+        CompiledZone::Trash => {
+            count_card_sources_filtered(&player_state.trash, filter, ctx, bindings)
+        }
+        CompiledZone::Security => {
+            count_card_sources_filtered(&player_state.security, filter, ctx, bindings)
+        }
+        CompiledZone::DigiEggDeck => {
+            count_card_sources_filtered(&player_state.digitama_deck, filter, ctx, bindings)
+        }
+        CompiledZone::Reveal => ctx
+            .game
+            .revealed_cards
+            .iter()
+            .filter(|card| card.owner == player)
+            .filter(|card| {
+                eval_predicate_with_bindings(
+                    filter,
+                    ctx,
+                    PredicateSubject::RevealedCard(card.handle()),
+                    bindings,
+                )
+            })
+            .count() as i32,
+        CompiledZone::Material => {
+            let battle = player_state
+                .battle_area
+                .iter()
+                .flat_map(|perm| perm.card_sources.iter().rev().skip(1))
+                .filter(|source| card_source_matches(source.handle(), filter, ctx, bindings))
+                .count();
+            let breeding = player_state
+                .breeding_area
+                .as_ref()
+                .map(|perm| {
+                    perm.card_sources
+                        .iter()
+                        .rev()
+                        .skip(1)
+                        .filter(|source| {
+                            card_source_matches(source.handle(), filter, ctx, bindings)
+                        })
+                        .count()
+                })
+                .unwrap_or(0);
+            (battle + breeding) as i32
+        }
+    }
+}
+
+fn count_card_sources_filtered(
+    cards: &[crate::card_source::CardSource],
+    filter: &CompiledPredicate,
+    ctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> i32 {
+    cards
+        .iter()
+        .filter(|source| card_source_matches(source.handle(), filter, ctx, bindings))
+        .count() as i32
+}
+
+fn card_source_matches(
+    card: CardHandle,
+    filter: &CompiledPredicate,
+    ctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> bool {
+    eval_card_zone_filter(filter, ctx, card, bindings)
+}
+
+fn eval_card_zone_filter(
+    pred: &CompiledPredicate,
+    ctx: &EffectReadContext<'_>,
+    card: CardHandle,
+    bindings: Option<&Bindings>,
+) -> bool {
+    if predicate_has_card_zone_unsupported_leaf(pred) {
+        return false;
+    }
+
+    let mut leaf = pred.clone();
+    leaf.all_of.clear();
+    leaf.any_of.clear();
+    leaf.none_of.clear();
+    leaf.not = None;
+    if !eval_predicate_with_bindings(&leaf, ctx, PredicateSubject::Card(card), bindings) {
+        return false;
+    }
+    if !pred
+        .all_of
+        .iter()
+        .all(|child| eval_card_zone_filter(child, ctx, card, bindings))
+    {
+        return false;
+    }
+    if !pred.any_of.is_empty()
+        && !pred
+            .any_of
+            .iter()
+            .any(|child| eval_card_zone_filter(child, ctx, card, bindings))
+    {
+        return false;
+    }
+    if pred
+        .none_of
+        .iter()
+        .any(|child| eval_card_zone_filter(child, ctx, card, bindings))
+    {
+        return false;
+    }
+    if pred
+        .not
+        .as_deref()
+        .is_some_and(|child| eval_card_zone_filter(child, ctx, card, bindings))
+    {
+        return false;
+    }
+    true
+}
+
+fn predicate_has_card_zone_unsupported_leaf(pred: &CompiledPredicate) -> bool {
+    let has_permanent_only_leaf = pred.dp_eq.is_some()
+        || pred.dp_lte.is_some()
+        || pred.dp_gte.is_some()
+        || pred.level_matches_aggregate.is_some()
+        || pred.stack_size_lte.is_some()
+        || pred.stack_size_gte.is_some()
+        || pred.materials_count_lte.is_some()
+        || pred.materials_count_gte.is_some()
+        || pred.has_inherited.is_some()
+        || pred.is_suspended.is_some()
+        || pred.is_unsuspended.is_some()
+        || pred.owner.is_some()
+        || pred.other.is_some()
+        || pred.of_permanent.is_some()
+        || pred.source_is_tamer.is_some()
+        || pred.source_name_contains.is_some()
+        || pred.source_permanent_trait_has.is_some()
+        || pred.in_breeding.is_some()
+        || pred.on_field.is_some()
+        || pred.dna_origin.is_some()
+        || pred.has_alt_path.is_some();
+    has_permanent_only_leaf
 }
 
 fn evaluate_aggregate(

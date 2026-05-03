@@ -173,6 +173,7 @@ pub struct CompiledPredicate {
     pub level_gte: Option<u8>,
     pub color_is: Option<CompiledColor>,
     pub color_only: Option<Vec<CompiledColor>>,
+    pub color_matches_any_field_digimon: Option<CompiledPlayerRef>,
     pub trait_has: Option<String>,
     pub form_is: Option<String>,
     pub attribute_is: Option<String>,
@@ -230,6 +231,12 @@ pub struct CompiledPredicate {
     pub none_of: Vec<CompiledPredicate>,
     pub not: Option<Box<CompiledPredicate>>,
     pub has_alt_path: Option<String>,
+    pub level_matches_aggregate: Option<(CompiledAggregateSelector, CompiledPlayerRef)>,
+    pub self_digivolution_contains_name: Option<String>,
+    pub event_target_owner: Option<CompiledPlayerRef>,
+    pub host_permanent_trait_has: Option<String>,
+    pub trashed_source_trait_has: Option<String>,
+    pub trashed_source_card_id_is: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -291,19 +298,29 @@ pub enum CompiledFormula {
         selector: CompiledAggregateSelector,
         scope: CompiledPlayerRef,
     },
+    BindingDp(String),
     RawRust(String),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledPerSelector {
     MaterialCount,
     StackSize,
     AllyCount,
     DigivolutionColorCount,
+    SameLevelPairsInSources,
+    SharedTrashCount {
+        bucket: Option<u32>,
+    },
     CardCountInZone,
     CardCountInZoneScoped {
         zone: CompiledZone,
         of: CompiledPlayerRef,
+    },
+    FilteredCardCountInZoneScoped {
+        zone: CompiledZone,
+        of: CompiledPlayerRef,
+        filter: Box<CompiledPredicate>,
     },
 }
 

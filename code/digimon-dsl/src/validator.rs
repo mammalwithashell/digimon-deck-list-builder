@@ -393,6 +393,20 @@ fn validate_predicate(
             });
         }
     }
+    if let Some(level_aggregate) = pred.level_matches_aggregate {
+        if !matches!(
+            level_aggregate.selector,
+            crate::formula::AggregateSelector::LowestLevel
+                | crate::formula::AggregateSelector::HighestLevel
+        ) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.level_matches_aggregate.selector"),
+                message: "level_matches_aggregate selector must be lowest_level or highest_level"
+                    .into(),
+            });
+        }
+    }
     for (i, sub) in pred.all_of.iter().enumerate() {
         validate_predicate(sub, &format!("{prefix}.all_of[{i}]"), card_id, ctx, errors);
     }
@@ -409,6 +423,15 @@ fn validate_predicate(
         validate_predicate(
             &ex.predicate,
             &format!("{prefix}.any_permanent"),
+            card_id,
+            ctx,
+            errors,
+        );
+    }
+    if let Some(ex) = &pred.any_field_permanent {
+        validate_predicate(
+            &ex.predicate,
+            &format!("{prefix}.any_field_permanent"),
             card_id,
             ctx,
             errors,
@@ -699,10 +722,27 @@ fn validate_formula(
                 validate_formula(arg, &format!("{prefix}[{i}]"), card_id, ctx, errors);
             }
         }
+        FormulaSpec::BasePerDelta { per, .. } => {
+            validate_per_selector(per, &format!("{prefix}.per"), card_id, ctx, errors);
+        }
         FormulaSpec::Literal(_)
-        | FormulaSpec::BasePerDelta { .. }
+        | FormulaSpec::BindingDp { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
         | FormulaSpec::Compound(CompoundFormula::AggregateScoped(_)) => {}
+    }
+}
+
+fn validate_per_selector(
+    per: &crate::formula::PerSelector,
+    prefix: &str,
+    card_id: &str,
+    ctx: &ValidationContext<'_>,
+    errors: &mut Vec<ValidationError>,
+) {
+    if let crate::formula::PerSelector::CardCountInZone(spec) = per {
+        if let Some(filter) = &spec.filter {
+            validate_predicate(filter, &format!("{prefix}.filter"), card_id, ctx, errors);
+        }
     }
 }
 
@@ -724,11 +764,59 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
             | CompoundFormula::Max(args)
             | CompoundFormula::Min(args),
         ) => args.iter().any(formula_uses_dp_aggregate),
+        FormulaSpec::BasePerDelta { per, .. } => per_uses_dp_aggregate(per),
         FormulaSpec::Literal(_)
-        | FormulaSpec::BasePerDelta { .. }
+        | FormulaSpec::BindingDp { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
         | FormulaSpec::Compound(CompoundFormula::RawRust(_)) => false,
     }
+}
+
+fn per_uses_dp_aggregate(per: &crate::formula::PerSelector) -> bool {
+    match per {
+        crate::formula::PerSelector::CardCountInZone(spec) => spec
+            .filter
+            .as_deref()
+            .is_some_and(predicate_uses_dp_aggregate),
+        _ => false,
+    }
+}
+
+fn predicate_uses_dp_aggregate(pred: &crate::predicate::PredicateSpec) -> bool {
+    [&pred.dp_eq, &pred.dp_lte, &pred.dp_gte]
+        .into_iter()
+        .flatten()
+        .any(|dp| {
+            matches!(
+                dp,
+                crate::predicate::DpConstraint::Formula(formula)
+                    if formula_uses_dp_aggregate(formula)
+            )
+        })
+        || pred
+            .all_of
+            .iter()
+            .chain(&pred.any_of)
+            .chain(&pred.none_of)
+            .any(predicate_uses_dp_aggregate)
+        || pred.not.as_deref().is_some_and(predicate_uses_dp_aggregate)
+        || pred
+            .has_inherited
+            .as_deref()
+            .is_some_and(predicate_uses_dp_aggregate)
+        || [
+            &pred.any_permanent,
+            &pred.any_field_permanent,
+            &pred.no_permanent,
+            &pred.all_permanents,
+        ]
+        .into_iter()
+        .flatten()
+        .any(|ex| predicate_uses_dp_aggregate(&ex.predicate))
+        || [&pred.count_lte, &pred.count_gte]
+            .into_iter()
+            .flatten()
+            .any(|agg| predicate_uses_dp_aggregate(&agg.filter))
 }
 
 fn is_known_modifier(name: &str) -> bool {
@@ -902,5 +990,65 @@ effects:
         let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
         let reg = StubRegistry::with(["registered_formula_fn"]);
         assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
+    }
+
+    #[test]
+    fn filtered_count_predicate_raw_rust_is_validated() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - kind: cost_reduction
+    when_playing_this: true
+    amount_fn:
+      base: 0
+      per:
+        card_count_in_zone:
+          zone: trash
+          of: any
+          filter:
+            dp_lte:
+              formula:
+                raw_rust: unregistered_filtered_formula_fn
+      delta: 1
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs
+            .iter()
+            .any(|e| e.message.contains("unregistered_filtered_formula_fn")));
+    }
+
+    #[test]
+    fn level_matches_aggregate_rejects_dp_aggregate_selector() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: option
+color: [red]
+cost: 3
+effects:
+  - when: main_from_hand
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          prompt: Pick
+          filter:
+            level_matches_aggregate:
+              selector: lowest_dp
+              of: opponent
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs
+            .iter()
+            .any(|e| e.path.contains("level_matches_aggregate.selector")));
     }
 }

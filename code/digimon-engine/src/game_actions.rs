@@ -3473,13 +3473,13 @@ impl Game {
     /// computes the matching `DnaCost` via `get_dna_stacking_order`,
     /// applies `BeforePayCost` reductions, and pays memory.
     pub fn initiate_dna_digivolve(&mut self, player_id: PlayerId, hand_index: usize) -> bool {
-        if self.current_phase != GamePhase::Main {
+        let Some(route_window) = self.current_dna_route_window() else {
             self.logger.log(&format!(
-                "[Rejected] initiate_dna_digivolve: not in Main phase (phase={:?})",
+                "[Rejected] initiate_dna_digivolve: not in DNA action phase (phase={:?})",
                 self.current_phase
             ));
             return false;
-        }
+        };
         let player = self.player(player_id);
         if hand_index >= player.hand.len() {
             self.logger.log(&format!(
@@ -3490,51 +3490,19 @@ impl Game {
             return false;
         }
         let card = player.hand[hand_index].clone();
-        let evo_meta = &self.card_data[card.data_index];
-        if evo_meta.dna_costs.is_empty() {
-            self.logger.log(&format!(
-                "[Rejected] initiate_dna_digivolve: card {} has no DNA costs",
-                card.card_id(&self.card_data)
-            ));
-            return false;
-        }
-        if !crate::dna_digivolve::has_valid_dna_targets(
-            evo_meta,
-            &player.battle_area,
-            &self.card_data,
-        ) {
+
+        // Collect valid first-material battle_area indices: those that
+        // appear in at least one valid pair (either ordering).
+        let mut first_targets: Vec<u16> = self
+            .valid_dna_first_targets_for_hand_card(player_id, hand_index, route_window)
+            .collect();
+        first_targets.sort();
+        first_targets.dedup();
+        if first_targets.is_empty() {
             self.logger.log(&format!(
                 "[Rejected] initiate_dna_digivolve: no valid DNA material pair for {}",
                 card.card_id(&self.card_data)
             ));
-            return false;
-        }
-
-        // Collect valid first-material battle_area indices: those that
-        // appear in at least one valid pair (either ordering).
-        let mut first_targets: Vec<u16> = Vec::new();
-        for i in 0..player.battle_area.len() {
-            for j in 0..player.battle_area.len() {
-                if i == j {
-                    continue;
-                }
-                if crate::dna_digivolve::can_dna_digivolve(
-                    evo_meta,
-                    &player.battle_area[i],
-                    &player.battle_area[j],
-                    &self.card_data,
-                ) {
-                    first_targets.push(i as u16);
-                    break;
-                }
-            }
-        }
-        first_targets.sort();
-        first_targets.dedup();
-        if first_targets.is_empty() {
-            self.logger.log(
-                "[Rejected] initiate_dna_digivolve: no valid first-material indices after filter",
-            );
             return false;
         }
 
@@ -3584,14 +3552,14 @@ impl Game {
                 }
 
                 // Build valid second-material list for the chosen first.
-                let evo_meta =
-                    &game.card_data[game.player(first_player).hand[evo_hand_index].data_index];
-                let second_targets = crate::dna_digivolve::get_valid_dna_second_targets(
-                    evo_meta,
-                    first_idx,
-                    &game.player(first_player).battle_area,
-                    &game.card_data,
-                );
+                let second_targets: Vec<u16> = game
+                    .valid_dna_second_targets_for_hand_card(
+                        first_player,
+                        evo_hand_index,
+                        first_idx,
+                        route_window,
+                    )
+                    .collect();
                 if second_targets.is_empty() {
                     game.logger.log(&format!(
                         "[Rejected] dna_digivolve stage 1: no valid second-material targets for first index {}",
@@ -3616,11 +3584,12 @@ impl Game {
                     source_kind: EffectSourceKind::Digimon,
                     callback: Box::new(move |game: &mut Game, action_id: u16| {
                         let second_idx = action_id as usize;
-                        game.resolve_dna_digivolve_stage2(
+                        game.resolve_dna_digivolve_stage2_with_window(
                             first_player,
                             first_idx,
                             second_idx,
                             evo_hand_index,
+                            route_window,
                         );
                     }),
                     on_decline: None,
@@ -3639,7 +3608,7 @@ impl Game {
     /// Stage-2 resolution of `Game::initiate_dna_digivolve`'s two-stage
     /// selection chain. Receives the chosen second-material `battle_area`
     /// index and the captured stage-1 state. Re-resolves the matching
-    /// `DnaCost` orientation, applies `BeforePayCost` reductions, calls
+    /// DNA route orientation, applies `BeforePayCost` reductions, calls
     /// `Game::dna_digivolve_inner`, and triggers the auto-end-of-turn
     /// check (mirroring `digivolve_from_hand`).
     ///
@@ -3650,12 +3619,13 @@ impl Game {
     /// Failure paths log `[Rejected] ...` via `self.logger` and return
     /// without mutating game state. The `pending_selection` was already
     /// consumed by `resolve_generic_selection` before this method ran.
-    pub(crate) fn resolve_dna_digivolve_stage2(
+    pub(crate) fn resolve_dna_digivolve_stage2_with_window(
         &mut self,
         first_player: PlayerId,
         first_idx: usize,
         second_idx: usize,
         evo_hand_index: usize,
+        route_window: crate::dna_digivolve::DnaRouteWindow,
     ) {
         if second_idx >= self.player(first_player).battle_area.len() {
             self.logger.log(&format!(
@@ -3679,26 +3649,21 @@ impl Game {
             return;
         }
 
-        let evo_meta = &self.card_data[self.player(first_player).hand[evo_hand_index].data_index];
-        let battle = &self.player(first_player).battle_area;
-        let perm_first = &battle[first_idx];
-        let perm_second = &battle[second_idx];
-
-        let stacking = crate::dna_digivolve::get_dna_stacking_order(
-            evo_meta,
-            perm_first,
-            perm_second,
-            &self.card_data,
-        );
-        let Some((first_is_top, dna_cost)) = stacking else {
+        let Some(route_match) = self.dna_route_for_hand_card(
+            first_player,
+            evo_hand_index,
+            first_idx,
+            second_idx,
+            route_window,
+        ) else {
             self.logger.log(
-                "[Rejected] resolve_dna_digivolve_stage2: no matching DnaCost for chosen pair",
+                "[Rejected] resolve_dna_digivolve_stage2: no matching DNA route for chosen pair",
             );
             return;
         };
-        let printed_cost = dna_cost.memory_cost;
+        let printed_cost = route_match.memory_cost;
 
-        let (target_a, target_b) = if first_is_top {
+        let (target_a, target_b) = if route_match.first_is_top {
             (
                 PermanentHandle {
                     player: first_player,
@@ -3735,7 +3700,13 @@ impl Game {
             true,
         );
 
-        self.check_turn_end();
+        if route_window == crate::dna_digivolve::DnaRouteWindow::EndOfTurnAction {
+            if self.memory < 0 && !self.game_over {
+                self.pass_end_of_turn_action();
+            }
+        } else {
+            self.check_turn_end();
+        }
     }
 
     /// Move a card from `source` to `player_id`'s security stack at the given
