@@ -82,6 +82,13 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::TrashAllSources { target } => {
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
+                ctx.trash_all_sources(h);
+            }
+            true
+        }
         _ => false,
     }
 }

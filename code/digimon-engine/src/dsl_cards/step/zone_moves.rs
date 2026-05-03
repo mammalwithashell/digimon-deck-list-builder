@@ -112,6 +112,13 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             true
         }
 
+        CompiledStep::PlaySelectedSourcesFree { source_refs } => {
+            if let Some(source_refs) = bindings.get_source_refs(source_refs) {
+                ctx.play_selected_sources_without_cost(source_refs);
+            }
+            true
+        }
+
         CompiledStep::ReturnToDeckFromReveal { of, card, position } => {
             let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
                 return true;

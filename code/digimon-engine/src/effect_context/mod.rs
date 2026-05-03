@@ -2505,6 +2505,45 @@ impl<'a> EffectContext<'a> {
         self.game.drain_effect_queue();
     }
 
+    /// Trash every digivolution source below `target`'s top card, preserving
+    /// the live permanent and dispatching source-trash observers per source.
+    pub fn trash_all_sources(&mut self, target: PermanentHandle) -> bool {
+        let Some(permanent) = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+        else {
+            return false;
+        };
+        let source_handles: Vec<CardHandle> = permanent
+            .card_sources
+            .iter()
+            .take(permanent.card_sources.len().saturating_sub(1))
+            .map(|source| source.handle())
+            .collect();
+
+        for source in source_handles {
+            let Some(permanent) = self
+                .game
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)
+            else {
+                return true;
+            };
+            let still_below_top = permanent
+                .card_sources
+                .iter()
+                .take(permanent.card_sources.len().saturating_sub(1))
+                .any(|candidate| candidate.handle() == source);
+            if still_below_top {
+                self.trash_card_source(target, source);
+            }
+        }
+        true
+    }
+
     /// Strip the top digivolution source from `target`'s stack and route the
     /// underlying card to its owner's trash. Returns `true` on
     /// success; `false` if the target handle is invalid or the stack is empty.

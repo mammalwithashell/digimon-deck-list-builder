@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -45,6 +45,60 @@ impl CardEffect for SourceTrashContextGainOne {
                     && ctx.event_host_card() == Some(expected_host)
             })
             .process(|ctx| ctx.gain_memory(1))
+            .build()]
+    }
+}
+
+struct SourceTrashRecordSources {
+    expected_host: CardHandle,
+    seen: Arc<Mutex<Vec<CardHandle>>>,
+}
+
+impl CardEffect for SourceTrashRecordSources {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let expected_host = self.expected_host;
+        let seen = self.seen.clone();
+        vec![Effect::on_digivolution_card_trashed(card)
+            .name("record source trash context")
+            .condition(move |ctx| {
+                ctx.event_host_card() == Some(expected_host) && ctx.event_source_card().is_some()
+            })
+            .process(move |ctx| {
+                if let Some(source) = ctx.event_source_card() {
+                    seen.lock().expect("record mutex poisoned").push(source);
+                }
+            })
+            .build()]
+    }
+}
+
+struct TrashQueuedSourceOnce {
+    target: PermanentHandle,
+    queued_source: CardHandle,
+    fired: Arc<Mutex<bool>>,
+}
+
+impl CardEffect for TrashQueuedSourceOnce {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let target = self.target;
+        let queued_source = self.queued_source;
+        let fired = self.fired.clone();
+        vec![Effect::on_digivolution_card_trashed(card)
+            .name("trash queued source once")
+            .process(move |ctx| {
+                let should_fire = {
+                    let mut fired = fired.lock().expect("fired mutex poisoned");
+                    if *fired {
+                        false
+                    } else {
+                        *fired = true;
+                        true
+                    }
+                };
+                if should_fire {
+                    ctx.trash_card_source(target, queued_source);
+                }
+            })
             .build()]
     }
 }
@@ -256,4 +310,188 @@ fn trash_card_source_routes_borrowed_source_to_owner_trash() {
     assert_eq!(runner.game.players[0].trash.len(), 0);
     assert_eq!(runner.game.players[1].trash.len(), 1);
     assert_eq!(runner.game.players[1].trash[0].handle(), borrowed);
+}
+
+#[test]
+fn trash_all_sources_preserves_top_card_and_trashes_each_source() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("BASE", "Base"))
+        .add_card(make_test_card("MID", "Mid"))
+        .add_card(make_test_card("TOP", "Top"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .start();
+
+    let target = runner.place_on_field(0, "BASE", None);
+    let source_a = push_source(&mut runner, target, "MID");
+    let top = push_source(&mut runner, target, "TOP");
+    let source_card = runner.place_on_field(0, "EFFECT", None);
+    let effect_card = runner.top_card(source_card);
+    let base = runner.game.players[0].battle_area[target.index as usize].card_sources[0].handle();
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, effect_card, Some(source_card), 0);
+        assert!(ctx.trash_all_sources(target));
+    }
+
+    let remaining: Vec<_> = runner.game.players[0].battle_area[target.index as usize]
+        .card_sources
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(remaining, vec![top]);
+    assert!(runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.handle() == base));
+    assert!(runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.handle() == source_a));
+}
+
+#[test]
+fn trash_all_sources_dispatches_each_removed_source_with_host_context() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("BASE", "Base"))
+        .add_card(make_test_card("MID", "Mid"))
+        .add_card(make_test_card("TOP", "Top"))
+        .add_card(make_test_card("OBSERVER", "Observer"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .start();
+
+    let target = runner.place_on_field(0, "BASE", None);
+    let source_a =
+        runner.game.players[0].battle_area[target.index as usize].card_sources[0].handle();
+    let source_b = push_source(&mut runner, target, "MID");
+    let top = push_source(&mut runner, target, "TOP");
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    runner.register_effect(
+        "OBSERVER",
+        Arc::new(SourceTrashRecordSources {
+            expected_host: top,
+            seen: seen.clone(),
+        }),
+    );
+    runner.place_on_field(0, "OBSERVER", None);
+    let effect_perm = runner.place_on_field(0, "EFFECT", None);
+    let effect_card = runner.top_card(effect_perm);
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, effect_card, Some(effect_perm), 0);
+        assert!(ctx.trash_all_sources(target));
+    }
+
+    assert_eq!(
+        *seen.lock().expect("record mutex poisoned"),
+        vec![source_a, source_b]
+    );
+}
+
+#[test]
+fn trash_all_sources_skips_sources_already_removed_by_observers() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("BASE", "Base"))
+        .add_card(make_test_card("MID", "Mid"))
+        .add_card(make_test_card("TOP", "Top"))
+        .add_card(make_test_card("OBSERVER", "Observer"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .start();
+
+    let target = runner.place_on_field(0, "BASE", None);
+    let base = runner.game.players[0].battle_area[target.index as usize].card_sources[0].handle();
+    let queued_source = push_source(&mut runner, target, "MID");
+    let top = push_source(&mut runner, target, "TOP");
+    let fired = Arc::new(Mutex::new(false));
+    runner.register_effect(
+        "OBSERVER",
+        Arc::new(TrashQueuedSourceOnce {
+            target,
+            queued_source,
+            fired: fired.clone(),
+        }),
+    );
+    runner.place_on_field(0, "OBSERVER", None);
+    let effect_perm = runner.place_on_field(0, "EFFECT", None);
+    let effect_card = runner.top_card(effect_perm);
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, effect_card, Some(effect_perm), 0);
+        assert!(ctx.trash_all_sources(target));
+    }
+
+    let remaining: Vec<_> = runner.game.players[0].battle_area[target.index as usize]
+        .card_sources
+        .iter()
+        .map(|c| c.handle())
+        .collect();
+    assert_eq!(remaining, vec![top]);
+    assert!(*fired.lock().expect("fired mutex poisoned"));
+    assert!(runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.handle() == base));
+    assert!(runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.handle() == queued_source));
+}
+
+#[test]
+fn play_selected_sources_without_cost_removes_stable_sources_and_plays_them() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC-A", "Source A"))
+        .add_card(make_test_card("TOP-A", "Top A"))
+        .add_card(make_test_card("SRC-B", "Source B"))
+        .add_card(make_test_card("TOP-B", "Top B"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .start();
+
+    let stack_a = runner.place_stack(0, &["SRC-A", "TOP-A"]);
+    let stack_b = runner.place_stack(0, &["SRC-B", "TOP-B"]);
+    let source_a =
+        runner.game.players[0].battle_area[stack_a.index as usize].card_sources[0].handle();
+    let source_b =
+        runner.game.players[0].battle_area[stack_b.index as usize].card_sources[0].handle();
+    let effect_perm = runner.place_on_field(0, "EFFECT", None);
+    let effect_card = runner.top_card(effect_perm);
+
+    let selected = vec![
+        digimon_engine::effect_context::SourceSelectionRef {
+            permanent: stack_a,
+            field_index: stack_a.index,
+            source_index: 0,
+            card: source_a,
+        },
+        digimon_engine::effect_context::SourceSelectionRef {
+            permanent: stack_b,
+            field_index: stack_b.index,
+            source_index: 0,
+            card: source_b,
+        },
+    ];
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, effect_card, Some(effect_perm), 0);
+        assert!(ctx.play_selected_sources_without_cost(selected));
+    }
+
+    let played_tops: Vec<_> = runner.game.players[0]
+        .battle_area
+        .iter()
+        .map(|perm| perm.top_card().handle())
+        .collect();
+    assert!(played_tops.contains(&source_a));
+    assert!(played_tops.contains(&source_b));
+    assert_eq!(
+        runner.game.players[0].battle_area[stack_a.index as usize]
+            .card_sources
+            .len(),
+        1
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[stack_b.index as usize]
+            .card_sources
+            .len(),
+        1
+    );
 }

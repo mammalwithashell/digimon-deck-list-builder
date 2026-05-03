@@ -96,6 +96,7 @@ pub enum StepSpec {
     PlayToken(PlayTokenArgs),
     PlaceAsBottomSource(PlaceAsBottomSourceArgs),
     TrashTopSource(TargetArg),
+    TrashAllSources(TargetArg),
     TrashSelectedSources(TrashSelectedSourcesArgs),
     Hatch(PlayerArg),
 
@@ -106,6 +107,7 @@ pub enum StepSpec {
     PlayFromTrashFree(PlayFromHandArgs),
     PlayFromSecurity(PlayFromSecurityArgs),
     PlayFromMaterials(PlayFromMaterialsArgs),
+    PlaySelectedSourcesFree(TrashSelectedSourcesArgs),
     EffectInitiatedDigivolve(EffectDigivolveArgs),
     EffectInitiatedDnaDigivolve(EffectDnaDigivolveArgs),
 
@@ -211,6 +213,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayToken(v) => kv!(s, "play_token", v),
             StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
+            StepSpec::TrashAllSources(v) => kv!(s, "trash_all_sources", v),
             StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             // Play / digivolve
@@ -220,6 +223,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
             StepSpec::PlayFromSecurity(v) => kv!(s, "play_from_security", v),
             StepSpec::PlayFromMaterials(v) => kv!(s, "play_from_materials", v),
+            StepSpec::PlaySelectedSourcesFree(v) => kv!(s, "play_selected_sources_free", v),
             StepSpec::EffectInitiatedDigivolve(v) => kv!(s, "effect_initiated_digivolve", v),
             StepSpec::EffectInitiatedDnaDigivolve(v) => kv!(s, "effect_initiated_dna_digivolve", v),
             // Security
@@ -342,6 +346,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_token" => StepSpec::PlayToken(map.next_value()?),
             "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
+            "trash_all_sources" => StepSpec::TrashAllSources(map.next_value()?),
             "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
 
@@ -352,6 +357,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
             "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
+            "play_selected_sources_free" => StepSpec::PlaySelectedSourcesFree(map.next_value()?),
             "effect_initiated_digivolve" => StepSpec::EffectInitiatedDigivolve(map.next_value()?),
             "effect_initiated_dna_digivolve" => {
                 StepSpec::EffectInitiatedDnaDigivolve(map.next_value()?)
@@ -443,6 +449,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_token",
                         "place_as_bottom_source",
                         "trash_top_source",
+                        "trash_all_sources",
                         "trash_selected_sources",
                         "hatch",
                         "play_from_hand",
@@ -451,6 +458,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_from_trash_free",
                         "play_from_security",
                         "play_from_materials",
+                        "play_selected_sources_free",
                         "effect_initiated_digivolve",
                         "effect_initiated_dna_digivolve",
                         "trash_top_security",

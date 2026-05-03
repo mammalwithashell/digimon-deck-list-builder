@@ -652,6 +652,9 @@ pub enum CompiledStep {
     TrashTopSource {
         target: CompiledBindingRef,
     },
+    TrashAllSources {
+        target: CompiledBindingRef,
+    },
     Hatch {
         of: CompiledPlayerRef,
     },
@@ -678,6 +681,9 @@ pub enum CompiledStep {
         target: CompiledBindingRef,
         source_index: CompiledBindingRef,
         cost_delta: Option<CompiledCostDelta>,
+    },
+    PlaySelectedSourcesFree {
+        source_refs: String,
     },
     EffectInitiatedDigivolve {
         target: CompiledBindingRef,

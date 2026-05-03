@@ -1402,6 +1402,9 @@ fn compile_step(
         S::TrashTopSource(a) => CompiledStep::TrashTopSource {
             target: compile_binding_ref(&a.target),
         },
+        S::TrashAllSources(a) => CompiledStep::TrashAllSources {
+            target: compile_binding_ref(&a.target),
+        },
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
         },
@@ -1436,6 +1439,9 @@ fn compile_step(
             target: compile_binding_ref(&a.target),
             source_index: compile_binding_ref(&a.source_index),
             cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
+        },
+        S::PlaySelectedSourcesFree(a) => CompiledStep::PlaySelectedSourcesFree {
+            source_refs: a.source_refs.clone(),
         },
         S::EffectInitiatedDigivolve(a) => CompiledStep::EffectInitiatedDigivolve {
             target: compile_binding_ref(&a.target),

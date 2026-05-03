@@ -105,5 +105,6 @@ mod reveal_buckets;
 mod roundtrip;
 mod schema_export;
 mod selection_dp_extrema;
+mod source_stack_aggregates;
 mod standalone_declaratives_exit;
 mod validator;
