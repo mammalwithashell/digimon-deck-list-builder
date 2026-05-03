@@ -86,6 +86,14 @@ pub fn eval_predicate_with_bindings(
     if !eval_replacement_fields(pred, rctx) {
         return false;
     }
+    if let Some(ref needle) = pred.self_digivolution_contains_name {
+        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+            return false;
+        };
+        if !perm.contains_card_name(needle, rctx.card_data()) {
+            return false;
+        }
+    }
     if let Some(want) = pred.in_breeding {
         let is_in_breeding = match subject {
             PredicateSubject::Permanent(h) => {
@@ -433,6 +441,14 @@ fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> 
             return false;
         }
     }
+    if let Some(want) = pred.event_target_owner {
+        let Some(owner) = event_target_owner(rctx) else {
+            return false;
+        };
+        if !player_ref_matches(want, owner, rctx) {
+            return false;
+        }
+    }
     if let Some(ref trait_name) = pred.event_card_trait_has {
         let Some(card) = rctx
             .game
@@ -457,7 +473,107 @@ fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> 
             return false;
         }
     }
+    if let Some(ref trait_name) = pred.host_permanent_trait_has {
+        let Some(host) = rctx.event_host_permanent() else {
+            return false;
+        };
+        let Some(perm) = permanent_for_handle(rctx, host) else {
+            return false;
+        };
+        if !perm.has_trait(trait_name, rctx.card_data()) {
+            return false;
+        }
+    }
+    if let Some(ref trait_name) = pred.trashed_source_trait_has {
+        let Some(card) = rctx.event_source_card() else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if !data
+            .traits
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case(trait_name))
+        {
+            return false;
+        }
+    }
+    if let Some(ref card_id) = pred.trashed_source_card_id_is {
+        let Some(card) = rctx.event_source_card() else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if data.card_id != *card_id {
+            return false;
+        }
+    }
     true
+}
+
+fn subject_or_source_permanent<'a>(
+    subject: PredicateSubject,
+    rctx: &'a EffectReadContext<'_>,
+) -> Option<&'a crate::permanent::Permanent> {
+    match subject {
+        PredicateSubject::Permanent(handle) => permanent_for_handle(rctx, handle),
+        PredicateSubject::BreedingPermanent(player) => {
+            rctx.game.player(player).breeding_area.as_ref()
+        }
+        PredicateSubject::Card(_) | PredicateSubject::RevealedCard(_) | PredicateSubject::None => {
+            rctx.source_permanent()
+        }
+    }
+}
+
+fn permanent_for_handle<'a>(
+    rctx: &'a EffectReadContext<'_>,
+    handle: PermanentHandle,
+) -> Option<&'a crate::permanent::Permanent> {
+    if handle.index == crate::action::space::BREEDING_TARGET as u8 {
+        return rctx.game.player(handle.player).breeding_area.as_ref();
+    }
+    rctx.game
+        .player(handle.player)
+        .battle_area
+        .get(handle.index as usize)
+}
+
+fn event_target_owner(rctx: &EffectReadContext<'_>) -> Option<PlayerId> {
+    let trigger = rctx.game.current_trigger_context?;
+    if let Some(handle) = trigger.event_permanent {
+        return Some(handle.player);
+    }
+    if let Some(handle) = trigger.event_host_permanent {
+        return Some(handle.player);
+    }
+    if let Some(handle) = trigger.target_permanent {
+        return Some(handle.player);
+    }
+    for card in [trigger.event_card, trigger.target_card]
+        .into_iter()
+        .flatten()
+    {
+        if let Some(source) = rctx.game.card_source_for_handle(card) {
+            return Some(source.owner);
+        }
+    }
+    trigger.source_player
+}
+
+fn player_ref_matches(
+    want: CompiledPlayerRef,
+    actual: PlayerId,
+    rctx: &EffectReadContext<'_>,
+) -> bool {
+    match want {
+        CompiledPlayerRef::You => actual == rctx.player(),
+        CompiledPlayerRef::Opponent => actual == rctx.opponent_id(),
+        CompiledPlayerRef::Active => actual == rctx.game.turn_player(),
+        CompiledPlayerRef::Any => true,
+    }
 }
 
 fn event_target_card(rctx: &EffectReadContext<'_>) -> Option<CardHandle> {

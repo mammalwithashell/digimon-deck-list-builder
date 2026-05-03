@@ -101,6 +101,8 @@ pub struct PredicateSpec {
     pub source_name_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_permanent_trait_has: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub self_digivolution_contains_name: Option<String>,
 
     // Leaf — global / observer
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -128,9 +130,17 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_owner: Option<PlayerRef>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_name_contains: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub host_permanent_trait_has: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trashed_source_trait_has: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trashed_source_card_id_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub replacement_cause: Option<ReplacementCauseSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -4,13 +4,15 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
 use digimon_engine::card_data::{DualCardData, DualDigimonFace, DualOptionFace};
-use digimon_engine::card_source::CardHandle;
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::predicate::{eval_predicate_with_bindings, PredicateSubject};
 use digimon_engine::dsl_cards::step::run_steps;
 use digimon_engine::effect_context::{EffectContext, EffectReadContext};
-use digimon_engine::enums::{CardColor, CardKind, ModifierType};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, ModifierType};
+use digimon_engine::permanent::{Permanent, PermanentHandle};
+use digimon_engine::selection::TriggerSource;
 
 fn runner_with_dp_cards() -> DebugRunner {
     let mut src = make_test_card("SRC", "Source");
@@ -109,6 +111,90 @@ effects:
         .iter()
         .any(|p| p.color_matches_any_field_digimon
             == Some(digimon_dsl::compiled::CompiledPlayerRef::You)));
+}
+
+#[test]
+fn self_digivolution_contains_name_compiles_in_when_digivolving_condition() {
+    let yaml = r#"
+card: T-G7-SELF-DIGI
+name: Stack Name Predicate
+kind: digimon
+level: 6
+color: [white]
+cost: 12
+dp: 12000
+effects:
+  - when: when_digivolving
+    condition: { self_digivolution_contains_name: Omnimon }
+    process:
+      - gain_memory: 1
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let condition = triggered.condition.as_ref().expect("condition");
+    assert_eq!(
+        condition.self_digivolution_contains_name.as_deref(),
+        Some("Omnimon")
+    );
+}
+
+#[test]
+fn self_digivolution_contains_name_scans_source_permanent_stack_at_runtime() {
+    let yaml = r#"
+card: T-G7-SELF-DIGI-RUNTIME
+name: Stack Name Predicate Runtime
+kind: digimon
+level: 6
+color: [white]
+cost: 12
+dp: 12000
+effects:
+  - when: when_digivolving
+    condition: { self_digivolution_contains_name: Omnimon }
+    process:
+      - gain_memory: 1
+"#;
+    let mut omnimon = make_test_card("BASE-OMNI", "Omnimon");
+    omnimon.card_kind = CardKind::Digimon;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(omnimon)
+        .build();
+    let target = {
+        let g = runner.game_mut();
+        let turn = g.turn_count;
+        let base_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BASE-OMNI")
+            .unwrap();
+        let top_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "T-G7-SELF-DIGI-RUNTIME")
+            .unwrap();
+        let base = CardSource::new(base_idx, 0, g.next_card_index());
+        let top = CardSource::new(top_idx, 0, g.next_card_index());
+        let mut permanent = Permanent::new(base, turn);
+        permanent.card_sources.push(top);
+        g.players[0].battle_area.push(permanent);
+        PermanentHandle {
+            player: 0,
+            index: (g.players[0].battle_area.len() - 1) as u8,
+        }
+    };
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(target),
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(runner.memory(), 1);
 }
 
 #[test]

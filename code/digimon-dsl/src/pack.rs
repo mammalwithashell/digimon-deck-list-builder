@@ -14,7 +14,7 @@ use crate::raw_rust_registry::RawRustRegistry;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
-pub const PACK_FORMAT_VERSION: &str = "0.2.0";
+pub const PACK_FORMAT_VERSION: &str = "0.4.0";
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {
