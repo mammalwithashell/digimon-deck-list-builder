@@ -57,3 +57,9 @@ These statuses are from the legacy Python QA lane. Rust YAML DSL readiness repor
 | [engine-api-reference.md](engine-api-reference.md) | Engine scripting API reference for card implementation agents |
 | [engine-gaps.md](engine-gaps.md) | Accumulated engine gaps found during reviews |
 | [dsl/bg-imperial.md](dsl/bg-imperial.md) | Rust YAML DSL readiness assessment for BG Imperial |
+| [dsl/2026-05-03-medusamon-cross-archetype-gaps.md](dsl/2026-05-03-medusamon-cross-archetype-gaps.md) | Medusamon reusable DSL/engine gap input for cross-archetype spec planning |
+| [dsl/2026-05-03-dna-omnimon-dsl-engine-gaps.md](dsl/2026-05-03-dna-omnimon-dsl-engine-gaps.md) | DNA Omnimon Rust DSL/engine gap source document for cross-archetype spec compilation |
+| [dsl/bg-imperial-cross-archetype-gaps-2026-05-03.md](dsl/bg-imperial-cross-archetype-gaps-2026-05-03.md) | BG Imperial Rust DSL/engine reusable gap inputs for cross-archetype spec compilation |
+| [dsl/rocks-gap-inputs-2026-05-03.md](dsl/rocks-gap-inputs-2026-05-03.md) | Rocks Rust DSL/engine reusable gap inputs for cross-archetype spec compilation |
+| [dsl/puppets-2026-05-03-engine-dsl-gaps.md](dsl/puppets-2026-05-03-engine-dsl-gaps.md) | Rust engine / DSL gap inventory for Puppets |
+| [dsl/royal-knights-2026-05-03-dsl-engine-gaps.md](dsl/royal-knights-2026-05-03-dsl-engine-gaps.md) | Royal Knights Rust DSL/engine gap rollup for cross-archetype spec planning |
