@@ -10,6 +10,7 @@ mod breeding_zone_movement;
 mod effect_digivolve_from_zones;
 mod effect_digivolve_union_zones;
 mod effect_initiated_dna_digivolve;
+mod effect_refiring;
 mod material_zone_select;
 mod override_persistence;
 mod place_under_permanent;

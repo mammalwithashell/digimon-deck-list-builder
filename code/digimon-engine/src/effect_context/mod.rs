@@ -27,6 +27,7 @@ use crate::card_source::CardHandle;
 use crate::combat::{AttackError, AttackResult};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
+use crate::effect::enumerate_refireable_effects;
 use crate::enums::{
     CardKind, DelayTrigger, EffectSourceKind, EffectTiming, Expiry, GamePhase, Keyword,
     ModifierType, PlaySource, PlayerId, StackPosition,
@@ -508,6 +509,11 @@ pub enum DelayCostStatus {
     Pending,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EffectRefireError {
+    InvalidTiming(String),
+}
+
 impl<'a> EffectContext<'a> {
     pub fn new(
         game: &'a mut Game,
@@ -535,6 +541,30 @@ impl<'a> EffectContext<'a> {
             override_selecting_player: None,
             cost_target_card: None,
             cost_target_from_hand: false,
+        }
+    }
+
+    pub fn refire_effect_from_permanent(
+        &mut self,
+        source: PermanentHandle,
+        timing_key: &str,
+        optional: bool,
+    ) -> Result<(), EffectRefireError> {
+        if timing_key != "when_digivolving" {
+            return Err(EffectRefireError::InvalidTiming(timing_key.to_string()));
+        }
+        let effects = enumerate_refireable_effects(self.game, source, timing_key);
+        match effects.as_slice() {
+            [] => Ok(()),
+            [effect] if !optional => {
+                self.game.run_refired_effect(effect.clone());
+                Ok(())
+            }
+            _ => {
+                self.game
+                    .install_refire_effect_selection(self.player, effects, optional);
+                Ok(())
+            }
         }
     }
 

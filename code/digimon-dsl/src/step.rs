@@ -154,6 +154,7 @@ pub enum StepSpec {
     // Combat / replacement process outcomes
     Battle(BattleArgs),
     MayAttackNow(MayAttackNowArgs),
+    RefireEffect(RefireEffectArgs),
     EndAttack(bool),
     CancelReplacement(EmptyArgs),
     HandleReplacement(EmptyArgs),
@@ -267,6 +268,7 @@ impl Serialize for StepSpec {
             // Combat / replacement process outcomes
             StepSpec::Battle(v) => kv!(s, "battle", v),
             StepSpec::MayAttackNow(v) => kv!(s, "may_attack_now", v),
+            StepSpec::RefireEffect(v) => kv!(s, "refire_effect", v),
             StepSpec::EndAttack(v) => kv!(s, "end_attack", v),
             StepSpec::CancelReplacement(v) => kv!(s, "cancel_replacement", v),
             StepSpec::HandleReplacement(v) => kv!(s, "handle_replacement", v),
@@ -408,6 +410,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Combat / replacement process outcomes
             "battle" => StepSpec::Battle(map.next_value()?),
             "may_attack_now" => StepSpec::MayAttackNow(map.next_value()?),
+            "refire_effect" => StepSpec::RefireEffect(map.next_value()?),
             "end_attack" => StepSpec::EndAttack(map.next_value()?),
             "cancel_replacement" => StepSpec::CancelReplacement(map.next_value()?),
             "handle_replacement" => StepSpec::HandleReplacement(map.next_value()?),
@@ -494,6 +497,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "optional",
                         "battle",
                         "may_attack_now",
+                        "refire_effect",
                         "end_attack",
                         "cancel_replacement",
                         "handle_replacement",
@@ -600,6 +604,15 @@ pub struct MayAttackNowArgs {
     pub optional: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RefireEffectArgs {
+    pub source: BindingRef,
+    pub timing: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
 }
 
 #[derive(

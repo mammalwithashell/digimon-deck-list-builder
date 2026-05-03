@@ -911,6 +911,11 @@ pub enum CompiledStep {
         optional: bool,
         prompt: Option<String>,
     },
+    RefireEffect {
+        source: CompiledBindingRef,
+        timing: String,
+        optional: bool,
+    },
     EndAttack {
         enabled: bool,
     },

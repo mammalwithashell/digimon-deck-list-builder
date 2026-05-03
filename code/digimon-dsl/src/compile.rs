@@ -1794,6 +1794,23 @@ fn compile_step(
             optional: a.optional,
             prompt: a.prompt.clone(),
         },
+        S::RefireEffect(a) => CompiledStep::RefireEffect {
+            source: compile_binding_ref(&a.source),
+            timing: if a.timing == "when_digivolving" {
+                a.timing.clone()
+            } else {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.refire_effect.timing"),
+                    message: format!(
+                        "refire_effect only supports timing: when_digivolving, got {}",
+                        a.timing
+                    ),
+                });
+                "when_digivolving".to_string()
+            },
+            optional: a.optional,
+        },
         S::EndAttack(enabled) => CompiledStep::EndAttack { enabled: *enabled },
         S::CancelReplacement(_) => CompiledStep::CancelReplacement,
         S::HandleReplacement(_) => CompiledStep::HandleReplacement,

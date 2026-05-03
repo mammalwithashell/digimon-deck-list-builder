@@ -43,6 +43,7 @@ pub type EffectReplacementConditionFn = Box<
 >;
 
 pub type ProcessFn = Box<dyn Fn(&mut EffectContext) + Send + Sync + 'static>;
+pub type EffectId = u8;
 pub type CostReductionFn = Box<dyn Fn(&EffectReadContext) -> i32 + Send + Sync + 'static>;
 pub type PayCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'static>;
 pub type DynamicModifierFn =
@@ -56,6 +57,18 @@ pub type LinkFilterFn =
 /// battle-area permanents can be deleted as the cost.
 pub type OverclockCostFilterFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReFireableEffect {
+    pub effect_id: EffectId,
+    pub source_card: CardHandle,
+    pub source: PermanentHandle,
+    pub source_kind: crate::enums::EffectSourceKind,
+    pub controller: crate::enums::PlayerId,
+    pub card_id: String,
+    pub timing: EffectTiming,
+    pub timing_key: String,
+}
 
 #[derive(Clone)]
 pub struct AltPathRegistrationEffect {
@@ -247,6 +260,25 @@ impl std::fmt::Debug for Effect {
 }
 
 impl Effect {
+    pub fn timing_key(&self) -> &'static str {
+        match self.timing {
+            EffectTiming::WhenDigivolving => "when_digivolving",
+            EffectTiming::OnPlay => "on_play",
+            EffectTiming::WhenAttacking => "when_attacking",
+            EffectTiming::OnDeletion => "on_deletion",
+            _ => "",
+        }
+    }
+
+    pub fn can_be_refired(&self) -> bool {
+        matches!(self.timing, EffectTiming::WhenDigivolving)
+            && self.when_digivolving
+            && !self.inherited
+            && !self.security
+            && !self.declarative
+            && !self.linked
+    }
+
     /// Builder constructor for an On Play effect.
     pub fn on_play(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnPlay).on_play_flag()
@@ -881,4 +913,50 @@ impl EffectBuilder {
 /// One struct per card_id; returns the card's effects parameterized by handle.
 pub trait CardEffect: Send + Sync {
     fn effects(&self, card: CardHandle) -> Vec<Effect>;
+}
+
+pub fn enumerate_refireable_effects(
+    game: &crate::game::Game,
+    source: PermanentHandle,
+    timing_key: &str,
+) -> Vec<ReFireableEffect> {
+    let Some(perm) = game
+        .players
+        .get(source.player as usize)
+        .and_then(|p| p.battle_area.get(source.index as usize))
+    else {
+        return Vec::new();
+    };
+    let top = perm.top_card();
+    let source_card = top.handle();
+    let card_id = top.card_id(&game.card_data).to_string();
+    let source_kind = match top.card_kind(&game.card_data) {
+        crate::enums::CardKind::Digimon
+        | crate::enums::CardKind::DigiEgg
+        | crate::enums::CardKind::Dual => crate::enums::EffectSourceKind::Digimon,
+        crate::enums::CardKind::Tamer => crate::enums::EffectSourceKind::Tamer,
+        crate::enums::CardKind::Option => crate::enums::EffectSourceKind::Option,
+        crate::enums::CardKind::Token => crate::enums::EffectSourceKind::Rule,
+    };
+
+    let Some(effects) = game.effects_for_card(&card_id, source_card) else {
+        return Vec::new();
+    };
+
+    effects
+        .iter()
+        .enumerate()
+        .filter(|(_, effect)| effect.timing_key() == timing_key)
+        .filter(|(_, effect)| effect.can_be_refired())
+        .map(|(slot, effect)| ReFireableEffect {
+            effect_id: slot as EffectId,
+            source_card,
+            source,
+            source_kind,
+            controller: source.player,
+            card_id: card_id.clone(),
+            timing: effect.timing,
+            timing_key: timing_key.to_string(),
+        })
+        .collect()
 }

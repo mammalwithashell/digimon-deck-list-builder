@@ -73,7 +73,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Player-scoped modifier registry (CannotPlayFromTrash, CannotPlayDigimonByEffect, OpponentCannotReduceDigivolveCost, IgnoreColorRequirement)](#player-scoped-modifier-registry-cannotplayfromtrash-cannotplaydigimonbyeffect-opponentcannotreducedigivolvecost-ignorecolorrequirement) | 🔴 | 6+ | `modifiers.rs`, `enums.rs`, `action/`, `effect_context.rs` |
 | [Option card play flow (resolve + trash vs. place-on-field; [Main]/[Security] activation) + Plug-In / Link mechanic](#option-card-play-flow-resolve--trash-vs-place-on-field-mainsecurity-activation--plug-in--link-mechanic) | 🔴 | 11 | `game.rs`, `effect.rs`, `effect_context.rs`, `action/` |
 | [Scheduled end-of-turn effect queue (for transient Options)](#scheduled-end-of-turn-effect-queue-for-transient-options) | ✅ | 1 | resolved in Group 5 Task 7 |
-| [Effect re-firing / cross-timing self-trigger](#effect-re-firing--cross-timing-self-trigger) | 🔴 | 1 | `effect_context.rs`, `effect_queue.rs` |
+| [Effect re-firing / cross-timing self-trigger](#effect-re-firing--cross-timing-self-trigger) | ✅ | 1 | resolved in Task 9 |
 | [Effect-initiated digivolve from non-hand source zones](#effect-initiated-digivolve-from-non-hand-source-zones) | ✅ | 4+ | resolved in Group 4 |
 | [Force-follow-up-attack / "may attack without suspending" script helpers](#force-follow-up-attack--may-attack-without-suspending-script-helpers) | 🟡 | 6 | immediate `may_attack_now` primitive resolved; persistent/cross-side variants remain |
 | [Trait-filter helpers on `CardSource` / `Permanent`](#trait-filter-helpers-on-cardsource--permanent) | 🟡 | pervasive | `card_source.rs`, `permanent.rs` |
@@ -456,14 +456,14 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** Couples with Option-card play-flow gap.
 
 ### Effect re-firing / cross-timing self-trigger
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED (Task 9, 2026-05-03)
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Dark Masters (2026-04-18)
 - **Card(s):** EX8-074 MedievalGallantmon — DNA Omnimon additionally surfaces a *related-but-distinct* "grant triggered ability to another permanent" need; see "Granted triggered ability — attach an `Effect` to another permanent" new entry below — Dark Masters adds: EX8-074 already canonical; reaffirms dependency on the OnAnyDigimonPlayed observer to fire the re-trigger. BT15-102 Apocalymon surfaces a sibling-but-distinct cross-card variant — see "Cross-card effect re-firing — activate a foreign card's [On Play] effect attributed to the source"
 - **Effect text:** "[All Turns] [Once Per Turn] When Digimon are played, you may activate 1 of this Digimon's [When Digivolving] effects."
-- **What's missing:** No API to invoke another of the source card's effects from within a `process` closure. `EffectContext` has mutation helpers but no `ctx.fire_effect_of_self(timing: EffectTiming)`.
-- **Suggested API shape:** `ctx.fire_effect_of_self(timing)` — looks up source card's effects via `CardEffectRegistry::get(card_id)`, filters by timing + matching condition, enqueues via `effect_queue`.
-- **Workaround:** Duplicating the [When Digivolving] body inline is brittle if the primary effect changes.
-- **Related:** None.
+- **Status:** Implemented for constrained permanent-sourced `WhenDigivolving` re-firing. `EffectContext::refire_effect_from_permanent(source, "when_digivolving")` enumerates safe refireable effects on the selected permanent, queues the exact effect slot through the normal `QueuedEffect` path, preserves `source_card` / `source_permanent` identity, and reuses existing once-per-turn accounting. DSL authors can use `refire_effect: { source: <binding>, timing: when_digivolving, optional: true|false }`.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- effect_refiring --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- effect_refiring --nocapture`.
+- **Remaining related blocker:** BT15-102-style foreign-card `[On Play]` activation is still tracked separately under "Cross-card effect re-firing — activate a foreign card's [On Play] effect attributed to the source".
+- **Related:** Cross-card effect re-firing — activate a foreign card's [On Play] effect attributed to the source.
 
 ### Effect-initiated digivolve from non-hand source zones
 - **Severity:** ✅ RESOLVED (Group 4, 2026-05-02)

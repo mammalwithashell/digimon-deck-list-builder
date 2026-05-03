@@ -7,6 +7,7 @@ pub mod as_selecting_player;
 pub mod combat;
 pub mod control_flow;
 pub mod draw;
+pub mod effects;
 pub mod iteration;
 pub mod memory;
 pub mod modifiers;
@@ -364,6 +365,9 @@ pub fn run_step_with_runtime(
         return;
     }
     if combat::try_run(step, ctx, bindings) {
+        return;
+    }
+    if effects::try_run(step, ctx, bindings) {
         return;
     }
     if replacement_outcome::try_run(step, ctx, bindings) {
