@@ -30,6 +30,8 @@
 //!   controller (excludes the target itself).
 //! - `DigivolutionColorCount` — distinct colors across all `CardSource`s
 //!   in the target's stack.
+//! - `SameLevelPairsInSources` — counts source cards below the target's top
+//!   card by level and sums `count / 2` for each level bucket.
 //! - `CardCountInZoneScoped` — number of cards in the selected zone for
 //!   the selected player scope. The legacy payload-less variant returns
 //!   0 for compatibility with older malformed compiled packs.
@@ -43,6 +45,7 @@
 //!   — e.g. a Tamer or Option permanent — are skipped). The legacy
 //!   payload-less aggregate variant scans the controller for compatibility.
 
+use std::collections::BTreeMap;
 use std::sync::OnceLock;
 
 use digimon_dsl::compiled::{
@@ -320,6 +323,9 @@ fn evaluate_per(
             }
             seen.count_ones() as i32
         }
+        CompiledPerSelector::SameLevelPairsInSources => target_permanent(ctx, target)
+            .map(|perm| same_level_pairs_in_sources(perm, &ctx.game.card_data))
+            .unwrap_or(0),
         CompiledPerSelector::SharedTrashCount { bucket } => {
             bucket_count(shared_trash_count(ctx), *bucket)
         }
@@ -373,6 +379,9 @@ fn evaluate_per_read(
             }
             seen.count_ones() as i32
         }
+        CompiledPerSelector::SameLevelPairsInSources => target_permanent_read(ctx, target)
+            .map(|perm| same_level_pairs_in_sources(perm, ctx.card_data()))
+            .unwrap_or(0),
         CompiledPerSelector::SharedTrashCount { bucket } => {
             bucket_count(shared_trash_count_read(ctx), *bucket)
         }
@@ -414,6 +423,16 @@ fn target_permanent_read<'a>(
         .player(target.player)
         .battle_area
         .get(target.index as usize)
+}
+
+fn same_level_pairs_in_sources(perm: &Permanent, data: &[crate::card_data::CardData]) -> i32 {
+    let mut counts: BTreeMap<u8, i32> = BTreeMap::new();
+    for source in perm.card_sources.iter().rev().skip(1) {
+        if let Some(level) = source.level(data) {
+            *counts.entry(level).or_default() += 1;
+        }
+    }
+    counts.values().map(|count| count / 2).sum()
 }
 
 fn players_for_ref(of: CompiledPlayerRef, ctx: &EffectContext<'_>) -> Vec<PlayerId> {
@@ -710,6 +729,7 @@ fn predicate_has_card_zone_unsupported_leaf(pred: &CompiledPredicate) -> bool {
     let has_permanent_only_leaf = pred.dp_eq.is_some()
         || pred.dp_lte.is_some()
         || pred.dp_gte.is_some()
+        || pred.level_matches_aggregate.is_some()
         || pred.stack_size_lte.is_some()
         || pred.stack_size_gte.is_some()
         || pred.materials_count_lte.is_some()

@@ -393,6 +393,20 @@ fn validate_predicate(
             });
         }
     }
+    if let Some(level_aggregate) = pred.level_matches_aggregate {
+        if !matches!(
+            level_aggregate.selector,
+            crate::formula::AggregateSelector::LowestLevel
+                | crate::formula::AggregateSelector::HighestLevel
+        ) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.level_matches_aggregate.selector"),
+                message: "level_matches_aggregate selector must be lowest_level or highest_level"
+                    .into(),
+            });
+        }
+    }
     for (i, sub) in pred.all_of.iter().enumerate() {
         validate_predicate(sub, &format!("{prefix}.all_of[{i}]"), card_id, ctx, errors);
     }
@@ -1009,5 +1023,32 @@ effects:
         assert!(errs
             .iter()
             .any(|e| e.message.contains("unregistered_filtered_formula_fn")));
+    }
+
+    #[test]
+    fn level_matches_aggregate_rejects_dp_aggregate_selector() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: option
+color: [red]
+cost: 3
+effects:
+  - when: main_from_hand
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          prompt: Pick
+          filter:
+            level_matches_aggregate:
+              selector: lowest_dp
+              of: opponent
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs
+            .iter()
+            .any(|e| e.path.contains("level_matches_aggregate.selector")));
     }
 }

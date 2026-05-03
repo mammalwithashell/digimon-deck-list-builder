@@ -14,6 +14,8 @@ use crate::raw_rust_registry::RawRustRegistry;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeSet;
 
+pub const PACK_FORMAT_VERSION: &str = "0.2.0";
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CardPack {
     pub manifest: PackManifest,
@@ -51,7 +53,7 @@ impl CardPack {
         Self {
             manifest: PackManifest {
                 pack_id: pack_id.into(),
-                pack_version: env!("CARGO_PKG_VERSION").to_string(),
+                pack_version: PACK_FORMAT_VERSION.to_string(),
                 min_engine_version: "0.1.0".into(),
                 max_engine_version: None,
                 required_raw_rust_fns: normalize_raw_rust_names(required_raw_rust_fns),
@@ -407,6 +409,7 @@ mod tests {
     #[test]
     fn empty_pack_round_trips() {
         let pack = CardPack::new("test", vec![]);
+        assert_eq!(pack.manifest.pack_version, PACK_FORMAT_VERSION);
         let bytes = pack.to_bytes().unwrap();
         let reparsed = CardPack::from_bytes(&bytes).unwrap();
         assert_eq!(reparsed.manifest.pack_id, "test");

@@ -121,6 +121,7 @@ pub enum PerSelector {
     StackSize,
     AllyCount,
     DigivolutionColorCount,
+    SameLevelPairsInSources,
     SharedTrashCount {
         #[serde(default, skip_serializing_if = "Option::is_none")]
         bucket: Option<u32>,
@@ -138,6 +139,7 @@ impl Serialize for PerSelector {
             Self::StackSize => serializer.serialize_str("stack_size"),
             Self::AllyCount => serializer.serialize_str("ally_count"),
             Self::DigivolutionColorCount => serializer.serialize_str("digivolution_color_count"),
+            Self::SameLevelPairsInSources => serializer.serialize_str("same_level_pairs_in_sources"),
             Self::SharedTrashCount { bucket } => {
                 let mut outer = serializer.serialize_map(Some(1))?;
                 #[derive(Serialize)]

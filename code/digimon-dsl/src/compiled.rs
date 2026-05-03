@@ -231,6 +231,7 @@ pub struct CompiledPredicate {
     pub none_of: Vec<CompiledPredicate>,
     pub not: Option<Box<CompiledPredicate>>,
     pub has_alt_path: Option<String>,
+    pub level_matches_aggregate: Option<(CompiledAggregateSelector, CompiledPlayerRef)>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -302,6 +303,7 @@ pub enum CompiledPerSelector {
     StackSize,
     AllyCount,
     DigivolutionColorCount,
+    SameLevelPairsInSources,
     SharedTrashCount {
         bucket: Option<u32>,
     },

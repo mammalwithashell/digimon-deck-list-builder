@@ -1,9 +1,9 @@
 //! Predicate evaluator. Phase 1c Task 3: leaf fields + combinators + existentials.
 
 use digimon_dsl::compiled::{
-    CompiledBindingCompare, CompiledCardKind, CompiledColor, CompiledDpConstraint,
-    CompiledExistential, CompiledPlayerRef, CompiledPredicate, CompiledReplacementCause,
-    CompiledZone,
+    CompiledAggregateSelector, CompiledBindingCompare, CompiledCardKind, CompiledColor,
+    CompiledDpConstraint, CompiledExistential, CompiledPlayerRef, CompiledPredicate,
+    CompiledReplacementCause, CompiledZone,
 };
 
 use crate::card_source::CardHandle;
@@ -370,6 +370,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.level_eq.is_none()
         && pred.level_lte.is_none()
         && pred.level_gte.is_none()
+        && pred.level_matches_aggregate.is_none()
         && pred.color_is.is_none()
         && pred.color_only.is_none()
         && pred.color_matches_any_field_digimon.is_none()
@@ -687,6 +688,9 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    if !eval_level_aggregate_match(pred, rctx, perm.level(rctx.card_data())) {
+        return false;
+    }
     if !eval_dp_constraints(pred, rctx, handle, bindings) {
         return false;
     }
@@ -763,6 +767,44 @@ fn eval_dp_constraints(
     true
 }
 
+fn eval_level_aggregate_match(
+    pred: &CompiledPredicate,
+    rctx: &EffectReadContext<'_>,
+    level: Option<u8>,
+) -> bool {
+    let Some((selector, of)) = pred.level_matches_aggregate else {
+        return true;
+    };
+    let Some(level) = level else {
+        return false;
+    };
+    let Some(aggregate_level) = aggregate_level(selector, of, rctx) else {
+        return false;
+    };
+    i32::from(level) == aggregate_level
+}
+
+fn aggregate_level(
+    selector: CompiledAggregateSelector,
+    of: CompiledPlayerRef,
+    rctx: &EffectReadContext<'_>,
+) -> Option<i32> {
+    let levels = existential_players(of, rctx)
+        .into_iter()
+        .flat_map(|player| {
+            rctx.game
+                .player(player)
+                .battle_area
+                .iter()
+                .filter_map(|perm| perm.level(rctx.card_data()).map(i32::from))
+        });
+    match selector {
+        CompiledAggregateSelector::LowestLevel => levels.min(),
+        CompiledAggregateSelector::HighestLevel => levels.max(),
+        CompiledAggregateSelector::LowestDp | CompiledAggregateSelector::HighestDp => None,
+    }
+}
+
 fn eval_dp_constraint(
     constraint: &CompiledDpConstraint,
     rctx: &EffectReadContext<'_>,
@@ -806,6 +848,9 @@ fn eval_breeding_permanent_fields(
         if !matches_kind {
             return false;
         }
+    }
+    if !eval_level_aggregate_match(pred, rctx, perm.level(rctx.card_data())) {
+        return false;
     }
     let handle = PermanentHandle {
         player,

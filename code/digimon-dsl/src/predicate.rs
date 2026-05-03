@@ -14,7 +14,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::common::PlayerRef;
-use crate::formula::FormulaSpec;
+use crate::formula::{AggregateSelector, FormulaSpec};
 use crate::spec::{CardKind, ColorSpec};
 
 #[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
@@ -29,6 +29,8 @@ pub struct PredicateSpec {
     pub level_lte: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level_gte: Option<u8>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level_matches_aggregate: Option<LevelAggregatePredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_is: Option<ColorSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -234,6 +236,18 @@ impl PlayerRefSelector {
             Self::Scoped { of } => of,
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct LevelAggregatePredicate {
+    pub selector: AggregateSelector,
+    #[serde(default = "default_level_aggregate_of")]
+    pub of: PlayerRef,
+}
+
+fn default_level_aggregate_of() -> PlayerRef {
+    PlayerRef::You
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

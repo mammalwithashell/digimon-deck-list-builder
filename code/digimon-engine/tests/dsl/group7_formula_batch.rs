@@ -1,7 +1,7 @@
 use digimon_dsl::compiled::{
-    CompiledBindingRef, CompiledCardKind, CompiledClause, CompiledDeclarativeClause,
-    CompiledDpConstraint, CompiledFormula, CompiledModifierValue, CompiledPerSelector,
-    CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledZone,
+    CompiledAggregateSelector, CompiledBindingRef, CompiledCardKind, CompiledClause,
+    CompiledDeclarativeClause, CompiledDpConstraint, CompiledFormula, CompiledModifierValue,
+    CompiledPerSelector, CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledZone,
 };
 use digimon_dsl::formula::{CardCountInZoneSpec, FormulaSpec, PerSelector};
 use digimon_dsl::predicate::Zone;
@@ -10,6 +10,7 @@ use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::formula_eval;
+use digimon_engine::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use digimon_engine::dsl_cards::step::run_steps;
 use digimon_engine::effect_context::{EffectContext, EffectReadContext};
 use digimon_engine::enums::{CardKind, Expiry, ModifierType, PlayerId};
@@ -35,6 +36,12 @@ fn tamer_card(id: &str) -> CardData {
     card
 }
 
+fn digimon_card_with_level(id: &str, dp: i32, level: u8) -> CardData {
+    let mut card = digimon_card(id, dp);
+    card.level = Some(level);
+    card
+}
+
 fn push_card_to_trash(runner: &mut DebugRunner, player: PlayerId, card_id: &str) {
     let data_idx = runner
         .game
@@ -46,6 +53,69 @@ fn push_card_to_trash(runner: &mut DebugRunner, player: PlayerId, card_id: &str)
     runner.game.players[player as usize]
         .trash
         .push(CardSource::new(data_idx, player, next));
+}
+
+#[test]
+fn level_is_lowest_among_opponent_digimon_filters_only_lowest_level_digimon() {
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon_card_with_level("SRC", 3000, 3))
+        .add_card(digimon_card_with_level("OPP-LOW", 3000, 3))
+        .add_card(digimon_card_with_level("OPP-HIGH", 12000, 6))
+        .add_card(tamer_card("OPP-TAMER"))
+        .build();
+    let source = runner.place_on_field(0, "SRC", None);
+    let low = runner.place_on_field(1, "OPP-LOW", None);
+    let high = runner.place_on_field(1, "OPP-HIGH", None);
+    let tamer = runner.place_on_field(1, "OPP-TAMER", None);
+    let src_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let rctx = EffectReadContext::new(&runner.game, src_card, Some(source), 0);
+    let predicate = CompiledPredicate {
+        level_matches_aggregate: Some((
+            CompiledAggregateSelector::LowestLevel,
+            CompiledPlayerRef::Opponent,
+        )),
+        ..Default::default()
+    };
+
+    assert!(eval_predicate(
+        &predicate,
+        &rctx,
+        PredicateSubject::Permanent(low)
+    ));
+    assert!(!eval_predicate(
+        &predicate,
+        &rctx,
+        PredicateSubject::Permanent(high)
+    ));
+    assert!(!eval_predicate(
+        &predicate,
+        &rctx,
+        PredicateSubject::Permanent(tamer)
+    ));
+}
+
+#[test]
+fn same_level_pair_count_formula_reads_source_stack_levels() {
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon_card_with_level("SRC-4A", 3000, 4))
+        .add_card(digimon_card_with_level("SRC-4B", 3000, 4))
+        .add_card(digimon_card_with_level("SRC-5", 5000, 5))
+        .add_card(digimon_card_with_level("TOP", 12000, 6))
+        .build();
+    let target = runner.place_stack(0, &["SRC-4A", "SRC-4B", "SRC-5", "TOP"]);
+    let src_card = runner.game.players[0].battle_area[target.index as usize]
+        .top_card()
+        .handle();
+    let ctx = EffectContext::new(&mut runner.game, src_card, Some(target), 0);
+    let formula = CompiledFormula::BasePerDelta {
+        base: 0,
+        per: CompiledPerSelector::SameLevelPairsInSources,
+        delta: 1,
+    };
+
+    assert_eq!(formula_eval::evaluate(&formula, &ctx, target), 1);
 }
 
 #[test]

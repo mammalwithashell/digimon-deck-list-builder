@@ -85,8 +85,9 @@ Format per entry:
 - Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- effect_digivolve_from_zones`, plus `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group4_zone_movement`.
 
 ## BT24-080 — delete all opponent Digimon with the lowest level
+- Status: PARTIALLY RESOLVED for the reusable lowest-level permanent predicate on 2026-05-02. `CompiledPredicate::level_matches_aggregate` can match permanents whose top card level equals `CompiledAggregateSelector::LowestLevel` for a player scope, skipping Tamers/Options with no top-card level. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- level_is_lowest_among_opponent_digimon_filters_only_lowest_level_digimon`.
 - Effect text: "[On Play] [When Digivolving] [On Deletion] Delete all of your opponent's lowest level Digimon."
-- Missing DSL verb / step kind / predicate: aggregate minimum-level predicate plus mass delete. `for_each` can delete all permanents matching a predicate, but the DSL has no predicate for "level equals the minimum level among opponent Digimon."
+- Remaining DSL verb / step kind / predicate: card-specific authoring still needs to wire the aggregate predicate through the surrounding delete-all flow. Repeat target-selection blockers elsewhere are unrelated and remain open.
 - Lowers to engine API: engine-side iteration over opponent battle-area permanents plus `delete_permanent` is sufficient once the minimum-level candidate set can be computed.
 - Suggested DSL syntax:
   ```yaml
@@ -210,8 +211,9 @@ Format per entry:
 - First reported: 2026-04-28
 
 ## BT22-015 — count same-level pairs in own stack
+- Status: PARTIALLY RESOLVED for the reusable same-level source pair formula on 2026-05-02. `CompiledPerSelector::SameLevelPairsInSources` counts source cards below the top card by level and sums `count / 2` per level bucket. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- same_level_pair_count_formula_reads_source_stack_levels`.
 - Effect text: "[When Digivolving] For every 2 cards with the same level in this Digimon's digivolution cards, return 1 of your opponent's Digimon to the bottom of the deck."
-- Missing DSL verb / step kind / predicate: Formula support for "number of same-level pairs in this Digimon's digivolution cards" and repeat-count target selection derived from that formula.
+- Remaining DSL verb / step kind / predicate: repeat-count target selection derived from a formula is still open.
 - Lowers to engine API: stack inspection plus repeated `return_to_deck(..., DeckEnd::Bottom)` after each player-visible target selection.
 - Suggested DSL syntax: `formula: { aggregate: same_level_pairs, zone: self_sources }` feeding `repeat: <formula>` around a `select_opponent_permanent` + `return_to_deck_bottom` step.
 - First reported: 2026-04-28

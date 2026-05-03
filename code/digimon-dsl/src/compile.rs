@@ -246,6 +246,7 @@ fn compile_per_selector(
         S::StackSize => CompiledPerSelector::StackSize,
         S::AllyCount => CompiledPerSelector::AllyCount,
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
+        S::SameLevelPairsInSources => CompiledPerSelector::SameLevelPairsInSources,
         S::SharedTrashCount { bucket } => CompiledPerSelector::SharedTrashCount { bucket: *bucket },
         S::CardCountInZone(spec) => {
             if let Some(filter) = &spec.filter {
@@ -392,6 +393,12 @@ fn compile_predicate(
         level_eq: p.level_eq,
         level_lte: p.level_lte,
         level_gte: p.level_gte,
+        level_matches_aggregate: p.level_matches_aggregate.map(|m| {
+            (
+                compile_aggregate_selector(m.selector),
+                compile_player_ref(m.of),
+            )
+        }),
         color_is: p.color_is.map(compile_color),
         color_only: p
             .color_only
