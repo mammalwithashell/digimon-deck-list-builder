@@ -58,3 +58,4 @@ These statuses are from the legacy Python QA lane. Rust YAML DSL readiness repor
 | [engine-gaps.md](engine-gaps.md) | Accumulated engine gaps found during reviews |
 | [dsl/bg-imperial.md](dsl/bg-imperial.md) | Rust YAML DSL readiness assessment for BG Imperial |
 | [dsl/rocks-gap-inputs-2026-05-03.md](dsl/rocks-gap-inputs-2026-05-03.md) | Rocks Rust DSL/engine reusable gap inputs for cross-archetype spec compilation |
+| [dsl/puppets-2026-05-03-engine-dsl-gaps.md](dsl/puppets-2026-05-03-engine-dsl-gaps.md) | Rust engine / DSL gap inventory for Puppets |

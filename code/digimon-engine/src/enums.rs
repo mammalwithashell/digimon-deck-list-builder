@@ -487,6 +487,7 @@ pub enum ModifierType {
     // Attack
     CannotAttack,
     CannotAttackPlayer,
+    VortexCanAttackPlayer,
     CanAttackUnsuspended,
     CanAttackActivePlayer,
     CannotAttackTarget,
