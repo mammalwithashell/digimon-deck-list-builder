@@ -6,7 +6,7 @@
 //! `try_replace` dispatcher, candidate collection/layering, and the
 //! `PendingSelection::Replacement` installer for optional replacements.
 
-use crate::action::space::REPLACEMENT_ACCEPT;
+use crate::action::space::{BREEDING_TARGET, REPLACEMENT_ACCEPT};
 use crate::card_source::CardHandle;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{EffectTiming, GamePhase, PlayerId, Zone};
@@ -378,6 +378,16 @@ fn collect_candidates(
                 // authors are expected to always attach one).
                 continue;
             }
+            if effect.max_per_turn > 0 {
+                let Some(activation_count) =
+                    source_permanent_activation_count(game, h, source_card, slot as u8)
+                else {
+                    continue;
+                };
+                if activation_count >= effect.max_per_turn {
+                    continue;
+                }
+            }
             if let Some(cond) = &effect.condition {
                 let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
                     .with_replacement_context(
@@ -660,6 +670,21 @@ fn run_candidate_inner(
         return ReplacementOutcome::None;
     };
 
+    if effect.max_per_turn > 0 {
+        let Some(source_permanent) = source_permanent else {
+            return ReplacementOutcome::None;
+        };
+        let Some(activation_count) =
+            source_permanent_activation_count(game, source_permanent, source_card, effect_slot)
+        else {
+            return ReplacementOutcome::None;
+        };
+        if activation_count >= effect.max_per_turn {
+            return ReplacementOutcome::None;
+        }
+        record_source_permanent_activation(game, source_permanent, source_card, effect_slot);
+    }
+
     // Build the EffectContext then the ReplacementContext in an inner scope
     // so their borrows on `game` end before the post-process hook reads
     // `game.pending_selection` and writes `game.parked_replacement`.
@@ -722,6 +747,50 @@ fn run_candidate_inner(
     }
 
     outcome
+}
+
+fn source_permanent_activation_count(
+    game: &crate::game::Game,
+    handle: PermanentHandle,
+    source_card: CardHandle,
+    effect_slot: u8,
+) -> Option<u8> {
+    if handle.index == BREEDING_TARGET as u8 {
+        return game
+            .players
+            .get(handle.player as usize)
+            .and_then(|p| p.breeding_area.as_ref())
+            .map(|perm| perm.activation_count(source_card, effect_slot));
+    }
+    game.players
+        .get(handle.player as usize)
+        .and_then(|p| p.battle_area.get(handle.index as usize))
+        .map(|perm| perm.activation_count(source_card, effect_slot))
+}
+
+fn record_source_permanent_activation(
+    game: &mut crate::game::Game,
+    handle: PermanentHandle,
+    source_card: CardHandle,
+    effect_slot: u8,
+) {
+    if handle.index == BREEDING_TARGET as u8 {
+        if let Some(perm) = game
+            .players
+            .get_mut(handle.player as usize)
+            .and_then(|p| p.breeding_area.as_mut())
+        {
+            perm.record_activation(source_card, effect_slot);
+        }
+        return;
+    }
+    if let Some(perm) = game
+        .players
+        .get_mut(handle.player as usize)
+        .and_then(|p| p.battle_area.get_mut(handle.index as usize))
+    {
+        perm.record_activation(source_card, effect_slot);
+    }
 }
 
 /// Install a `PendingSelection::Replacement` prompt for an optional

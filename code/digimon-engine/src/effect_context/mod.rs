@@ -1045,6 +1045,42 @@ impl<'a> EffectContext<'a> {
         self.cancel_leave();
     }
 
+    pub fn trash_top_security_and_cancel_current_replacement(&mut self, player: PlayerId) -> bool {
+        if self.trash_top_security(player) {
+            if self.game.parked_replacement.is_some() {
+                self.cancel_current_replacement();
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn place_sourceless_permanent_bottom_security_and_cancel_current_replacement(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+    ) -> bool {
+        if self
+            .game
+            .modifiers
+            .player_has(self.player, ModifierType::CannotAddSecurityByEffect)
+        {
+            return false;
+        }
+        if self
+            .game
+            .place_sourceless_permanent_on_security_bottom(player, target, self.player)
+        {
+            if self.game.parked_replacement.is_some() {
+                self.cancel_current_replacement();
+            }
+            true
+        } else {
+            false
+        }
+    }
+
     /// Mark the parked replacement as custom-handled — the process body has
     /// already mutated state and the original event should be skipped.
     /// Distinct from `cancel_leave` only at the doc level; both result in
@@ -1374,8 +1410,9 @@ impl<'a> EffectContext<'a> {
         card: crate::card_source::CardSource,
         destination: crate::selection::SecurityRemovalDestination,
     ) {
+        let observer_player = self.game.next_clockwise(defender);
         self.game
-            .fire_effect_security_removal(defender, self.player, card, destination);
+            .fire_effect_security_removal(defender, observer_player, card, destination);
     }
 
     // ─── Field mutations ──────────────────────────────────────────────
@@ -1617,6 +1654,20 @@ impl<'a> EffectContext<'a> {
             crate::selection::SecurityRemovalDestination::Hand(owner),
         );
         true
+    }
+
+    /// Move the top card of `player`'s security stack to its owner's hand.
+    pub fn add_top_security_to_hand(&mut self, player: PlayerId) -> bool {
+        let Some(card) = self
+            .game
+            .player(player)
+            .security
+            .last()
+            .map(|card| card.handle())
+        else {
+            return false;
+        };
+        self.add_to_hand_from_security(player, card)
     }
 
     /// Reveal up to `n` cards from the top of `player`'s deck. See
@@ -3007,6 +3058,24 @@ impl<'a> EffectContext<'a> {
         }
         self.game
             .place_on_security_observed(player, source, position, face_up, self.player)
+    }
+
+    /// Recover up to `count` cards from `player`'s deck to the top of security.
+    pub fn recover_from_deck(&mut self, player: PlayerId, count: u8) -> u8 {
+        let mut recovered = 0;
+        for _ in 0..count {
+            if self.place_on_security(
+                player,
+                crate::enums::CardSourceRef::DeckTop(player),
+                crate::enums::StackPosition::Top,
+                false,
+            ) {
+                recovered += 1;
+            } else {
+                break;
+            }
+        }
+        recovered
     }
 
     // ─── Combat mutations (Phase 9 Task 2) ────────────────────────────

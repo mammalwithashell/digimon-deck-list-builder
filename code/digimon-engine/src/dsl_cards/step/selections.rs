@@ -42,6 +42,7 @@ fn collect_matching_permanents(
     ctx: &EffectContext<'_>,
     player: u8,
     filter: &CompiledPredicate,
+    bindings: Option<&Bindings>,
 ) -> Vec<PermanentHandle> {
     let read = ctx.as_read();
     let mut handles = Vec::new();
@@ -50,7 +51,12 @@ fn collect_matching_permanents(
             player,
             index: index as u8,
         };
-        if eval_predicate(filter, &read, PredicateSubject::Permanent(handle)) {
+        if eval_predicate_with_bindings(
+            filter,
+            &read,
+            PredicateSubject::Permanent(handle),
+            bindings,
+        ) {
             handles.push(handle);
         }
     }
@@ -61,6 +67,7 @@ fn collect_matching_any_permanents(
     ctx: &EffectContext<'_>,
     excluded: Option<PermanentHandle>,
     filter: &CompiledPredicate,
+    bindings: Option<&Bindings>,
 ) -> Vec<PermanentHandle> {
     let read = ctx.as_read();
     let mut handles = Vec::new();
@@ -74,7 +81,12 @@ fn collect_matching_any_permanents(
             if Some(handle) == excluded {
                 continue;
             }
-            if eval_predicate(filter, &read, PredicateSubject::Permanent(handle)) {
+            if eval_predicate_with_bindings(
+                filter,
+                &read,
+                PredicateSubject::Permanent(handle),
+                bindings,
+            ) {
                 handles.push(handle);
             }
         }
@@ -753,7 +765,7 @@ fn install_select_own_permanent(
     // result (e.g. "kind: token" with no tokens on field) short-circuits
     // without installing a PendingSelection. Mirrors install_select_any_permanent.
     let target_player = ctx.player;
-    let candidates = collect_matching_permanents(ctx, target_player, &filter);
+    let candidates = collect_matching_permanents(ctx, target_player, &filter, Some(&bindings));
     let selected_dp = select_dp_extreme(ctx.game, &candidates, selector);
     if candidates.is_empty() {
         return;
@@ -765,6 +777,7 @@ fn install_select_own_permanent(
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
     let player = ctx.player;
+    let filter_bindings = bindings.clone();
     ctx.select_own_permanent(
         &prompt,
         optional,
@@ -776,8 +789,12 @@ fn install_select_own_permanent(
                 source_kind,
                 player,
             );
-            eval_predicate(&filter, &read_ctx, PredicateSubject::Permanent(handle))
-                && matches_selected_dp(game, handle, selected_dp)
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Permanent(handle),
+                Some(&filter_bindings),
+            ) && matches_selected_dp(game, handle, selected_dp)
         },
         move |cb_ctx, handle: PermanentHandle| {
             let mut b = bindings.clone();
@@ -803,7 +820,7 @@ fn install_select_opponent_permanent(
     // Pre-filter candidates using the compiled predicate so that an empty
     // result short-circuits without installing a PendingSelection.
     let opponent = ctx.game.next_clockwise(ctx.player);
-    let candidates: Vec<_> = collect_matching_permanents(ctx, opponent, &filter)
+    let candidates: Vec<_> = collect_matching_permanents(ctx, opponent, &filter, Some(&bindings))
         .into_iter()
         .filter(|handle| !ctx.game.progress_excludes(*handle, Some(ctx.player)))
         .collect();
@@ -818,6 +835,7 @@ fn install_select_opponent_permanent(
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
     let player = ctx.player;
+    let filter_bindings = bindings.clone();
     ctx.select_opponent_permanent(
         &prompt,
         optional,
@@ -830,7 +848,12 @@ fn install_select_opponent_permanent(
                 player,
             );
             !game.progress_excludes(handle, Some(player))
-                && eval_predicate(&filter, &read_ctx, PredicateSubject::Permanent(handle))
+                && eval_predicate_with_bindings(
+                    &filter,
+                    &read_ctx,
+                    PredicateSubject::Permanent(handle),
+                    Some(&filter_bindings),
+                )
                 && matches_selected_dp(game, handle, selected_dp)
         },
         move |cb_ctx, handle: PermanentHandle| {
@@ -858,7 +881,7 @@ fn install_select_any_permanent(
 ) {
     use crate::action::space::encode_attack;
 
-    let handles = collect_matching_any_permanents(ctx, excluded, &filter);
+    let handles = collect_matching_any_permanents(ctx, excluded, &filter, Some(&bindings));
     let selected_dp = select_dp_extreme(ctx.game, &handles, selector);
     let candidates: Vec<(u16, PermanentHandle)> = handles
         .into_iter()

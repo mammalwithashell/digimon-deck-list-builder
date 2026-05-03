@@ -16,7 +16,7 @@ The archetype is blocked primarily by missing card YAML and card-specific tests,
 |---|---|---|
 | Top-level authored DNA `alt_paths` populate runtime `CardData.dna_costs` | resolved as reusable capability | `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action authored_dna_alt_path_makes_dna_action_legal_for_bt20_016` |
 | Partition source requirements and replacement-window source selection | resolved as reusable engine capability | `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements bt16_025_partition` |
-| Delay-as-deletion-replacement | resolved as reusable engine capability | `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow bt17_097_delay` |
+| Delay-as-deletion-replacement | resolved as reusable engine capability; BT17-097 Delay replacement prompt/continuation verified 2026-05-03 | `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- replacement_integration::bt17_097 --nocapture` |
 | Start-of-your-next-turn Delay timing | resolved as reusable timing capability | `docs/RUST_ENGINE_GAPS.md` Group 5 closure notes |
 | Source-parametric effect digivolve and selected security-to-hand | resolved as reusable movement capability | `docs/RUST_ENGINE_GAPS.md` Group 4 closure notes |
 
@@ -30,7 +30,7 @@ These are needed to make BG Imperial playable but should not become new shared g
 | Searcher rookies and inherited end-of-turn DNA | `BT12-021`, `BT12-047` | Author YAML using reveal/add and inherited DNA registration; add card tests |
 | Normal DNA Lv.5s | `ST9-05`, `BT12-028`, `BT16-025` | Author DNA `alt_paths`, When Digivolving/Attacking clauses, and DNA-origin tests |
 | Imperialdramon boss line | `ST9-06`, `BT12-031`, `BT16-027`, `BT16-028`, `BT20-020`, `BT17-077` | Author production YAML and card tests around source counts, source names, ACE/Blast, and security/trash movement |
-| Tamers/options with mostly known primitives | `BT3-093`, `LM-030`, `BT17-097` | Replace fixtures/placeholders with full printed behavior and regressions |
+| Tamers/options with mostly known primitives | `BT3-093`, `LM-030`, `BT17-097` | BT17-097 Delay replacement continuation is fixed/verified; security Tamer-play production authoring remains open until production YAML and card-level tests prove it. |
 
 ## Remaining Reusable Gap Candidates
 
@@ -97,7 +97,7 @@ These are needed to make BG Imperial playable but should not become new shared g
 ### G-BG-06: Hand/trash union-zone play or digivolve choices
 
 - **Type:** `dsl-gap`
-- **Blocks:** `BT17-097` security effect if authored literally; related to many option/security effects
+- **Blocks:** `BT17-097` security Tamer-play effect if authored literally; related to many option/security effects. This does not block the already verified BT17-097 Delay replacement continuation.
 - **Cross-archetype value:** Many security and option effects let the player choose a card from hand or trash, then play/digivolve it.
 - **Printed behavior:** `BT17-097` security effect plays 1 Tamer card with `Davis Motomiya` or `Ken Ichijoji` in its name from hand or trash, then places the option in battle area.
 - **Missing capability:** A first-class union-zone selector that surfaces hand and trash candidates in one pending choice while preserving zone-specific movement semantics.
@@ -105,6 +105,7 @@ These are needed to make BG Imperial playable but should not become new shared g
 - **Spec should cover:** candidate identity includes zone, PASS behavior, ownership routing, and follow-up placement of the resolving option.
 - **First test:** Put one valid Davis/Ken Tamer in hand and one in trash, resolve the security effect, and assert both candidates appear in the same pending selection.
 - **Likely files:** `code/digimon-engine/src/selection.rs`, `code/digimon-engine/src/action/`, `code/digimon-engine/src/effect_context/`, `code/digimon-dsl/src/step.rs`.
+- **Updated 2026-05-03:** Keep this open for BT17-097 security Tamer play. The passing `replacement_integration::bt17_097*` option-flow tests verify Delay replacement prompt/continuation only; this plan did not prove production security YAML or behavioral tests for the Tamer play clause.
 
 ## Cross-Archetype Spec Compile Notes
 

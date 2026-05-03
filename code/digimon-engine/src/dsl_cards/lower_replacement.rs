@@ -2,23 +2,23 @@
 //! `Effect`.
 
 use digimon_dsl::compiled::{
-    CompiledBindingRef, CompiledCostDelta, CompiledPlayerRef, CompiledPredicate, CompiledScope,
-    CompiledStep,
+    CompiledBindingRef, CompiledCostDelta, CompiledFieldSelector, CompiledPlayerRef,
+    CompiledPredicate, CompiledScope, CompiledStep, CompiledZone,
 };
 use std::sync::Arc;
 
 use crate::action::space::{HAND_EFFECT_START, HAND_MAIN_LIMIT};
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+use crate::dsl_cards::predicate::{eval_predicate, eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::dsl_cards::step::{resolve_player, run_steps_with_runtime, StepRuntime};
 use crate::dsl_cards::trigger_map::lookup_replacement_trigger;
 use crate::effect::{Effect, EffectBuilder};
 use crate::effect_context::{DelayCostStatus, EffectContext, EffectReadContext};
-use crate::enums::{EffectTiming, GamePhase, PlayerId};
+use crate::enums::{EffectTiming, GamePhase, ModifierType, PlayerId};
 use crate::game::Game;
-use crate::permanent::OptionState;
+use crate::permanent::{OptionState, PermanentHandle};
 use crate::replacement::ReplacementSubject;
 use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind};
 
@@ -50,6 +50,8 @@ pub fn lower(
     scope: CompiledScope,
     active_when: Option<&CompiledPredicate>,
     trigger: &str,
+    optional: bool,
+    once_per_turn: bool,
     process: &[CompiledStep],
 ) -> Option<Effect> {
     lower_with_raw(
@@ -57,6 +59,8 @@ pub fn lower(
         scope,
         active_when,
         trigger,
+        optional,
+        once_per_turn,
         process,
         Arc::new(EngineRawRustRegistry::new()),
     )
@@ -67,6 +71,8 @@ pub fn lower_with_raw(
     scope: CompiledScope,
     active_when: Option<&CompiledPredicate>,
     trigger: &str,
+    optional: bool,
+    once_per_turn: bool,
     process: &[CompiledStep],
     raw: Arc<EngineRawRustRegistry>,
 ) -> Option<Effect> {
@@ -81,11 +87,18 @@ pub fn lower_with_raw(
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
     }
+    if optional {
+        builder = builder.optional();
+    }
+    if once_per_turn {
+        builder = builder.once_per_turn();
+    }
 
     let active_when = active_when.cloned();
     let can_match_cross_permanent_subject = active_when
         .as_ref()
-        .is_some_and(predicate_requires_replacement_subject);
+        .is_some_and(predicate_reads_replacement_subject);
+    let preflight_process = process.clone();
     builder = builder.replacement_condition(move |ctx, subject| {
         source_permanent_is_still_active(ctx)
             && (can_match_cross_permanent_subject || replacement_subject_is_source(ctx, *subject))
@@ -96,6 +109,7 @@ pub fn lower_with_raw(
                     predicate_subject_from_replacement_subject(*subject),
                 )
             })
+            && replacement_process_has_payable_required_selection(&preflight_process, ctx, *subject)
     });
 
     if let Some(delay_flow) = DelayHandDigivolveFlow::from_process(&process) {
@@ -151,17 +165,417 @@ pub fn lower_with_raw(
     Some(builder.build())
 }
 
-fn predicate_requires_replacement_subject(pred: &CompiledPredicate) -> bool {
-    pred.replacement_subject_is_mine.is_some()
+fn predicate_reads_replacement_subject(pred: &CompiledPredicate) -> bool {
+    let reads_direct_subject = pred.kind.is_some()
+        || pred.level_eq.is_some()
+        || pred.level_lte.is_some()
+        || pred.level_gte.is_some()
+        || pred.level_matches_aggregate.is_some()
+        || pred.color_is.is_some()
+        || pred.color_only.is_some()
+        || pred.color_matches_any_field_digimon.is_some()
+        || pred.trait_has.is_some()
+        || pred.form_is.is_some()
+        || pred.attribute_is.is_some()
+        || pred.name_is.is_some()
+        || pred.name_contains.is_some()
+        || pred.name_in.is_some()
+        || pred.card_number_is.is_some()
+        || pred.play_cost_lte.is_some()
+        || pred.dp_eq.is_some()
+        || pred.dp_lte.is_some()
+        || pred.dp_gte.is_some()
+        || pred.stack_size_lte.is_some()
+        || pred.stack_size_gte.is_some()
+        || pred.materials_count_lte.is_some()
+        || pred.materials_count_gte.is_some()
+        || pred.has_inherited.is_some()
+        || pred.is_suspended.is_some()
+        || pred.is_unsuspended.is_some()
+        || pred.has_keyword.is_some()
+        || !pred.zone.is_empty()
+        || pred.owner.is_some()
+        || pred.other.is_some()
+        || pred.of_permanent.is_some()
+        || pred.not_in_binding.is_some()
+        || pred.replacement_subject_is_mine.is_some();
+
+    reads_direct_subject
+        || pred.all_of.iter().any(predicate_reads_replacement_subject)
+        || (!pred.any_of.is_empty() && pred.any_of.iter().all(predicate_reads_replacement_subject))
+        || pred.none_of.iter().any(predicate_reads_replacement_subject)
         || pred
-            .all_of
+            .not
+            .as_deref()
+            .is_some_and(predicate_reads_replacement_subject)
+}
+
+fn replacement_process_has_payable_required_selection(
+    process: &[CompiledStep],
+    ctx: &EffectReadContext<'_>,
+    subject: ReplacementSubject,
+) -> bool {
+    if process_places_permanent_in_security(process)
+        && ctx
+            .game
+            .modifiers
+            .player_has(ctx.player, ModifierType::CannotAddSecurityByEffect)
+    {
+        return false;
+    }
+
+    let Some(first) = process.first() else {
+        return true;
+    };
+    let mut bindings = Bindings::new();
+    if let Some(subject) = subject.permanent() {
+        bindings.insert_permanent("replacement_subject", subject);
+    }
+    required_selection_step_has_candidate(first, ctx, &bindings)
+}
+
+fn process_places_permanent_in_security(process: &[CompiledStep]) -> bool {
+    process.iter().any(step_places_permanent_in_security)
+}
+
+fn step_places_permanent_in_security(step: &CompiledStep) -> bool {
+    match step {
+        CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement { .. } => true,
+        CompiledStep::AsSelectingPlayer { body, .. }
+        | CompiledStep::Optional(body)
+        | CompiledStep::ScheduleDelayed { body, .. } => process_places_permanent_in_security(body),
+        CompiledStep::If {
+            then, else_branch, ..
+        } => {
+            process_places_permanent_in_security(then)
+                || process_places_permanent_in_security(else_branch)
+        }
+        CompiledStep::ForEach { body, .. } | CompiledStep::PerSelected { body, .. } => {
+            process_places_permanent_in_security(body)
+        }
+        CompiledStep::SelectOwnSources { then, .. }
+        | CompiledStep::SelectOpponentDpBudget { then, .. }
+        | CompiledStep::SelectOwnBreedingPermanent { then, .. } => {
+            process_places_permanent_in_security(then)
+        }
+        _ => false,
+    }
+}
+
+fn required_selection_step_has_candidate(
+    step: &CompiledStep,
+    ctx: &EffectReadContext<'_>,
+    bindings: &Bindings,
+) -> bool {
+    match step {
+        CompiledStep::AsSelectingPlayer { of, body } => {
+            let player = resolve_player_ref(ctx, *of);
+            let scoped = EffectReadContext::new_with_source_kind(
+                ctx.game,
+                ctx.source_card,
+                ctx.source_permanent,
+                ctx.source_kind,
+                player,
+            );
+            replacement_process_has_payable_required_selection_without_subject(
+                body, &scoped, bindings,
+            )
+        }
+        CompiledStep::SelectOwnPermanent {
+            filter,
+            selector,
+            optional,
+            ..
+        } => {
+            *optional || has_matching_permanent(ctx, Some(ctx.player), filter, *selector, bindings)
+        }
+        CompiledStep::SelectOpponentPermanent {
+            filter,
+            selector,
+            optional,
+            ..
+        } => {
+            let opponent = ctx.game.next_clockwise(ctx.player);
+            *optional || has_matching_permanent(ctx, Some(opponent), filter, *selector, bindings)
+        }
+        CompiledStep::SelectAnyPermanent {
+            filter,
+            selector,
+            optional,
+            ..
+        } => *optional || has_matching_permanent(ctx, None, filter, *selector, bindings),
+        CompiledStep::SelectHand {
+            of,
+            filter,
+            optional,
+            ..
+        } => *optional || has_matching_card_in_zone(ctx, *of, CompiledZone::Hand, filter, bindings),
+        CompiledStep::SelectTrash {
+            of,
+            filter,
+            optional,
+            ..
+        } => {
+            *optional || has_matching_card_in_zone(ctx, *of, CompiledZone::Trash, filter, bindings)
+        }
+        CompiledStep::SelectSecurity { of, optional, .. } => {
+            *optional
+                || !ctx
+                    .game
+                    .player(resolve_player_ref(ctx, *of))
+                    .security
+                    .is_empty()
+        }
+        CompiledStep::SelectCountCappedMulti {
+            of,
+            zone,
+            max,
+            optional_zero,
+            ..
+        } => {
+            *optional_zero
+                || *max > 0
+                    && match zone {
+                        CompiledZone::Hand => !ctx
+                            .game
+                            .player(resolve_player_ref(ctx, *of))
+                            .hand
+                            .is_empty(),
+                        CompiledZone::Trash => !ctx
+                            .game
+                            .player(resolve_player_ref(ctx, *of))
+                            .trash
+                            .is_empty(),
+                        _ => true,
+                    }
+        }
+        CompiledStep::SelectMaterial {
+            of_permanent,
+            optional,
+            ..
+        } => {
+            *optional
+                || resolve_permanent_binding(of_permanent, bindings)
+                    .is_some_and(|perm| permanent_has_materials(ctx, perm))
+        }
+        CompiledStep::SelectOwnSources { min, max, .. } => {
+            *min == 0 || (*max >= *min && has_own_source_candidates(ctx))
+        }
+        CompiledStep::SelectOpponentDpBudget {
+            dp_budget,
+            min_picks,
+            ..
+        } => *min_picks == 0 || has_opponent_dp_budget_candidate(ctx, *dp_budget),
+        CompiledStep::SelectOwnBreedingPermanent { .. } => {
+            ctx.game.player(ctx.player).breeding_area.is_some()
+        }
+        CompiledStep::SelectUnionZone {
+            of,
+            zones,
+            optional,
+            ..
+        } => {
+            *optional
+                || zones.iter().any(|zone| match zone {
+                    CompiledZone::Hand => !ctx
+                        .game
+                        .player(resolve_player_ref(ctx, *of))
+                        .hand
+                        .is_empty(),
+                    CompiledZone::Trash => !ctx
+                        .game
+                        .player(resolve_player_ref(ctx, *of))
+                        .trash
+                        .is_empty(),
+                    _ => false,
+                })
+        }
+        CompiledStep::SelectOrderedPermutation { items, .. } => {
+            resolve_card_list_binding(items, bindings).is_some_and(|items| !items.is_empty())
+        }
+        // Non-selection first steps may mutate state before a later selection,
+        // so this read-only preflight deliberately does not speculate.
+        _ => true,
+    }
+}
+
+fn replacement_process_has_payable_required_selection_without_subject(
+    process: &[CompiledStep],
+    ctx: &EffectReadContext<'_>,
+    bindings: &Bindings,
+) -> bool {
+    process
+        .first()
+        .is_none_or(|step| required_selection_step_has_candidate(step, ctx, bindings))
+}
+
+fn resolve_player_ref(ctx: &EffectReadContext<'_>, player: CompiledPlayerRef) -> PlayerId {
+    match player {
+        CompiledPlayerRef::You => ctx.player,
+        CompiledPlayerRef::Opponent => ctx.game.next_clockwise(ctx.player),
+        CompiledPlayerRef::Active => ctx.game.turn_player(),
+        CompiledPlayerRef::Any => ctx.player,
+    }
+}
+
+fn has_matching_permanent(
+    ctx: &EffectReadContext<'_>,
+    player: Option<PlayerId>,
+    filter: &CompiledPredicate,
+    selector: Option<CompiledFieldSelector>,
+    bindings: &Bindings,
+) -> bool {
+    let mut handles = Vec::new();
+    let players: Box<dyn Iterator<Item = PlayerId>> = if let Some(player) = player {
+        Box::new(std::iter::once(player))
+    } else {
+        Box::new((0..ctx.game.players.len()).map(|p| p as PlayerId))
+    };
+
+    for player in players {
+        for index in 0..ctx.game.player(player).battle_area.len() {
+            let handle = PermanentHandle {
+                player,
+                index: index as u8,
+            };
+            if eval_predicate_with_bindings(
+                filter,
+                ctx,
+                PredicateSubject::Permanent(handle),
+                Some(bindings),
+            ) {
+                handles.push(handle);
+            }
+        }
+    }
+
+    let selected_dp = selected_dp_extreme(ctx, &handles, selector);
+    handles
+        .into_iter()
+        .any(|handle| matches_selected_dp(ctx, handle, selected_dp))
+}
+
+#[derive(Clone, Copy)]
+enum SelectedDp {
+    Any,
+    Exact(i32),
+    None,
+}
+
+fn selected_dp_extreme(
+    ctx: &EffectReadContext<'_>,
+    handles: &[PermanentHandle],
+    selector: Option<CompiledFieldSelector>,
+) -> SelectedDp {
+    match selector {
+        None => SelectedDp::Any,
+        Some(CompiledFieldSelector::LowestDp) => handles
             .iter()
-            .any(predicate_requires_replacement_subject)
-        || (!pred.any_of.is_empty()
-            && pred
-                .any_of
-                .iter()
-                .all(predicate_requires_replacement_subject))
+            .filter_map(|handle| ctx.game.effective_dp(*handle))
+            .min()
+            .map(SelectedDp::Exact)
+            .unwrap_or(SelectedDp::None),
+        Some(CompiledFieldSelector::HighestDp) => handles
+            .iter()
+            .filter_map(|handle| ctx.game.effective_dp(*handle))
+            .max()
+            .map(SelectedDp::Exact)
+            .unwrap_or(SelectedDp::None),
+    }
+}
+
+fn matches_selected_dp(
+    ctx: &EffectReadContext<'_>,
+    handle: PermanentHandle,
+    selected_dp: SelectedDp,
+) -> bool {
+    match selected_dp {
+        SelectedDp::Any => true,
+        SelectedDp::Exact(dp) => ctx
+            .game
+            .effective_dp(handle)
+            .is_some_and(|candidate_dp| candidate_dp == dp),
+        SelectedDp::None => false,
+    }
+}
+
+fn has_matching_card_in_zone(
+    ctx: &EffectReadContext<'_>,
+    of: CompiledPlayerRef,
+    zone: CompiledZone,
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+) -> bool {
+    let player = resolve_player_ref(ctx, of);
+    let cards = match zone {
+        CompiledZone::Hand => &ctx.game.player(player).hand,
+        CompiledZone::Trash => &ctx.game.player(player).trash,
+        _ => return true,
+    };
+    cards.iter().any(|card| {
+        eval_predicate_with_bindings(
+            filter,
+            ctx,
+            PredicateSubject::Card(card.handle()),
+            Some(bindings),
+        )
+    })
+}
+
+fn resolve_permanent_binding(
+    binding: &CompiledBindingRef,
+    bindings: &Bindings,
+) -> Option<PermanentHandle> {
+    match binding {
+        CompiledBindingRef::Named(name) | CompiledBindingRef::Binding(name) => {
+            bindings.get_permanent(name)
+        }
+        _ => None,
+    }
+}
+
+fn resolve_card_list_binding(
+    binding: &CompiledBindingRef,
+    bindings: &Bindings,
+) -> Option<Vec<CardHandle>> {
+    match binding {
+        CompiledBindingRef::Named(name) | CompiledBindingRef::Binding(name) => {
+            bindings.get_card_list(name)
+        }
+        _ => None,
+    }
+}
+
+fn permanent_has_materials(ctx: &EffectReadContext<'_>, perm: PermanentHandle) -> bool {
+    ctx.game
+        .player(perm.player)
+        .battle_area
+        .get(perm.index as usize)
+        .is_some_and(|p| p.card_sources.len() > 1)
+}
+
+fn has_own_source_candidates(ctx: &EffectReadContext<'_>) -> bool {
+    ctx.game
+        .player(ctx.player)
+        .battle_area
+        .iter()
+        .any(|perm| perm.card_sources.len() > 1)
+}
+
+fn has_opponent_dp_budget_candidate(ctx: &EffectReadContext<'_>, dp_budget: i32) -> bool {
+    let opponent = ctx.game.next_clockwise(ctx.player);
+    ctx.game
+        .player(opponent)
+        .battle_area
+        .iter()
+        .enumerate()
+        .any(|(index, _)| {
+            let handle = PermanentHandle {
+                player: opponent,
+                index: index as u8,
+            };
+            ctx.game.effective_dp(handle).unwrap_or(0) <= dp_budget
+        })
 }
 
 fn replacement_subject_is_source(ctx: &EffectReadContext<'_>, subject: ReplacementSubject) -> bool {

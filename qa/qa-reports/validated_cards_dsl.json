@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-04-28",
+  "last_updated": "2026-05-03",
   "cards": {
     "BT21-093": {
       "card_name": "Raging Serpentine",
@@ -872,6 +872,81 @@
         "Inherited-Security"
       ],
       "notes": "4-clause white Option (Cost 4): [Main] reveal top 3 + add 1 Digimon + 1 Tamer to hand + place rest at bottom; [Main]<Delay> optional play Tamer from hand cost -4; flood_gate IgnoreColorRequirement; [Inherited][Security] optional play Digimon cost ≤3 from hand or trash free + add self to hand. Active tests cover: structural (8), Main reveal accounting (4), Delay structural (1), flood_gate structural (1), inherited security structural (3), event-log deck-size (1). Tests ignored: (a) G-IGNORE-COLOR-MASK — IgnoreColorRequirement modifier compiles but not enforced in action/mask.rs (1 test); (b) G-PLACE-SELF-AS-OPTION-PERMANENT — battle-area count post-main and post-security (3 tests); (c) G-COLOR-MATCH-AGAINST-BOARD (NEW gap) — Delay clause color-match predicate missing from PredicateSpec; only kind:tamer filter enforced (2 tests); (d) G-PLAY-COST-LTE — cost ≤3 filter in security clause cannot be expressed in DSL (1 test); (e) G-ADD-OPTION-SELF-TO-HAND — 'add this card to hand' after security resolution requires raw_rust stub p_206_add_self_to_hand (registered, no-op). Raw_rust fn p_206_add_self_to_hand registered in src/cards/raw_rust/mod.rs. New DSL gap G-COLOR-MATCH-AGAINST-BOARD documented in qa/dsl-vocab-gaps.md."
+    },
+    "BT17-009": {
+      "card_name": "Flamemon",
+      "validated_date": "2026-05-03",
+      "report": "rust-dsl/outstanding-archetype-blockers-dcgo",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Red Hybrid",
+      "yaml_path": "code/digimon-engine/cards/bt17/BT17-009.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_009.rs",
+      "test_count": 3,
+      "patterns": [
+        "MULTI-BUCKET-REVEAL",
+        "INHERITED-ON-DELETION",
+        "FREE-TAMER-PLAY"
+      ],
+      "notes": "Production YAML and focused behavioral tests cover the red level-2 digivolve path, On Play reveal-top-3 with separate Hybrid/Ten Warriors and inherited-effect Tamer buckets, no duplicate reveal-card pick, bottom remainder handling, and inherited On Deletion optional free Tamer play from hand. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_009 --nocapture` (3 passed)."
+    },
+    "BT24-031": {
+      "card_name": "Elecmon",
+      "validated_date": "2026-05-03",
+      "report": "rust-dsl/outstanding-archetype-blockers-dcgo",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Olympos",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-031.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_031.rs",
+      "test_count": 5,
+      "patterns": [
+        "MULTI-BUCKET-REVEAL",
+        "TOP-SECURITY-TO-HAND",
+        "RECOVERY-DECK"
+      ],
+      "notes": "Production YAML and focused behavioral tests cover yellow and TS level-2 digivolve paths, On Play reveal with Iliad and TS buckets without double-picking a dual-match card, inherited When Attacking optional top-security-to-hand, decline behavior, and Recovery +1 Deck at zero security. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_031 --nocapture` (5 passed)."
+    },
+    "BT24-040": {
+      "card_name": "Venusmon",
+      "validated_date": "2026-05-03",
+      "report": "rust-dsl/outstanding-archetype-blockers-dcgo",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Olympos",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-040.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_040.rs",
+      "test_count": 10,
+      "patterns": [
+        "TRASH-ALL-SOURCES",
+        "CANNOT-SUSPEND",
+        "CANNOT-ACTIVATE-WHEN-DIGIVOLVING",
+        "REPLACEMENT-COST-PREFLIGHT",
+        "SECURITY-PLACEMENT-FLOODGATE",
+        "CROSS-PERMANENT-REPLACEMENT"
+      ],
+      "notes": "Production YAML and focused behavioral tests cover printed stats, Lv5 TS alt path, security-gated cost reduction, On Play/When Digivolving trash-all-sources plus two selected lock targets, CannotSuspend and CannotActivateEffectsByTiming(WhenDigivolving), and optional cross-permanent TS protection by placing another sourceless Digimon in security. Accept, decline, own-effect removal, no-cost-body preflight, CannotAddSecurityByEffect flood-gating of the security-placement replacement cost, and once-per-turn replacement limits are covered. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_040 --nocapture` (10 passed)."
+    },
+    "BT24-101": {
+      "card_name": "Jupitermon",
+      "validated_date": "2026-05-03",
+      "report": "rust-dsl/outstanding-archetype-blockers-dcgo",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Olympos",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-101.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_101.rs",
+      "test_count": 12,
+      "patterns": [
+        "ALTERNATE-DIGIVOLVE",
+        "FORMULA-COST",
+        "TRASH-TOP-SECURITY",
+        "RECOVERY-DECK",
+        "ON-LOSE-SECURITY-OBSERVER",
+        "OPTIONAL-REPLACEMENT",
+        "CROSS-PERMANENT-REPLACEMENT"
+      ],
+      "notes": "Production YAML and focused behavioral tests cover the printed standard Lv5 yellow cost-5 digivolve route, Lv5 TS cost-3 alt digivolve, Lv5 Aegiochusmon-name alt digivolve with dynamic security-count cost, cheapest-route precedence when multiple paths apply, On Play/When Digivolving shared body that trashes own top security, applies the DP debuff target, and recovers when the threshold is met; own-security-removed observer trashes opponent top security once; and optional protection for own TS Digimon or Tamers by trashing top security. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_101 --nocapture` (12 passed)."
     }
   }
 }

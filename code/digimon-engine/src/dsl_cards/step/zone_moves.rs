@@ -8,6 +8,8 @@ use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::resolve_player;
 use crate::effect_context::EffectContext;
+use crate::enums::{GamePhase, PlayerId};
+use crate::selection::{PendingSelection, SelectionKind};
 
 fn singleton_card(resolved: ResolvedBinding) -> Option<crate::card_source::CardHandle> {
     match resolved {
@@ -15,6 +17,57 @@ fn singleton_card(resolved: ResolvedBinding) -> Option<crate::card_source::CardH
         ResolvedBinding::CardList(cards) if cards.len() == 1 => cards.first().copied(),
         _ => None,
     }
+}
+
+fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_player: PlayerId) {
+    use crate::action::space::{MAX_SECURITY, SEL_MY_SECURITY_START, SEL_OPP_SECURITY_START};
+
+    let security_len = ctx.game.player(target_player).security.len();
+    if security_len == 0 {
+        return;
+    }
+
+    let base = if target_player == ctx.player {
+        SEL_MY_SECURITY_START
+    } else {
+        SEL_OPP_SECURITY_START
+    };
+    let top_index = security_len
+        .saturating_sub(1)
+        .min(MAX_SECURITY.saturating_sub(1));
+    let selecting_player = ctx.override_selecting_player().unwrap_or(ctx.player);
+    let controller = ctx.player;
+    let override_pin = ctx.override_selecting_player();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let previous_phase = ctx.game.current_phase;
+
+    ctx.game.current_phase = GamePhase::SelectSecurity;
+    ctx.game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::Security,
+        selecting_player,
+        previous_phase,
+        valid_action_ids: vec![base + top_index as u16],
+        is_optional: true,
+        prompt: "Add top security to hand".to_string(),
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        source_kind,
+        callback: Box::new(move |game, _action_id| {
+            let mut cb_ctx = EffectContext::new_with_source_kind_and_override(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                controller,
+                override_pin,
+            );
+            cb_ctx.add_top_security_to_hand(target_player);
+        }),
+        on_decline: Some(Box::new(|_game| {})),
+    });
 }
 
 /// Returns `true` if `step` is a zone-move family handled here. Unknown
@@ -59,6 +112,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::AddTopSecurityToHand { of } => {
+            let p = resolve_player(ctx, *of);
+            ctx.add_top_security_to_hand(p);
+            true
+        }
+        CompiledStep::MayAddTopSecurityToHand { of } => {
+            let p = resolve_player(ctx, *of);
+            install_may_add_top_security_to_hand(ctx, p);
+            true
+        }
         CompiledStep::AddToHandFromDeck { of, card } => {
             // Phase 2b has no way to bind a deck card (no SelectDeck variant
             // and RevealTopDeck binds into the reveal pool, not deck). The
@@ -89,6 +152,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
 
         CompiledStep::AddThisOptionToHand => {
             ctx.add_pending_security_to_hand();
+            true
+        }
+
+        CompiledStep::Recover { of, count } => {
+            let p = resolve_player(ctx, *of);
+            ctx.recover_from_deck(p, *count);
             true
         }
 

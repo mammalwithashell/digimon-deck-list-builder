@@ -190,6 +190,8 @@ impl CardEffect for DslCardEffect {
                         scope,
                         active_when,
                         trigger,
+                        optional,
+                        once_per_turn,
                         process,
                         ..
                     } => {
@@ -198,6 +200,8 @@ impl CardEffect for DslCardEffect {
                             *scope,
                             active_when.as_ref(),
                             trigger,
+                            *optional,
+                            *once_per_turn,
                             process,
                             self.raw.clone(),
                         ) {

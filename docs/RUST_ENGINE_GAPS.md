@@ -162,6 +162,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 **Updated 2026-05-03:** Generic DSL cross-permanent replacement authoring is now supported for clauses that explicitly use replacement-subject context predicates, such as `replacement_subject_is_mine`, alongside `replacement_source_is_opponent` and `replacement_cause`. `lower_replacement.rs` preserves self-scoped behavior by default, but no longer drops an explicitly scoped different subject during process execution. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- cross_permanent context_predicates route_replacements nested_select_substrate --nocapture` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- replacement_context --nocapture`.
 
+**Updated 2026-05-03:** Replacement once-per-turn/context subject filtering is verified for the currently implemented TS/Olympos and BG Imperial slices. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- cross_permanent context_predicates route_replacements nested_select_substrate --nocapture`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- replacement_integration::bt17_097 --nocapture`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_040 bt24_101 --nocapture`. This closes BT17-097 Delay replacement continuation and BT24-040/BT24-101 subject/cause-filtered protection cases only; do not close unrelated leave-field replacement variants that still lack card-level proof.
+
 ### Selection: multi-select with aggregate-sum constraint (and count-capped sibling)
 - **Severity:** 🟡 PARTIAL
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18)
@@ -266,6 +268,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** Parity §2.5k (face_up_security stale entries), §2.5m (security_reveal event).
 
 **Closed by Phase 2 (2026-04-19):** Core placement primitive implemented in `digimon-engine` — see `EffectContext::place_on_security` (code/digimon-engine/src/effect_context/mod.rs) and `Game::place_on_security` (code/digimon-engine/src/game_actions.rs). The method accepts a `StackPosition` enum (`Top` / `Bottom`) so both `place_security_top` and `place_security_bottom` shapes are covered by a single primitive. `OnLoseSecurity` firing and `face_up_security` bookkeeping are handled inside the method. Remaining open sub-items: `trash_top_security(player, N)`, `move_top_security_to_hand`, face-up flip, Recovery +N deck-top variant, security-stack extraction with face-up filter, and placing the current battle-area permanent/card-source itself into security. DNA Omnimon re-surfaced the last item on 2026-04-28: EX9-021 Omnimon Alter-S and EX4-060 Omnimon Alter-S need to move the resolving Digimon from the battle area into security, but `CardSourceRef` currently has hand/trash/deck/reveal forms and no `Permanent`/`SelfPermanent` source.
+
+**Updated 2026-05-03:** Top-security-to-hand and Recovery deck-step coverage is implemented for the validated TS/Olympos slice. `EffectContext::add_top_security_to_hand` and `recover_from_deck` are covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- security_stack_operations --nocapture`, DSL lowering by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- security_stack_steps --nocapture`, and card behavior by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_031 bt24_101 --nocapture`. Do not treat the entire security-stack gap as closed: face-up security extraction/flip, moving the resolving permanent itself into security, security-stack searches, and other listed card shapes still require card-specific or reusable follow-up proof.
 
 ### Token creation + `CardKind::Token` + Petrification Token definition
 - **Severity:** 🟢 CLOSED
@@ -602,6 +606,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Workaround:** "None — BLOCKED." Looping `de_digivolve(target, 1)` stops at Lv.3 and silently drops lower sources; raw stack drain skips trash-routing and observer triggers.
 - **Related:** "De-Digivolve N primitive (single + mass)" (sibling primitive with bounded stopping rule).
 
+**Updated 2026-05-03:** The unbounded trash-all-sources slice is implemented and verified for `BT24-040`. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- source_stack_aggregates --nocapture` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_040 --nocapture`. Source-count aggregate predicates and dynamic De-Digivolve amount requirements for other TS/Olympos cards remain open unless separately tested.
+
 ### Permanent-scoped modifier to suppress effect activation by timing
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
@@ -611,6 +617,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Suggested API shape:** `ModifierType::CannotActivateEffectsByTiming(EffectTiming)` applied via `ctx.add_modifier(target, ModifierType::CannotActivateEffectsByTiming(EffectTiming::WhenDigivolving), 1, Expiry::EndOfOpponentsTurn)`. Consult in every triggered-effect enqueue site; skip effects whose `timing` is suppressed. Or an aura form: `Effect::aura(card).filter(predicate).suppress_timings(&[WhenAttacking, WhenDigivolving])`.
 - **Workaround:** "None — BLOCKED." Over-applying `CannotBeAffected` blocks far more than the card's text allows; per-effect enable flags would race with dispatch.
 - **Related:** "Player-scoped modifier registry" (sibling, different scope); "Granted triggered ability — attach an Effect to another permanent".
+
+**Updated 2026-05-03:** The permanent-scoped timing suppression path is implemented for `BT24-040`'s selected two-target `CannotSuspend` / `CannotActivateEffectsByTiming(WhenDigivolving)` lock. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_040 --nocapture`. Keep the broader gap open for other timings, aura-style suppression, and unvalidated cards such as `BT10-042` and `BT19-093`.
 
 ### Grant Security A. ±N modifier to a targeted permanent (parametric `SecurityAttackChange`)
 - **Severity:** 🔴 BLOCKING

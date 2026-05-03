@@ -403,6 +403,8 @@ pub enum CompiledDeclarativeClause {
         scope: CompiledScope,
         active_when: Option<CompiledPredicate>,
         trigger: String,
+        optional: bool,
+        once_per_turn: bool,
         process: Vec<CompiledStep>,
         summary: Option<String>,
         summary_key: Option<String>,
@@ -580,6 +582,12 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
     },
+    AddTopSecurityToHand {
+        of: CompiledPlayerRef,
+    },
+    MayAddTopSecurityToHand {
+        of: CompiledPlayerRef,
+    },
     AddToHandFromReveal {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
@@ -704,6 +712,17 @@ pub enum CompiledStep {
     },
     TrashTopSecurity {
         of: CompiledPlayerRef,
+    },
+    TrashTopSecurityAndCancelReplacement {
+        of: CompiledPlayerRef,
+    },
+    PlacePermanentBottomSecurityAndCancelReplacement {
+        of: CompiledPlayerRef,
+        target: CompiledBindingRef,
+    },
+    Recover {
+        of: CompiledPlayerRef,
+        count: u8,
     },
     MarkSecurityFaceUp {
         of: CompiledPlayerRef,

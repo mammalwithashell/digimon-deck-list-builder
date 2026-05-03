@@ -190,6 +190,16 @@ impl Game {
             TriggerSource::SecurityRevealed { defender, card } => {
                 let trigger_context = self.trigger_context_for_source(&source, None);
                 self.enqueue_from_security_card(timing, defender, card, Some(trigger_context));
+                if timing == EffectTiming::OnLoseSecurity {
+                    let count = self.player(defender).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player: defender,
+                            index: i as u8,
+                        };
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
             }
             TriggerSource::OnSecurityCheck { defender, .. } => {
                 // Observer timing: scan every permanent in the defender's

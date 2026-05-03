@@ -47,6 +47,8 @@ fn replacement_clause() -> CompiledClause {
         scope: CompiledScope::FaceUp,
         active_when: None,
         trigger: "when_would_be_deleted".into(),
+        optional: false,
+        once_per_turn: false,
         process: vec![],
         summary: None,
         summary_key: None,

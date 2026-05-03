@@ -1054,6 +1054,8 @@ fn compile_declarative(
                 scope,
                 active_when,
                 trigger,
+                optional: r.optional,
+                once_per_turn: r.once_per_turn,
                 process: compile_replacement_process(&r, prefix, card_id, errors),
                 summary,
                 summary_key,
@@ -1338,6 +1340,12 @@ fn compile_step(
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
         },
+        S::AddTopSecurityToHand(a) => CompiledStep::AddTopSecurityToHand {
+            of: compile_player_ref(a.of),
+        },
+        S::MayAddTopSecurityToHand(a) => CompiledStep::MayAddTopSecurityToHand {
+            of: compile_player_ref(a.of),
+        },
         S::AddToHandFromReveal(a) => CompiledStep::AddToHandFromReveal {
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
@@ -1483,6 +1491,21 @@ fn compile_step(
 
         S::TrashTopSecurity(a) => CompiledStep::TrashTopSecurity {
             of: compile_player_ref(a.of),
+        },
+        S::TrashTopSecurityAndCancelReplacement(a) => {
+            CompiledStep::TrashTopSecurityAndCancelReplacement {
+                of: compile_player_ref(a.of),
+            }
+        }
+        S::PlacePermanentBottomSecurityAndCancelReplacement(a) => {
+            CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement {
+                of: compile_player_ref(a.of),
+                target: compile_binding_ref(&a.target),
+            }
+        }
+        S::Recover(a) => CompiledStep::Recover {
+            of: compile_player_ref(a.of),
+            count: a.count,
         },
         S::MarkSecurityFaceUp(a) => CompiledStep::MarkSecurityFaceUp {
             of: compile_player_ref(a.of),

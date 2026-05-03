@@ -74,6 +74,8 @@ pub enum StepSpec {
     AddToHandFromDeck(HandleMoveArgs),
     AddToHandFromTrash(HandleMoveArgs),
     AddToHandFromSecurity(HandleMoveArgs),
+    AddTopSecurityToHand(PlayerArg),
+    MayAddTopSecurityToHand(PlayerArg),
     AddToHandFromReveal(HandleMoveArgs),
     AddThisOptionToHand(EmptyArgs),
     TrashFromHandByIndex(IndexedMoveArgs),
@@ -113,6 +115,9 @@ pub enum StepSpec {
 
     // Security
     TrashTopSecurity(PlayerArg),
+    TrashTopSecurityAndCancelReplacement(PlayerArg),
+    PlacePermanentBottomSecurityAndCancelReplacement(PlacePermanentSecurityReplacementArgs),
+    Recover(DrawArgs),
     MarkSecurityFaceUp(MarkSecurityArgs),
 
     // Modifiers
@@ -193,6 +198,8 @@ impl Serialize for StepSpec {
             StepSpec::AddToHandFromDeck(v) => kv!(s, "add_to_hand_from_deck", v),
             StepSpec::AddToHandFromTrash(v) => kv!(s, "add_to_hand_from_trash", v),
             StepSpec::AddToHandFromSecurity(v) => kv!(s, "add_to_hand_from_security", v),
+            StepSpec::AddTopSecurityToHand(v) => kv!(s, "add_top_security_to_hand", v),
+            StepSpec::MayAddTopSecurityToHand(v) => kv!(s, "may_add_top_security_to_hand", v),
             StepSpec::AddToHandFromReveal(v) => kv!(s, "add_to_hand_from_reveal", v),
             StepSpec::AddThisOptionToHand(v) => kv!(s, "add_this_option_to_hand", v),
             StepSpec::TrashFromHandByIndex(v) => kv!(s, "trash_from_hand_by_index", v),
@@ -229,6 +236,13 @@ impl Serialize for StepSpec {
             StepSpec::EffectInitiatedDnaDigivolve(v) => kv!(s, "effect_initiated_dna_digivolve", v),
             // Security
             StepSpec::TrashTopSecurity(v) => kv!(s, "trash_top_security", v),
+            StepSpec::TrashTopSecurityAndCancelReplacement(v) => {
+                kv!(s, "trash_top_security_and_cancel_replacement", v)
+            }
+            StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(v) => {
+                kv!(s, "place_permanent_bottom_security_and_cancel_replacement", v)
+            }
+            StepSpec::Recover(v) => kv!(s, "recover", v),
             StepSpec::MarkSecurityFaceUp(v) => kv!(s, "mark_security_face_up", v),
             // Modifiers
             StepSpec::AddDpModifier(v) => kv!(s, "add_dp_modifier", v),
@@ -326,6 +340,10 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_to_hand_from_deck" => StepSpec::AddToHandFromDeck(map.next_value()?),
             "add_to_hand_from_trash" => StepSpec::AddToHandFromTrash(map.next_value()?),
             "add_to_hand_from_security" => StepSpec::AddToHandFromSecurity(map.next_value()?),
+            "add_top_security_to_hand" => StepSpec::AddTopSecurityToHand(map.next_value()?),
+            "may_add_top_security_to_hand" => {
+                StepSpec::MayAddTopSecurityToHand(map.next_value()?)
+            }
             "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
             "add_this_option_to_hand" => StepSpec::AddThisOptionToHand(map.next_value()?),
             "trash_from_hand_by_index" => StepSpec::TrashFromHandByIndex(map.next_value()?),
@@ -367,6 +385,13 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Security
             "trash_top_security" => StepSpec::TrashTopSecurity(map.next_value()?),
+            "trash_top_security_and_cancel_replacement" => {
+                StepSpec::TrashTopSecurityAndCancelReplacement(map.next_value()?)
+            }
+            "place_permanent_bottom_security_and_cancel_replacement" => {
+                StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(map.next_value()?)
+            }
+            "recover" => StepSpec::Recover(map.next_value()?),
             "mark_security_face_up" => StepSpec::MarkSecurityFaceUp(map.next_value()?),
 
             // Modifiers
@@ -432,6 +457,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_to_hand_from_deck",
                         "add_to_hand_from_trash",
                         "add_to_hand_from_security",
+                        "add_top_security_to_hand",
+                        "may_add_top_security_to_hand",
                         "add_to_hand_from_reveal",
                         "add_this_option_to_hand",
                         "trash_from_hand_by_index",
@@ -465,6 +492,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "effect_initiated_digivolve",
                         "effect_initiated_dna_digivolve",
                         "trash_top_security",
+                        "trash_top_security_and_cancel_replacement",
+                        "place_permanent_bottom_security_and_cancel_replacement",
+                        "recover",
                         "mark_security_face_up",
                         "add_dp_modifier",
                         "add_modifier",
@@ -720,6 +750,18 @@ pub struct PlaceOnSecurityArgs {
     pub position: StackPosition,
     #[serde(default)]
     pub face_up: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlacePermanentSecurityReplacementArgs {
+    #[serde(default = "default_player_ref_you")]
+    pub of: PlayerRef,
+    pub target: BindingRef,
+}
+
+fn default_player_ref_you() -> PlayerRef {
+    PlayerRef::You
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

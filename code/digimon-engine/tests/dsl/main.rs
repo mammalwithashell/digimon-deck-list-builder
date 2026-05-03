@@ -109,6 +109,7 @@ mod residual_formula_predicate_vocab;
 mod reveal_buckets;
 mod roundtrip;
 mod schema_export;
+mod security_stack_steps;
 mod selection_dp_extrema;
 mod source_stack_aggregates;
 mod standalone_declaratives_exit;

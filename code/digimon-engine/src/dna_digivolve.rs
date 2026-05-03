@@ -15,6 +15,7 @@
 use crate::card_data::{CardData, DnaCost, DnaRequirement};
 use crate::card_source::CardSource;
 use crate::digixros::matches_digixros_name_requirement;
+use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::effect_context::EffectReadContext;
 use crate::enums::{CardColor, CardKind, EffectTiming, GamePhase, PlayerId};
@@ -214,7 +215,13 @@ impl Game {
                         };
                         memory_cost
                     }
-                    Some(CompiledCost::Formula(_)) => continue,
+                    Some(CompiledCost::Formula(formula)) => {
+                        let value = formula_eval::evaluate_read(formula, &rctx, base_handle);
+                        let Some(memory_cost) = u16::try_from(value).ok() else {
+                            continue;
+                        };
+                        memory_cost
+                    }
                     None => {
                         let Some(memory_cost) = treated_as_cost else {
                             continue;
