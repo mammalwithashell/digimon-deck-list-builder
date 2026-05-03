@@ -151,4 +151,3 @@ Use these tags when normalizing gaps across archetypes:
 3. `EX9-033` Kaguyamon card test for Alliance/Blocker aura plus lowest-level delete.
 4. `P-165` ShoeShoemon card test for security end-of-battle play plus Familiar token.
 5. `P-229` event-gated Delay test for Mirai-played trigger.
-
