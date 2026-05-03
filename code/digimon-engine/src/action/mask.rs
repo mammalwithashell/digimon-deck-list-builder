@@ -10,7 +10,7 @@
 
 use crate::action::space::*;
 use crate::card_data::CardData;
-use crate::effect_context::EffectReadContext;
+use crate::effect_context::{AttackTargetRestriction, EffectReadContext};
 use crate::enums::{CardColor, CardKind, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
@@ -724,6 +724,105 @@ fn can_basic_attack(
         return false;
     }
     true
+}
+
+/// Legal target action IDs for an effect-installed immediate attack prompt.
+///
+/// This mirrors Main-phase attack target filtering while intentionally omitting
+/// the Main-phase memory gate: the enclosing effect grants the immediate
+/// attack, but target legality still uses the normal action IDs.
+pub(crate) fn effect_attack_target_action_ids(
+    game: &Game,
+    attacker: PermanentHandle,
+    restriction: AttackTargetRestriction,
+    without_suspending: bool,
+) -> Vec<u16> {
+    if game
+        .modifiers
+        .player_has(attacker.player, ModifierType::CannotAttack)
+    {
+        return Vec::new();
+    }
+    let attacker_can_attack = if without_suspending {
+        game.can_attack_without_suspending(attacker, false)
+    } else {
+        game.can_attack(attacker, false)
+    };
+    if !attacker_can_attack {
+        return Vec::new();
+    }
+
+    let mut action_ids = Vec::new();
+    let opponent = game.next_clockwise(attacker.player);
+    let attacker_index = attacker.index as u16;
+
+    if matches!(
+        restriction,
+        AttackTargetRestriction::Any | AttackTargetRestriction::PlayerOnly
+    ) && !game
+        .modifiers
+        .has(attacker, ModifierType::CannotAttackPlayer)
+    {
+        action_ids.push(encode_attack(attacker_index, SECURITY_TARGET));
+    }
+
+    if matches!(
+        restriction,
+        AttackTargetRestriction::Any | AttackTargetRestriction::DigimonOnly
+    ) {
+        let can_attack_unsuspended = game
+            .modifiers
+            .has(attacker, ModifierType::CanAttackUnsuspended);
+        let has_raid = game.has_keyword(attacker, Keyword::Raid);
+        let max_opp = game.player(opponent).battle_area.len().min(FIELD_SLOTS);
+        let raid_max_dp = if has_raid && !can_attack_unsuspended {
+            let mut best: Option<i32> = None;
+            for j in 0..max_opp {
+                let target = &game.player(opponent).battle_area[j];
+                if target.is_suspended || !target.is_digimon(&game.card_data) {
+                    continue;
+                }
+                let target_handle = PermanentHandle {
+                    player: opponent,
+                    index: j as u8,
+                };
+                if let Some(dp) = game.effective_dp(target_handle) {
+                    best = Some(best.map_or(dp, |b| b.max(dp)));
+                }
+            }
+            best
+        } else {
+            None
+        };
+
+        for j in 0..max_opp {
+            let target = &game.player(opponent).battle_area[j];
+            if !target.is_digimon(&game.card_data) {
+                continue;
+            }
+            let target_handle = PermanentHandle {
+                player: opponent,
+                index: j as u8,
+            };
+            if game
+                .modifiers
+                .has(target_handle, ModifierType::CannotAttackTarget)
+            {
+                continue;
+            }
+            let legal = target.is_suspended
+                || can_attack_unsuspended
+                || raid_max_dp.is_some_and(|max_dp| {
+                    game.effective_dp(target_handle)
+                        .is_some_and(|dp| dp == max_dp)
+                });
+            if legal {
+                action_ids.push(encode_attack(attacker_index, j as u16));
+            }
+        }
+    }
+
+    action_ids
 }
 
 /// Basic digivolve eligibility: hand card has an evo_cost matching the base

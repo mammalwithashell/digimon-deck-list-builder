@@ -894,6 +894,13 @@ pub enum CompiledStep {
         attacker: CompiledBindingRef,
         defender: CompiledBindingRef,
     },
+    MayAttackNow {
+        attacker: CompiledBindingRef,
+        targets: CompiledAttackTargetSpec,
+        without_suspending: bool,
+        optional: bool,
+        prompt: Option<String>,
+    },
     EndAttack {
         enabled: bool,
     },
@@ -918,6 +925,13 @@ pub struct CompiledRevealBucket {
     pub filter: Option<CompiledPredicate>,
     pub min: u8,
     pub max: u8,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledAttackTargetSpec {
+    Any,
+    Player,
+    Digimon,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

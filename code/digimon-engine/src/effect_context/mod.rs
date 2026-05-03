@@ -20,14 +20,16 @@ pub use selections::{
 
 pub use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef};
 
+use crate::action::mask::effect_attack_target_action_ids;
+use crate::action::space::{decode_attack, SECURITY_TARGET};
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
-use crate::combat::AttackResult;
+use crate::combat::{AttackError, AttackResult};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
 use crate::enums::{
-    CardKind, DelayTrigger, EffectSourceKind, EffectTiming, Expiry, Keyword, ModifierType,
-    PlaySource, PlayerId, StackPosition,
+    CardKind, DelayTrigger, EffectSourceKind, EffectTiming, Expiry, GamePhase, Keyword,
+    ModifierType, PlaySource, PlayerId, StackPosition,
 };
 use crate::game::Game;
 use crate::game_actions::PlayFromHandCostResult;
@@ -39,11 +41,19 @@ use crate::player::Player;
 use crate::replacement::{ReplacementCause, ReplacementSubject};
 use crate::rules::Rules;
 use crate::scheduled_effects::ScheduledEffect;
+use crate::selection::{AttackTarget, DeclineCallback, PendingSelection, SelectionKind};
 use digimon_dsl::compiled::CompiledStep;
 
 pub struct PartitionRequirement {
     pub label: &'static str,
     pub matches: Box<dyn Fn(&Game, SourceSelectionRef) -> bool + Send + Sync>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttackTargetRestriction {
+    Any,
+    PlayerOnly,
+    DigimonOnly,
 }
 
 impl PartitionRequirement {
@@ -2995,6 +3005,77 @@ impl<'a> EffectContext<'a> {
         defender: PermanentHandle,
     ) -> AttackResult {
         self.game.battle_digimon(attacker, defender)
+    }
+
+    pub fn may_attack_now(
+        &mut self,
+        attacker: PermanentHandle,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        prompt: &str,
+    ) -> Result<(), AttackError> {
+        self.may_attack_now_optional(attacker, targets, without_suspending, false, prompt)
+    }
+
+    pub fn may_attack_now_optional(
+        &mut self,
+        attacker: PermanentHandle,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        optional: bool,
+        prompt: &str,
+    ) -> Result<(), AttackError> {
+        let valid_action_ids =
+            effect_attack_target_action_ids(self.game, attacker, targets, without_suspending);
+        if valid_action_ids.is_empty() {
+            return Ok(());
+        }
+
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let previous_phase = self.game.current_phase;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
+
+        self.game.current_phase = GamePhase::SelectTarget;
+        self.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Target,
+            selecting_player,
+            previous_phase,
+            valid_action_ids,
+            is_optional: optional,
+            prompt: prompt.to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent,
+            source_kind,
+            callback: Box::new(move |game, action_id| {
+                let (decoded_attacker, decoded_target) = decode_attack(action_id);
+                if decoded_attacker as u8 != attacker.index {
+                    return;
+                }
+                let opponent = game.next_clockwise(attacker.player);
+                let target = if decoded_target == SECURITY_TARGET {
+                    AttackTarget::Player(opponent)
+                } else {
+                    AttackTarget::Digimon(PermanentHandle {
+                        player: opponent,
+                        index: decoded_target as u8,
+                    })
+                };
+                if without_suspending {
+                    game.begin_attack_without_suspending(attacker, target);
+                } else {
+                    game.begin_attack(attacker, target, false);
+                }
+            }),
+            on_decline: if optional {
+                Some(Box::new(|_game: &mut Game| {}) as DeclineCallback)
+            } else {
+                None
+            },
+        });
+        Ok(())
     }
 
     /// Move the top of `player`'s digitama deck into the breeding area.

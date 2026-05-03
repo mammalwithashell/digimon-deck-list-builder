@@ -314,16 +314,19 @@ Format per entry:
 ## BT24-082 / BT21-081 — Immediate optional attack within effect resolution  [G-MAY-ATTACK-NOW]
 - Effect text (BT24-082): "[Your Turn] When any of your Digimon digivolve into a [Reptile] or [Dragonkin] Digimon, by suspending this Tamer, that Digimon gets +3000 DP for the turn. Then, it may attack."
 - Effect text (BT21-081): "[End of Your Turn] By suspending this Tamer, 1 of your Digimon with the [Reptile] or [Dragonkin] trait gains <Piercing> for the turn. Then, that Digimon attacks."
-- Missing DSL verb / step kind / predicate: No DSL verb for an immediate attack (optional or mandatory) on a specific named Digimon mid-effect-resolution. The DCGO fires `SelectAttackEffect` (BT24-082) or `SetCanNotSelectNotAttack` (BT21-081) within the effect coroutine — i.e., an in-effect attack, not an end-of-turn attack-window action.
-- Engine gap: `ModifierType::MayAttack` and `ModifierType::ForceAttack` exist in `enums.rs` but are NOT in `lookup_modifier_type` (`modifier_map.rs`), so they cannot be granted via `add_modifier:`. Even if registered, these modifiers target the EOT Execute/Vortex attack window — they don't trigger an immediate, mid-effect attack on a specific permanent.
-- Lowers to engine API: A new `EffectContext::may_attack_now(target: PermanentHandle)` / `force_attack_now(target: PermanentHandle)` primitive would be needed, plus a corresponding DSL step verb.
+- Status: RESOLVED for the reusable immediate in-effect attack primitive on 2026-05-03. The DSL now has `may_attack_now`, which lowers to `EffectContext::may_attack_now_optional(...)` and installs an existing-action-ID pending target selection mid-effect-resolution.
+- Engine notes: `ModifierType::MayAttack` / `ForceAttack` remain EOT-window modifiers and are still not the right vehicle for this specific immediate prompt. This gap is closed by a distinct effect-context primitive, not by registering those modifiers.
+- Lowers to engine API: `EffectContext::may_attack_now_optional(attacker, targets, without_suspending, optional, prompt)`; mandatory "then attacks" is `optional: false`, optional "may attack" is `optional: true`.
 - Suggested DSL syntax:
   ```yaml
-  - may_attack_now: { target: tgt }          # optional — player may choose to attack
-  - force_attack_now: { target: tgt }         # mandatory — Digimon must attack
+  - may_attack_now:
+      attacker: tgt
+      targets: any        # any | player | digimon
+      optional: true      # false for mandatory "then attacks"
+      without_suspending: false
   ```
-- Gap kind: hybrid (DSL lacks the verb AND engine lacks the mid-effect attack primitive).
-- Workaround: Omit the "may attack" / "then attacks" sub-clause. Test `#[ignore]`'d with `G-MAY-ATTACK-NOW` tag.
+- Gap kind: closed for immediate attack prompts. Persistent player-scoped grants such as `MayAttackPlayerOnly` and cross-side granted forced attacks remain separate engine gaps.
+- Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- effect_granted_attack --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- effect_granted_attack --nocapture`.
 - First reported: 2026-04-27 (BT24-082 batch-implement-cards-rust-dsl)
 
 ---

@@ -151,6 +151,7 @@ pub enum StepSpec {
 
     // Combat / replacement process outcomes
     Battle(BattleArgs),
+    MayAttackNow(MayAttackNowArgs),
     EndAttack(bool),
     CancelReplacement(EmptyArgs),
     HandleReplacement(EmptyArgs),
@@ -261,6 +262,7 @@ impl Serialize for StepSpec {
             StepSpec::Optional(v) => kv!(s, "optional", v),
             // Combat / replacement process outcomes
             StepSpec::Battle(v) => kv!(s, "battle", v),
+            StepSpec::MayAttackNow(v) => kv!(s, "may_attack_now", v),
             StepSpec::EndAttack(v) => kv!(s, "end_attack", v),
             StepSpec::CancelReplacement(v) => kv!(s, "cancel_replacement", v),
             StepSpec::HandleReplacement(v) => kv!(s, "handle_replacement", v),
@@ -399,6 +401,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Combat / replacement process outcomes
             "battle" => StepSpec::Battle(map.next_value()?),
+            "may_attack_now" => StepSpec::MayAttackNow(map.next_value()?),
             "end_attack" => StepSpec::EndAttack(map.next_value()?),
             "cancel_replacement" => StepSpec::CancelReplacement(map.next_value()?),
             "handle_replacement" => StepSpec::HandleReplacement(map.next_value()?),
@@ -481,6 +484,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "place_self_as_delay_option",
                         "link_to_own_digimon",
                         "optional",
+                        "battle",
+                        "may_attack_now",
                         "end_attack",
                         "cancel_replacement",
                         "handle_replacement",
@@ -573,6 +578,31 @@ pub struct TargetArg {
 pub struct BattleArgs {
     pub attacker: BindingRef,
     pub defender: BindingRef,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MayAttackNowArgs {
+    pub attacker: BindingRef,
+    #[serde(default)]
+    pub targets: AttackTargetSpec,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub without_suspending: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+}
+
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema, Default,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum AttackTargetSpec {
+    #[default]
+    Any,
+    Player,
+    Digimon,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

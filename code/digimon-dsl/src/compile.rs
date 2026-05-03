@@ -234,6 +234,14 @@ fn compile_distinct_by(d: crate::alt_path::DistinctBy) -> CompiledDistinctBy {
     }
 }
 
+fn compile_attack_target_spec(t: crate::step::AttackTargetSpec) -> CompiledAttackTargetSpec {
+    match t {
+        crate::step::AttackTargetSpec::Any => CompiledAttackTargetSpec::Any,
+        crate::step::AttackTargetSpec::Player => CompiledAttackTargetSpec::Player,
+        crate::step::AttackTargetSpec::Digimon => CompiledAttackTargetSpec::Digimon,
+    }
+}
+
 fn compile_per_selector(
     p: &crate::formula::PerSelector,
     prefix: &str,
@@ -1759,6 +1767,13 @@ fn compile_step(
         S::Battle(b) => CompiledStep::Battle {
             attacker: compile_binding_ref(&b.attacker),
             defender: compile_binding_ref(&b.defender),
+        },
+        S::MayAttackNow(a) => CompiledStep::MayAttackNow {
+            attacker: compile_binding_ref(&a.attacker),
+            targets: compile_attack_target_spec(a.targets),
+            without_suspending: a.without_suspending,
+            optional: a.optional,
+            prompt: a.prompt.clone(),
         },
         S::EndAttack(enabled) => CompiledStep::EndAttack { enabled: *enabled },
         S::CancelReplacement(_) => CompiledStep::CancelReplacement,

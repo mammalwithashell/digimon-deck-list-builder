@@ -217,6 +217,31 @@ impl Game {
         true
     }
 
+    pub(crate) fn can_attack_without_suspending(
+        &self,
+        handle: PermanentHandle,
+        vortex: bool,
+    ) -> bool {
+        let perm = match self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+        {
+            Some(p) => p,
+            None => return false,
+        };
+        if !perm.is_digimon(&self.card_data) {
+            return false;
+        }
+        // "Without suspending" bypasses only the suspend cost/unsuspended
+        // requirement. Summoning sickness still requires Rush or Vortex.
+        let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
+        if is_fresh && !vortex && !self.has_keyword(handle, Keyword::Rush) {
+            return false;
+        }
+        true
+    }
+
     /// Attack another Digimon on the opponent's field.
     ///
     /// Returns the terminal battle outcome — **unless** an interrupt
@@ -303,6 +328,21 @@ impl Game {
         )
     }
 
+    /// Declare an effect-granted attack that does not suspend on declaration.
+    ///
+    /// Uses the same internal no-suspend path as `<Overclock>` but is exposed
+    /// under a neutral name for card text like "this Digimon may attack
+    /// without suspending".
+    pub(crate) fn begin_attack_without_suspending(
+        &mut self,
+        attacker: PermanentHandle,
+        target: AttackTarget,
+    ) -> AttackResult {
+        self.begin_attack_impl(
+            attacker, target, /* vortex = */ false, /* is_overclock = */ true,
+        )
+    }
+
     fn begin_attack_impl(
         &mut self,
         attacker: PermanentHandle,
@@ -310,7 +350,12 @@ impl Game {
         vortex: bool,
         is_overclock: bool,
     ) -> AttackResult {
-        if !self.can_attack(attacker, vortex) {
+        let attacker_can_attack = if is_overclock {
+            self.can_attack_without_suspending(attacker, vortex)
+        } else {
+            self.can_attack(attacker, vortex)
+        };
+        if !attacker_can_attack {
             return AttackResult::Invalid;
         }
         // Target validation (Digimon must be a Digimon on field; Player target

@@ -75,7 +75,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Scheduled end-of-turn effect queue (for transient Options)](#scheduled-end-of-turn-effect-queue-for-transient-options) | ✅ | 1 | resolved in Group 5 Task 7 |
 | [Effect re-firing / cross-timing self-trigger](#effect-re-firing--cross-timing-self-trigger) | 🔴 | 1 | `effect_context.rs`, `effect_queue.rs` |
 | [Effect-initiated digivolve from non-hand source zones](#effect-initiated-digivolve-from-non-hand-source-zones) | ✅ | 4+ | resolved in Group 4 |
-| [Force-follow-up-attack / "may attack without suspending" script helpers](#force-follow-up-attack--may-attack-without-suspending-script-helpers) | 🔴 | 6 | `effect_context.rs`, `modifiers.rs`, `combat.rs` |
+| [Force-follow-up-attack / "may attack without suspending" script helpers](#force-follow-up-attack--may-attack-without-suspending-script-helpers) | 🟡 | 6 | immediate `may_attack_now` primitive resolved; persistent/cross-side variants remain |
 | [Trait-filter helpers on `CardSource` / `Permanent`](#trait-filter-helpers-on-cardsource--permanent) | 🟡 | pervasive | `card_source.rs`, `permanent.rs` |
 | [Granted triggered ability — attach an `Effect` to another permanent](#granted-triggered-ability--attach-an-effect-to-another-permanent) | 🔴 | 1 | `modifiers.rs`, `effect_queue.rs`, `effect_context.rs` |
 | [Named-target declarative aura (DP / keyword grants filtered by name/trait/level)](#named-target-declarative-aura-dp--keyword-grants-filtered-by-nametraitlevel) | 🟡 | 3+ | `effect.rs`, `modifiers.rs`, `tensor.rs`, `combat.rs` |
@@ -473,13 +473,15 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** Search-own-security-stack primitives and origin/provenance flags may still need card-specific follow-up where printed text distinguishes effect origin beyond the source zone.
 
 ### Force-follow-up-attack / "may attack without suspending" script helpers
-- **Severity:** 🔴 BLOCKING
+- **Severity:** 🟡 PARTIAL
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18)
 - **Card(s):** BT21-081 Owen Dreadnought ("Then, that Digimon attacks"), BT24-082 Owen Dreadnought ("it may attack"), BT20-016 Paildramon ("this Digimon may attack"), BT20-102 Omnimon (X Antibody) ("attack without suspending"), BT21-072 Arresterdramon: Superior Mode ("This Digimon may attack without suspending"), EX9-013 BlitzGreymon ("1 of your Digimon may attack") — DNA Omnimon adds: BT20-102 Omnimon (X Antibody) (Rush + attack without suspending), AD1-009 BlitzGreymon ([End of Your Turn] "1 of your Digimon may attack"), BT22-015 Omnimon ("Then, this Digimon may attack" after WhenDigivolving — grant-attack-after-digivolve, expected to work even on negative memory). Related: BT17-081 Tai Kamiya & Matt Ishida needs the `MayAttackPlayerOnly` variant captured in the player-scoped-modifier entry above — Rocks adds: EX10-034 Blastmon (**grant opp Digimon** `[Start of Your Main Phase] This Digimon attacks` — cross-side forced-attack; couples with the Granted triggered ability entry)
 - **Effect text:** Variants of "it may attack" / "attack without suspending" immediately following another effect.
-- **What's missing:** Engine internally supports `PendingAttack::is_overclock = true` to skip suspend (§4.6c-residual) but the flag is not exposed to scripts. No `ctx.force_follow_up_attack(attacker)` / `ctx.grant_may_attack_without_suspend(target, expiry)`. `ModifierType::MayAttack` exists but is EndOfTurnAction-scoped; the immediate force-attack case needs a distinct primitive.
-- **Suggested API shape:** `ctx.force_follow_up_attack(attacker: PermanentHandle)` installs an EndOfTurnAction-slotted attack scoped to that attacker. `ctx.grant_may_attack_without_suspend(target, expiry)` / new `ModifierType::AttackWithoutSuspend(u8)` consumed by `begin_attack_impl`.
-- **Workaround:** None — BLOCKED.
+- **Status (2026-05-03):** Immediate in-effect attack prompts are implemented via `EffectContext::may_attack_now_optional(...)` and DSL `may_attack_now`. The prompt installs a normal pending target selection using existing attack action IDs, supports optional PASS, target scopes (`any`, `player`, `digimon`), and `without_suspending`. It does not change `ACTION_SPACE_SIZE` or tensor layout.
+- **Remaining:** Persistent player-scoped grants such as `MayAttackPlayerOnly`, EndOfTurnAction-only modifier variants, and cross-side granted forced attacks (EX10-034-style) are still covered by the player-scoped modifier / granted-triggered-ability entries. Those should not be treated as closed by the immediate prompt primitive.
+- **Suggested DSL/API shape:** `may_attack_now: { attacker: tgt, targets: any|player|digimon, optional: true|false, without_suspending: true|false }` lowers to `ctx.may_attack_now_optional(...)`.
+- **Regression coverage:** `combat::effect_granted_attack::{may_attack_now_installs_attack_prompt_with_player_only_target,may_attack_now_without_suspending_resolves_real_attack_flow}` and `dsl::effect_granted_attack::may_attack_now_yaml_lowers_to_compiled_step`.
+- **Workaround:** No workaround needed for immediate in-effect attack prompts; remaining persistent/cross-side variants are still blocked.
 - **Related:** Parity §4.6c / §4.6c-residual.
 
 ### Trait-filter helpers on `CardSource` / `Permanent`
