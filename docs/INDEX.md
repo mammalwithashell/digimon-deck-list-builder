@@ -18,7 +18,6 @@
 | [RULES_CONTEXT.md](RULES_CONTEXT.md) | Official Digimon TCG rules reference |
 | [TITAN_MODE.md](TITAN_MODE.md) | Titan/Commander variant rules |
 | [EDH_COMMANDER_MODE.md](EDH_COMMANDER_MODE.md) | EDH Commander mode design |
-| [UI_PLAN.md](UI_PLAN.md) | UI design plan |
 | [admin_ai_batch_runbook.md](admin_ai_batch_runbook.md) | AI batch processing runbook |
 
 Related top-level docs:

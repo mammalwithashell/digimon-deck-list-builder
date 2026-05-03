@@ -206,11 +206,9 @@ Start at [docs/INDEX.md](docs/INDEX.md) for the full catalog.
 | [docs/RUST_ENGINE_GAPS.md](docs/RUST_ENGINE_GAPS.md) | Rust-engine gap log from archetype audits |
 | [docs/TRAINING_RUNBOOK.md](docs/TRAINING_RUNBOOK.md) | Training pipeline operations guide |
 | [docs/TOOLS.md](docs/TOOLS.md) | CLI tools: transpiler, Pinecone, model export, new-set workflow |
-| [docs/UI_PLAN.md](docs/UI_PLAN.md) | Frontend and API surface design |
 | [docs/admin_ai_batch_runbook.md](docs/admin_ai_batch_runbook.md) | Admin AI pipeline operations |
 | [docs/EDH_COMMANDER_MODE.md](docs/EDH_COMMANDER_MODE.md) | 4-player commander format spec |
 | [docs/TITAN_MODE.md](docs/TITAN_MODE.md) | Asymmetric multiplayer format spec |
-| [docs/plans/DESKTOP_DISTRIBUTION_PLAN.md](docs/plans/DESKTOP_DISTRIBUTION_PLAN.md) | Desktop distribution plan (WebSocket PvP, ONNX, Tauri) |
 | [qa/archetype-qa/engine-gaps.md](qa/archetype-qa/engine-gaps.md) | Python-engine gap tracker |
 | [qa/archetype-qa/engine-api-reference.md](qa/archetype-qa/engine-api-reference.md) | Engine scripting reference used by archetype sub-agents |
 

@@ -30,7 +30,6 @@ Detailed architecture documentation extracted from CLAUDE.md. For project overvi
 - `code/src-tauri/`: Tauri v2 desktop app shell — Rust-only; hosts gameplay, ONNX inference, deck tools, and the runtime-downloaded model cache
 - `code/tools/export_onnx.py`: SB3 → ONNX model conversion (MLP + LSTM)
 - `docs/TENSOR_SPEC.md`, `docs/ACTION_SPEC.md`, `AGENTS.md`, `docs/TRAINING_RUNBOOK.md`: behavior contracts
-- `docs/plans/DESKTOP_DISTRIBUTION_PLAN.md`: full implementation plan for desktop distribution
 - `docs/TOOLS.md`: card registry, autoencoder, tensor layout, and new-set workflow documentation
 - `code/engine_py_legacy/engine/data/tensor_layout.py`: card ID / scalar position map for FeaturesExtractor
 - `code/engine_py_legacy/engine/data/card_features.py`: card feature vectorizer for autoencoder
