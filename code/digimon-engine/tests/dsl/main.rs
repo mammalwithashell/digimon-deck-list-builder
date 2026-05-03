@@ -104,6 +104,7 @@ mod raw_rust_registry;
 mod real_cards_json;
 mod replacement;
 mod replacement_context;
+mod residual_formula_predicate_vocab;
 mod reveal_buckets;
 mod roundtrip;
 mod schema_export;

@@ -350,6 +350,19 @@ fn compile_formula(
             delta: *delta,
         },
         FormulaSpec::BindingDp { binding_dp } => CompiledFormula::BindingDp(binding_dp.clone()),
+        FormulaSpec::SourceStackDpSum {
+            source_stack_dp_sum,
+        } => CompiledFormula::SourceStackDpSum {
+            target: source_stack_dp_sum.target.clone(),
+            filter: source_stack_dp_sum.filter.as_ref().map(|filter| {
+                Box::new(compile_predicate(
+                    filter,
+                    &format!("{prefix}.source_stack_dp_sum.filter"),
+                    card_id,
+                    errors,
+                ))
+            }),
+        },
         FormulaSpec::Compound(CompoundFormula::FloorDiv(v)) => CompiledFormula::FloorDiv(
             v.iter()
                 .enumerate()

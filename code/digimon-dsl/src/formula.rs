@@ -5,7 +5,7 @@ use serde::ser::SerializeMap;
 use serde::{Deserialize, Serialize};
 
 use crate::common::PlayerRef;
-use crate::predicate::Zone;
+use crate::predicate::{PredicateSpec, Zone};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
@@ -21,7 +21,18 @@ pub enum FormulaSpec {
     BindingDp {
         binding_dp: String,
     },
+    SourceStackDpSum {
+        source_stack_dp_sum: SourceStackDpSumSpec,
+    },
     Compound(CompoundFormula),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SourceStackDpSumSpec {
+    pub target: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter: Option<Box<PredicateSpec>>,
 }
 
 #[derive(Debug, Clone, PartialEq, schemars::JsonSchema)]

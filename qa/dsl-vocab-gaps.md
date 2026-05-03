@@ -20,6 +20,18 @@ Format per entry:
 - Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection -- reveal_buckets --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- reveal_buckets --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2e_select_reveal phase2e_select_ordered_permutation phase2b_zone_moves_extra --nocapture`.
 - Remaining related blockers: card-specific TS/Olympos YAML migration and any top-security inherited variants are tracked separately; the reusable multi-bucket reveal selection primitive is closed.
 
+## Source-stack DP sum formula
+- Status: RESOLVED on 2026-05-03 for the narrow reusable formula leaf. `source_stack_dp_sum` now parses, compiles, validates its optional predicate filter, and evaluates by summing printed DP of live source-stack cards below the target permanent's top card. The optional filter reuses existing card predicate evaluation against each source card handle.
+- Implemented DSL formula:
+  ```yaml
+  source_stack_dp_sum:
+    target: self
+    filter: { trait_has: Iliad }
+  ```
+- Lowers to engine formula evaluator: `CompiledFormula::SourceStackDpSum { target, filter }`.
+- Verification: `cargo test --manifest-path code\digimon-engine\Cargo.toml --test dsl -- residual_formula_predicate_vocab group7_formula_batch group7_predicate_batch group6_dynamic_formulas --nocapture`.
+- Remaining related blockers: none for summing matching live source-stack card DP; card-specific YAML authoring remains separate.
+
 ## Security Option self-disposition to hand
 - Status: COVERED on 2026-05-03 for the narrow currently-resolving security Option moving itself to hand. The existing DSL step `add_this_option_to_hand: {}` already parses/compiles as `AddThisOptionToHand`, lowers through `zone_moves.rs` to `EffectContext::add_pending_security_to_hand()`, and consumes `Game.pending_security` so the security dispose phase cannot also trash the card.
 - No new disposition marker/API was added. Broader security disposition primitives such as adding an opponent's top security card to hand remain separate tracker entries.

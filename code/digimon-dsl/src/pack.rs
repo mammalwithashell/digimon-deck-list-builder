@@ -394,6 +394,11 @@ fn collect_formula_raw_rust_fns(formula: &CompiledFormula, names: &mut BTreeSet<
         CompiledFormula::BasePerDelta { per, .. } => {
             collect_per_selector_raw_rust_fns(per, names);
         }
+        CompiledFormula::SourceStackDpSum { filter, .. } => {
+            if let Some(filter) = filter {
+                collect_predicate_raw_rust_fns(filter, names);
+            }
+        }
         CompiledFormula::Literal(_)
         | CompiledFormula::Aggregate(_)
         | CompiledFormula::AggregateScoped { .. }

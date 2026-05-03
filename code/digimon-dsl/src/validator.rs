@@ -826,6 +826,19 @@ fn validate_formula(
         FormulaSpec::BasePerDelta { per, .. } => {
             validate_per_selector(per, &format!("{prefix}.per"), card_id, ctx, errors);
         }
+        FormulaSpec::SourceStackDpSum {
+            source_stack_dp_sum,
+        } => {
+            if let Some(filter) = &source_stack_dp_sum.filter {
+                validate_predicate(
+                    filter,
+                    &format!("{prefix}.source_stack_dp_sum.filter"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
+        }
         FormulaSpec::Literal(_)
         | FormulaSpec::BindingDp { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
@@ -866,6 +879,7 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
             | CompoundFormula::Min(args),
         ) => args.iter().any(formula_uses_dp_aggregate),
         FormulaSpec::BasePerDelta { per, .. } => per_uses_dp_aggregate(per),
+        FormulaSpec::SourceStackDpSum { .. } => false,
         FormulaSpec::Literal(_)
         | FormulaSpec::BindingDp { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))

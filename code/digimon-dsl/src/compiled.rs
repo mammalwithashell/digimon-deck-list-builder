@@ -299,6 +299,10 @@ pub enum CompiledFormula {
         scope: CompiledPlayerRef,
     },
     BindingDp(String),
+    SourceStackDpSum {
+        target: String,
+        filter: Option<Box<CompiledPredicate>>,
+    },
     RawRust(String),
 }
 
