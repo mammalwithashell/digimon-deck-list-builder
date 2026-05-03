@@ -260,16 +260,7 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // action-execution time, not mask generation. Mirror that here.
             // Data population (cards.json ingest of dna_costs) is §4.5b.
             for h in 0..max_hand as usize {
-                let card = &me.hand[h];
-                let evo_meta = &game.card_data[card.data_index];
-                if evo_meta.dna_costs.is_empty() {
-                    continue;
-                }
-                if crate::dna_digivolve::has_valid_dna_targets(
-                    evo_meta,
-                    &me.battle_area,
-                    &game.card_data,
-                ) {
+                if game.has_valid_dna_route_for_hand_card(player_id, h) {
                     mask[(DNA_DIGIVOLVE_START + h as u16) as usize] = 1.0;
                 }
             }
@@ -494,6 +485,13 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 
             let max_field = me.battle_area.len().min(FIELD_SLOTS);
             let max_opp = opp.battle_area.len().min(FIELD_SLOTS);
+            let max_hand = (me.hand.len() as u16).min(DNA_DIGIVOLVE_END - DNA_DIGIVOLVE_START);
+
+            for h in 0..max_hand as usize {
+                if game.has_valid_dna_route_for_hand_card(player_id, h) {
+                    mask[(DNA_DIGIVOLVE_START + h as u16) as usize] = 1.0;
+                }
+            }
 
             for i in 0..max_field {
                 let handle = PermanentHandle {

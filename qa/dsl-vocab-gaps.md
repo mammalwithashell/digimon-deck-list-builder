@@ -181,10 +181,12 @@ Format per entry:
 
 ## BT22-008 / BT22-017 — inherited end-of-turn DNA digivolve registration
 - Effect text: "[End of Your Turn] This Digimon and another of your Digimon may DNA digivolve into a Digimon card in your hand."
-- Missing DSL verb / step kind / predicate: Lowering for existing `alt_path_registration` declarative clauses with `kind: dna_digivolve`. YAML examples can spell the clause, but `code/digimon-engine/src/dsl_cards/mod.rs` currently leaves this declarative form in the unlowered catch-all branch.
+- Missing DSL verb / step kind / predicate: RESOLVED 2026-05-02 for literal-cost, two battle-area material `alt_path_registration` declarative clauses with `kind: dna_digivolve`, `scope: inherited`, and `trigger: end_of_your_turn`.
 - Lowers to engine API: the same alternate-path registration and action-mask channel used by normal DNA digivolve costs, producing a player-visible pending/action path rather than an automatic end-of-turn digivolve.
 - Suggested DSL syntax: keep the existing `alt_path_registration` shape and require lowering for inherited clauses, including `timing: end_of_your_turn`, `kind: dna_digivolve`, material filters, target hand-card filter, and cost override.
 - Also blocks: `BT12-021` Veemon and `BT12-047` Wormmon in BG Imperial. Their inherited text is "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand."
+- Covered by: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_alt_path_registration`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test mask_and_tensor -- dna`.
+- Remaining limits: formula costs, extra costs, `from` gates, burst end steps, `stacks_unsuspended`, non-battle-area materials, repeat/unbounded materials, `ignore_requirements`, `source_treated_as`, marker routes, and non-DNA alt-path kinds are intentionally not consumed by this v1 action hook.
 - First reported: 2026-04-28
 
 ## BG Imperial DNA cards — YAML `dna_costs` authoring / production data population
@@ -193,7 +195,7 @@ Format per entry:
 - Lowers to engine API: `CardData.dna_costs`, consumed by the DNA digivolve action-mask branch and `Game::initiate_dna_digivolve`.
 - Covered by: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- dsl_dna_alt_path_enriches_card_data_dna_costs`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action -- authored_dna_alt_path_makes_dna_action_legal_for_bt20_016`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_016_has_dna_digivolve_alt_path`.
 - Full verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml`, `DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_rust_backend_parity.py -v`, and `python -m pytest code/tests/rl -v`.
-- Remaining limits: inherited/end-of-turn `alt_path_registration` DNA clauses are still tracked by the preceding entry; this closure covers top-level printed DNA digivolve card data.
+- Remaining limits: this closure covers top-level printed DNA digivolve card data. Inherited/end-of-turn registration is covered separately by the preceding entry and supports the existing DNA action IDs for the v1 literal-cost two-material shape.
 - First reported: 2026-04-28 (BG Imperial assess-rust-engine-archetype)
 
 ## Group 8 — scoped DigiXros aliases, ACE Overflow metadata, and reveal overlays

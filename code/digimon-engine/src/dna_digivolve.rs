@@ -14,9 +14,27 @@
 
 use crate::card_data::{CardData, DnaCost, DnaRequirement};
 use crate::digixros::matches_digixros_name_requirement;
+use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
+use crate::effect_context::EffectReadContext;
+use crate::enums::{EffectTiming, GamePhase, PlayerId};
 use crate::game::Game;
 use crate::permanent::Permanent;
 use crate::permanent::PermanentHandle;
+use digimon_dsl::compiled::{
+    CompiledAltPath, CompiledAltPathKind, CompiledCost, CompiledMaterial, CompiledZone,
+};
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DnaRouteWindow {
+    Main,
+    EndOfTurnAction,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DnaRouteMatch {
+    pub first_is_top: bool,
+    pub memory_cost: i16,
+}
 
 impl Game {
     pub fn card_data_by_id(&self, card_id: &str) -> Option<&CardData> {
@@ -51,6 +69,273 @@ impl Game {
             .map(|data| data.card_name.eq_ignore_ascii_case(required_name))
             .unwrap_or(false)
     }
+
+    pub fn has_valid_dna_route_for_hand_card(&self, player: PlayerId, hand_index: usize) -> bool {
+        let Some(window) = self.current_dna_route_window() else {
+            return false;
+        };
+        self.valid_dna_first_targets_for_hand_card(player, hand_index, window)
+            .next()
+            .is_some()
+    }
+
+    pub fn has_registered_end_of_turn_dna_action(&self, player: PlayerId) -> bool {
+        let hand_len = self
+            .players
+            .get(player as usize)
+            .map(|p| p.hand.len())
+            .unwrap_or(0);
+        (0..hand_len).any(|hand_index| {
+            self.valid_dna_first_targets_for_hand_card(
+                player,
+                hand_index,
+                DnaRouteWindow::EndOfTurnAction,
+            )
+            .next()
+            .is_some()
+        })
+    }
+
+    pub(crate) fn current_dna_route_window(&self) -> Option<DnaRouteWindow> {
+        match self.current_phase {
+            GamePhase::Main => Some(DnaRouteWindow::Main),
+            GamePhase::EndOfTurnAction => Some(DnaRouteWindow::EndOfTurnAction),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn valid_dna_first_targets_for_hand_card(
+        &self,
+        player: PlayerId,
+        hand_index: usize,
+        window: DnaRouteWindow,
+    ) -> impl Iterator<Item = u16> + '_ {
+        let battle_len = self
+            .players
+            .get(player as usize)
+            .map(|p| p.battle_area.len())
+            .unwrap_or(0);
+        (0..battle_len).filter_map(move |first_idx| {
+            self.valid_dna_second_targets_for_hand_card(player, hand_index, first_idx, window)
+                .next()
+                .map(|_| first_idx as u16)
+        })
+    }
+
+    pub(crate) fn valid_dna_second_targets_for_hand_card(
+        &self,
+        player: PlayerId,
+        hand_index: usize,
+        first_idx: usize,
+        window: DnaRouteWindow,
+    ) -> impl Iterator<Item = u16> + '_ {
+        let battle_len = self
+            .players
+            .get(player as usize)
+            .map(|p| p.battle_area.len())
+            .unwrap_or(0);
+        (0..battle_len).filter_map(move |second_idx| {
+            if first_idx == second_idx {
+                return None;
+            }
+            self.dna_route_for_hand_card(player, hand_index, first_idx, second_idx, window)
+                .map(|_| second_idx as u16)
+        })
+    }
+
+    pub(crate) fn dna_route_for_hand_card(
+        &self,
+        player: PlayerId,
+        hand_index: usize,
+        first_idx: usize,
+        second_idx: usize,
+        window: DnaRouteWindow,
+    ) -> Option<DnaRouteMatch> {
+        let player_state = self.players.get(player as usize)?;
+        let hand_card = player_state.hand.get(hand_index)?;
+        let battle = &player_state.battle_area;
+        let first = battle.get(first_idx)?;
+        let second = battle.get(second_idx)?;
+
+        if matches!(window, DnaRouteWindow::Main) {
+            let evo_meta = &self.card_data[hand_card.data_index];
+            if let Some((first_is_top, dna_cost)) =
+                get_dna_stacking_order(evo_meta, first, second, &self.card_data)
+            {
+                return Some(DnaRouteMatch {
+                    first_is_top,
+                    memory_cost: dna_cost.memory_cost,
+                });
+            }
+        }
+
+        if matches!(window, DnaRouteWindow::EndOfTurnAction) {
+            return self.registered_end_of_turn_dna_route_for_hand_card(
+                player, hand_index, first_idx, second_idx,
+            );
+        }
+        None
+    }
+
+    fn registered_end_of_turn_dna_route_for_hand_card(
+        &self,
+        player: PlayerId,
+        hand_index: usize,
+        first_idx: usize,
+        second_idx: usize,
+    ) -> Option<DnaRouteMatch> {
+        let player_state = self.players.get(player as usize)?;
+        let hand_card = player_state.hand.get(hand_index)?;
+        let hand_subject = PredicateSubject::Card(hand_card.handle());
+
+        for (source_card_id, source_card, source_permanent, controller, inherited_source) in
+            live_stack_sources(player_state, player, &self.card_data)
+        {
+            let Some(effects) = self.effects_for_card(&source_card_id, source_card) else {
+                continue;
+            };
+            for effect in effects {
+                if effect.inherited != inherited_source
+                    || effect.timing != EffectTiming::EndOfYourTurn
+                {
+                    continue;
+                }
+                let Some(registration) = effect.alt_path_registration.as_ref() else {
+                    continue;
+                };
+                let rctx =
+                    EffectReadContext::new(self, source_card, Some(source_permanent), controller);
+                if let Some(condition) = &effect.condition {
+                    if !condition(&rctx) {
+                        continue;
+                    }
+                }
+                if let Some(applies_to) = registration.applies_to.as_ref() {
+                    if !eval_predicate(applies_to, &rctx, hand_subject) {
+                        continue;
+                    }
+                }
+                if let Some(matched) = registered_dna_route_match(
+                    registration.registers.as_ref(),
+                    &rctx,
+                    player,
+                    first_idx,
+                    second_idx,
+                ) {
+                    return Some(matched);
+                }
+            }
+        }
+        None
+    }
+}
+
+fn live_stack_sources(
+    player_state: &crate::player::Player,
+    player: PlayerId,
+    data: &[CardData],
+) -> Vec<(
+    String,
+    crate::card_source::CardHandle,
+    PermanentHandle,
+    PlayerId,
+    bool,
+)> {
+    let mut out = Vec::new();
+    for (index, permanent) in player_state.battle_area.iter().enumerate() {
+        let host = PermanentHandle {
+            player,
+            index: index as u8,
+        };
+        let stack_size = permanent.card_sources.len();
+        for (source_index, source) in permanent.card_sources.iter().enumerate() {
+            out.push((
+                source.card_id(data).to_string(),
+                source.handle(),
+                host,
+                player,
+                source_index + 1 < stack_size,
+            ));
+        }
+    }
+    out
+}
+
+fn registered_dna_route_match(
+    path: &CompiledAltPath,
+    rctx: &EffectReadContext<'_>,
+    player: PlayerId,
+    first_idx: usize,
+    second_idx: usize,
+) -> Option<DnaRouteMatch> {
+    if !matches!(path.kind, CompiledAltPathKind::DnaDigivolve) || path.materials.len() != 2 {
+        return None;
+    }
+    // Existing DNA action IDs select exactly two battle-area permanents.
+    // Broader alt-path shapes need their own selection flow before they can
+    // be exposed without approximation.
+    let cost = registered_path_literal_cost(path)?;
+    let first = PermanentHandle {
+        player,
+        index: first_idx as u8,
+    };
+    let second = PermanentHandle {
+        player,
+        index: second_idx as u8,
+    };
+    if material_matches(&path.materials[0], rctx, first)
+        && material_matches(&path.materials[1], rctx, second)
+    {
+        return Some(DnaRouteMatch {
+            first_is_top: true,
+            memory_cost: cost,
+        });
+    }
+    if material_matches(&path.materials[0], rctx, second)
+        && material_matches(&path.materials[1], rctx, first)
+    {
+        return Some(DnaRouteMatch {
+            first_is_top: false,
+            memory_cost: cost,
+        });
+    }
+    None
+}
+
+fn registered_path_literal_cost(path: &CompiledAltPath) -> Option<i16> {
+    if path.from.is_some()
+        || !path.extra_cost.is_empty()
+        || !path.on_burst_turn_end.is_empty()
+        || path.stacks_unsuspended
+        || path.ignore_requirements
+        || path.source_treated_as.is_some()
+        || path.marker
+    {
+        return None;
+    }
+    match &path.cost {
+        None => Some(0),
+        Some(CompiledCost::Literal(n)) => i16::try_from(*n).ok(),
+        Some(CompiledCost::Formula(_)) => None,
+    }
+}
+
+fn material_matches(
+    material: &CompiledMaterial,
+    rctx: &EffectReadContext<'_>,
+    handle: PermanentHandle,
+) -> bool {
+    if material.repeat.is_some()
+        || material.distinct_by.is_some()
+        || material.stack_under
+        || !material
+            .zones
+            .iter()
+            .all(|z| *z == CompiledZone::BattleArea)
+    {
+        return false;
+    }
+    eval_predicate(&material.filter, rctx, PredicateSubject::Permanent(handle))
 }
 
 fn perm_matches_req(perm: &Permanent, req: &DnaRequirement, data: &[CardData]) -> bool {

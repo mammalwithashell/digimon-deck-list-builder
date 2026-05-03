@@ -208,6 +208,12 @@ impl Game {
 
         let tp = self.turn_player();
 
+        if (DNA_DIGIVOLVE_START..DNA_DIGIVOLVE_END).contains(&action_id) {
+            let hand_idx = (action_id - DNA_DIGIVOLVE_START) as usize;
+            self.initiate_dna_digivolve(tp, hand_idx);
+            return;
+        }
+
         // [100..400) — End-of-turn attacks (Vortex, MayAttack)
         if (ATTACK_START..ATTACK_START + 300).contains(&action_id) {
             let offset = action_id - ATTACK_START;

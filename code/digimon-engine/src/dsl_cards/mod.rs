@@ -9,6 +9,7 @@ pub mod bindings;
 pub mod expiry_map;
 pub mod formula_eval;
 pub mod formula_registry;
+pub mod lower_alt_path_registration;
 pub mod lower_aura;
 pub mod lower_cost_reduction;
 pub mod lower_delay;
@@ -251,6 +252,25 @@ impl CardEffect for DslCardEffect {
                             builder = builder.name(summary);
                         }
                         out.push(builder.build());
+                    }
+                    CompiledDeclarativeClause::AltPathRegistration {
+                        scope,
+                        active_when,
+                        trigger,
+                        applies_to,
+                        registers,
+                        ..
+                    } => {
+                        if let Some(e) = lower_alt_path_registration::lower(
+                            card,
+                            *scope,
+                            active_when.clone(),
+                            *trigger,
+                            applies_to.clone(),
+                            registers.clone(),
+                        ) {
+                            out.push(e);
+                        }
                     }
                     CompiledDeclarativeClause::RawRust { fn_name, .. } => {
                         if let Some(f) = self.raw.declarative_fn(fn_name) {

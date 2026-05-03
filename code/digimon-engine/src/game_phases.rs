@@ -314,6 +314,9 @@ impl Game {
         let Some(me) = self.players.get(player as usize) else {
             return false;
         };
+        if self.has_registered_end_of_turn_dna_action(player) {
+            return true;
+        }
         for (i, perm) in me.battle_area.iter().enumerate() {
             if !perm.top_card().is_digimon(&self.card_data) {
                 continue;
