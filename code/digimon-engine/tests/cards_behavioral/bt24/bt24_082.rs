@@ -24,18 +24,9 @@
 //!
 //! # Known engine and DSL gaps affecting these tests
 //!
-//! G-ON-DIGIVOLVE-TRAIT-FILTER [engine gap]:
-//!   `on_digivolve` fires with `TriggerSource::PlayerBattleArea`, which sets
-//!   `trigger_context.target_permanent` = the OBSERVER permanent (the Tamer
-//!   itself), not the newly-digivolved permanent. There is no way to:
-//!     (a) filter "the newly-digivolved card has Reptile/Dragonkin",
-//!     (b) reference the newly-digivolved permanent as the dp-modifier target.
-//!   The YAML uses an `any_permanent` condition approximation (a Reptile/
-//!   Dragonkin is anywhere on the field) and a select_own_permanent prompt
-//!   for the DP modifier target — both under-specify the effect. Tests for
-//!   correct per-Digimon targeting and trait filtering are `#[ignore]`'d
-//!   pending a `TriggerContext::digivolve_target` field being added to
-//!   `TriggerSource::PlayerBattleArea`.
+//! `on_digivolve` now carries the newly-digivolved permanent/card in event
+//! context. Clause 2 gates with `event_target_owner` + `event_target_trait_has`
+//! and applies the DP modifier to `target: event_target`.
 //!
 //! G-MAY-ATTACK-NOW [dsl+engine gap]:
 //!   The DCGO fires `SelectAttackEffect` mid-effect-resolution (immediate
@@ -56,6 +47,7 @@ use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::EffectTiming;
+use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::TriggerSource;
 
 const YAML: &str = include_str!("../../../cards/bt24/BT24-082.yaml");
@@ -65,11 +57,27 @@ const YAML: &str = include_str!("../../../cards/bt24/BT24-082.yaml");
 fn make_digimon_card(id: &str, dp: i32) -> CardData {
     let mut c = make_test_card(id, id);
     c.dp = Some(dp);
+    c.traits = vec!["Reptile".to_string()];
     c
 }
 
 fn make_filler(id: &str) -> CardData {
     make_test_card(id, id)
+}
+
+fn enqueue_digivolve_event_for(runner: &mut DebugRunner, target: PermanentHandle) {
+    let card = runner.game.players[target.player as usize].battle_area[target.index as usize]
+        .top_card()
+        .handle();
+    runner.game.enqueue_triggered(
+        EffectTiming::OnDigivolve,
+        TriggerSource::Digivolved {
+            player: target.player,
+            permanent: target,
+            card,
+        },
+    );
+    runner.game.drain_effect_queue();
 }
 
 // ─── SECTION 1 — Structural assertions ───────────────────────────────────────
@@ -422,9 +430,8 @@ fn bt24_082_clause1_elizamon_gate_open_when_no_digimon() {
 
 // ─── SECTION 3 — Clause 2: On-Digivolve behavior ─────────────────────────────
 
-/// Clause 2 smoke: on_digivolve trigger does not panic. Since make_test_card
-/// doesn't set traits, the any_permanent condition won't fire here — this is
-/// purely a non-panic verification.
+/// Clause 2 smoke: on_digivolve trigger does not panic when the event target
+/// has no matching trait.
 #[test]
 fn bt24_082_clause2_no_panic_on_digivolve_trigger() {
     let mut runner = DebugRunner::builder()
@@ -437,16 +444,13 @@ fn bt24_082_clause2_no_panic_on_digivolve_trigger() {
         .start();
 
     runner.place_on_field(0, "BT24-082", Some(0));
+    let target = runner.place_on_field(0, "FILL", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnDigivolve,
-        TriggerSource::PlayerBattleArea(0),
-    );
-    runner.game.drain_effect_queue();
+    enqueue_digivolve_event_for(&mut runner, target);
     // No panic is the primary assertion.
 }
 
-/// Clause 2: When there are NO Reptile/Dragonkin Digimon on the field, the
+/// Clause 2: When the newly-digivolved target is not Reptile/Dragonkin, the
 /// condition blocks — Owen must remain unsuspended and no selection installs.
 #[test]
 fn bt24_082_clause2_condition_blocked_without_reptile_dragonkin() {
@@ -460,17 +464,14 @@ fn bt24_082_clause2_condition_blocked_without_reptile_dragonkin() {
         .start();
 
     let tamer = runner.place_on_field(0, "BT24-082", Some(0));
+    let target = runner.place_on_field(0, "FILL", Some(0));
 
     assert!(
         !runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
         "Owen must start unsuspended"
     );
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnDigivolve,
-        TriggerSource::PlayerBattleArea(0),
-    );
-    runner.game.drain_effect_queue();
+    enqueue_digivolve_event_for(&mut runner, target);
 
     assert!(
         !runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
@@ -482,14 +483,37 @@ fn bt24_082_clause2_condition_blocked_without_reptile_dragonkin() {
     );
 }
 
-/// Clause 2 IGNORED: The correct filter should be 'the newly-digivolved card
-/// has Reptile/Dragonkin'. With G-ON-DIGIVOLVE-TRAIT-FILTER, this is not
-/// implementable — the context carries the observer's permanent, not the
-/// newly-digivolved one.
 #[test]
-#[ignore = "pending: G-ON-DIGIVOLVE-TRAIT-FILTER — on_digivolve trigger context does not carry the newly-digivolved permanent's traits"]
 fn bt24_082_clause2_fires_only_for_reptile_dragonkin_digivolve() {
-    unimplemented!("blocked on G-ON-DIGIVOLVE-TRAIT-FILTER");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-082 YAML parses")
+        .add_card(make_digimon_card("REPTILE-TARGET", 4000))
+        .add_card(make_filler("FILL"))
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    let tamer = runner.place_on_field(0, "BT24-082", Some(0));
+    let target = runner.place_on_field(0, "REPTILE-TARGET", Some(0));
+    let dp_before = runner
+        .effective_dp(target)
+        .expect("target has effective DP");
+
+    enqueue_digivolve_event_for(&mut runner, target);
+
+    assert!(
+        runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "Owen should pay the suspend cost when a Reptile/Dragonkin digivolve event is observed"
+    );
+    assert_eq!(
+        runner
+            .effective_dp(target)
+            .expect("target has effective DP"),
+        dp_before + 3000,
+        "DP modifier must apply to the newly-digivolved event target"
+    );
 }
 
 /// Clause 2 IGNORED: "it may attack" — no may_attack_now primitive.

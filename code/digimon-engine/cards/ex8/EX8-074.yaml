@@ -26,13 +26,17 @@ alt_paths:
 effects:
   # ─── Clause 1: BeforePayCost — suspend 2 Digimon → -4 play cost ─────────────
   #
-  # NOTE G-COUNT-LTE-EVAL: A `count_gte >= 2 unsuspended Digimon` condition would
-  # guard this clause, but `count_gte` evaluates always-TRUE in the current engine.
-  # Omitted here; partial protection is provided by the pay_cost selections which
-  # will find no valid candidates if fewer than 2 unsuspended Digimon exist.
   - kind: cost_reduction
     reduction_timing: before_pay_cost
     when_playing_this: true
+    condition:
+      count_gte:
+        filter:
+          owner: you
+          zone: [battle_area]
+          kind: digimon
+          is_unsuspended: true
+        n: 2
     amount: 4
     summary: "Suspend 2 Digimon, -4 play cost"
     pay_cost:
@@ -63,12 +67,9 @@ effects:
 
   # ─── Clause 4: [When Digivolving] optional — suspend + delete ───────────────
   #
-  # NOTE G-PRED-DP-LTE: dp_lte predicate on permanents is parsed but the engine
-  # predicate evaluator does not evaluate it yet for battle-area permanents.
-  # All opponent Digimon appear as valid targets until the gap closes.
-  # The raw_rust formula `ex8_074_suspended_dp_cap` computes 8000 + 3000 × (other
-  # suspended Digimon count) but is NOT yet registered in raw_rust/mod.rs —
-  # the dp_lte formula evaluates to 0 until registered (so all opp Digimon pass).
+  # The raw_rust formula `ex8_074_suspended_dp_cap` computes 8000 + 3000 ×
+  # other suspended Digimon count and is shared by both instances of the
+  # When Digivolving body.
   - when: when_digivolving
     optional: true
     summary: "[When Digivolving] May suspend 1 Digimon; may delete opp Digimon (DP cap)"
@@ -100,8 +101,6 @@ effects:
   # NOTE G-ACTIVATE-CARD-WD-EFFECTS: No DSL verb to enumerate and re-activate a
   # named card's [When Digivolving] effects. Inline duplication of Clause 4's
   # process body is the documented workaround.
-  # NOTE G-OPT-TRIGGERED: once_per_turn lowers to max_per_turn=1 but is not
-  # consulted for triggered effects yet. OPT lockout test is #[ignore]'d.
   - when: on_enter_field_anyone
     active_when: { all_turns: true }
     once_per_turn: true

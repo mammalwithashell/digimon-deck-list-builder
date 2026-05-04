@@ -4,6 +4,17 @@ kind: option
 color: [purple]
 cost: 3
 traits: [LIBERATOR]
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: LIBERATOR
+      - all_of:
+          - kind: tamer
+          - trait_has: LIBERATOR
 
 # ─── Clause 0: Color bypass (conditional IgnoreColorRequirement) ──────────────
 #
@@ -21,14 +32,9 @@ traits: [LIBERATOR]
 #   kind: flood_gate, modifier: IgnoreColorRequirement
 #   active_when uses any_permanent to check for LIBERATOR Digimon or Tamer.
 #
-# KNOWN GAP G-IGNORE-COLOR-MASK:
-#   IgnoreColorRequirement modifier is compiled correctly but not enforced in
-#   code/digimon-engine/src/action/mask.rs (line 598 comment: "residual §4.2b
-#   work; absent here"). The flood_gate clause compiles and structural tests pass,
-#   but the modifier has zero runtime effect on the action mask until the gap closes.
-#   The condition target:{ card_number_is: "P-151" } restricts the bypass to this
-#   card only, matching DCGO's CardCondition.
-#   Tests for runtime enforcement are #[ignore = "pending: G-IGNORE-COLOR-MASK"].
+# Runtime modelling:
+#   use_requirement mirrors the LIBERATOR Digimon/Tamer board predicate so
+#   hand-play legality can bypass ordinary Option color matching for this card.
 #
 # ─── Clause 1: [Main] ─────────────────────────────────────────────────────────
 #
@@ -59,11 +65,7 @@ traits: [LIBERATOR]
 #       → add_to_hand_from_reveal → place_remainder_on_deck bottom
 #   (2) select_hand (optional, filter trait_has: LIBERATOR) → play_from_hand_free
 #
-# KNOWN GAP G-PLAY-COST-LTE:
-#   `play_cost_lte` predicate does not exist in PredicateSpec. The "cost ≤ 3"
-#   constraint cannot be enforced at selection time. The trait_has: LIBERATOR filter
-#   is expressed in YAML but select_hand uses an accept-all filter (Phase 2b).
-#   Tests for the cost-≤3 constraint are #[ignore = "pending: G-PLAY-COST-LTE"].
+# play_cost_lte: 3 is enforced by the select_hand card filter.
 #
 # ─── Clause 2: [Security] (inherited) ─────────────────────────────────────────
 #
@@ -85,7 +87,6 @@ effects:
   # "While you have [LIBERATOR] Digimon or Tamer, ignore this card's color requirements."
   # DCGO: IgnoreColorConditionClass, CanUseCondition checks battle area for LIBERATOR
   # Digimon/Tamer, CardCondition restricts to THIS card only.
-  # G-IGNORE-COLOR-MASK: compiled but not enforced in Rust action mask.
   - kind: flood_gate
     active_when:
       any_of:
@@ -96,6 +97,7 @@ effects:
         - any_permanent:
             of: you
             kind: tamer
+            trait_has: LIBERATOR
     modifier: IgnoreColorRequirement
     target: { card_number_is: "P-151" }
     summary: "While you have LIBERATOR Digimon/Tamer, ignore color requirements for this card"
@@ -129,14 +131,14 @@ effects:
       # Step 4: Optionally play 1 LIBERATOR card (cost ≤ 3) from hand free.
       # DCGO: SelectHandEffect, canNoSelect: true (optional), maxCount: 1,
       #   canTargetCondition: HasPlayCost && GetCostItself <= 3 && CanPlayAsNewPermanent && LIBERATOR.
-      # G-PLAY-COST-LTE: play_cost_lte predicate not in PredicateSpec; cost ≤ 3 not enforced.
       - select_hand:
           of: you
           bind_as: free_play_target
           optional: true
           filter:
-            # trait_has expressed; play_cost_lte: 3 omitted (G-PLAY-COST-LTE gap).
-            trait_has: LIBERATOR
+            all_of:
+              - trait_has: LIBERATOR
+              - play_cost_lte: 3
           prompt: "You may play 1 [LIBERATOR] card with cost 3 or less from your hand without paying its cost"
       - play_from_hand_free:
           of: you
@@ -164,13 +166,14 @@ effects:
           prompt: "Select 1 card with the [LIBERATOR] trait to add to your hand"
       - add_to_hand_from_reveal: { of: you, card: sec_picked }
       - place_remainder_on_deck: { of: you, position: bottom }
-      # G-PLAY-COST-LTE: same gap as Clause 1; cost ≤ 3 not enforced.
       - select_hand:
           of: you
           bind_as: sec_free_play_target
           optional: true
           filter:
-            trait_has: LIBERATOR
+            all_of:
+              - trait_has: LIBERATOR
+              - play_cost_lte: 3
           prompt: "You may play 1 [LIBERATOR] card with cost 3 or less from your hand without paying its cost"
       - play_from_hand_free:
           of: you

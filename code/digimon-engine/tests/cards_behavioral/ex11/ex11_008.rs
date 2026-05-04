@@ -17,15 +17,10 @@
 //!
 //! # Engine coverage note
 //!
-//! ## [When Moving] — ENGINE GAP
+//! ## [When Moving]
 //! The printed [When Moving] timing fires when THIS Digimon moves from the
-//! breeding area to the battle area. DCGO uses EffectTiming.OnMove for this.
-//! The Rust engine has no equivalent: `EffectTiming::OnHatch` fires for
-//! permanents already in battle_area when game.hatch() is called (egg →
-//! breeding), NOT for the Digimon that later moves from breeding → battle.
-//! `game.move_from_breeding()` dispatches no timing for the moved card.
-//! This is logged in qa/dsl-vocab-gaps.md. The DSL YAML uses `when: [on_play]`
-//! only; tests for [When Moving] are omitted pending the engine gap fix.
+//! breeding area to the battle area. The Rust engine dispatches
+//! `EffectTiming::OnMove` with moved-card event context.
 //!
 //! ## Inherited effects from digivolution stack sources — ENGINE GAP
 //! The engine's enqueue_from_permanent() scans the TOP CARD of each permanent
@@ -125,7 +120,6 @@ fn ex11_008_has_two_triggered_clauses() {
 
 #[test]
 fn ex11_008_first_clause_has_on_play_timing() {
-    // [When Moving] is an engine gap; only [On Play] is wired.
     let runner = elizamon_builder().build();
     let compiled = runner
         .compiled_card("EX11-008")
@@ -143,6 +137,10 @@ fn ex11_008_first_clause_has_on_play_timing() {
     assert!(
         first_triggered.when.contains(&CompiledTiming::OnPlay),
         "first clause must include OnPlay timing"
+    );
+    assert!(
+        first_triggered.when.contains(&CompiledTiming::OnMove),
+        "first clause must include OnMove timing for [When Moving]"
     );
     assert!(
         !first_triggered.optional,
@@ -406,6 +404,23 @@ fn ex11_008_raid_keyword_expires_after_end_of_turn() {
     assert!(
         !runner.game.modifiers.has_keyword(target_h, Keyword::Raid),
         "Raid must expire after end of turn"
+    );
+}
+
+#[test]
+fn ex11_008_when_moving_installs_selection_after_breeding_move() {
+    let mut runner = elizamon_builder().memory(10).start();
+
+    runner.place_in_breeding(0, "EX11-008");
+    assert!(
+        runner.move_from_breeding(0),
+        "Elizamon should move from breeding to battle"
+    );
+
+    assert_eq!(
+        runner.pending_kind(),
+        Some(digimon_engine::selection::SelectionKind::OwnField),
+        "[When Moving] must install the Raid/+3000 DP target prompt"
     );
 }
 

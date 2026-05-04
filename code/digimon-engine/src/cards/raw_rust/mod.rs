@@ -26,30 +26,6 @@ fn ex11_012_return_trash_to_deck_bottom(ctx: &mut EffectContext<'_>, bindings: &
     }
 }
 
-/// EX11-054 Owen Dreadnought — [All Turns] Reptile/Dragonkin observer no-op placeholder.
-///
-/// The printed effect: "When your Digimon with [Reptile] or [Dragonkin] trait is played
-/// or digivolves, by suspending this Tamer, Draw 1. Then 1 Progress Digimon gets +3000 DP."
-///
-/// This function is a no-op placeholder pending resolution of the following hybrid gap:
-///
-/// **Engine gap**: `OnEnterFieldAnyone` and `OnDigivolve` observer `TriggerContext` does
-/// not expose the entering/digivolving permanent to observer permanents. The context's
-/// `target_permanent` points to the observer (Owen) itself, not the card that just
-/// entered the field.  Additionally, `GameEvent::Digivolve` is not yet emitted, blocking
-/// even event-log approaches for the digivolve half.
-///
-/// **DSL gap**: No `entering_permanent_trait_has` / `digivolving_permanent_trait_has`
-/// BoolPredicate leaf exists. Once the engine threads the entering permanent through
-/// `TriggerContext`, a matching predicate would enable native DSL expression.
-///
-/// Tracked in `qa/dsl-vocab-gaps.md` under `entering_permanent_trait_has`.
-fn ex11_054_all_turns_noop(_handle: crate::card_source::CardHandle) -> Vec<Effect> {
-    // No-op: returns an empty effect list.
-    // The real logic is pending engine + DSL gap closure.
-    vec![]
-}
-
 /// BT24-012 Dimetromon — [All Turns] "protect other Reptile/Dragonkin ally by bouncing self"
 /// replacement — no-op placeholder.
 ///
@@ -94,32 +70,6 @@ fn bt24_012_would_leave_replacement(_handle: crate::card_source::CardHandle) -> 
     // Full implementation blocked by G-EVENT-TARGET-OWNER (removal cause attribution
     // + cross-permanent replacement) and the subject_matches gate in lower_replacement.rs.
     vec![]
-}
-
-/// BT16-082 Ukkomon — OnMove trigger body no-op placeholder.
-///
-/// Printed effect: "[Your Turn][Once Per Turn] When one of your Digimon moves
-/// from the breeding area to the battle area, reveal the top 3 cards of your
-/// deck. Add 1 Digimon card or Tamer card among them to the hand. Return the
-/// rest to the bottom of the deck. Then, you may hatch in your breeding area."
-///
-/// This function is a no-op step placeholder pending resolution of G-ON-MOVE
-/// (hybrid gap):
-///
-/// **Engine gap**: `EffectTiming::OnMove` does not exist in `enums.rs`. The
-/// `game_actions::move_from_breeding` method only fires `OnTrainingTrash` — it
-/// does not dispatch any event that a battle-area observer card like Ukkomon
-/// could subscribe to. See `qa/archetype-qa/engine-gaps.md` [G-ON-MOVE].
-///
-/// **DSL gap**: No `on_move_from_breeding` when-token exists in `digimon-dsl`.
-/// `CompiledTiming` has no `OnMoveFromBreeding` variant, and `timing_map.rs`
-/// has no mapping for it. See `qa/dsl-vocab-gaps.md` (EX11-008 entry).
-///
-/// When G-ON-MOVE is closed, replace the stub clause in `BT16-082.yaml` with
-/// the real process body (reveal 3 → select Digimon/Tamer → hand → remainder
-/// bottom → may hatch EffectChoice) and remove this function.
-fn bt16_082_on_move_noop(_ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    // No-op: full implementation blocked by G-ON-MOVE.
 }
 
 /// P-137 Flamedramon — [Your Turn][OPT] opponent adds their top security to hand.
@@ -889,13 +839,6 @@ fn lm_027_add_self_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings
     ctx.add_pending_security_to_hand();
 }
 
-/// EX7-074 Vortex Resonance — [Security] "Then, add this card to the hand."
-///
-/// Legacy raw-rust shim; prefer native DSL `add_this_option_to_hand: {}`.
-fn ex7_074_add_self_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    ctx.add_pending_security_to_hand();
-}
-
 /// P-206 Digital Gate Open — [Inherited][Security] "Then, add this card to the hand."
 ///
 /// Printed effect: "[Security] You may play 1 Digimon card with a play cost of 3 or
@@ -947,12 +890,10 @@ pub fn build_registry() -> EngineRawRustRegistry {
         "ex11_012_return_trash_to_deck_bottom",
         ex11_012_return_trash_to_deck_bottom,
     );
-    r.register_declarative("ex11_054_all_turns_noop", ex11_054_all_turns_noop);
     r.register_declarative(
         "bt24_012_would_leave_replacement",
         bt24_012_would_leave_replacement,
     );
-    r.register_step("bt16_082_on_move_noop", bt16_082_on_move_noop);
     r.register_step(
         "p_137_opp_adds_top_security_to_hand",
         p_137_opp_adds_top_security_to_hand,
@@ -986,7 +927,6 @@ pub fn build_registry() -> EngineRawRustRegistry {
         lm_027_delay_start_of_turn_noop,
     );
     r.register_step("lm_027_add_self_to_hand", lm_027_add_self_to_hand);
-    r.register_step("ex7_074_add_self_to_hand", ex7_074_add_self_to_hand);
     r.register_step("p_206_add_self_to_hand", p_206_add_self_to_hand);
     r.register_formula(
         "bt21_093_cost_reduction_amount",

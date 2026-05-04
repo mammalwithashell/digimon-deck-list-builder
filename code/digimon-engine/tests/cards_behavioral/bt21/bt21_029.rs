@@ -38,14 +38,16 @@
 //! | (c) no-selection when 0 opponent Digimon | condition guard works | PASS |
 //! | (c) OPT lockout | G-OPT-TRIGGERED | #[ignore] |
 //! | (d) security-removed arm | none | PASS |
-//! | (d) deletion arm | G-EVENT-TARGET-OWNER | BLOCKED — omitted from YAML |
+//! | (d) deletion arm | event_target_owner + event_target_kind | PASS |
 //! | (d) OPT lockout | G-OPT-TRIGGERED | #[ignore] |
 
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
     CompiledTriggeredClause,
 };
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{CardKind, EffectTiming, Keyword};
 use digimon_engine::selection::TriggerSource;
 
@@ -130,11 +132,10 @@ fn bt21_029_declarative_keywords_are_security_attack_plus_and_progress() {
     );
 }
 
-/// BT21-029 has exactly two triggered clauses (clause c and the security arm
-/// of clause d). The deletion arm of clause d is BLOCKED (G-EVENT-TARGET-OWNER)
-/// and is omitted from the YAML.
+/// BT21-029 has exactly three triggered clauses: clause c, the security arm of
+/// clause d, and the deletion arm of clause d.
 #[test]
-fn bt21_029_has_two_triggered_clauses() {
+fn bt21_029_has_three_triggered_clauses() {
     let runner = medusamon_runner();
     let card = runner
         .compiled_card("BT21-029")
@@ -150,8 +151,8 @@ fn bt21_029_has_two_triggered_clauses() {
         .collect();
     assert_eq!(
         triggered.len(),
-        2,
-        "expected 2 triggered clauses (clause-c + security arm of clause-d)"
+        3,
+        "expected 3 triggered clauses (clause-c + both arms of clause-d)"
     );
 }
 
@@ -223,6 +224,39 @@ fn bt21_029_clause_d_security_arm_fires_on_opponent_security_removed() {
         clause_d_sec.scope,
         CompiledScope::FaceUp,
         "clause (d) is own-scope (All Turns = face-up + not inherited)"
+    );
+}
+
+/// Clause (d) deletion arm fires on OnAnyDeletion and filters to opponent-owned
+/// Digimon using event context.
+#[test]
+fn bt21_029_clause_d_deletion_arm_fires_on_opponent_digimon_deleted() {
+    let runner = medusamon_runner();
+    let card = runner
+        .compiled_card("BT21-029")
+        .expect("BT21-029 in embedded pack");
+
+    let clause_d_del = card
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .find(|t| t.when.contains(&CompiledTiming::OnAnyDeletion))
+        .expect("clause (d) deletion arm must exist");
+
+    assert!(
+        clause_d_del.once_per_turn,
+        "clause (d) deletion arm must be once-per-turn"
+    );
+    assert!(
+        !clause_d_del.optional,
+        "clause (d) deletion arm is mandatory"
+    );
+    assert!(
+        clause_d_del.condition.is_some(),
+        "deletion arm must filter event target owner/kind"
     );
 }
 
@@ -492,8 +526,8 @@ fn bt21_029_clause_d_security_arm_opponent_plays_petrification_token_on_security
 /// clause (d) does not fire and no token appears.
 #[test]
 fn bt21_029_clause_d_security_arm_no_token_without_security_removal() {
-    let mut opp_digi = make_test_card("OPP-WEAK", "OppWeak");
-    opp_digi.dp = Some(1000);
+    let mut opp_digi = make_test_card("OPP-STRONG", "OppStrong");
+    opp_digi.dp = Some(13000);
     opp_digi.level = Some(3);
 
     let sec_filler = make_test_card("SEC-F", "SecF");
@@ -508,7 +542,7 @@ fn bt21_029_clause_d_security_arm_no_token_without_security_removal() {
         .start();
 
     let attacker = runner.place_on_field(0, "BT21-029", Some(0));
-    let defender = runner.place_on_field(1, "OPP-WEAK", Some(0));
+    let defender = runner.place_on_field(1, "OPP-STRONG", Some(0));
 
     let _opp_field_before = runner.battle_area_size(1); // 1 (the weak Digimon)
 
@@ -517,8 +551,8 @@ fn bt21_029_clause_d_security_arm_no_token_without_security_removal() {
     runner.attack_digimon(attacker, defender, false);
     runner.auto_resolve().ok();
 
-    // Opponent may have lost their weak Digimon (DP 1000 < 12000) but no token
-    // from security removal.
+    // The attack targets a Digimon directly, and the opponent's Digimon survives
+    // the battle. There is no security removal and no opponent deletion.
     let _opp_field_after = runner.battle_area_size(1);
     let has_token = runner
         .game
@@ -527,10 +561,8 @@ fn bt21_029_clause_d_security_arm_no_token_without_security_removal() {
         .iter()
         .any(|p| p.top_card().card_kind(&runner.game.card_data) == CardKind::Token);
 
-    // No token spawned from security removal (there was none).
-    // Note: a deletion-arm token would also be possible if clause (d) deletion
-    // arm were implemented. Since it's BLOCKED (G-EVENT-TARGET-OWNER), no token
-    // from deletion either.
+    // No token spawned from security removal (there was none). The deletion arm
+    // also should not fire because BT21-029's opponent did not lose a Digimon.
     assert!(
         !has_token,
         "no Petrification Token should appear without security removal"
@@ -545,12 +577,78 @@ fn bt21_029_clause_d_opt_blocks_second_activation_same_turn() {
     todo!("write once G-OPT-TRIGGERED is closed");
 }
 
+#[test]
+fn bt21_029_clause_d_deletion_arm_opponent_plays_petrification_token_on_their_digimon_deleted() {
+    let mut victim = make_test_card("OPP-DELETE-ME", "Opp Delete Me");
+    victim.card_kind = CardKind::Digimon;
+    victim.dp = Some(3000);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-029")
+        .expect("BT21-029 in embedded DSL pack")
+        .add_card(victim)
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "BT21-029", Some(0));
+    let victim = runner.place_on_field(1, "OPP-DELETE-ME", Some(0));
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, CardHandle(0), None, 0);
+        ctx.delete_permanent(victim);
+    }
+
+    let has_token = runner
+        .game
+        .player(1)
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_kind(&runner.game.card_data) == CardKind::Token);
+    assert!(
+        has_token,
+        "opponent must receive a Petrification Token when their Digimon is deleted"
+    );
+}
+
+#[test]
+fn bt21_029_clause_d_deletion_arm_ignores_own_digimon_deleted() {
+    let mut own_victim = make_test_card("OWN-DELETE-ME", "Own Delete Me");
+    own_victim.card_kind = CardKind::Digimon;
+    own_victim.dp = Some(3000);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-029")
+        .expect("BT21-029 in embedded DSL pack")
+        .add_card(own_victim)
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "BT21-029", Some(0));
+    let victim = runner.place_on_field(0, "OWN-DELETE-ME", Some(0));
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, CardHandle(0), None, 0);
+        ctx.delete_permanent(victim);
+    }
+
+    let has_token = runner
+        .game
+        .player(1)
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_kind(&runner.game.card_data) == CardKind::Token);
+    assert!(
+        !has_token,
+        "opponent must not receive a token when BT21-029's controller loses a Digimon"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 5 — Clause (c) DP filter gap note
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// Ensures the dp_lte filter YAML compiles (parses + lowers) without errors.
-/// Does NOT assert the filter is enforced — that is pending G-PREDICATE-DP-FILTER.
+/// The filter is enforced by the shared dp_lte aggregate predicate runtime.
 #[test]
 fn bt21_029_clause_c_dp_lte_filter_compiles_without_error() {
     // If BT21-029 is in the embedded pack (YAML parses + compiles), this passes.

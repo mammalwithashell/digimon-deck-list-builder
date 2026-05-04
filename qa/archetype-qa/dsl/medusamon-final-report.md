@@ -2,8 +2,8 @@
 
 **Run dates:** 2026-04-27 / 2026-04-28
 **Pipeline:** `/batch-implement-cards-rust-dsl` (Sonnet implementer / Opus reviewer waves)
-**Pool source:** `data/deck_library.json` archetype "Medusamon" (meta_share 4.99%)
-**Total cards:** 53
+**Pool source:** `data/deck_library.json` archetype "Medusamon" plus resolver/alias-expanded `qa/archetype-qa/medusamon/deck_pool.json`
+**Total cards:** 54
 
 ---
 
@@ -11,15 +11,17 @@
 
 | Verdict | Count | Notes |
 |---|---:|---|
-| IMPLEMENTED | 18 | Card ships faithfully; all clauses behavioral-tested or aura-tested. |
-| PARTIAL | 32 | At least one clause behavioral; others ignore-tagged with named gap. |
-| BLOCKED | 3 | Not enough vocabulary to author any clause faithfully. |
-| **Total** | **53** | |
+| IMPLEMENTED | 20 | Card ships faithfully; all clauses behavioral-tested or aura-tested. |
+| PARTIAL | 33 | At least one clause behavioral; others ignore-tagged with named gap. |
+| BLOCKED | 1 | Not enough vocabulary to author any clause faithfully. |
+| **Total** | **54** | |
 
 BLOCKED gap-kind split:
-- BT16-082 Ukkomon — **hybrid** (G-ON-MOVE: `EffectTiming::OnMove` missing)
 - ST22-08 Offensive Plug-In V — **hybrid** (Plug-In/Link mechanic entirely unsupported)
-- EX4-006 Guilmon — **dsl** (G-COUNT-GTE-EVAL: predicate parses, no evaluator branch)
+
+Recovered from previous BLOCKED/lost-file state:
+- EX4-006 Guilmon — **resolved 2026-05-03** (count_gte gate implemented; YAML/tests restored)
+- BT16-082 Ukkomon — **resolved 2026-05-04** (`when:on_move` body implemented; reveal/add/remainder/hatch flow native)
 
 Final test suite (cumulative across all 14 batches):
 - `cargo test --test cards_behavioral`: **558 passed, 0 failed, 225 ignored**
@@ -73,11 +75,11 @@ Plus a small assortment of cross-batch fixes (binding-keyword bug `target: sourc
 |---|---|---|
 | G-INHERITED-DISPATCH | `enqueue_from_permanent` doesn't iterate `card_sources[0..n-1]` for inherited triggered effects | BT21-008 |
 | G-OPT-TRIGGERED | `Effect::max_per_turn` not consulted in `run_queued_effect_inner` for triggered-effect dispatch | EX11-008 |
-| G-ON-MOVE | `EffectTiming::OnMove` variant + dispatch hook missing in `move_from_breeding()` | EX11-008, BT16-082 |
+| ~~G-ON-MOVE~~ | RESOLVED: `EffectTiming::OnMove` + `when: on_move` dispatch from `move_from_breeding()` with moved-card event context | EX11-008, BT16-082 |
 | G-PRED-DP-LTE (consolidated) | Resolved for reusable permanent `dp_lte` / `dp_gte` predicate evaluation by Group 7; older card-level ignores may still need migration | BT21-015 (Batch 2), reused throughout |
-| G-EVENT-TARGET-OWNER | No predicate to filter triggers/replacements by event-target permanent's controller | BT24-018, BT21-029 |
+| ~~G-EVENT-TARGET-OWNER~~ | RESOLVED for trigger event context and generic replacement context; BT21-029 deletion arm now uses it behaviorally | BT24-018, BT21-029 |
 | G-WHEN-DIGIVOLVING-DISPATCH | Own-scope WhenDigivolving triggered effects don't fire when this card is the source being digivolved-into | BT21-013 |
-| G-COUNT-LTE-EVAL / G-COUNT-GTE-EVAL | `count_lte` / `count_gte` aggregate predicates parse, no evaluation branch in `eval_predicate_with_bindings` | BT21-017, EX4-006 |
+| ~~G-COUNT-LTE-EVAL / G-COUNT-GTE-EVAL~~ | RESOLVED 2026-05-03/04: `count_lte` / `count_gte` aggregate predicates evaluate zone/owner filters in `eval_predicate_with_bindings`; EX8-074's cost gate now carries `count_gte` for 2 unsuspended Digimon | BT21-017, EX4-006, EX8-074 |
 | G-DP-LTE-PREDICATE (= G-PRED-DP-LTE) | Same root cause as above; reusable predicate path resolved by Group 7 | BT21-015 |
 | G-FOR-EACH-DELETE-INDEX-SHIFT | `for_each` snapshot indices stale after first deletion in multi-target sweep | BT8-097 |
 | G-FORMULA-KIND-FILTER | Resolved 2026-05-02: `card_count_in_zone` supports predicate filters; BT8-097 now counts opponent Digimon only | BT8-097 |
@@ -108,10 +110,10 @@ Plus a small assortment of cross-batch fixes (binding-keyword bug `target: sourc
 | ID | Description | First reported |
 |---|---|---|
 | BT23-005 cost-reduction-trigger predicate | `CostReductionBody` lacks `when_this_digivolves_into + target_trait_has` | BT23-005 |
-| EX11-008 OnMove DSL token | (DSL half of G-ON-MOVE) | EX11-008 |
+| ~~EX11-008 OnMove DSL token~~ | RESOLVED via `when: on_move` | EX11-008 |
 | G-ATK-TRAIT-FILTER | `attacker_trait_has` predicate on `on_attack_target_change` clauses | BT21-025 |
 | G-ALT-PATH-CONDITION | `AltPathSpec` missing `condition: Option<PredicateSpec>` field | BT24-016 |
-| G-PLAY-COST-LTE | No `play_cost_lte` predicate in `PredicateSpec` | P-189 |
+| ~~G-PLAY-COST-LTE~~ | RESOLVED for select_hand/select_trash card filters; older card notes may still need migration | P-189 |
 | G-MAY-ATTACK-NOW | No DSL verb for mid-effect optional/forced attack on a specific permanent | BT24-082, BT21-081 |
 | G-ZONE-TRASH-TO-DECK | No DSL verb for "return trash card to bottom of deck" | BT24-017 |
 | G-TRASH-SELECTED-SECURITY | No verb to trash a non-top selected security card | BT24-018 |
@@ -130,5 +132,5 @@ Plus a small assortment of cross-batch fixes (binding-keyword bug `target: sourc
 - **Per-batch process:** scout-implementer-reviewer-merge ran at full fidelity for the first ~3 batches; mid-run agents began doing direct merges to the main tree (writing `validated_cards_dsl.json`, `medusamon.md`, gap trackers) themselves rather than letting the orchestrator handle merge — saving turn cost but violating the skill's "workers never edit shared state" invariant. No data corruption observed; the trackers stayed consistent.
 - **Latent bug pattern:** several workers wrote `target: source_permanent` instead of `target: source` for self-bindings (silent no-op via `CompiledBindingRef::Named`). Caught and fixed across BT18-087, BT24-017, BT24-082, BT21-081 — would have shipped silently if not for cross-batch agents inspecting each other's YAML.
 - **Path drift:** ~3 workers wrote YAML to `cards/_examples/` instead of `cards/<set>/`, or test files to flat `cards_behavioral/` instead of nested `cards_behavioral/<set>/`. Orchestrator caught and relocated each at merge time; flagged as worker-drift in commit messages.
-- **Lost-during-merge:** EX9-008 Biyomon (IMPLEMENTED, with 3 engine fixes shipped) and EX4-006 Guilmon (BLOCKED stub) had their YAML/test files dropped during worktree cleanup — the engine fixes EX9-008 landed are still in the main tree. Tracker entries flag both. Re-running `/batch-implement-cards-rust-dsl medusamon` will re-process them since prior verdicts only short-circuit IMPLEMENTED/AUDITED-OK and the tracker entries point to YAML files that don't exist.
+- **Recovered 2026-05-03:** EX9-008 Biyomon and EX4-006 Guilmon YAML/test files are back in the main tree. EX4-006 also closed the shared `count_lte` / `count_gte` aggregate predicate evaluator gap.
 - **One-stall recovery:** BT21-093 Raging Serpentine's worker stalled mid-test. Orchestrator finished by registering the agent's referenced raw_rust stubs (`bt21_093_cost_reduction_amount`, `bt21_093_delete_highest_dp_opponent`) and writing structural-only tests (4 active, 5 ignored).

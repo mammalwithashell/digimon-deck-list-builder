@@ -4,6 +4,17 @@ kind: option
 color: [green, blue]
 cost: 3
 traits: [LIBERATOR]
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: LIBERATOR
+      - all_of:
+          - kind: tamer
+          - trait_has: LIBERATOR
 
 # ─── Clause 0: Color bypass (conditional IgnoreColorRequirement) ──────────────
 #
@@ -23,14 +34,9 @@ traits: [LIBERATOR]
 #   - active_when: any_permanent { of: you, battle_area } where
 #     (kind: digimon AND trait: LIBERATOR) OR (kind: tamer)
 #
-# G-IGNORE-COLOR-MASK [engine gap]:
-#   The modifier: IgnoreColorRequirement flood_gate clause compiles correctly,
-#   but code/digimon-engine/src/action/mask.rs option_color_match_available
-#   does not consult the IgnoreColorRequirement modifier at runtime. The clause
-#   has zero runtime effect until that gap is resolved.
-#   Tracked in qa/archetype-qa/engine-gaps.md under G-IGNORE-COLOR-MASK.
-#   Tests asserting the color bypass actually unlocks play are
-#   #[ignore = "pending: G-IGNORE-COLOR-MASK"].
+# Runtime modelling:
+#   use_requirement mirrors the same LIBERATOR Digimon/Tamer board predicate
+#   so hand-play legality can bypass ordinary Option color matching.
 
 # ─── Clause 1: [Main] Reveal + add LIBERATOR to hand + digivolve cost -4 ──────
 #
@@ -81,9 +87,8 @@ traits: [LIBERATOR]
 #   PlayPermanentCards(payCost: false) on selected card.
 #   AddThisCardToHand → EX7-074 moves to controller's hand.
 #
-# G-PLAY-COST-LTE: play_cost_lte: 4 predicate not enforced at selection runtime.
-# G-ADD-OPTION-SELF-TO-HAND: no DSL step / engine method for self-to-hand.
-#   raw_rust placeholder (ex7_074_add_self_to_hand) is a no-op until resolved.
+# play_cost_lte: 4 is enforced by select_hand/select_trash card filters.
+# add_this_option_to_hand moves the currently resolving security Option to hand.
 
 effects:
   # ─── Clause 0: Color bypass flood_gate ─────────────────────────────────────
@@ -98,7 +103,9 @@ effects:
           - all_of:
               - kind: digimon
               - trait_has: LIBERATOR
-          - kind: tamer
+          - all_of:
+              - kind: tamer
+              - trait_has: LIBERATOR
     modifier: IgnoreColorRequirement
     target: { card_number_is: "EX7-074" }
     summary: "While you have a LIBERATOR Digimon or Tamer, ignore this card's color requirements"
@@ -177,7 +184,6 @@ effects:
           prompt: "From which area do you play a card?"
       # Branch A: play from hand.
       # DCGO: SelectHandEffect(canNoSelect: true, filter: LIBERATOR + cost≤4 + playable)
-      # G-PLAY-COST-LTE: play_cost_lte: 4 not enforced at selection runtime.
       - if:
           condition: { equals: [zone_choice, 0] }
           then:
@@ -186,12 +192,13 @@ effects:
                 bind_as: picked_hand
                 optional: true
                 filter:
-                  trait_has: LIBERATOR
+                  all_of:
+                    - trait_has: LIBERATOR
+                    - play_cost_lte: 4
                 prompt: "Select a LIBERATOR card (cost 4 or less) to play from your hand"
             - play_from_hand_free: { of: you, hand_index: picked_hand }
       # Branch B: play from trash.
       # DCGO: SelectCardEffect(canNoSelect: () => true, root: Trash, filter: LIBERATOR + cost≤4)
-      # G-PLAY-COST-LTE: play_cost_lte: 4 not enforced at selection runtime.
       - if:
           condition: { equals: [zone_choice, 1] }
           then:
@@ -200,11 +207,11 @@ effects:
                 bind_as: picked_trash
                 optional: true
                 filter:
-                  trait_has: LIBERATOR
+                  all_of:
+                    - trait_has: LIBERATOR
+                    - play_cost_lte: 4
                 prompt: "Select a LIBERATOR card (cost 4 or less) to play from your trash"
             - play_from_trash_free: { of: you, hand_index: picked_trash }
       # "Then, add this card to the hand."
       # DCGO: CardEffectCommons.AddThisCardToHand(card, activateClass).
-      # G-ADD-OPTION-SELF-TO-HAND: no DSL step / EffectContext method exists yet.
-      # No-op placeholder — same pattern as lm_027_add_self_to_hand.
-      - raw_rust: { fn: ex7_074_add_self_to_hand }
+      - add_this_option_to_hand: {}

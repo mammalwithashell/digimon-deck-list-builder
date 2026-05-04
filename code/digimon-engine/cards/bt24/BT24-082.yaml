@@ -28,19 +28,9 @@ traits: [LIBERATOR]
 # optional: true — "by suspending this Tamer" is the activation cost.
 # active_when: { your_turn: true } — [Your Turn] scoping.
 #
-# G-ON-DIGIVOLVE-TRAIT-FILTER [engine gap]:
-#   The `on_digivolve` trigger fires via TriggerSource::PlayerBattleArea, which
-#   makes every permanent in the owner's battle area an observer candidate. The
-#   trigger context does not carry a reference to the newly-digivolved permanent.
-#   Therefore:
-#     (a) The "digivolve into a [Reptile] or [Dragonkin]" trait check on the
-#         NEWLY-DIGIVOLVED card cannot be expressed — we approximate it with
-#         an `any_permanent` condition (a Reptile/Dragonkin must be on the field).
-#     (b) The DP modifier cannot target "that Digimon" (the newly-digivolved one);
-#         instead a select_own_permanent prompt lets the player pick from eligible
-#         Reptile/Dragonkin Digimon — a best-effort approximation.
-#   Tests for accurate per-digivolve-target filtering are #[ignore]'d pending
-#   TriggerContext::digivolve_target being added to PlayerBattleArea firing.
+# OnDigivolve event context carries the newly-digivolved permanent/card as
+# event_target/event_card, so the trait filter and "that Digimon" target are
+# modelled directly.
 #
 # G-MAY-ATTACK-NOW [hybrid gap]:
 #   "Then, it may attack" — no DSL verb or engine primitive for an immediate
@@ -87,39 +77,22 @@ effects:
 
   # ─── Clause 2: [Your Turn] on_digivolve ──────────────────────────────────
   # optional: true — "by suspending this Tamer" is the activation cost.
-  # Condition (approximation — G-ON-DIGIVOLVE-TRAIT-FILTER): requires a Reptile
-  # or Dragonkin Digimon to be present on field; the trait check should be on
-  # the newly-digivolved card, but the trigger context does not carry it.
   - when: on_digivolve
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] When Digimon digivolves into Reptile/Dragonkin, suspend self → +3000 DP for turn; may attack"
     condition:
-      any_permanent:
-        of: you
-        zone: [battle_area]
-        kind: digimon
-        any_of:
-          - trait_has: Reptile
-          - trait_has: Dragonkin
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_trait_has: Reptile
+            - event_target_trait_has: Dragonkin
     process:
       # Cost: suspend this tamer.
       # `source` resolves to CompiledBindingRef::Source → ctx.source_permanent (the tamer).
       - suspend: { target: source }
-      # Select the Reptile/Dragonkin Digimon to receive +3000 DP.
-      # NOTE: Should be the newly-digivolved Digimon (G-ON-DIGIVOLVE-TRAIT-FILTER).
-      # We approximate with a player-choice selection among eligible Digimon.
-      - select_own_permanent:
-          bind_as: tgt
-          filter:
-            all_of:
-              - kind: digimon
-              - any_of:
-                  - trait_has: Reptile
-                  - trait_has: Dragonkin
-          prompt: "Choose a Reptile or Dragonkin Digimon to gain +3000 DP for the turn"
       - add_dp_modifier:
-          target: tgt
+          target: event_target
           value: 3000
           expiry: end_of_turn
       # "Then, it may attack." — omitted (G-MAY-ATTACK-NOW gap).

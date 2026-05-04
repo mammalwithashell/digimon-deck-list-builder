@@ -1,0 +1,85 @@
+card: LM-055
+name: "Sprint Dash Training"
+kind: option
+color: [green, red]
+cost: 2
+
+effects:
+  - kind: flood_gate
+    active_when:
+      no_permanent:
+        of: you
+        zone: [battle_area]
+        kind: option
+        card_number_is: "LM-055"
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "LM-055" }
+    summary: "While you don't have Sprint Dash Training in the battle area, ignore this card's color requirements"
+
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 2; add 1 green or red card; bottom the rest; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 2
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            any_of:
+              - color_is: green
+              - color_is: red
+          prompt: "Add 1 green or red card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: on_play
+    summary: "[Main]<Delay> 1 of your Digimon may digivolve into a green or red Digimon in hand, cost -2"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            kind: digimon
+            zone: [battle_area]
+          prompt: "Choose 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - color_is: green
+                  - color_is: red
+          prompt: "Choose a green or red Digimon card in your hand to digivolve into"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Reveal top 2; add 1 green or red card; bottom the rest; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 2
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            any_of:
+              - color_is: green
+              - color_is: red
+          prompt: "Add 1 green or red card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}

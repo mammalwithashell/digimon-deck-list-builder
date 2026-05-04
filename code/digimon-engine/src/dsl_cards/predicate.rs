@@ -2,11 +2,11 @@
 
 use digimon_dsl::compiled::{
     CompiledAggregateSelector, CompiledBindingCompare, CompiledCardKind, CompiledColor,
-    CompiledDpConstraint, CompiledExistential, CompiledPlayerRef, CompiledPredicate,
-    CompiledReplacementCause, CompiledZone,
+    CompiledCountAggregate, CompiledDpConstraint, CompiledExistential, CompiledPlayerRef,
+    CompiledPredicate, CompiledReplacementCause, CompiledZone,
 };
 
-use crate::card_source::CardHandle;
+use crate::card_source::{CardHandle, CardSource};
 use crate::dsl_cards::bindings::{BindingValue, Bindings};
 use crate::dsl_cards::formula_eval;
 use crate::effect_context::EffectReadContext;
@@ -77,6 +77,17 @@ pub fn eval_predicate_with_bindings(
     }
     if let Some(floor) = pred.security_count_gte {
         if (rctx.security_count(rctx.player) as u8) < floor {
+            return false;
+        }
+    }
+    if let Some(player_ref) = pred.can_hatch {
+        let can_any = resolve_predicate_players(player_ref, rctx)
+            .into_iter()
+            .any(|player| {
+                let p = rctx.game.player(player);
+                p.breeding_area.is_none() && !p.digitama_deck.is_empty()
+            });
+        if !can_any {
             return false;
         }
     }
@@ -181,6 +192,16 @@ pub fn eval_predicate_with_bindings(
     }
     if let Some(ex) = &pred.all_permanents {
         if !existential_all(ex, rctx, bindings) {
+            return false;
+        }
+    }
+    if let Some(agg) = &pred.count_lte {
+        if count_matching(agg, rctx, bindings) > agg.n {
+            return false;
+        }
+    }
+    if let Some(agg) = &pred.count_gte {
+        if count_matching(agg, rctx, bindings) < agg.n {
             return false;
         }
     }
@@ -364,12 +385,151 @@ fn existential_all(
 }
 
 fn existential_players(of: CompiledPlayerRef, rctx: &EffectReadContext<'_>) -> Vec<PlayerId> {
+    resolve_predicate_players(of, rctx)
+}
+
+fn resolve_predicate_players(of: CompiledPlayerRef, rctx: &EffectReadContext<'_>) -> Vec<PlayerId> {
     match of {
         CompiledPlayerRef::You => vec![rctx.player],
         CompiledPlayerRef::Opponent => vec![rctx.opponent_id()],
         CompiledPlayerRef::Active => vec![rctx.game.turn_player()],
         CompiledPlayerRef::Any => (0..rctx.game.players.len() as PlayerId).collect(),
     }
+}
+
+fn count_matching(
+    aggregate: &CompiledCountAggregate,
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> u32 {
+    let filter = aggregate.filter.as_ref();
+    let owners = existential_players(filter.owner.unwrap_or(CompiledPlayerRef::You), rctx);
+    let zones: Vec<CompiledZone> = if filter.zone.is_empty() {
+        vec![CompiledZone::BattleArea]
+    } else {
+        filter.zone.clone()
+    };
+
+    let mut subject_filter = filter.clone();
+    subject_filter.zone.clear();
+    subject_filter.owner = None;
+
+    let mut count = 0;
+    for owner in owners {
+        let player = rctx.game.player(owner);
+        for zone in &zones {
+            match zone {
+                CompiledZone::BattleArea => {
+                    for index in 0..player.battle_area.len() {
+                        let handle = PermanentHandle {
+                            player: owner,
+                            index: index as u8,
+                        };
+                        if eval_predicate_with_bindings(
+                            &subject_filter,
+                            rctx,
+                            PredicateSubject::Permanent(handle),
+                            bindings,
+                        ) {
+                            count += 1;
+                        }
+                    }
+                }
+                CompiledZone::Breeding => {
+                    if player.breeding_area.is_some()
+                        && eval_predicate_with_bindings(
+                            &subject_filter,
+                            rctx,
+                            PredicateSubject::BreedingPermanent(owner),
+                            bindings,
+                        )
+                    {
+                        count += 1;
+                    }
+                }
+                CompiledZone::Hand => {
+                    count += count_card_sources(&player.hand, &subject_filter, rctx, bindings);
+                }
+                CompiledZone::Deck => {
+                    count += count_card_sources(&player.deck, &subject_filter, rctx, bindings);
+                }
+                CompiledZone::Trash => {
+                    count += count_card_sources(&player.trash, &subject_filter, rctx, bindings);
+                }
+                CompiledZone::Security => {
+                    count += count_card_sources(&player.security, &subject_filter, rctx, bindings);
+                }
+                CompiledZone::DigiEggDeck => {
+                    count +=
+                        count_card_sources(&player.digitama_deck, &subject_filter, rctx, bindings);
+                }
+                CompiledZone::Reveal => {
+                    count += rctx
+                        .game
+                        .revealed_cards
+                        .iter()
+                        .filter(|card| {
+                            card.owner == owner
+                                && eval_predicate_with_bindings(
+                                    &subject_filter,
+                                    rctx,
+                                    PredicateSubject::RevealedCard(card.handle()),
+                                    bindings,
+                                )
+                        })
+                        .count() as u32;
+                }
+                CompiledZone::Material => {
+                    if let Some(source) = rctx.source_permanent {
+                        count += permanent_material_count(source, &subject_filter, rctx, bindings);
+                    }
+                }
+            }
+        }
+    }
+    count
+}
+
+fn count_card_sources(
+    cards: &[CardSource],
+    filter: &CompiledPredicate,
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> u32 {
+    cards
+        .iter()
+        .filter(|card| {
+            eval_predicate_with_bindings(
+                filter,
+                rctx,
+                PredicateSubject::Card(card.handle()),
+                bindings,
+            )
+        })
+        .count() as u32
+}
+
+fn permanent_material_count(
+    handle: PermanentHandle,
+    filter: &CompiledPredicate,
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> u32 {
+    let Some(perm) = permanent_for_handle(rctx, handle) else {
+        return 0;
+    };
+    perm.card_sources
+        .iter()
+        .take(perm.card_sources.len().saturating_sub(1))
+        .filter(|card| {
+            eval_predicate_with_bindings(
+                filter,
+                rctx,
+                PredicateSubject::Card(card.handle()),
+                bindings,
+            )
+        })
+        .count() as u32
 }
 
 fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {

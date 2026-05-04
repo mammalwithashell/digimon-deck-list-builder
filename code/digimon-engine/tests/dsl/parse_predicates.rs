@@ -98,3 +98,9 @@ dp_gte:
     );
     assert!(matches!(p.dp_gte, Some(DpConstraint::Formula(_))));
 }
+
+#[test]
+fn parse_can_hatch_predicate_leaf() {
+    let p = parse("can_hatch: you");
+    assert_eq!(p.can_hatch, Some(PlayerRef::You));
+}

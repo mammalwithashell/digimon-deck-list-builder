@@ -1,0 +1,27 @@
+card: EX4-006
+name: Guilmon
+kind: digimon
+level: 3
+color: [red, purple]
+cost: 3
+dp: 2000
+traits: [Reptile]
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: Gigimon }
+    cost: 0
+
+effects:
+  # [On Play] If the total trashes of both players' add up to 20 or more
+  # cards, this Digimon gains <Rush> for the turn.
+  - when: on_play
+    condition:
+      count_gte:
+        filter: { zone: [trash], owner: any }
+        n: 20
+    process:
+      - grant_keyword:
+          target: self
+          keyword: Rush
+          expiry: end_of_turn

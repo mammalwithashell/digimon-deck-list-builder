@@ -281,18 +281,9 @@ fn bt21_017_condition_passes_with_one_tamer_boundary() {
 
 /// Negative: P0 has 2 Tamers → condition count > 1, effect does NOT fire.
 ///
-/// BLOCKED: `count_lte` (non-security aggregate count) is compiled into
-/// `CompiledPredicate.count_lte` but is NOT evaluated by
-/// `eval_predicate_with_bindings` in `predicate.rs`. The condition is
-/// silently treated as always-true, so the effect fires even with 2+ tamers.
-///
-/// This gap also affects any other card whose clause-level `condition:` uses
-/// `count_lte` with a `zone: [battle_area]` filter (e.g. BT22-084 Nokia
-/// Shiramine's `start_of_your_main_phase` condition).
-///
-/// Gap ID: G-COUNT-LTE-EVAL
+/// Regression coverage for G-COUNT-LTE-EVAL: non-security aggregate counts
+/// must gate triggered effects instead of silently passing.
 #[test]
-#[ignore = "pending: G-COUNT-LTE-EVAL — count_lte aggregate predicate not evaluated in predicate.rs (only security_count_lte is implemented)"]
 fn bt21_017_condition_blocked_with_two_tamers() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(DIMETROMON_YAML)

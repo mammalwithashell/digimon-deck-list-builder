@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-05-03",
+  "last_updated": "2026-05-04",
   "cards": {
     "BT21-093": {
       "card_name": "Raging Serpentine",
@@ -37,35 +37,37 @@
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/ex7/EX7-074.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_074.rs",
-      "test_count": 21,
+      "test_count": 22,
+      "tests_passing": 8,
+      "tests_ignored": 14,
       "patterns": ["A1", "D-COLOR-IGNORE", "F-PLAY-FROM-HAND-FREE"],
-      "notes": "IgnoreColorRequirement flood_gate + reveal-3 + LIBERATOR-trait add + free digivolve cost-reduce-4 + inherited Security hand-or-trash play. 6 active, 15 ignored for G-IGNORE-COLOR-MASK, G-ADD-OPTION-SELF-TO-HAND, G-PLAY-COST-LTE."
+      "notes": "use_requirement color bypass now unlocks hand play with LIBERATOR board presence; reveal-3 + LIBERATOR-trait add + optional digivolve cost-reduce-4 remain DSL-modelled. Inherited Security hand/trash play now uses play_cost_lte:4 filters and native add_this_option_to_hand; 8 active, 14 ignored for option/security flow harness coverage."
     },
     "EX4-006": {
       "card_name": "Guilmon",
-      "validated_date": "2026-04-27",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
-      "archetype": "Medusamon",
-      "yaml_path": null,
-      "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_006.rs",
-      "test_count": 0,
-      "patterns": [],
-      "notes": "Original Batch 7 worker reported BLOCKED (dsl) on count_gte predicate uneval. YAML/tests not retained in main tree after worktree prune (lost during merge). Gap G-COUNT-LTE-EVAL / G-COUNT-GTE-EVAL covers it."
-    },
-    "EX9-008": {
-      "card_name": "Biyomon",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-03",
       "report": "batch-implement-cards-rust-dsl",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon",
-      "yaml_path": null,
+      "yaml_path": "code/digimon-engine/cards/ex4/EX4-006.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_006.rs",
+      "test_count": 3,
+      "patterns": ["H1-RUSH", "G-COUNT-GTE-EVAL"],
+      "notes": "Recovered YAML/tests and implemented runtime count_lte/count_gte aggregate predicate evaluation. EX4-006 On Play grants Rush at 20 shared trash cards and stays masked below threshold."
+    },
+    "EX9-008": {
+      "card_name": "Biyomon",
+      "validated_date": "2026-05-03",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-008.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_008.rs",
       "test_count": 6,
       "patterns": ["H_TRAINING", "H9-RAID-INHERITED"],
-      "notes": "Original Batch 7 worker reported IMPLEMENTED with 3 engine fixes (Training keyword in modifier_map.rs, has_keyword stack-walk, card_data_from_compiled keyword population). Engine fixes landed; YAML/tests not retained in main tree after worktree prune (lost during merge)."
+      "notes": "Recovered YAML/tests. EX9-008 declares Training and inherited Raid keyword grants plus Lv2 DM alt path; focused test suite passes."
     },
     "BT1-090": {
       "card_name": "Gravity Crush",
@@ -117,6 +119,24 @@
       ],
       "notes": "13 active tests pass; 6 ignored pending gaps. Clause A ([Main] effect_initiated_digivolve cost -3 from option card) fully DSL-implemented — optional select_own_permanent + select_hand + effect_initiated_digivolve. Clause B ([Start of Your Turn] Delay) registered as raw_rust declarative lm_027_delay_start_of_turn_noop (no-op) pending G-DELAY-START-OF-TURN (engine has no DelayTrigger::StartOfYourNextTurn). Clause C ([Security] play small red Digimon from trash) DSL-implemented with select_trash + play_from_trash_free; add-self-to-hand step is raw_rust no-op pending G-ADD-OPTION-SELF-TO-HAND. dp_lte: 2000 filter compiled but unenforced pending G-PRED-DP-LTE."
     },
+    "LM-055": {
+      "card_name": "Sprint Dash Training",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Medusamon Batch 16",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-055.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_055.rs",
+      "test_count": 12,
+      "patterns": [
+        "A1",
+        "A2",
+        "Option-as-permanent Delay",
+        "C-digivolve"
+      ],
+      "notes": "Sprint Dash Training is authored in native DSL: conditional IgnoreColorRequirement flood_gate, Main reveal top 2/add green-or-red/remainder bottom/place as Delay option, Delay effect-initiated digivolve into green/red from hand with cost -2, and inherited Security mirror. 10 active tests pass; 2 ignored for G-IGNORE-COLOR-MASK conditional action-mask enforcement."
+    },
     "BT20-016": {
       "card_name": "Paildramon",
       "validated_date": "2026-04-27",
@@ -144,7 +164,9 @@
       "archetype": "Medusamon Batch 11",
       "yaml_path": "code/digimon-engine/cards/bt20/BT20-102.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_102.rs",
-      "test_count": 16,
+      "test_count": 17,
+      "tests_passing": 16,
+      "tests_ignored": 1,
       "patterns": [
         "D4",
         "F",
@@ -248,11 +270,11 @@
         "E1",
         "H9"
       ],
-      "notes": "OnPlay grant-Raid+3000-DP implemented and tested with end-of-turn expiry (15 active tests). [When Moving] timing dropped pending G-ON-MOVE engine gap. Inherited OPT lockout test ignored pending G-OPT-TRIGGERED."
+      "notes": "OnPlay and OnMove share the Raid+3000-DP target grant body; breeding move dispatch installs the selection prompt. Inherited OPT lockout remains ignored pending G-OPT-TRIGGERED. 16 active, 1 ignored."
     },
     "BT21-025": {
       "card_name": "Lamiamon",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-03",
       "report": "batch-implement-cards-rust-dsl",
       "status": "PARTIAL",
       "gap_kind": null,
@@ -290,7 +312,9 @@
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-015.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_015.rs",
-      "test_count": 16,
+      "test_count": 19,
+      "tests_passing": 15,
+      "tests_ignored": 4,
       "patterns": [
         "F-PLAY-FROM-SEC",
         "D-DELETE-DP-LTE",
@@ -331,7 +355,7 @@
         "H4-SECA-PLUS-1",
         "H_PROGRESS"
       ],
-      "notes": "Security A.+1 + Progress + OPT delete-lowest-DP + token-spawn-on-security ship. Token-spawn-on-deletion arm dropped pending G-EVENT-TARGET-OWNER. Engine fix: token name lowercased (Petrification â†’ petrification matches TokenRegistry key)."
+      "notes": "Security A.+1 + Progress + OPT delete-lowest-DP ship structurally/behaviorally where supported. Token spawn now fires for both opponent security removal and opponent Digimon deletion via OnAnyDeletion event context. Remaining ignored tests cover declarative keyword install, triggered OPT, and lowest-DP selection restriction."
     },
     "BT24-017": {
       "card_name": "Medusamon",
@@ -522,21 +546,21 @@
     },
     "BT16-082": {
       "card_name": "Ukkomon",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-04",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "hybrid",
-      "archetype": "Medusamon Batch 6",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon Batch 16",
       "yaml_path": "code/digimon-engine/cards/bt16/BT16-082.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_082.rs",
-      "test_count": 16,
+      "test_count": 18,
       "patterns": [
-        "G-ON-MOVE",
         "A1",
+        "A2",
         "E2-adjacent",
         "B-hatch"
       ],
-      "notes": "Entire effect blocked by G-ON-MOVE (hybrid): engine has no EffectTiming::OnMove, DSL has no on_move_from_breeding timing token. YAML uses on_play stub timing with raw_rust no-op step. 5 structural tests active (pass), 11 behavioral tests #[ignore]'d pending G-ON-MOVE. Reveal-3+add-Digimon/Tamer+may-hatch body documented in YAML comments ready for implementation when gap closes."
+      "notes": "Ukkomon now uses native when:on_move with event_target_owner:you plus reveal_top_deck/select_reveal/add_to_hand_from_reveal/place_remainder_on_deck. Added reusable can_hatch predicate so the Hatch/Don't hatch EffectChoice only appears when breeding is empty and digitama is available. Raw-rust no-op removed. 16 active tests pass; 2 ignored are residual triggered OPT lockout/reset coverage for OnMove effects."
     },
     "BT21-007": {
       "card_name": "Agumon",
@@ -680,8 +704,8 @@
     },
     "EX8-074": {
       "status": "IMPLEMENTED",
-      "date": "2026-04-28",
-      "notes": "All 13 runnable tests pass. 5 ignored (G-COUNT-LTE-EVAL, G-PRED-DP-LTE x2, G-OPT-TRIGGERED, G-ALL-TURNS-FILTER). raw_rust formula ex8_074_suspended_dp_cap registered. Gaps: G-PRED-DP-LTE (dp_lte formula not eval'd at runtime), G-COUNT-LTE-EVAL, G-OPT-TRIGGERED, G-ALL-TURNS-FILTER, G-ACTIVATE-CARD-WD-EFFECTS."
+      "date": "2026-05-04",
+      "notes": "Cost-reduction clause now carries the count_gte gate for 2 unsuspended Digimon, and the targeted structural regression passes. Existing raw_rust formula ex8_074_suspended_dp_cap remains registered for the dynamic DP cap. Remaining ignored tests track older dynamic DP/all-turn/OPT behavioral coverage, not the count_gte authoring gap."
     },
     "BT21-026": {
       "status": "IMPLEMENTED",
@@ -709,7 +733,7 @@
     },
     "BT23-014": {
       "card_name": "Gallantmon",
-      "validated_date": "2026-04-28",
+      "validated_date": "2026-05-03",
       "report": "batch-implement-cards-rust-dsl",
       "status": "IMPLEMENTED",
       "gap_kind": "PARTIAL",
@@ -840,20 +864,20 @@
       "validated_date": "2026-04-28",
       "report": "batch-implement-cards-rust-dsl",
       "status": "PARTIAL",
-      "gap_kind": "dsl",
-      "archetype": "Medusamon Batch 13",
+      "gap_kind": null,
+      "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/p/P-151.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_151.rs",
       "test_count": 18,
-      "tests_passing": 15,
-      "tests_ignored": 3,
+      "tests_passing": 18,
+      "tests_ignored": 0,
       "patterns": [
         "D3-color-bypass",
         "A1-reveal-top-pick",
         "A2-remainder-bottom",
         "E2-optional-free-play"
       ],
-      "notes": "Purple Option Cost 3, [LIBERATOR] trait. 3 clauses: (0) flood_gate IgnoreColorRequirement while LIBERATOR Digimon/Tamer on field — compiles structurally; runtime blocked by G-IGNORE-COLOR-MASK (2 tests ignored). (1) [Main] reveal_top_deck(3) + select_reveal(optional, trait_has:LIBERATOR) + add_to_hand_from_reveal + place_remainder_on_deck(bottom) + select_hand(optional, trait_has:LIBERATOR) + play_from_hand_free — all DSL-native, fully passes; cost-≤3 filter unenforced (G-PLAY-COST-LTE, 1 test ignored). (2) [Inherited][Security] mirrors Clause 1 process exactly — standard 'activate main effects' security pattern (same as P-035, BT22-084 etc.) using scope:inherited + when:on_security. 15 active tests pass (7 structural + 5 behavioral + 3 integration). Key patterns: activate_hand_main (P-035 pattern) used for all behavioral tests instead of runner.play() to avoid full auto-resolve consuming the option card. Reveal-pick test fixed: explicit execute_action(0, view.valid_action_ids[0]) drives the reveal selection rather than auto_resolve (which PASS-resolves optional selections). Gaps: G-IGNORE-COLOR-MASK, G-PLAY-COST-LTE."
+      "notes": "Purple Option Cost 3, [LIBERATOR] trait. use_requirement color bypass is active in the hand-play mask when a LIBERATOR Digimon/Tamer is present. [Main] reveal_top_deck(3), LIBERATOR reveal-pick, bottom remainder, optional play LIBERATOR cost≤3 from hand free all pass with play_cost_lte:3 enforced. [Security] mirrors the Main effects. 18 active tests pass, 0 ignored."
     },
     "P-206": {
       "card_name": "Digital Gate Open",

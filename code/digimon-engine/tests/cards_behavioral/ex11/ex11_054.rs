@@ -18,52 +18,16 @@
 //! - F9 Security-loss conditioned tamers (Owen Dreadnought pattern)
 //! - Security play (play_from_security)
 //!
-//! # Engine gap notes
+//! # Engine notes
 //!
-//! ## [All Turns] ally Reptile/Dragonkin observer — HYBRID GAP (engine + DSL)
-//!
-//! The clause fires when YOUR Digimon WITH [Reptile] or [Dragonkin] trait is
-//! played or digivolves. The Rust engine's `OnEnterFieldAnyone` and
-//! `OnDigivolve` fire as global observers but the trigger context does NOT
-//! carry the entering/digivolving permanent's information to OBSERVER permanents
-//! (i.e., the `TriggerContext` seen by Owen Dreadnought has
-//! `target_permanent = Owen's own handle`, not the handle of the card that
-//! just entered). The `event_target_trait_has` DSL predicate evaluates the
-//! trigger context's target_permanent — which is Owen, not the entering Digimon.
-//!
-//! Additionally, `GameEvent::Digivolve` is "defined for future wiring — not
-//! emitted yet" per events.rs, so even reading the event log from a raw_rust
-//! condition cannot reliably detect which Digimon just digivolved.
-//!
-//! The All Turns clause is implemented as `kind: raw_rust` with a no-op
-//! placeholder (`ex11_054_all_turns_noop`) until the following gaps close:
-//!
-//! Engine gap: thread `entering_permanent: Option<PermanentHandle>` through
-//!   `TriggerContext` for `OnEnterFieldAnyone` and `OnDigivolve` observers,
-//!   so observer cards can inspect the triggering permanent's traits.
-//!   Also: emit `GameEvent::Digivolve` (currently stubbed).
-//!
-//! DSL gap: add `entering_permanent_trait_has` / `digivolving_permanent_trait_has`
-//!   BoolPredicate leaf (reads the new TriggerContext field) so native DSL clauses
-//!   can gate on the entering card's traits without raw_rust.
-//!
-//! The All Turns tests below are annotated #[ignore] with the gap tag until
-//! the gaps close.
-//!
-//! ## G-DECLARATIVE-KEYWORD gap (Progress keyword)
-//! The +3000 DP sub-step selects "1 of your Digimon with <Progress>". The
-//! `<Progress>` keyword is granted via `kind: grant_keyword` DSL clauses.
-//! However, the G-DECLARATIVE-KEYWORD gap means declarative grant_keyword
-//! clauses compile but are never fired at runtime — the Progress modifier is
-//! never installed in the ModifierRegistry. Therefore
-//! `select_own_permanent { has_keyword: Progress }` would find zero candidates
-//! even if the observer mechanism were working. Tests for the Progress DP buff
-//! step are tagged `#[ignore = "pending: G-DECLARATIVE-KEYWORD"]`.
+//! The all-turns observer now uses event context: played/digivolved Digimon are
+//! visible through `event_target_owner` and `event_target_trait_has`, so the
+//! clause is native DSL instead of a raw-rust no-op.
 
 #[path = "../../support/dsl_card_data.rs"]
 mod dsl_card_data;
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledTiming};
+use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 
 fn compiled() -> digimon_dsl::compiled::CompiledCard {
@@ -125,20 +89,23 @@ fn ex11_054_has_security_clause() {
 }
 
 #[test]
-fn ex11_054_has_raw_rust_all_turns_clause() {
-    // The All Turns ally-Reptile/Dragonkin observer is registered as
-    // `kind: raw_rust` — confirmed at structural level.
+fn ex11_054_has_native_all_turns_observer_clause() {
     let card = compiled();
-    let has_raw_rust = card.effects.iter().any(|c| {
-        matches!(
-            c,
-            CompiledClause::Declarative(CompiledDeclarativeClause::RawRust { .. })
-        )
-    });
-    assert!(
-        has_raw_rust,
-        "EX11-054 must have a RawRust declarative clause for the All Turns observer"
-    );
+    let observer = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::OnEnterFieldAnyone)
+                    && t.when.contains(&CompiledTiming::OnDigivolve) =>
+            {
+                Some(t)
+            }
+            _ => None,
+        })
+        .expect("EX11-054 must have a native all-turns enter/digivolve observer");
+    assert_eq!(observer.scope, CompiledScope::FaceUp);
+    assert!(observer.optional, "suspending Owen is an optional cost");
 }
 
 // ─── Section 2: Condition gating — Clause 1 (start_of_your_turn) ─────────────
@@ -301,17 +268,9 @@ fn ex11_054_security_play_puts_tamer_on_field() {
     );
 }
 
-// ─── Section 4: All Turns clause — pending hybrid gap ─────────────────────────
-//
-// The following tests confirm the INTENDED behavior once the engine and DSL
-// gaps are closed. They are #[ignore]d until:
-//   1. TriggerContext carries `entering_permanent` for OnEnterFieldAnyone observers
-//   2. GameEvent::Digivolve is emitted
-//   3. A DSL predicate or raw_rust approach can gate on the entering card's traits
-//   4. G-DECLARATIVE-KEYWORD gap closes so Progress keywords are active at runtime
+// ─── Section 4: All Turns clause ─────────────────────────────────────────────
 
 #[test]
-#[ignore = "pending: entering_permanent_trigger_context (hybrid engine+DSL gap for OnEnterFieldAnyone observer)"]
 fn ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played() {
     // When P0 plays a Reptile Digimon, Owen (unsuspended) should offer an
     // optional activation: suspend Owen, draw 1 card.
@@ -328,6 +287,8 @@ fn ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played() {
         .dsl_card("EX11-054")
         .expect("EX11-054 in embedded pack")
         .add_card(reptile)
+        .add_card(make_test_card("DRAW-FILLER", "DrawFiller"))
+        .deck(0, &["DRAW-FILLER"])
         .memory(10)
         .start();
 
@@ -393,7 +354,6 @@ fn ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played() {
 }
 
 #[test]
-#[ignore = "pending: entering_permanent_trigger_context (hybrid engine+DSL gap for OnEnterFieldAnyone observer)"]
 fn ex11_054_all_turns_does_not_trigger_without_reptile_or_dragonkin() {
     // When P0 plays a non-Reptile/Dragonkin Digimon, Owen's clause should NOT fire.
     use digimon_engine::enums::CardKind;
@@ -446,7 +406,6 @@ fn ex11_054_all_turns_grants_3000_dp_to_progress_digimon() {
 }
 
 #[test]
-#[ignore = "pending: entering_permanent_trigger_context (hybrid engine+DSL gap for OnEnterFieldAnyone observer)"]
 fn ex11_054_all_turns_does_not_offer_activation_when_tamer_already_suspended() {
     // DCGO's CanActivateCondition checks CanActivateSuspendCostEffect — returns
     // false when the tamer is already suspended. The activation prompt must NOT

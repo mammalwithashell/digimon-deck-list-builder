@@ -23,13 +23,15 @@
 //!   (clause 3 — blocked by G-INHERITED-DISPATCH)
 //!
 //! # Known gaps applied
-//! - G-ATK-TRAIT-FILTER (NEW — see qa/dsl-vocab-gaps.md): DSL has no
-//!   `attacker_trait_has` predicate; clause 2 condition uses `any_permanent`
-//!   with trait filter as a necessary-but-not-sufficient approximation.
 //! - G-INHERITED-DISPATCH: inherited triggered effects on digivolution-stack
 //!   sources never fire — clause 3 behavioral tests are ignored.
 //! - G-OPT-TRIGGERED: `once_per_turn` not enforced at runtime — OPT lockout
 //!   tests are ignored.
+//!
+//! # Resolved/stale gap note
+//! - G-ATK-TRAIT-FILTER is modelled through `event_target_owner` +
+//!   `event_target_trait_has` after OnAttackTargetChange started carrying the
+//!   attacker as event context.
 //!
 //! # Build note
 //! `dsl_card("BT21-025")` requires build.rs to scan `cards/bt21/` (Phase 1c+).
@@ -42,6 +44,7 @@ use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::TriggerSource;
 
 // ─── Inlined production YAML (mirrors cards/bt21/BT21-025.yaml) ───────────────
@@ -114,6 +117,21 @@ fn lamiamon_runner_with_security() -> DebugRunner {
         .add_card(plain_digimon("SEC-FILLER"))
         .security(1, &["SEC-FILLER"])
         .build()
+}
+
+fn enqueue_attack_target_change_for_attacker(runner: &mut DebugRunner, attacker: PermanentHandle) {
+    let card = runner.game.players[attacker.player as usize].battle_area[attacker.index as usize]
+        .top_card()
+        .handle();
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::EventObserved {
+            player: attacker.player,
+            permanent: attacker,
+            card,
+        },
+    );
+    runner.game.drain_effect_queue();
 }
 
 // ─── §1 Structural assertions ─────────────────────────────────────────────────
@@ -210,13 +228,9 @@ fn bt21_025_clause2_fires_when_dragonkin_on_your_field() {
     let mut runner = lamiamon_runner_with_security();
 
     let sec_before = runner.security_count(1);
-    let _ = runner.place_on_field(0, "BT21-025", None); // Dragonkin on field
+    let attacker = runner.place_on_field(0, "BT21-025", None); // Dragonkin attacker
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnAttackTargetChange,
-        TriggerSource::PlayerBattleArea(0),
-    );
-    runner.game.drain_effect_queue();
+    enqueue_attack_target_change_for_attacker(&mut runner, attacker);
 
     assert_eq!(
         runner.security_count(1),
@@ -237,14 +251,10 @@ fn bt21_025_clause2_does_not_fire_without_matching_trait_permanent() {
         .security(1, &["SEC-FILLER"])
         .build();
 
-    let _ = runner.place_on_field(0, "NO-TRAIT", None); // no Reptile/Dragonkin trait
+    let attacker = runner.place_on_field(0, "NO-TRAIT", None); // no Reptile/Dragonkin trait
     let sec_before = runner.security_count(1);
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnAttackTargetChange,
-        TriggerSource::PlayerBattleArea(0),
-    );
-    runner.game.drain_effect_queue();
+    enqueue_attack_target_change_for_attacker(&mut runner, attacker);
 
     assert_eq!(
         runner.security_count(1),
@@ -263,17 +273,13 @@ fn bt21_025_clause2_does_not_fire_on_opponents_turn() {
         .security(1, &["SEC-FILLER"])
         .build();
 
-    let _ = runner.place_on_field(0, "BT21-025", None); // Dragonkin on p0's field
+    let attacker = runner.place_on_field(0, "BT21-025", None); // Dragonkin on p0's field
     runner.end_turn(); // → player 1's turn; BT21-025 active_when:your_turn must block for p0
 
     let sec_before = runner.security_count(1);
 
-    // Fire from player 0's battle area — but it's player 1's turn.
-    runner.game.enqueue_triggered(
-        EffectTiming::OnAttackTargetChange,
-        TriggerSource::PlayerBattleArea(0),
-    );
-    runner.game.drain_effect_queue();
+    // Fire from a player 0 attacker — but it's player 1's turn.
+    enqueue_attack_target_change_for_attacker(&mut runner, attacker);
 
     assert_eq!(
         runner.security_count(1),
@@ -296,15 +302,11 @@ fn bt21_025_clause2_trashes_exactly_one_opponent_top_security() {
         .security(1, &["SEC-A", "SEC-B", "SEC-C"])
         .build();
 
-    let _ = runner.place_on_field(0, "BT21-025", None);
+    let attacker = runner.place_on_field(0, "BT21-025", None);
     let sec_before = runner.security_count(1);
     let trash_before = runner.trash_size(1);
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnAttackTargetChange,
-        TriggerSource::PlayerBattleArea(0),
-    );
-    runner.game.drain_effect_queue();
+    enqueue_attack_target_change_for_attacker(&mut runner, attacker);
 
     assert_eq!(
         runner.security_count(1),
@@ -324,14 +326,10 @@ fn bt21_025_clause2_noop_when_opponent_has_no_security() {
     let mut runner = lamiamon_runner(); // no security set up for player 1
 
     assert_eq!(runner.security_count(1), 0);
-    let _ = runner.place_on_field(0, "BT21-025", None);
+    let attacker = runner.place_on_field(0, "BT21-025", None);
 
     // Must not panic.
-    runner.game.enqueue_triggered(
-        EffectTiming::OnAttackTargetChange,
-        TriggerSource::PlayerBattleArea(0),
-    );
-    runner.game.drain_effect_queue();
+    enqueue_attack_target_change_for_attacker(&mut runner, attacker);
 
     assert_eq!(runner.security_count(1), 0);
 }
@@ -354,22 +352,14 @@ fn bt21_025_clause2_opt_blocks_second_trigger_same_turn() {
         .security(1, &["SEC-A", "SEC-B", "SEC-C"])
         .build();
 
-    let _ = runner.place_on_field(0, "BT21-025", None);
+    let attacker = runner.place_on_field(0, "BT21-025", None);
 
     // First trigger.
-    runner.game.enqueue_triggered(
-        EffectTiming::OnAttackTargetChange,
-        TriggerSource::PlayerBattleArea(0),
-    );
-    runner.game.drain_effect_queue();
+    enqueue_attack_target_change_for_attacker(&mut runner, attacker);
     let after_first = runner.security_count(1);
 
     // Second trigger same turn — must be suppressed.
-    runner.game.enqueue_triggered(
-        EffectTiming::OnAttackTargetChange,
-        TriggerSource::PlayerBattleArea(0),
-    );
-    runner.game.drain_effect_queue();
+    enqueue_attack_target_change_for_attacker(&mut runner, attacker);
 
     assert_eq!(
         runner.security_count(1),
@@ -394,14 +384,10 @@ fn bt21_025_clause2_opt_resets_after_turn_end() {
         .security(1, &["SEC-A", "SEC-B", "SEC-C", "SEC-D"])
         .build();
 
-    let _ = runner.place_on_field(0, "BT21-025", None);
+    let attacker = runner.place_on_field(0, "BT21-025", None);
 
     // Fire once — uses the OPT slot.
-    runner.game.enqueue_triggered(
-        EffectTiming::OnAttackTargetChange,
-        TriggerSource::PlayerBattleArea(0),
-    );
-    runner.game.drain_effect_queue();
+    enqueue_attack_target_change_for_attacker(&mut runner, attacker);
     let after_first = runner.security_count(1);
 
     // Cycle turns back to player 0.
@@ -409,11 +395,7 @@ fn bt21_025_clause2_opt_resets_after_turn_end() {
     runner.end_turn();
 
     // OPT resets — fires again.
-    runner.game.enqueue_triggered(
-        EffectTiming::OnAttackTargetChange,
-        TriggerSource::PlayerBattleArea(0),
-    );
-    runner.game.drain_effect_queue();
+    enqueue_attack_target_change_for_attacker(&mut runner, attacker);
 
     assert_eq!(
         runner.security_count(1),

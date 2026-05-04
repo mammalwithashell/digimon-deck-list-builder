@@ -17,18 +17,15 @@
 //!
 //! # Known gaps / partially-blocked clauses
 //!
-//! G-COUNT-LTE-EVAL: `count_gte` in condition predicate is parsed but NOT evaluated
-//!   (always TRUE). The BeforePayCost condition `count_gte >= 2 unsuspended Digimon`
-//!   is authored correctly in YAML but won't gate activation until the gap closes.
-//!   Test `ex8_074_cost_reduction_blocked_with_fewer_than_2_unsuspended` is
-//!   `#[ignore = "pending: G-COUNT-LTE-EVAL"]`.
+//! Count gate: the BeforePayCost condition now carries `count_gte >= 2`
+//!   unsuspended Digimon. Structural coverage is active; the full cost-payment
+//!   negative-path test remains ignored until the play-cost prompt harness can
+//!   assert no suspend selection installs.
 //!
 //! Dynamic DP cap (raw_rust formula): The DP cap `8000 + 3000 × (other suspended
 //!   Digimon count)` uses a raw_rust formula `ex8_074_suspended_dp_cap` registered
-//!   in `src/cards/raw_rust/mod.rs`. Until registered, the dp_lte formula evaluates
-//!   to 0 (raw_rust fallback returns 0 when unregistered).
-//!   Tests for the dynamic cap filtering are `#[ignore = "pending: G-PRED-DP-LTE
-//!   + raw_rust formula registration"]`.
+//!   in `src/cards/raw_rust/mod.rs`. Runtime target-filter coverage remains ignored
+//!   under the broader `G-PRED-DP-LTE` behavioral gap.
 //!
 //! G-ALL-TURNS-FILTER: The [All Turns][OPT] trigger fires on `on_enter_field_anyone`.
 //!   Verification that it fires on the opponent's turn is
@@ -184,6 +181,33 @@ fn ex8_074_structural_cost_reduction_present() {
     );
 }
 
+#[test]
+fn ex8_074_cost_reduction_has_two_unsuspended_digimon_condition() {
+    let card = compiled_ex8_074();
+    let condition = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction {
+                condition,
+                ..
+            }) => condition.as_ref(),
+            _ => None,
+        })
+        .expect("cost reduction must carry a count_gte condition");
+
+    let count = condition
+        .count_gte
+        .as_ref()
+        .expect("cost reduction must require enough unsuspended Digimon");
+    assert_eq!(count.n, 2);
+    assert_eq!(
+        count.filter.kind,
+        Some(digimon_dsl::compiled::CompiledCardKind::Digimon)
+    );
+    assert_eq!(count.filter.is_unsuspended, Some(true));
+}
+
 /// The [When Digivolving] clause must be optional and NOT once_per_turn.
 #[test]
 fn ex8_074_structural_when_digivolving_optional_not_opt() {
@@ -245,14 +269,13 @@ fn ex8_074_structural_all_turns_oefta_optional_opt() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// With fewer than 2 unsuspended Digimon, the BeforePayCost reduction condition
-/// is not met and must NOT fire. Currently blocked by G-COUNT-LTE-EVAL (count_gte
-/// predicate evaluates to true regardless of actual count).
+/// is not met and must NOT fire.
 #[test]
-#[ignore = "pending: G-COUNT-LTE-EVAL — count_gte predicate always evaluates true until gap closes"]
+#[ignore = "pending: BeforePayCost prompt harness for negative cost-gate behavior"]
 fn ex8_074_cost_reduction_blocked_with_fewer_than_2_unsuspended() {
-    // When G-COUNT-LTE-EVAL closes: set up a game where the controller has
-    // 0 or 1 unsuspended Digimon, attempt to play EX8-074, and verify that
-    // the suspension selection prompt does NOT install.
+    // Set up a game where the controller has 0 or 1 unsuspended Digimon,
+    // attempt to play EX8-074, and verify that the suspension selection
+    // prompt does NOT install.
     let _ = compiled_ex8_074();
 }
 
@@ -452,7 +475,7 @@ fn ex8_074_when_digivolving_delete_removes_opp_digimon() {
 /// 8000 + 3000 = 11000. Requires `ex8_074_suspended_dp_cap` raw_rust formula.
 /// Until registered, dp_lte formula returns 0 and this test cannot pass.
 #[test]
-#[ignore = "pending: raw_rust formula ex8_074_suspended_dp_cap not yet registered + G-PRED-DP-LTE"]
+#[ignore = "pending: G-PRED-DP-LTE behavioral target filtering for dynamic DP cap"]
 fn ex8_074_dp_cap_scales_with_other_suspended_digimon() {
     // When resolved: set up 2 own Digimon (one pre-suspended), fire WD on EX8-074,
     // verify that the delete selection shows opponents with DP <= 11000 only.
@@ -461,7 +484,7 @@ fn ex8_074_dp_cap_scales_with_other_suspended_digimon() {
 
 /// With 0 other suspended Digimon, the DP cap should be 8000 (base only).
 #[test]
-#[ignore = "pending: raw_rust formula ex8_074_suspended_dp_cap not yet registered + G-PRED-DP-LTE"]
+#[ignore = "pending: G-PRED-DP-LTE behavioral target filtering for dynamic DP cap"]
 fn ex8_074_dp_cap_base_8000_no_other_suspended() {
     let _ = compiled_ex8_074();
 }
