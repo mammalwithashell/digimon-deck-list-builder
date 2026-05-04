@@ -1,0 +1,209 @@
+# BT17-093 Tai Kamiya & Kari Kamiya — Tamer, White, Cost 3.
+# Traits: (none printed).
+#
+# Printed card text (data/cards.json):
+#
+#   [All Turns] When you hatch in the breeding area, by suspending this Tamer,
+#   gain 1 memory.
+#
+#   [End of Your Turn] By returning this Tamer to the bottom of the deck,
+#   <Draw 1> (Draw 1 card from your deck.) Then, you may play 1 Tamer card
+#   with [Tai Kamiya] or [Kari Kamiya] in its name from your hand without
+#   paying the cost.
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT17/White/BT17_093.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnEnterFieldAnyone`-keyed activate that filters via
+#   `IsDigiEggHatch` → `CardEffectCommons.IsPermanentExistsOnOwnerBreedingArea(
+#   permanent, card)` AND `permanent.TopCard.IsDigiEgg`. The owner-scoping in
+#   `IsPermanentExistsOnOwnerBreedingArea` is the "you hatch" gate. Cost:
+#   `SuspendPermanentsClass` on `card.PermanentOfThisCard()`. Effect:
+#   `card.Owner.AddMemory(1, …)`. `SetUpActivateClass(..., -1, isOptional=true)`.
+#
+# Clause 2 — `EffectTiming.OnEndTurn` activate gated by
+#   `CardEffectCommons.IsOwnerTurn(card)` (i.e. [End of YOUR Turn]).
+#   `SetUpActivateClass(..., -1, isOptional=false)` for the outer entry, but the
+#   coroutine itself prompts a Yes/No `BoolSelection` ("Will you return this
+#   tamer to bottom of the deck?"). If Yes: `DeckBottomBounceClass` on
+#   `card.PermanentOfThisCard()`, then `DrawClass(card.Owner, 1)`, then a
+#   `SelectHandEffect` (`maxCount: min(1, eligible)`, `canNoSelect: true`,
+#   `canEndNotMax: false`) over `HasProperTamer` (Tamer kind AND
+#   ContainsCardName "Tai Kamiya" OR "Kari Kamiya" AND CanPlayAsNewPermanent).
+#   If a card is selected: `PlayPermanentCards(payCost=false, isTapped=false,
+#   root=Hand, activateETB=true)`. The "you may" semantic on the OUTER step is
+#   the BoolSelection, not the ActivateClass.isOptional flag — DCGO models the
+#   outer gate as a runtime prompt, not the trigger-level optional.
+#
+# DSL faithfulness gap on the outer "you may":
+#   We mark this clause `optional: true`, but under the current DSL lowering a
+#   single-trigger `optional` only gates the `TriggerOrder` selection's
+#   "decline all" affordance — which never installs when only this one effect
+#   is queued. Therefore the body runs unconditionally and the player cannot
+#   decline the cost-and-draw at the trigger level. This matches sister DSL
+#   cards' observed behavior (BT24-082 Owen Dreadnought, BT22-084 Nokia
+#   Shiramine — same return-to-deck-bottom shape with the same single-trigger
+#   `optional: true` flag and no inner Yes/No prompt). The inner `select_hand`
+#   IS optional (canNoSelect=true) and remains player-declinable. Honest path
+#   to closure would inject an explicit `select_effect_choice` step at the
+#   start of `process:` to surface the outer Yes/No to the agent — pursued
+#   broadly across the EOT-cost-then-effect family rather than per-card.
+#
+# Clause 3 (Security) — `EffectTiming.SecuritySkill` →
+#   `CardEffectFactory.PlaySelfTamerSecurityEffect(card)`. Standard
+#   play_from_security pattern (sister cards: BT18-087, BT22-084, BT21-015,
+#   BT9-092, EX11-054).
+#
+# ─── DSL-GAP — `event_player_is_owner` for OnHatch  [G-EVENT-PLAYER-HATCH] ───
+#
+# DCGO uses `IsPermanentExistsOnOwnerBreedingArea(permanent, card)` to scope
+# Clause 1 to "the egg hatched in MY breeding area" — i.e. only fires when the
+# tamer's controller is the player who hatched.
+#
+# `Game::hatch` enqueues `OnHatch` with `TriggerSource::PlayerBattleArea(pid)`
+# for EVERY player (game.rs:1490-1498), so observers in BOTH battle areas are
+# scanned on every hatch. The trigger context for OnHatch carries no
+# `event_permanent` referencing the egg, so the existing `event_target_owner`
+# DSL leaf cannot be used to gate "the hatching player == this card's owner."
+#
+# Workaround under current DSL:
+#   `active_when: { your_turn: true }` — hatching is a main-phase action that
+#   happens during the hatching player's own turn. In standard play this is a
+#   tight approximation: the opponent never hatches during your turn, so the
+#   tamer never over-fires. The only edge case is a hypothetical effect that
+#   forces the opponent to hatch on your turn — none in the current card pool.
+#
+# This DOWN-REGULATES the printed [All Turns] tag (we observe only on the
+# controller's own turn). Per source priority: printed text says [All Turns],
+# DCGO scopes per-owner-of-card. The intersection is "you hatch on your turn,"
+# which both interpretations admit. The only printed-text behavior we lose is
+# "you hatch during opponent's turn" — currently unreachable in the rules.
+#
+# Tracked in qa/dsl-vocab-gaps.md (G-EVENT-PLAYER-HATCH); when closed (e.g.
+# `event_target_owner: you` evaluable in OnHatch context, or a dedicated
+# `event_hatching_player_is: you` leaf), drop the `your_turn: true` gate and
+# restore `all_turns: true` to honor the printed [All Turns] tag.
+#
+# ─── Cost-as-suspend invariant (Clause 1) ────────────────────────────────────
+#
+# "By suspending this Tamer, gain 1 memory." Suspend IS the activation cost.
+# Condition gate: any_permanent self & is_unsuspended (mirrors BT18-087's
+# `CanActivateSuspendCostEffect` modeling). The cost is paid as the FIRST
+# step of `process:`, so a re-entrant fire (e.g. two hatches in same turn)
+# is naturally limited: after the first fire the tamer is suspended and the
+# condition fails on the second.
+#
+# ─── Cost-as-return-to-deck-bottom invariant (Clause 2) ──────────────────────
+#
+# "By returning this Tamer to the bottom of the deck, ..." Return-to-deck-
+# bottom IS the activation cost. The DSL `return_to_deck` step on `target:
+# source` removes the tamer from the field as the first step; this also means
+# the OnDeletion-style cleanup happens before the draw + Tamer-replay sub-
+# steps run. (Tamer is now in the deck, not in trash — `return_to_deck` moves
+# permanent to deck, not trash.) The downstream `select_hand` + `play_from_
+# hand_free` for the Tai/Kari-named replacement Tamer fires after the cost
+# is paid, matching DCGO's coroutine ordering.
+
+card: BT17-093
+name: "Tai Kamiya & Kari Kamiya"
+kind: tamer
+color: [white]
+cost: 3
+traits: []
+
+effects:
+  # ─── Clause 1 — [All Turns] OnHatch suspend self → gain 1 memory ───────────
+  #
+  # Printed: "[All Turns] When you hatch in the breeding area, by suspending
+  # this Tamer, gain 1 memory."
+  #
+  # `optional: true` mirrors DCGO's `SetUpActivateClass(..., isOptional=true)`
+  # — the player may decline the suspend cost (and thus skip the memory gain).
+  #
+  # `active_when: { your_turn: true }` is a faithful approximation of "you
+  # hatch" given the current OnHatch dispatch + the absence of an event-player
+  # gate (see G-EVENT-PLAYER-HATCH header note). Hatching is a main-phase
+  # action by the hatching player, so tying activation to your_turn captures
+  # the standard semantics without over-firing on opponent hatches.
+  #
+  # Condition: this tamer must be on the field AND unsuspended (so the
+  # suspend cost can be paid). Mirrors BT18-087's
+  # `any_permanent { ..., is_unsuspended: true }` shape.
+  - when: on_hatch
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[All Turns] When you hatch: suspend self, gain 1 memory"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: "BT17-093"
+        is_unsuspended: true
+    process:
+      # Cost: suspend this Tamer.
+      - suspend: { target: source }
+      # Effect: gain 1 memory (controller of this tamer).
+      - gain_memory: 1
+
+  # ─── Clause 2 — [End of Your Turn] return self → draw 1 → may play Tamer ───
+  #
+  # Printed: "[End of Your Turn] By returning this Tamer to the bottom of the
+  # deck, <Draw 1>. Then, you may play 1 Tamer card with [Tai Kamiya] or
+  # [Kari Kamiya] in its name from your hand without paying the cost."
+  #
+  # `optional: true` — player may decline the entire effect (DCGO models this
+  # via the inner BoolSelection prompt; in DSL terms, declining at the
+  # clause-level pending point skips the return-to-deck cost AND all downstream
+  # steps, which matches the DCGO outer-prompt-no contract).
+  #
+  # Inner Tamer replacement is also optional (`select_hand: optional: true`),
+  # mirroring DCGO's `SelectHandEffect.SetUp(canNoSelect: true)`.
+  #
+  # Condition: this tamer must be on the field (to be returnable). The
+  # end_of_your_turn timing already implies it's the controller's turn; no
+  # `your_turn` gate needed.
+  - when: end_of_your_turn
+    optional: true
+    summary: "[EOT] Return self to deck bottom → draw 1 → may play Tai/Kari Tamer free"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: "BT17-093"
+    process:
+      # Cost: return this tamer to the bottom of the deck.
+      # `source` resolves to CompiledBindingRef::Source → ctx.source_permanent.
+      - return_to_deck: { target: source, position: bottom }
+      # Effect 1: draw 1 (controller).
+      - draw: { of: you, count: 1 }
+      # Effect 2: optional play of 1 Tamer w/[Tai Kamiya] or [Kari Kamiya] in
+      # name from hand without paying the cost.
+      - select_hand:
+          of: you
+          bind_as: tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - any_of:
+                  - name_contains: "Tai Kamiya"
+                  - name_contains: "Kari Kamiya"
+          prompt: "Play 1 Tamer w/[Tai Kamiya] or [Kari Kamiya] in name (free)"
+      - play_from_hand_free: { of: you, hand_index: tamer }
+
+  # ─── Clause 3 — [Security] Play without paying the cost ────────────────────
+  #
+  # Printed: "Security Effect [Security] Play this card without paying the
+  # cost."
+  #
+  # Standard play_from_security pattern (cf. BT18-087, BT22-084, BT21-015,
+  # BT9-092, EX11-054). Mandatory (no [Security] effect is opt-out per the
+  # rules manual §16 / RULES_CONTEXT.md).
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

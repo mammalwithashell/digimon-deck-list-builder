@@ -1,0 +1,312 @@
+# BT22-015 Omnimon — Digimon, Lv.7, Red+White, DP 15000, Cost 15.
+# Traits: Holy Warrior, Royal Knight, CS.
+# Evo: Lv.6 Red / Cost 6
+# DNA Digivolve: Lv.6 w/[Greymon]-name + Lv.6 w/[Garurumon]-name / Cost 0
+#
+# Printed card text (data/cards.json):
+#
+#   ＜Blocker＞
+#   ＜Decode (Red/Black Lv.3)＞
+#     (When this Digimon would leave the battle area other than in battle,
+#      you may play 1 Red or Black Level 3 Digimon card from its digivolution
+#      cards without paying the cost.)
+#   ＜Decode (Blue/Yellow Lv.3)＞
+#   [On Play] [When Attacking] Delete 1 of your opponent's Digimon with the
+#     lowest DP.
+#   [When Digivolving] For every 2 same-level cards this Digimon's stack has,
+#     return 1 of your opponent's Digimon to the bottom of the deck. Then,
+#     this Digimon may attack.
+#
+# Inherited / Security: (none)
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT22/Red/BT22_015.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Five primary blocks:
+#
+#   1. Alternate Digivolution (EffectTiming.None) —
+#      AddSelfDigivolutionRequirementStaticEffect with permCondition =
+#      `TopCard.IsLevel6 && TopCard.HasCSTraits`, digivolutionCost: 5,
+#      ignoreDigivolutionRequirement: false. This is a CS-trait-narrowed
+#      cost-5 alt-source on Lv.6 ANY-color. Printed evo cost block in
+#      cards.json shows Lv.6/Red/cost 6 — DCGO's CS-narrowed cost-5 source
+#      is an extra source not on the printed card; per source priority
+#      (printed text > DCGO), we encode the printed standard alt-path
+#      `from: { level_eq: 6, color_is: red }, cost: 6` and treat the DCGO
+#      CS-trait alt-source as an unprinted implementation alt-source not
+#      authored in YAML.
+#
+#   2. DNA Digivolution (EffectTiming.None) — AddJogressConditionClass
+#      registering the DNA recipe: PermanentCondition1 = ContainsCardName
+#      ("Greymon") + Lv.6, PermanentCondition2 = ContainsCardName("Garurumon")
+#      + Lv.6, JogressCondition cost = 0. Authored as
+#      `kind: dna_digivolve` alt-path with materials filtered by
+#      `name_contains` and `level_eq: 6`. `stacks_unsuspended: true`.
+#
+#   3. Static Effects (EffectTiming.None) —
+#      • BlockerSelfStaticEffect → `kind: grant_keyword, keyword: Blocker`.
+#      • DecodeSelfEffect (Red/Black) — sourceCondition = (Red || Black) &&
+#        IsLevel3.
+#      • DecodeSelfEffect (Blue/Yellow) — sourceCondition = (Blue || Yellow)
+#        && IsLevel3.
+#
+#      The two Decode clauses are BLOCKED — see G-DECODE-PLAY-FROM-OWN-
+#      DIGIVOLUTION-SOURCES below. The engine has a generic `Keyword::Decode`
+#      replacement that REDIRECTS the leaving permanent to the controller's
+#      hand (cards/keyword_effects.rs:270-297), but BT22-015's printed Decode
+#      is fundamentally different: it doesn't redirect the leaving permanent —
+#      it allows the controller to PLAY a Lv.3 Red/Black or Blue/Yellow
+#      Digimon card from THIS card's digivolution sources (i.e. from the
+#      stack about to be cleaned up) without paying the cost. There is no
+#      DSL verb for "play card from own digivolution cards" and no
+#      replacement form that surfaces this play-from-source-stack option.
+#
+#   4. On Play (EffectTiming.OnEnterFieldAnyone) — ActivateClass with
+#      CanTriggerOnPlay. Body = SelectPermanentEffect over IsOpponentsDigimon
+#      AND IsMinDP, mode Destroy, maxCount: 1, canNoSelect: false. Outer
+#      isOptional: false (printed has no "may"). Mandatory delete of opp's
+#      lowest-DP Digimon.
+#
+#   5. When Attacking (EffectTiming.OnAllyAttack) — same shape as block 4
+#      with CanTriggerOnAttack. Mandatory delete of opp's lowest-DP Digimon.
+#
+#   6. When Digivolving (EffectTiming.OnEnterFieldAnyone +
+#      CanTriggerWhenDigivolving) — body computes targetCount =
+#      sum(per_level_count / 2) over THIS permanent's StackCards by level
+#      bucket. Then SelectPermanentEffect over IsOpponentsDigimon, mode
+#      PutLibraryBottom, maxCount = min(targetCount, opp Digimon count),
+#      canNoSelect: false. After the bottom-deck selection: if THIS card is
+#      still on the battle area and CanAttack(activateClass), present a
+#      SelectAttackEffect with canAttackPlayerCondition = () => true and
+#      defenderCondition = (perm) => true (any defender allowed).
+#
+#      The "Then, this Digimon may attack" is a may_attack_now (RESOLVED
+#      2026-05-03) primitive — `targets: any`, `optional: true`. The
+#      bottom-deck repeat-count target selection is BLOCKED — see
+#      G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET below.
+#
+# ─── Source-priority audit (printed text vs DCGO) ────────────────────────────
+#
+# Printed text says "1 Red or Black Level 3 Digimon card from its
+# digivolution cards" — both colour-pair Decode clauses select from THIS
+# card's own digivolution sources. DCGO's DecodeSelfEffect with
+# sourceCondition matches the printed colour/level filters exactly.
+#
+# Printed [On Play] / [When Attacking] are mandatory ("Delete 1 ..." not
+# "you may delete"). DCGO confirms isOptional: false on both ActivateClass
+# blocks. → no `optional` flag on the clauses, but `optional: true` on the
+# select if no legal target — DCGO uses CanActivateCondition to gate; we
+# use the engine's auto-skip when no legal targets exist.
+#
+# Printed [When Digivolving] uses "may attack" for the inner attack —
+# `optional: true` on the may_attack_now. The bottom-deck step itself is
+# mandatory once the digivolve resolves ("return 1 of your opponent's
+# Digimon" — no "may" on that arm).
+#
+# ─── DSL-GAP — Decode (play L3 source) [G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES] ─
+#
+# The printed Decode clauses are an entirely different shape from the
+# generic `Keyword::Decode` (which redirects the leaving permanent to its
+# controller's hand). BT22-015's Decode:
+#   - Triggers on the "would leave the battle area other than in battle"
+#     timing (replacement-style observer).
+#   - Body: optionally PLAY a card from THIS permanent's digivolution
+#     SOURCES (i.e. the stack of cards under the top), filtered by colour
+#     and level (Red/Black L3 for one clause, Blue/Yellow L3 for the
+#     other), without paying the cost.
+#   - Does NOT redirect the leaving permanent — the leave proceeds as
+#     normal AFTER the optional play.
+#
+# Closing this gap requires:
+#   A. A new DSL replacement-clause variant whose process body can issue a
+#      `play_from_source_stack: { source: <this permanent>, filter: { ... },
+#      free: true }` step — OR
+#   B. A new keyword variant such as `DecodeOf { color, level }` that
+#      auto-installs the source-stack-play option on leave-other-than-
+#      battle, mirroring how `Keyword::Decode` auto-installs its
+#      redirect-to-hand replacement.
+#
+# Until the gap closes, both Decode clauses are OMITTED from `effects:`.
+# The visible behavior is faithful to the "decline the optional play"
+# branch (DCGO `canNoSelect: true` at line 124/138 — the player MAY decline
+# the play, in which case the leave proceeds with no body effect). That's
+# what happens here; the player just loses the OPTION to elect the play.
+# Per the no-approximations rule we author no stub: tests for the Decode
+# clauses are #[ignore]'d on G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES.
+#
+# ─── DSL-GAP — Same-level pairs → repeat-count select [G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET] ─
+#
+# `CompiledPerSelector::SameLevelPairsInSources` is RESOLVED for the
+# narrow formula leaf (computes `sum(count / 2)` per level bucket over the
+# carrier's source stack — qa/dsl-vocab-gaps.md 2026-05-02). What's still
+# OPEN: feeding that formula as the COUNT bound on a player-visible
+# `select_count_capped_multi`-style pick where the player chooses N opp
+# Digimon to bottom-deck.
+#
+# Authoring options today:
+#   (a) `select_count_capped_multi` accepts a literal `max:` integer —
+#       not a formula reference. We can't bind the formula result there.
+#   (b) `select_opponent_permanent` + `return_to_deck` is a 1-shot;
+#       there's no `repeat: <formula>` wrapper that runs it N times where
+#       N is the formula result.
+#
+# Closing the gap requires either:
+#   A. Extending `select_count_capped_multi` to accept `max: { formula:
+#      <formula_ref> }`, with the formula evaluated against the resolving
+#      effect context — OR
+#   B. Adding a `repeat_with_count: <formula>` step kind that runs its
+#      body N times with N from the formula.
+#
+# Until the gap closes, the bottom-deck arm of [When Digivolving] is
+# OMITTED. The "Then, this Digimon may attack" arm IS implemented (it
+# does NOT depend on the bottom-deck arm — DCGO line 321 checks
+# IsExistOnBattleArea(card), not whether bottom-deck happened). Tests for
+# the bottom-deck arm are #[ignore]'d on
+# G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |----------------------------------------------------------------|--------|
+# | Standard digivolve Lv.6 Red / Cost 6                            | IMPLEMENTED (alt_paths kind: digivolve) |
+# | DNA digivolve Lv.6 Greymon-name + Lv.6 Garurumon-name / Cost 0  | IMPLEMENTED (alt_paths kind: dna_digivolve) |
+# | <Blocker>                                                       | IMPLEMENTED (grant_keyword) |
+# | <Decode (Red/Black Lv.3)>                                       | BLOCKED — G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES |
+# | <Decode (Blue/Yellow Lv.3)>                                     | BLOCKED — G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES |
+# | [On Play] Delete 1 opp Digimon with lowest DP                    | PARTIAL (G-PRED-DP-LTE — predicate parses but evaluator does not narrow targets to lowest-DP only) |
+# | [When Attacking] Delete 1 opp Digimon with lowest DP             | PARTIAL (G-PRED-DP-LTE — same as above) |
+# | [When Digivolving] Bottom-deck N opp Digimon (N = same-level pairs) | BLOCKED — G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET |
+# | [When Digivolving] "Then, this Digimon may attack"               | IMPLEMENTED (may_attack_now, optional: true, targets: any) |
+
+card: BT22-015
+name: Omnimon
+kind: digimon
+level: 7
+color: [red, white]
+cost: 15
+dp: 15000
+traits: [Holy Warrior, Royal Knight, CS]
+
+alt_paths:
+  # Standard digivolve: Lv.6 Red / Cost 6 (per cards.json evo_costs).
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 6
+
+  # DNA digivolve: Lv.6 Greymon-named + Lv.6 Garurumon-named / Cost 0.
+  # Per cards.json `dna_costs` and DCGO BT22_015.cs lines 51-99 GetJogress.
+  # `stacks_unsuspended: true` per DNA-digivolve convention (BT17-078 idiom).
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, name_contains: "Greymon" }
+      - { level_eq: 6, name_contains: "Garurumon" }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  # ─── Static keyword: <Blocker> ────────────────────────────────────────────
+  # DCGO BT22_015.cs:108 — BlockerSelfStaticEffect at None timing,
+  # isInheritedEffect: false. Standard face-up declarative.
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # ─── BLOCKED — <Decode (Red/Black Lv.3)> ───────────────────────────────────
+  # Printed: "When this Digimon would leave the battle area other than in
+  # battle, you may play 1 Red or Black Level 3 Digimon card from its
+  # digivolution cards without paying the cost."
+  #
+  # See G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES in header. Omitted
+  # entirely until the gap closes — neither the generic `Keyword::Decode`
+  # (which only redirects the leaving permanent to hand) nor any DSL
+  # replacement-clause body can express "play a card from this permanent's
+  # digivolution sources without paying cost".
+
+  # ─── BLOCKED — <Decode (Blue/Yellow Lv.3)> ─────────────────────────────────
+  # Same shape as Red/Black — different colour filter. BLOCKED — see header.
+
+  # ─── Clause — [On Play] Delete 1 opp Digimon with lowest DP ────────────────
+  #
+  # Printed: "[On Play] [When Attacking] Delete 1 of your opponent's Digimon
+  # with the lowest DP."
+  #
+  # DCGO BT22_015.cs:145-194 (On Play) and 197-247 (When Attacking) —
+  # identical body shape on different timings. Both mandatory (isOptional:
+  # false), both filter the target to opp Digimon AND IsMinDP.
+  #
+  # G-PRED-DP-LTE: `dp_lte: { aggregate: { selector: lowest_dp, scope:
+  # opponent } }` predicate is parsed and compiled but not yet evaluated for
+  # permanents (sister cards BT24-017 / BT22-013). Until the gap closes the
+  # select prompt offers all opp Digimon rather than only the lowest-DP one.
+  # The YAML faithfully encodes the printed filter; the evaluator gap is
+  # cross-card.
+  - when: [on_play, when_attacking]
+    summary: "[On Play][When Attacking] Delete 1 opp Digimon with lowest DP"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte:
+                  aggregate:
+                    selector: lowest_dp
+                    scope: opponent
+          prompt: "Delete opponent's lowest-DP Digimon"
+      - delete_permanent: { target: victim }
+
+  # ─── Clause — [When Digivolving] same-level pair count → bottom-deck + may attack ─
+  #
+  # Printed: "[When Digivolving] For every 2 same-level cards this Digimon's
+  # stack has, return 1 of your opponent's Digimon to the bottom of the deck.
+  # Then, this Digimon may attack."
+  #
+  # DCGO BT22_015.cs:251-337 — single ActivateClass at OnEnterFieldAnyone
+  # gated on CanTriggerWhenDigivolving. Body:
+  #   1. Compute targetCount = sum(per_level_count / 2) across THIS
+  #      permanent's StackCards by level bucket.
+  #   2. SelectPermanentEffect over opp Digimon, maxCount = min(targetCount,
+  #      opp Digimon count), canNoSelect: false, mode PutLibraryBottom.
+  #   3. After bottom-deck step: if THIS card still on the battle area and
+  #      CanAttack(activateClass), SelectAttackEffect with
+  #      canAttackPlayerCondition: () => true, defenderCondition: any.
+  #
+  # G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET (header): the formula leaf
+  # (`SameLevelPairsInSources`) IS resolved — but feeding its output as the
+  # COUNT bound on a player-visible repeat-target select is BLOCKED. The
+  # bottom-deck arm is OMITTED until the gap closes.
+  #
+  # The "may attack" arm IS implemented. DCGO line 321
+  # (IsExistOnBattleArea check) implies it does NOT depend on the bottom-
+  # deck arm having happened — so the may_attack_now step is faithful even
+  # when the bottom-deck arm is omitted.
+  - when: when_digivolving
+    summary: "[When Digivolving] (BLOCKED bottom-deck) Then, this Digimon may attack (any target)"
+    process:
+      # BLOCKED: bottom-deck arm omitted — see header
+      # G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET. When the gap closes,
+      # add (above the may_attack_now step):
+      #
+      #   - select_count_capped_multi:
+      #       of: opponent
+      #       zone: battle_area
+      #       max: { formula: { aggregate: same_level_pairs, zone: self_sources } }
+      #       filter: { kind: digimon }
+      #       bind_as: bottoms
+      #       prompt: "Bottom-deck N opp Digimon (N = same-level pairs in own stack)"
+      #       optional_zero: false
+      #   - for_each:
+      #       over: { binding: bottoms }
+      #       bind_as: b
+      #       body:
+      #         - return_to_deck: { target: b, position: bottom }
+      #
+      # "Then, this Digimon may attack" — DCGO defenderCondition is `any`
+      # (perm → true) and canAttackPlayerCondition is `() => true`, so the
+      # attack target is unrestricted (player or any opp Digimon).
+      # `optional: true` per printed "may attack".
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: true

@@ -20,8 +20,11 @@ mod tokens;
 mod sample_bt17_015;
 
 // Per-set per-card test modules (added by /batch-implement-cards-rust-dsl)
+mod ad1;
 mod bt1;
+mod bt13;
 mod bt14;
+mod bt15;
 mod bt16;
 mod bt17;
 mod bt18;
@@ -42,3 +45,10 @@ mod lm;
 mod p;
 mod st1;
 mod st22;
+mod bt12;
+mod bt22;
+mod ex1;
+mod ex5;
+mod st2;
+mod st20;
+mod st21;

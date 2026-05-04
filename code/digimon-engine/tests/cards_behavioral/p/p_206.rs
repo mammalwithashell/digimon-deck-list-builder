@@ -551,6 +551,74 @@ fn p_206_delay_tamer_wrong_color_not_selectable() {
     todo!("implement once G-COLOR-MATCH-AGAINST-BOARD is resolved");
 }
 
+/// AUDIT 2026-05-03: G-COLOR-MATCH-AGAINST-BOARD was resolved on 2026-05-02.
+/// The DSL predicate `color_matches_any_field_digimon` now compiles and
+/// evaluates against live battle-area Digimon top-card colors at selection
+/// time. However, the P-206 YAML's Delay clause `select_hand` filter still
+/// uses only `kind: tamer` — the resolved predicate has NOT been wired in.
+///
+/// This structural test documents the discrepancy: it asserts the current
+/// state (predicate NOT present in P-206's compiled Delay filter) and is
+/// expected to FAIL after the YAML is updated to:
+///   filter:
+///     all_of:
+///       - kind: tamer
+///       - color_matches_any_field_digimon: { of: you }
+///
+/// When the YAML is updated, flip this test (assertion direction) and remove
+/// the two `pending: G-COLOR-MATCH-AGAINST-BOARD` ignored tests above by
+/// implementing the positive/negative behavioral assertions against
+/// `select_hand_color_matches_any_field_digimon_filters_by_live_board_colors`
+/// in `tests/dsl/group7_predicate_batch.rs`.
+#[test]
+fn p_206_delay_filter_does_not_yet_use_resolved_color_match_predicate() {
+    use digimon_dsl::compiled::CompiledStep;
+
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(filler("FILL"))
+        .hand(0, &["P-206"])
+        .deck(0, &["FILL"])
+        .memory(0)
+        .start();
+
+    let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
+    let delay_process = match &compiled.effects[1] {
+        CompiledClause::Declarative(CompiledDeclarativeClause::Delay { process, .. }) => process,
+        other => panic!("clause 1 must be Declarative(Delay); got {:?}", other),
+    };
+
+    // Find the select_hand step in the Delay process.
+    let select_hand_filter = delay_process.iter().find_map(|step| match step {
+        CompiledStep::SelectHand { filter, .. } => Some(filter),
+        _ => None,
+    });
+
+    let filter = select_hand_filter
+        .expect("Delay process must contain a SelectHand step for the Tamer pick");
+
+    // AUDIT: confirms YAML still uses the workaround (kind:tamer only) — does
+    // NOT yet wire in the resolved color_matches_any_field_digimon predicate.
+    // When YAML is updated, this assertion MUST flip.
+    let uses_color_match_predicate = filter
+        .all_of
+        .iter()
+        .any(|p| p.color_matches_any_field_digimon.is_some())
+        || filter.color_matches_any_field_digimon.is_some();
+
+    assert!(
+        !uses_color_match_predicate,
+        "AUDIT REGRESSION: P-206 Delay filter now wires the resolved \
+         `color_matches_any_field_digimon` predicate. Update this audit test \
+         (flip the assertion) AND un-ignore both \
+         `p_206_delay_tamer_filter_matches_digimon_color_on_field` and \
+         `p_206_delay_tamer_wrong_color_not_selectable` with real behavioral \
+         assertions. See qa/dsl-vocab-gaps.md G-COLOR-MATCH-AGAINST-BOARD \
+         (resolved 2026-05-02)."
+    );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // SECTION 2c — Behavioral: Ignore-color bypass
 // ─────────────────────────────────────────────────────────────────────────────

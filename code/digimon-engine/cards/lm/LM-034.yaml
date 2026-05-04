@@ -1,0 +1,236 @@
+# LM-034 Wisteria Memory Boost! — Option, Blue, Cost 3.
+#
+# Printed card text (data/cards.json):
+#
+#   Red also meets this card's color requirements.
+#   [Main] Reveal the top 3 cards of your deck. Add 1 blue or red Digimon card
+#   among them to the hand. Return the rest to the bottom of deck. Then,
+#   place this card in the battle area.
+#   [Main] ＜Delay＞ (By trashing this card after the placing turn, activate
+#   the effect below.)
+#   ・Gain 2 memory.
+#
+# Inherited (Security):
+#   Security Effect [Security] Place this card in the battle area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/LM/Blue/LM_034.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 0 — `EffectTiming.None` IgnoreColorConditionClass.
+#   CanUseCondition: HasMatchConditionPermanent over OWN field —
+#       (IsTamer || IsDigimon) && CardColors.Contains(Red).
+#   CardCondition: cardSource == card (THIS card only — bypass scopes to
+#       LM-034's own color requirement, not all options).
+#   Mirror: BT22-099 / P-151 Clause 0 — same shape with the trait test
+#   replaced by a colour test on the same OWN-field digimon-or-tamer
+#   permanent population.
+#
+# Clause 1 — `EffectTiming.OptionSkill` (= [Main] play). DCGO calls
+#   `CardEffectCommons.RevealDeckTopCardsAndSelect(
+#       revealCount: 3,
+#       selectCardConditions: [
+#         SelectCardConditionClass(
+#           canTargetCondition: cardSource.IsDigimon
+#                            && (cardSource.HasCardColor(Blue) || cardSource.HasCardColor(Red)),
+#           canNoSelect: false,
+#           message: "Select 1 blue or red Digimon card.",
+#           maxCount: 1,
+#           canEndNotMax: false,
+#           mode: AddHand)
+#       ],
+#       remainingCardsPlace: RemainingCardsPlace.DeckBottom,
+#       canNoAction: false)`.
+#   `SetUpActivateClass(..., -1, false, ...)` — outer trigger NOT isOptional.
+#   Then `CardEffectCommons.PlaceDelayOptionCards(card, activateClass)` moves
+#   this Option from hand to its controller's battle area as a Delay
+#   permanent (the printed "Then, place this card in the battle area").
+#
+# Clause 2 — `EffectTiming.OnDeclaration` (Delay activation). DCGO uses an
+#   inline ActivateClass that calls `DeletePeremanentAndProcessAccordingToResult`
+#   on `card.PermanentOfThisCard()`, and on success runs
+#   `card.Owner.AddMemory(2, activateClass)`. This is the standard
+#   Delay-Option pattern (same shape as the BT22-099 / P-035 carriers).
+#
+# Clause 3 (Security, inherited) — `EffectTiming.SecuritySkill`. DCGO uses
+#   `CardEffectFactory.PlaceSelfDelayOptionSecurityEffect(card)` — the
+#   inherited-security path that places this Option as a Delay permanent
+#   from the security-resolution context.
+#
+# ─── Source-priority audit (printed text vs DCGO) ────────────────────────────
+#
+# Printed Clause 0 ("Red also meets this card's color requirements") is
+# additive in plain reading: only Red is added as an alternate satisfying
+# color, not the whole color check waived. DCGO chose the simpler model —
+# `IgnoreColorConditionClass` (full bypass) gated on having a Red Digimon or
+# Tamer on your field — because for a single-coloured Blue Option, "Red
+# satisfies" and "ignore (when a Red is on field)" produce the same outcome
+# in practice: the only colours that could be present on field are Red
+# (qualifying via the new clause) or Blue (already qualifying natively); any
+# other colour fails to gate the bypass, so colour matching effectively still
+# requires Blue or Red on board. We mirror DCGO's model with the BT22-099 /
+# P-151 flood_gate shape: `IgnoreColorRequirement` modifier scoped to this
+# card via `target.card_number_is`, gated by an OWN-field "Red Digimon or
+# Tamer" condition — printed-text equivalent under the source-priority rule.
+#
+# Printed Clause 1 carries no "you may" — the Main clause is mandatory once
+# the player chooses to play the Option. DCGO confirms via
+# `SetUpActivateClass(..., -1, false, ...)` and `canNoSelect: false`. The
+# inner blue-or-red Digimon bucket is mandatory if any qualifying Digimon is
+# in the reveal (single bucket, max 1, no canNoSelect). When no qualifying
+# Digimon is in the reveal, the bucket has zero candidates and silently
+# resolves; all 3 revealed cards then bottom-deck.
+#
+# This mirrors the BT22-099 single-bucket reveal pattern exactly with a
+# colour-disjunction filter substituted for the trait filter — sister option
+# Memory Boost! card from the same set.
+#
+# Printed Clause 2 ＜Delay＞ has no [OPT] — and a single LM-034 in play can
+# only fire ONCE total because the Delay activation trashes the carrier.
+# `kind: delay` + `trigger: end_of_your_next_turn` mirrors P-035 / EX9-021
+# / BT22-099 standard-Delay precedents.
+#
+# Printed inherited Security ("Place this card in the battle area") uses the
+# `place_self_as_delay_option: {}` step (RESOLVED 2026-05-02 — see
+# qa/dsl-vocab-gaps.md G-PLACE-SELF-AS-OPTION-PERMANENT). The engine method
+# `EffectContext::place_self_as_delay_option_permanent` seats the source-
+# Option Card in battle area as `OptionState::Delayed`.
+#
+# ─── DSL precedent ─────────────────────────────────────────────────────────────
+#
+# - Clause 0 (color bypass): P-151 / BT22-099 Clause 0 — `kind: flood_gate`
+#   + `modifier: IgnoreColorRequirement` + `target: { card_number_is: ... }`,
+#   gated by `any_permanent` over (qualifying Digimon | qualifying Tamer).
+#   Swap LIBERATOR/CS trait for `color_is: red` on both Digimon and Tamer
+#   branches. The G-IGNORE-COLOR-MASK gap was RESOLVED 2026-05-02 — runtime
+#   enforcement now lives in `code/digimon-engine/src/action/mask.rs` and
+#   the same helper gates `play_option_from_hand`, so the modifier no longer
+#   needs to be `#[ignore]`'d.
+#
+# - Clause 1 (single-bucket Digimon-by-colour reveal): BT22-099 Clause 1 —
+#   `select_reveal_buckets` with one bucket `{ min: 1, max: 1, filter: ... }`
+#   + trailing `place_remainder_on_deck { position: bottom }`. Identical shape;
+#   the bucket's filter combines `kind: digimon` with an `any_of [color_is:
+#   blue, color_is: red]` colour disjunction.
+#
+# - Clause 2 (gain-memory Delay): BT22-099 Clause 2 / P-035 Red Memory Boost!
+#   Clause 1 — `kind: delay` + `trigger: end_of_your_next_turn` + `process:
+#   [gain_memory: 2]`. Identical. DCGO uses the same gain-2-memory body.
+#
+# - Clause 3 (inherited security place-self): the resolved DSL verb is
+#   `place_self_as_delay_option: {}` — same as BT22-099 Clause 3.
+#
+# - Engine auto-place for [Main] Delay-Option: the engine's
+#   `classify_option_subtype` detects the `kind: delay` clause and triggers
+#   `dispose_option` to seat this Option as `OptionState::Delayed` in the
+#   battle area at MainEffectDrain — no explicit step is required in the
+#   [Main] clause body. Confirmed by P-035 / BT22-099 dsl-vocab-gaps notes.
+
+card: LM-034
+name: "Wisteria Memory Boost!"
+kind: option
+color: [blue]
+cost: 3
+
+effects:
+  # ─── Clause 0: Color bypass (conditional IgnoreColorRequirement) ──────────
+  #
+  # "Red also meets this card's color requirements."
+  #
+  # DCGO: IgnoreColorConditionClass + CardCondition (cardSource == card)
+  #   → bypass restricted to THIS card; CanUseCondition gates on having a
+  #     Red Digimon or Tamer on YOUR field.
+  # Mirror of BT22-099 / P-151 Clause 0 — same flood_gate +
+  # IgnoreColorRequirement + any_permanent shape; trait predicate swapped
+  # for `color_is: red` on both Digimon and Tamer branches per the printed
+  # text and DCGO CanUseCondition.
+  - kind: flood_gate
+    active_when:
+      any_of:
+        - any_permanent:
+            of: you
+            kind: digimon
+            color_is: red
+        - any_permanent:
+            of: you
+            kind: tamer
+            color_is: red
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "LM-034" }
+    summary: "While you have a Red Digimon or Tamer, ignore color requirements for this card"
+
+  # ─── Clause 1: [Main] reveal-3 + add 1 blue/red Digimon to hand + bottom rest
+  #
+  # Printed: "[Main] Reveal the top 3 cards of your deck. Add 1 blue or red
+  # Digimon card among them to the hand. Return the rest to the bottom of
+  # deck. Then, place this card in the battle area."
+  #
+  # Outer trigger is NOT optional (DCGO `SetUpActivateClass(..., false, ...)`;
+  # no "you may" in printed text). Inner Digimon bucket is mandatory when any
+  # qualifying card is in the reveal (`min: 1, max: 1`); silently resolves
+  # when none.
+  #
+  # The "Then, place this card in the battle area" sub-step is implicit:
+  # the engine's `classify_option_subtype` detects the trailing Clause 2
+  # (`kind: delay`) and treats this Option as a Delay-Option, auto-seating
+  # it in battle area at MainEffectDrain via `dispose_option`. No explicit
+  # `place_self_as_delay_option` step is needed here (per the resolved-gap
+  # note for the Main context in qa/dsl-vocab-gaps.md G-PLACE-SELF-AS-OPTION-
+  # PERMANENT — only the inherited-security context needs the explicit step).
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal 3; add 1 blue/red Digimon to hand; bottom the rest; auto-place self as Delay"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: digi_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - color_is: blue
+                      - color_is: red
+          prompt: "Select 1 blue or red Digimon card to add to hand"
+      - add_to_hand_from_reveal: { of: you, card: digi_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Clause 2: [Main] ＜Delay＞ Gain 2 memory ─────────────────────────────
+  #
+  # Printed: "[Main] ＜Delay＞ (By trashing this card after the placing turn,
+  # activate the effect below.) ・Gain 2 memory."
+  #
+  # DCGO: inline ActivateClass that calls DeletePeremanentAndProcessAccordingToResult
+  # on `card.PermanentOfThisCard()` then `Owner.AddMemory(2, ...)`. Same
+  # behavioural shape as BT22-099's Gain2MemoryOptionDelayEffect helper.
+  # No [OPT] — the trash cost self-limits to one fire per LM-034 in play.
+  - kind: delay
+    trigger: end_of_your_next_turn
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  # ─── Clause 3: [Security] (inherited) ─────────────────────────────────────
+  #
+  # Printed inherited (security): "Security Effect [Security] Place this
+  # card in the battle area."
+  #
+  # DCGO: `PlaceSelfDelayOptionSecurityEffect(card)` — places this Option in
+  # the controller's battle area as a Delay permanent from the security-
+  # resolution context. DCGO has no canNoSelect parameter — mandatory.
+  #
+  # `place_self_as_delay_option: {}` lowers to
+  # `EffectContext::place_self_as_delay_option_permanent`, which removes the
+  # source Option from its host stack and seats it as `OptionState::Delayed`
+  # in the owner's battle area, then dispatches `OnOptionPlaced`.
+  # (RESOLVED 2026-05-02 — see qa/dsl-vocab-gaps.md
+  # G-PLACE-SELF-AS-OPTION-PERMANENT for the inherited-security context.)
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security][Inherited] Place this card in the battle area as a Delay permanent"
+    process:
+      - place_self_as_delay_option: {}

@@ -1,0 +1,164 @@
+# BT23-008 Greymon — Digimon, Lv.4, Red, DP 5000, Cost 6.
+# Traits: Dinosaur, CS
+# Attribute: Vaccine
+# Evo (printed): Lv.3 Red / Cost 2
+# Alt-evo (DCGO BT23_008.cs:14-32): Lv.3 with [Agumon] in name OR [CS] trait /
+#   Cost 2 (color requirement waived).
+#
+# Printed card text (cards.json):
+#
+#   ＜Raid＞ (When this Digimon attacks, you may switch the target of attack
+#   to 1 of your opponent's unsuspended Digimon with the highest DP.)
+#   [Main] [Once Per Turn] By placing this Digimon's top stacked card as its
+#   bottom digivolution card, you may play 1 [Gabumon] or [Nokia Shiramine]
+#   from your hand with the play cost reduced by 2.
+#
+# Inherited:
+#   [Your Turn] This Digimon gets +2000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT23/Red/BT23_008.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────────
+#
+#   alt-path 1: Standard digivolve (Lv.3 Red / Cost 2)              IMPLEMENTED
+#   alt-path 2: Alt digivolve Lv.3 [Agumon]/[CS] / Cost 2,          IMPLEMENTED
+#               ignoring color requirement
+#   Clause 1:  ＜Raid＞                                              IMPLEMENTED via grant_keyword
+#   Clause 2:  [Main][OPT] cost (place top stacked → bottom) +      BLOCKED — see G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM
+#               optional play Gabumon/Nokia from hand at -2 cost
+#   Clause 3:  [Inherited][Your Turn] +2000 DP self-aura            IMPLEMENTED
+#
+# ─── DSL-GAP — Place own top stacked card as own bottom digivolution card ──────
+#                                                              [G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM]
+#
+# The DSL has `place_as_bottom_source { source, target }` (lowers to
+# `EffectContext::place_as_bottom_source`), but it requires `source` to be a
+# binding that resolves to a `CardSourceRef` (e.g. a card picked from hand or
+# trash via `select_hand`/`select_trash`). It cannot bind "the top stacked card
+# of <permanent>" — there is no `top_source_of` step / binding kind.
+#
+# `select_material { of_permanent, filter }` selects a stacked card with a
+# selection prompt, which would faithfully model "any stacked card" but NOT
+# the printed "top stacked card" semantic — the player would be exposed to a
+# fake choice (DCGO grabs `card.PermanentOfThisCard().TopCard` directly with
+# no prompt, and the printed text says "top stacked card", definite singular).
+#
+# The cost ("By placing this Digimon's top stacked card as its bottom
+# digivolution card") is a hard activation gate: under the no-approximations
+# policy, omitting the cost (free play) over-permits, and replacing the
+# deterministic top-pick with a `select_material` choice over-restricts the
+# action space (player would be asked to pick an arbitrary stacked card,
+# violating printed text). Both directions break the contract; the entire
+# clause is OMITTED pending a DSL verb such as:
+#
+#   - place_top_source_as_bottom: { target: source }
+#
+# that lowers to a sequence equivalent to:
+#
+#   let top = perm.top_card_source();
+#   ctx.place_as_bottom_source(CardSourceRef::Material(perm, top_idx), perm);
+#
+# without a player-facing selection. Logged to qa/dsl-vocab-gaps.md.
+#
+# Companion gap: even with the cost step in place, the optional "play 1
+# [Gabumon]/[Nokia Shiramine] from hand at cost -2" body is straightforward —
+# `select_hand` (optional) filtered by name + `play_from_hand: { cost_delta:
+# { reduce: 2 } }`. The blocking element is solely the cost step.
+
+card: BT23-008
+name: Greymon
+kind: digimon
+level: 4
+color: [red]
+cost: 6
+dp: 5000
+traits: [Dinosaur, CS]
+attribute: Vaccine
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+#
+# 1) Standard digivolve: Lv.3 Red / Cost 2 (per evo_costs in cards.json).
+# 2) Alt digivolve: Lv.3 with [Agumon] in name OR [CS] trait / Cost 2,
+#    ignoring color requirement (DCGO BT23_008.cs:14-32).
+#
+# DCGO `ignoreDigivolutionRequirement: false` for the alt clause is a slight
+# misnomer — the alt clause itself adds a NEW digivolution recipe via
+# `AddSelfDigivolutionRequirementStaticEffect`, and the predicate already
+# encodes the requirement. To enable the alt path independently of the printed
+# evo color (Red) requirement, we set `ignore_requirements: true` (matches the
+# BT23-014 alt-CS pattern at the same DSL level).
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - name_contains: "Agumon"
+            - trait_has: CS
+    cost: 2
+    ignore_requirements: true
+
+effects:
+  # ─── Clause 1 — ＜Raid＞ (face-up declarative) ────────────────────────────────
+  # "When this Digimon attacks, you may switch the target of attack to 1 of
+  #  your opponent's unsuspended Digimon with the highest DP."
+  # DCGO: RaidSelfEffect at OnAllyAttack timing, isInheritedEffect: false.
+  # Mirrors BT17-078 Clause 1 pattern.
+  - kind: grant_keyword
+    keyword: Raid
+
+  # ─── Clause 2 — [Main][OPT] place-top-as-bottom + play Gabumon/Nokia ─────────
+  # BLOCKED — G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM. See header docs.
+  #
+  # Stub (commented — uncomment + remove BLOCKED note when the gap closes):
+  #
+  # - when: main_on_field
+  #   once_per_turn: true
+  #   optional: true
+  #   summary: "[Main][OPT] Place top stacked card as bottom; may play [Gabumon]/[Nokia Shiramine] from hand at -2"
+  #   condition:
+  #     # DCGO: card.PermanentOfThisCard().StackCards.Count >= 1 (must have
+  #     # at least one stacked card to pay the cost).
+  #     stack_size_gte: 1
+  #   process:
+  #     # Cost: place this permanent's top stacked card as its bottom
+  #     # digivolution card. NEEDS NEW DSL VERB.
+  #     - place_top_source_as_bottom: { target: source }   # ← BLOCKED
+  #     # Effect: optional play of a Gabumon Digimon or Nokia Shiramine Tamer
+  #     # from hand with -2 cost reduction. DCGO: SelectHandEffect with
+  #     # CanSelectCardCondition allowing IsDigimon+EqualsCardName("Gabumon")
+  #     # OR IsTamer+EqualsCardName("Nokia Shiramine"); canNoSelect: true.
+  #     - select_hand:
+  #         of: you
+  #         bind_as: pick
+  #         optional: true
+  #         filter:
+  #           any_of:
+  #             - all_of:
+  #                 - kind: digimon
+  #                 - name_is: "Gabumon"
+  #             - all_of:
+  #                 - kind: tamer
+  #                 - name_is: "Nokia Shiramine"
+  #         prompt: "Play 1 [Gabumon] or [Nokia Shiramine] from hand (cost -2)"
+  #     - play_from_hand:
+  #         of: you
+  #         hand_index: pick
+  #         cost_delta: { reduce: 2 }
+
+  # ─── Clause 3 — [Inherited][Your Turn] +2000 DP self-aura ────────────────────
+  # Mirrors BT23-005 Clause 2. DCGO: ChangeSelfDPStaticEffect(2000,
+  # isInheritedEffect: true, condition: IsExistOnBattleArea && IsOwnerTurn).
+  # The DSL self-aura (empty target `{}`) with `scope: inherited` sets the
+  # static `dp_modifier` field on the Effect. `Game::source_dp_contribution`
+  # reads this field for tensor-layer DP computation, gated by `active_when`.
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"

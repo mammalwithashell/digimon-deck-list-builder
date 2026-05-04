@@ -1,0 +1,161 @@
+# ST20-10 Agumon — Lv3, Black, Reptile / ADVENTURE / Hero, DP 1000, Cost 3.
+#
+# Printed card text (data/cards.json):
+#
+#   [Your Turn] While your opponent has a Digimon with 10000 DP or more, or
+#   your Tamers have 3 or more total colors, this Digimon can digivolve into
+#   [WarGreymon] in the hand for a digivolution cost of 4, ignoring
+#   digivolution requirements.
+#
+#   Inherited:  ＜Reboot＞ (Unsuspend this Digimon during your opponent's
+#                          unsuspend phase.)
+#
+#   Digivolve box (xros_req): "[Digivolve] Lv.2 w/[ADVENTURE]/[Hero] trait:
+#                              Cost 0"
+#   Standard evo_costs:       Lv.2 Black, Cost 0.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/ST20/Black/ST20_10.cs
+#
+# DCGO declares three EffectTiming.None static effects:
+#
+#   1. AddSelfDigivolutionRequirementStaticEffect — alt-source: any colour,
+#      Lv2 with HasAdventureTraits || HasHeroTraits, digivolutionCost=0,
+#      ignoreDigivolutionRequirement=false. This corresponds to the printed
+#      [Digivolve] xros_req box.
+#
+#   2. AddSelfDigivolutionRequirementStaticEffect — "Warp Digivolution" —
+#      gated on Condition: ownerTurn && self-on-field &&
+#      ((opponent has Digimon with DP>=10000) || (own Tamers have >=3 distinct
+#      colours)).
+#      permanentCondition: target == self (so "this Digimon" is the source).
+#      cardCondition: target hand card is named "WarGreymon".
+#      digivolutionCost=4, ignoreDigivolutionRequirement=true.
+#
+#   3. RebootSelfStaticEffect — inherited <Reboot>.
+#
+# ─── Implementation status / DSL gaps ───────────────────────────────────────
+#
+# Clauses 1 and 3 lower cleanly to the existing DSL surface.
+#
+# Clause 2 (warp into WarGreymon) is NOT expressible on ST20-10's YAML. Three
+# independent DSL gaps stack on top of each other:
+#
+#   (A) [G-ALT-PATH-DIRECTION-INTO]  — NEW gap.
+#       The DSL's `alt_paths:` block describes sources that can digivolve
+#       INTO the carrier card (predicate `from:` filters the SOURCE
+#       permanent / hand card). It has no inverse form expressing "this card
+#       grants ITSELF the ability to digivolve into card X in hand". The
+#       natural alternative — adding an alt_path entry on WarGreymon's YAML —
+#       is out of scope for this card's task, and would not survive
+#       generalisation: the printed effect lives on the Lv3 source, gates on
+#       its own controller's board state, and only applies while ST20-10 is
+#       on field. Authoring it on WarGreymon would over-broadcast the path to
+#       every Lv3 controller (or require WarGreymon's YAML to know about
+#       every "warp into me" effect across the card pool).
+#
+#   (B) [G-ALT-PATH-CONDITION]  — already filed (qa/dsl-vocab-gaps.md, BT24-016
+#       entry "G-ALT-PATH-CONDITION"). `AltPathSpec` has no `condition:` field
+#       (the struct is `#[serde(deny_unknown_fields)]`). Even if the inverse
+#       direction in (A) existed, the "while opponent has 10000+ DP Digimon
+#       OR your Tamers have 3+ colours" gate could not be attached.
+#
+#   (C) [G-DSL-DISTINCT-TAMER-COLORS]  — partial sibling of
+#       G-DSL-DISTINCT-TAMER-COLORS-FORMULA (qa/dsl-vocab-gaps.md, BT21-102
+#       entry). No PredicateSpec leaf exists for "you have N or more distinct
+#       Tamer colours on the field"; the existing `distinct_colors_count` is
+#       only available inside `FormulaSpec::per`, not as a BoolPredicate. The
+#       3-tamer-colour disjunct of clause 2's gate cannot be expressed inside
+#       any predicate. (Note: the 10000+ DP disjunct is also blocked by the
+#       existing G-PRED-DP-LTE engine gap — `dp_gte` is parsed but not
+#       evaluated; see EX10-010 precedent comment.)
+#
+# Until (A), (B), (C) all close, clause 2 is intentionally omitted rather
+# than authored as a misfiring approximation. The behavioral test file
+# documents the missing branches with `#[ignore]` markers tagged to the
+# gap entries above. This follows the BT5-092 / BT23-005 precedent of
+# omitting unimplementable clauses with extensive justification rather
+# than emitting silently-wrong YAML.
+#
+# Verdict: PARTIAL — clauses 1 (xros_req alt-source) and 3 (inherited
+# <Reboot>) implemented; clause 2 (warp into WarGreymon) BLOCKED on three
+# stacked DSL gaps.
+
+card: ST20-10
+name: Agumon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Reptile, ADVENTURE, Hero]
+
+# Standard digivolve: Lv2 Black, cost 0 (printed `evo_costs`).
+# Alt-source (xros_req box): Lv2 with ADVENTURE or Hero trait, cost 0.
+# DCGO ST20_10.cs region "Alternate Digivolution Requirement" (lines 14-23):
+#   permanentCondition = (HasAdventureTraits || HasHeroTraits) && Level == 2
+#   digivolutionCost = 0, ignoreDigivolutionRequirement = false.
+# Note: requirement-respecting (`ignore_requirements: false`); the trait
+# filter REPLACES the standard colour gate but the standard cost-checking
+# still applies.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+  - kind: digivolve
+    from:
+      any_of:
+        - { level_eq: 2, trait_has: ADVENTURE }
+        - { level_eq: 2, trait_has: Hero }
+    cost: 0
+
+effects:
+  # ─── Inherited: <Reboot> ────────────────────────────────────────────────
+  #
+  # DCGO ST20_10.cs region "Reboot - ESS" (lines 79-83):
+  #   CardEffectFactory.RebootSelfStaticEffect(isInheritedEffect: true,
+  #                                            card: card, condition: null)
+  #
+  # Same idiom as EX10-010 ("- kind: grant_keyword, keyword: Reboot") but
+  # with `scope: inherited` so the keyword grant flows from the digivolution
+  # stack to the carrier (resolved via game.has_keyword() stack-walk; same
+  # mechanism as ST1-07's inherited <Security A. +1>).
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Reboot
+    summary: "Inherited <Reboot>"
+
+  # ─── Clause 2 — [Your Turn] Warp into WarGreymon for cost 4 ──────────────
+  #
+  # BLOCKED on stacked DSL gaps (A) G-ALT-PATH-DIRECTION-INTO,
+  # (B) G-ALT-PATH-CONDITION, (C) G-DSL-DISTINCT-TAMER-COLORS. See file
+  # header for full discussion.
+  #
+  # Concrete YAML shape that would lower IF the missing primitives existed
+  # (authored on ST20-10 once (A) lands, gated by (B) once `condition:` is
+  # added to AltPathSpec, with the disjunct expressed via (C)):
+  #
+  #   alt_paths:
+  #     - kind: activated_digivolve
+  #       direction: into            # NEW: requires (A) — flip default direction
+  #       into:                       # NEW: target hand card filter
+  #         zone: [hand]
+  #         of: you
+  #         name_is: "WarGreymon"
+  #       cost: 4
+  #       ignore_requirements: true
+  #       condition:                  # NEW: requires (B)
+  #         all_of:
+  #           - your_turn: true
+  #           - any_of:
+  #               - any_permanent:
+  #                   of: opponent
+  #                   zone: [battle_area]
+  #                   kind: digimon
+  #                   dp_gte: 10000   # also needs G-PRED-DP-LTE evaluation
+  #               - distinct_tamer_colours_gte: 3   # NEW: requires (C)
+  #
+  # Until those primitives exist, this clause is omitted. The behavioral
+  # test asserts the structural shape today (alt_paths.len() == 2) and
+  # carries `#[ignore]` placeholders for the warp behaviour.

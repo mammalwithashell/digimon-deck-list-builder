@@ -1,0 +1,369 @@
+# ST20-15 Island of Adventure — Option, White, Cost 2.
+# Traits: ADVENTURE.
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   While you have no face-up [Island of Adventure] security cards, you can
+#     ignore this card's color requirements.
+#   [Security] [All Turns] All of your level 3 or higher Digimon get +2000 DP.
+#   [Main] Add your top security card to the hand. Then, place this card face
+#     up as the top security card.
+#
+# Inherited (Security):
+#   Security Effect [Security] You may play 1 Tamer card from your hand
+#     without paying the cost.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/ST20/White/ST20_15.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Block 1 (`EffectTiming.None`) — IgnoreColorConditionClass:
+#   - CanUseCondition: `!card.Owner.SecurityCards.Any(c =>
+#       c.EqualsCardName("Island of Adventure") && !c.IsFlipped)`
+#     → fires while NO face-up Island of Adventure card exists in own security.
+#   - CardCondition: `cardSource == card` → only THIS card's color req is
+#     bypassed (not other cards).
+#
+# Block 2 (`EffectTiming.None`) — ChangeDPStaticEffect, isInheritedEffect=false:
+#   - CanUseCondition: `CardEffectCommons.IsExistInSecurity(card, false)`
+#     → fires while THIS card sits face-up in security (the source-zone is
+#     the controller's own security stack, NOT the battle area).
+#   - PermanentCondition: own battle-area Digimon, TopCard.HasLevel,
+#     Level >= 3.
+#   - changeValue: +2000 DP.
+#
+# Block 3 (`EffectTiming.OptionSkill`, [Main]) —
+#   `CardEffectFactory.ReplaceTopSecurityWithFaceUpOptionMainEffect(card)`:
+#   - Step A: add the controller's top security card to hand (mirrors
+#     `add_top_security_to_hand` API).
+#   - Step B: place THIS Option card (currently in hand, being played) as
+#     the controller's NEW top security card, FACE UP.
+#
+# Block 4 (`EffectTiming.SecuritySkill`, inherited) — ActivateClass:
+#   - isOptional: true (`canNoSelect: true` on the SelectHandEffect).
+#   - CanSelectCardCondition: `cardSource.IsTamer && CanPlayAsNewPermanent(...,
+#     payCost: false, ...)`
+#   - PlayPermanentCards(payCost: false, isTapped: false, root: Hand,
+#     activateETB: true).
+#
+# ─── Source-priority cross-check (printed text + RULES_CONTEXT.md > DCGO) ───
+#
+# Printed text governs and DCGO matches on every clause:
+#   - Color bypass is conditional on "no face-up [Island of Adventure] in
+#     own security" — printed text and DCGO `IsFlipped` check agree.
+#   - Security-zone DP aura: printed `[Security] [All Turns]` tag means the
+#     source stays in security and the effect is continuous; DCGO
+#     `IsExistInSecurity(card, false)` confirms the source-zone gate.
+#     `false` = "must be face-up in security" (DCGO convention; the second
+#     argument is the includeFaceDown flag inverted).
+#   - [Main] body: printed "Add your top security card to the hand. Then,
+#     place this card face up as the top security card." DCGO uses the
+#     `ReplaceTopSecurityWithFaceUpOptionMainEffect` factory which performs
+#     both steps atomically.
+#   - Security inherited: printed "You may play 1 Tamer card from your hand
+#     without paying the cost." DCGO `canNoSelect: true` confirms the "may"
+#     optional gate.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                | Status |
+# |------------------------------------------------------------------|--------|
+# | Color bypass while NO face-up [Island of Adventure] in security  | PARTIAL — see G-PRED-NO-FACE-UP-SECURITY-NAMED |
+# | [Security][All Turns] +2000 DP to own Lv3+ Digimon (security src)| BLOCKED — security-zone aura source (engine-gaps.md L294) — see G-SECURITY-ZONE-AURA-SOURCE |
+# | [Main] Add top security card to hand                              | RESOLVED — `add_top_security_to_hand` (P-137 sibling) |
+# | [Main] "Then, place this card face up as the top security card"   | BLOCKED — see G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION |
+# | [Security] (inherited) optional play 1 Tamer from hand free       | IMPLEMENTED |
+#
+# ─── DSL-GAP — Predicate "no face-up security card with name X" [G-PRED-NO-FACE-UP-SECURITY-NAMED] ──
+#
+# Printed text: "While you have no face-up [Island of Adventure] security
+# cards, you can ignore this card's color requirements." DCGO models this
+# with `!card.Owner.SecurityCards.Any(c => c.EqualsCardName("Island of
+# Adventure") && !c.IsFlipped)` — i.e. examines every card in the
+# controller's security stack and rejects only face-up ones whose name
+# matches.
+#
+# The DSL has no predicate that combines: (a) the security zone, (b) a
+# face-up filter (per RULES_CONTEXT.md §16 face-down security cards are
+# "hidden" — the printed text "face-up" is a deliberate qualifier), and (c)
+# a name / card-id filter on individual security cards. The closest
+# existing primitives:
+#   - `security_count_lte` / `security_count_gte` — total count predicates
+#     only; no per-card filter.
+#   - `any_permanent { zone: [security], ... }` — `Zone::Security` exists in
+#     the DSL enum, but the predicate evaluator's any_permanent path is
+#     wired primarily for battle-area zone scans; security cards are NOT
+#     `Permanent` instances (they are raw `Card`s in `Player.security`),
+#     so even if the zone constraint is honored the predicate would silently
+#     evaluate to false. AND there is no `is_face_up` / `face_up: true`
+#     leaf to discriminate face-up from face-down security cards.
+#
+# Closing this gap requires a new `PredicateSpec` leaf such as
+# `face_up_security_card_count` { card_number_is | name_is, of: PlayerRef,
+# count_eq | count_lte | count_gte: u8 }` (or simply
+# `no_face_up_security_named: { card_number_is: "X", of: you }`), plus a
+# matching `eval_predicate_with_bindings` arm that walks
+# `player.security` and counts entries satisfying the face-up flag and the
+# id filter.
+#
+# Workaround applied today: `no_permanent { of: you, zone: [security],
+# card_number_is: "ST20-15" }`. This is structurally faithful to the
+# "named-card-not-in-own-security" intent but:
+#   (i) silently over-fires while ANY [Island of Adventure] sits face-up
+#       OR face-down in security (over-grants the bypass when an
+#       Island-of-Adventure was placed face-down via, e.g., another
+#       effect's "place X as security face-down" — rare in practice but
+#       possible).
+#   (ii) silently UNDER-fires if the predicate evaluator's any_permanent
+#        zone-filter never matches Card-only security entries (very likely
+#        — see notes above), in which case the gate is permanently OPEN
+#        and color bypass always applies (over-firing). Both directions
+#        are unfaithful to printed text.
+#
+# Because the gate's failure mode is BOTH-DIRECTIONS over-firing (in the
+# common evaluator-evaluates-false sub-case the bypass always applies; in
+# the evaluator-evaluates-true sub-case the bypass is suppressed), there
+# is no way to author a "safe" partial workaround. Per no-approximations
+# the workaround is documented + tests gated under the gap tag, and the
+# YAML clause is authored against printed text so that the future
+# evaluator + predicate fix slots in cleanly.
+#
+# Engine-side note: G-IGNORE-COLOR-MASK was RESOLVED 2026-05-02; the
+# `IgnoreColorRequirement` modifier IS now consulted by the action mask
+# (`code/digimon-engine/src/action/mask.rs`). So a fully-correct gate
+# would actually toggle the Option's playability when the security pile
+# changes — the gap is purely the predicate side.
+#
+# Also blocks: any future "[While you have no face-up <name> security
+# cards] X" or "[While you have a face-up <name> security card] X" form.
+# DCGO grep for `SecurityCards.Any(... IsFlipped ...)` returns multiple
+# entries (mirror cards in companion sets / Adventure-trait family).
+#
+# ─── DSL-GAP — Place self at TOP of own security stack face-up (Option flavor) [G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION] ──
+#
+# Printed text: "Then, place this card face up as the top security card."
+# DCGO performs this inside `ReplaceTopSecurityWithFaceUpOptionMainEffect`
+# which calls `IPutSecurityPermanent(... toTop: true, isFlipped: false)`
+# (or equivalent face-up placement) AFTER the head step removed the
+# previous top security card to hand.
+#
+# This is the SAME engine substrate as the existing
+# `G-PLACE-SELF-AT-SECURITY-TOP` gap (filed 2026-05-03 for EX9-021 Omnimon
+# Alter-S) and `G-PLACE-SELF-AT-SECURITY-BOTTOM` (EX4-060), with two
+# important differences:
+#
+#   (a) ST20-15 is an OPTION card (`kind: option`), not a Digimon
+#       Permanent. EX9-021 / EX4-060 surface the gap for a leaving /
+#       attacking Digimon permanent (top + sources go to security as a
+#       bundle). ST20-15's "self" is the Option card currently being PLAYED
+#       from hand — there is no source-stack to bundle, just a single
+#       card to route from MainEffectDrain staging directly to security
+#       top.
+#
+#   (b) ST20-15 specifies "face up" while EX4-060 places face-down at
+#       bottom. EX9-021's "place this Digimon as your top security card"
+#       defaults to face-up per printed text (the orientation is implicit
+#       for top placements). So ST20-15 + EX9-021 cover the (top, face-up)
+#       axis; EX4-060 covers (bottom, face-down).
+#
+# Closing this gap requires the same engine helper proposed at
+# G-PLACE-SELF-AT-SECURITY-TOP / G-PLACE-SELF-AT-SECURITY-BOTTOM —
+# `EffectContext::place_self_at_security(top_or_bottom, face_orientation)`
+# — extended to accept an Option card from MainEffectDrain (no source
+# stack required; the "self" card is the Option being played). The DSL
+# verb `place_self_at_security_top: { face: up }` (or unified `place_self_at_security: { position: top, face: up }`)
+# would handle both Digimon-permanent and Option-card subjects.
+#
+# Workaround that would VIOLATE no-approximations: omit the trailing
+# "Then, place this card face up as the top security card" — the Option
+# would resolve to trash by the default OptionState resolution, never
+# joining security. This DROPS the printed effect entirely (no "Island
+# of Adventure" in security → the color-bypass gate above ALWAYS opens,
+# breaking Block 1's gating semantics). Unfaithful both forward and
+# backward.
+#
+# Per no-approximations the [Main] body's TAIL ("Then, place this card
+# face up...") is OMITTED, and consequently the entire [Main] clause is
+# OMITTED rather than fire only the head ("Add your top security card to
+# the hand"). Authoring only the head would:
+#   - lose the printed conjunction ("Then,") which DCGO models as a
+#     single atomic factory call;
+#   - leave the controller having paid the Option cost (2 memory) for a
+#     security-rotation that is half-printed (the new top is gone, but
+#     the Option that was supposed to refill it lands in trash);
+#   - permanently keep Block 1's color-bypass gate OPEN even after the
+#     intended placing turn (since no Island of Adventure ever lands in
+#     own security).
+# All three are unfaithful. Tests for the [Main] clause are #[ignore]'d
+# under both this gap and (defensively) G-PRED-NO-FACE-UP-SECURITY-NAMED.
+#
+# Also blocks: any future "place this card as your top / bottom security
+# card face up / face down" clause whose subject is the Option card being
+# PLAYED (not a leaving Digimon Permanent). DCGO grep for the
+# `ReplaceTopSecurityWith*` factory family returns a handful of Option
+# cards across recent sets that share the same shape.
+#
+# ─── ENGINE-GAP — [Security][All Turns] aura with security-zone source [G-SECURITY-ZONE-AURA-SOURCE] ──
+#
+# Printed text: "[Security] [All Turns] All of your level 3 or higher
+# Digimon get +2000 DP." The `[Security]` tag is a SOURCE-ZONE qualifier
+# (per RULES_CONTEXT.md §16) — the effect is continuous (`[All Turns]`)
+# and the source must be face-up in this player's security stack for the
+# effect to be active. DCGO models it with
+# `CardEffectCommons.IsExistInSecurity(card, false)` on the
+# `ChangeDPStaticEffect` `condition`, exactly the source-zone gate.
+#
+# Status: known engine gap, tracked at `qa/archetype-qa/engine-gaps.md`
+# line 294: "security-zone aura sources and the future query-time aura
+# model remain separate work; no remaining blocker for battle-area
+# tick-dispatched filtered auras covered by Group 6." Group 6 (resolved
+# 2026-05-02) only covers face-up battle-area sources — `Game::tick_declarative_effects`
+# iterates own/opponent battle-area permanents and dispatches their
+# declarative effects; it does NOT iterate face-up security cards.
+#
+# Closing this gap requires:
+#   A. Engine: extend `Game::tick_declarative_effects` (or sister loop) to
+#      also iterate face-up security cards on both players, dispatch their
+#      declarative effects with a synthetic `TriggerSource::SecurityZone(player)`
+#      (or equivalent) so the process closure executes with `source` bound
+#      to the security card.
+#   B. Engine: extend `EffectReadContext::source_permanent` / source resolution
+#      so a security-zone source binding works (currently `source` resolves
+#      to a battle-area Permanent handle; security cards are raw `Card`).
+#      Likely needs a `SourceLocation::Security { player, idx }` variant on
+#      the source enum used during clause execution.
+#   C. DSL: probably no new verb needed — `kind: aura` with `target: { owner:
+#      you, kind: digimon, level_gte: 3 }` + `dp_modifier: +2000` is the
+#      natural shape; the gap is purely the runtime-ticker not seeing the
+#      security source.
+#
+# Workaround that would VIOLATE no-approximations: install the +2000 DP
+# modifier unconditionally at compile / on-play time (over-fires while the
+# Option sits in hand / trash). Per no-approximations the [Security][All
+# Turns] DP aura is OMITTED. Tests asserting the +2000 DP buff are
+# #[ignore]'d under this gap tag.
+#
+# Also blocks: BT5-058 X-Antibody (and several "[Security] All Turns" DP
+# / keyword auras across the card pool). DCGO grep for
+# `IsExistInSecurity(card, false)` on a `ChangeDPStaticEffect` /
+# `RushStaticEffect` / `BlockerStaticEffect` returns multiple entries.
+#
+# Filed: 2026-05-03 (ST20-15 Island of Adventure, batch-implement-cards-rust-dsl).
+
+card: ST20-15
+name: "Island of Adventure"
+kind: option
+color: [white]
+cost: 2
+traits: [ADVENTURE]
+
+effects:
+  # ─── Clause 0: Color bypass while NO face-up [Island of Adventure] in security ─
+  #
+  # Printed: "While you have no face-up [Island of Adventure] security cards,
+  # you can ignore this card's color requirements."
+  #
+  # Mirror of BT22-099 / BT23-096 / EX7-074 / P-151 flood_gate shape but
+  # with the gate negated AND scoped to OWN security (not own field).
+  #
+  # The G-IGNORE-COLOR-MASK gap was RESOLVED 2026-05-02 — runtime enforcement
+  # lives in `code/digimon-engine/src/action/mask.rs` and the same helper
+  # gates `play_option_from_hand`.
+  #
+  # G-PRED-NO-FACE-UP-SECURITY-NAMED workaround: `no_permanent { of: you,
+  # zone: [security], card_number_is: "ST20-15" }`. See header docs for the
+  # full failure-mode analysis (this is a both-directions over-fire and the
+  # affected behavioral assertions are #[ignore]'d under the gap tag).
+  - kind: flood_gate
+    active_when:
+      no_permanent:
+        of: you
+        zone: [security]
+        card_number_is: "ST20-15"
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "ST20-15" }
+    summary: "While no face-up [Island of Adventure] in own security, ignore color requirements for this card"
+
+  # ─── BLOCKED Clause 1: [Security][All Turns] +2000 DP to own Lv3+ Digimon ─────
+  #
+  # Printed: "[Security] [All Turns] All of your level 3 or higher Digimon
+  # get +2000 DP."
+  #
+  # BLOCKED — G-SECURITY-ZONE-AURA-SOURCE (engine-gaps.md L294). Group 6
+  # (resolved 2026-05-02) wired declarative-aura tick dispatch only for
+  # face-up battle-area sources, not security-zone sources. Until the
+  # tick-loop iterates face-up security cards (and the source-resolution
+  # path supports a security source), this aura cannot fire even though
+  # the YAML form would compile.
+  #
+  # Per no-approximations the entire clause is OMITTED. Authoring stub
+  # (commented; uncomment when the engine gap closes):
+  #
+  # - kind: aura
+  #   active_when: {}                            # printed [All Turns] = no turn gate
+  #   target:
+  #     owner: you
+  #     kind: digimon
+  #     level_gte: 3
+  #   dp_modifier: 2000
+  #   summary: "[Security][All Turns] Own Lv3+ Digimon get +2000 DP"
+
+  # ─── BLOCKED Clause 2: [Main] Add top security to hand; then place self at security top face up ─
+  #
+  # Printed: "[Main] Add your top security card to the hand. Then, place
+  # this card face up as the top security card."
+  #
+  # BLOCKED — G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION. The HEAD step
+  # (`add_top_security_to_hand`) was RESOLVED 2026-05-03 and is available
+  # as a native DSL verb. The TAIL step ("place this card face up as the
+  # top security card") has no DSL verb / engine substrate for an OPTION
+  # card subject — the existing G-PLACE-SELF-AT-SECURITY-TOP gap (EX9-021)
+  # covers the Digimon-permanent flavor; ST20-15 surfaces the Option-card
+  # specialization. See header docs for full gap analysis.
+  #
+  # Per no-approximations the entire clause is OMITTED. Authoring partially
+  # (head only) would (a) drop the printed conjunction, (b) leak the played
+  # Option to trash with no rotation back into security, and (c)
+  # permanently keep the Clause 0 color-bypass gate OPEN.
+  #
+  # Authoring stub (commented; uncomment when the gap closes):
+  #
+  # - when: main_from_hand
+  #   optional: false
+  #   summary: "[Main] Add top security to hand; then place self face up as top security"
+  #   process:
+  #     - add_top_security_to_hand: { of: you }
+  #     - place_self_at_security_top: { face: up }     # ← BLOCKED: G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION
+
+  # ─── Clause 3: [Security] (inherited) optional play 1 Tamer from hand free ────
+  #
+  # Printed inherited (security): "Security Effect [Security] You may play 1
+  # Tamer card from your hand without paying the cost."
+  #
+  # Standard select_hand → play_from_hand_free pattern (sister cards: see
+  # the on_security clauses on BT17-093, BT18-087, BT22-084, ST21-13 for
+  # the play-self idiom; this clause picks a DIFFERENT hand card per the
+  # printed text rather than the security-resolving card itself).
+  #
+  # `optional: true` mirrors DCGO `canNoSelect: true` on the SelectHandEffect
+  # (the player may decline the play entirely).
+  #
+  # `kind: tamer` filter mirrors DCGO `cardSource.IsTamer && CanPlayAsNewPermanent
+  # (..., payCost: false, ...)`. The play step inherits free play (no cost
+  # check) per DCGO `payCost: false`.
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security][Inherited] You may play 1 Tamer from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: picked_tamer
+          optional: true
+          filter:
+            kind: tamer
+          prompt: "Play 1 Tamer card from your hand without paying its cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: picked_tamer

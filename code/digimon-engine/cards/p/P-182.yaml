@@ -1,0 +1,268 @@
+# P-182 WarGreymon — Digimon, Lv.6, Red, DP 12000, Cost 12.
+# Traits: Dragonkin, ADVENTURE
+# Attribute: Vaccine
+#
+# Standard digivolve: Lv.5 Red / Cost 4 (per evo_costs in cards.json).
+# Alt digivolve (xros_req): Lv.5 w/[MetalGreymon] in name OR w/[ADVENTURE] trait,
+# Cost 3. Per DCGO P_182.cs lines 19-40 (AddSelfDigivolutionRequirementStaticEffect
+# with PermanentCondition: IsLevel5 && (ContainsCardName("MetalGreymon")
+# || EqualsTraits("ADVENTURE")), digivolutionCost: 3,
+# ignoreDigivolutionRequirement: false).
+#
+# Printed card text (data/cards.json):
+#
+# ＜Security A. +1＞ (This Digimon checks 1 additional security card.)
+# ＜Blocker＞ (This Digimon can block in the blocker timing.)
+# [When Digivolving] Delete 1 of your opponent's Digimon with as much or less
+#   DP as this Digimon.
+# [All Turns] This Digimon gets +1000 DP for each color Digimon and Tamers have.
+#
+# Inherited / Security: none.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Red/P_182.cs
+#
+# ─── Faithfulness diff vs. card text ─────────────────────────────────────────
+#
+# | Card-text element                                          | Implementation status |
+# |------------------------------------------------------------|-----------------------|
+# | Standard digivolve Lv.5 Red / cost 4                       | IMPLEMENTED (alt_paths)
+# | Alt digivolve Lv.5 w/[MetalGreymon] OR [ADVENTURE] / cost 3| IMPLEMENTED (alt_paths)
+# | <Security A. +1>                                            | IMPLEMENTED (grant_keyword SecurityAttackPlus 1) — see G-DECLARATIVE-KEYWORD note
+# | <Blocker>                                                  | IMPLEMENTED (grant_keyword Blocker) — see G-DECLARATIVE-KEYWORD note
+# | [When Digivolving] delete opp Digimon ≤ self DP            | BLOCKED — G-FORMULA-SOURCE-DP
+# | [All Turns] +1000 DP per distinct color across both players' Digimon+Tamers | BLOCKED — G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA
+#
+# ─── DSL-GAP — Cannot read source permanent's DP in formula  [G-FORMULA-SOURCE-DP] ──
+#
+# The "delete 1 opp Digimon with as much or less DP as this Digimon" clause needs
+# `dp_lte` to compare against THIS card's effective DP. The `binding_dp` formula
+# primitive (RESOLVED 2026-05-02) reads the DP of a NAMED binding (a permanent
+# captured by `bind_as` from a prior `select_*_permanent` step). It does NOT
+# accept the special tokens `source` / `self` / `carrier` that
+# `BindingRef`/`resolve_binding_ref` recognize for `target:` arguments.
+#
+# Source permanent DP IS available at runtime via `ctx.source_permanent` +
+# `ctx.game.effective_dp(handle)` — the engine has the data, the formula layer
+# just lacks a primitive that reads it. Sibling: ST22-08's G-BINDING-DP-FORMULA
+# (RESOLVED) handles user-picked bindings; this is the source-permanent variant.
+#
+# This card SHARES the gap with BT17-102 (Greymon), where the same primitive is
+# documented in detail. Suggested closure (verbatim from BT17-102.yaml):
+#
+#   dp_lte:
+#     formula:
+#       source_dp: {}        # reads ctx.source_permanent's effective_dp
+#
+# Implementation: add `SourceDp` variant to `FormulaSpec`/`CompiledFormula`;
+# evaluate as `ctx.source_permanent.and_then(|h| ctx.game.effective_dp(h)).unwrap_or(0)`.
+# Until then the delete sub-clause is OMITTED (printed text would over-fire on
+# opponents with arbitrary DP if we used `kind: digimon` alone — violates
+# no-approximations).
+#
+# ─── DSL-GAP — Distinct-colors PerSelector across both players' Digimon+Tamers
+# [G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA] ───────────────────────────────
+#
+# The [All Turns] clause needs a continuously-recomputed +1000 DP aura whose
+# value is `1000 * (count of distinct colors across all Digimon and Tamers in
+# both players' battle areas)`. DCGO P_182.cs lines 149-181 use:
+#
+#   List<CardSource> cards = card.Owner.GetBattleAreaPermanents()
+#     .Concat(card.Owner.Enemy.GetBattleAreaPermanents()).ToList()
+#     .Map(card => card.TopCard)
+#     .Where(x => x.IsDigimon || x.IsTamer).ToList();
+#   var colourCount = Combinations.GetDifferenetColorCardCount(cards);
+#   var newDP = colourCount * 1000;
+#
+# The aura body has TWO blocking sub-gaps that must both close:
+#
+# (1) `kind: aura` accepts `dp_modifier_fn` (RESOLVED 2026-05-02 by Group 6),
+#     so the dynamic continuous DP is now expressible as a runtime formula
+#     closure. ✓
+#
+# (2) BUT the `PerSelector` enum in `digimon-dsl/src/formula.rs` (lines 130-141)
+#     has NO `distinct_colors_count` variant over arbitrary zone+filter:
+#       MaterialCount, StackSize, AllyCount, DigivolutionColorCount,
+#       SameLevelPairsInSources, SharedTrashCount, CardCountInZone
+#     `DigivolutionColorCount` only counts colors of the source's own
+#     digivolution stack (NOT cards in battle area). `CardCountInZone` counts
+#     cards (not distinct colors among them). There is no formula primitive
+#     that:
+#       (a) iterates a zone (battle_area) across BOTH players,
+#       (b) filters to Digimon OR Tamer top cards,
+#       (c) collapses to the distinct-color set,
+#       (d) returns its size.
+#
+#     This is a sibling of the BT21-102 companion gap referenced in
+#     dsl-vocab-gaps.md line 892 (`G-DSL-DISTINCT-TAMER-COLORS-FORMULA`), but
+#     scoped MORE BROADLY:
+#       - BT21-102 needs distinct colors of YOUR TAMERS only
+#       - P-182 needs distinct colors of BOTH PLAYERS' Digimon AND Tamers
+#     A general primitive should accept a `PredicateSpec` filter + a `PlayerRef`
+#     (you / opponent / both / any) so both card-shapes and future cards can
+#     consume it.
+#
+#     Suggested DSL syntax (sibling to existing `card_count_in_zone`):
+#       dp_modifier_fn:
+#         base: 0
+#         per:
+#           distinct_colors_count:
+#             of: any                          # both players
+#             zone: [battle_area]
+#             filter:
+#               any_of:
+#                 - kind: digimon
+#                 - kind: tamer
+#         delta: 1000
+#
+#     Implementation: add `DistinctColorsCount(DistinctColorsSpec)` variant to
+#     `PerSelector` in `digimon-dsl/src/formula.rs`, add a `CompiledPerSelector`
+#     branch, and an evaluator in `formula_eval.rs` that iterates the requested
+#     player(s)' battle_area, filters via the embedded `CompiledPredicate`, and
+#     returns the cardinality of the distinct-color set across the surviving
+#     top cards. Engine has `Permanent::top_card()` + `card_data.colors` —
+#     the distinct-color collapse is trivial in Rust (`HashSet<Color>`).
+#
+# Until BOTH (1) AND (2) are open, the aura clause is OMITTED entirely. A
+# static `dp_modifier: 1000` would under-claim (assumes only 1 color on field);
+# a static `dp_modifier: N000` for any N over-claims. Both options violate
+# no-approximations. Authoring the clause without enforcement of the formula
+# would compile but install no DP modifier (or a wrong one).
+#
+# ─── G-DECLARATIVE-KEYWORD note (Clauses Security A.+1 and Blocker) ──────────
+#
+# Declarative `grant_keyword` clauses compile to Effect::declarative(...) with
+# EffectTiming::Declarative. The runtime modifier installation pathway is
+# documented as a known broader DSL/engine gap (see BT21-029, AD1-014 notes).
+# Tests for runtime KEYWORD INSTALLATION on the field are
+# `#[ignore = "pending: G-DECLARATIVE-KEYWORD"]`. STRUCTURAL assertions
+# (compiled clauses present, correct keyword names) are NOT ignored.
+
+card: P-182
+name: WarGreymon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+traits: [Dragonkin, ADVENTURE]
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# 1) Standard digivolve: Lv.5 Red / Cost 4 (per evo_costs).
+# 2) Alt digivolve (xros_req): Lv.5 w/[MetalGreymon] in name OR w/[ADVENTURE]
+#    trait, Cost 3. DCGO P_182.cs lines 23-29:
+#      TopCard.IsLevel5 && (ContainsCardName("MetalGreymon") || EqualsTraits("ADVENTURE"))
+#    digivolutionCost: 3, ignoreDigivolutionRequirement: false.
+#
+#    Note: AD1-014 splits an OR-shape into two alt-paths because `from:` did not
+#    historically express OR. Modern DSL accepts `any_of` inside `from.all_of`,
+#    and that pattern is used in BT17-102 alt-path 2 (`level_eq: 3, name_contains:
+#    "Agumon"`) — but the OR variant is more cleanly represented as two paths.
+#    Following the AD1-014/MetalGarurumon precedent for any-of-name-or-trait OR
+#    shape: split into two `kind: digivolve` paths sharing cost 3.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - color_is: red
+    cost: 4
+
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - name_contains: "MetalGreymon"
+            - trait_has: ADVENTURE
+    cost: 3
+
+effects:
+  # ─── Clause 1 — <Security A. +1> (face-up declarative) ──────────────────────
+  # DCGO P_182.cs lines 44-54: ChangeSelfSAttackStaticEffect(changeValue: 1,
+  #   isInheritedEffect: false, ...) at EffectTiming.None.
+  # Idiom matches BT21-029, AD1-009, BT20-016, ST1-07.
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  # ─── Clause 2 — <Blocker> (face-up declarative) ─────────────────────────────
+  # DCGO P_182.cs lines 57-66: BlockerSelfStaticEffect(isInheritedEffect: false,
+  #   ...) at EffectTiming.None.
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── Clause 3 — [When Digivolving] delete opp Digimon ≤ self DP  [BLOCKED] ─
+  #
+  # Printed text:
+  #   "[When Digivolving] Delete 1 of your opponent's Digimon with as much or
+  #    less DP as this Digimon."
+  #
+  # DCGO P_182.cs lines 71-143: ActivateClass(EffectTiming.OnEnterFieldAnyone),
+  # CanUseCondition: CanTriggerWhenDigivolving + IsExistOnBattleAreaDigimon.
+  # CanSelectPermanentCondition gates on:
+  #   IsPermanentExistsOnOpponentBattleAreaDigimon(permanent, card)
+  #   && permanent.DP <= card.PermanentOfThisCard().DP
+  # SelectPermanentEffect with maxCount: 1, canNoSelect: false, mode: Destroy.
+  #
+  # BLOCKED: G-FORMULA-SOURCE-DP — see header docs. Mirrors BT17-102 Clause 1's
+  # delete sub-clause exactly. Omitted from this clause body until the gap
+  # closes; including a `kind: digimon` delete without the DP filter would
+  # over-target opponents with arbitrary DP, violating no-approximations.
+  #
+  # Stub (commented — uncomment when G-FORMULA-SOURCE-DP closes):
+  #
+  # - when: when_digivolving
+  #   summary: "[When Digivolving] Delete 1 opp Digimon with DP ≤ this Digimon"
+  #   condition:
+  #     any_permanent:
+  #       of: opponent
+  #       zone: [battle_area]
+  #       kind: digimon
+  #   process:
+  #     - select_opponent_permanent:
+  #         bind_as: tgt
+  #         filter:
+  #           all_of:
+  #             - kind: digimon
+  #             - dp_lte: { formula: { source_dp: {} } }   # NEW formula primitive
+  #         prompt: "Delete 1 opp Digimon (DP ≤ this Digimon)"
+  #     - delete_permanent: { target: tgt }
+
+  # ─── Clause 4 — [All Turns] +1000 DP per distinct color  [BLOCKED] ──────────
+  #
+  # Printed text:
+  #   "[All Turns] This Digimon gets +1000 DP for each color Digimon and Tamers
+  #    have."
+  #
+  # DCGO P_182.cs lines 147-181: ChangeSelfDPStaticEffect(changeValue: count, ...)
+  # at EffectTiming.None, where count() is a live closure evaluating
+  # `Combinations.GetDifferenetColorCardCount(cards) * 1000` over BOTH players'
+  # battle-area Digimon + Tamers.
+  #
+  # BLOCKED: G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA — see header docs.
+  # `kind: aura` + `dp_modifier_fn` (Group 6 RESOLVED) provides the dynamic
+  # continuous DP shell, but the `PerSelector` enum has no `distinct_colors_count`
+  # variant over a zone+filter+player. Omitted entirely rather than represented
+  # partially — a static `dp_modifier: 1000` (single-color baseline) would
+  # under-claim, and any larger fixed value would over-claim.
+  #
+  # Stub (commented — uncomment when G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA
+  # closes):
+  #
+  # - kind: aura
+  #   target: {}
+  #   active_when: { all_turns: true }
+  #   dp_modifier_fn:
+  #     base: 0
+  #     per:
+  #       distinct_colors_count:
+  #         of: any                          # NEW: both players
+  #         zone: [battle_area]
+  #         filter:
+  #           any_of:
+  #             - kind: digimon
+  #             - kind: tamer
+  #     delta: 1000
+  #   summary: "[All Turns] +1000 DP per distinct color across both players' Digimon+Tamers"

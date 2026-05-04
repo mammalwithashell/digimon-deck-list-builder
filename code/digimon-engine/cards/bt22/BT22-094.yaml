@@ -1,0 +1,187 @@
+# BT22-094 Yuugo Kamishiro — Tamer, White, Cost 3.
+# Traits: CS.
+#
+# Printed card text (data/cards.json):
+#
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with the [CS]
+#   trait among them to the hand. Return the rest to the bottom of the deck.
+#   [Your Turn] When any of your Digimon or Tamers with the [CS] trait would
+#   be played, by returning this Tamer to the bottom of the deck, reduce the
+#   play cost by 2.
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT22/White/BT22_094.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnEnterFieldAnyone` activate gated by
+#   `CardEffectCommons.CanTriggerOnPlay(hashtable, card)` AND
+#   `CardEffectCommons.IsExistOnField(card)`. Coroutine:
+#   `SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, ...)` with a single
+#   bucket whose `canTargetCondition: cardSource.HasCSTraits`,
+#   `mode: AddHand`, `maxCount: 1`, `remainingCardsPlace: DeckBottom`.
+#   `SetUpActivateClass(..., -1, false, ...)` — the outer trigger is NOT
+#   isOptional. The inner SimplifiedRevealDeckTopCardsAndSelect's selectClass
+#   handles "no candidates" by quietly placing the entire reveal at the
+#   chosen remainder location; in our DSL `select_reveal_buckets` with
+#   `min: 1, max: 1` will install no pick if no card matches and the
+#   `place_remainder_on_deck { position: bottom }` step then bottoms all 3.
+#
+# Clause 2 — `EffectTiming.BeforePayCost` activate. Outer:
+#   `SetUpActivateClass(..., -1, isOptional=true, ...)` — player may decline
+#   the cost reduction (and thus skip paying the deck-bottom cost). Inner:
+#   `CardEffectCommons.CanTriggerWhenPermanentWouldPlay` over a
+#   `PlayCardCondition` of `(IsDigimon || IsTamer) && HasCSTraits &&
+#   Owner == card.Owner`. Activation requires
+#   `IsExistOnBattleArea(card) && IsOwnerTurn(card)` — both encoded as
+#   `active_when: { your_turn: true }` plus the `condition` any_permanent
+#   self-on-field guard. Coroutine: `DeckBouncePeremanentAndProcessAccordingToResult`
+#   on `card.PermanentOfThisCard()` (the cost), then on success installs a
+#   `ChangeCostClass` of -2 with `cardSourceCondition: cardSource.Owner ==
+#   card.Owner` for the next cost calculation. The DSL `CostReductionBody`
+#   models this as a single `kind: cost_reduction` declarative clause whose
+#   `pay_cost` step is the deck-bottom return; the -2 amount is applied
+#   directly via `amount: 2`.
+#
+# Clause 3 (Security) — `EffectTiming.SecuritySkill` →
+#   `CardEffectFactory.PlaySelfTamerSecurityEffect(card)`. Standard
+#   play_from_security pattern (sister cards: BT17-093, BT18-087, BT22-084,
+#   BT21-015, BT9-092, EX11-054).
+#
+# ─── Source-priority audit (printed text vs DCGO) ────────────────────────────
+#
+# Printed text on Clause 2 reads "by returning this Tamer to the bottom of
+# the deck, reduce the play cost by 2." The "by X" idiom in Digimon TCG
+# rules text (RULES_CONTEXT.md §16) marks X as the activation cost — paid
+# IF the player wants the effect. The clause is therefore implicitly
+# optional ("when ... would be played" + "by returning ..."): the player
+# decides whether to apply the cost-reduction. DCGO confirms via
+# `isOptional: true` on the outer ActivateClass. → `optional: true`.
+#
+# Printed text does NOT carry [Once Per Turn]; the natural floor of "once
+# per game" is enforced by the cost (after the Tamer leaves the field, the
+# effect's `active_when: your_turn` AND `condition: any_permanent self`
+# both fail). → no `once_per_turn` flag.
+#
+# ─── DSL precedent: cost-reduction with `pay_cost` ───────────────────────────
+#
+# EX8-074 MedievalGallantmon — `kind: cost_reduction` + `when_playing_this`
+# + `pay_cost: [select + suspend, select + suspend]`. Confirms the DSL
+# supports a synchronous `pay_cost` step list run as the cost.
+#
+# BT13-007 King Drasil_7D6 — `kind: cost_reduction` + `optional: true` +
+# `when_any_ally_played: { trait_has: "Royal Knight" }` + `amount_fn`.
+# Confirms the optional + when_any_ally_played + ally-trait predicate
+# combination. (BT22-094 differs: literal `amount: 2` instead of a formula,
+# and adds `pay_cost`.)
+#
+# ─── DSL note: `kind: digimon | tamer` predicate ─────────────────────────────
+#
+# CompiledPredicate has a single `kind: Option<CompiledCardKind>` field —
+# no `kind_any_of: [...]`. The "Digimon or Tamer" filter is expressed as a
+# top-level `any_of` over two single-kind sub-predicates, matched against
+# `PredicateSubject::Card` in `eval_card_fields`. trait_has is checked
+# case-insensitively against `data.traits` (predicate.rs:683-687).
+
+card: BT22-094
+name: Yuugo Kamishiro
+kind: tamer
+color: [white]
+cost: 3
+traits: [CS]
+
+effects:
+  # ─── Clause 1: [On Play] reveal 3, add 1 [CS] card to hand, bottom rest ───
+  #
+  # Printed text:
+  #   "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [CS]
+  #   trait among them to the hand. Return the rest to the bottom of the deck."
+  #
+  # DCGO `SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, [bucket(CS,
+  # AddHand, max 1)], remainingCardsPlace: DeckBottom)`. Single bucket pattern
+  # — same shape as BT24-031 (Iliad+TS two-bucket reveal-3) and BT12-059
+  # (Greymon/Omnimon+Tai Kamiya two-bucket reveal-4), reduced to one bucket.
+  #
+  # `min: 1` makes the pick mandatory if any CS card is among the 3, mirroring
+  # DCGO's mandatory-when-eligible single-bucket SimplifiedRevealDeckTopCards
+  # behavior. If no CS card is revealed, the bucket cannot be filled and
+  # `select_reveal_buckets` resolves with no pick — the trailing
+  # `place_remainder_on_deck` then bottoms all 3.
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [CS] card to hand; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: cs_pick
+              min: 1
+              max: 1
+              filter: { trait_has: CS }
+          prompt: "Select 1 [CS] card to add to hand"
+      - add_to_hand_from_reveal: { of: you, card: cs_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Clause 2: [Your Turn] cost reduction on ally CS Digimon/Tamer play ───
+  #
+  # Printed text:
+  #   "[Your Turn] When any of your Digimon or Tamers with the [CS] trait
+  #   would be played, by returning this Tamer to the bottom of the deck,
+  #   reduce the play cost by 2."
+  #
+  # `kind: cost_reduction` declarative clause:
+  #   - reduction_timing: before_pay_cost — fires during BeforePayCost scan.
+  #   - active_when: your_turn:true — [Your Turn] gate; also implicitly
+  #       requires the carrier to be on field for the effect registry to
+  #       include it during the BeforePayCost scan.
+  #   - optional: true — printed "by returning ..." is an opt-in cost; DCGO
+  #       confirms `isOptional: true` on the outer ActivateClass. The player
+  #       chooses whether to pay the cost and apply the reduction.
+  #   - when_any_ally_played: { ... } — the cost-target card must be the
+  #       owner's Digimon or Tamer with the CS trait. The predicate is
+  #       evaluated against `cost_target_card` in lower_cost_reduction.rs
+  #       (line 116, 141): `eval_predicate(wap, rctx, PredicateSubject::Card(target))`.
+  #       Owner-scoping is implicit — `cost_target_card` is set when the
+  #       controller is paying for THEIR own play.
+  #   - condition: any_permanent self-on-field — explicit guard that mirrors
+  #       DCGO's `IsExistOnBattleArea(card)` check (precedent: BT17-093
+  #       Clause 2). Belt-and-suspenders against the lowering's source-handle
+  #       sentinel paths.
+  #   - amount: 2 — printed "reduce the play cost by 2".
+  #   - pay_cost: [return_to_deck { target: source, position: bottom }] —
+  #       the cost. `target: source` resolves to ctx.source_permanent (this
+  #       Tamer's permanent handle), per the BT17-093 / BT24-082 precedent.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when: { your_turn: true }
+    optional: true
+    when_any_ally_played:
+      all_of:
+        - any_of:
+            - kind: digimon
+            - kind: tamer
+        - trait_has: CS
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: "BT22-094"
+    amount: 2
+    summary: "[Your Turn] Return self to deck bottom: -2 cost on CS Digimon/Tamer play"
+    pay_cost:
+      - return_to_deck: { target: source, position: bottom }
+
+  # ─── Clause 3: [Security] play self without paying the cost ───────────────
+  #
+  # Printed: "Security Effect [Security] Play this card without paying the
+  # cost."
+  #
+  # Standard play_from_security pattern (cf. BT17-093, BT18-087, BT22-084,
+  # BT21-015, BT9-092, EX11-054). Mandatory (no [Security] effect is opt-out
+  # per the rules manual §16 / RULES_CONTEXT.md).
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -1,0 +1,99 @@
+# BT15-020 Gabumon — Digimon, Lv.3, Blue, DP 1000, Cost 3.
+# Traits: Reptile.
+#
+# Printed effect:
+#   [Start of Your Main Phase] 1 of your Digimon gains <Blocker> until the
+#   end of your opponent's turn. Then, if you have a Tamer with [Matt
+#   Ishida] in its name, <Draw 1>.
+#
+# Inherited Effect [When Attacking] [Once Per Turn] <Draw 1>.
+#
+# Standard digivolve: Lv.2 Blue / cost 0.
+# Bonus digivolve from Tsunomon: cost 0 (handled by alt_path with name_is).
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT15/Blue/BT15_020.cs
+#
+# Clause notes (from DCGO):
+#   * Start-of-main effect is mandatory (`isOptional: false`). Selection of
+#     the Blocker target is mandatory once installed (`canNoSelect: false`).
+#     Trigger condition fires if either branch is satisfiable: at least one
+#     own Digimon (Blocker target) OR an own Matt Ishida tamer + non-empty
+#     deck (Draw branch).
+#   * Inherited When Attacking Draw 1 is mandatory + OPT (`SetHashString
+#     "Draw1_BT15_020"`, `isInheritedEffect: true`, `1` max-count).
+#
+# DSL structure notes:
+#   * The two sub-clauses ("grant Blocker" and "draw if Matt Ishida") are
+#     gated by independent `if` blocks so that the absence of an own
+#     Digimon does NOT short-circuit the Matt Ishida draw branch (which
+#     would happen if `select_own_permanent` were the top-level step — see
+#     `install_select_own_permanent`'s empty-candidates early return).
+#   * `grant_keyword` here is the procedural step (lives inside a process),
+#     not the `kind: grant_keyword` declarative variant which is currently
+#     blocked by G-DECLARATIVE-KEYWORD.
+
+card: BT15-020
+name: Gabumon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Reptile]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+  # Bonus 0-cost digivolve from Tsunomon ("[Digivolve] [Tsunomon]: Cost 0").
+  - kind: digivolve
+    from: { name_is: "Tsunomon" }
+    cost: 0
+
+effects:
+  # ─── Clause (a): [Start of Your Main Phase] ─────────────────────────────────
+  - when: start_of_your_main_phase
+    summary: "[SoMP] 1 of your Digimon gains Blocker until EoOT; then draw 1 if Matt Ishida tamer"
+    process:
+      # Sub-clause (a1): grant Blocker to a chosen own Digimon.
+      # Gated so the select step short-circuits cleanly (and outer-tail
+      # remains live) when no own Digimon is on field.
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_own_permanent:
+                bind_as: tgt
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to gain Blocker"
+            - grant_keyword:
+                target: tgt
+                keyword: Blocker
+                expiry: end_of_opponents_turn
+
+      # Sub-clause (a2): "Then, if you have a Tamer with [Matt Ishida] in
+      # its name, draw 1." Independent of the Blocker branch.
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+              name_contains: "Matt Ishida"
+          then:
+            - draw: { of: you, count: 1 }
+
+  # ─── Clause (b): Inherited [When Attacking] [Once Per Turn] Draw 1 ──────────
+  # DCGO: ActivateClass at OnAllyAttack timing, IsInheritedEffect=true,
+  # max-count 1, hash-string "Draw1_BT15_020".
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][OPT] Draw 1 (inherited)"
+    process:
+      - draw: { of: you, count: 1 }

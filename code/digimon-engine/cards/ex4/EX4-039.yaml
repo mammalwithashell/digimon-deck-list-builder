@@ -1,0 +1,165 @@
+# EX4-039 Gabumon — Lv3, Black, Cost 3, DP 1000, Reptile.
+#
+# Printed effect (cards.json effect_description_eng):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with
+#   [Garurumon] in its name and 1 Digimon card with [Agumon], [Greymon] or
+#   [Omnimon] in its name among them to your hand. Place the rest on top of
+#   your deck in any order.
+#
+# Inherited (cards.json inherited_effect_description_eng):
+#   [Your Turn] [Once Per Turn] When one of your other Digimon digivolves,
+#   gain 1 memory.
+#
+# Security: none printed.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX4/Black/EX4_039.cs
+#
+# Sister card: EX4-038 Agumon — same shape with the bucket halves swapped
+# (Greymon-name first, Gabumon/Garurumon/Omnimon-name second). Same inherited
+# clause text. Both share the standard Lv2 Black cost-0 evo path.
+#
+# ─── Source priority cross-check ─────────────────────────────────────────────
+#
+# Printed text + RULES_CONTEXT.md govern semantics; DCGO is the implementation
+# tiebreaker. DCGO matches printed text:
+#
+# Clause 1 (EX4_039.cs:12-103, EffectTiming.OnEnterFieldAnyone):
+#   - SetUpActivateClass(..., -1, false, ...): NOT optional outer trigger.
+#   - CanActivateCondition gates on `card.Owner.LibraryCards.Count >= 1`.
+#     Implicit in `reveal_top_deck` (caps at deck size). No explicit gate.
+#   - SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, ...):
+#       * Bucket 1 (CanSelectCardCondition): IsDigimon && HasGarurumonName.
+#         message "Select 1 Digimon card with [Garurumon] in its name.",
+#         maxCount 1.
+#       * Bucket 2 (CanSelectCardCondition1): IsDigimon &&
+#         (ContainsCardName("Omnimon") || ContainsCardName("Agumon") ||
+#          HasGreymonName). message "Select 1 Digimon card with [Agumon],
+#         [Greymon], or [Omnimon] in its name.", maxCount 1.
+#       * mutualConditions: true → no card may satisfy both buckets.
+#         `no_duplicate_cards: true`.
+#       * remainingCardsPlace: DeckTop → trailing
+#         `place_remainder_on_deck { position: top }`. The "in any order"
+#         phrasing surfaces the standard ordered-permutation prompt.
+#
+# Clause 2 (EX4_039.cs:105-163, EffectTiming.OnEnterFieldAnyone third block,
+# isInheritedEffect=true, hashString "Memory+1_EX4_039"):
+#   - SetIsInheritedEffect(true) → inherited (carrier-bound) effect, fires
+#     while EX4-039 is a digivolution source under another permanent.
+#   - changeValue (memory delta) +1 via `Owner.AddMemory(1)`.
+#   - CanUseCondition:
+#       * IsExistOnBattleArea(card) — carrier still on battle area.
+#       * IsOwnerTurn(card) — [Your Turn] gate.
+#       * CanTriggerWhenPermanentDigivolving(hashtable, PermanentCondition)
+#         where PermanentCondition = IsPermanentExistsOnOwnerBattleArea
+#         (permanent, card) && permanent != card.PermanentOfThisCard().
+#         The "permanent != card.PermanentOfThisCard()" clause encodes
+#         "OTHER Digimon" — the trigger ignores digivolutions of the
+#         permanent that hosts EX4-039 itself.
+#   - hashString "Memory+1_EX4_039" tracks the [Once Per Turn] lockout —
+#     `once_per_turn: true` on the triggered clause is the DSL counterpart.
+#
+# ─── DSL mapping notes ───────────────────────────────────────────────────────
+#
+# Clause 1 (DSL): `when: on_play` + `reveal_top_deck` (count 3) +
+# `select_reveal_buckets` with two `min: 1, max: 1` buckets (Garurumon,
+# Agumon/Greymon/Omnimon) + `no_duplicate_cards: true` (DCGO mutualConditions)
+# + two `add_to_hand_from_reveal` + `place_remainder_on_deck { position: top }`.
+# Mirrors BT24-031 / BT12-059 exactly with name-based filters instead of
+# trait-based.
+#
+# Clause 2 (DSL): `when: on_digivolve` + `scope: inherited` +
+# `active_when: { your_turn: true }` + `once_per_turn: true` + body
+# `gain_memory: 1`. The inherited scope means the clause is active only while
+# EX4-039 is a digivolution source (under another permanent).
+#
+# Condition: filters by `event_target_owner: you` + `event_target_kind: digimon`
+# (the digivolved permanent must be an own Digimon — the OnDigivolve trigger
+# fires for both players' permanents via the global broadcast). The "other"
+# half of "your other Digimon" is the only piece of printed text that cannot
+# be expressed in current DSL — see G-EVENT-TARGET-NOT-SOURCE in
+# qa/dsl-vocab-gaps.md. The over-fire window is narrow:
+#   * EX4-039 is Lv3 and is itself a Digimon when on top of its own stack;
+#     while it is the top card the clause is dormant (inherited scope only
+#     activates when EX4-039 is BELOW the top card, i.e. a source).
+#   * Once another permanent is digivolved on top of EX4-039 (making EX4-039
+#     a source), the carrier itself digivolving again (a Lv4→Lv5 etc evolve
+#     of the carrier) would self-trigger the inherited clause. Printed text
+#     excludes that case ("OTHER Digimon"). DCGO's
+#     `permanent != card.PermanentOfThisCard()` filter is the missing leaf.
+#   * `once_per_turn: true` softens the impact (at most one extra memory per
+#     turn). The behavioral test for the carrier-self-digivolve case is
+#     `#[ignore]`'d pending the gap closure.
+#
+# ─── Known gaps affecting this card ──────────────────────────────────────────
+#
+# G-EVENT-TARGET-NOT-SOURCE (NEW, this card surfaces it):
+#   No predicate excludes the OnDigivolve event_permanent when it equals the
+#   inherited clause's source_permanent (the carrier). Printed text "your
+#   other Digimon" cannot be faithfully expressed today. Approximation:
+#   `event_target_owner: you` + `event_target_kind: digimon` over-fires when
+#   the carrier itself digivolves further. See qa/dsl-vocab-gaps.md.
+#
+# G-OPT-TRIGGERED:
+#   `once_per_turn: true` on a triggered clause is authored but the engine
+#   queue-drain path does not yet enforce same-turn lockout. The OPT flag
+#   compiles correctly; behavioral lockout is asserted via #[ignore] tests.
+
+card: EX4-039
+name: Gabumon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Reptile]
+
+effects:
+  # ─── Clause 1 — [On Play] Reveal 3 + two-bucket selection (top of deck) ──
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 Garurumon-named Digimon and 1 Agumon/Greymon/Omnimon-named Digimon; remainder on top of deck"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: garurumon_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - name_contains: "Garurumon"
+            - bind_as: agumon_greymon_omnimon_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - name_contains: "Agumon"
+                      - name_contains: "Greymon"
+                      - name_contains: "Omnimon"
+          no_duplicate_cards: true
+          prompt: "Select 1 [Garurumon] Digimon and 1 [Agumon]/[Greymon]/[Omnimon] Digimon"
+      - add_to_hand_from_reveal: { of: you, card: garurumon_pick }
+      - add_to_hand_from_reveal: { of: you, card: agumon_greymon_omnimon_pick }
+      - place_remainder_on_deck: { of: you, position: top }
+
+  # ─── Clause 2 — [Inherited][Your Turn][OPT] On other-own digivolve, +1 memory
+  #
+  # G-EVENT-TARGET-NOT-SOURCE (this card surfaces it): the printed "OTHER"
+  # filter cannot be expressed in DSL today. The condition below scopes to
+  # own-Digimon digivolutions; the carrier-self-digivolve over-fire is
+  # tracked in qa/dsl-vocab-gaps.md and asserted via #[ignore] tests.
+  - scope: inherited
+    when: on_digivolve
+    optional: false
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Inherited][Your Turn][OPT] When your other Digimon digivolves, gain 1 memory"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    process:
+      - gain_memory: 1

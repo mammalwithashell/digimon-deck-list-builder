@@ -1,0 +1,205 @@
+# ST20-11 WarGreymon — Digimon, Lv.6, Black/Red, DP 12000, Cost 7.
+# Traits: Dragonkin, ADVENTURE, Hero. Attribute: Vaccine.
+# Standard digivolve: Lv.5 Black / Cost 4 (printed evo_costs).
+# xros_req: alt-digivolve Lv.5 with [ADVENTURE] or [Hero] trait / Cost 3.
+#
+# Printed card text (cards.json):
+#
+# [Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this
+#   card without paying the cost.)
+# [On Play] [When Digivolving] Until your opponent's turn ends, for every 2
+#   colors your Tamers have, their Digimon's effects don't affect 1 of your
+#   Digimon.
+# [When Digivolving] [When Attacking] Delete 1 of your opponent's lowest DP
+#   Digimon.
+#
+# Inherited: Ace Overflow ＜-4＞ (As this card moves from the field or under
+#   a card to an area other than those, lose 4 memory.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST20/Black/ST20_11.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────────
+#
+# alt-path 1: Standard digivolve (Lv.5 Black / Cost 4) — printed evo_costs.
+# alt-path 2: Alt digivolve (Lv.5 ADVENTURE OR Hero trait / Cost 3) — xros_req.
+# alt-path 3: ＜Blast Digivolve＞ — burst_digivolve marker:true cost 0
+#             (the [Hand][Counter] entry path).
+# Clause 1:  BLOCKED — [On Play][When Digivolving] immunity grant
+#             "for every 2 colors your Tamers have". OMITTED pending
+#             G-DSL-DISTINCT-TAMER-COLORS-FORMULA. See clause comment + ignored
+#             tests in companion st20_11.rs.
+# Clause 2:  [When Digivolving][When Attacking] delete opp lowest-DP Digimon.
+#             dp_lte aggregate filter authored correctly; selection is
+#             over-permissive until G-PRED-DP-LTE closes.
+# Inherited: Ace Overflow ＜-4＞ via top-level `ace_overflow: -4` field.
+
+card: ST20-11
+name: WarGreymon
+kind: digimon
+level: 6
+color: [black, red]
+cost: 7
+dp: 12000
+traits: [Dragonkin, ADVENTURE, Hero]
+
+# ─── Inherited: Ace Overflow ＜-4＞ ────────────────────────────────────────────
+# `CardData.ace_overflow` accepts negative values; -4 matches printed text.
+# Same shape as EX9-013 BlitzGreymon and EX10-010 BlackWarGreymon.
+ace_overflow: -4
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# 1) Standard digivolve: Lv.5 Black / Cost 4 (printed evo_costs).
+# 2) xros_req alt-digivolve: Lv.5 with [ADVENTURE] OR [Hero] trait / Cost 3.
+#    DCGO ST20_11.cs lines 17-27: AddSelfDigivolutionRequirementStaticEffect
+#    with PermanentCondition: HasAdventureTraits || EqualsTraits("Hero"), level
+#    5, digivolutionCost 3.
+# 3) ＜Blast Digivolve＞: burst_digivolve marker:true cost 0. DCGO ST20_11.cs
+#    lines 31-35: BlastDigivolveEffect at OnCounterTiming. Same idiom as
+#    EX9-013 and EX10-010 — see those for canonical examples.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: ADVENTURE
+            - trait_has: Hero
+    cost: 3
+    ignore_requirements: true
+
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
+
+effects:
+  # ─── Clause 1 — BLOCKED [On Play][When Digivolving] tamer-color immunity ────
+  #
+  # Printed text:
+  #   "[On Play] [When Digivolving] Until your opponent's turn ends, for every
+  #    2 colors your Tamers have, their Digimon's effects don't affect 1 of
+  #    your Digimon."
+  #
+  # DCGO ST20_11.cs:
+  #   - lines 45-57 TamerTwoColourCount: floor(distinct_colors_across_tamers / 2)
+  #   - lines 67-175 [On Play] ActivateClass at OnEnterFieldAnyone with
+  #     CanTriggerOnPlay; mandatory N-pick (canNoSelect: false) where N = the
+  #     formula above, capped by available own Digimon count, minimum 1 IF the
+  #     formula is > 0.
+  #   - lines 181-285 [When Digivolving] ActivateClass — same body, gated by
+  #     CanTriggerWhenDigivolving (DCGO duplicates the body with one tiny
+  #     diff: the [On Play] SkillCondition treats `IsDigimonEffect &&
+  #     IsSecurityEffect` as immune-target-eligible too; see lines 145-160 vs
+  #     260-271 — printed text only specifies "Digimon's effects", so we model
+  #     both timings identically per the printed text).
+  #   - The granted modifier installs a CanNotAffectedClass that filters
+  #     opponent CardSource for "is the chosen permanent's top card" and
+  #     opponent ICardEffect for "is opponent effect AND is digimon effect",
+  #     until OpponentTurnEnd.
+  #
+  # BLOCKED: G-DSL-DISTINCT-TAMER-COLORS-FORMULA
+  #   No formula primitive in `digimon_dsl::formula::PerSelector` /
+  #   `AggregateSelector` counts distinct colors across own Tamers in battle
+  #   area. Same gap blocking AD1-014 lock branch and BT21-102 main clause.
+  #   The would-be formula:
+  #
+  #     floor_div:
+  #       - distinct_colors_count:
+  #           of: you
+  #           zone: [battle_area]
+  #           filter: { kind: tamer }
+  #       - 2
+  #
+  # COMPANION GAP G-DSL-REPEAT-N (or `per_n`)
+  #   Even with the formula, the engine has no `repeat_n: { count, body }`
+  #   step driver to install N selection prompts in sequence (each picking a
+  #   distinct own Digimon, filtered by `not_in_binding`). `add_modifier` and
+  #   `grant_effect_immunity` operate on a single bound permanent.
+  #
+  # Per skill rule §11 (Engine-gap vs DSL-vocab-gap discipline) and the
+  # no-approximations policy, the entire clause body is OMITTED rather than
+  # implementing a fixed-1 fallback that would silently misrepresent the
+  # tamer-color synergy to RL agents. Including it without the formula would
+  # either (a) over-fire (always grant 1 immunity even with 0 tamer colors,
+  # leaking the "every 2" floor_div) or (b) under-fire (always grant 1 even
+  # when 4+ colors should grant 2). Both directions break the printed text.
+  #
+  # Suggested YAML when both gaps close:
+  #
+  #   - when: [on_play, when_digivolving]
+  #     summary: "[OP][WD] Tamer-color immunity"
+  #     condition:
+  #       all_of:
+  #         - any_permanent: { of: you, zone: [battle_area], kind: digimon }
+  #         - any_permanent: { of: you, zone: [battle_area], kind: tamer }
+  #     process:
+  #       - per_n:
+  #           count:
+  #             floor_div:
+  #               - distinct_colors_count:
+  #                   of: you
+  #                   zone: [battle_area]
+  #                   filter: { kind: tamer }
+  #               - 2
+  #           body:
+  #             - select_own_permanent:
+  #                 bind_as: shielded_n
+  #                 filter:
+  #                   all_of:
+  #                     - kind: digimon
+  #                     - not_in_binding: prior_shields
+  #                 prompt: "Select 1 of your Digimon to shield from opponent Digimon effects"
+  #             - grant_effect_immunity:
+  #                 target: shielded_n
+  #                 source_kind: digimon
+  #                 source_controller: opponent
+  #                 expiry: end_of_opponents_turn
+
+  # ─── Clause 2 — [When Digivolving][When Attacking] delete lowest-DP ─────────
+  #
+  # Printed text:
+  #   "[When Digivolving] [When Attacking] Delete 1 of your opponent's lowest
+  #    DP Digimon."
+  #
+  # DCGO ST20_11.cs:
+  #   - lines 290-293 CanSelectTargetCondition: IsMinDP(perm, opponent_player)
+  #   - lines 309-350 [When Digivolving] ActivateClass at OnEnterFieldAnyone
+  #     with CanTriggerWhenDigivolving; SelectPermanentEffect Mode.Destroy with
+  #     canNoSelect: false, maxCount: 1.
+  #   - lines 353-394 [When Attacking] ActivateClass at OnAllyAttack with
+  #     CanTriggerOnAttack; identical body.
+  #
+  # Mandatory (canNoSelect: false). Single target. The dp_lte aggregate filter
+  # form (selector: lowest_dp, scope: opponent) is the canonical pattern from
+  # BT24-017 Medusamon — the YAML expresses the lowest-DP intent correctly.
+  #
+  # KNOWN GAP G-PRED-DP-LTE (qa/archetype-qa/engine-gaps.md):
+  #   `dp_lte` predicate is parsed and compiled but `eval_permanent_fields` in
+  #   `dsl_cards/predicate.rs` does NOT evaluate it for permanents. Until the
+  #   gap closes, the selection prompt will offer ANY opponent Digimon rather
+  #   than only those tied for lowest DP. Tests that assert only the lowest-DP
+  #   target is offered are #[ignore]'d in the companion st20_11.rs with the
+  #   gap tag.
+  - when: [when_digivolving, when_attacking]
+    summary: "[WD][WA] Delete 1 of your opponent's lowest-DP Digimon"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              # G-PRED-DP-LTE: dp_lte not yet evaluated for permanents.
+              - dp_lte:
+                  aggregate:
+                    selector: lowest_dp
+                    scope: opponent
+          prompt: "Delete 1 of your opponent's lowest-DP Digimon"
+      - delete_permanent: { target: victim }

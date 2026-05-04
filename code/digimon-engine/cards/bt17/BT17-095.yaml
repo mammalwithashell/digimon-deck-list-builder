@@ -1,0 +1,337 @@
+# BT17-095 Miraculous Mega Knight — Option, Red+Blue, Cost 2.
+# Traits: (none printed).
+#
+# Printed card text (data/cards.json):
+#
+#   [Main] You may play 1 [Agumon] or [Gabumon] from your hand or trash without
+#   paying the cost. Then, place this card in the battle area.
+#
+#   [All Turns] When one of your level 6 Digimon with [Greymon] or [Garurumon]
+#   in its name would leave the battle area outside of a battle, ＜Delay＞ (By
+#   trashing this card after the placing turn, activate the effect below.)
+#   ・That Digimon and a card in the hand may DNA digivolve into a Digimon card
+#   with [Omnimon] in its name in the hand.
+#
+# Inherited (Security):
+#   Security Effect [Security] You may play 1 card with [Tai Kamiya] or
+#   [Matt Ishida] in its name from your hand or trash without paying the cost.
+#   Then, add this card to the hand.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT17/Red/BT17_095.cs
+#
+# ─── DCGO crosscheck (high-level) ─────────────────────────────────────────────
+#
+# Clause A — `EffectTiming.OptionSkill` (= Main play). DCGO presents a "From
+#   hand / From trash" `BoolSelection` only when both zones contain an
+#   eligible [Agumon]/[Gabumon] Digimon (else auto-routes to the populated
+#   zone). `canNoSelect: true` on each per-zone selection — the player may
+#   decline the play entirely. Then `CardEffectCommons.PlaceDelayOptionCards`
+#   moves this Option from hand to its controller's battle area as a Delay
+#   permanent (the printed "Then, place this card in the battle area").
+#
+# Clause B — `EffectTiming.WhenRemoveField` (cross-permanent observer).
+#   `CanUseCondition`:
+#     • `CanDeclareOptionDelayEffect(card)`  (this card must already be on the
+#       field as a Delay-Option permanent).
+#     • `CanTriggerWhenPermanentRemoveField(hashtable, IsOwnerPermanentCondition)`
+#       — fires when ANY permanent that the OWNER controls is leaving the
+#       field, AND the leaving permanent is a level-6 Digimon whose top-card
+#       name contains "Greymon" or "Garurumon".
+#     • `!CardEffectCommons.IsByBattle(hashtable)` — outside-of-battle filter.
+#
+#   `ActivateCoroutine`:
+#     1. `DeletePermanentAndProcessAccordingToResult` on `card.PermanentOfThisCard()`
+#        — pays the Delay cost (trash this Option from the field).
+#     2. On success, `SelectHandEffect` for an Omnimon-name level-7 Digimon
+#        card with at least one `JogressCondition` (= DNA-digivolve recipe).
+#        `canNoSelect: false`.
+#     3. Build `allowedPermanents` (own field-Digimon matching DNA element 0)
+#        and `allowedCards` (own hand cards matching DNA element 1, using a
+#        speculative "fake permanent" check).
+#     4. `SelectPermanentEffect` for the leaving Digimon (only one survives the
+#        intersect with `IsOwnerPermanentToBeDeletedCondition`).
+#     5. `SelectHandEffect` over `allowedCards` (the hand-card DNA partner).
+#     6. Materialise the hand-card partner as a permanent in an empty frame and
+#        run `PlayCardClass.PlayCard` with `SetJogress(jogressEvoRootsFrameIDs)`
+#        — this performs the DNA digivolve, consuming both permanents.
+#     7. If the DNA isn't actually legal (e.g. invalid digivolve target), the
+#        played hand-partner card is added back to hand instead.
+#
+# Clause C (Security, inherited) — `EffectTiming.SecuritySkill`. Same shape as
+#   Clause A but the eligibility predicate is `IsTamer` AND
+#   `ContainsCardName("Tai Kamiya"|"Matt Ishida")`. `canNoSelect: true`. After
+#   the optional play, `CardEffectCommons.AddThisCardToHand(card, ...)` routes
+#   this Option from security-resolution staging to the controller's hand.
+#
+# ─── Implementation status (faithfulness diff) ────────────────────────────────
+#
+# | Card-text element                                                   | Status |
+# |---------------------------------------------------------------------|--------|
+# | [Main] play [Agumon]/[Gabumon] from hand or trash, free             | PARTIAL — see G-DSL-UNION-PLAY-FREE
+# | [Main] "Then, place this card in the battle area"                   | IMPLEMENTED via place_self_as_delay_option
+# | [All Turns] cross-permanent leave-watcher gate (subject filter)     | IMPLEMENTED via kind: replacement + replacement_subject_is_mine
+# | [All Turns] "outside of a battle" gate                              | IMPLEMENTED via none_of: [replacement_cause: battle]
+# | [All Turns] <Delay> trashes this card after the placing turn         | PARTIAL — Delay-as-replacement-cost surfaced via replacement process; "after the placing turn" timing-window IS covered by source_is_delayed_option guard inside lower_replacement.rs
+# | [All Turns] DNA-digivolve into Omnimon, where second material is in hand | BLOCKED — see G-DSL-DNA-FROM-HAND-PARTNER
+# | [Security] play [Tai Kamiya]/[Matt Ishida] from hand or trash, free | PARTIAL — see G-DSL-UNION-PLAY-FREE
+# | [Security] "Then, add this card to the hand"                        | IMPLEMENTED via add_this_option_to_hand
+#
+# ─── DSL-GAP — `select_union_zone` binding type vs. play_from_*_free  [G-DSL-UNION-PLAY-FREE] ──
+#
+# `select_union_zone` (the natural primitive for "from your hand or trash")
+# binds the picked card as a `Card`-typed binding (CardHandle). The downstream
+# `play_from_hand_free` / `play_from_trash_free` steps both REQUIRE a
+# `HandIndex` / `TrashIndex` binding (see `play_digivolve.rs:120-160`); a
+# Card binding is silently dropped. Until the engine widens the resolver
+# (`resolve_binding_ref` → tolerate `Card` and look up the index by handle),
+# the From-hand-or-trash optional play cannot be expressed in a single
+# `select_union_zone` step.
+#
+# Workaround used here: P-189 / P-206 pattern — `select_effect_choice` with
+# "From hand" / "From trash" labels, then a branching `if` per choice. This
+# reaches the same RL action surface (the player still chooses a zone, then a
+# card), but the engine doesn't auto-collapse the branch when only one zone
+# has eligible cards. DCGO collapses via `SetBool`; we always present both
+# branches and the player must walk through them. Tracked in
+# qa/dsl-vocab-gaps.md.
+#
+# ─── DSL-GAP — DNA digivolve where second material lives in hand  [G-DSL-DNA-FROM-HAND-PARTNER] ──
+#
+# `effect_initiated_dna_digivolve` (the only DNA-from-effect verb) requires
+# BOTH `target_a` and `target_b` to be permanents that already exist on the
+# battle area; it merges the two permanents and tops them with `from_hand`
+# (the result card). See `effect_context/effect_initiated_dna_digivolve.rs`
+# for the engine contract.
+#
+# BT17-095's printed text is unique: the SECOND DNA material is "a card in
+# the hand" — not a permanent on the field. DCGO models this by speculatively
+# materialising the hand card as a temporary `Permanent`, calling the standard
+# `PlayCardClass.PlayCard` with `SetJogress(...)` to perform the DNA, then
+# either committing the permanent (if the DNA succeeded) or returning the
+# card to hand (if the recipe was invalid).
+#
+# Closing this gap requires either:
+#   A. A new DSL verb `effect_initiated_dna_digivolve_with_hand_partner` that
+#      accepts (`target_perm`, `hand_partner_card`, `result_from_hand`, cost)
+#      and materialises the hand partner inline; OR
+#   B. Engine-side: extend `effect_initiated_dna_digivolve` to accept a
+#      `CardHandle` (not just `PermanentHandle`) for `target_b`, with the
+#      hand-card path inlined behind a runtime branch.
+#
+# Until the gap closes the entire DNA-digivolve sub-clause is OMITTED from
+# Clause B's `process:`. The visible behavior is still faithful to two-thirds
+# of the printed text: the cross-permanent observer fires, the Delay cost
+# (trashing this Option) is paid, and the would-leave subject is allowed to
+# proceed. The omitted leg is the "may DNA-digivolve into Omnimon in hand"
+# bonus reward; declining the bonus is itself a printed-legal outcome ("may")
+# so the partial-implementation behavior is identical to the player declining.
+# Tests for the DNA branch are #[ignore]'d pending closure of the gap.
+#
+# ─── Behavioral note — Clause B replacement does NOT cancel the leave ─────────
+#
+# Printed text: the Delay activates "When … would leave the battle area" but
+# the body is a benefit (DNA digivolve), not a prevention. DCGO does NOT call
+# `Cancel` on the `WhenRemoveField` event — the leaving Digimon proceeds to
+# leave the field. Our `kind: replacement` clause therefore omits any
+# `cancel_replacement` step (the default replacement outcome is Proceed).
+
+card: BT17-095
+name: "Miraculous Mega Knight"
+kind: option
+color: [red, blue]
+cost: 2
+traits: []
+
+effects:
+  # ─── Clause A — [Main] optional play of [Agumon]/[Gabumon] from hand or trash ─
+  #
+  # Printed: "[Main] You may play 1 [Agumon] or [Gabumon] from your hand or
+  # trash without paying the cost. Then, place this card in the battle area."
+  #
+  # `optional: true` mirrors DCGO's `canNoSelect: true` on each per-zone
+  # selection (the player may decline the play entirely).
+  #
+  # Workaround for G-DSL-UNION-PLAY-FREE: the From-hand-or-trash decision is
+  # surfaced as an explicit `select_effect_choice` (mirrors P-189/P-206 sec
+  # clauses). Each branch then runs `select_hand`/`select_trash` +
+  # `play_from_*_free`.
+  #
+  # "Then, place this card in the battle area" — the FINAL step is
+  # `place_self_as_delay_option: {}` (RESOLVED 2026-05-02 G-PLACE-SELF-AS-
+  # OPTION-PERMANENT). Clause B's `kind: replacement` clause is what installs
+  # the cross-permanent observer once this Option is on the field; the engine's
+  # `classify_option_subtype` treats this card as a Standard option (no
+  # `kind: delay` clause), so the explicit `place_self_as_delay_option` step
+  # is required to seat it as a Delay-Option permanent.
+  - when: main_from_hand
+    optional: true
+    summary: "[Main] You may play [Agumon]/[Gabumon] from hand or trash free; then place self in battle area"
+    process:
+      # G-DSL-UNION-PLAY-FREE workaround: surface the zone choice explicitly.
+      # DCGO would auto-collapse to the populated zone if only one of the two
+      # is non-empty; this DSL form always presents both branches.
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "From which area do you play [Agumon] or [Gabumon]?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: picked_hand
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_contains: "Agumon"
+                        - name_contains: "Gabumon"
+                prompt: "Play 1 [Agumon] or [Gabumon] from hand (free)"
+            - play_from_hand_free:
+                of: you
+                hand_index: picked_hand
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: picked_trash
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_contains: "Agumon"
+                        - name_contains: "Gabumon"
+                prompt: "Play 1 [Agumon] or [Gabumon] from trash (free)"
+            - play_from_trash_free:
+                of: you
+                hand_index: picked_trash
+      # Final step: place this Option in controller's battle area as a Delay
+      # permanent (so Clause B's cross-permanent leave observer can fire).
+      - place_self_as_delay_option: {}
+
+  # ─── Clause B — [All Turns] cross-permanent leave observer (DNA omitted) ─────
+  #
+  # Printed: "[All Turns] When one of your level 6 Digimon with [Greymon] or
+  # [Garurumon] in its name would leave the battle area outside of a battle,
+  # ＜Delay＞ … ・That Digimon and a card in the hand may DNA digivolve into
+  # a Digimon card with [Omnimon] in its name in the hand."
+  #
+  # Implementation:
+  #   - `kind: replacement` with `trigger: when_would_leave_battle_area` —
+  #     observes ALL would-leave events, then filters via `active_when`.
+  #   - `replacement_subject_is_mine: true` — gate to "your" Digimon.
+  #   - `kind: digimon` + `level_eq: 6` + Greymon/Garurumon name check on
+  #     the leaving subject (cross-permanent subject filter; works because
+  #     `predicate_reads_replacement_subject` returns true for these leaves
+  #     — see lower_replacement.rs:168-211).
+  #   - `none_of: [replacement_cause: battle]` — the printed "outside of a
+  #     battle" filter (DCGO `!IsByBattle(hashtable)`).
+  #   - `optional: true` — the printed "may DNA digivolve" makes the entire
+  #     reward optional. The optional gate is presented to the player; on
+  #     decline the Delay cost is NOT paid and the leaving Digimon proceeds.
+  #     (This is faithful: in DCGO, `CanUseCondition` returning false skips
+  #     the entire flow including the self-trash.)
+  #   - `once_per_turn: true` is NOT set — the printed text has no [OPT] tag.
+  #     A single BT17-095 in play can only fire ONCE total because the Delay
+  #     cost trashes this card; the source-is-delayed-option guard inside
+  #     `lower_replacement.rs` (`source_is_delayed_option`) ensures the
+  #     observer only fires while THIS card is on the battle area as a Delay.
+  #
+  # Process:
+  #   1. `delete_permanent: { target: source }` — pays the Delay cost by
+  #      trashing this Option from the battle area.
+  #   2. (BLOCKED — G-DSL-DNA-FROM-HAND-PARTNER) The DNA-digivolve sub-clause
+  #      is omitted entirely. The printed body reads "may DNA digivolve … in
+  #      the hand" — the second material lives in the HAND, not on the field.
+  #      `effect_initiated_dna_digivolve` only accepts permanent handles for
+  #      both DNA materials. Including a half-implementation (e.g. select an
+  #      Omnimon hand card and mark it played) would over-fire on illegal DNA
+  #      recipes, violating no-approximations. Omitted — see header docs.
+  #
+  # We deliberately do NOT cancel the replacement: DCGO does not prevent the
+  # leave (the body is a benefit, not a prevention). Default replacement
+  # outcome is Proceed.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - level_eq: 6
+        - any_of:
+            - name_contains: "Greymon"
+            - name_contains: "Garurumon"
+        - none_of:
+            - replacement_cause: battle
+    summary: "[All Turns] When own L6 Greymon/Garurumon would leave outside battle: <Delay> trash self (DNA-digivolve into Omnimon BLOCKED — G-DSL-DNA-FROM-HAND-PARTNER)"
+    process:
+      # Step 1: pay the Delay cost — trash this Option from the battle area.
+      # DCGO: `DeletePermanentAndProcessAccordingToResult` on
+      # `card.PermanentOfThisCard()`.
+      - delete_permanent: { target: source }
+      # Step 2: BLOCKED — DNA-digivolve into Omnimon-name hand card with the
+      # leaving Digimon + a second hand card as DNA materials.
+      # See G-DSL-DNA-FROM-HAND-PARTNER in header docs. Omitted entirely until
+      # the engine grows a DNA-from-hand-partner verb.
+
+  # ─── Clause C — [Security] (inherited) ───────────────────────────────────────
+  #
+  # Printed inherited (security): "Security Effect [Security] You may play 1
+  # card with [Tai Kamiya] or [Matt Ishida] in its name from your hand or trash
+  # without paying the cost. Then, add this card to the hand."
+  #
+  # Same `select_effect_choice` workaround for G-DSL-UNION-PLAY-FREE as
+  # Clause A. The eligibility predicate is the printed name filter (Tai Kamiya
+  # OR Matt Ishida). DCGO restricts further to `IsTamer`, but the printed text
+  # says "card with [Tai Kamiya] or [Matt Ishida] in its name" — there are no
+  # non-Tamer cards in the legal pool with these names, so the name filter is
+  # equivalent in practice. Mirrored as a pure name filter to match printed.
+  #
+  # `add_this_option_to_hand: {}` (RESOLVED 2026-05-02) handles the printed
+  # tail "Then, add this card to the hand."
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security][Inherited] You may play 1 [Tai Kamiya]/[Matt Ishida] from hand or trash free; then add self to hand"
+    process:
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "From which area do you play a card?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: picked_hand
+                optional: true
+                filter:
+                  any_of:
+                    - name_contains: "Tai Kamiya"
+                    - name_contains: "Matt Ishida"
+                prompt: "Play 1 [Tai Kamiya] or [Matt Ishida] from hand (free)"
+            - play_from_hand_free:
+                of: you
+                hand_index: picked_hand
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: picked_trash
+                optional: true
+                filter:
+                  any_of:
+                    - name_contains: "Tai Kamiya"
+                    - name_contains: "Matt Ishida"
+                prompt: "Play 1 [Tai Kamiya] or [Matt Ishida] from trash (free)"
+            - play_from_trash_free:
+                of: you
+                hand_index: picked_trash
+      # Final step: route this Option from security-resolution staging to the
+      # controller's hand instead of the trash.
+      - add_this_option_to_hand: {}

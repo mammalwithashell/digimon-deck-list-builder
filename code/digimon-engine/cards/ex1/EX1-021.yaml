@@ -1,0 +1,140 @@
+# EX1-021 MetalGarurumon — Digimon, Lv.6, Blue, DP 12000, Cost 11.
+# Traits: Cyborg
+#
+# Printed card text (cards.json effect_description_eng):
+#   [When Digivolving] Gain 1 memory for every 4 cards in your hand.
+#   [When Attacking] If you have 8 or more cards in your hand and a Tamer in
+#     play, return 1 of your opponent's Digimon that has an [On Deletion]
+#     effect to the bottom of its owners deck.
+#
+# Inherited / Security text: (none printed)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX1/Blue/EX1_021.cs
+#
+# Evo: Lv.5 Blue / cost 4.
+#
+# ─── Verdict: PARTIAL (structural-only) ──────────────────────────────────────
+#
+# Both triggered clauses are blocked at the body level by missing DSL
+# vocabulary. The clauses are present so the trigger surface (timing
+# registration, scope, alt-paths) compiles correctly and is reachable, but
+# both `process:` blocks are `[]` until the gaps below close. Behavioral
+# memory-gain and return-to-deck tests are `#[ignore]`'d and converted to
+# structural assertions.
+#
+# ─── Clause 1 — [When Digivolving] gain memory per 4 hand cards ─────────────
+#
+# DCGO (EX1_021.cs:13-55, EffectTiming.OnEnterFieldAnyone gated by
+# CanTriggerWhenDigivolving): `count() = card.Owner.HandCards.Count / 4`.
+# Gain `count()` memory if `count() >= 1`. Mandatory (no canNoSelect).
+#
+# DSL-GAP — `gain_memory_fn` formula-valued memory gain  [G-DSL-GAIN-MEMORY-FN]
+#   `StepSpec::GainMemory(i32)` only accepts a literal integer (see
+#   `code/digimon-dsl/src/step.rs` line 67). There is no `gain_memory_fn:`
+#   variant that consumes a `FormulaSpec` (`floor_div`, `card_count_in_zone`,
+#   etc.). The faithful lowering for "gain N memory where N = floor(hand_count
+#   / 4)" requires this primitive, which already exists for cost reductions
+#   (`amount_fn:` on `kind: cost_reduction`).
+#
+# DSL-GAP — `count_gte` aggregate not evaluated at runtime
+#               [G-COUNT-GTE-NOT-EVALUATED, pre-existing]
+#   A bounded-faithful workaround using chained `if count_gte hand n: 4k`
+#   blocks (k = 1..=4) WOULD lower correctly through the DSL surface, but
+#   `dsl_cards/predicate.rs::eval_predicate_with_bindings` does not consult
+#   `pred.count_gte` (only `security_count_gte` and `materials_count_gte`
+#   are wired). Result: `count_gte: { filter: ... }` always evaluates TRUE
+#   at runtime, so the chained-`if` workaround would always award the full
+#   +4 memory regardless of hand size — strictly worse than `process: []`.
+#   See dsl-vocab-gaps.md §"BT24-008 / EX9-066 — General `count_gte` ..."
+#
+# Once EITHER gap closes, prefer the formula primitive form:
+#   - gain_memory_fn:
+#       formula:
+#         floor_div:
+#           - card_count_in_zone: { of: you, zone: hand }
+#           - 4
+#
+# ─── Clause 2 — [When Attacking] return opp [On Deletion] Digimon to deck ────
+#
+# DCGO (EX1_021.cs:57-127, EffectTiming.OnAllyAttack gated by
+# CanTriggerOnAttack):
+#   CanActivateCondition:
+#     IsExistOnBattleArea(card)
+#     AND HasMatchConditionPermanent(perm => IsOpponentBattleAreaDigimon(perm)
+#                                          AND perm.HasOnDeletionEffect)
+#     AND HasMatchConditionOwnersPermanent(card, perm => perm.IsTamer)
+#     AND card.Owner.HandCards.Count >= 8
+#   Body: SelectPermanentEffect (canNoSelect: false, maxCount: min(1, candidates))
+#         over OPP digimon with HasOnDeletionEffect, mode: PutLibraryBottom.
+#
+# Note from EffectDiscription string in DCGO source: "Trash all of the
+# digivolution cards of that Digimon." The PutLibraryBottom mode in DCGO
+# trashes below-top sources (digivolution cards) and places only the top
+# card on the deck bottom — this is the standard "return permanent to deck"
+# semantics matching the Rust DSL `return_to_deck` step (which by default
+# moves only the top card; `include_sources: true` would carry sources too).
+# Per the printed text the digivolution cards are trashed, so default
+# `return_to_deck { include_sources: false }` is the correct lowering once
+# the candidate filter primitive lands.
+#
+# BLOCKED — `has_on_deletion_effect` predicate  [G-DSL-HAS-ON-DELETION-EFFECT]
+#   `PredicateSpec` has no leaf that asks "does this permanent's top card
+#   (or any card in its digivolution stack) carry a triggered effect with
+#   `EffectTiming::OnDeletion`?" The closest existing leaf is `has_keyword`
+#   (which inspects `Keyword` modifiers, not effect timings). Without this
+#   predicate the selection filter would over-include opponent Digimon that
+#   lack [On Deletion] effects, violating the printed text and the no-
+#   approximations policy.
+#
+# BLOCKED — `count_gte` hand condition not evaluated
+#               [G-COUNT-GTE-NOT-EVALUATED, pre-existing]
+#   The "if you have 8 or more cards in your hand" gate cannot be evaluated
+#   today (see Clause 1 commentary). Even with the [On Deletion] filter
+#   gap closed, the hand-size gate would still leak.
+#
+# Once both gaps close, the body should lower as:
+#   - select_opponent_permanent:
+#       bind_as: target
+#       filter:
+#         all_of:
+#           - kind: digimon
+#           - has_on_deletion_effect: true
+#       prompt: "Return 1 opp Digimon with an [On Deletion] effect to deck bottom"
+#   - return_to_deck: { target: target, position: bottom }
+
+card: EX1-021
+name: MetalGarurumon
+kind: digimon
+level: 6
+color: [blue]
+cost: 11
+dp: 12000
+traits: [Cyborg]
+
+# ─── Standard digivolve: Lv.5 Blue / cost 4 ──────────────────────────────────
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - color_is: blue
+    cost: 4
+
+effects:
+  # ─── Clause 1 — [When Digivolving] Gain 1 memory per 4 hand cards ──────────
+  #
+  # `process: []` per BLOCKED convention until G-DSL-GAIN-MEMORY-FN OR
+  # G-COUNT-GTE-NOT-EVALUATED closes (either suffices to express the
+  # printed text faithfully). Behavioral memory-gain tests are `#[ignore]`'d
+  # in tests/cards_behavioral/ex1/ex1_021.rs.
+  - when: when_digivolving
+    summary: "[When Digivolving] Gain 1 memory per 4 hand cards (BLOCKED: G-DSL-GAIN-MEMORY-FN / G-COUNT-GTE-NOT-EVALUATED)"
+    process: []
+
+  # ─── Clause 2 — [When Attacking] return opp [On Deletion] Digimon ──────────
+  #
+  # `process: []` per BLOCKED convention until G-DSL-HAS-ON-DELETION-EFFECT
+  # closes (and G-COUNT-GTE-NOT-EVALUATED for the hand-size gate).
+  - when: when_attacking
+    summary: "[When Attacking] If hand>=8 and Tamer in play, return 1 opp [On Deletion] Digimon to deck bottom (BLOCKED: G-DSL-HAS-ON-DELETION-EFFECT / G-COUNT-GTE-NOT-EVALUATED)"
+    process: []

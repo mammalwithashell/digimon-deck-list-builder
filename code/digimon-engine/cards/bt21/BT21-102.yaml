@@ -1,0 +1,201 @@
+card: BT21-102
+name: Tai Kamiya
+kind: tamer
+color: [white]
+cost: 4
+traits: [ADVENTURE, Hero]
+
+# ─── Printed text (cards.json) ───────────────────────────────────────────────
+#
+# [Start of Your Turn] If you have 2 or less memory, set it to 3.
+# [Your Turn] When one of your Digimon attacks, by suspending this Tamer,
+#   ＜Draw 1＞ (Draw 1 card from your deck.)
+# [Main] [Once Per Turn] You may play 1 [ADVENTURE] or [Hero] trait card with
+#   a play cost of 2 or less from your hand without paying the cost. For each
+#   of your Tamers' colors, add 1 to this effect's play cost maximum. Then,
+#   return this Tamer to the bottom of the deck.
+# Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO reference: DCGO/Assets/Scripts/CardEffect/BT21/White/BT21_102.cs
+#
+# ─── Clause (a): [Start of Your Turn] memory floor 3 ─────────────────────────
+#
+# Same pattern as BT22-084 Nokia Shiramine and EX11-054 Owen Dreadnought.
+# Mandatory ("If your memory ≤ 2, set it to 3" — no "you may"). DCGO uses
+# CardEffectFactory.SetMemoryTo3TamerEffect which is mandatory at OnStartTurn.
+#
+# ─── Clause (b): [Your Turn] when one of your Digimon attacks ────────────────
+#
+# "by suspending this Tamer" is the activation cost → optional: true.
+# active_when: { your_turn: true } scopes [Your Turn].
+#
+# G-DSL-ON-ALLY-ATTACK-TIMING [new — dsl]
+#   The DSL `Timing` enum (digimon-dsl/src/clause.rs lines 81-125) does NOT
+#   expose `on_ally_attack` (or `on_opponent_attack`). The engine has both
+#   `EffectTiming::OnAllyAttack` and a working dispatch in combat.rs §Phase 9
+#   Task 8, but lower_triggered.rs line 180's `OnAllyAttack` arm is unreachable
+#   from DSL because no `CompiledTiming::OnAllyAttack` exists.
+#
+#   Workaround used here: `when: when_attacking`. Both `when_attacking` and
+#   `on_ally_attack` are dispatched via `TriggerSource::PlayerBattleArea(attacker_player)`
+#   in combat.rs. The only behavioral difference is that OnAllyAttack also
+#   filters out the attacker itself, while WhenAttacking keeps it. Because Tai
+#   is a Tamer (Tamers never declare attacks), the source_permanent firing
+#   THIS clause can never coincide with the attacker — so the WhenAttacking
+#   path is faithful to "When one of your Digimon attacks" for a Tamer source.
+#
+#   When G-DSL-ON-ALLY-ATTACK-TIMING closes (add `OnAllyAttack` to
+#   `digimon_dsl::clause::Timing` and `compiled::CompiledTiming`, plus the
+#   timing_map.rs entry), swap `when: when_attacking` to `when: on_ally_attack`
+#   for clarity — but the runtime behavior is identical for this card.
+#
+# DCGO observer firing on EffectTiming.OnAllyAttack:
+#   CanUseCondition:
+#     - IsExistOnBattleArea(card)         → on_field gate
+#     - IsOwnerTurn(card)                 → active_when your_turn: true
+#     - CanActivateSuspendCostEffect(card) → Tai must be unsuspended (cost)
+#     - CanTriggerOnPermanentAttack(... PermanentCondition) where
+#       PermanentCondition = IsPermanentExistsOnOwnerBattleAreaDigimon(perm, card)
+#       → the attacker must be one of Tai's controller's permanents AND a Digimon.
+#
+# Note: combat.rs lines 2213-2231 dispatch OnAllyAttack across the
+# attacker-controller's PlayerBattleArea and explicitly drop only the
+# attacker's own slot from the queue. Tai (a separate permanent on the same
+# player's battle area) IS included as an observer — exactly the wiring we
+# want for "your Digimon attacks".
+#
+# Cost-failure semantics: if Tai is already suspended (`is_unsuspended: false`),
+# the `is_unsuspended: true` condition gate blocks activation entirely. This
+# matches DCGO's CanActivateSuspendCostEffect check.
+#
+# ─── Clause (c): [Main][OPT] play ADVENTURE/Hero — BLOCKED ────────────────────
+#
+# DCGO BT21_102.cs Main body:
+#   - SelectHandEffect: canTargetCondition CanSelectCard(source) =
+#       source.HasPlayCost
+#       && source.BasePlayCostFromEntity <= AdjustedPlayCostMax(source)
+#       && (source.HasAdventureTraits || source.HasHeroTraits);
+#   - AdjustedPlayCostMax(card) = 2 + Combinations.GetDifferenetColorCardCount(
+#         card.Owner.GetBattleAreaPermanents().Filter(p => p.IsTamer)
+#                    .Select(p => p.TopCard).ToList());
+#   - PlayPermanentCards(payCost: false) on the chosen card.
+#   - DeckBottomBounceClass([Tai's permanent]) — return self to deck bottom.
+#
+# Two reusable DSL gaps prevent a faithful implementation:
+#
+#   G-PLAY-COST-LTE-FORMULA [new — dsl]
+#     `play_cost_lte` on PredicateSpec is `Option<i32>` literal only
+#     (digimon-dsl/src/predicate.rs line 59). It does not accept a formula.
+#     Even if a `distinct_tamer_colors` formula existed, we could not pass
+#     it through `select_hand` filtering as a play-cost ceiling.
+#     Same gap surface as G-PLAY-COST-LTE in qa/dsl-vocab-gaps.md but for the
+#     formula-valued variant rather than a literal.
+#
+#   G-DSL-DISTINCT-TAMER-COLORS-FORMULA [known — dsl]
+#     Already documented for AD1-014. No formula primitive counts distinct
+#     colors across own Tamers in battle area. Would lower to a future
+#     CompiledFormula::DistinctColorsCount { of, zone, filter } that maps to
+#     an engine helper paralleling DCGO's
+#     Combinations.GetDifferenetColorCardCount.
+#
+# Implementing with a hardcoded `play_cost_lte: 2` would silently drop the
+# "+1 per distinct Tamer color" bonus — a mute approximation that violates
+# the no-approximations policy (the player would never see legal targets
+# enabled by additional Tamer colors, and the RL agent could not learn the
+# Tamer-color synergy). Implementing without the cost filter would be
+# over-permissive and let the player play arbitrarily expensive cards free.
+#
+# Both directions break the contract; the clause is OMITTED from this YAML
+# pending one of the two gaps closing. The companion behavioral test
+# `bt21_102_main_opt_play_adventure_hero_with_dynamic_cap` is `#[ignore]`'d
+# with the gap names cited in the ignore reason.
+#
+# Suggested YAML when the gaps close:
+#
+#   - when: main_from_field
+#     once_per_turn: true
+#     optional: true
+#     summary: "[Main][OPT] Play ADVENTURE/Hero card cost ≤ 2+colors free; return self to deck bottom"
+#     process:
+#       - select_hand:
+#           of: you
+#           bind_as: pick
+#           optional: true
+#           filter:
+#             all_of:
+#               - any_of:
+#                   - trait_has: ADVENTURE
+#                   - trait_has: Hero
+#               - play_cost_lte:
+#                   formula:
+#                     base: 2
+#                     per:
+#                       distinct_colors_count:
+#                         of: you
+#                         zone: [battle_area]
+#                         filter: { kind: tamer }
+#                     delta: 0
+#           prompt: "Play 1 ADVENTURE/Hero card free (cost ≤ 2 + your Tamers' colors)"
+#       - play_from_hand_free: { of: you, hand_index: pick }
+#       - return_to_deck: { target: source, position: bottom }
+#
+# (Note: `main_from_field` is the natural Tamer-active timing analogue of
+# DCGO `OnDeclaration` for tamers; see also EX11-054 / BT24-082 for tamer
+# main-phase clauses.)
+#
+# ─── Clause (d): [Security] play self free ───────────────────────────────────
+#
+# Standard play_from_security pattern shared by BT18-087, BT22-084, BT21-015.
+
+effects:
+  # ─── Clause (a): [Start of Your Turn] memory floor 3 ─────────────────────────
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If memory <= 2, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  # ─── Clause (b): [Your Turn] on_ally_attack — suspend self, draw 1 ───────────
+  # optional: true — "by suspending this Tamer" is the activation cost.
+  # active_when: { your_turn: true } — [Your Turn] scope.
+  # Condition: Tai must be on field AND unsuspended (so the suspend cost can
+  # be paid). DCGO additionally checks the attacker is a Digimon belonging to
+  # Tai's controller, but the engine's OnAllyAttack fan-out already restricts
+  # firing to the attacker-controller's PlayerBattleArea (combat.rs §Phase 9
+  # Task 8), so the controller half is implicit. The attacker-is-Digimon half
+  # is implicit in normal play — only Digimons declare attacks in this engine.
+  # Timing: we use `when_attacking` (not `on_ally_attack`) because the DSL
+  # `Timing` enum does NOT expose `OnAllyAttack` — see DSL gap notes below.
+  # `WhenAttacking` is dispatched via TriggerSource::PlayerBattleArea on the
+  # attacker's controller (combat.rs lines 2204-2207), so it ALSO fires for
+  # this Tamer as an observer when one of the controller's Digimons attacks.
+  # For a Tamer source this is a faithful equivalent of OnAllyAttack: a Tamer
+  # is never the attacker, so the "ally" semantic ("when one of YOUR DIGIMON
+  # attacks") is preserved — the source firing this clause is always Tai, and
+  # the attacker is always a separate Digimon on the same battle area.
+  #
+  # If we ever want to gate on "the attacker is a Digimon", note that only
+  # Digimons declare attacks in the action mask, so the gate is implicit.
+  - when: when_attacking
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When ally Digimon attacks, suspend self -> draw 1"
+    condition:
+      any_permanent:
+        of: you
+        card_number_is: "BT21-102"
+        is_unsuspended: true
+    process:
+      # Cost: suspend this tamer. `source` = ctx.source_permanent (the Tamer).
+      - suspend: { target: source }
+      # Effect: draw 1 card.
+      - draw: { of: you, count: 1 }
+
+  # ─── Clause (c): [Main][OPT] BLOCKED — see header for gap analysis ──────────
+  # Omitted entirely pending G-PLAY-COST-LTE-FORMULA + G-DSL-DISTINCT-TAMER-COLORS-FORMULA.
+
+  # ─── Clause (d): [Security] Play this card without paying the cost ──────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

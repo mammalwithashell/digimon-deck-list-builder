@@ -1,0 +1,205 @@
+# AD1-012 CresGarurumon — Digimon, Lv.6, Blue/Black, DP 12000, Cost 12.
+# Traits: Beast Knight, ADVENTURE
+# Evo: Lv.5 Blue / Cost 4 (printed default)
+# xros_req: Lv.5 with [Garurumon] in name OR [ADVENTURE] trait / Cost 3
+#
+# Printed card text:
+#
+# ＜Alliance＞
+# ＜Evade＞
+# [On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may return 1
+# of your opponent's lowest level Digimon to the hand. Then, this Digimon and
+# 1 of your Digimon with [Greymon] in its name may unsuspend.
+# [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks,
+# 2 of your Digimon may DNA digivolve into [Omnimon Alter-S] in the hand.
+# Then, you may change the attack target to 1 of your Digimon.
+#
+# Inherited Effect: [Your Turn] This Digimon's attack target can't change.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/AD1/Blue/AD1_012.cs
+#
+# Clause layout:
+#   Clause 1 (declarative): grant_keyword Alliance
+#   Clause 2 (declarative): grant_keyword Evade
+#   Clause 3 (triggered, multi-timing OPT):
+#     [On Play][When Digivolving][When Attacking] shared OPT body —
+#     optional bounce of opp lowest-level Digimon, then optional unsuspend
+#     of self + 1 own Greymon-named suspended Digimon.
+#   Clause 4 (BLOCKED — DSL gap):
+#     [Opponent's Turn][OPT] When opp Digimon attacks → optional DNA
+#     digivolve into Omnimon Alter-S in hand, then optional redirect attack
+#     target to 1 own Digimon. Requires DSL `on_opponent_attack` timing
+#     and `redirect_attack_target` step. See qa/dsl-vocab-gaps.md.
+#   Clause 5 (BLOCKED — engine gap):
+#     Inherited [Your Turn] "This Digimon's attack target can't change."
+#     Requires `ModifierType::CannotChangeAttackTarget` in engine enums.
+#     See qa/archetype-qa/engine-gaps.md.
+
+card: AD1-012
+name: CresGarurumon
+kind: digimon
+level: 6
+color: [blue, black]
+cost: 12
+dp: 12000
+traits: ["Beast Knight", ADVENTURE]
+
+# Standard Lv.5 Blue / Cost 4 digivolve (printed default).
+# Alt-digivolve (xros_req): Lv.5 with [Garurumon] in name OR [ADVENTURE] trait / Cost 3
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5 }
+    cost: 4
+
+  - kind: digivolve
+    from:
+      any_of:
+        - { level_eq: 5, name_contains: "Garurumon" }
+        - { level_eq: 5, trait_has: ADVENTURE }
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  # ─── Clause 1 — ＜Alliance＞ keyword grant ──────────────────────────────────
+  # DCGO: AllianceSelfEffect on EffectTiming.OnAllyAttack.
+  - kind: grant_keyword
+    keyword: Alliance
+
+  # ─── Clause 2 — ＜Evade＞ keyword grant ─────────────────────────────────────
+  # DCGO: EvadeSelfEffect on EffectTiming.WhenPermanentWouldBeDeleted.
+  - kind: grant_keyword
+    keyword: Evade
+
+  # ─── Clause 3 — Shared [On Play][When Digivolving][When Attacking][OPT] ────
+  #
+  # "You may return 1 of your opponent's lowest level Digimon to the hand.
+  #  Then, this Digimon and 1 of your Digimon with [Greymon] in its name
+  #  may unsuspend."
+  #
+  # DCGO: SharedHashString = "AD1_012_OP_WD_WA" — single OPT shared across
+  # OnEnterFieldAnyone + OnAllyAttack triggers. Multi-timing `when:` list
+  # captures the same shape; OPT is enforced via `once_per_turn: true` and
+  # the engine's per-clause OPT hash. (Cross-timing OPT lockout for shared
+  # multi-timing clauses is tracked as G-OPT-TRIGGERED — the affected
+  # behavioral test is `#[ignore]`'d until the gap closes.)
+  #
+  # Bounce select: opponent lowest-level Digimon (DCGO IsOpponentsLowestLevel
+  # via CardEffectCommons.IsMinLevel). canNoSelect: true → optional: true
+  # on the select_opponent_permanent step.
+  #
+  # The "Then ... may unsuspend" sub-block is wrapped in `optional: [...]` so
+  # the player can decline the entire unsuspend chain (DCGO's Yes/No bool
+  # selection prompt). Inside the optional substep:
+  #   - unsuspend self
+  #   - select_own_permanent name_contains "Greymon", is_suspended, other,
+  #     optional (DCGO canNoSelect: false guarded by HasMatchConditionOwnersPermanent;
+  #     when no eligible Greymon exists, the select prompt simply doesn't install)
+  #   - unsuspend the picked Greymon
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    summary: "Return opp lowest-level Digimon to hand; then may unsuspend self + 1 Greymon"
+    process:
+      # Step 1 — optional bounce of opp's lowest-level Digimon.
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_matches_aggregate:
+                  selector: lowest_level
+                  of: opponent
+          prompt: "Return 1 of your opponent's lowest level Digimon to hand"
+      - return_to_hand: { target: bounce_target }
+      # Step 2 — optional sub-block: "Then, this Digimon and 1 [Greymon] may unsuspend"
+      # NOTE: `target: source` (NOT `self`) because Unsuspend dispatches on
+      # ResolvedBinding::Permanent, and SelfRef resolves to Card while Source
+      # resolves to source_permanent. See dsl_cards/binding_ref.rs.
+      - optional:
+          - unsuspend: { target: source }
+          - select_own_permanent:
+              bind_as: greymon_pick
+              optional: true
+              filter:
+                all_of:
+                  - kind: digimon
+                  - name_contains: "Greymon"
+                  - is_suspended: true
+                  - other: true
+              prompt: "Select 1 of your suspended [Greymon] to unsuspend"
+          - unsuspend: { target: greymon_pick }
+
+  # ─── Clause 4 — BLOCKED ────────────────────────────────────────────────────
+  #
+  # "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon
+  #  attacks, 2 of your Digimon may DNA digivolve into [Omnimon Alter-S]
+  #  in the hand. Then, you may change the attack target to 1 of your Digimon."
+  #
+  # BLOCKED on TWO DSL vocab gaps:
+  #   1. `on_opponent_attack` Timing variant — code/digimon-dsl/src/clause.rs:83
+  #      enum Timing has no OnOpponentAttack entry, and compile.rs:173 maps
+  #      no Timing → CompiledTiming::OnOpponentAttack. The engine *does* expose
+  #      `Effect::on_opponent_attack` (effect.rs:427) and the lowering layer
+  #      (lower_triggered.rs:181) handles `EffectTiming::OnOpponentAttack`,
+  #      but the DSL surface can't currently route a clause there.
+  #   2. `redirect_attack_target` step verb — code/digimon-dsl/src/step.rs has
+  #      no entry for it. The engine has `EffectContext::redirect_attack`
+  #      (effect_context/mod.rs:3099). DCGO uses `attackProcess.SwitchDefender`
+  #      with canNoSelect: true (optional pick).
+  #
+  # Once both gaps close, the clause shape will be:
+  #
+  # - when: on_opponent_attack
+  #   active_when: { opponents_turn: true }
+  #   once_per_turn: true
+  #   optional: true
+  #   process:
+  #     # Optional DNA into Omnimon Alter-S (effect-initiated, payCost: true).
+  #     - select_hand:
+  #         of: you
+  #         bind_as: alters_card
+  #         optional: true
+  #         filter: { kind: digimon, name_is: "Omnimon Alter-S" }
+  #     - select_dna_pair:
+  #         left_filter:  { kind: digimon, of: you }
+  #         right_filter: { kind: digimon, of: you }
+  #         bind_left_as: dna_a
+  #         bind_right_as: dna_b
+  #         optional: true
+  #     - effect_initiated_dna_digivolve:
+  #         target_a: dna_a
+  #         target_b: dna_b
+  #         from_hand: alters_card
+  #         cost: 0
+  #         ignore_requirements: false
+  #     # Optional redirect of the in-flight attack to 1 own Digimon.
+  #     - select_own_permanent:
+  #         bind_as: redirect_target
+  #         optional: true
+  #         filter: { kind: digimon }
+  #         prompt: "Change the attack target to 1 of your Digimon"
+  #     - redirect_attack_target: { new_target: redirect_target }
+
+  # ─── Clause 5 — BLOCKED ────────────────────────────────────────────────────
+  #
+  # Inherited Effect: [Your Turn] "This Digimon's attack target can't change."
+  #
+  # BLOCKED on engine gap: ModifierType::CannotChangeAttackTarget.
+  #   - code/digimon-engine/src/enums.rs:463-575 ModifierType enum has no
+  #     CannotChangeAttackTarget variant. The closest is CannotAttackTarget
+  #     (which prevents attacking specific targets, not target redirection).
+  #   - DCGO uses `CanNotSwitchAttackTargetClass` with PermanentCondition
+  #     `permanent == card.PermanentOfThisCard()` — i.e. only protects this
+  #     specific Digimon (the source carrying the inherited effect).
+  #
+  # Once the engine gap closes, the clause shape will be:
+  #
+  # - kind: aura
+  #   scope: inherited
+  #   active_when: { your_turn: true }
+  #   target: self
+  #   grant_modifier:
+  #     modifier: CannotChangeAttackTarget
+  #     value: 1

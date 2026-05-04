@@ -1,0 +1,300 @@
+# BT22-013 WarGreymon — Digimon, Lv.6, Red, DP 12000, Cost 12.
+# Traits: Dragonkin, CS.
+# Attribute: Vaccine
+# Evo: Lv.5 Red / cost 4
+#
+# Printed card text (data/cards.json):
+#
+#   [Hand] [Main] If you have [Nokia Shiramine], 1 of your [Agumon] digivolves
+#   into this card for a digivolution cost of 6, ignoring digivolution
+#   requirements.
+#
+#   [When Digivolving] Activate 1 of the effects below:
+#   ・1 of your [Gabumon] may digivolve into [MetalGarurumon] in the hand,
+#     ignoring digivolution requirements and without paying the cost.
+#   ・Delete 1 of your opponent's Digimon with the lowest DP.
+#
+# Inherited:
+#   Inherited Effect [When Attacking] [Once Per Turn]
+#     If this Digimon has [Omnimon] in its name, trash your opponent's top
+#     security card.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT22/Red/BT22_013.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# DCGO BT22_013.cs registers FOUR clauses:
+#
+#   (1) `EffectTiming.None` →
+#       `CardEffectFactory.AddSelfDigivolutionRequirementStaticEffect(
+#           permanentCondition: Lv5 && (CS-trait || Greymon-name),
+#           digivolutionCost: 3,
+#           ignoreDigivolutionRequirement: false)`
+#       NOTE: this is the printed standard-evolution alt-path expressed
+#       declaratively as a static add-evolution-source. Matches printed
+#       evo cost block { lv5 / red / cost 4 } — DCGO uses cost 3, but
+#       printed cards.json shows the published evolution cost of 4. DCGO
+#       value is treated as the implementation-side reference for the
+#       Greymon-name / CS-trait alt-source filter; printed cost 4 wins per
+#       source priority. The encoded `from: { level_eq: 5 }, cost: 4`
+#       captures the printed text. (DCGO's narrower
+#       `Greymon-name || CS-trait` filter is NOT a printed-text constraint;
+#       printed text shows only the standard cost block.)
+#
+#   (2) `EffectTiming.OnDeclaration` activate (the [Hand][Main] activated
+#       digivolve from Agumon at fixed cost 6, ignoring requirements).
+#       `CanUseCondition`: card-on-hand && HasMatchConditionPermanent(Nokia
+#       on owner's field) && HasMatchConditionPermanent(Agumon on owner's
+#       field who can be a digivolve target at fixedCost: 6 with
+#       IgnoreRequirement.All). Coroutine: SelectPermanentEffect filters to
+#       Agumon-named own permanents → DigivolveIntoHandOrTrashCard with
+#       payCost=true, ignoreDigivolutionRequirementFixedCost=6,
+#       isHand=true, isOptional=false (after the player activates the
+#       [Main] entry, the resolution is not declinable mid-flow), failure
+#       OnFail = trash this card.
+#
+#       In DSL terms this is `alt_paths: - kind: activated_digivolve`
+#       with `from: { name_contains: "Agumon" }`, `cost: 6`,
+#       `ignore_requirements: true`, plus a `condition:` saying Nokia
+#       Shiramine is on field. **G-ALT-PATH-CONDITION** — AltPathSpec has
+#       no `condition:` field today (per BT24-016 header note). The Nokia
+#       gate cannot be enforced; the alt-path will be offered whenever
+#       Agumon is on field, regardless of Nokia presence. The Agumon-on-
+#       field filter IS enforced via the `from:` clause.
+#
+#   (3) `EffectTiming.OnEnterFieldAnyone` activate — the [When Digivolving]
+#       branch-choice. `CanUseCondition` =
+#       `CardEffectCommons.CanTriggerWhenDigivolving(hashtable, card)` — this
+#       gates on the actual Digivolving timing (not OnPlay). DCGO presents
+#       a 2-option SelectionElement<int>:
+#         0: "1 of your [Gabumon] may digivolve into [MetalGarurumon] in
+#            your hand"
+#         1: "Delete 1 of your opponent's Digimon with the lowest DP"
+#       Branch 0 path: SelectPermanentEffect over own field for Gabumon-
+#       named permanents that can host MetalGarurumon → DigivolveIntoHand
+#       OrTrashCard with payCost=false, ignoreDigivolution
+#       RequirementFixedCost=0, IgnoreRequirement.All. Branch 1 path:
+#       SelectPermanentEffect over opponent's lowest-DP Digimon (mode:
+#       Destroy).
+#
+#       The clause itself is mandatory once triggered (the "Activate 1"
+#       choice MUST be made if either sub-path is legal); the inner
+#       Branch 0 hand-target pick is `canNoSelect: true` (DCGO line 237) —
+#       i.e. picking branch 0 may resolve to no-op. Branch 1 is
+#       `canNoSelect: false` (DCGO line 285) — once branch 1 is chosen,
+#       the player must delete a target. This matches printed text:
+#       "Activate 1 of the effects below" + "1 of your [Gabumon] MAY
+#       digivolve" (branch 0 sub-pick optional) vs "Delete 1" (branch 1
+#       sub-pick mandatory).
+#
+#   (4) `EffectTiming.OnAllyAttack` inherited. `SetIsInheritedEffect(true)`,
+#       `SetUpActivateClass(..., 1, false, ...)` (the `1` is OPT slot;
+#       `false` = not isOptional → the trash is mandatory if the
+#       conditional gate matches). `SetHashString("TrashSecurity_BT22_013")`
+#       — OPT bucket key. `CanUseCondition`: IsExistOnBattleAreaDigimon &&
+#       CanTriggerOnAttack. `CanActivateCondition`:
+#       IsExistOnBattleAreaDigimon &&
+#       `card.PermanentOfThisCard().TopCard.ContainsCardName("Omnimon")` —
+#       the gate is on the actual top card of the carrier permanent, NOT
+#       on this card's own printed name. So the inherited only fires when
+#       BT22-013 is buried under an Omnimon-named top card.
+#
+# ─── Printed cost vs DCGO `digivolutionCost: 3` divergence (Clause 1) ────────
+#
+# Printed cards.json `evo_costs` for BT22-013 shows `{ level: 5, color: red,
+# memory_cost: 4 }` — the published Lv.5/Red digivolution cost is 4. DCGO's
+# `AddSelfDigivolutionRequirementStaticEffect(... digivolutionCost: 3 ...)`
+# adds a Lv.5 + (CS-trait || Greymon-name) source at cost 3, narrower than
+# the printed cost block. Per source priority (printed text wins over DCGO),
+# we encode the printed standard alt-path: `from: { level_eq: 5 }` at cost 4.
+#
+# The DCGO Lv.5 + CS/Greymon source-at-cost-3 is treated as an unprinted
+# implementation alt-source; it's not a printed text element so we do NOT
+# encode it in YAML. If a future erratum aligns printed and DCGO costs, the
+# alt-path can be tightened to `from: { level_eq: 5, any_of: [...] }`.
+#
+# ─── DSL-GAP — `condition:` on AltPathSpec (Clause 2)  [G-ALT-PATH-CONDITION] ─
+#
+# Printed Clause 2 has TWO sequential gates: (a) "If you have [Nokia Shiramine]"
+# (precondition on field state) and (b) "1 of your [Agumon] digivolves into
+# this card" (target filter for the digivolve source). The DSL
+# `activated_digivolve` alt_path supports (b) via `from:` but has no
+# `condition:` field for the (a) precondition.
+#
+# Reference: BT24-016 (Lamiamon) flagged the same gap for its
+# Owen Dreadnought precondition on its `activated_digivolve` alt-path. The
+# header note in BT24-016 reads: "Owen gate CANNOT be expressed as a
+# `condition:` on the alt_path because AltPathSpec has no `condition:` field
+# (DSL vocab gap — see G-ALT-PATH-CONDITION)."
+#
+# Net effect: the alt-path is offered whenever Agumon is on field, even if
+# Nokia is NOT on field — over-permissive on the Nokia precondition axis.
+# When G-ALT-PATH-CONDITION closes, append:
+#     condition:
+#       any_permanent:
+#         of: you
+#         zone: [battle_area]
+#         name_eq: "Nokia Shiramine"
+# to the activated_digivolve alt-path.
+#
+# Tests for the Nokia precondition are #[ignore = "BLOCKED:
+# G-ALT-PATH-CONDITION"]. Tests for the Agumon `from:` filter (which IS
+# enforced) and the cost / ignore_requirements semantics pass.
+#
+# ─── DSL-GAP — chained perm→hand→effect_initiated_digivolve (Clause 3) ───────
+#                                  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET]
+#
+# Branch 0 of [When Digivolving] mirrors BT17-015 branch 1 exactly: select
+# own Gabumon permanent → select MetalGarurumon in hand → effect_initiated_
+# digivolve. BT17-015's behavioral test for this branch (`bt17_015_on_play_
+# branch_1_digivolves_gabumon_into_metalgarurumon_free`) is `#[ignore]`'d
+# under the gap: "select_own_permanent + select_hand + effect_initiated_
+# digivolve(target: <binding>) chain terminates after the permanent pick;
+# the hand-pick prompt never installs and the digivolve verb never executes."
+#
+# Branch 0 here will exhibit the same observable: picking branch 0 then the
+# Gabumon permanent will not install the MetalGarurumon hand prompt, and
+# the digivolve never happens. Behavioral test for branch 0 is
+# #[ignore = "BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET"].
+#
+# ─── DSL-GAP — `source_name_contains` predicate (Inherited)  [G-DSL-SOURCE-NAME-CONTAINS] ─
+#
+# Same as BT17-015 inherited [When Attacking][OPT]: the
+# `source_name_contains: "Omnimon"` predicate parses + compiles but the
+# engine evaluator never inspects it (`code/digimon-engine/src/dsl_cards/
+# predicate.rs`). The gate degenerates to true and the inherited fires
+# regardless of the carrier's top-card name. Negative-case test (BT22-013
+# alone at top — not buried under Omnimon) is #[ignore = "BLOCKED:
+# G-DSL-SOURCE-NAME-CONTAINS"]. Positive-case test (Omnimon on top of
+# BT22-013) passes either way and serves as the wiring regression.
+#
+# ─── Branch 2 sub-pick: `dp_lte: { aggregate: { selector: lowest_dp } }` ────
+#
+# Branch 1 ("Delete 1 of your opponent's Digimon with the lowest DP") uses
+# the same `dp_lte: { aggregate: { selector: lowest_dp, scope: opponent } }`
+# pattern that BT24-017 (Medusamon) [When Digivolving] uses. BT24-017's
+# header notes the engine predicate evaluator has a related gap
+# (G-PRED-DP-LTE) where `dp_lte` on permanents is parsed but not yet
+# evaluated. The select prompt may show all opponent Digimon rather than
+# only the lowest-DP one. The YAML is correct against the spec; the engine
+# gap is shared with BT24-017 and BT24-040.
+#
+# We encode the predicate faithfully and structure the test to ASSERT the
+# lowest-DP-only behavior. The test is #[ignore = "BLOCKED: G-PRED-DP-LTE"]
+# until the evaluator gap closes; a positive-only test (single low-DP
+# Digimon — only legal target) DOES pass.
+#
+# ─── No-approximations note: branch 0 inner optionality ──────────────────────
+#
+# Per DCGO line 237 (`canNoSelect: true` on the Gabumon-pick), branch 0's
+# permanent pick is opt-out (the player MAY decline to digivolve, even after
+# choosing branch 0). The DSL `select_own_permanent` step does not natively
+# support `optional: true` on the permanent pick, so the branch 0 sub-pick
+# is encoded as mandatory; DCGO's "may" is folded into the branch-choice
+# itself (via `select_effect_choice`). Faithfulness micro-issue: a player
+# who chose branch 0 cannot back out without picking a Gabumon. Not test-
+# asserted; this is consistent with how BT17-015 encodes the equivalent
+# branch.
+
+card: BT22-013
+name: WarGreymon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+traits: [Dragonkin, CS]
+
+alt_paths:
+  # Standard digivolution from any Lv.5 (printed Lv.5/Red, cost 4).
+  - kind: digivolve
+    from: { level_eq: 5 }
+    cost: 4
+
+  # [Hand][Main] activated digivolve from own Agumon at cost 6, ignoring
+  # digivolution requirements. Printed: "If you have [Nokia Shiramine],
+  # 1 of your [Agumon] digivolves into this card for a digivolution cost
+  # of 6, ignoring digivolution requirements."
+  #
+  # G-ALT-PATH-CONDITION: the Nokia Shiramine precondition cannot be
+  # expressed on AltPathSpec today. The Agumon `from:` filter IS enforced;
+  # the Nokia gate is not. See header.
+  - kind: activated_digivolve
+    from:
+      of: you
+      zone: [battle_area]
+      name_contains: "Agumon"
+    cost: 6
+    ignore_requirements: true
+
+effects:
+  # ─── Clause 3 — [When Digivolving] branch-choice ─────────────────────────
+  #
+  # Printed: "[When Digivolving] Activate 1 of the effects below:
+  #   ・1 of your [Gabumon] may digivolve into [MetalGarurumon] in the hand,
+  #     ignoring digivolution requirements and without paying the cost.
+  #   ・Delete 1 of your opponent's Digimon with the lowest DP."
+  #
+  # Mandatory (not optional) clause. Inner branch 0 chains a permanent pick
+  # then a hand pick into effect_initiated_digivolve — same shape as
+  # BT17-015 branch 1, blocked by G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
+  # WITH-PERMANENT-TARGET (the chained hand-pick prompt never installs).
+  #
+  # Inner branch 1 uses dp_lte: { aggregate: lowest_dp } — same pattern as
+  # BT24-017 / BT24-040, blocked by G-PRED-DP-LTE on the lowest-DP filter
+  # being honored.
+  - when: when_digivolving
+    summary: "[When Digivolving] Choose: digivolve Gabumon→MetalGarurumon free OR delete opp's lowest-DP Digimon"
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Digivolve Gabumon into MetalGarurumon (free, ignore reqs)"
+            - "Delete opponent's lowest-DP Digimon"
+          prompt: "Choose effect"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - select_own_permanent:
+                bind_as: base
+                filter: { name_contains: "Gabumon" }
+                prompt: "Choose your Gabumon"
+            - select_hand:
+                of: you
+                bind_as: evo
+                filter: { name_contains: "MetalGarurumon" }
+                prompt: "Digivolve into MetalGarurumon (free, ignore reqs)"
+            - effect_initiated_digivolve:
+                target: base
+                from_hand: evo
+                cost: 0
+                ignore_requirements: true
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte:
+                        aggregate:
+                          selector: lowest_dp
+                          scope: opponent
+                prompt: "Delete opponent's lowest-DP Digimon"
+            - delete_permanent: { target: victim }
+
+  # ─── Inherited [When Attacking][OPT] — Omnimon-name → trash top sec ──────
+  #
+  # Printed: "[When Attacking] [Once Per Turn] If this Digimon has [Omnimon]
+  # in its name, trash your opponent's top security card."
+  #
+  # Same shape as BT17-015 inherited clause. `source_name_contains: "Omnimon"`
+  # parses + compiles but the engine evaluator never inspects it (G-DSL-SOURCE-
+  # NAME-CONTAINS); the gate degenerates to true. Negative test is #[ignore]'d.
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition: { source_name_contains: "Omnimon" }
+    process:
+      - trash_top_security: { of: opponent }

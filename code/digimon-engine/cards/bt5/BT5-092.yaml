@@ -1,0 +1,138 @@
+# BT5-092 Nokia Shiramine — Tamer, White, Cost 3.
+#
+# Printed card text (cards.json):
+#   [On Play] You may play 1 [Agumon] or [Gabumon] from your hand without
+#     paying the cost.
+#   [Your Turn] When one of your Digimon would digivolve into a Digimon card
+#     in your hand with [Greymon], [Garurumon] or [Omnimon] in its name, by
+#     suspending this Tamer, reduce the digivolution cost by 1.
+#
+# Inherited (Security):
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT5/White/BT5_092.cs
+#
+# Clause map:
+#   Clause 1: [On Play]   — optional select_hand Agumon/Gabumon → play_from_hand_free
+#   Clause 2: [Your Turn] — cost reduction on ally-Digimon digivolve INTO a
+#                            Greymon/Garurumon/Omnimon-named hand Digimon, paid
+#                            for by suspending this Tamer (BLOCKED — see below)
+#   Clause 3: [Security]  — play_from_security (this Tamer plays itself for free)
+#
+# ─── Clause 2 status — BLOCKED on DSL vocab gap ─────────────────────────────
+#
+# `CostReductionBody` (digimon-dsl/src/clause.rs) currently exposes:
+#   - `when_playing_this: bool`            — observer on THIS card being played
+#   - `when_any_ally_played: PredicateSpec` — observer on an ally entering field
+#
+# It has no `when_this_digivolves_into` (or `when_any_ally_digivolves_into`)
+# trigger form keyed on the target hand card's name. BT5-092 needs the latter
+# variant: "when ANY of MY Digimon would digivolve into a hand card whose
+# name contains Greymon / Garurumon / Omnimon." Furthermore the engine path
+# `scan_before_pay_cost_reduction` does not thread the digivolution-target
+# CardSource through to the condition closure, so a predicate could not
+# inspect the target's name even if the trigger variant existed.
+#
+# This is the same root gap recorded as the BT23-005 entry in
+# qa/dsl-vocab-gaps.md (search anchor: "when_this_digivolves_into").
+# BT5-092 widens the gap to cover BOTH the "THIS permanent" (BT23-005) and
+# the "ANY of your Digimon" (BT5-092) source-card forms; the missing knob is
+# the same on both shapes.
+#
+# Until the DSL adds (a) a `when_*_digivolves_into` trigger variant with
+# `target_name_contains` / `target_trait_has` predicates AND (b) the engine
+# threads the target hand-card into `EffectReadContext`, this clause cannot
+# be expressed faithfully. We omit it from the YAML rather than emit a
+# silently-misfiring approximation. The BT23-005 precedent does the same.
+#
+# Additional missing primitive (orthogonal to the trigger gap): the cost
+# (`by suspending this Tamer`) is a player-paid resource cost on a
+# cost-reduction clause. CostReductionBody has no `pay_cost: [{ suspend_self }]`
+# step list (the `pay_cost` field exists but is unused for declarative
+# reductions, and `suspend_self` is not a recognised step kind in this
+# context). Even if the trigger gap closes, the suspend-self payment will
+# require a second pass.
+
+card: BT5-092
+name: Nokia Shiramine
+kind: tamer
+color: [white]
+cost: 3
+
+effects:
+  # ─── Clause 1: [On Play] You may play 1 [Agumon]/[Gabumon] free ────────────
+  #
+  # DCGO BT5_092.cs:15-106 — OnEnterFieldAnyone ActivateClass with
+  # SetUpActivateClass(..., isOptional: true, ...) and SelectHandEffect.SetUp
+  # (canNoSelect: true, maxCount: 1). Filter: cardSource.CardNames.Contains
+  # ("Agumon") || cardSource.CardNames.Contains("Gabumon"). Played via
+  # CardEffectCommons.PlayPermanentCards(payCost: false). The "you may"
+  # wording maps to clause-level `optional: true` and select_hand
+  # `optional: true` (player can decline either to never enter the picker
+  # or to PASS the picker once installed).
+  #
+  # Cross-reference: same shape as BT22-084 (Nokia Shiramine Lv.5) clause 2
+  # and BT5-091 Tai Kamiya — see qa/archetype-qa/dsl/ implementations.
+  - when: on_play
+    optional: true
+    summary: "[On Play] You may play 1 [Agumon] or [Gabumon] from your hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - name_contains: "Agumon"
+              - name_contains: "Gabumon"
+          prompt: "Play 1 [Agumon] or [Gabumon] from hand for free"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  # ─── Clause 2: [Your Turn] cost reduction on digivolve into ─────────────────
+  #             Greymon/Garurumon/Omnimon-named hand card.
+  #
+  # BLOCKED on DSL vocab gap (see file header). DCGO BT5_092.cs:108-269 —
+  # BeforePayCost ActivateClass that, when CanTriggerWhenPermanentWouldDigivolve
+  # fires for an OWNER battle-area permanent digivolving into a hand card with
+  # HasGreymonName || ContainsCardName("Omnimon") || HasGarurumonName, suspends
+  # this Tamer (CanActivateSuspendCostEffect + new SuspendPermanentsClass(...)
+  # then enqueues a ChangeCostClass with Cost -= 1 for the next paid cost).
+  # Hash: "Digisorption-1_BT5_092" (1-per-trigger throttling shared across
+  # copies). Once-per-trigger; not Once-per-turn.
+  #
+  # Concrete YAML shape that would lower IF the missing primitives existed:
+  #
+  #   - scope: own
+  #     kind: cost_reduction
+  #     reduction_timing: before_pay_cost
+  #     active_when: { your_turn: true }
+  #     when_any_ally_digivolves_into:
+  #       target:
+  #         any_of:
+  #           - name_contains: "Greymon"
+  #           - name_contains: "Garurumon"
+  #           - name_contains: "Omnimon"
+  #     pay_cost:
+  #       - suspend: { target: self }
+  #     amount: 1
+  #     summary: "[Your Turn] Suspend self → -1 digivolve cost when ally digivolves into
+  #              a Greymon/Garurumon/Omnimon-named hand card"
+  #
+  # Until the DSL gains `when_any_ally_digivolves_into` (target-card aware
+  # trigger) AND the suspend-self payment hook on cost_reduction clauses,
+  # this effect is intentionally omitted. The behavioral test file documents
+  # the missing branches with `#[ignore]` markers tagged to the same gap
+  # entry that BT23-005 references in qa/dsl-vocab-gaps.md.
+
+  # ─── Clause 3: [Security] Play this card without paying the cost ───────────
+  #
+  # DCGO BT5_092.cs:271-274 — SecuritySkill timing,
+  # CardEffectFactory.PlaySelfTamerSecurityEffect(card). Same primitive used
+  # by BT5-093 (Tai & Matt), BT22-084 (Nokia Lv.5), BT9-092 (Cool Boy) and
+  # other "play self from security" Tamers. Resolved precedent
+  # G-PLACE-SELF-AS-OPTION-PERMANENT (engine-gaps.md, 2026-04-27).
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

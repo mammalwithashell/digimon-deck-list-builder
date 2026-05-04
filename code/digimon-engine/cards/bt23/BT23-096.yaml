@@ -1,0 +1,340 @@
+# BT23-096 Comet Hammer — Option, Black, Cost 5.
+# Traits: CS.
+#
+# Printed card text (data/cards.json):
+#
+#   While you have a Digimon or Tamer with the [CS] trait on the field, you can
+#   ignore this card's color requirements.
+#   [Main] ＜De-Digivolve 4＞ 1 of your opponent's Digimon. (Trash up to 4 cards
+#   from the top. You can't trash past level 3 cards.) Then, place this card in
+#   the battle area.
+#   [Your Turn] When one of your [CS] trait Digimon attacks, ＜Delay＞ (By
+#   trashing this card after the placing turn, activate the effect below.)
+#   ・＜De-Digivolve 4＞ 1 of your opponent's Digimon. (Trash up to 4 cards from
+#   the top. You can't trash past level 3 cards.)
+#
+# Inherited (Security):
+#   Security Effect [Security] ＜De-Digivolve 4＞ 1 of your opponent's Digimon.
+#   (Trash up to 4 cards from the top. You can't trash past level 3 cards.)
+#   Then, place this card in the battle area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT23/Black/BT23_096.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 0 — `EffectTiming.None` IgnoreColorConditionClass.
+#   CanUseCondition: HasMatchConditionPermanent over OWN field —
+#       (IsTamer || IsDigimon) && HasCSTraits.
+#   CardCondition: cardSource == card (THIS card only — bypass scopes to
+#       BT23-096's own color requirement, not all options).
+#   Identical to BT22-099 Clause 0 with CS trait.
+#
+# Clause 1 — `EffectTiming.OptionSkill` (= [Main] play).
+#   SharedActivateCoroutine: SelectPermanentEffect over opponent battle-area
+#     Digimon, max 1, canNoSelect: false (mandatory pick when any opponent
+#     Digimon exists). Then `IDegeneration(selectedPermanent, 4, ...)` trashes
+#     up to 4 top digivolution cards (stops at level 3 per `IDegeneration`).
+#   Then CardEffectCommons.PlaceDelayOptionCards(card, activateClass) — moves
+#     this Option from hand to its controller's battle area as a Delay
+#     permanent (printed "Then, place this card in the battle area").
+#   `SetUpActivateClass(..., -1, false, ...)` → outer trigger NOT optional.
+#
+# Clause 2 — `EffectTiming.OnAllyAttack` (= [Your Turn] When ally Digimon
+#   attacks). CanUseCondition gates:
+#     - IsExistOnBattleArea(card)        → this card is on the field
+#     - CanDeclareOptionDelayEffect(card) → it's a Delay-Option AND placed-turn
+#                                            already passed (Delay activation
+#                                            window guard)
+#     - CanTriggerOnPermanentAttack(... PermanentCondition) where
+#       PermanentCondition = IsPermanentExistsOnOwnerBattleAreaDigimon(perm, card)
+#                            && permanent.TopCard.HasCSTraits
+#       → the attacker must be a CS-trait Digimon controlled by the same player.
+#   CanActivateCondition: IsExistOnBattleArea(card) && IsOwnerTurn(card).
+#   ActivateCoroutine:
+#     1. DeletePermanentAndProcessAccordingToResult on card.PermanentOfThisCard()
+#        (pays the Delay cost — trash this Option from the field).
+#     2. On success → SharedActivateCoroutine (same target+de-digi-4 body).
+#
+# Clause 3 (Security, inherited) — `EffectTiming.SecuritySkill`. Same shape as
+#   Clause 1 but `SetIsSecurityEffect(true)`. Same trail with PlaceDelayOptionCards
+#   placing this Option in the controller's battle area as a Delay permanent
+#   from the security-resolution context. DCGO has no canNoSelect — mandatory.
+#
+# ─── Source-priority audit (printed text vs DCGO) ────────────────────────────
+#
+# Printed Clauses 1 and 3 carry no "you may" — both are mandatory once the
+# trigger fires. DCGO confirms via `SetUpActivateClass(..., false, ...)` for
+# both. The inner select-1-opponent-Digimon target is mandatory IF an opponent
+# Digimon exists; when none, the entire clause silently resolves (DCGO outer
+# `HasMatchConditionPermanent` gate skips the body).
+#
+# Clause 2 ＜Delay＞ has no [OPT] — the Delay trash-cost self-limits to one
+# fire per BT23-096 in play. The "When one of your [CS] trait Digimon attacks"
+# trigger gate makes this a non-standard Delay (event-driven, not end-of-turn).
+#
+# ─── DSL precedent ─────────────────────────────────────────────────────────────
+#
+# - Clause 0 (color bypass): BT22-099 Clause 0 — `kind: flood_gate` +
+#   `modifier: IgnoreColorRequirement` + `target: { card_number_is: ... }`,
+#   gated by `any_permanent` over (CS Digimon | CS Tamer). Identical shape;
+#   only the card_number_is target differs.
+#
+# - Clause 1 (Main: select opp Digimon → de_digivolve 4 → place self):
+#   EX9-013 / BT9-112 — `select_opponent_permanent` + `de_digivolve` with
+#   amount/stop_at_level. The trailing `place_self_as_delay_option: {}` step
+#   (RESOLVED 2026-05-02 G-PLACE-SELF-AS-OPTION-PERMANENT) seats this Option
+#   in the battle area as `OptionState::Delayed`.
+#
+#   NOTE on auto-place: BT22-099 elides `place_self_as_delay_option` from its
+#   [Main] body because Clause 2 there is a standard `kind: delay` clause,
+#   which `classify_option_subtype` detects → `dispose_option` auto-seats the
+#   Option as Delayed at MainEffectDrain. For BT23-096 the [Your Turn] Delay
+#   clause is BLOCKED (see Clause 2 below) and is NOT authored as `kind: delay`
+#   — so `classify_option_subtype` would treat this card as a Standard option
+#   (not Delay), and the engine would NOT auto-seat it. We add the explicit
+#   `place_self_as_delay_option: {}` step at the tail of the [Main] body
+#   (mirroring BT17-095 Clause A) to ensure faithful "Then, place this card in
+#   the battle area" semantics regardless of the BLOCKED Clause 2.
+#
+# - Clause 3 (inherited security): same body as Clause 1, on `scope: inherited`
+#   + `when: on_security`. Same `place_self_as_delay_option: {}` tail.
+#
+# ─── BLOCKED — Clause 2 [Your Turn] Delay activation ─────────────────────────
+#
+# This clause encodes a non-standard Delay activation: the printed text says
+# "[Your Turn] When one of your [CS] trait Digimon attacks, ＜Delay＞ ・…".
+# DCGO models this as `EffectTiming.OnAllyAttack` with a CanUseCondition guard
+# `CanDeclareOptionDelayEffect` (Delay activation window) plus the CS-trait
+# attacker filter, and the body includes a self-trash step before the de-digi-4
+# body.
+#
+# Two reusable DSL gaps + one card-shaped gap prevent a faithful encoding:
+#
+#   G-DSL-ON-ALLY-ATTACK-TIMING (existing — first reported BT21-102 Tai
+#     Kamiya, 2026-05-03; see qa/dsl-vocab-gaps.md). The `digimon_dsl::clause::
+#     Timing` enum has no `OnAllyAttack` variant. The engine's `Effect::on_ally_
+#     attack` and combat.rs §Phase 9 Task 8 dispatch already exist; only the
+#     YAML surface is missing. Without this token, no triggered clause can
+#     observe an ally attack from YAML in a faithful (no-over-fire) form.
+#
+#     BT21-102 worked around this by using `when: when_attacking` because its
+#     source is a TAMER (Tamers never attack, so the "ally" semantic is
+#     preserved trivially). BT23-096's source is an OPTION (also never attacks),
+#     so the same workaround is structurally valid for the trigger-fan-out half.
+#     But — see G-ATK-TRAIT-FILTER below — the ATTACKER-trait predicate half
+#     remains unsatisfiable.
+#
+#   G-ATK-TRAIT-FILTER (existing — first reported BT21-025, 2026-04-27; see
+#     qa/dsl-vocab-gaps.md). No `attacker_trait_has` BoolPredicate exists to
+#     gate the clause on the attacking permanent's traits. Engine has the data
+#     in `TriggerContext.source_permanent` for `PlayerBattleArea(attacker_player)`
+#     fan-outs; the DSL just lacks a predicate leaf to read it. Without this,
+#     "When one of your [CS] trait Digimon attacks" cannot be expressed
+#     faithfully — only "When ANY of your Digimon attacks" can.
+#
+#     A workaround using `any_permanent: { trait_has: CS, kind: digimon, of: you }`
+#     in `condition:` does NOT solve the over-fire problem: it would gate the
+#     clause on CS-Digimon presence on the field, but still fire when a NON-CS
+#     attacker attacks while a CS Digimon merely exists elsewhere on the field.
+#     This violates no-approximations (the De-Digivolve 4 + self-trash would
+#     resolve on attacks the printed text does not authorize).
+#
+#   G-DSL-DELAY-ON-ATTACK-EVENT (NEW — this card). `kind: delay` lowering in
+#     `code/digimon-engine/src/dsl_cards/lower_delay.rs` lines 55-65 currently
+#     maps only `EndOfYourTurn` / `StartOfYourTurn` / `EndOfYourNextTurn` /
+#     `OnSuspend` / `OnUnsuspend` to specific `DelayTrigger` variants — every
+#     other CompiledTiming silently degrades to `DelayTrigger::EndOfYourNextTurn`.
+#     A `kind: delay` with `trigger: on_ally_attack` (even if G-DSL-ON-ALLY-
+#     ATTACK-TIMING closed) would be silently downgraded to "fire at end of
+#     your next turn", violating the printed "When one of your [CS] trait
+#     Digimon attacks" semantics. Closure path: extend the lowering arm to
+#     accept `OnAttack` / `OnAllyAttack` / `OnOpponentAttack` and lower them to
+#     `DelayTrigger::OnEvent(EffectTiming::OnAllyAttack)` (etc.) — same shape
+#     as the existing `OnSuspend` event-Delay path landed for BT22-098.
+#
+# This gap stack mirrors BT24-089's analysis for an Owen-Dreadnought-suspends
+# Delay activation: same root cause (`kind: delay` only honors a fixed set of
+# trigger tokens; non-standard Delay activations need a new lowering arm).
+#
+# Workaround: NONE that preserves no-approximations. Encoding the clause as
+# `kind: delay` with `trigger: on_ally_attack` would (a) parse-error if the
+# DSL Timing enum rejects `on_ally_attack`, OR (b) silently degrade to
+# end-of-your-next-turn timing if the DSL accepts it but lower_delay.rs maps
+# it to `EndOfYourNextTurn`. Encoding it as `when: when_attacking` (a triggered
+# clause, not `kind: delay`) drops the Delay semantics entirely (no self-trash
+# cost gating the activation window, no "after the placing turn" guard, no
+# DelayEffect timing, no integration with the Delay-Option subtype classifier).
+#
+# A `kind: raw_rust` no-op placeholder would preserve clause-index counts but
+# is an empty stub — the no-approximations policy forbids stubs that mute a
+# printed mandatory effect (here: a printed-may-be-relevant repeated De-Digi-4).
+# We OMIT the clause entirely and leave a structural marker comment + an
+# `#[ignore]`'d behavioral test documenting the expected behavior. Tests for
+# this clause are gated on the gap closures.
+#
+# ─── Faithfulness diff ───────────────────────────────────────────────────────
+#
+# | Card-text element                                                   | Status |
+# |---------------------------------------------------------------------|--------|
+# | Color bypass while own CS Digimon/Tamer on field                    | IMPLEMENTED (Clause 0)
+# | [Main] <De-Digivolve 4> 1 opp Digimon                               | IMPLEMENTED (Clause 1)
+# | [Main] "Then, place this card in the battle area"                   | IMPLEMENTED via place_self_as_delay_option
+# | [Your Turn] When CS-trait ally attacks → <Delay> trash + de-digi-4  | BLOCKED — see G-DSL-ON-ALLY-ATTACK-TIMING + G-ATK-TRAIT-FILTER + G-DSL-DELAY-ON-ATTACK-EVENT
+# | [Security] (inherited) <De-Digivolve 4> 1 opp Digimon               | IMPLEMENTED (Clause 2)
+# | [Security] (inherited) "Then, place this card in the battle area"   | IMPLEMENTED via place_self_as_delay_option
+
+card: BT23-096
+name: "Comet Hammer"
+kind: option
+color: [black]
+cost: 5
+traits: [CS]
+
+effects:
+  # ─── Clause 0: Color bypass (conditional IgnoreColorRequirement) ──────────
+  #
+  # Printed: "While you have a Digimon or Tamer with the [CS] trait on the
+  # field, you can ignore this card's color requirements."
+  #
+  # Mirror of BT22-099 Clause 0 — same flood_gate + IgnoreColorRequirement +
+  # any_permanent shape. BOTH gate branches require trait_has: CS per the
+  # printed text "Digimon or Tamer with the [CS] trait".
+  #
+  # The G-IGNORE-COLOR-MASK gap was RESOLVED 2026-05-02 — runtime enforcement
+  # lives in `code/digimon-engine/src/action/mask.rs` and the same helper
+  # gates `play_option_from_hand`.
+  - kind: flood_gate
+    active_when:
+      any_of:
+        - any_permanent:
+            of: you
+            kind: digimon
+            trait_has: CS
+        - any_permanent:
+            of: you
+            kind: tamer
+            trait_has: CS
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT23-096" }
+    summary: "While you have a CS Digimon or Tamer, ignore color requirements for this card"
+
+  # ─── Clause 1: [Main] <De-Digivolve 4> 1 opp Digimon + place self ─────────
+  #
+  # Printed: "[Main] ＜De-Digivolve 4＞ 1 of your opponent's Digimon. Then,
+  # place this card in the battle area."
+  #
+  # Outer trigger NOT optional (DCGO `SetUpActivateClass(..., false, ...)`;
+  # no "you may" in printed text). Inner select-1-opponent-Digimon is
+  # mandatory IF any opponent Digimon exists; the outer condition gate skips
+  # the entire body when none exists (silent no-op, matching DCGO outer
+  # HasMatchConditionPermanent skip).
+  #
+  # de_digivolve: amount: 4, stop_at_level: 3 — printed "Trash up to 4 cards
+  # from the top. You can't trash past level 3 cards." matches DCGO
+  # `IDegeneration(selectedPermanent, 4, ...)`.
+  #
+  # The trailing `place_self_as_delay_option: {}` step is REQUIRED for this
+  # card (unlike BT22-099): Clause 2 below is BLOCKED and not authored as
+  # `kind: delay`, so `classify_option_subtype` would treat this Option as
+  # Standard (not Delay). Without the explicit step the printed "Then, place
+  # this card in the battle area" semantics would be lost.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] <De-Digivolve 4> 1 opp Digimon; then place self in battle area as Delay"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Select 1 of your opponent's Digimon to De-Digivolve 4"
+      - de_digivolve:
+          target: tgt
+          amount: 4
+          stop_at_level: 3
+      - place_self_as_delay_option: {}
+
+  # ─── Clause 2: [Your Turn] When CS-trait ally attacks → <Delay> ───────────
+  #
+  # Printed: "[Your Turn] When one of your [CS] trait Digimon attacks,
+  # ＜Delay＞ (By trashing this card after the placing turn, activate the
+  # effect below.)
+  # ・＜De-Digivolve 4＞ 1 of your opponent's Digimon."
+  #
+  # BLOCKED: simultaneous closure of three gaps required —
+  #   - G-DSL-ON-ALLY-ATTACK-TIMING (existing — DSL Timing enum lacks
+  #     OnAllyAttack/OnOpponentAttack variants; first reported BT21-102)
+  #   - G-ATK-TRAIT-FILTER (existing — no attacker_trait_has predicate;
+  #     first reported BT21-025)
+  #   - G-DSL-DELAY-ON-ATTACK-EVENT (NEW — kind: delay lowering doesn't
+  #     map on_attack timings to DelayTrigger::OnEvent; lower_delay.rs
+  #     would silently degrade to EndOfYourNextTurn)
+  #
+  # See the file header for the full gap analysis. No faithful workaround:
+  # using `when: when_attacking` (without kind: delay) drops Delay semantics;
+  # using `condition: any_permanent { trait_has: CS, of: you }` over-fires
+  # on non-CS attackers while a CS Digimon exists elsewhere.
+  #
+  # When the gaps close, the intended YAML is:
+  #
+  #   - kind: delay
+  #     trigger: on_ally_attack
+  #     active_when:
+  #       all_of:
+  #         - your_turn: true
+  #         - attacker_trait_has: CS
+  #         - attacker_kind: digimon  # or attacker_owner_is_you (auto from fan-out)
+  #     summary: "[Your Turn]<Delay> When CS Digimon attacks, trash self -> <De-Digivolve 4>"
+  #     process:
+  #       - delete_permanent: { target: source }   # pays the Delay trash cost
+  #       - if:
+  #           condition:
+  #             any_permanent:
+  #               of: opponent
+  #               zone: [battle_area]
+  #               kind: digimon
+  #           then:
+  #             - select_opponent_permanent:
+  #                 bind_as: tgt
+  #                 filter: { kind: digimon }
+  #                 prompt: "Select 1 of your opponent's Digimon to De-Digivolve 4"
+  #             - de_digivolve:
+  #                 target: tgt
+  #                 amount: 4
+  #                 stop_at_level: 3
+  #
+  # OMITTED until the gap stack closes. Behavioral test
+  # `bt23_096_your_turn_cs_attack_delay_dedigi4_BLOCKED` is `#[ignore]`'d
+  # citing all three gap names.
+
+  # ─── Clause 3: [Security] (inherited) <De-Digivolve 4> + place self ───────
+  #
+  # Printed inherited: "Security Effect [Security] ＜De-Digivolve 4＞ 1 of
+  # your opponent's Digimon. Then, place this card in the battle area."
+  #
+  # Same body as Clause 1 (DCGO factors via SharedActivateCoroutine). DCGO has
+  # no canNoSelect — mandatory. `place_self_as_delay_option: {}` (RESOLVED
+  # 2026-05-02 G-PLACE-SELF-AS-OPTION-PERMANENT) places this Option from the
+  # security-resolution context as `OptionState::Delayed`.
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security][Inherited] <De-Digivolve 4> 1 opp Digimon; then place self in battle area as Delay"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Select 1 of your opponent's Digimon to De-Digivolve 4"
+      - de_digivolve:
+          target: tgt
+          amount: 4
+          stop_at_level: 3
+      - place_self_as_delay_option: {}

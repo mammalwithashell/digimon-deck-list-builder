@@ -1,0 +1,123 @@
+card: P-123
+name: Ukkomon
+kind: digimon
+level: 3
+color: [white]
+cost: 3
+dp: 2000
+traits: [Ancient Fairy]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+
+# Printed text (cards.json):
+# "[Your Turn] [Once Per Turn] When one of your Digimon moves from the
+# breeding area to the battle area, you may hatch in your breeding area.
+# Then, gain 1 memory."
+#
+# DCGO C# (DCGO/Assets/Scripts/CardEffect/P/White/P_123.cs):
+#   timing == EffectTiming.OnMove
+#   ActivateClass with description "[Your Turn] [Once Per Turn] When one of
+#   your Digimon moves from the breeding area to the battle area, you may
+#   hatch in your breeding area. Then, gain 1 memory."
+#   CanUseCondition (gating):
+#     1. CardEffectCommons.IsExistOnBattleArea(card)         — Ukkomon on field
+#     2. CardEffectCommons.IsOwnerTurn(card)                 — your turn
+#     3. CardEffectCommons.CanTriggerOnMove(...)             — a Digimon moved
+#        with PermanentCondition = IsPermanentExistsOnOwnerBattleAreaDigimon
+#        (i.e. one of THIS owner's Digimon)
+#   ActivateCoroutine (body):
+#     - if (card.Owner.CanHatch) {
+#         BoolSelection: "Hatch" / "Not hatch"
+#         if (doHatch) HatchDigiEggClass.Hatch();
+#       }
+#     - card.Owner.AddMemory(1, activateClass);              — UNCONDITIONAL
+#
+# Important: gain_memory(1) is OUTSIDE both the `if (CanHatch)` block AND the
+# `if (doHatch)` block. The hatch is the optional sub-step; the +1 memory
+# always fires once the trigger condition is met.
+#
+# Engine availability (G-ON-MOVE: RESOLVED 2026-04-29):
+#   - EffectTiming::OnMove + Effect::on_move(card) live in src/effect.rs.
+#   - DSL `when: on_move` lowers to CompiledTiming::OnMove.
+#   - game_actions::move_from_breeding enqueues OnMove with
+#     TriggerSource::MovedFromBreeding { player, permanent, card } so
+#     event-context predicates (event_target_kind, event_target_owner,
+#     event_target_trait_has) see the moved permanent/top card.
+#   - Dispatch only scans the moving player's own battle area (effect_queue.rs
+#     ~line 221), so observer-side over-fire is not a concern.
+#
+# Trigger gating in DSL:
+#   - active_when: { your_turn: true }            → [Your Turn]
+#   - once_per_turn: true                         → [Once Per Turn] (best-effort;
+#     blocked at runtime by G-OPT-TRIGGERED until that gap closes)
+#   - condition: any_permanent of:you, zone:battle_area, card_number_is "P-123"
+#                                                 → Ukkomon must be on the field
+#   - condition: event_target_owner: you, event_target_kind: digimon
+#                                                 → "one of your Digimon" gate
+#                                                   (the dispatch already only
+#                                                   fires on the moving player's
+#                                                   own BA; this is a defensive
+#                                                   double-gate that also makes
+#                                                   the predicate explicit for
+#                                                   readers).
+#
+# Body modelling — "you may hatch ... Then, gain 1 memory":
+#   Per RULES_CONTEXT.md / printed text, "you may hatch" is the optional
+#   sub-step; "Then, gain 1 memory" is unconditional. We surface the choice
+#   via select_effect_choice (no clause-level optional, so memory always
+#   fires) — same shape as the documented BT16-082 resolution body and
+#   BT17-102 Clauses 3/4 (Play / Hatch branch).
+#
+#     - select_effect_choice:
+#         labels: ["Hatch", "Don't hatch"]
+#         bind_as: do_hatch
+#     - if: { condition: { equals: [do_hatch, 0] }, then: [hatch: { of: you }] }
+#     - gain_memory: 1   # mandatory tail
+#
+# `hatch: { of: you }` is a no-op when CanHatch is false (digi-egg deck empty
+# OR breeding area occupied). The agent still sees the choice action ID in
+# the action mask even when the actual hatch resolves to a no-op, which keeps
+# the no-approximations contract intact (same rationale as BT16-082's header
+# note on the missing `can_hatch` BoolPredicate).
+#
+# Known DSL/engine gaps applied:
+#   - G-OPT-TRIGGERED: `once_per_turn: true` is emitted but not enforced at
+#     runtime for triggered effects (queue-drain path). Behavioral OPT-lockout
+#     and OPT-reset tests are #[ignore]'d.
+#   - G-CAN-HATCH (informational, not blocking): no `can_hatch` BoolPredicate
+#     means the "Hatch / Don't hatch" prompt is always shown even when the
+#     player cannot legally hatch. The hatch step itself is a no-op in that
+#     case, so no illegal state is reached. DCGO suppresses the prompt
+#     entirely via `card.Owner.CanHatch`. Same documented faithfulness
+#     micro-gap as BT16-082 / BT17-102 hatch sub-steps.
+
+effects:
+  - when: on_move
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "P-123"
+        - event_target_owner: you
+        - event_target_kind: digimon
+    summary: "[Your Turn][OPT] On your Digimon moving breeding→battle: may hatch, then gain 1 memory"
+    process:
+      # "you may hatch in your breeding area" — optional sub-step.
+      - select_effect_choice:
+          labels:
+            - "Hatch"
+            - "Don't hatch"
+          bind_as: do_hatch
+          prompt: "Will you hatch in your Breeding Area?"
+      - if:
+          condition: { equals: [do_hatch, 0] }
+          then:
+            - hatch: { of: you }
+      # "Then, gain 1 memory." — unconditional tail (DCGO P_123.cs:83 fires
+      # AddMemory(1) outside both `if (CanHatch)` and `if (doHatch)` blocks).
+      - gain_memory: 1

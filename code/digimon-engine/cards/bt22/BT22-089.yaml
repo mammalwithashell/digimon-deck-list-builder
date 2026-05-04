@@ -1,0 +1,259 @@
+# BT22-089 Mirei Mikagura — Tamer, Yellow + Purple, Cost 3.
+# Traits: [CS].
+#
+# Printed card text (data/cards.json):
+#
+#   [Start of Your Main Phase] By returning this Tamer to the bottom of the
+#   deck, you may play 1 play cost 4 or higher [Mirei Mikagura] or play cost
+#   4 or higher Tamer card with the [CS] trait from your hand without paying
+#   the cost.
+#
+#   [On Play] By trashing 1 card with the [Holy Beast], [Angel], [Archangel],
+#   [Fallen Angel] or [CS] trait from your hand, <Draw 2> (Draw 2 cards from
+#   your deck.)
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT22/Yellow/BT22_089.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartMainPhase` activate; `CanUseCondition` =
+#   IsExistOnBattleArea + IsOwnerTurn (start-of-MAIN-phase is the owner's
+#   own turn by definition; the redundant gate matches DCGO). The activate
+#   class is marked `isOptional: true` (inner BoolSelection presents a
+#   "Will you return this Tamer?" Yes/No to the player). Coroutine:
+#     1. `DeckBouncePeremanentAndProcessAccordingToResult` — pays the cost
+#        by returning `card.PermanentOfThisCard()` to the bottom of the
+#        deck. SUCCESS path runs the next steps; FAILURE (if the bounce is
+#        prevented) runs nothing.
+#     2. SuccessProcess: if hand has any matching card, present a
+#        `SelectHandEffect` with `maxCount: min(1, eligible)`,
+#        `canNoSelect: true`, `canEndNotMax: false`. Filter is
+#        `cardSource.IsExistOnHand && HasPlayCost && BasePlayCostFromEntity
+#        >= 4 && (EqualsCardName("Mirei Mikagura") || (IsTamer && HasCSTraits))
+#        && CanPlayAsNewPermanent(...)`.
+#     3. If a card is selected, `PlayPermanentCards(payCost=false,
+#        isTapped=false, root=Hand, activateETB=true)`.
+#
+# Clause 2 — `EffectTiming.OnEnterFieldAnyone` activate; `CanUseCondition`
+#   = IsExistOnBattleArea + CanTriggerOnPlay. `CanActivateCondition` adds
+#   HasMatchConditionOwnersHand (we need at least one matching trash
+#   candidate — DCGO short-circuits the activate if the cost is unpayable).
+#   `isOptional: true` (the trash cost is optional; player may decline the
+#   draw). Coroutine: present `SelectHandEffect` over candidates whose
+#   trait set intersects {HolyBeast, Angel, ArchAngel, FallenAngel, CS}
+#   with `canNoSelect: true`. If a card is selected, `IDiscardHand.Discard()`
+#   then `DrawClass(card.Owner, 2).Draw()`.
+#
+#   NB: the DCGO `CanSelectCardCondition` body has the precedence quirk
+#   `IsExistOnHand && HasHolyBeastTraits || EqualsTraits("Angel") || ...`
+#   — i.e. `(IsExistOnHand && HolyBeast) || Angel || ArchAngel || FallenAngel
+#   || CS`. The four non-HolyBeast disjuncts are evaluated against any
+#   `cardSource` regardless of zone. In the SelectHandEffect dispatch path
+#   the candidate set is already filtered to hand cards by the surrounding
+#   loop (`MatchConditionOwnersCardCountInHand` / `HasMatchConditionOwnersHand`
+#   iterate the owner's hand), so the practical observable filter is
+#   "hand cards whose trait set intersects {HolyBeast, Angel, ArchAngel,
+#   FallenAngel, CS}". Per source priority (printed text wins over DCGO
+#   implementation quirks), we encode the printed semantics: any of the 5
+#   listed traits, restricted to hand by the `select_hand` step.
+#
+# Clause 3 (Security) — `EffectTiming.SecuritySkill` →
+#   `CardEffectFactory.PlaySelfTamerSecurityEffect(card)`. Standard
+#   play_from_security pattern (cf. BT17-093, BT18-087, BT22-084,
+#   BT21-015, BT9-092, EX11-054).
+#
+# ─── DSL faithfulness gap on Clause 1 outer "you may" ────────────────────────
+#
+# We mark Clause 1 `optional: true`, but under the current DSL lowering a
+# single-trigger `optional` only gates the `TriggerOrder` selection's
+# "decline all" affordance — which never installs when only this one effect
+# is queued. Therefore the body runs unconditionally and the player cannot
+# decline the cost-and-replay at the trigger level. This matches sister
+# DSL cards' observed behavior (BT17-093 Tai/Kari, BT24-082 Owen
+# Dreadnought, BT22-084 Nokia Shiramine — same return-to-deck-bottom shape
+# with the same single-trigger `optional: true` flag and no inner Yes/No
+# prompt). The inner `select_hand` IS optional (canNoSelect=true) and
+# remains player-declinable. Honest path to closure would inject an
+# explicit `select_effect_choice` step at the start of `process:` to
+# surface the outer Yes/No to the agent — pursued broadly across the
+# return-to-deck-cost-then-effect family rather than per-card.
+#
+# ─── DSL-GAP — `play_cost_gte` predicate missing  [G-PLAY-COST-GTE] ──────────
+#
+# Clause 1's hand filter says "play cost 4 or HIGHER [Mirei Mikagura] or
+# play cost 4 or HIGHER Tamer card with the [CS] trait." This is the upper-
+# bound mirror of the `play_cost_lte` predicate (G-PLAY-COST-LTE, CLOSED
+# 2026-05-01).
+#
+# `PredicateSpec` in `code/digimon-dsl/src/predicate.rs` exposes
+# `play_cost_lte: Option<i32>` (line 59) but no `play_cost_gte`. The
+# `eval_card_fields` function in `code/digimon-engine/src/dsl_cards/
+# predicate.rs` has a `play_cost_lte` branch but no `play_cost_gte` branch.
+# Wiring is otherwise symmetric: `play_cost_lte` was already plumbed
+# through `select_hand` valid-action filtering (companion to the closure
+# of G-PLAY-COST-LTE). Adding `play_cost_gte` is the trivial mirror:
+#   (1) add `play_cost_gte: Option<i32>` to `PredicateSpec` (and
+#       `CompiledPredicate`);
+#   (2) add a branch in `eval_card_fields` to check
+#       `card_data.play_cost >= n`;
+#   (3) the `select_hand` Phase-2b filter wiring already evaluates
+#       arbitrary `CompiledPredicate` leaves, so no separate hookup is
+#       needed.
+# Tracked in qa/dsl-vocab-gaps.md (entry to be filed by orchestrator).
+#
+# Workaround under current DSL:
+#   The hand filter is expressed as
+#     any_of:
+#       - name_contains: "Mirei Mikagura"
+#       - all_of: [ kind: tamer, trait_has: CS ]
+#   This faithfully captures the disjunction structure (Mirei OR (Tamer ∧
+#   CS)) but the "play cost ≥ 4" gate is NOT enforced — the predicate is
+#   silently dropped from the YAML. At runtime, ANY hand card whose name
+#   contains "Mirei Mikagura" OR which is a Tamer with the CS trait will
+#   appear in the `select_hand` valid-action list, regardless of its
+#   printed play cost.
+#
+# Tests for the cost-bound filter are #[ignore = "pending: G-PLAY-COST-GTE"].
+# Positive-case tests using a candidate Tamer that printed cost 5 (i.e.
+# satisfies the gate trivially) DO pass; the over-permissive over-fire is
+# only observable when seeding a cost-3 CS Tamer in hand.
+#
+# When G-PLAY-COST-GTE closes, append a third clause to each `any_of`
+# branch:
+#   - any_of:
+#       - all_of: [ name_contains: "Mirei Mikagura", play_cost_gte: 4 ]
+#       - all_of: [ kind: tamer, trait_has: CS, play_cost_gte: 4 ]
+#
+# ─── Cost-as-return-to-deck-bottom invariant (Clause 1) ──────────────────────
+#
+# "By returning this Tamer to the bottom of the deck, ..." Return-to-deck-
+# bottom IS the activation cost. The DSL `return_to_deck` step on `target:
+# source` removes the tamer from the field as the first step; the tamer is
+# placed at the bottom of the deck (not in trash). Only after the cost
+# resolves does the optional `select_hand` for the replacement Mirei/CS
+# Tamer fire, matching DCGO's coroutine ordering.
+
+card: BT22-089
+name: "Mirei Mikagura"
+kind: tamer
+color: [yellow, purple]
+cost: 3
+traits: [CS]
+
+effects:
+  # ─── Clause 1 — [Start of Your Main Phase] return self → may play Mirei/CS Tamer
+  #
+  # Printed: "[Start of Your Main Phase] By returning this Tamer to the bottom
+  # of the deck, you may play 1 play cost 4 or higher [Mirei Mikagura] or play
+  # cost 4 or higher Tamer card with the [CS] trait from your hand without
+  # paying the cost."
+  #
+  # `optional: true` — player may decline the entire effect (DCGO models this
+  # via the inner BoolSelection prompt; in DSL terms, declining at the
+  # clause-level pending point skips the return-to-deck cost AND all
+  # downstream steps, which matches the DCGO outer-prompt-no contract).
+  # See DSL faithfulness gap note above re: single-trigger `optional`.
+  #
+  # Inner Tamer replacement is also optional (`select_hand: optional: true`),
+  # mirroring DCGO's `SelectHandEffect.SetUp(canNoSelect: true)`.
+  #
+  # Condition: this tamer must be on the field (to be returnable). The
+  # start_of_your_main_phase timing already implies it's the controller's
+  # turn; no explicit `your_turn` gate needed.
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "[Start of Main Phase] Return self to deck bottom → may play Mirei or CS-trait Tamer (cost ≥ 4) from hand free"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: "BT22-089"
+    process:
+      # Cost: return this tamer to the bottom of the deck.
+      # `source` resolves to CompiledBindingRef::Source → ctx.source_permanent.
+      - return_to_deck: { target: source, position: bottom }
+      # Effect: optional play of 1 Mirei Mikagura OR CS-trait Tamer (printed
+      # cost ≥ 4) from hand without paying the cost.
+      #
+      # G-PLAY-COST-GTE: the `play_cost_gte: 4` leaf cannot be expressed in
+      # PredicateSpec today. The disjunction structure is preserved; the
+      # cost gate is dropped (over-permissive on this axis). See header.
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - name_contains: "Mirei Mikagura"
+              - all_of:
+                  - kind: tamer
+                  - trait_has: CS
+          prompt: "Play 1 [Mirei Mikagura] or CS-trait Tamer (cost ≥ 4) from hand free"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  # ─── Clause 2 — [On Play] by trashing 1 Holy/Angel/.../CS card, draw 2 ────
+  #
+  # Printed: "[On Play] By trashing 1 card with the [Holy Beast], [Angel],
+  # [Archangel], [Fallen Angel] or [CS] trait from your hand, <Draw 2>."
+  #
+  # `optional: true` — the whole effect is optional (player may decline the
+  # trash cost and forfeit the draw). DCGO models this via
+  # `SetUpActivateClass(..., isOptional=true)` plus the inner SelectHandEffect's
+  # `canNoSelect: true`.
+  #
+  # Condition: gates activation when no eligible card in hand (DCGO's
+  # `CanActivateCondition` adds `HasMatchConditionOwnersHand`). The
+  # `count_gte: { ..., n: 1 }` aggregate over the trait-disjunction filter
+  # in the hand zone faithfully encodes "you must have at least one
+  # eligible card to even prompt". Same shape as BT24-008 Elizamon Clause 1.
+  #
+  # Trait disjunction: per printed text ([Holy Beast] OR [Angel] OR
+  # [Archangel] OR [Fallen Angel] OR [CS]). Encoded as a 5-way `any_of`
+  # over `trait_has` leaves both in the condition gate and in the
+  # select_hand filter.
+  - when: on_play
+    optional: true
+    summary: "[On Play] By trashing 1 Holy Beast / Angel / Archangel / Fallen Angel / CS card from hand, Draw 2"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - trait_has: Holy Beast
+            - trait_has: Angel
+            - trait_has: Archangel
+            - trait_has: Fallen Angel
+            - trait_has: CS
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter:
+            any_of:
+              - trait_has: Holy Beast
+              - trait_has: Angel
+              - trait_has: Archangel
+              - trait_has: Fallen Angel
+              - trait_has: CS
+          prompt: "Trash a Holy Beast / Angel / Archangel / Fallen Angel / CS card"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - draw: { of: you, count: 2 }
+
+  # ─── Clause 3 — [Security] Play without paying the cost ──────────────────
+  #
+  # Printed: "Security Effect [Security] Play this card without paying the
+  # cost."
+  #
+  # Standard play_from_security pattern (cf. BT17-093, BT18-087, BT22-084,
+  # BT21-015, BT9-092, EX11-054). Mandatory (no [Security] effect is
+  # opt-out per the rules manual §16 / RULES_CONTEXT.md).
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

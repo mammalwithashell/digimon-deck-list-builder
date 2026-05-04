@@ -1,0 +1,287 @@
+# BT17-102 Greymon — Digimon, Lv.4, White, DP 5000, Cost 5.
+# Traits: Dinosaur
+# Standard digivolve: Lv.3 Red / Cost 3
+# Alt digivolve: Lv.3 with [Agumon] in name / Cost 2 (xros_req)
+#
+# Printed card text (data/cards.json):
+#
+# [When Digivolving] If this Digimon's name is [Koromon], it gets +3000 DP for
+# the turn. Then, delete 1 of your opponent's Digimon with as much or less DP
+# as this Digimon.
+#
+# [All Turns] This Digimon has all the names of level 3 and lower cards in its
+# digivolution cards.
+#
+# [On Deletion] You may play 1 Tamer card with [Tai Kamiya] or [Kari Kamiya]
+# in its name from your hand without paying the cost, or hatch in your
+# breeding area.
+#
+# Inherited Effect:
+#   [On Deletion] You may play 1 Tamer card with [Tai Kamiya] or [Kari Kamiya]
+#   in its name from your hand without paying the cost, or hatch in your
+#   breeding area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT17/White/BT17_102.cs
+#
+# ─── Faithfulness diff vs. card text ─────────────────────────────────────────
+#
+# | Card-text element                                   | Implementation status |
+# |-----------------------------------------------------|-----------------------|
+# | Standard digivolve Lv.3 Red / cost 3                | IMPLEMENTED (alt_paths)
+# | Alt digivolve Lv.3 w/[Agumon] in name / cost 2      | IMPLEMENTED (alt_paths)
+# | [When Digivolving] +3000 DP if name is [Koromon]    | PARTIAL — see G-DSL-SELF-NAME-IS below
+# | [When Digivolving] then delete opp Digimon ≤ self DP| BLOCKED — G-FORMULA-SOURCE-DP
+# | [All Turns] dynamic name aliasing from digi-stack   | BLOCKED — G-DYNAMIC-NAME-ALIAS-FROM-STACK
+# | [On Deletion] may play Tamer (Tai/Kari) free OR hatch (own clause)        | IMPLEMENTED
+# | [On Deletion] same body, inherited                  | IMPLEMENTED (scope: inherited)
+#
+# ─── DSL-GAP — Cannot read source permanent's DP in formula  [G-FORMULA-SOURCE-DP] ──
+#
+# The "delete 1 opp Digimon with as much or less DP as this Digimon" clause needs
+# `dp_lte` to compare against THIS card's effective DP. The `binding_dp` formula
+# primitive (RESOLVED 2026-05-02) reads the DP of a NAMED binding (a permanent
+# captured by `bind_as` from a prior `select_*_permanent` step). It does NOT
+# accept the special tokens `source` / `self` / `carrier` that
+# `BindingRef`/`resolve_binding_ref` recognize for `target:` arguments.
+#
+# Source permanent DP IS available at runtime via `ctx.source_permanent` +
+# `ctx.game.effective_dp(handle)` — the engine has the data, the formula layer
+# just lacks a primitive that reads it. Sibling: ST22-08's G-BINDING-DP-FORMULA
+# (RESOLVED) handles user-picked bindings; this one is the source-permanent
+# variant of the same shape.
+#
+# The cleanest closure is to add a `source_dp: {}` (or `binding_dp: source` with
+# special handling) variant to `FormulaSpec`/`CompiledFormula` that reads
+# `ctx.source_permanent.and_then(|h| ctx.game.effective_dp(h))`. Until then the
+# delete sub-clause is OMITTED (printed text would over-fire on opponents with
+# arbitrary DP if we used `kind: digimon` alone — violates no-approximations).
+#
+# ─── DSL-GAP — Self-name-is predicate  [G-DSL-SELF-NAME-IS] ─────────────────
+#
+# "If this Digimon's name is [Koromon]" should check the carrier permanent's
+# top-card name. Existing predicates:
+#   - `name_contains` / `name_is`: filter CANDIDATE cards in selections, not self
+#   - `source_name_contains`: parses but never evaluated (G-DSL-SOURCE-NAME-CONTAINS)
+#   - `self_digivolution_contains_name`: scans THIS card's digivolution stack
+#     (RESOLVED 2026-05-02 by Group 7)
+#
+# Sibling AD1-014 documents G-DSL-SELF-NAME-CONTAINS (top-card name check from
+# below the stack — for inherited effects).
+#
+# For BT17-102 [When Digivolving], "this Digimon's name is Koromon" semantically
+# requires the [All Turns] alias (which makes Koromon-in-stack count as a name).
+# The stack-scanning predicate `self_digivolution_contains_name: "Koromon"` is
+# the closest faithful approximation under the current DSL — it correctly fires
+# in the standard play pattern (Koromon → Greymon BT17-102) and stays false
+# when Koromon is not in the digivolution material stack.
+#
+# Limitation: if BT17-102 is itself the bottom card (e.g. dropped via an effect
+# that bypasses the standard digivolution chain), the "name is Koromon" gate
+# would fail under DCGO too (the printed top-card name "Greymon" alone never
+# equals "Koromon"). The dynamic [All Turns] alias is the only path that would
+# make the gate fire when no Koromon is in the stack — and that's BLOCKED below.
+# Conclusion: `self_digivolution_contains_name: "Koromon"` is faithful for the
+# normal case and matches the [All Turns] alias semantics for the typical
+# Koromon-Agumon-Greymon line.
+#
+# ─── DSL-GAP — Dynamic name aliases from material stack  [G-DYNAMIC-NAME-ALIAS-FROM-STACK] ──
+#
+# "[All Turns] This Digimon has all the names of level 3 and lower cards in its
+# digivolution cards." This is a dynamic NAME ALIAS effect that recomputes the
+# carrier permanent's effective name set from its current material stack each
+# time a name predicate is evaluated.
+#
+# DCGO uses `ChangeCardNamesClass.SetUpChangeCardNamesClass(changeCardNames)`
+# where `changeCardNames` is a closure that scans
+# `card.PermanentOfThisCard().DigivolutionCards` filtered by `Level <= 3` and
+# appends each material's `CardNames`. Name predicates like `EqualsCardName`
+# and `ContainsCardName` then consult this dynamic alias set.
+#
+# The DSL identity layer (`code/digimon-dsl/src/identity.rs`) has only
+# `IdentitySpec.name_aliases: Vec<NameAliasSpec>` where each `NameAliasSpec`
+# has `treat_as: String` + `when: AliasCondition { zone, has_inherited }`.
+# These aliases are STATIC (zone-conditional) and authored at YAML compile
+# time. There is no runtime closure that derives an alias from the carrier's
+# material stack.
+#
+# Because every name-gated effect that touches BT17-102 is affected by this
+# (e.g. cards that say "if you have a Koromon-named Digimon"), it is a
+# wide-reach gap. Closure requires:
+#   1. New `kind: dynamic_name_alias` declarative clause OR an extension to
+#      `IdentitySpec` allowing `derive_from: { material_filter: { level_lte: 3 } }`.
+#   2. Engine name-predicate evaluators (`name_is`, `name_contains`,
+#      `name_in`, alias resolvers in `Permanent::contains_card_name`,
+#      `EqualsCardName`-equivalent paths) read the dynamic alias set in
+#      addition to the static one.
+#   3. The alias set is recomputed on every material-stack mutation (digivolve,
+#      de-digivolve, source-trash, source-add).
+#
+# Workaround: NONE that preserves no-approximations. Omitting the clause means
+# other cards that name-check BT17-102 will not see the dynamic alias names.
+# Including it as a static `name_aliases: [ {treat_as: Agumon}, {treat_as: Koromon} ]`
+# would over-claim names when those cards are NOT in the digivolution stack.
+
+card: BT17-102
+name: Greymon
+kind: digimon
+level: 4
+color: [white]
+cost: 5
+dp: 5000
+traits: [Dinosaur]
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# - Standard digivolve: Lv.3 Red / Cost 3 (printed default).
+# - Alt digivolve: Lv.3 with [Agumon] in name / Cost 2 (xros_req).
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - color_is: red
+    cost: 3
+
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - name_contains: "Agumon"
+    cost: 2
+    ignore_requirements: true
+
+effects:
+  # ─── Clause 1 — [When Digivolving] +3000 DP if [Koromon] in stack ──────────
+  #
+  # Printed text:
+  #   "[When Digivolving] If this Digimon's name is [Koromon], it gets +3000
+  #   DP for the turn. Then, delete 1 of your opponent's Digimon with as much
+  #   or less DP as this Digimon."
+  #
+  # Implementation status:
+  #   - +3000 DP if Koromon: IMPLEMENTED via `self_digivolution_contains_name:
+  #     "Koromon"` (the [All Turns] alias makes Koromon-in-stack equivalent to
+  #     "name is Koromon" per DCGO's dynamic ChangeCardNamesClass).
+  #   - Delete sub-clause: BLOCKED (G-FORMULA-SOURCE-DP) — see header docs.
+  #     Omitted from this clause body until the gap closes; including a
+  #     `kind: digimon` delete without the DP filter would over-target
+  #     opponents with arbitrary DP, violating no-approximations.
+  #
+  # DCGO ordering: DP buff is applied first (only if Koromon-name), then the
+  # delete check uses the now-buffed DP. Once the delete sub-clause is unblocked,
+  # the +3000 buff must precede the delete step in `process:` to preserve this.
+  - when: when_digivolving
+    summary: "[When Digivolving] +3000 DP if [Koromon] in digi-stack (delete sub-clause BLOCKED — see header)"
+    condition:
+      self_digivolution_contains_name: "Koromon"
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 3000
+          expiry: end_of_turn
+    # BLOCKED follow-up step (uncomment when G-FORMULA-SOURCE-DP closes):
+    #   - select_opponent_permanent:
+    #       bind_as: tgt
+    #       filter:
+    #         all_of:
+    #           - kind: digimon
+    #           - dp_lte: { formula: { source_dp: {} } }   # NEW formula primitive
+    #       prompt: "Delete 1 opp Digimon (DP ≤ this Digimon)"
+    #   - delete_permanent: { target: tgt }
+
+  # ─── Clause 2 — [All Turns] Dynamic name aliasing  [BLOCKED] ───────────────
+  #
+  # Printed text: "[All Turns] This Digimon has all the names of level 3 and
+  # lower cards in its digivolution cards."
+  #
+  # BLOCKED: G-DYNAMIC-NAME-ALIAS-FROM-STACK (see header docs).
+  # No DSL/engine surface for runtime-derived name aliases. Omitted entirely
+  # rather than represented partially — a static alias would over-claim names
+  # when materials aren't present, and any approximation breaks every
+  # name-gated card that interacts with BT17-102.
+
+  # ─── Clause 3 — [On Deletion] may play Tai/Kari Tamer free OR hatch ────────
+  #
+  # Printed text:
+  #   "[On Deletion] You may play 1 Tamer card with [Tai Kamiya] or [Kari Kamiya]
+  #   in its name from your hand without paying the cost, or hatch in your
+  #   breeding area."
+  #
+  # DCGO BT17_102.cs:144-253 — ActivateClass at OnDestroyedAnyone with two
+  # SelectionElements (Play / Hatch). Optional ("may") with EFFECT-level decline.
+  # If "Play" chosen: select 1 Tamer-name-Tai-or-Kari hand card; play free.
+  # If "Hatch" chosen: invoke HatchDigiEggClass for owner.
+  #
+  # The branch choice is itself optional — DCGO's ActivateClass with
+  # `SetUpActivateClass(canActivateCondition, ..., isOptional: true)` allows
+  # declining the entire effect. Players may decline both Play and Hatch.
+  #
+  # Implementation: select_effect_choice with optional: true (entire clause
+  # declinable), then if branch == 0 → select_hand + play_from_hand_free,
+  # else if branch == 1 → hatch.
+  - when: on_deletion
+    optional: true
+    summary: "[On Deletion] May play 1 Tai/Kari Tamer free, OR hatch"
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Play 1 Tamer w/[Tai Kamiya] or [Kari Kamiya] in name (free)"
+            - "Hatch in your breeding area"
+          prompt: "Choose effect (or pass)"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: tamer
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - any_of:
+                        - name_contains: "Tai Kamiya"
+                        - name_contains: "Kari Kamiya"
+                prompt: "Play 1 Tai/Kari Tamer free"
+            - play_from_hand_free: { of: you, hand_index: tamer }
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - hatch: { of: you }
+
+  # ─── Clause 4 — Inherited [On Deletion] same body ───────────────────────────
+  #
+  # Printed inherited text matches Clause 3 verbatim. Encoded as scope: inherited
+  # so the effect rides on any carrier permanent that has BT17-102 as a
+  # digivolution material when the carrier itself is deleted.
+  #
+  # DCGO BT17_102.cs:256-365 mirrors Clause 3 with
+  # `activateClass.SetIsInheritedEffect(true)` and uses
+  # `CanActivateOnDeletionInherited` (vs. `CanActivateOnDeletion` for Clause 3).
+  - scope: inherited
+    when: on_deletion
+    optional: true
+    summary: "[Inherited][On Deletion] May play 1 Tai/Kari Tamer free, OR hatch"
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Play 1 Tamer w/[Tai Kamiya] or [Kari Kamiya] in name (free)"
+            - "Hatch in your breeding area"
+          prompt: "Choose effect (or pass)"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: tamer
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - any_of:
+                        - name_contains: "Tai Kamiya"
+                        - name_contains: "Kari Kamiya"
+                prompt: "Play 1 Tai/Kari Tamer free"
+            - play_from_hand_free: { of: you, hand_index: tamer }
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - hatch: { of: you }

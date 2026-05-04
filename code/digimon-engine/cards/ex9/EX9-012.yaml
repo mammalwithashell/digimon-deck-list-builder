@@ -1,0 +1,257 @@
+# EX9-012 MetalGreymon: Alterous Mode — Digimon, Lv.5, Red+Black, DP 8000, Cost 8.
+# Traits: Cyborg, ADVENTURE
+# Evo (printed): Lv.4 Red / Cost 4
+#
+# Printed card text (cards.json effect_description_eng):
+#
+#   [On Play] [When Digivolving] Delete 1 of your opponent's Digimon with
+#   8000 DP or less.
+#   [Your Turn] When any of your Digimon or Tamers with [Garurumon] or
+#   [Tai Kamiya] in their names are played or any of your Digimon digivolve
+#   into a Digimon with [Garurumon] in its name, this Digimon may digivolve
+#   into a Digimon card with [Greymon] in its name in the hand without
+#   paying the cost.
+#
+# Inherited / Security text (cards.json inherited_effect_description_eng):
+#   [Your Turn] This Digimon gets +4000 DP.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/EX9/Red/EX9_012.cs
+#
+# ─── Source-priority cross-check (printed text + RULES_CONTEXT.md > DCGO) ───
+#
+# DCGO matches the printed text on every clause:
+#
+# Block 1 (DCGO None timing) — TWO AddSelfDigivolutionRequirementStaticEffect
+# entries:
+#   - PermanentCondition: TopCard.EqualsCardName("MetalGreymon"), cost: 1.
+#   - PermanentCondition: (TopCard.HasGreymonName || TopCard.HasAdventureTraits)
+#     && TopCard.IsLevel4, cost: 3.
+#   These are unprinted alt-paths added via the static effect — the printed
+#   text shows only the Lv.4 Red / Cost 4 evo block. Per the BT22-026 / BT22-013
+#   precedent (header notes), unprinted DCGO alt-sources are NOT encoded in
+#   YAML (printed text wins). Only the printed Lv.4 Red / Cost 4 evo path is
+#   carried as a `kind: digivolve` alt_path.
+#
+# Block 2 (DCGO OnEnterFieldAnyone × 2 — gated by CanTriggerOnPlay /
+#   CanTriggerWhenDigivolving): two ActivateClass entries with identical
+#   bodies — SelectPermanentEffect over opp battle area for an opp Digimon
+#   with `permanent.DP <= MaxDP_DeleteEffect(8000, ...)`, mode Destroy,
+#   maxCount 1, canNoSelect: false. Mandatory deletion when a legal target
+#   exists. Encoded as a single triggered clause with both timings (BT17-015
+#   / AD1-025 idiom; same shape as EX4-060 [When Digivolving] arm 1).
+#
+# Block 3 (DCGO OnEnterFieldAnyone — the [Your Turn] observer):
+#   ActivateClass with CanUseCondition =
+#     IsExistOnBattleAreaDigimon(card)
+#     && IsOwnerTurn(card)
+#     && (CanTriggerOnPermanentPlay(hashtable, PlayedRequirement)
+#         || CanTriggerWhenPermanentDigivolving(hashtable, DigivolveRequirement))
+#   PlayedRequirement: permanent on owner's battle area, !IsOption, and
+#     TopCard.HasGarurumonName || ContainsCardName("Tai Kamiya"). Includes
+#     Tamers (per "your Digimon or Tamers ... are played").
+#   DigivolveRequirement: permanent on owner's battle-area Digimon, !IsOption,
+#     and TopCard.HasGarurumonName. Note: digivolve half is GARURUMON-only
+#     (Tai Kamiya is a Tamer name, can't be digivolved INTO).
+#   Body: DigivolveIntoHandOrTrashCard(target=card.PermanentOfThisCard(),
+#     cardCondition: IsDigimon && HasGreymonName, payCost: false, isHand: true).
+#   `SetUpActivateClass(..., isOptional: false)` BUT inner SelectCardEffect
+#   has `canNoSelect: () => true` — the outer trigger fires unconditionally
+#   when the gates match, but the player MAY decline the digivolve. Printed
+#   text "may digivolve" → `optional: true` at the clause level (printed
+#   wording governs per source priority).
+#
+# Block 4 (DCGO None timing) — ChangeSelfDPStaticEffect(changeValue: 4000,
+#   isInheritedEffect: true, condition: IsOwnerTurn). The +4000 DP self-aura
+#   gated on owner's turn. Standard self-aura pattern (BT23-008 / BT23-005
+#   idiom): `scope: inherited / kind: aura / target: {} /
+#   active_when: { your_turn: true } / dp_modifier: 4000`.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                  | Status |
+# |--------------------------------------------------------------------|--------|
+# | Standard digivolve Lv.4 Red / Cost 4                                | IMPLEMENTED (alt_paths kind: digivolve) |
+# | [On Play][When Digivolving] Delete 1 opp Digimon DP<=8000          | IMPLEMENTED (select_opponent_permanent dp_lte: 8000 + delete_permanent) |
+# | [Your Turn] Garurumon/Tai-Kamiya play observer → free-digivolve self into [Greymon] in hand | IMPLEMENTED (target: self pattern; AD1-001/AD1-010 idiom) |
+# | [Your Turn] Garurumon-name digivolve observer → same body          | IMPLEMENTED (separate clause; on_digivolve trigger) |
+# | [Inherited][Your Turn] +4000 DP self-aura                          | IMPLEMENTED (BT23-008 idiom) |
+#
+# ─── DSL/engine notes (PARTIAL but not BLOCKED) ─────────────────────────────
+#
+# G-PRED-DP-LTE: literal `dp_lte: 8000` filter — simple "DP <= literal" form
+# is wired and evaluated for permanents (sister cards EX4-060, BT8-097,
+# BT13-012, BT18-087 all rely on it). The aggregate `lowest_dp` variant is
+# the one that's blocked (BT22-013, BT22-015, BT24-017); the literal form
+# used here works.
+#
+# G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET: this gap
+# affects effect-initiated digivolves whose `target:` is a SEPARATE picked
+# permanent (the chained perm→hand path used by BT17-015 / BT22-013 /
+# BT22-026). EX9-012's [Your Turn] observer has `target: self` (this card)
+# — same shape as AD1-001 / AD1-010 — which is NOT blocked. The hand-pick
+# prompt installs and the digivolve verb executes.
+#
+# G-EVENT-CARD coverage (per AD1-010 header / qa/dna-omnimon-dsl-engine-gaps.md
+# §9): `event_card` is wired for normal hand-played battle-area permanents
+# (`OnEnterFieldAnyone` with `TriggerSource::EnteredField`) and for
+# `Game::digivolve_from_hand` battle-area digivolves. Tamer-play
+# `event_card` parity is unconfirmed (see AD1-010 test docstring §3).
+# DNA-digivolve and effect-initiated digivolve `event_card` coverage
+# remain open. Tests for tamer-play and DNA-digivolve event observation
+# are #[ignore]'d under the same gap tag as AD1-010 uses.
+
+card: EX9-012
+name: "MetalGreymon: Alterous Mode"
+kind: digimon
+level: 5
+color: [red, black]
+cost: 8
+dp: 8000
+traits: [Cyborg, ADVENTURE]
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# Standard digivolve: Lv.4 Red / Cost 4 (per evo_costs in cards.json).
+# (DCGO's two unprinted alt-source entries — MetalGreymon-name @ cost 1 and
+# Lv4 [Greymon]/[ADVENTURE] @ cost 3 — are NOT encoded; printed text governs.)
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+
+effects:
+  # ─── Clause 1 — [On Play] [When Digivolving] Delete opp DP<=8000 ───────────
+  #
+  # Printed: "[On Play] [When Digivolving] Delete 1 of your opponent's
+  # Digimon with 8000 DP or less."
+  #
+  # Single triggered clause with both timings (BT17-015 / AD1-025 / EX4-060
+  # idiom). Mandatory (no "may"). The select step has an existential guard
+  # via the candidate filter — when no opp Digimon ≤ 8000 DP exists, the
+  # prompt silently skips, mirroring DCGO's HasMatchConditionPermanent gate
+  # at lines 73-78 / 142-147.
+  #
+  # G-PRED-DP-LTE: literal `dp_lte: 8000` form is wired (sister cards
+  # EX4-060, BT8-097, BT13-012, BT18-087 all use it). Not blocked.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 opp Digimon with DP 8000 or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: del_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 8000
+          prompt: "Delete 1 opponent Digimon with DP 8000 or less"
+      - delete_permanent: { target: del_target }
+
+  # ─── Clause 2 — [Your Turn] Garurumon/Tai-Kamiya play observer ─────────────
+  #
+  # Printed: "[Your Turn] When any of your Digimon or Tamers with [Garurumon]
+  # or [Tai Kamiya] in their names are played ..., this Digimon may digivolve
+  # into a Digimon card with [Greymon] in its name in the hand without paying
+  # the cost."
+  #
+  # DCGO PlayedRequirement: own battle-area, !IsOption, name contains
+  # Garurumon OR Tai Kamiya. Includes Tamers (per "your Digimon or Tamers ...
+  # played"). DSL filter: `event_target_owner: you` + name predicate. We
+  # deliberately DO NOT add `event_target_kind: digimon` — Tamer plays must
+  # also satisfy the gate (printed wording).
+  #
+  # `target: source` mirrors AD1-001 idiom: the effect-initiated-digivolve
+  # target is THIS card's source permanent (the carrier), which bypasses
+  # G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET (that gap
+  # only affects digivolves whose target is a SEPARATE picked permanent).
+  # Note: `target: self` resolves to a Card binding (not Permanent) and is
+  # silently dropped by `EffectInitiatedDigivolve`; only `source`/`carrier`
+  # produce a Permanent binding (see code/digimon-engine/src/dsl_cards/binding_ref.rs).
+  #
+  # `optional: true` per printed "may digivolve" (DCGO outer activate is
+  # `isOptional: false` BUT inner SelectCardEffect has `canNoSelect: () => true`
+  # — printed wording governs per source priority).
+  #
+  # `active_when: { your_turn: true }` per printed [Your Turn] scoping
+  # (BT13-012 / BT14-001 idiom; matches DCGO `IsOwnerTurn(card)` gate at
+  # CanUseCondition line 216).
+  - when: on_enter_field_anyone
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] On own [Garurumon]/[Tai Kamiya] play, may free-digivolve self into a Greymon-named hand card"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_card_name_contains: "Garurumon"
+            - event_card_name_contains: "Tai Kamiya"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Greymon"
+          prompt: "Free-digivolve into a [Greymon]-named Digimon card"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
+
+  # ─── Clause 3 — [Your Turn] Garurumon-name digivolve observer ──────────────
+  #
+  # Printed: "... or any of your Digimon digivolve into a Digimon with
+  # [Garurumon] in its name, this Digimon may digivolve into a Digimon card
+  # with [Greymon] in its name in the hand without paying the cost."
+  #
+  # DCGO DigivolveRequirement: own battle-area Digimon, !IsOption, name
+  # contains Garurumon. NOTE: digivolve half is Garurumon-only (Tai Kamiya
+  # is a Tamer name and cannot be digivolved INTO — printed text correctly
+  # excludes it from this half). DSL filter: `event_target_owner: you` +
+  # `event_target_kind: digimon` + `event_card_name_contains: "Garurumon"`.
+  #
+  # Same body as Clause 2; split into a separate clause so each timing fires
+  # on its correct trigger (AD1-010 idiom). The on_digivolve trigger carries
+  # `event_card` for hand-driven `Game::digivolve_from_hand` (RESOLVED
+  # 2026-04-29). Effect-initiated digivolve / DNA digivolve event-card
+  # coverage remain open follow-ups (see AD1-010 docstring §G-EVENT-CARD-EFFECT-INITIATED-DIGIVOLVE).
+  - when: on_digivolve
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] On own digivolve into [Garurumon]-named Digimon, may free-digivolve self into a Greymon-named hand card"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_card_name_contains: "Garurumon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Greymon"
+          prompt: "Free-digivolve into a [Greymon]-named Digimon card"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
+
+  # ─── Clause 4 — [Inherited][Your Turn] +4000 DP self-aura ──────────────────
+  #
+  # Printed inherited: "[Your Turn] This Digimon gets +4000 DP."
+  # DCGO: ChangeSelfDPStaticEffect(4000, isInheritedEffect: true,
+  # condition: IsOwnerTurn). Standard self-aura pattern (BT23-008 / BT23-005
+  # idiom): empty target `{}` + `active_when: { your_turn: true }` +
+  # `scope: inherited`. `Game::source_dp_contribution` reads `dp_modifier`
+  # gated by `active_when` for tensor-layer DP computation.
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 4000
+    summary: "[Your Turn] This Digimon gets +4000 DP"
