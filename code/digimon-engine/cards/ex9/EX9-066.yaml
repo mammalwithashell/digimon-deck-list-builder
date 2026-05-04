@@ -1,0 +1,225 @@
+# EX9-066 Tai Kamiya & Matt Ishida — Tamer, Cost 4, Red+Blue.
+#
+# Printed effect (cards.json effect_description_eng):
+#   [On Play] You may return 1 Digimon card with [Greymon], [Garurumon] or
+#   [Omnimon] in its name from your trash to the hand. If this effect didn't
+#   return, ＜Draw 1＞ (Draw 1 card from your deck.)
+#   [All Turns] When any of your Digimon are played or digivolve, by suspending
+#   this Tamer, gain 1 memory if you have a Digimon with [Greymon] in its name.
+#   Then, gain 1 memory if you have a Digimon with [Garurumon] in its name.
+#
+# Inherited / Security text (cards.json inherited_effect_description_eng):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/EX9/Red/EX9_066.cs
+#
+# ─── Clause 1 — [On Play] return-from-trash ELSE draw 1 ────────────────────────
+#
+# DCGO (EX9_066.cs:14-87): single ActivateClass on EffectTiming.OnEnterFieldAnyone
+# gated only by CanTriggerOnPlay (no [When Digivolving] half — distinct from the
+# AD1-001 trash-recursion clause). `SetUpActivateClass(..., isOptional: false)`
+# (`false` at param index 4) — the OUTER activation is MANDATORY. The optionality
+# is purely on the inner SelectCardEffect:
+#
+#   selectCardEffect.SetUp(
+#       canTargetCondition: ReturnCard (Greymon|Garurumon|Omnimon name),
+#       canNoSelect: () => true,            ← player may decline the pick
+#       maxCount: 1,
+#       mode: SelectCardEffect.Mode.AddHand,
+#       root: SelectCardEffect.Root.Trash,
+#       ...);
+#
+# The SelectCardEffect is only entered when
+# `HasMatchConditionOwnersCardInTrash(card, ReturnCard)` is true. After the
+# (skipped or executed) selection coroutine returns, DCGO reads a local
+# `cardAdded` flag set inside `SelectCardCoroutine` only if `sources.Count > 0`,
+# and if `!cardAdded` runs `DrawClass(card.Owner, 1, ...).Draw()`.
+#
+# DSL gap stack — TWO independent gaps interact here:
+#
+#   1. G-DSL-BIND-PRESENT (filed 2026-05-03): no binding-presence predicate
+#      (`binding_present: pick`) — can't mirror DCGO's `cardAdded` flag
+#      exactly. Sibling of EX11-074 "if this effect suspended your Digimon"
+#      gap (qa/dsl-vocab-gaps.md line 61).
+#
+#   2. G-COUNT-GTE-NOT-EVALUATED: `PredicateSpec::count_gte` parses and
+#      compiles but `code/digimon-engine/src/dsl_cards/predicate.rs` does NOT
+#      evaluate the general `pred.count_gte` field — only the specialized
+#      `security_count_gte` and `materials_count_gte` are wired. So
+#      `condition: { count_gte: { filter: ..., n: 1 } }` is currently a no-op
+#      that always evaluates as TRUE. This blocks the "did we have any
+#      eligible card in trash?" pre-check that BT24-008 also depends on
+#      ("requires Phase 3 count_gte evaluation on hand zone to take effect at
+#      runtime"). See qa/dsl-vocab-gaps.md G-COUNT-GTE-NOT-EVALUATED.
+#
+# Faithful workaround given BOTH gaps (no approximation, no auto-selection —
+# every choice still surfaces to the RL action space):
+#
+# Always present `select_effect_choice` on [On Play] with two labelled
+# branches; the trash-pick step is itself `optional: true` so it silently
+# passes through when no eligible cards exist:
+#
+#   - select_effect_choice [Return 1 from trash / Decline → Draw 1]
+#       branch 0 → `select_trash` (optional, filter by name) → if eligible
+#                   exists and player picks → `add_to_hand_from_trash`;
+#                   if no eligible OR player declines → no-op (NB: this
+#                   diverges from DCGO's "fallback draw" — see below)
+#       branch 1 → `draw: 1`
+#
+# Mapping vs DCGO's two reachable code paths:
+#
+#   A. Eligible card in trash + player wants to return:
+#      DSL: pick branch 0 → pick trash card → return-to-hand. ✓ exact match
+#      DCGO: SelectCardEffect with the card picked → AddHand. ✓
+#
+#   B. Eligible card in trash + player wants to skip return → draw:
+#      DSL: pick branch 1 → draw 1. ✓ exact match
+#      DCGO: SelectCardEffect with Cancel → cardAdded=false → DrawClass(1). ✓
+#
+#   C. No eligible card in trash → must draw:
+#      DSL: branch 0 leads to a no-op (no eligible target, optional skip);
+#           branch 1 leads to draw. The player MUST pick branch 1 for the
+#           printed effect to resolve faithfully.
+#      DCGO: HasMatchConditionOwnersCardInTrash=false → SelectCardEffect
+#            never enters → cardAdded=false → DrawClass(1) runs unconditionally.
+#
+#   The case-C divergence is structural, not behavioral: a faithful RL agent
+#   will always pick branch 1 in case C since branch 0 is a dead pick and the
+#   game state outcome is identical (draw 1). The action mask still surfaces
+#   both choices so the agent learns to skip dead branches — exactly what the
+#   no-approximations policy requires (no auto-selection on the agent's
+#   behalf). When G-COUNT-GTE-NOT-EVALUATED closes, this can be tightened by
+#   wrapping the choice prompt in `if count_gte ≥ 1 then [choice...] else
+#   draw 1` to gate the choice off in case C.
+#
+# Cost-2 test note: this clause is NOT marked `optional: true` at the clause
+# level because DCGO's outer `isOptional: false` means the player cannot skip
+# the [On Play] entirely. The inner `select_effect_choice` enforces the binary
+# decision (Return vs Draw); within branch 0, the trash pick is `optional: true`
+# so an empty-eligible-pool degrades gracefully.
+#
+# ─── Clause 2 — [All Turns] on play/digivolve observer ─────────────────────────
+#
+# DCGO (EX9_066.cs:91-148): single ActivateClass on EffectTiming.OnEnterFieldAnyone
+# gated with both `CanTriggerOnPermanentPlay` and
+# `CanTriggerWhenPermanentDigivolving`, both filtered to a permanent that is on
+# the OWNER's battle area AND IsDigimon (`IsPermanentExistsOnOwnerBattleAreaDigimon`).
+# `SetUpActivateClass(..., isOptional: true)` — the outer activation is OPTIONAL
+# ("by suspending this Tamer" is the cost; declining the prompt avoids the cost).
+# Body: tap (suspend) self first, then independently checks for own
+# [Greymon]-named (+1 memory) and own [Garurumon]-named (+1 memory) Digimon.
+#
+# This clause is structurally identical to BT17-081 clause 1 — see that file
+# for the full DCGO mapping commentary. The only difference vs BT17-081 is the
+# printed wording order ("gain 1 memory if you have... Then, gain 1 memory if
+# you have..." vs BT17-081's "if you have..., gain 1 memory. If you have...,
+# gain 1 memory."), which is semantically identical: two independent
+# board-state checks at resolution time.
+#
+# DSL mapping (mirrors BT17-081 clause 1 verbatim):
+#   - `when: [on_enter_field_anyone, on_digivolve]` covers play+digivolve halves.
+#   - `active_when: { all_turns: true }` per [All Turns] scoping.
+#   - `condition: event_target_owner: you AND event_target_kind: digimon` —
+#     DCGO `IsPermanentExistsOnOwnerBattleAreaDigimon`. Tamer entries do NOT
+#     satisfy this gate (printed text scopes to "your **Digimon**").
+#   - `optional: true` — "by suspending this Tamer" makes the outer activation
+#     declinable.
+#   - Cost step: `suspend: { target: source }` (BT17-081 / BT24-082 idiom).
+#   - Body: two independent `if any_permanent` checks (Greymon / Garurumon),
+#     each running `gain_memory: 1` when satisfied.
+#
+# Same gap status applies as BT17-081: G-ENTERING-PERMANENT-TRAIT is partially
+# closed for hand-played battle-area permanents and hand-driven
+# `Game::digivolve_from_hand` (2026-04-29). DNA digivolve, effect-initiated
+# digivolve, and breeding-area observer fan-out remain open.
+#
+# ─── Clause 3 — [Security] Play this card without paying the cost ─────────────
+#
+# DCGO (EX9_066.cs:152-159): EffectTiming.SecuritySkill →
+# CardEffectFactory.PlaySelfTamerSecurityEffect(card). Standard security-play
+# pattern. DSL: `when: on_security`, `play_from_security: {}` (BT17-081 /
+# BT22-084 / BT18-087 idiom).
+
+card: EX9-066
+name: Tai Kamiya & Matt Ishida
+kind: tamer
+color: [red, blue]
+cost: 4
+
+effects:
+  # ─── Clause 1: [On Play] return-from-trash ELSE draw 1 ─────────────────────
+  - when: on_play
+    summary: "[On Play] May return Greymon/Garurumon/Omnimon-named card from trash; if didn't return, draw 1"
+    process:
+      # Always present the binary choice. The player picks Return (branch 0)
+      # to attempt the trash pick, or Decline (branch 1) to draw 1. The trash
+      # pick inside branch 0 is itself `optional: true` so it degrades
+      # gracefully when no eligible cards exist (case C in header notes).
+      - select_effect_choice:
+          bind_as: pick_branch
+          labels:
+            - "Return 1 [Greymon/Garurumon/Omnimon]-named card from trash to hand"
+            - "Decline return → Draw 1"
+          prompt: "Choose: return from trash, or draw 1"
+      - if:
+          condition: { equals: [pick_branch, 0] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: pick
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_contains: "Greymon"
+                        - name_contains: "Garurumon"
+                        - name_contains: "Omnimon"
+                prompt: "Return 1 [Greymon/Garurumon/Omnimon] card from trash to hand"
+            - add_to_hand_from_trash: { of: you, card: pick }
+      - if:
+          condition: { equals: [pick_branch, 1] }
+          then:
+            - draw: { of: you, count: 1 }
+
+  # ─── Clause 2: [All Turns] on own Digimon play/digivolve ───────────────────
+  - when: [on_enter_field_anyone, on_digivolve]
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[All Turns] On own Digimon play/digivolve, suspend self → +1 memory per Greymon and per Garurumon on own field"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    process:
+      # Cost: suspend this Tamer ("by suspending this Tamer"). `source` resolves
+      # to CompiledBindingRef::Source → ctx.source_permanent (the Tamer).
+      - suspend: { target: source }
+      # Greymon check: independently grant +1 memory if any own [Greymon]-named
+      # Digimon is on the field at resolution time.
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              name_contains: "Greymon"
+          then:
+            - gain_memory: 1
+      # Garurumon check: same, independent of the Greymon check.
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              name_contains: "Garurumon"
+          then:
+            - gain_memory: 1
+
+  # ─── Clause 3: [Security] Play this card without paying the cost ───────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

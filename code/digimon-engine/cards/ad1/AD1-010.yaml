@@ -1,0 +1,132 @@
+card: AD1-010
+name: Garurumon
+kind: digimon
+level: 4
+color: [blue]
+cost: 5
+dp: 5000
+traits: [Beast, ADVENTURE]
+attribute: Data
+
+# ─── Alternate Digivolution Paths ────────────────────────────────────────────
+#
+# DCGO (AD1_010.cs, EffectTiming.None, AddSelfDigivolutionRequirementStaticEffect):
+#   permanentCondition: TopCard.HasText("Omnimon") || TopCard.EqualsTraits("ADVENTURE")
+#   level: 3, digivolutionCost: 2, ignoreDigivolutionRequirement: false
+#
+# DSL: encode the OR with two alt_paths (BT24-011 idiom). DCGO sets
+# `ignoreDigivolutionRequirement: false` on this entry — the printed text gives
+# no separate alt-cost; standard color requirements still apply.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, name_contains: "Omnimon" }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: ADVENTURE }
+    cost: 2
+
+effects:
+  # ─── Clause 1: [On Play] [When Digivolving] <Draw 1> ─────────────────────────
+  #
+  # Printed text: "[On Play] [When Digivolving] <Draw 1> (Draw 1 card from your
+  # deck.)"
+  #
+  # DCGO: SharedActivateCoroutine → DrawClass(card.Owner, 1).
+  # CanUseCondition splits On Play (CanTriggerOnPlay) and When Digivolving
+  # (CanTriggerWhenDigivolving) into separate ActivateClass entries; the body
+  # is identical, so we collapse them into a single DSL clause with two
+  # `when:` timings (BT17-015 / AD1-025 idiom).
+  #
+  # The clause has no [Once Per Turn] and no "you may" — the draw is
+  # mandatory when the trigger fires.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] <Draw 1>"
+    process:
+      - draw: { of: you, count: 1 }
+
+  # ─── Clause 2: [All Turns] All-Turns observer ────────────────────────────────
+  #
+  # Printed text: "[All Turns] When your Digimon or Tamers are played or
+  # digivolve, if any of them have [Greymon] or [Matt Ishida] in their names,
+  # this Digimon may digivolve into a Digimon card with [Garurumon] in its name
+  # in the hand without paying the cost."
+  #
+  # DCGO: ActivateClass on EffectTiming.OnEnterFieldAnyone with CanUseCondition
+  # = CanTriggerOnPermanentPlay || CanTriggerWhenPermanentDigivolving on a
+  # permanent that IsPermanentExistsOnOwnerBattleArea && (IsDigimon || IsTamer);
+  # CanActivateCondition checks the played/digivolved permanent's TopCard for
+  # ContainsCardName("Greymon"|"Matt Ishida"). Body:
+  # DigivolveIntoHandOrTrashCard(target=this, condition=Digimon name "Garurumon",
+  # payCost:false, isHand:true).
+  #
+  # DSL modeling:
+  #   - Two clauses (one per timing) so each fires on the correct trigger:
+  #       * `on_enter_field_anyone` covers play (digimon AND tamer; engine-gaps
+  #         RESOLVED 2026-04-29 for hand-played battle-area permanents — tamer
+  #         fan-out parity is unconfirmed, see Section 3 of the test docstring).
+  #       * `on_digivolve` covers digivolve (engine-gaps RESOLVED 2026-04-29 for
+  #         battle-area `Game::digivolve_from_hand`).
+  #   - Both clauses use `event_card_name_contains` to filter the triggering
+  #     permanent's name — predicate evaluator reads the entering/digivolving
+  #     card via `TriggerContext.event_card`.
+  #   - "any of them have [Greymon] or [Matt Ishida]" → `any_of` of two
+  #     `event_card_name_contains` predicates.
+  #   - Body: prompt for a Garurumon card in hand; effect-initiated digivolve
+  #     onto self with cost 0 and ignore_requirements: true (DCGO payCost: false
+  #     and isHand: true; ignore_requirements mirrors DCGO's "without paying
+  #     the cost" semantics — color/level requirements bypass).
+  #   - `optional: true` (printed: "may digivolve") so the player may decline.
+  - when: on_enter_field_anyone
+    optional: true
+    summary: "[All Turns] On ally play of [Greymon]/[Matt Ishida], may free-digivolve into [Garurumon] from hand"
+    condition:
+      any_of:
+        - event_card_name_contains: "Greymon"
+        - event_card_name_contains: "Matt Ishida"
+    process:
+      - select_hand:
+          of: you
+          bind_as: garu
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Garurumon"
+          prompt: "Digivolve into a [Garurumon] from your hand without paying the cost"
+      - effect_initiated_digivolve:
+          target: self
+          from_hand: garu
+          cost: 0
+          ignore_requirements: true
+
+  - when: on_digivolve
+    optional: true
+    summary: "[All Turns] On ally digivolve into [Greymon]/[Matt Ishida], may free-digivolve into [Garurumon] from hand"
+    condition:
+      any_of:
+        - event_card_name_contains: "Greymon"
+        - event_card_name_contains: "Matt Ishida"
+    process:
+      - select_hand:
+          of: you
+          bind_as: garu
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Garurumon"
+          prompt: "Digivolve into a [Garurumon] from your hand without paying the cost"
+      - effect_initiated_digivolve:
+          target: self
+          from_hand: garu
+          cost: 0
+          ignore_requirements: true
+
+  # ─── Clause 3: Inherited <Jamming> ───────────────────────────────────────────
+  #
+  # Printed text: "<Jamming> (This Digimon can't be deleted in battles against
+  # Security Digimon.)"
+  #
+  # DCGO: JammingSelfStaticEffect(isInheritedEffect: true).
+  # DSL: BT24-011 idiom — `scope: inherited / kind: grant_keyword / keyword: Jamming`.
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Jamming

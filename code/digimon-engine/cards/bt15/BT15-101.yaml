@@ -1,0 +1,167 @@
+card: BT15-101
+name: MetalGarurumon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 12000
+traits: [Cyborg]
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+#
+# Printed alt-path:
+#   "While you have a Tamer with [Matt Ishida] in its name and your opponent has
+#    a 10000 DP or higher Digimon, one of your [Gabumon] may digivolve into this
+#    card in your hand for a digivolution cost of 4, ignoring its digivolution
+#    requirements."
+#
+# OMITTED — pending DSL gap [G-ALT-PATH-CONDITION] (qa/dsl-vocab-gaps.md):
+#   `AltPathSpec` has `#[serde(deny_unknown_fields)]` and no `condition:`
+#   field. The "[Matt Ishida] tamer present AND opponent has a 10000 DP+ Digimon"
+#   activation gate cannot be expressed today. Authoring the alt-path WITHOUT
+#   the gate would let any Gabumon alt-digivolve into BT15-101 for cost 4
+#   unconditionally — violating printed text and the no-approximations policy.
+#
+# When G-ALT-PATH-CONDITION closes, the path lowers as:
+#
+#   - kind: digivolve
+#     from: { name_contains: "Gabumon" }
+#     cost: 4
+#     ignore_requirements: true
+#     condition:
+#       all_of:
+#         - any_permanent:
+#             of: you
+#             zone: [battle_area]
+#             kind: tamer
+#             name_contains: "Matt Ishida"
+#         - any_permanent:
+#             of: opponent
+#             zone: [battle_area]
+#             kind: digimon
+#             dp_gte: 10000
+#
+# Standard Lv5 Blue cost-4 path is the printed evo_costs entry; not authored as
+# an alt_path (the engine reads it from the standard digivolve cost table).
+
+effects:
+  # ─── Clause (a): <Evade> ────────────────────────────────────────────────────
+  #
+  # Declarative keyword grant. DCGO: EvadeSelfEffect on
+  # WhenPermanentWouldBeDeleted. Lowered to a self-target Effect by the DSL
+  # (evade modifier installed at registration).
+  - kind: grant_keyword
+    keyword: Evade
+
+  # ─── Clause (b): [When Digivolving] 3-lock ──────────────────────────────────
+  #
+  # Printed text:
+  #   "[When Digivolving] 3 of your opponent's Digimon and Tamers can't suspend
+  #    until the end of their turn."
+  #
+  # DCGO (BT15_101.cs OnEnterFieldAnyone, CanTriggerWhenDigivolving):
+  #   - Filter: opponent permanents that are Digimon OR Tamer
+  #     (CanSelectPermanentCondition on lines 112–123).
+  #   - maxCount = Math.Min(3, count) (line 147).
+  #   - canNoSelect: false, canEndNotMax: false (lines 157–158).
+  #   - Per pick: install CanNotSuspendClass on the chosen permanent until the
+  #     OWNER (opponent) turn ends (line 178: UntilOwnerTurnEndEffects.Add).
+  #
+  # Implementation choice — sequential select+modify:
+  #   `select_count_capped_multi` only supports Hand and Trash zones (see
+  #   `count_capped_candidate_count` in selections.rs); BattleArea is not
+  #   supported. We model the repeat-3 as three sequential
+  #   `select_opponent_permanent` + `add_modifier` blocks, each gated by
+  #   `not_in_binding` against the prior picks so the same permanent is not
+  #   picked twice. Each select is non-optional (matches DCGO canNoSelect:
+  #   false). When fewer than N candidates exist, the engine's existential
+  #   guard skips the select silently (matches DCGO Math.Min(3, count)).
+  - when: when_digivolving
+    summary: "[When Digivolving] 3 of opp's Digimon/Tamers can't suspend until end of opp's turn"
+    process:
+      # Pick 1
+      - select_opponent_permanent:
+          bind_as: lock_a
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose 1 of your opponent's Digimon or Tamers — can't suspend until end of their turn (1 of 3)"
+      - add_modifier:
+          target: lock_a
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+      # Pick 2 (must differ from pick 1)
+      - select_opponent_permanent:
+          bind_as: lock_b
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - not_in_binding: lock_a
+          prompt: "Choose another opponent's Digimon or Tamer — can't suspend until end of their turn (2 of 3)"
+      - add_modifier:
+          target: lock_b
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+      # Pick 3 (must differ from picks 1 and 2)
+      - select_opponent_permanent:
+          bind_as: lock_c
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - not_in_binding: lock_a
+              - not_in_binding: lock_b
+          prompt: "Choose a third opponent's Digimon or Tamer — can't suspend until end of their turn (3 of 3)"
+      - add_modifier:
+          target: lock_c
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── Clause (c): [All Turns][OPT] on_suspend → may unsuspend self ───────────
+  #
+  # Printed text:
+  #   "[All Turns] [Once Per Turn] When this Digimon becomes suspended, you may
+  #    unsuspend it."
+  #
+  # DCGO (BT15_101.cs OnTappedAnyone, hash "Unsuspen_BT15_101"):
+  #   - CanUseCondition: CanTriggerWhenPermanentSuspends gated by
+  #     `permanent == card.PermanentOfThisCard()` (line 234) — strictly self.
+  #   - CanActivate: CardEffectCommons.CanUnsuspend on the source permanent.
+  #   - Activate: IUnsuspendPermanents on [card.PermanentOfThisCard()].
+  #
+  # G-DSL-EVENT-TARGET-IS-SELF [new — dsl]:
+  #   No DSL predicate compares the suspended-permanent handle to the source
+  #   permanent. The DSL `equals: [...]` predicate only compares integers
+  #   (literals + integer bindings via `get_literal`); `event_target` /
+  #   `source` permanent handles are not exposed as integer comparison values.
+  #   Until the predicate ships, the closest faithful DSL gate is
+  #   `event_target_owner: you` + `event_target_kind: digimon` (the AD1-014
+  #   pattern), which OVER-FIRES when an ally Digimon suspends instead of
+  #   only when this Digimon suspends. The over-fire wastes the OPT lockout
+  #   and offers a "may unsuspend self" prompt at the wrong moment.
+  #
+  #   Suggested DSL syntax: `event_target_is_source: true` BoolPredicate leaf
+  #   evaluating
+  #   `rctx.game.current_trigger_context?.event_permanent ==
+  #    Some(rctx.source_permanent_handle()?)`.
+  #
+  # `target: source` resolves to the source permanent (this card on field), so
+  # the unsuspend target itself is correct — only the gate is permissive.
+  - when: on_suspend
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns][OPT] When this Digimon becomes suspended (over-fires on ally suspend pending G-DSL-EVENT-TARGET-IS-SELF), you may unsuspend it"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    process:
+      - unsuspend: { target: source }

@@ -1,0 +1,190 @@
+card: AD1-014
+name: MetalGarurumon
+kind: digimon
+level: 6
+color: [blue]
+cost: 12
+dp: 12000
+traits: [Cyborg, ADVENTURE, Hero]
+
+# ─── Alternate Digivolution Paths ────────────────────────────────────────────
+#
+# DCGO (AD1_014.cs, EffectTiming.None, AddSelfDigivolutionRequirementStaticEffect):
+#   permanentCondition: TopCard.ContainsCardName("Garurumon")
+#                    || TopCard.EqualsTraits("ADVENTURE")
+#                    || TopCard.EqualsTraits("HERO")
+#   level: 5, digivolutionCost: 3
+#
+# We split into two alt-paths because the DSL `from:` predicate does not
+# express OR over name_contains + trait_has on a single source today; the
+# `any_of` form keeps both branches explicit.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - name_contains: "Garurumon"
+            - trait_has: ADVENTURE
+            - trait_has: Hero
+    cost: 3
+
+effects:
+  # ─── Clause (a): <Blocker> ────────────────────────────────────────────────
+  # Declarative keyword grant.
+  # GAP G-DECLARATIVE-KEYWORD: declarative grant_keyword compiles to
+  # Effect::declarative which is never enqueued/fired by the engine, so the
+  # runtime modifier is not installed for self-target keywords. Structural
+  # assertion ad1_014_declares_blocker_and_evade_keyword_grants covers this.
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # ─── Clause (b): <Evade> ──────────────────────────────────────────────────
+  # Same G-DECLARATIVE-KEYWORD note.
+  - kind: grant_keyword
+    keyword: Evade
+
+  # ─── Clause (c): [On Play][When Digivolving][When Attacking][OPT] body ────
+  #
+  # Printed text:
+  #   "Delete 1 of your opponent's level 5 or lower Digimon. Then, for every
+  #   2 of your Tamers' colors, 1 of your opponent's Digimon or Tamers can't
+  #   suspend until their turn ends."
+  #
+  # DCGO (AD1_014.cs, SharedHashString = "AD1_014_OP_WD_WA"): one shared
+  # ActivateClass body fired by three ActivateClass shells (one per timing),
+  # all gated by `maxUsableCount: 1` AND the same hash so the three timings
+  # share a single OPT lockout per turn.
+  #
+  # Implementation note (faithful slice):
+  #
+  #   1. Delete-1-L5- target picker: fully expressible. Uses
+  #      `select_opponent_permanent` with `level_lte: 5` filter (G-PRED-LEVEL
+  #      is evaluated). Optionality matches DCGO `canNoSelect: false` — the
+  #      step prompts mandatorily when an eligible target exists.
+  #
+  #   2. Lock branch: BLOCKED — G-DSL-DISTINCT-TAMER-COLORS-FORMULA.
+  #      "For every 2 of your Tamers' colors" requires a formula primitive
+  #      that counts the distinct colors across own Tamers in battle area
+  #      (DCGO: `Combinations.GetDifferenetColorCardCount(tamerCards) / 2`).
+  #      `digimon_dsl::formula::PerSelector` lacks both:
+  #        (a) a `distinct_colors_count` PerSelector (or equivalent
+  #            AggregateSelector) over a zone+filter,
+  #        (b) a generic `repeat_n: { count, body }` step driver to install
+  #            N selection prompts in sequence (each picking a distinct
+  #            opponent permanent, filtered by `not_in_binding`).
+  #      Once the formula primitive ships, the lock body would lower as:
+  #
+  #        - per_n:
+  #            count:
+  #              floor_div:
+  #                - distinct_colors_count:
+  #                    of: you
+  #                    zone: [battle_area]
+  #                    filter: { kind: tamer }
+  #                - 2
+  #            body:
+  #              - select_opponent_permanent:
+  #                  bind_as: lock_n
+  #                  filter:
+  #                    all_of:
+  #                      - any_of:
+  #                          - kind: digimon
+  #                          - kind: tamer
+  #                      - not_in_binding: prior_locks
+  #                  prompt: "Choose 1 opponent Digimon or Tamer to lock"
+  #              - add_modifier:
+  #                  target: lock_n
+  #                  modifier: CannotSuspend
+  #                  value: 1
+  #                  expiry: end_of_opponents_turn
+  #
+  # GAP G-OPT-MULTI-TIMING-SHARED-LOCKOUT: each timing in `when: [...]` lowers
+  # to a separate `Effect` (lower_triggered.rs `for t in &clause.when`), each
+  # carrying its own OPT counter keyed by (card, slot). DCGO's
+  # `SharedHashString: "AD1_014_OP_WD_WA"` shares lockout across all three.
+  # Single-timing OPT lockout still works (regression in
+  # ad1_014_on_play_opt_blocks_second_same_timing_activation_in_same_turn).
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[OP][WD][WA][OPT] Delete 1 opp L5- Digimon (lock branch BLOCKED: G-DSL-DISTINCT-TAMER-COLORS-FORMULA)"
+    process:
+      - select_opponent_permanent:
+          bind_as: del_target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+          prompt: "Delete 1 of your opponent's level 5 or lower Digimon"
+      - delete_permanent: { target: del_target }
+      # Lock branch BLOCKED — see clause comment.
+
+  # ─── Clause (d): [All Turns][OPT] on_suspend → may unsuspend self ─────────
+  #
+  # Printed text:
+  #   "[All Turns] [Once Per Turn] When any of your Digimon suspend, this
+  #    Digimon may unsuspend."
+  #
+  # DCGO (AD1_014.cs, EffectTiming.OnTappedAnyone, hash "AD1_014_AT"):
+  #   CanTriggerWhenPermanentSuspends gated by
+  #   IsPermanentExistsOnOwnerBattleAreaDigimon — i.e. the suspended permanent
+  #   belongs to AD1-014's controller AND is a Digimon.
+  #
+  # We use:
+  #   - active_when: { all_turns: true } — both-player firing scope
+  #   - condition: event_target_owner = you (closes the "your Digimon" filter)
+  #     plus event_target_kind: digimon (closes the kind filter)
+  #   - process: optional unsuspend self via target: source
+  #
+  # Note on target: `target: source` resolves to `ctx.source_permanent` (the
+  # AD1-014 permanent on the battle area). `target: self` would resolve to the
+  # source CARD handle which is silently dropped by the unsuspend lowering
+  # (see permanent_mutations.rs).
+  - when: on_suspend
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns][OPT] When any of your Digimon suspend, this Digimon may unsuspend"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    process:
+      - unsuspend: { target: source }
+
+  # ─── Inherited Clause (e): [When Attacking][OPT] name-gated lock ──────────
+  #
+  # Printed text:
+  #   "[When Attacking] [Once Per Turn] If this Digimon has [Garurumon] or
+  #    [Omnimon] in its name, 1 of your opponent's Digimon or Tamers can't
+  #    suspend until their turn ends."
+  #
+  # DCGO (AD1_014.cs, OnAllyAttack, hash "AD1_014_ESS_WA", isInheritedEffect:
+  # true): CanActivateCondition gates on
+  #   PermanentOfThisCard().TopCard.ContainsCardName("Garurumon")
+  #   || PermanentOfThisCard().TopCard.ContainsCardName("Omnimon")
+  # The check is on the CARRIER permanent's TOP CARD name — not on the
+  # AD1-014 source card (which is hidden under a digivolution stack when this
+  # inherited effect is active).
+  #
+  # GAP G-DSL-SELF-NAME-CONTAINS [new — dsl]:
+  #   No DSL BoolPredicate evaluates "the carrier permanent's top card name
+  #   contains X". The closest existing predicates are:
+  #     - `name_contains` (filters CANDIDATE cards in selections, not self)
+  #     - `source_name_contains` (refers to the source-card name, not the
+  #       carrier's top card; also semantics are about the SOURCE permanent
+  #       in inherited contexts which is the AD1-014 permanent only when
+  #       AD1-014 is itself the top card)
+  #     - `self_digivolution_contains_name` (scans THIS card's own digivolution
+  #       stack for a name — the inverse of what we need; we want to check the
+  #       TOP card name from below the stack)
+  #   Engine API exists: `Permanent::top_card()` + `card_name`. The DSL needs
+  #   a `self_name_contains: <string>` BoolPredicate leaf that evaluates
+  #   `rctx.source_permanent()?.top_card().card_name.contains(name)`.
+  #
+  # Until G-DSL-SELF-NAME-CONTAINS closes, the inherited clause is OMITTED
+  # from the production YAML. Including it without the gate would leak the
+  # lock to non-Garurumon/Omnimon top cards, which violates the printed text
+  # and fails the no-approximations policy. Negative test
+  # `ad1_014_inherited_when_attacking_does_not_fire_when_top_card_lacks_garurumon_or_omnimon_name`
+  # passes today (no clause = no install). The positive test is `#[ignore]`.

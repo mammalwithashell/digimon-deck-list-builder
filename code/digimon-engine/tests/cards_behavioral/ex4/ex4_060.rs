@@ -1,0 +1,504 @@
+//! EX4-060 Omnimon Alter-S — Digimon, Lv.7, White, DP 15000, Cost 15.
+//! Traits: Holy Warrior.
+//! Evo: Lv.6 Blue / Cost 6
+//! DNA Digivolve: Lv.6 Blue + Lv.6 Red / Cost 0
+//!
+//! # Card text (cards.json — verbatim)
+//!
+//! ```text
+//! [When Digivolving] Delete 1 of your opponent's Digimon with 8000 DP or
+//!   less, and return 1 of your opponent's level 6 or higher Digimon to the
+//!   bottom of its owner's deck.
+//! [All Turns] When this Digimon would leave the battle area other than by
+//!   one of your effects, play 1 [BlitzGreymon] and 1 [CresGarurumon] from
+//!   this Digimon's digivolution cards without paying the costs. Then,
+//!   place this Digimon at the bottom of your security stack face down.
+//! ```
+//!
+//! Inherited / Security: (none)
+//!
+//! # DCGO C# reference
+//! `DCGO/Assets/Scripts/CardEffect/EX4/White/EX4_060.cs`
+//!
+//! # Patterns this test covers
+//! - Structural: 2 alt_paths (Digivolve Lv.6/Blue/cost-6 + DNA Blue+Red
+//!   cost 0) + 1 triggered clause ([When Digivolving] mandatory delete +
+//!   return-to-deck). The [All Turns] replacement clause is OMITTED until
+//!   two new gaps close — see BLOCKED tests in Section 4.
+//! - F1-adjacent literal `dp_lte: 8000` predicate (sister tests:
+//!   BT8-097, BT13-012, BT18-087, BT21-015, BT21-025).
+//! - Sequential mandatory selects within one clause (BT15-101 idiom).
+//!
+//! # Sister cards (cross-reference)
+//! - BT22-015 Omnimon — sister Decode form whose play-from-own-digivolution
+//!   surfaces the SAME engine primitive (G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-
+//!   SOURCES). EX4-060's clause is [All Turns] / not Decode-keyworded; both
+//!   need the same engine substrate.
+//! - BT17-078 Omnimon — sister DNA Greymon+Garurumon shape, but EX4-060
+//!   uses color-only filters (Blue + Red) instead of name_contains.
+//! - BT24-040 — sister `kind: replacement` with `replacement_cause` filter,
+//!   but cancels the leave (place ANOTHER permanent at security bottom);
+//!   EX4-060's clause does NOT cancel and reroutes the SELF subject.
+//!
+//! # Faithfulness diff vs. card text
+//!
+//! | Card-text element                                              | Status         |
+//! |----------------------------------------------------------------|----------------|
+//! | Standard digivolve Lv.6 Blue / Cost 6                           | OK             |
+//! | DNA digivolve Lv.6 Blue + Lv.6 Red / Cost 0                     | OK             |
+//! | [When Digivolving] Delete 1 opp Digimon DP <= 8000               | OK             |
+//! | [When Digivolving] Return 1 opp Lv >= 6 Digimon to bottom-deck   | OK             |
+//! | [All Turns] On leave-other-than-own-effect, play BlitzGreymon + CresGarurumon free | BLOCKED (G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES) |
+//! | [All Turns] Then, place self at bottom of security face down     | BLOCKED (G-PLACE-SELF-AT-SECURITY-BOTTOM) |
+//!
+//! # Known engine/DSL gaps affecting these tests
+//!
+//! - **G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES** (NEW): no DSL verb / step for
+//!   "play a named card from THIS permanent's digivolution cards without
+//!   paying the cost". Sibling of BT22-015's
+//!   G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES. Filed in
+//!   `qa/dsl-vocab-gaps.md`.
+//! - **G-PLACE-SELF-AT-SECURITY-BOTTOM** (NEW): no DSL verb / step for
+//!   "place this leaving Digimon at the bottom of your security stack face
+//!   down" as a self-disposition reroute on a `kind: replacement` clause
+//!   whose subject IS this permanent. Sibling of the engine-side
+//!   "Zone-manipulation: security stack operations" gap in
+//!   `docs/RUST_ENGINE_GAPS.md`. Filed in `qa/dsl-vocab-gaps.md`.
+
+#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
+
+use digimon_dsl::compiled::{
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
+    CompiledStep, CompiledTiming, CompiledTriggeredClause,
+};
+use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardKind, EffectTiming, PlayerId};
+use digimon_engine::events::GameEvent;
+use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
+
+/// Production YAML for EX4-060, inlined at compile time from the canonical
+/// location under `cards/ex4/`.
+const YAML: &str = include_str!("../../../cards/ex4/EX4-060.yaml");
+
+/// Compile EX4-060 from the production YAML and return the CompiledCard.
+fn compiled_ex4_060() -> digimon_dsl::compiled::CompiledCard {
+    let spec: digimon_dsl::CardSpec =
+        serde_yml::from_str(YAML).expect("EX4-060.yaml parses");
+    let registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
+        .expect("EX4-060.yaml compiles");
+    registry
+        .lookup("EX4-060")
+        .expect("EX4-060 in registry")
+        .clone()
+}
+
+// ─── Fixture helpers ────────────────────────────────────────────────────────
+
+fn make_opp_digimon(id: &str, name: &str, level: u8, dp: i32) -> CardData {
+    let mut card = make_test_card(id, name);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(level);
+    card.dp = Some(dp);
+    card
+}
+
+fn place_ex4_on_field(runner: &mut DebugRunner, player: PlayerId) -> PermanentHandle {
+    runner.place_on_field(player, "EX4-060", Some(0))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 1 — Structural assertions (parse / compile / topology)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[test]
+fn ex4_060_compiles_with_two_alt_paths_and_one_triggered() {
+    let card = compiled_ex4_060();
+
+    assert_eq!(
+        card.alt_paths.len(),
+        2,
+        "expected exactly 2 alt_paths (Digivolve Lv.6/Blue/cost-6 + DnaDigivolve Blue+Red cost-0), got {}",
+        card.alt_paths.len()
+    );
+
+    let triggered: Vec<&CompiledTriggeredClause> = card
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        triggered.len(),
+        1,
+        "expected exactly 1 triggered clause ([When Digivolving] — the [All Turns] \
+         replacement clause is OMITTED on G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES + \
+         G-PLACE-SELF-AT-SECURITY-BOTTOM); got {}",
+        triggered.len()
+    );
+}
+
+#[test]
+fn ex4_060_first_alt_path_is_digivolve_lv6_blue_cost6() {
+    let card = compiled_ex4_060();
+    let path = &card.alt_paths[0];
+    assert_eq!(path.kind, CompiledAltPathKind::Digivolve);
+    assert_eq!(
+        path.cost,
+        Some(digimon_dsl::compiled::CompiledCost::Literal(6)),
+        "standard digivolve must be Lv.6/Blue/cost-6 (printed cards.json evo_costs)"
+    );
+    assert!(
+        !path.ignore_requirements,
+        "standard digivolve must NOT ignore requirements"
+    );
+}
+
+#[test]
+fn ex4_060_second_alt_path_is_dna_digivolve_blue_red_cost0() {
+    let card = compiled_ex4_060();
+    let path = &card.alt_paths[1];
+    assert_eq!(path.kind, CompiledAltPathKind::DnaDigivolve);
+    assert_eq!(
+        path.cost,
+        Some(digimon_dsl::compiled::CompiledCost::Literal(0)),
+        "DNA digivolve must be cost 0 (printed dna_costs)"
+    );
+    let mats = &path.materials;
+    assert_eq!(
+        mats.len(),
+        2,
+        "DNA digivolve must have exactly 2 materials (Lv.6 Blue + Lv.6 Red), got {}",
+        mats.len()
+    );
+}
+
+#[test]
+fn ex4_060_when_digivolving_clause_is_face_up_mandatory() {
+    let card = compiled_ex4_060();
+    let clause = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t)
+                if matches!(t.scope, CompiledScope::FaceUp)
+                    && t.when.contains(&CompiledTiming::WhenDigivolving) =>
+            {
+                Some(t)
+            }
+            _ => None,
+        })
+        .expect("must have a face-up [When Digivolving] clause");
+
+    assert!(
+        !clause.optional,
+        "[When Digivolving] clause is mandatory (printed text has no 'may')"
+    );
+    assert!(
+        !clause.once_per_turn,
+        "no [Once Per Turn] on the [When Digivolving] clause"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 2 — [When Digivolving] delete-then-return behavioral
+// ═══════════════════════════════════════════════════════════════════════════════
+
+fn trigger_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
+    runner.game.drain_effect_queue();
+}
+
+/// Positive: [When Digivolving] with both arms having a single legal
+/// target each. The delete-DP-<=8000 arm removes the low-DP Digimon, and
+/// the return-Lv-6+ arm bottom-decks the Lv.6 Digimon.
+#[test]
+fn ex4_060_when_digivolving_deletes_low_dp_and_bottom_decks_lv6() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX4-060 YAML loads")
+        .add_card(make_opp_digimon("OPP-LOW", "OppLow", 4, 5000))
+        .add_card(make_opp_digimon("OPP-LV6", "OppLv6", 6, 11000))
+        .memory(15)
+        .start();
+
+    let ex4 = place_ex4_on_field(&mut runner, 0);
+    runner.place_on_field(1, "OPP-LOW", None);
+    runner.place_on_field(1, "OPP-LV6", None);
+    let opp_before = runner.battle_area_size(1);
+
+    trigger_when_digivolving(&mut runner, ex4);
+    let _ = runner.auto_resolve();
+
+    let opp_after = runner.battle_area_size(1);
+    assert!(
+        opp_after <= opp_before.saturating_sub(1),
+        "[When Digivolving] must remove at least the delete arm's target \
+         (delete + return-to-deck both remove from battle area). Before: {}, after: {}.",
+        opp_before,
+        opp_after,
+    );
+}
+
+/// Positive: with ONLY a legal delete target on the field (no Lv >= 6
+/// opp Digimon), the delete arm fires and the return-to-deck arm
+/// silently skips. Mirrors DCGO's per-arm HasMatchConditionPermanent
+/// gate at lines 169 / 191.
+#[test]
+fn ex4_060_when_digivolving_only_low_dp_target_fires_delete_only() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX4-060 YAML loads")
+        .add_card(make_opp_digimon("OPP-LOW", "OppLow", 4, 5000))
+        .memory(15)
+        .start();
+
+    let ex4 = place_ex4_on_field(&mut runner, 0);
+    runner.place_on_field(1, "OPP-LOW", None);
+    let opp_before = runner.battle_area_size(1);
+
+    trigger_when_digivolving(&mut runner, ex4);
+    let _ = runner.auto_resolve();
+
+    let opp_after = runner.battle_area_size(1);
+    assert_eq!(
+        opp_after,
+        opp_before - 1,
+        "delete arm must fire on the only legal DP-<=8000 target; return-to-deck arm silently skips"
+    );
+}
+
+/// Positive: with ONLY a legal return-to-deck target on the field (no
+/// DP <= 8000 opp Digimon), the delete arm silently skips and the
+/// return-to-deck arm fires.
+#[test]
+fn ex4_060_when_digivolving_only_lv6_target_fires_return_only() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX4-060 YAML loads")
+        .add_card(make_opp_digimon("OPP-LV6-HIGH", "OppLv6High", 6, 13000))
+        .memory(15)
+        .start();
+
+    let ex4 = place_ex4_on_field(&mut runner, 0);
+    runner.place_on_field(1, "OPP-LV6-HIGH", None);
+    let opp_before = runner.battle_area_size(1);
+
+    trigger_when_digivolving(&mut runner, ex4);
+    let _ = runner.auto_resolve();
+
+    let opp_after = runner.battle_area_size(1);
+    assert_eq!(
+        opp_after,
+        opp_before - 1,
+        "return-to-deck arm must fire on the only legal Lv >= 6 target; delete arm silently skips"
+    );
+}
+
+/// Negative: with NO opp Digimon at all, the [When Digivolving] clause
+/// must not panic and must leave the field unchanged (both arms silently
+/// skip per per-arm existential guards).
+#[test]
+fn ex4_060_when_digivolving_no_opp_digimon_does_not_panic() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX4-060 YAML loads")
+        .memory(15)
+        .start();
+
+    let ex4 = place_ex4_on_field(&mut runner, 0);
+    let opp_before = runner.battle_area_size(1);
+
+    trigger_when_digivolving(&mut runner, ex4);
+    // No assertion needed beyond non-panic and field unchanged.
+    assert_eq!(runner.battle_area_size(1), opp_before);
+}
+
+/// Negative gate: with a legal candidate that fails BOTH filters
+/// (e.g. an Lv.5 Digimon at 11000 DP — too high for delete, too low
+/// for return-to-deck), neither arm fires and the field is unchanged.
+#[test]
+fn ex4_060_when_digivolving_filters_exclude_high_dp_low_level() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX4-060 YAML loads")
+        .add_card(make_opp_digimon("OPP-MID", "OppMid", 5, 11000))
+        .memory(15)
+        .start();
+
+    let ex4 = place_ex4_on_field(&mut runner, 0);
+    runner.place_on_field(1, "OPP-MID", None);
+    let opp_before = runner.battle_area_size(1);
+
+    trigger_when_digivolving(&mut runner, ex4);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        opp_before,
+        "Lv.5 Digimon at 11000 DP fails both filters — neither arm should fire"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 3 — Negative gating: target filter correctness on each arm
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// With opponent Digimon at DP 8001 only, the delete arm's candidate
+/// list must be empty (boundary check on `dp_lte: 8000`). Acceptance
+/// criterion: field unchanged.
+#[test]
+fn ex4_060_dp_filter_excludes_dp_8001() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX4-060 YAML loads")
+        .add_card(make_opp_digimon("OPP-8001", "Opp8001", 5, 8001))
+        .memory(15)
+        .start();
+
+    let ex4 = place_ex4_on_field(&mut runner, 0);
+    runner.place_on_field(1, "OPP-8001", None);
+    let opp_before = runner.battle_area_size(1);
+
+    trigger_when_digivolving(&mut runner, ex4);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        opp_before,
+        "DP 8001 must be excluded by `dp_lte: 8000` (boundary), and Lv.5 fails the return arm too"
+    );
+}
+
+/// With an opp Digimon at exactly DP 8000, the delete arm's candidate
+/// list must include it (boundary check on `dp_lte: 8000`). Acceptance:
+/// the Digimon is removed.
+#[test]
+fn ex4_060_dp_filter_includes_dp_8000_boundary() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX4-060 YAML loads")
+        .add_card(make_opp_digimon("OPP-8000", "Opp8000", 5, 8000))
+        .memory(15)
+        .start();
+
+    let ex4 = place_ex4_on_field(&mut runner, 0);
+    runner.place_on_field(1, "OPP-8000", None);
+    let opp_before = runner.battle_area_size(1);
+
+    trigger_when_digivolving(&mut runner, ex4);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        opp_before - 1,
+        "DP 8000 is INCLUSIVE on `dp_lte: 8000` — the delete arm must fire"
+    );
+}
+
+/// With an opp Lv.5 Digimon at low DP (eligible for delete) and an opp
+/// Lv.7 Digimon at high DP (eligible for return-to-deck), both arms
+/// fire on their respective targets — order: delete first, then return.
+#[test]
+fn ex4_060_when_digivolving_both_arms_fire_independently_lv5_and_lv7() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX4-060 YAML loads")
+        .add_card(make_opp_digimon("OPP-LV5-LOW", "OppLv5Low", 5, 4000))
+        .add_card(make_opp_digimon("OPP-LV7-HIGH", "OppLv7High", 7, 14000))
+        .memory(15)
+        .start();
+
+    let ex4 = place_ex4_on_field(&mut runner, 0);
+    runner.place_on_field(1, "OPP-LV5-LOW", None);
+    runner.place_on_field(1, "OPP-LV7-HIGH", None);
+
+    trigger_when_digivolving(&mut runner, ex4);
+    let _ = runner.auto_resolve();
+
+    // Both should be removed. Delete consumes Lv.5/4000; return-to-deck
+    // consumes Lv.7/14000. Field count drops by 2.
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "both arms must fire independently when each has its own legal target"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SECTION 4 — BLOCKED tests for omitted [All Turns] clause
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// BLOCKED — G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES: when EX4-060 would
+/// leave the battle area outside of own-effect cause (e.g. opp deletion
+/// effect, battle, security check), the player should be offered the
+/// chance to play 1 [BlitzGreymon] and 1 [CresGarurumon] from EX4-060's
+/// digivolution stack without paying the cost. No DSL verb / keyword
+/// variant exists today that surfaces a play-from-own-digivolution-stack
+/// option. The entire [All Turns] clause is OMITTED from the YAML.
+#[test]
+#[ignore = "BLOCKED: G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (NEW) — no DSL verb / step for \
+            'play a named card from THIS permanent's digivolution cards without paying the cost'. \
+            Sibling of BT22-015's G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES. The entire \
+            [All Turns] clause is OMITTED from the YAML; no replacement-clause body installs. \
+            Test serves as the regression once a DSL `select_self_digivolution_source` + \
+            `play_from_own_digivolution_free` (or combined) verb lands."]
+fn ex4_060_all_turns_offers_play_blitz_and_cres_from_own_digivolution_on_leave() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX4-060 YAML loads")
+        .memory(15)
+        .start();
+    let _ = runner;
+}
+
+/// BLOCKED — G-PLACE-SELF-AT-SECURITY-BOTTOM: after the play-from-stack
+/// arm resolves, the leaving EX4-060 should be placed face-down at the
+/// bottom of its controller's security stack — NOT routed to the trash.
+/// No DSL verb / step exists for "place this leaving Digimon at the
+/// bottom of own security stack face down" as a self-disposition reroute.
+/// The entire [All Turns] clause is OMITTED from the YAML.
+#[test]
+#[ignore = "BLOCKED: G-PLACE-SELF-AT-SECURITY-BOTTOM (NEW) — no DSL verb / step for the \
+            self-disposition reroute 'place this leaving Digimon at the bottom of own security \
+            stack face down' on a `kind: replacement` clause whose subject IS this permanent. \
+            Sibling of the engine-side 'Zone-manipulation: security stack operations' gap in \
+            docs/RUST_ENGINE_GAPS.md. The entire [All Turns] clause is OMITTED from the YAML; \
+            test serves as the regression once a DSL `place_self_at_security_bottom: {}` step \
+            lands AND the engine substrate (face-down placement + zone reroute on Proceed \
+            replacement outcome + CannotAddSecurityByEffect modifier check) is in place."]
+fn ex4_060_all_turns_places_self_at_security_bottom_face_down_after_leave() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX4-060 YAML loads")
+        .memory(15)
+        .start();
+    let _ = runner;
+}
+
+/// BLOCKED — G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES + G-PLACE-SELF-AT-SECURITY-BOTTOM:
+/// when EX4-060 would leave by ITS controller's OWN effect, the [All
+/// Turns] clause should NOT fire (DCGO's `!IsByEffect(IsOwnerEffect)`
+/// gate at line 260). Today the entire clause is OMITTED so this is
+/// trivially satisfied — but pinning the negative case as a test helps
+/// regression once the gaps close: when own-effect causes the leave,
+/// the leaving Digimon should go to trash as normal, NOT to security bottom.
+#[test]
+#[ignore = "BLOCKED: G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES + G-PLACE-SELF-AT-SECURITY-BOTTOM — \
+            negative case: on own-effect-caused leave the [All Turns] clause must NOT fire. \
+            The entire clause is OMITTED until both gaps close; this test pins the \
+            'cause = own_effect' branch for regression once the clause is authored."]
+fn ex4_060_all_turns_does_not_fire_on_own_effect_leave() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX4-060 YAML loads")
+        .memory(15)
+        .start();
+    let _ = runner;
+}

@@ -554,3 +554,115 @@ fn ex10_010_no_cannot_be_affected_modifier_when_opp_lacks_13000_dp_digimon() {
     // assert!(!runner.game.modifiers.has(bwg, ModifierType::CannotBeAffected),
     //   "EX10-010 must NOT carry CannotBeAffected when opp lacks ≥13000 DP Digimon");
 }
+
+// SECTION 8 - Closed-gap regression tests (audit 2026-05-03)
+//
+// The #[ignore]d scaffolds above predate engine landings:
+// - 2026-05-01: play_cost_lte parsed and evaluated in eval_card_fields
+//   (predicate.rs:727). qa/dsl-vocab-gaps.md P-189.
+// - 2026-05-02: dp_lte/dp_gte permanent predicates evaluated against live
+//   effective DP in eval_dp_constraints (predicate.rs:867).
+//   qa/archetype-qa/engine-gaps.md G-PRED-DP-LTE.
+// Plus lower_aura.rs threads `modifier` end-to-end (lines 38, 89, 144) and
+// game.rs:1885 enforces CannotBeAffected via permanent_is_unaffected_by_effect.
+// flood_gate path in lower_flood_gate.rs also installs the modifier per tick.
+
+fn make_opp_digimon_costed(id: &str, dp: i32, play_cost: u16) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.dp = Some(dp);
+    c.play_cost = play_cost;
+    c
+}
+
+#[test]
+fn ex10_010_dp_aura_applies_when_opp_has_13000_dp_digimon() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-010")
+        .expect("EX10-010 in embedded DSL pack")
+        .add_card(make_opp_digimon("OPP-BIG", 13000))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
+        .memory(0)
+        .start();
+    let bwg = runner.place_on_field(0, "EX10-010", None);
+    let _opp = runner.place_on_field(1, "OPP-BIG", None);
+    let contrib = runner.game.source_dp_contribution(bwg, 0);
+    assert_eq!(contrib, 3000, "expected +3000 with >=13000 DP opp; got {}", contrib);
+}
+
+#[test]
+fn ex10_010_dp_aura_does_not_apply_when_opp_digimon_below_13000_dp() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-010")
+        .expect("EX10-010 in embedded DSL pack")
+        .add_card(make_opp_digimon("OPP-SMALL", 12000))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
+        .memory(0)
+        .start();
+    let bwg = runner.place_on_field(0, "EX10-010", None);
+    let _opp = runner.place_on_field(1, "OPP-SMALL", None);
+    let contrib = runner.game.source_dp_contribution(bwg, 0);
+    assert_eq!(contrib, 0, "expected 0 with <13000 DP opp; got {}", contrib);
+}
+
+#[test]
+#[ignore = "audit finding A1: YAML omits play_cost_lte: 7 even though predicate now exists"]
+fn ex10_010_on_play_filter_excludes_cost_above_7_target() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-010")
+        .expect("EX10-010 in embedded DSL pack")
+        .add_card(make_opp_digimon_costed("OPP-CHEAP", 5000, 3))
+        .add_card(make_opp_digimon_costed("OPP-BIG", 12000, 9))
+        .add_card(make_filler("FILLER"))
+        .hand(0, &["EX10-010"])
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
+        .security(0, &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER"])
+        .security(1, &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER"])
+        .memory(7)
+        .start();
+    let _ = runner.place_on_field(1, "OPP-CHEAP", None);
+    let _ = runner.place_on_field(1, "OPP-BIG", None);
+    let _ = runner.play(0, 0);
+    let n = runner.game.pending_selection.as_ref().expect("prompt").valid_action_ids.len();
+    assert_eq!(n, 1, "only cost-3 should be valid; got {}", n);
+}
+
+#[test]
+fn ex10_010_cannot_be_affected_installed_when_opp_has_13000_dp_digimon() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-010")
+        .expect("EX10-010 in embedded DSL pack")
+        .add_card(make_opp_digimon("OPP-BIG", 13000))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
+        .memory(0)
+        .start();
+    let bwg = runner.place_on_field(0, "EX10-010", None);
+    let _opp = runner.place_on_field(1, "OPP-BIG", None);
+    runner.game.tick_declarative_effects();
+    assert!(runner.game.modifiers.has(bwg, ModifierType::CannotBeAffected),
+        "expected CannotBeAffected installed");
+}
+
+#[test]
+fn ex10_010_cannot_be_affected_not_installed_when_opp_lacks_13000_dp_digimon() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-010")
+        .expect("EX10-010 in embedded DSL pack")
+        .add_card(make_opp_digimon("OPP-SMALL", 12000))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
+        .memory(0)
+        .start();
+    let bwg = runner.place_on_field(0, "EX10-010", None);
+    let _opp = runner.place_on_field(1, "OPP-SMALL", None);
+    runner.game.tick_declarative_effects();
+    assert!(!runner.game.modifiers.has(bwg, ModifierType::CannotBeAffected),
+        "expected CannotBeAffected NOT installed");
+}

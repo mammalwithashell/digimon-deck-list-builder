@@ -4,3 +4,5 @@ mod p_137;
 mod p_151;
 mod p_189;
 mod p_206;
+mod p_123;
+mod p_182;

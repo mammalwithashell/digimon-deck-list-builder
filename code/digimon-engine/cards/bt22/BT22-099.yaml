@@ -1,0 +1,214 @@
+# BT22-099 Kuremi Detective Agency — Option, Black+Yellow, Cost 3.
+# Traits: CS.
+#
+# Printed card text (data/cards.json):
+#
+#   While you have a [CS] trait Digimon or Tamer on the field, you can ignore
+#   this card's color requirements.
+#   [Main] Reveal the top 3 cards of your deck. Add 1 [CS] trait card among
+#   them to the hand. Return the rest to the bottom of the deck. Then, place
+#   this card in the battle area.
+#   [Main] ＜Delay＞ (By trashing this card after the placing turn, activate
+#   the effect below.)
+#   ・Gain 2 memory.
+#
+# Inherited (Security):
+#   Security Effect [Security] Place this card in the battle area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT22/Black/BT22_099.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 0 — `EffectTiming.None` IgnoreColorConditionClass.
+#   CanUseCondition: HasMatchConditionPermanent over OWN field —
+#       (IsTamer || IsDigimon) && HasCSTraits.
+#   CardCondition: cardSource == card (THIS card only — bypass scopes to
+#       BT22-099's own color requirement, not all options).
+#   Mirror: P-151 Digimon Liberator Clause 0 — same shape with LIBERATOR
+#       trait swapped for CS.
+#
+# Clause 1 — `EffectTiming.OptionSkill` (= [Main] play). DCGO calls
+#   `CardEffectCommons.SimplifiedRevealDeckTopCardsAndSelect(
+#       revealCount: 3,
+#       simplifiedSelectCardConditions: [
+#         { canTargetCondition: cardSource.HasCSTraits,
+#           message: "Select 1 [CS] card.",
+#           mode: AddHand,
+#           maxCount: 1 }
+#       ],
+#       remainingCardsPlace: RemainingCardsPlace.DeckBottom)`.
+#   `SetUpActivateClass(..., -1, false, ...)` — outer trigger NOT isOptional.
+#   Then `CardEffectCommons.PlaceDelayOptionCards(card: card, ...)` moves
+#   this Option from hand to its controller's battle area as a Delay
+#   permanent (the printed "Then, place this card in the battle area").
+#
+# Clause 2 — `EffectTiming.OnDeclaration` (Delay activation). DCGO uses
+#   `CardEffectFactory.Gain2MemoryOptionDelayEffect(card)` — the standard
+#   Delay-Option pattern. Activation drains the carrier and gains 2 memory.
+#
+# Clause 3 (Security, inherited) — `EffectTiming.SecuritySkill`. DCGO uses
+#   `CardEffectFactory.PlaceSelfDelayOptionSecurityEffect(card)` — the
+#   inherited-security path that places this Option as a Delay permanent
+#   from the security-resolution context (NOT the same as the [Main] auto-
+#   placement; this clause runs while the source card is a digivolution
+#   source, not a hand card).
+#
+# ─── Source-priority audit (printed text vs DCGO) ────────────────────────────
+#
+# Printed Clause 1 carries no "you may" — the Main clause is mandatory once
+# the player chooses to play the Option. DCGO confirms via
+# `SetUpActivateClass(..., false, ...)`. The inner CS-bucket select is
+# mandatory IF a CS card is in the reveal (single bucket, max 1, no
+# canNoSelect). When no CS card is in the reveal, the bucket has zero
+# candidates and silently resolves; all 3 revealed cards then bottom-deck.
+#
+# This mirrors the BT22-094 Clause 1 single-bucket reveal pattern exactly
+# (same set, same trait, same max 1, same revealCount-3 vs revealCount-3).
+# We re-use the `select_reveal_buckets` shape from BT22-094 with one bucket
+# `{ trait_has: CS, min: 1, max: 1 }`. `min: 1` makes the pick mandatory if
+# a CS card is in the reveal and silently resolves when none is — matching
+# DCGO mandatory-when-eligible single-bucket behavior.
+#
+# Printed Clause 2 ＜Delay＞ has no [OPT] — and a single BT22-099 in play can
+# only fire ONCE total because the Delay activation trashes the carrier.
+# `kind: delay` + `trigger: end_of_your_next_turn` mirrors P-035 / EX9-021
+# / LM-027 standard-Delay precedents.
+#
+# Printed inherited Security ("Place this card in the battle area") uses the
+# `place_self_as_delay_option: {}` step (RESOLVED 2026-05-02 — see
+# qa/dsl-vocab-gaps.md G-PLACE-SELF-AS-OPTION-PERMANENT). No more raw_rust
+# stub needed — the engine method `EffectContext::place_self_as_delay_option_permanent`
+# now seats the source-Option Card in battle area as `OptionState::Delayed`.
+#
+# ─── DSL precedent ─────────────────────────────────────────────────────────────
+#
+# - Clause 0 (color bypass): P-151 Digimon Liberator Clause 0 — `kind: flood_gate`
+#   + `modifier: IgnoreColorRequirement` + `target: { card_number_is: ... }`,
+#   gated by `any_permanent` over (LIBERATOR Digimon | Tamer). Swap LIBERATOR
+#   for CS, and broaden "Tamer" gate to also require CS trait per BT22-099's
+#   printed text ("[CS] trait Digimon or Tamer", not "Tamer alone").
+#   The G-IGNORE-COLOR-MASK gap was RESOLVED 2026-05-02 — runtime enforcement
+#   now lives in `code/digimon-engine/src/action/mask.rs` and the same helper
+#   gates `play_option_from_hand`, so the modifier no longer needs to be
+#   `#[ignore]`'d.
+#
+# - Clause 1 (single-bucket CS reveal): BT22-094 Yuugo Kamishiro Clause 1 —
+#   `select_reveal_buckets` with one bucket `{ trait_has: CS, min: 1, max: 1 }`
+#   + trailing `place_remainder_on_deck { position: bottom }`. Identical shape.
+#
+# - Clause 2 (gain-memory Delay): P-035 Red Memory Boost! Clause 1 — `kind: delay`
+#   + `trigger: end_of_your_next_turn` + `process: [gain_memory: 2]`. Identical.
+#   Same DCGO factory `Gain2MemoryOptionDelayEffect` is used by both cards.
+#
+# - Clause 3 (inherited security place-self): the resolved DSL verb is
+#   `place_self_as_delay_option: {}`. P-035 / P-103 / BT24-089 are older YAMLs
+#   that left this as `process: []` while the gap was open; they will migrate
+#   on revisit. This card uses the new step natively from authoring.
+#
+# - Engine auto-place for [Main] Delay-Option: the engine's
+#   `classify_option_subtype` detects the `kind: delay` clause and triggers
+#   `dispose_option` to seat this Option as `OptionState::Delayed` in the
+#   battle area at MainEffectDrain — no explicit step is required in the
+#   [Main] clause body. Confirmed by P-035 dsl-vocab-gaps note 2026-05-02.
+
+card: BT22-099
+name: "Kuremi Detective Agency"
+kind: option
+color: [black, yellow]
+cost: 3
+traits: [CS]
+
+effects:
+  # ─── Clause 0: Color bypass (conditional IgnoreColorRequirement) ──────────
+  #
+  # "While you have a [CS] trait Digimon or Tamer on the field, you can
+  # ignore this card's color requirements."
+  #
+  # DCGO: IgnoreColorConditionClass + CardCondition (cardSource == card)
+  #   → bypass restricted to THIS card.
+  # Mirror of P-151 Clause 0 — same flood_gate + IgnoreColorRequirement +
+  # any_permanent shape; LIBERATOR swapped for CS, and BOTH branches
+  # (digimon OR tamer) require trait_has: CS per the printed text.
+  - kind: flood_gate
+    active_when:
+      any_of:
+        - any_permanent:
+            of: you
+            kind: digimon
+            trait_has: CS
+        - any_permanent:
+            of: you
+            kind: tamer
+            trait_has: CS
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT22-099" }
+    summary: "While you have a CS Digimon or Tamer, ignore color requirements for this card"
+
+  # ─── Clause 1: [Main] reveal-3 + add 1 CS card to hand + bottom rest ──────
+  #
+  # Printed: "[Main] Reveal the top 3 cards of your deck. Add 1 [CS] trait
+  # card among them to the hand. Return the rest to the bottom of the deck.
+  # Then, place this card in the battle area."
+  #
+  # Outer trigger is NOT optional (DCGO `SetUpActivateClass(..., false, ...)`;
+  # no "you may" in printed text). Inner CS bucket is mandatory when any CS
+  # card is in the reveal (`min: 1, max: 1`); silently resolves when none.
+  #
+  # The "Then, place this card in the battle area" sub-step is implicit:
+  # the engine's `classify_option_subtype` detects the trailing Clause 2
+  # (`kind: delay`) and treats this Option as a Delay-Option, auto-seating
+  # it in battle area at MainEffectDrain via `dispose_option`. No explicit
+  # `place_self_as_delay_option` step is needed here (per the resolved-gap
+  # note for the Main context in qa/dsl-vocab-gaps.md G-PLACE-SELF-AS-OPTION-
+  # PERMANENT — only the inherited-security context needs the explicit step).
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal 3; add 1 [CS] card to hand; bottom the rest; auto-place self as Delay"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: cs_pick
+              min: 1
+              max: 1
+              filter: { trait_has: CS }
+          prompt: "Select 1 [CS] card to add to hand"
+      - add_to_hand_from_reveal: { of: you, card: cs_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Clause 2: [Main] ＜Delay＞ Gain 2 memory ─────────────────────────────
+  #
+  # Printed: "[Main] ＜Delay＞ (By trashing this card after the placing turn,
+  # activate the effect below.) ・Gain 2 memory."
+  #
+  # DCGO: `Gain2MemoryOptionDelayEffect(card)` — standard Delay-Option pattern
+  # mapping to the EndOfYourNextTurn trigger. Identical to P-035 Clause 1.
+  # No [OPT] — the trash cost self-limits to one fire per BT22-099 in play.
+  - kind: delay
+    trigger: end_of_your_next_turn
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  # ─── Clause 3: [Security] (inherited) ─────────────────────────────────────
+  #
+  # Printed inherited (security): "Security Effect [Security] Place this
+  # card in the battle area."
+  #
+  # DCGO: `PlaceSelfDelayOptionSecurityEffect(card)` — places this Option in
+  # the controller's battle area as a Delay permanent from the security-
+  # resolution context. DCGO has no canNoSelect parameter — mandatory.
+  #
+  # `place_self_as_delay_option: {}` lowers to
+  # `EffectContext::place_self_as_delay_option_permanent`, which removes the
+  # source Option from its host stack and seats it as `OptionState::Delayed`
+  # in the owner's battle area, then dispatches `OnOptionPlaced`.
+  # (RESOLVED 2026-05-02 — see qa/dsl-vocab-gaps.md
+  # G-PLACE-SELF-AS-OPTION-PERMANENT for the inherited-security context.)
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security][Inherited] Place this card in the battle area as a Delay permanent"
+    process:
+      - place_self_as_delay_option: {}

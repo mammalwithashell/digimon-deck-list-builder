@@ -1,0 +1,162 @@
+card: BT13-012
+name: GeoGreymon
+kind: digimon
+level: 4
+color: [red, yellow]
+cost: 5
+dp: 5000
+traits: [Dinosaur]
+attribute: Vaccine
+
+# ─── Alt-path: Lv.3 w/[Agumon] in name and [Dinosaur] trait, cost 2 ──────────
+# Printed in xros_req column / DCGO `AddSelfDigivolutionRequirementStaticEffect`
+# (BT13_012.cs lines 14–22): "[Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur]
+# trait: Cost 2".
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - name_contains: "Agumon"
+        - trait_has: Dinosaur
+    cost: 2
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Clause 1 — [When Digivolving] Search your security stack, and you may play
+# 1 red or yellow Tamer card among it without paying its cost.
+# If you did, ＜Recovery +1 (Deck)＞. Then, shuffle your security stack.
+#
+# BLOCKED — hybrid DSL gap (G-PLAY-SELECTED-SECURITY-CARD).
+#
+# The clause requires three coordinated steps:
+#   a. Search the controller's security stack and (optionally) PLAY one of
+#      those cards (a red or yellow Tamer) without paying its cost.
+#   b. Conditional Recovery +1 (Deck) — only if a Tamer was actually played.
+#   c. Unconditional shuffle of the security stack.
+#
+# Step (a) is the blocker. The current DSL surface offers:
+#   - `select_security: { of: you, bind_as: tgt, filter: { ... } }` — installs
+#     a SelectionKind::Security prompt and binds the chosen card via
+#     `b.insert_card(name, card.handle())` (a CardHandle), and
+#   - `play_from_security: {}` — pops the TOP of security and plays it (no
+#     binding parameter; security index is implicit from trigger context).
+#   - `add_to_hand_from_security: { of, card }` — accepts a Card binding and
+#     moves the chosen security card to hand, but has no companion verb to
+#     then play that card by Card-handle binding from hand. `play_from_hand_free`
+#     requires a `hand_index: BindingRef` (HandIndex), and there is no DSL
+#     primitive that converts a Card binding into the resulting hand_index
+#     after the move (the card lands at `hand.len() - 1` but no binding
+#     captures that position).
+#
+# Two equally-acceptable closures for the gap:
+#
+#   (i)  Add a new step verb such as
+#          `play_security_card: { of: you, card: <binding> }`
+#        that lowers to: pop the security card matching the bound CardHandle,
+#        push to hand, call `play_from_hand_with_cost_result(.., Free, ByEffect, false)`,
+#        return the new field index. Mirrors the existing
+#        `EffectContext::play_from_security(player)` API but takes an explicit
+#        security index rather than the top.
+#
+#   (ii) Extend `PlayFromHandFree` (and `PlayFromHand{Free}`) to accept a
+#        Card-handle binding in `hand_index`, resolving the current hand
+#        position of the bound card at run-time. Combined with the existing
+#        `add_to_hand_from_security: { of: you, card: tgt }` this would let us
+#        write `select_security` → `add_to_hand_from_security` → `play_from_hand_free`
+#        as three native DSL verbs.
+#
+# Step (b) ALSO needs an "if-the-Tamer-was-played" predicate. The DSL has no
+# `binding_was_set` / `last_play_succeeded` predicate; the canonical idiom is
+# probably to bind the play step's result and gate Recovery on its presence.
+# Once (a) is closed, this needs a small `set_binding_on_play` companion.
+#
+# Step (c) (shuffle_security) is implementable today, but emitting it in
+# isolation would imply that the rest of the clause already shipped, masking
+# the blocker. Per CLAUDE.md "no-approximations policy", the entire When
+# Digivolving clause is omitted until G-PLAY-SELECTED-SECURITY-CARD closes.
+#
+# When the gap closes, implement as:
+#
+#   - when: when_digivolving
+#     summary: "[When Digivolving] search security for red/yellow Tamer; play free; if played, Recovery +1; then shuffle"
+#     process:
+#       - select_security:
+#           of: you
+#           bind_as: sec_tamer
+#           optional: true
+#           filter:
+#             all_of:
+#               - kind: tamer
+#               - any_of:
+#                   - color_is: red
+#                   - color_is: yellow
+#           prompt: "Play 1 red or yellow Tamer from security without paying its cost"
+#       - if:
+#           condition: { binding_was_set: sec_tamer }
+#           then:
+#             - play_security_card: { of: you, card: sec_tamer }
+#             - recover: { of: you, count: 1 }
+#       - shuffle_security: { of: you }
+#
+# Tracked under [G-PLAY-SELECTED-SECURITY-CARD] in qa/dsl-vocab-gaps.md
+# (security-stack search/extraction follow-on noted on the
+# `add_top_security_to_hand` / `recover_from_deck` resolution entry).
+# Same blocker affects BT11-042 Angewomon (which currently uses raw_rust).
+
+effects:
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Clause 2 — Inherited [Your Turn] [Once Per Turn]
+  # When one of your red or yellow Tamers becomes suspended, you may delete
+  # 1 of your opponent's Digimon with 3000 DP or less.
+  #
+  # Predicates available:
+  #   - event_target_owner: you            ✓ (DSL leaf)
+  #   - event_target_kind: tamer           ✓ (DSL leaf)
+  #   - your_turn: true                    ✓ ([Your Turn] scoping)
+  #
+  # Predicates MISSING (faithfulness gap, not a blocker — see below):
+  #   - event_target_color_any_of: [red, yellow]
+  #     The DSL has no `event_target_color_*` predicate leaf. Only
+  #     `event_target_kind`, `event_target_trait_has`, `event_target_owner`
+  #     exist. The clause as authored therefore over-fires on suspended
+  #     own Tamers of ANY color (e.g. a green or purple Tamer suspending
+  #     would also offer the delete prompt). Tracked under
+  #     [G-EVENT-TARGET-COLOR] in qa/dsl-vocab-gaps.md.
+  #
+  # Engine-side caveats (active, but tests scaffolded):
+  #   - G-OPT-TRIGGERED: `once_per_turn: true` compiles to
+  #     `Effect::max_per_turn=1` but triggered-effect OPT enforcement is
+  #     not yet wired in `run_queued_effect_inner`. The clause may
+  #     over-fire on multiple suspends in the same turn until that gap
+  #     closes (same caveat as BT24-018 clause f).
+  #   - G-PRED-DP-LTE: `dp_lte: 3000` is parsed and compiled but the
+  #     predicate evaluator does not yet enforce it on permanents in
+  #     non-security zones. All opponent Digimon will be selectable until
+  #     the gap closes.
+  #
+  # The inherited clause is authored faithfully against printed text; the
+  # gaps are documented and the affected behavioral assertions are
+  # `#[ignore]`'d with their gap IDs in the test file.
+  - scope: inherited
+    when: on_suspend
+    optional: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        # Missing: event_target_color_any_of: [red, yellow]
+        # — see G-EVENT-TARGET-COLOR note above.
+    summary: "[Your Turn][OPT] On own Tamer suspending (red/yellow color filter pending), may delete 1 opp Digimon DP≤3000"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 3000
+          prompt: "Delete 1 of your opponent's Digimon with 3000 DP or less"
+      - delete_permanent: { target: tgt }

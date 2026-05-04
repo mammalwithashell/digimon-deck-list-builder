@@ -1,0 +1,93 @@
+# BT17-019 Gabumon — Digimon, Lv.3, Blue, DP 1000, Cost 3.
+# Traits: Reptile.
+#
+# Printed effect:
+#   [Start of Your Main Phase] If you have a Tamer with [Matt Ishida] in
+#   its name, <Draw 1>.
+#
+# Inherited Effect:
+#   [End of Your Turn] This Digimon and any of your other Digimon may DNA
+#   digivolve into a Digimon card in the hand.
+#
+# Standard digivolve: Lv.2 Blue / cost 0.
+# (No Tsunomon name-bonus is printed on this card. DCGO does have an
+#  AddSelfDigivolutionRequirementStaticEffect block at EffectTiming.None
+#  for "Tsunomon" with cost 0 and ignoreDigivolutionRequirement: false,
+#  but that block is REDUNDANT with the printed Lv.2 Blue / cost 0
+#  digivolve since Tsunomon IS a Lv.2 Blue Digimon. We do not author it
+#  separately — it would create a duplicate alt-path with no behavioral
+#  difference. Sister card BT17-007 (Agumon) has the same DCGO pattern
+#  for "Koromon" and its YAML in cards/_examples/BT17-007.yaml similarly
+#  authors only the standard digivolve alt-path. See test docstring for
+#  the cross-check.)
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT17/Blue/BT17_019.cs
+#
+# Clause notes (from DCGO):
+#   * Start-of-main effect is mandatory once gated (`isOptional: false`).
+#     The Draw 1 step takes no player choice — it is a deterministic
+#     state delta with no SelectCard prompt. The condition checks own
+#     battle area for a tamer whose top-card name contains
+#     "Matt Ishida" (DCGO also normalizes the no-space variant
+#     "MattIshida", but the printed text uses the spaced form and
+#     `name_contains` substring match handles the spaced form
+#     correctly).
+#   * End-of-Your-Turn inherited DNA digivolve is encoded as the
+#     resolved `alt_path_registration` declarative — see
+#     qa/dsl-vocab-gaps.md (RESOLVED 2026-05-02).
+#
+# Sister card:
+#   BT17-007 (Agumon, Tai Kamiya) — same shape, swaps the Matt-Ishida
+#   tamer for Tai-Kamiya and the Draw 1 payload for a name-filtered
+#   trash-to-hand select. See cards/_examples/BT17-007.yaml for the
+#   reference template this YAML adapts.
+
+card: BT17-019
+name: Gabumon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Reptile]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+effects:
+  # ─── Clause 1 — [Start of Your Main Phase] Matt-Ishida-conditional Draw 1 ───
+  # "If you have a Tamer with [Matt Ishida] in its name, <Draw 1>."
+  #
+  # Printed text has no "you may" → mandatory once gated. DCGO uses
+  # `isOptional: false`. The Draw step has no SelectCard prompt
+  # (deterministic state delta), so no `pending_selection` will install.
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If Matt Ishida tamer present, draw 1"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        name_contains: "Matt Ishida"
+    process:
+      - draw: { of: you, count: 1 }
+
+  # ─── Clause 2 — Inherited [End of Your Turn] DNA digivolve registration ─────
+  # "This Digimon and any of your other Digimon may DNA digivolve into a
+  #  Digimon card in the hand."
+  #
+  # Encoded via the `alt_path_registration` declarative (RESOLVED
+  # 2026-05-02 in qa/dsl-vocab-gaps.md). The optional "may" semantic is
+  # naturally captured by the alt-path framework — DNA digivolve is
+  # always an opt-in player action.
+  - kind: alt_path_registration
+    scope: inherited
+    trigger: end_of_your_turn
+    registers:
+      kind: dna_digivolve
+    applies_to:
+      of: you
+      zone: [battle_area]

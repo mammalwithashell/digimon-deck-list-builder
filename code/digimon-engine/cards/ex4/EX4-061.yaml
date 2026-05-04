@@ -1,0 +1,339 @@
+# EX4-061 Matt Ishida & Tai Kamiya — Tamer, Cost 4, Blue+Red.
+#
+# Printed effect (cards.json effect_description_eng):
+#   [Your Turn] When you play a [Gabumon] or [Agumon], you may suspend this
+#   Tamer to gain 1 memory.
+#   [Your Turn] [Once Per Turn] When one of your Digimon digivolves, if you
+#   have 1 or fewer Digimon, you may play 1 [Gabumon] if that Digimon has
+#   [Greymon] in its name or 1 [Agumon] if that Digimon has [Garurumon] in
+#   its name from your hand or trash without paying its cost.
+#
+# Inherited / Security text (cards.json inherited_effect_description_eng):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/EX4/Blue/EX4_061.cs
+#
+# ─── Source priority cross-check ─────────────────────────────────────────────
+#
+# Printed text + RULES_CONTEXT.md govern semantics. DCGO is the implementation
+# tiebreaker. DCGO matches printed text exactly here:
+#
+# Clause 1 (EX4_061.cs:13-78): two consecutive ActivateClass blocks at
+# EffectTiming.OnEnterFieldAnyone. The second-block listing in the file is
+# actually clause 2; the first-block clause-1 PermanentCondition checks
+# `permanent.TopCard.CardNames.Contains("Agumon" || "Gabumon")` for any
+# permanent on the OWNER's battle area. CanActivateCondition adds
+# `CanActivateSuspendCostEffect(card)` (the Tamer must be unsuspended). Body:
+# suspend self, then `card.Owner.AddMemory(1)`. `isOptional: true`.
+#
+# Clause 2 (EX4_061.cs:80-211): EffectTiming.OnEnterFieldAnyone third block
+# (the file uses OnEnterFieldAnyone with `CanTriggerWhenPermanentDigivolving`
+# rather than a separate EffectTiming.OnDigivolve gate). PermanentCondition =
+# `IsPermanentExistsOnOwnerBattleAreaDigimon` (the digivolving permanent must
+# be the owner's Digimon). CanActivateCondition (lines 147-171):
+#   - card on battle area (Tamer still in play)
+#   - `card.Owner.GetBattleAreaDigimons().Count == 1` ← exactly 1 Digimon
+#   - Top of that 1 Digimon `HasGreymonName || HasGarurumonName`
+#   - hand has ≥1 card OR trash has a matching card
+# Body (lines 173-277):
+#   - if both hand and trash have an eligible card, present a "From hand /
+#     From trash" BoolSelection; otherwise auto-pick the only zone.
+#   - SelectHandEffect / SelectCardEffect (Trash) with maxCount=1,
+#     `canNoSelect: true` (player may decline the select within the chosen
+#     zone). CanSelectCardCondition gates by:
+#       * `CanPlayAsNewPermanent(payCost: false)` (memory + zone affordability)
+#       * `card.Owner.GetBattleAreaDigimons().Count == 1` AND for that 1:
+#         - top has Greymon name → cardSource.CardNames.Contains("Gabumon"), or
+#         - top has Garurumon name → cardSource.CardNames.Contains("Agumon")
+#   - PlayPermanentCards(payCost: false, isTapped: false, root: Hand or Trash,
+#     activateETB: true).
+# `isOptional: true`, maxCount: 1 ([Once Per Turn]).
+#
+# Clause 3 (EX4_061.cs:280-283): EffectTiming.SecuritySkill →
+# CardEffectFactory.PlaySelfTamerSecurityEffect(card). Standard
+# play_from_security pattern.
+#
+# ─── DSL mapping notes ───────────────────────────────────────────────────────
+#
+# Clause 1 (DSL):
+#   - `when: on_enter_field_anyone` — printed "When you play". `on_play`
+#     fires on the played permanent itself; `on_enter_field_anyone` is the
+#     observer fan-out that lets a Tamer watch other plays. (BT17-081 idiom.)
+#   - `active_when: { your_turn: true }` per [Your Turn] scoping.
+#   - `condition`: `event_target_owner: you` AND `event_target_kind: digimon`
+#     AND any_of `event_card_name_contains: Gabumon | Agumon`. The printed
+#     text says "play a [Gabumon] or [Agumon]"; we filter by event card name.
+#     Affected by G-ENTERING-PERMANENT-TRAIT (partially closed 2026-04-29):
+#     event_card is populated for normal hand-played permanents and hand
+#     digivolves only; effect-created plays / token plays / play-from-trash
+#     observer fan-out remain open and would over- or under-fire in those
+#     paths. BT17-081 has identical exposure.
+#   - `optional: true` per "you may". DCGO models with `isOptional: true`.
+#   - Cost: `suspend: { target: source }` — the "by suspending this Tamer"
+#     activation cost. (BT17-081 / BT24-082 idiom — `source` resolves to
+#     CompiledBindingRef::Source → ctx.source_permanent.)
+#   - Body: `gain_memory: 1` after the suspend cost.
+#
+# Clause 2 (DSL):
+#   - `when: on_digivolve` — explicit digivolve timing (DCGO collapses to
+#     OnEnterFieldAnyone+CanTriggerWhenPermanentDigivolving; engine uses
+#     OnDigivolve directly).
+#   - `active_when: { your_turn: true }` per [Your Turn] scoping. Note that
+#     `your_turn` is somewhat redundant for "when one of your Digimon
+#     digivolves" (you can only digivolve on your turn), but the printed text
+#     explicitly carries [Your Turn] so we encode it.
+#   - `optional: true` per "you may", `once_per_turn: true` per [Once Per Turn].
+#     OPT enforcement on triggered effects is partial (G-OPT-TRIGGERED — same
+#     situation as BT17-081 clause 2). The flag is authored faithfully even if
+#     same-turn lockout is not yet enforced through the queue drain.
+#   - `condition`:
+#       * `count_lte` your battle_area Digimon ≤ 1 — encodes "if you have 1
+#         or fewer Digimon". On `on_digivolve`, the digivolving permanent IS
+#         a Digimon and counts toward the total, so count==1 means the
+#         digivolved card is the only Digimon.
+#       * `any_permanent` your battle_area Digimon `name_contains` Greymon OR
+#         Garurumon — encodes "that Digimon has [Greymon] OR [Garurumon] in
+#         its name". With count_lte ≤ 1, "that Digimon" IS the only Digimon
+#         on the field, so a board-state any_permanent check is equivalent.
+#         (Engine has no `event_target_name_contains` predicate — DSL gap
+#         documented under qa/dsl-vocab-gaps.md, not blocking here because
+#         the count_lte gate makes the board check semantically equivalent.)
+#   - Body branches by board state (NOT by player choice — the Greymon vs
+#     Garurumon branch is decided by which named Digimon is on field):
+#       * If board has a Greymon-named Digimon → optional play of 1 Gabumon
+#         from hand or trash without paying cost.
+#       * If board has a Garurumon-named Digimon → optional play of 1 Agumon
+#         from hand or trash without paying cost.
+#       * The two `if` branches are independent — if the only Digimon
+#         somehow has BOTH Greymon and Garurumon in its name (e.g., a token
+#         named "GreymonGarurumon"), both prompts would queue. DCGO has the
+#         same independent-branch semantics.
+#   - Hand-or-trash zone selection: P-189 / DCGO idiom. Use
+#     `select_effect_choice` ("From hand" / "From trash") then branch with
+#     `if equals: [zone, 0|1]`. Each branch runs a `select_hand` /
+#     `select_trash` over name_contains: Gabumon / Agumon, then
+#     `play_from_hand_free` / `play_from_trash_free`. The inner `select_*`
+#     is `optional: true` to mirror DCGO's `canNoSelect: true`.
+#
+# Clause 3 (DSL): `when: on_security`, `play_from_security: {}` — standard
+# tamer security pattern (BT17-081, BT22-084, etc.).
+#
+# ─── Known gaps affecting this card ──────────────────────────────────────────
+#
+# G-ENTERING-PERMANENT-TRAIT (partially closed 2026-04-29):
+#   `event_card_name_contains` reliably populated only for normal hand-play
+#   and hand-digivolve paths. Observer fan-out via PlayerBattleArea
+#   broadcasts (effect-created plays, token plays, play-from-trash) lacks
+#   event_card today — clause 1 would silently no-fire on those paths.
+#   Same exposure as BT17-081, AD1-001.
+#
+# G-OPT-TRIGGERED:
+#   `once_per_turn: true` on a triggered clause is authored but the engine
+#   queue-drain path does not yet enforce same-turn lockout. The OPT flag
+#   compiles correctly; behavioral lockout is asserted via #[ignore] tests.
+#
+# G-EVENT-TARGET-NAME-CONTAINS (this card surfaces it):
+#   No `event_target_name_contains` predicate exists for filtering by the
+#   digivolving permanent's name. Workaround: use `count_lte` to constrain
+#   the board to 1 Digimon, then `any_permanent name_contains` over the
+#   board — equivalent in this card's domain because "that Digimon" can
+#   only refer to the one Digimon on the field. Will need an explicit
+#   predicate when a future card needs to filter by event-target name with
+#   >1 Digimon on the board. To file in qa/dsl-vocab-gaps.md.
+#
+# G-COUNT-AGGREGATE (this card surfaces it):
+#   `count_lte` / `count_gte` aggregate predicate leaves are parsed and
+#   compiled (see `code/digimon-dsl/src/predicate.rs:161`,
+#   `code/digimon-dsl/src/compile.rs:504`) but are NOT evaluated at
+#   runtime in `eval_predicate_with_bindings`
+#   (`code/digimon-engine/src/dsl_cards/predicate.rs`). Only
+#   `security_count_lte` and `materials_count_lte` are wired. As a
+#   result, clause 2's outer `count_lte ≤ 1 Digimon` is a no-op today,
+#   so the clause over-fires when the player has >1 Digimon and one of
+#   them happens to be Greymon- or Garurumon-named. The leaf is authored
+#   faithfully so a future engine-side `count_lte` evaluator (analogous
+#   to `existential_any` for `any_permanent`) flips the gate on
+#   automatically. To file in qa/dsl-vocab-gaps.md.
+#
+# G-PLAY-FREE-COST-VALIDATION:
+#   `play_from_hand_free` / `play_from_trash_free` do not yet filter
+#   selection candidates by play-cost-free affordability quirks (e.g., a
+#   card whose printed cost is 0 and would interact with cost-replacement
+#   effects). Not relevant for stock Gabumon / Agumon cards.
+
+card: EX4-061
+name: "Matt Ishida & Tai Kamiya"
+kind: tamer
+color: [blue, red]
+cost: 4
+
+effects:
+  # ─── Clause 1: [Your Turn] On own [Gabumon]/[Agumon] play, suspend → +1 memory
+  - when: on_enter_field_anyone
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] On own Gabumon/Agumon play, may suspend self to gain 1 memory"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_card_name_contains: "Gabumon"
+            - event_card_name_contains: "Agumon"
+    process:
+      # Cost: suspend this Tamer ("by suspending this Tamer"). `source`
+      # resolves to CompiledBindingRef::Source → ctx.source_permanent.
+      - suspend: { target: source }
+      - gain_memory: 1
+
+  # ─── Clause 2: [Your Turn][OPT] On own Digimon digivolve, if ≤1 Digimon,
+  #              may play 1 Gabumon/Agumon from hand or trash free
+  - when: on_digivolve
+    optional: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] On own Digimon digivolve, if ≤1 Digimon, may play Gabumon (if Greymon) or Agumon (if Garurumon) from hand or trash free"
+    condition:
+      all_of:
+        # G-COUNT-AGGREGATE (GAP, this card surfaces it): the runtime
+        # `eval_predicate_with_bindings` does NOT evaluate the
+        # `count_lte` / `count_gte` aggregate predicates today (only
+        # `security_count_lte` and `materials_count_lte` are wired). The
+        # leaf compiles correctly, but at runtime the gate is a no-op
+        # and clause 2 over-fires when the player has >1 Digimon.
+        # Tests asserting the negative gate are #[ignore = "pending:
+        # G-COUNT-AGGREGATE"]. The leaf is authored faithfully so a
+        # future engine pass can flip it on.
+        - count_lte:
+            filter: { of: you, zone: [battle_area], kind: digimon }
+            n: 1
+        - any_of:
+            # "that Digimon has [Greymon] in its name" — with count_lte ≤ 1
+            # working, the only Digimon IS "that Digimon", so a board
+            # check is equivalent (G-EVENT-TARGET-NAME-CONTAINS workaround).
+            - any_permanent:
+                of: you
+                zone: [battle_area]
+                kind: digimon
+                name_contains: "Greymon"
+            # "or [Garurumon] in its name"
+            - any_permanent:
+                of: you
+                zone: [battle_area]
+                kind: digimon
+                name_contains: "Garurumon"
+    process:
+      # ─── Engine constraint: nested-park ─────────────────────────────────
+      # `select_effect_choice` parks; `select_hand`/`select_trash` parks.
+      # The dsl_outer_tail mechanism (code/digimon-engine/src/dsl_cards/
+      # step/mod.rs:109) panics if a parking step is nested inside an
+      # earlier outer continuation that hasn't been drained — i.e. you
+      # cannot put a `select_*` inside the `then:` of an `if` that
+      # itself follows a parking step within the same nested scope. The
+      # structure below is FLAT at the top level: one zone-choice park,
+      # then four mutually-exclusive top-level `if` blocks (each with a
+      # single inner parking step + play step). No `select_*` nests
+      # inside another `select_*`'s outer scope.
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone
+          prompt: "From which area do you play a card?"
+      # Branch 1: zone=hand AND board has a Greymon-named Digimon → may
+      # play 1 [Gabumon] from hand free. Inner select is optional
+      # (DCGO canNoSelect: true).
+      - if:
+          condition:
+            all_of:
+              - equals: [zone, 0]
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  kind: digimon
+                  name_contains: "Greymon"
+          then:
+            - select_hand:
+                of: you
+                bind_as: gabu_hand
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: "Gabumon"
+                prompt: "Play 1 [Gabumon] from hand free"
+            - play_from_hand_free: { of: you, hand_index: gabu_hand }
+      # Branch 2: zone=trash AND board has a Greymon-named Digimon → may
+      # play 1 [Gabumon] from trash free.
+      - if:
+          condition:
+            all_of:
+              - equals: [zone, 1]
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  kind: digimon
+                  name_contains: "Greymon"
+          then:
+            - select_trash:
+                of: you
+                bind_as: gabu_trash
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: "Gabumon"
+                prompt: "Play 1 [Gabumon] from trash free"
+            - play_from_trash_free: { of: you, hand_index: gabu_trash }
+      # Branch 3: zone=hand AND board has a Garurumon-named Digimon → may
+      # play 1 [Agumon] from hand free. Independent of the Greymon
+      # branches (matches DCGO's two-condition structure: each name match
+      # is checked separately, but only one Digimon can satisfy both at a
+      # time so in practice only one inner play happens).
+      - if:
+          condition:
+            all_of:
+              - equals: [zone, 0]
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  kind: digimon
+                  name_contains: "Garurumon"
+          then:
+            - select_hand:
+                of: you
+                bind_as: agu_hand
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: "Agumon"
+                prompt: "Play 1 [Agumon] from hand free"
+            - play_from_hand_free: { of: you, hand_index: agu_hand }
+      # Branch 4: zone=trash AND board has a Garurumon-named Digimon → may
+      # play 1 [Agumon] from trash free.
+      - if:
+          condition:
+            all_of:
+              - equals: [zone, 1]
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  kind: digimon
+                  name_contains: "Garurumon"
+          then:
+            - select_trash:
+                of: you
+                bind_as: agu_trash
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: "Agumon"
+                prompt: "Play 1 [Agumon] from trash free"
+            - play_from_trash_free: { of: you, hand_index: agu_trash }
+
+  # ─── Clause 3: [Security] Play this card without paying the cost ───────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

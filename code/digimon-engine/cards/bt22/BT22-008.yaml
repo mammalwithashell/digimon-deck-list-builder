@@ -1,0 +1,162 @@
+# BT22-008 Agumon — Digimon, Lv.3, Red, DP 1000, Cost 3.
+# Traits: Reptile, CS.
+# Attribute: Vaccine.
+#
+# Printed effect:
+#   [On Play] You may return 1 Digimon card with [Greymon], [Garurumon] or
+#   [Omnimon] in its name from your trash to the hand.
+#
+# Inherited Effect:
+#   [End of Your Turn] This Digimon and any of your other Digimon may DNA
+#   digivolve into a Digimon card in the hand.
+#
+# Standard digivolve: Lv.2 Red / cost 0.
+# Bonus digivolve from data/cards.json `xros_req`:
+#   "[Digivolve] [Koromon]/Lv.2 w/[CS] trait: Cost 0"
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT22/Red/BT22_008.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Self-digivolution-requirement static effect (`EffectTiming.None`):
+#   `AddSelfDigivolutionRequirementStaticEffect` with
+#   `permanentCondition = (TopCard.EqualsCardName("Koromon")) ||
+#                         (TopCard.IsLevel2 && TopCard.HasCSTraits)`,
+#   `digivolutionCost: 0`, `ignoreDigivolutionRequirement: false`.
+#
+#   This block prints as `[Digivolve] [Koromon]/Lv.2 w/[CS] trait: Cost 0`
+#   in `xros_req`. It is NOT redundant with the standard Lv.2 Red /
+#   cost 0 path, because:
+#     - "Koromon" can be ANY color/level (a Lv.3 Koromon variant would
+#       still satisfy the name-anchored predicate);
+#     - "Lv.2 with CS trait" can be ANY color (a Lv.2 CS card of a
+#       different color is admitted here but rejected by the standard
+#       Lv.2 Red path).
+#   Authoring the bonus path therefore widens the digivolve material
+#   pool faithfully. We split it into two `digivolve` alt-paths because
+#   the DSL `from:` predicate has no name OR predicate at the top
+#   level — but `any_of:` works inside a single `from:` block, so we
+#   could also merge them. Keeping them split mirrors the printed
+#   `xros_req` line ("[Koromon]/Lv.2 w/[CS] trait") which itself reads
+#   as a disjunction.
+#
+# Clause 1 — `EffectTiming.OnEnterFieldAnyone` activate:
+#   * `SetUpActivateClass(..., -1, isOptional: true, ...)` — printed
+#     "you may", outer trigger is opt-in.
+#   * `CanUseCondition` = `CanTriggerOnPlay(hashtable, card)` (this
+#     permanent is the trigger source).
+#   * `CanActivateCondition` = `IsExistOnBattleAreaDigimon(card) &&
+#     HasMatchConditionOwnersCardInTrash(card, CanSelectCardCondition)`
+#     — short-circuits if no matching trash card exists.
+#   * `CanSelectCardCondition`:
+#       `cardSource.IsDigimon &&
+#       (ContainsCardName("Greymon") ||
+#        ContainsCardName("Garurumon") ||
+#        ContainsCardName("Omnimon"))`
+#   * `SelectCardEffect.SetUp(..., canNoSelect: true, maxCount: 1, ...)`
+#     — inner pick is also optional ("up to 1").
+#   * On select: `AddHand` from Trash root.
+#
+# Clause 2 (Inherited) — `EffectTiming.OnEndTurn` with
+#   `SetIsInheritedEffect(true)`:
+#   * `SetUpActivateClass(..., isOptional: true, ...)` — opt-in DNA digi.
+#   * Encoded via `alt_path_registration` declarative (RESOLVED
+#     2026-05-02 in qa/dsl-vocab-gaps.md). The optional "may" semantic
+#     is naturally captured by the alt-path framework — DNA digivolve
+#     is always an opt-in player action.
+#
+# ─── Source-priority audit (printed text wins) ───────────────────────────────
+#
+# Printed [On Play] reads "you may return 1 Digimon card ..." — both the
+# outer trigger AND the inner pick are optional (DCGO matches with
+# `isOptional: true` + `canNoSelect: true`). DSL: `optional: true` on the
+# clause AND `optional: true` on `select_trash`.
+#
+# Sister card: BT17-007 (Agumon, Tai Kamiya). BT17-007 differs by:
+#   (a) trigger timing: BT17-007 is `start_of_your_main_phase` gated by a
+#       Tai-Kamiya-tamer condition; BT22-008 is `on_play` with no tamer
+#       gate;
+#   (b) BT17-007 has only a single Lv.2 Red digivolve alt-path (its
+#       Koromon block is redundant); BT22-008 widens with a bonus
+#       Koromon-OR-(Lv.2 CS) path.
+# The trash-return body shape and inherited DNA-digivolve registration
+# are identical to BT17-007.
+
+card: BT22-008
+name: Agumon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Reptile, CS]
+
+alt_paths:
+  # Standard printed digivolve: Lv.2 Red / cost 0.
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+
+  # Bonus printed digivolve (`xros_req`): "[Koromon]/Lv.2 w/[CS] trait: Cost 0"
+  # — admits any-color Koromon OR any-color Lv.2 CS-trait Digimon.
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: Koromon
+        - all_of:
+            - level_eq: 2
+            - trait_has: CS
+    cost: 0
+
+effects:
+  # ─── Clause 1 — [On Play] may return Greymon/Garurumon/Omnimon from trash ──
+  #
+  # Printed: "[On Play] You may return 1 Digimon card with [Greymon],
+  # [Garurumon] or [Omnimon] in its name from your trash to the hand."
+  #
+  # `optional: true` — printed "you may" gates the entire effect (DCGO
+  # confirms `isOptional: true`).
+  #
+  # Inner `select_trash: optional: true` — DCGO confirms `canNoSelect:
+  # true` on the SelectCardEffect; player may decline the pick even
+  # after entering the prompt. The `kind: digimon` filter mirrors DCGO
+  # `cardSource.IsDigimon`.
+  #
+  # No tamer gate (sister BT17-007 has Tai-Kamiya gating; BT22-008 does
+  # not — the trigger fires unconditionally on ETB).
+  - when: on_play
+    optional: true
+    summary: "[On Play] May return 1 Greymon/Garurumon/Omnimon-named Digimon from trash to hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: "Greymon"
+                  - name_contains: "Garurumon"
+                  - name_contains: "Omnimon"
+          prompt: "Return 1 Greymon/Garurumon/Omnimon-named Digimon to hand"
+      - add_to_hand_from_trash: { of: you, card: pick }
+
+  # ─── Clause 2 — Inherited [End of Your Turn] DNA digivolve registration ───
+  #
+  # Printed: "[End of Your Turn] This Digimon and any of your other Digimon
+  # may DNA digivolve into a Digimon card in the hand."
+  #
+  # Encoded via the `alt_path_registration` declarative (RESOLVED
+  # 2026-05-02 in qa/dsl-vocab-gaps.md). The optional "may" semantic
+  # is naturally captured by the alt-path framework — DNA digivolve is
+  # always an opt-in player action surfaced through the action mask.
+  - kind: alt_path_registration
+    scope: inherited
+    trigger: end_of_your_turn
+    registers:
+      kind: dna_digivolve
+    applies_to:
+      of: you
+      zone: [battle_area]

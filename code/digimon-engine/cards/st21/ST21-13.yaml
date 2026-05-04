@@ -1,0 +1,213 @@
+# ST21-13 Matt Ishida & T.K. Takaishi — Tamer, Purple+Yellow, Cost 3.
+# Traits: ADVENTURE.
+#
+# Printed card text (cards.json, effect_description_eng):
+#
+#   [Your Turn] When any Digimon cards with the [ADVENTURE] trait would be
+#     played from your hand, by suspending this Tamer, reduce the play cost
+#     by 1.
+#   [Your Turn] All of your level 5 or higher Digimon with the [ADVENTURE]
+#     trait gain ＜Rush＞ (This Digimon can attack the turn it comes into
+#     play.).
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST21/Multi/ST21_13.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.BeforePayCost` activate.
+#   `SetUpActivateClass(..., -1, isOptional=true, ...)` — outer trigger is
+#   opt-in (printed "by suspending this Tamer" is the activation cost).
+#   `CanUseCondition` →
+#     `IsExistOnBattleArea(card) && CanTriggerWhenPermanentWouldPlay(...,
+#      PlayCardCondition)` where `PlayCardCondition = IsExistOnHand &&
+#      IsDigimon && HasAdventureTraits && Owner == card.Owner`.
+#   `CanActivateCondition` →
+#     `IsOwnerTurn(card) && IsExistOnBattleArea(card) &&
+#      CanActivateSuspendCostEffect(card)` (i.e. tamer must be unsuspended,
+#      no anti-suspend lock, etc.).
+#   Coroutine: SuspendPermanentsClass on `card.PermanentOfThisCard()`, then
+#     install a `ChangeCostClass` of -1 with
+#     `cardSourceCondition: cardSource.Owner == card.Owner` for the next
+#     cost calculation.
+#
+# Clause 2 — `EffectTiming.None` (declarative tick).
+#   `CardEffectFactory.RushStaticEffect(permanentCondition: PermanentCondition,
+#                                       isInheritedEffect: false, card: card,
+#                                       condition: CanUseCondition)`.
+#   `CanUseCondition` → `IsExistOnBattleArea(card) && IsOwnerTurn(card)`.
+#   `PermanentCondition` →
+#     `IsPermanentExistsOnOwnerBattleAreaDigimon(permanent, card) &&
+#      permanent.TopCard.HasAdventureTraits && permanent.Level >= 5`.
+#
+# Clause 3 (Security) — `EffectTiming.SecuritySkill` →
+#   `CardEffectFactory.PlaySelfTamerSecurityEffect(card)`. Standard
+#   play_from_security pattern (sister cards: BT17-093, BT18-087, BT22-084,
+#   BT21-015, BT9-092, EX11-054, BT22-094).
+#
+# ─── Source-priority audit (printed text vs DCGO) ────────────────────────────
+#
+# Printed text on Clause 1 reads "by suspending this Tamer, reduce the play
+# cost by 1." The "by X" idiom in Digimon TCG rules text (RULES_CONTEXT.md
+# §16) marks X as the activation cost — paid IF the player wants the effect.
+# DCGO confirms via `isOptional: true` on the outer ActivateClass. →
+# `optional: true` on the cost_reduction clause.
+#
+# Printed text does NOT carry [Once Per Turn]; the natural floor is the
+# suspend cost — once paid the tamer is suspended and the
+# `CanActivateSuspendCostEffect` gate fails on subsequent BeforePayCost
+# scans this turn. The tamer becomes available again next turn after the
+# unsuspend phase. → no `once_per_turn` flag.
+#
+# Clause 2 ([Your Turn] grant Rush to ally Lv5+ ADVENTURE Digimon) — printed
+# text is unconditional during your turn for matching allies. DCGO uses
+# `EffectTiming.None` + `RushStaticEffect` which is the declarative-aura
+# substrate. → `kind: aura` with `active_when: { your_turn: true }` and
+# `target: { owner: you, kind: digimon, level_gte: 5, trait_has: ADVENTURE }`,
+# `grant_keyword: { keyword: Rush }`.
+#
+# ─── DSL precedent: cost-reduction with `pay_cost: [suspend self]` ───────────
+#
+# EX8-074 MedievalGallantmon — `kind: cost_reduction` + `when_playing_this`
+# + `pay_cost: [select_own_permanent + suspend, ...]`. Confirms the DSL
+# supports a synchronous `pay_cost` step list run as the cost.
+#
+# BT22-094 Yuugo Kamishiro — `kind: cost_reduction` + `optional: true` +
+# `when_any_ally_played: { ... CS trait ... }` + `pay_cost: [return_to_deck
+# { target: source, position: bottom }]`. Confirms the optional +
+# when_any_ally_played + ally-trait predicate + pay_cost on source-of-self
+# combination. ST21-13 differs only in: (a) cost is `suspend: { target:
+# source }` instead of return-to-deck; (b) trait is ADVENTURE instead of CS;
+# (c) kind filter is `digimon` only (no Tamer).
+#
+# BT17-093 Tai Kamiya & Kari Kamiya — `suspend: { target: source }` as a
+# `process:` step (clause-level, not pay_cost). Confirms the `target: source`
+# binding for the suspend step resolves to ctx.source_permanent (the Tamer).
+#
+# ─── DSL precedent: filtered aura with grant_keyword ────────────────────────
+#
+# G-DECLARATIVE-KEYWORD was RESOLVED 2026-05-02 (Group 6). Filtered
+# `kind: aura` with `target: { owner: you, ... }` + `grant_keyword:
+# { keyword: ... }` lowers to a process-backed declarative effect that calls
+# `ctx.grant_declarative_keyword(handle, keyword, Expiry::Permanent)` for
+# each matching permanent during `Game::tick_declarative_effects`. Coverage:
+# `tests/dsl/group6_auras.rs` —
+# `declarative_grant_keyword_refresh_removes_stale_keyword_after_source_leaves`
+# verifies the grant + refresh-on-source-leave path. The aura's
+# `active_when` closure is evaluated each tick, so the `your_turn: true`
+# gate is honored.
+#
+# BT5-093 audit found `target.of` is a YAML bug — use `target.owner: you`
+# (PredicateSpec field name). BT22-084 / EX8-074 use `target.owner: you`.
+
+card: ST21-13
+name: "Matt Ishida & T.K. Takaishi"
+kind: tamer
+color: [purple, yellow]
+cost: 3
+traits: [ADVENTURE]
+
+effects:
+  # ─── Clause 1: [Your Turn] suspend self → -1 cost on ally ADVENTURE ───────
+  #             Digimon play.
+  #
+  # Printed text:
+  #   "[Your Turn] When any Digimon cards with the [ADVENTURE] trait would be
+  #   played from your hand, by suspending this Tamer, reduce the play cost
+  #   by 1."
+  #
+  # `kind: cost_reduction` declarative clause:
+  #   - reduction_timing: before_pay_cost — fires during BeforePayCost scan.
+  #   - active_when: { your_turn: true } — printed [Your Turn] gate; mirrors
+  #       DCGO `IsOwnerTurn(card)` on CanActivateCondition.
+  #   - optional: true — printed "by suspending ..." is an opt-in cost; DCGO
+  #       confirms `isOptional: true`. Player decides per-fire whether to
+  #       suspend.
+  #   - when_any_ally_played: { all_of: [trait_has: ADVENTURE, kind: digimon] }
+  #       — the cost-target card must be a Digimon with the ADVENTURE trait.
+  #       Owner-scoping is implicit — `cost_target_card` is set during the
+  #       controller's own pay-cost flow (lower_cost_reduction.rs:116; see
+  #       BT22-094 audit notes). DCGO predicate is `IsDigimon &&
+  #       HasAdventureTraits && Owner == card.Owner`.
+  #   - condition: any_permanent self-on-field & unsuspended — explicit guard
+  #       mirroring DCGO's `IsExistOnBattleArea(card) &&
+  #       CanActivateSuspendCostEffect(card)` (the suspend cost cannot be
+  #       paid if the tamer is already suspended). Belt-and-suspenders
+  #       against the lowering's source-handle sentinel paths and provides
+  #       the natural once-per-turn limit (after the first fire the tamer is
+  #       suspended and the condition fails on subsequent BeforePayCost
+  #       scans this turn).
+  #   - amount: 1 — printed "reduce the play cost by 1".
+  #   - pay_cost: [suspend { target: source }] — the cost. `target: source`
+  #       resolves to ctx.source_permanent (this Tamer's permanent handle),
+  #       per the BT17-093 / BT24-082 / BT17-081 precedent.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when: { your_turn: true }
+    optional: true
+    when_any_ally_played:
+      all_of:
+        - kind: digimon
+        - trait_has: ADVENTURE
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: "ST21-13"
+        is_unsuspended: true
+    amount: 1
+    summary: "[Your Turn] Suspend self: -1 cost on ally ADVENTURE Digimon play"
+    pay_cost:
+      - suspend: { target: source }
+
+  # ─── Clause 2: [Your Turn] aura — own Lv5+ ADVENTURE Digimon gain Rush ────
+  #
+  # Printed text:
+  #   "[Your Turn] All of your level 5 or higher Digimon with the [ADVENTURE]
+  #   trait gain ＜Rush＞."
+  #
+  # `kind: aura` declarative clause:
+  #   - active_when: { your_turn: true } — printed [Your Turn] gate; mirrors
+  #       DCGO's `RushStaticEffect` `condition: CanUseCondition` =
+  #       `IsExistOnBattleArea(card) && IsOwnerTurn(card)`. The
+  #       on-battle-area check is implicit: declarative effects only fire
+  #       from face-up sources on the battle area (per
+  #       Game::tick_declarative_effects). The your_turn check is the
+  #       active_when closure.
+  #   - target: { owner: you, kind: digimon, level_gte: 5, trait_has:
+  #       ADVENTURE } — mirrors DCGO `PermanentCondition` =
+  #       `IsPermanentExistsOnOwnerBattleAreaDigimon && HasAdventureTraits &&
+  #       Level >= 5`. PredicateSpec field name is `owner` (NOT `of`); see
+  #       BT5-093 / BT22-084 / EX8-074 / group6_auras.rs precedents.
+  #       `level_gte: 5` matches `permanent.Level >= 5` per the
+  #       PredicateSpec field (predicate.rs:31).
+  #   - grant_keyword: { keyword: Rush } — DCGO `RushStaticEffect`. The
+  #       lower_aura.rs path calls `ctx.grant_declarative_keyword(handle,
+  #       Keyword::Rush, Expiry::Permanent)` for each matching permanent;
+  #       the modifier is refreshed every declarative tick so it tracks
+  #       state changes (target leaves field, source leaves field, your_turn
+  #       toggles).
+  - kind: aura
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      kind: digimon
+      level_gte: 5
+      trait_has: ADVENTURE
+    grant_keyword: { keyword: Rush }
+    summary: "[Your Turn] Your Lv5+ [ADVENTURE] Digimon gain Rush"
+
+  # ─── Clause 3: [Security] Play this card without paying the cost ──────────
+  #
+  # Printed: "Security Effect [Security] Play this card without paying the
+  # cost."
+  #
+  # Standard play_from_security pattern (cf. BT17-093, BT18-087, BT22-084,
+  # BT21-015, BT9-092, EX11-054, BT22-094). Mandatory (no [Security] effect
+  # is opt-out per the rules manual §16 / RULES_CONTEXT.md).
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

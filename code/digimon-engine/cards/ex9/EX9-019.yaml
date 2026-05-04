@@ -1,0 +1,301 @@
+# EX9-019 WereGarurumon: Sagittarius Mode — Digimon, Lv.5, Blue+Black, DP 8000, Cost 8.
+# Traits: Beastkin, ADVENTURE
+# Evo (printed): Lv.4 Blue / Cost 4
+#
+# Printed card text (cards.json effect_description_eng):
+#
+#   [On Play] [When Digivolving] 1 of your opponent's Digimon or Tamers
+#   can't suspend until their turn ends.
+#   [Your Turn] When any of your Digimon or Tamers with [Greymon] or
+#   [Matt Ishida] in its name are played or any of your Digimon digivolve
+#   into a Digimon with [Greymon] in its name, this Digimon may digivolve
+#   into a Digimon card with [Garurumon] in its name in the hand without
+#   paying the cost.
+#
+# Inherited / Security text (cards.json inherited_effect_description_eng):
+#   [When Attacking] [Once Per Turn] <De-Digivolve 1> 1 of your opponent's
+#   Digimon. (Trash the top card. You can't trash past level 3 cards.)
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/EX9/Blue/EX9_019.cs
+#
+# This is the BLUE/BLACK sister to EX9-012 (RED/BLACK) — identical structure
+# with the trigger/target name lists mirrored across the Greymon ↔ Garurumon
+# (and Tai Kamiya ↔ Matt Ishida) axes, AND the [On Play]/[When Digivolving]
+# arm switched from "Delete DP<=8000" to "CannotSuspend until end of opp turn",
+# AND the inherited switched from "+4000 DP self-aura" to a [When Attacking]
+# [OPT] <De-Digivolve 1> on opp.
+#
+# ─── Source-priority cross-check (printed text + RULES_CONTEXT.md > DCGO) ───
+#
+# DCGO matches the printed text on every clause:
+#
+# Block 1 (DCGO None timing) — TWO AddSelfDigivolutionRequirementStaticEffect
+# entries:
+#   - PermanentCondition: TopCard.EqualsCardName("WereGarurumon"), cost: 1.
+#   - PermanentCondition: (TopCard.HasGarurumonName || TopCard.HasAdventureTraits)
+#     && TopCard.IsLevel4, cost: 3.
+#   These are unprinted alt-paths added via the static effect — the printed
+#   text shows only the Lv.4 Blue / Cost 4 evo block. Per the EX9-012 / BT22-026
+#   precedent, unprinted DCGO alt-sources are NOT encoded in YAML (printed
+#   text wins). Only the printed Lv.4 Blue / Cost 4 evo path is carried as a
+#   `kind: digivolve` alt_path.
+#
+# Block 2 (DCGO OnEnterFieldAnyone × 2 — gated by CanTriggerOnPlay /
+#   CanTriggerWhenDigivolving): two ActivateClass entries with identical
+#   bodies — SelectPermanentEffect over opp battle area for an opp Digimon
+#   OR Tamer (`permanent.IsDigimon || permanent.IsTamer`), maxCount 1,
+#   canNoSelect: false. Body installs `CanNotSuspendClass` on the chosen
+#   permanent via `selectedPermanent.UntilOwnerTurnEndEffects.Add(...)` —
+#   i.e. expires at the end of the SELECTED PERMANENT'S OWNER'S turn (the
+#   opponent's turn, since the target is on opp battle area). Encoded as a
+#   single triggered clause with both timings (BT17-027 / BT24-040 idiom for
+#   add_modifier { CannotSuspend, expiry: end_of_opponents_turn }).
+#
+# Block 3 (DCGO OnEnterFieldAnyone — the [Your Turn] observer):
+#   ActivateClass with CanUseCondition =
+#     IsExistOnBattleAreaDigimon(card)
+#     && IsOwnerTurn(card)
+#     && (CanTriggerOnPermanentPlay(hashtable, PlayedRequirement)
+#         || CanTriggerWhenPermanentDigivolving(hashtable, DigivolveRequirement))
+#   PlayedRequirement: permanent on owner's battle area, !IsOption, and
+#     TopCard.HasGreymonName || ContainsCardName("Matt Ishida"). Includes
+#     Tamers (per "your Digimon or Tamers ... are played").
+#   DigivolveRequirement: permanent on owner's battle-area Digimon, !IsOption,
+#     and TopCard.HasGreymonName. NOTE: digivolve half is GREYMON-only
+#     (Matt Ishida is a Tamer name and cannot be digivolved INTO).
+#   Body: DigivolveIntoHandOrTrashCard(target=card.PermanentOfThisCard(),
+#     cardCondition: IsDigimon && HasGarurumonName, payCost: false, isHand: true).
+#   `SetUpActivateClass(..., isOptional: false)` BUT inner SelectCardEffect
+#   has `canNoSelect: () => true` — the outer trigger fires unconditionally
+#   when the gates match, but the player MAY decline the digivolve. Printed
+#   text "may digivolve" → `optional: true` at the clause level (printed
+#   wording governs per source priority).
+#
+# Block 4 (DCGO OnAllyAttack) — inherited [When Attacking][OPT] <De-Digivolve 1>:
+#   ActivateClass with `oncePerTurn: 1`, `isInheritedEffect: true`,
+#   `SharedHashString: "WA_EX9-019"`. CanUseCondition gates on
+#   CanTriggerOnAttack(hashtable, card). Body uses SelectPermanentEffect over
+#   opp battle area Digimon (canNoSelect: false), then
+#   `IDegeneration(selectedPermanent, 1, ...).Degeneration()`. The "stop at
+#   level 3" floor comes from the printed reminder text and the standard
+#   De-Digivolve verb (matches EX9-013/AD1-009/BT9-112 idiom).
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                  | Status |
+# |--------------------------------------------------------------------|--------|
+# | Standard digivolve Lv.4 Blue / Cost 4                              | IMPLEMENTED (alt_paths kind: digivolve) |
+# | [On Play][When Digivolving] 1 opp Digimon/Tamer can't suspend EOOT | IMPLEMENTED (select_opponent_permanent + add_modifier CannotSuspend / end_of_opponents_turn) |
+# | [Your Turn] Greymon/Matt-Ishida play observer → free-digivolve self into [Garurumon] in hand | IMPLEMENTED (target: self pattern; AD1-001/AD1-010/EX9-012 idiom) |
+# | [Your Turn] Greymon-name digivolve observer → same body            | IMPLEMENTED (separate clause; on_digivolve trigger) |
+# | [Inherited][When Attacking][OPT] <De-Digivolve 1> 1 opp Digimon    | IMPLEMENTED (scope: inherited + when: when_attacking + once_per_turn + select_opponent_permanent + de_digivolve amount:1 stop_at_level:3) |
+#
+# ─── DSL/engine notes (PARTIAL but not BLOCKED) ─────────────────────────────
+#
+# G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET: this gap
+# affects effect-initiated digivolves whose `target:` is a SEPARATE picked
+# permanent (the chained perm→hand path used by BT17-015 / BT22-013 /
+# BT22-026). EX9-019's [Your Turn] observer has `target: self` (this card)
+# — same shape as AD1-001 / AD1-010 / EX9-012 — which is NOT blocked. The
+# hand-pick prompt installs and the digivolve verb executes.
+#
+# G-EVENT-CARD coverage (per EX9-012 header / AD1-010 docstring): `event_card`
+# is wired for normal hand-played battle-area permanents (`OnEnterFieldAnyone`
+# with `TriggerSource::EnteredField`) and for `Game::digivolve_from_hand`
+# battle-area digivolves. Tamer-play `event_card` parity is unconfirmed
+# (see AD1-010 test docstring §3). DNA-digivolve and effect-initiated
+# digivolve `event_card` coverage remain open.
+#
+# G-INHERITED-DISPATCH (per BT21-072 header / EX9-012 inherited): `scope:
+# inherited` triggered clauses are dispatched by `enqueue_from_permanent`
+# through the source-stack scan. Inherited [When Attacking] de_digivolve
+# is exercised via a stack with WereGarurumon: Sagittarius Mode UNDER an
+# attacking top card (e.g. BT17-027's `make_omnimon_top` idiom). The
+# inherited dispatch path is exercised by BT22-013/BT22-026/BT17-027
+# unsuspend tests (same shape, different verb).
+
+card: EX9-019
+name: "WereGarurumon: Sagittarius Mode"
+kind: digimon
+level: 5
+color: [blue, black]
+cost: 8
+dp: 8000
+traits: [Beastkin, ADVENTURE]
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# Standard digivolve: Lv.4 Blue / Cost 4 (per evo_costs in cards.json).
+# (DCGO's two unprinted alt-source entries — WereGarurumon-name @ cost 1 and
+# Lv4 [Garurumon]/[ADVENTURE] @ cost 3 — are NOT encoded; printed text governs.)
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+
+effects:
+  # ─── Clause 1 — [On Play][When Digivolving] CannotSuspend opp Digimon/Tamer ─
+  #
+  # Printed: "[On Play] [When Digivolving] 1 of your opponent's Digimon or
+  # Tamers can't suspend until their turn ends."
+  #
+  # Single triggered clause with both timings (BT17-027 / BT24-040 idiom).
+  # Mandatory (no "may" at the outer trigger). The select step has an
+  # existential guard via the candidate filter — when no opp Digimon/Tamer
+  # exists, the prompt silently skips, mirroring DCGO's HasMatchConditionPermanent
+  # gate in CanActivateCondition.
+  #
+  # Target filter: `any_of: [kind: digimon, kind: tamer]` — printed text
+  # explicitly covers BOTH Digimon and Tamers (DCGO line 75:
+  # `permanent.IsDigimon || permanent.IsTamer`). BT17-027 and BT24-040 use
+  # the same `any_of` form for their "Digimon or Tamer" picks.
+  #
+  # Modifier: `CannotSuspend` with `expiry: end_of_opponents_turn`. The target
+  # is on the OPPONENT's battle area, and the printed "their turn ends"
+  # resolves to the opponent's turn — DCGO uses
+  # `selectedPermanent.UntilOwnerTurnEndEffects.Add(...)` which keys expiry
+  # off the SELECTED PERMANENT'S OWNER (the opponent here). Same pattern as
+  # BT17-027 lock branch and BT24-040 / BT15-101.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 opp Digimon/Tamer can't suspend until end of their turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose 1 opponent Digimon or Tamer — can't suspend until end of their turn"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── Clause 2 — [Your Turn] Greymon/Matt-Ishida play observer ──────────────
+  #
+  # Printed: "[Your Turn] When any of your Digimon or Tamers with [Greymon]
+  # or [Matt Ishida] in their names are played ..., this Digimon may digivolve
+  # into a Digimon card with [Garurumon] in its name in the hand without paying
+  # the cost."
+  #
+  # DCGO PlayedRequirement: own battle-area, !IsOption, name contains Greymon
+  # OR Matt Ishida. Includes Tamers (per "your Digimon or Tamers ... played").
+  # DSL filter: `event_target_owner: you` + name predicate. We deliberately
+  # DO NOT add `event_target_kind: digimon` — Tamer plays must also satisfy
+  # the gate (printed wording).
+  #
+  # `target: self` mirrors AD1-001 / AD1-010 / EX9-012 idiom: the
+  # effect-initiated-digivolve target is THIS card (carrier permanent), which
+  # bypasses G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET (that
+  # gap only affects digivolves whose target is a SEPARATE picked permanent).
+  #
+  # `optional: true` per printed "may digivolve" (DCGO outer activate is
+  # `isOptional: false` BUT inner SelectCardEffect has `canNoSelect: () => true`
+  # — printed wording governs per source priority).
+  #
+  # `active_when: { your_turn: true }` per printed [Your Turn] scoping
+  # (BT13-012 / BT14-001 / EX9-012 idiom; matches DCGO `IsOwnerTurn(card)`
+  # gate at CanUseCondition).
+  - when: on_enter_field_anyone
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] On own [Greymon]/[Matt Ishida] play, may free-digivolve self into a Garurumon-named hand card"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_card_name_contains: "Greymon"
+            - event_card_name_contains: "Matt Ishida"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Garurumon"
+          prompt: "Free-digivolve into a [Garurumon]-named Digimon card"
+      - effect_initiated_digivolve:
+          target: self
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
+
+  # ─── Clause 3 — [Your Turn] Greymon-name digivolve observer ────────────────
+  #
+  # Printed: "... or any of your Digimon digivolve into a Digimon with
+  # [Greymon] in its name, this Digimon may digivolve into a Digimon card
+  # with [Garurumon] in its name in the hand without paying the cost."
+  #
+  # DCGO DigivolveRequirement: own battle-area Digimon, !IsOption, name
+  # contains Greymon. NOTE: digivolve half is Greymon-only (Matt Ishida is a
+  # Tamer name and cannot be digivolved INTO — printed text correctly excludes
+  # it from this half). DSL filter: `event_target_owner: you` +
+  # `event_target_kind: digimon` + `event_card_name_contains: "Greymon"`.
+  #
+  # Same body as Clause 2; split into a separate clause so each timing fires
+  # on its correct trigger (AD1-010 / EX9-012 idiom). The on_digivolve trigger
+  # carries `event_card` for hand-driven `Game::digivolve_from_hand`. Effect-
+  # initiated digivolve / DNA digivolve event-card coverage remain open
+  # follow-ups (see AD1-010 docstring §G-EVENT-CARD-EFFECT-INITIATED-DIGIVOLVE).
+  - when: on_digivolve
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] On own digivolve into [Greymon]-named Digimon, may free-digivolve self into a Garurumon-named hand card"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_card_name_contains: "Greymon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Garurumon"
+          prompt: "Free-digivolve into a [Garurumon]-named Digimon card"
+      - effect_initiated_digivolve:
+          target: self
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
+
+  # ─── Clause 4 — [Inherited][When Attacking][OPT] <De-Digivolve 1> ──────────
+  #
+  # Printed inherited: "[When Attacking] [Once Per Turn] <De-Digivolve 1>
+  # 1 of your opponent's Digimon. (Trash the top card. You can't trash past
+  # level 3 cards.)"
+  #
+  # DCGO: ActivateClass at OnAllyAttack with `oncePerTurn: 1`,
+  # `isInheritedEffect: true`. Body = SelectPermanentEffect over opp
+  # battle-area Digimon (canNoSelect: false), then
+  # `IDegeneration(selectedPermanent, 1, ...).Degeneration()` which trashes
+  # the top digivolution card and stops at level 3 (per the printed
+  # reminder text).
+  #
+  # Implementation: `scope: inherited` + `when: when_attacking` +
+  # `once_per_turn: true` (BT17-027 / BT22-013 / BT22-026 idiom for inherited
+  # OPT [When Attacking] clauses). Body = `select_opponent_permanent`
+  # (kind: digimon) + `de_digivolve` with `amount: 1` and `stop_at_level: 3`
+  # (EX9-013 / AD1-009 / BT9-112 / BT23-096 idiom for the De-Digivolve verb).
+  #
+  # The inherited dispatch goes through `enqueue_from_permanent`'s source-
+  # stack scan, which fires inherited clauses on the attacking top card's
+  # source stack — the same path BT17-027/BT22-013/BT22-026 inherited
+  # [When Attacking] clauses ride.
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][OPT] <De-Digivolve 1> 1 of opp's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
+      - de_digivolve:
+          target: dd_target
+          amount: 1
+          stop_at_level: 3

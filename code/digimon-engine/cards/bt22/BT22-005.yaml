@@ -1,0 +1,142 @@
+# BT22-005 Tsumemon — Digi-Egg, Lv.2, Black, Cost 0.
+# Traits: [Unidentified, CS].
+# Form: In-Training.
+#
+# Printed card text (cards.json effect_description_eng):
+#
+#   Inherited Effect [Your Turn] [Once Per Turn]
+#   When any of your Digimon with the [Unidentified] or [CS] trait are played,
+#   <Draw 1> (Draw 1 card from your deck.)
+#
+# (DigiEgg has no main effect — the only printed clause is the inherited
+# triggered effect that fires while Tsumemon is a digivolution source.)
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT22/Black/BT22_005.cs
+#
+# ─── DCGO crosscheck ────────────────────────────────────────────────────────
+#
+# Single ActivateClass on `EffectTiming.OnEnterFieldAnyone`.
+#
+#   `SetIsInheritedEffect(true)` — clause is inherited (fires from the
+#     digivolution-source slot, not from the top-card slot).
+#   `SetUpActivateClass(..., 1, false, ...)` — `oncePerTurn: 1`,
+#     `isOptional: false`. Mandatory trigger; no "you may" in printed text.
+#
+#   `CanUseCondition`:
+#     `IsExistOnBattleAreaDigimon(card)` — Tsumemon must be on the battle
+#       area as a Digimon source (i.e. nested under a carrier on field).
+#     `CanTriggerOnPermanentPlay(hashtable, PermanentCondition, null)` —
+#       the play-event being inspected matches the per-event filter below.
+#
+#   `CanActivateCondition`:
+#     `IsExistOnBattleAreaDigimon(card)` — re-checked at activation time.
+#     `IsOwnerTurn(card)` — [Your Turn] gate.
+#
+#   `PermanentCondition(perm)`:
+#     `IsPermanentExistsOnOwnerBattleAreaDigimon(perm, card)` — the entering
+#       permanent must be on the OWNER's (Tsumemon's controller's) battle
+#       area AND must be a Digimon. Maps directly to:
+#         event_target_owner: you
+#         event_target_kind: digimon
+#     `(perm.TopCard.HasUnidentifiedTraits || perm.TopCard.HasCSTraits)` —
+#       trait disjunction on the entering permanent's TOP CARD. Maps to:
+#         any_of:
+#           - event_target_trait_has: Unidentified
+#           - event_target_trait_has: CS
+#
+#   `ActivateCoroutine`: `new DrawClass(card.Owner, 1, activateClass).Draw()`
+#     — straight Draw 1 to Tsumemon's owner.
+#
+# ─── Source-priority audit (printed text vs DCGO) ───────────────────────────
+#
+# Printed text says "[Your Turn] [Once Per Turn]" → `active_when:
+# { your_turn: true }` + `once_per_turn: true`.
+#
+# Printed text does NOT carry "you may" or any other optional marker;
+# DCGO confirms `isOptional: false` on the outer ActivateClass. → no
+# `optional` flag.
+#
+# Printed text scopes the trigger to "your Digimon" → `event_target_owner:
+# you` + `event_target_kind: digimon`. The "Tamer with [CS] trait" case
+# (e.g. Mirei Mikagura BT22-089) does NOT fire this draw — same as DCGO's
+# `IsPermanentExistsOnOwnerBattleAreaDigimon`.
+#
+# ─── DSL note: trait disjunction on event target ────────────────────────────
+#
+# `CompiledPredicate` exposes `event_target_trait_has: Option<String>` —
+# a single trait. There is no `event_target_trait_has_any_of: Vec<String>`
+# leaf (predicate.rs:131 / compiled.rs:215). The disjunction "Unidentified
+# OR CS" is expressed as a top-level `any_of` over two single-trait
+# sub-predicates, evaluated by `eval_event_fields` against the entering
+# permanent's top card (predicate.rs:429-443). This is faithful — the
+# evaluator short-circuits the same way DCGO's `||` does.
+#
+# This is the first card in the YAML corpus to use `event_target_trait_has`
+# (BT13-012 mentions it in a comment as a "predicate available" but does
+# not yet use it). The leaf is wired end-to-end (parser →
+# CompiledPredicate → eval_event_fields).
+#
+# ─── Engine gaps the test must `#[ignore]` ──────────────────────────────────
+#
+# G-INHERITED-DISPATCH: `enqueue_from_permanent` only scans the top card
+# (+ linked_cards + Training inserts) for triggered effects. Inherited
+# clauses on cards in lower digivolution-stack slots (where Tsumemon lives
+# at runtime) are not enqueued today. Tests that require the clause to
+# actually fire are gated `#[ignore = "BLOCKED: G-INHERITED-DISPATCH ..."]`.
+# Same caveat as BT14-001 / BT21-001 / BT24-001 (sister DigiEgg DSL cards).
+#
+# G-OPT-TRIGGERED: `once_per_turn: true` compiles to `Effect::max_per_turn=1`
+# but `run_queued_effect_inner` does not yet enforce the per-turn lockout
+# for triggered clauses. The OPT-lockout test is `#[ignore]`'d alongside
+# G-INHERITED-DISPATCH (OPT can't be tested until the clause fires).
+
+card: BT22-005
+name: Tsumemon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+traits: [Unidentified, CS]
+form: In-Training
+
+effects:
+  # ─── Inherited [Your Turn] [Once Per Turn] ────────────────────────────────
+  #
+  # Printed: "When any of your Digimon with the [Unidentified] or [CS] trait
+  # are played, <Draw 1>."
+  #
+  # `scope: inherited` — fires while Tsumemon is a digivolution source under
+  # a carrier on the battle area (DCGO `SetIsInheritedEffect(true)`).
+  #
+  # `when: on_enter_field_anyone` — DCGO `EffectTiming.OnEnterFieldAnyone`.
+  # Per-event filtering happens in the `condition` block.
+  #
+  # `active_when: { your_turn: true }` — [Your Turn] scoping (DCGO
+  # `IsOwnerTurn(card)`).
+  #
+  # `once_per_turn: true` — [Once Per Turn] (DCGO `oncePerTurn: 1`).
+  #
+  # No `optional:` flag — printed text has no "you may"; DCGO sets
+  # `isOptional: false`. The draw is mandatory once the trigger conditions
+  # are met.
+  #
+  # Condition: triple-conjunction
+  #   1. event_target_owner: you      — entering permanent belongs to Tsumemon's controller
+  #   2. event_target_kind: digimon   — entering permanent is a Digimon (not a Tamer)
+  #   3. any_of [trait Unidentified, trait CS] — trait disjunction on the
+  #      entering permanent's top card.
+  - scope: inherited
+    when: on_enter_field_anyone
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] [OPT] When own Digimon with [Unidentified] or [CS] is played, Draw 1"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_trait_has: Unidentified
+            - event_target_trait_has: CS
+    process:
+      - draw: { of: you, count: 1 }

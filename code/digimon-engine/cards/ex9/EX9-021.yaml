@@ -1,0 +1,372 @@
+# EX9-021 Omnimon Alter-S — Digimon, Lv.7, Blue+White, DP 15000, Cost 15.
+# Traits: Holy Warrior, DM, Ver.1, Ver.2.
+# Evo (printed evo_costs): Lv.6 Blue / Cost 5.
+# Alt-source (printed xros_req): Lv.6 with [DM] trait / Cost 5.
+# DNA digivolve (printed dna_costs / xros_req): Blue Lv.6 + Red Lv.6 / Cost 0,
+# stack the 2 specified Digimon and digivolve unsuspended.
+#
+# Printed card text (data/cards.json effect_description_eng — verbatim):
+#
+#   [When Digivolving] If DNA digivolving, your opponent's effects don't
+#   affect this Digimon for the turn. Then, delete all of their Digimon with
+#   the highest level.
+#   [End of Attack] You may play 1 card with [Greymon] in its name or the
+#   [Ver.1] trait and 1 card with [Garurumon] in its name or the [Ver.2]
+#   trait from this Digimon's digivolution cards without paying the costs.
+#   If this effect played, place this Digimon as your top security card.
+#
+# Inherited / Security: (none)
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/EX9/Blue/EX9_021.cs
+#
+# ─── Source-priority cross-check (printed text + RULES_CONTEXT.md > DCGO) ───
+#
+# Printed text governs. DCGO matches the printed text on every clause, with
+# minor sequencing details we follow:
+#
+# Block 1 (DCGO None timing — alt-source) — AddSelfDigivolutionRequirementStaticEffect:
+#   - PermanentCondition: TopCard.HasDMTraits && TopCard.IsLevel6, cost: 5.
+#   This entry IS PRINTED in the xros_req text ("Lv.6 w/[DM] trait: Cost 5"),
+#   so it is encoded as a `kind: digivolve` alt_path with `trait_has: DM` and
+#   `level_eq: 6`. (Distinct from EX9-012/EX9-019, where DCGO's two None
+#   alt-source entries were UNPRINTED and therefore omitted.)
+#
+# Block 2 (DCGO None timing — DNA) — AddJogressConditionClass:
+#   - PermanentCondition1: Lv.6 + Blue.
+#   - PermanentCondition2: Lv.6 + Red.
+#   - cost: 0.
+#   Authored as `kind: dna_digivolve` alt-path with `level_eq: 6 + color_is`
+#   filters and `stacks_unsuspended: true` (sibling to EX4-060, BT22-015,
+#   BT17-078).
+#
+# Block 3 (DCGO OnEnterFieldAnyone — gated by CanTriggerWhenDigivolving) —
+#   ActivateClass with body in TWO PARTS:
+#   (a) `if (CardEffectCommons.IsJogress(_hashtable))` → install
+#       CanNotAffectedClass on `card.PermanentOfThisCard()` via
+#       `selectedPermanent.UntilEachTurnEndEffects.Add(...)` — i.e. self
+#       gains "not affected by opponent's effects" UNTIL THE END OF THE
+#       CURRENT TURN. CardCondition gates on the protected permanent itself;
+#       SkillCondition gates on `cardEffect.EffectSourceCard.Owner ==
+#       card.Owner.Enemy` (opponent-source effects only).
+#   (b) UNCONDITIONAL: `card.Owner.Enemy.GetBattleAreaDigimons().Filter
+#       (IsMaxLevel(permanent, card.Owner.Enemy))` then DestroyPermanentsClass.
+#       This DELETE runs regardless of the DNA gate.
+#   Printed text grammatically reads "If X, A. Then, B." — DCGO's split
+#   matches: A is DNA-gated, B is unconditional.
+#
+# Block 4 (DCGO OnEndAttack) — ActivateClass with `isOptional: true` ("you
+#   may play"). Body: two SequentialChained SelectCardEffect calls:
+#     (i) Pick from THIS permanent's `DigivolutionCards` filtered by
+#         `cardSource.IsDigimon && (HasGreymonName || EqualsTraits("Ver.1"))
+#         && CanPlayAsNewPermanent(payCost: false)`. canNoSelect: false but
+#         outer `isOptional: true` lets the player decline the whole clause.
+#     (ii) Same shape with Garurumon-name OR Ver.2 trait.
+#   Then PlayPermanentCards(selectedCards, payCost: false, root:
+#   DigivolutionCards, activateETB: true). If `selectedCards.Count > 0` AND
+#   any selected card is still on the battle area → IPutSecurityPermanent
+#   with `toTop: true` → places THIS permanent (top + sources) at the TOP of
+#   the controller's security stack.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                  | Status |
+# |--------------------------------------------------------------------|--------|
+# | Standard digivolve Lv.6 Blue / Cost 5                              | IMPLEMENTED (alt_paths kind: digivolve, color_is: blue) |
+# | Alt-source Lv.6 [DM] trait / Cost 5 (printed in xros_req)          | IMPLEMENTED (alt_paths kind: digivolve, trait_has: DM) |
+# | DNA digivolve Lv.6 Blue + Lv.6 Red / Cost 0                        | IMPLEMENTED (alt_paths kind: dna_digivolve, stacks_unsuspended: true) |
+# | [When Digivolving] If DNA, opp effects don't affect self for turn  | BLOCKED — G-DSL-IS-DNA-DIGIVOLVING (no predicate AND no engine flag) |
+# | [When Digivolving] Then, delete all opp Digimon with highest level | IMPLEMENTED (for_each over level_matches_aggregate { selector: highest_level, of: opponent } + delete_permanent) |
+# | [End of Attack] May play 1 [Greymon|Ver.1] + 1 [Garurumon|Ver.2] from own digivolution cards free | BLOCKED — G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (sibling to EX4-060) |
+# | [End of Attack] If played, place self as TOP security card          | BLOCKED — G-PLACE-SELF-AT-SECURITY-TOP (sibling to G-PLACE-SELF-AT-SECURITY-BOTTOM EX4-060 — different placement target, same engine substrate gap) |
+#
+# ─── DSL/engine GAP — DNA-digivolving condition on triggered clauses ─────────
+#
+# [G-DSL-IS-DNA-DIGIVOLVING] (NEW — surfaced by EX9-021 [When Digivolving]
+# inner gate "If DNA digivolving").
+#
+# Printed text: "[When Digivolving] **If DNA digivolving**, your opponent's
+# effects don't affect this Digimon for the turn. Then, delete all of their
+# Digimon with the highest level."
+#
+# DCGO models this via `CardEffectCommons.IsJogress(_hashtable)` — a per-
+# trigger hashtable flag set when the digivolve was a DNA / jogress path
+# (the AddJogressConditionClass route). EX9-021's [When Digivolving] body
+# splits on this flag so the immunity arm is DNA-only and the delete arm
+# unconditional.
+#
+# DSL: `PredicateSpec` exposes no `is_dna_digivolving: bool` leaf, and the
+# `condition:` shape on a triggered clause has no equivalent. There is also
+# no clause-level `if:` form (matches in `process:` body) that can branch on
+# the DNA-vs-standard digivolve origin.
+#
+# Engine: `TriggerSource::Digivolved { player, permanent, card }` (selection.rs
+# line 352) has NO `via_dna` / `from_dna_pair` flag. The DNA digivolve action
+# path (Game::initiate_dna_digivolve etc.) does not currently enqueue a
+# distinct trigger source for the DNA case. The dispatch code that lifts
+# `Digivolved { ... }` into `TriggerContext` (effect_queue.rs around line
+# 479) builds a context with `event_permanent` / `event_card` / `source_player`
+# but no DNA discriminator.
+#
+# Closing this gap requires:
+#   A. Engine: add a `via_dna: bool` (or `dna_pair: Option<(CardHandle,
+#      CardHandle)>`) field to `TriggerSource::Digivolved`. Populate it from
+#      the DNA-digivolve action handler. Surface it on `TriggerContext` so
+#      DSL predicates can read it.
+#   B. DSL: add `is_dna_digivolving: Option<bool>` leaf to `PredicateSpec` +
+#      `CompiledPredicate`. Evaluator returns the trigger context flag when
+#      present (false otherwise — non-trigger-time evaluation reads false,
+#      same convention as `event_target_owner`).
+#   C. (Optional but symmetric): expose `is_standard_digivolving` as the dual
+#      so authors can express "[If standard digivolving]"-style clauses.
+#
+# Workaround that would VIOLATE no-approximations:
+#   - Always grant the immunity (over-fires when the digivolve was standard).
+#   - Never grant the immunity (under-fires when the digivolve was DNA — the
+#     printed protection is lost).
+# Both are unfaithful. Per no-approximations the DNA-gated immunity arm is
+# OMITTED entirely. The unconditional delete-highest arm IS implemented (it
+# fires regardless of the DNA gate).
+#
+# Also blocks: any future card with "[When Digivolving] If DNA digivolving,
+# X" or "[When Digivolving] If you DNA digivolved, X" style printed text.
+# DCGO grep for `IsJogress(` returns multiple cards across sets (notably
+# Omnimon-family / DNA-archetype cards). Sibling form to AD1-001's
+# trash-recursion split already addressed by `dna_origin: true` predicate
+# context (filed when the trash-recursion gap was opened — sibling but
+# distinct primitive, since `dna_origin` reads card-data origin metadata
+# rather than per-trigger event metadata).
+#
+# Gap kind: hybrid (engine TriggerSource needs the flag; DSL needs the
+# predicate). First reported: 2026-05-03 (EX9-021 Omnimon Alter-S,
+# batch-implement-cards-rust-dsl).
+#
+# ─── DSL/engine GAP — Place self at TOP of own security stack ────────────────
+#
+# [G-PLACE-SELF-AT-SECURITY-TOP] (NEW — sibling of G-PLACE-SELF-AT-SECURITY-BOTTOM
+# already filed for EX4-060). Same engine substrate is missing; only the
+# placement target (top vs bottom) and the trigger-clause kind (end-of-attack
+# tail, NOT a "would leave" replacement) differ.
+#
+# Printed text: "If this effect played, place this Digimon as your top
+# security card." DCGO models this with `IPutSecurityPermanent(card.
+# PermanentOfThisCard(), CardEffectHashtable, toTop: true).PutSecurity()`
+# — places THIS permanent (top + its sources) at the TOP of the controller's
+# security stack (face-up; printed text does not specify face-down here).
+#
+# Distinguishing factors vs G-PLACE-SELF-AT-SECURITY-BOTTOM (EX4-060):
+#   1. EX4-060 places at the BOTTOM (`toTop: false`) face-down inside a
+#      replacement-style "would leave" clause — the destination is a reroute
+#      of an in-flight leave.
+#   2. EX9-021 places at the TOP (`toTop: true`) inside a normal triggered
+#      [End of Attack] tail — the source IS still on the battle area at
+#      trigger fire-time and the placement INITIATES the leave (not a
+#      reroute). DCGO's gate `selectedCards.Count > 0 && selectedCards.Any
+#      (x => CardEffectCommons.IsExistOnBattleAreaDigimon(x))` reads as
+#      "if at least one of the played-from-stack cards is currently on the
+#      battle area" — i.e. the head arm produced a board-state effect.
+#
+# Both forms need the same underlying engine helper:
+# `EffectContext::place_self_at_security(top_or_bottom: SecurityPlacement,
+# face_orientation: SecurityFace)` that consumes the source permanent's top
+# card + sources, places the bundle at the specified end of the controller's
+# security stack with the specified orientation, fires `OnAddToSecurity`, and
+# updates `face_up_security` bookkeeping. The two existing inheritor cards
+# (EX4-060 bottom-face-down, EX9-021 top-face-up) cover both axes of the
+# helper, so the gap should be closed in one engine slice.
+#
+# Engine half remains the same as the EX4-060 entry: `place_security_bottom`
+# /  `place_security_top` are absent from `EffectContext`. The DSL half needs
+# a `place_self_at_security_top: {}` step (companion to the proposed
+# `place_self_at_security_bottom: {}`) — or a unified `place_self_at_security:
+# { position: top | bottom, face: up | down }` step.
+#
+# Suggested DSL syntax (option A — separate verbs, mirrors `position` axis):
+#   - place_self_at_security_top: {}           # face-up by default
+# Or (option B — unified):
+#   - place_self_at_security:
+#       position: top                          # top | bottom
+#       face: up                               # up | down (printed default
+#                                              # for top is up; for bottom is down)
+#
+# Workaround that would VIOLATE no-approximations: cancel the leave / keep
+# self in battle area; both produce the wrong board state. Per no-approximations
+# the entire [End of Attack] clause is OMITTED until G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES
+# AND G-PLACE-SELF-AT-SECURITY-TOP both close (the "If this effect played"
+# tail is gated on the head arm having executed at least one play, so neither
+# half can stand alone in a faithful encoding).
+#
+# Also blocks: any future "If Y, place this Digimon as your top security card"
+# or "place this card on top of your security stack face up" self-disposition
+# tail. DCGO grep for `IPutSecurityPermanent(card.PermanentOfThisCard(...
+# toTop: true)` returns multiple entries beyond EX9-021.
+#
+# Gap kind: hybrid (engine substrate + DSL verb). First reported: 2026-05-03
+# (EX9-021 Omnimon Alter-S, batch-implement-cards-rust-dsl). Sibling clause
+# tracked at G-PLACE-SELF-AT-SECURITY-BOTTOM (EX4-060).
+
+card: EX9-021
+name: "Omnimon Alter-S"
+kind: digimon
+level: 7
+color: [blue, white]
+cost: 15
+dp: 15000
+traits: [Holy Warrior, DM, Ver.1, Ver.2]
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# 1) Standard digivolve: Lv.6 Blue / Cost 5 (per evo_costs in cards.json).
+# 2) Alt-source digivolve: Lv.6 with [DM] trait / Cost 5 (PRINTED in xros_req).
+# 3) DNA digivolve: Lv.6 Blue + Lv.6 Red / Cost 0 (per dna_costs; DCGO
+#    EX9_021.cs lines 30-96 GetJogress).
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 5
+
+  - kind: digivolve
+    from: { level_eq: 6, trait_has: DM }
+    cost: 5
+
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, color_is: blue }
+      - { level_eq: 6, color_is: red }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  # ─── Clause 1 — [When Digivolving] delete-highest (unconditional half) ─────
+  #
+  # Printed: "[When Digivolving] If DNA digivolving, your opponent's effects
+  # don't affect this Digimon for the turn. Then, delete all of their
+  # Digimon with the highest level."
+  #
+  # The "If DNA digivolving" gate covers ONLY the immunity arm (sentence A);
+  # the "Then, delete..." arm (sentence B) fires unconditionally. DCGO
+  # confirms: the immunity is inside `if (CardEffectCommons.IsJogress(...))`,
+  # the destroy code below runs outside that block (EX9_021.cs lines 130-188).
+  # Source priority: printed grammar + DCGO sequencing both align — the
+  # delete is unconditional.
+  #
+  # Per the BLOCKED gap [G-DSL-IS-DNA-DIGIVOLVING] documented in the header,
+  # the DNA-only immunity arm is OMITTED entirely. The unconditional
+  # delete-highest arm IS implemented.
+  #
+  # Body: `for_each` over `level_matches_aggregate { selector: highest_level,
+  # of: opponent }` + delete_permanent. The aggregate selector is wired
+  # (validator.rs line 405 admits both `lowest_level` and `highest_level`;
+  # AD1-012 / BT22-026 use `lowest_level`, BT24-080 RESOLVED for `lowest_level`,
+  # and EX9-021 surfaces the `highest_level` symmetric usage).
+  #
+  # Existential guard via the candidate filter: when no opp Digimon exists,
+  # the for_each iterates zero times and the clause silently no-ops, mirroring
+  # DCGO's `if (card.Owner.Enemy.GetBattleAreaDigimons().Count > 0)` gate at
+  # line 187 (well, here the gate is on the loop being non-empty — same effect).
+  - when: when_digivolving
+    summary: "[When Digivolving] Delete all opp Digimon with highest level (unconditional half; DNA-only immunity arm BLOCKED on G-DSL-IS-DNA-DIGIVOLVING)"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            level_matches_aggregate:
+              selector: highest_level
+              of: opponent
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }
+
+  # ─── BLOCKED Clause 2 — [When Digivolving] DNA-only opp-effect immunity ────
+  #
+  # Printed: "[When Digivolving] If DNA digivolving, your opponent's effects
+  # don't affect this Digimon for the turn."
+  #
+  # BLOCKED on G-DSL-IS-DNA-DIGIVOLVING (NEW — see header). Both the engine
+  # `TriggerSource::Digivolved` and the DSL `PredicateSpec` lack a flag/leaf
+  # for "did this digivolve happen via the DNA pair path?".
+  #
+  # Per no-approximations the entire arm is OMITTED. The visible behavior is
+  # faithful to the standard-digivolve case (DCGO does not grant immunity
+  # there); for the DNA-pair case the printed protection is missed. When the
+  # gap closes the body will be:
+  #
+  # - when: when_digivolving
+  #   condition:
+  #     is_dna_digivolving: true               # ← BLOCKED leaf
+  #   summary: "[When Digivolving] DNA-only: self ignores opp effects this turn"
+  #   process:
+  #     - grant_effect_immunity:
+  #         target: source                     # the carrier permanent
+  #         source_kind: any                   # printed "your opponent's effects"
+  #                                            # has no card-kind restriction
+  #         source_controller: opponent
+  #         expiry: end_of_turn                # printed "for the turn"
+  #
+  # DCGO sets the immunity via `selectedPermanent.UntilEachTurnEndEffects.Add`
+  # which expires at the end of the CURRENT turn (EachTurnEnd, not OwnerTurnEnd
+  # — the immunity covers BOTH players' actions for the rest of the turn this
+  # digivolve happens on). The sister card AD1-009's
+  # `expiry: end_of_opponents_turn` is DIFFERENT — DON'T copy that expiry here.
+  # `end_of_turn` (current turn's end) is the correct expiry per DCGO.
+
+  # ─── BLOCKED Clause 3 — [End of Attack] play-2-from-stack + place self top ─
+  #
+  # Printed: "[End of Attack] You may play 1 card with [Greymon] in its name
+  # or the [Ver.1] trait and 1 card with [Garurumon] in its name or the
+  # [Ver.2] trait from this Digimon's digivolution cards without paying the
+  # costs. If this effect played, place this Digimon as your top security
+  # card."
+  #
+  # BLOCKED on TWO gaps:
+  #   - G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (existing, surfaced by EX4-060
+  #     and BT22-015 Decode). No DSL bind/play step pair for "play a filtered
+  #     card from THIS permanent's digivolution stack without paying the
+  #     cost". The candidate root, the bind step
+  #     (`select_self_digivolution_source` does not exist), and the play step
+  #     (`play_from_own_digivolution_free` does not exist) are all absent.
+  #   - G-PLACE-SELF-AT-SECURITY-TOP (NEW — see header; sibling to
+  #     G-PLACE-SELF-AT-SECURITY-BOTTOM filed for EX4-060). Different
+  #     placement (TOP vs bottom; printed face-up vs face-down), same engine
+  #     substrate gap.
+  #
+  # The "If this effect played" tail in the printed text is GATED on the head
+  # arm having played at least one card (DCGO `selectedCards.Count > 0 &&
+  # selectedCards.Any(x => CardEffectCommons.IsExistOnBattleAreaDigimon(x))`).
+  # Without G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES the head can never run; the
+  # tail therefore can never be triggered faithfully — even if
+  # G-PLACE-SELF-AT-SECURITY-TOP were closed in isolation. So the entire
+  # clause is OMITTED.
+  #
+  # Authoring stub (commented; uncomment + adjust when both gaps close):
+  #
+  # - when: end_of_attack
+  #   optional: true
+  #   summary: "[End of Attack] May play 1 [Greymon|Ver.1] + 1 [Garurumon|Ver.2] from own digivolution cards free; if played, place self as top security card"
+  #   process:
+  #     - select_self_digivolution_source:                 # ← BLOCKED: G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES
+  #         bind_as: greymon_pick
+  #         filter:
+  #           all_of:
+  #             - kind: digimon
+  #             - any_of:
+  #                 - name_contains: "Greymon"
+  #                 - trait_has: "Ver.1"
+  #         prompt: "Select 1 card with [Greymon] in name or [Ver.1] trait from this Digimon's digivolution cards"
+  #     - play_from_own_digivolution_free: { source: greymon_pick }
+  #     - select_self_digivolution_source:                 # ← BLOCKED: G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES
+  #         bind_as: garu_pick
+  #         filter:
+  #           all_of:
+  #             - kind: digimon
+  #             - any_of:
+  #                 - name_contains: "Garurumon"
+  #                 - trait_has: "Ver.2"
+  #         prompt: "Select 1 card with [Garurumon] in name or [Ver.2] trait from this Digimon's digivolution cards"
+  #     - play_from_own_digivolution_free: { source: garu_pick }
+  #     - if:
+  #         condition:
+  #           binding_present: greymon_pick   # ← also depends on G-DSL-BIND-PRESENT (EX9-066) for the "If this effect played" gate
+  #         then:
+  #           - place_self_at_security_top: {}           # ← BLOCKED: G-PLACE-SELF-AT-SECURITY-TOP

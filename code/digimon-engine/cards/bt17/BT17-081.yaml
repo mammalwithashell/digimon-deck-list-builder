@@ -1,0 +1,163 @@
+# BT17-081 Tai Kamiya & Matt Ishida — Tamer, Cost 4, Red+Blue.
+#
+# Printed effect (cards.json effect_description_eng):
+#   [All Turns] When one of your Digimon is played or digivolves, by suspending
+#   this Tamer, if you have a Digimon with [Greymon] in its name, gain 1 memory.
+#   If you have a Digimon with [Garurumon] in its name, gain 1 memory.
+#   [End of Your Turn] [Once Per Turn] 1 of your Digimon with [Omnimon] in its
+#   name may attack a player.
+#
+# Inherited / Security text (cards.json inherited_effect_description_eng):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT17/Red/BT17_081.cs
+#
+# ─── Clause 1 — [All Turns] on_enter_field_anyone + on_digivolve observer ─────
+#
+# DCGO (BT17_081.cs:13-87): single ActivateClass on EffectTiming.OnEnterFieldAnyone
+# that gates with both `CanTriggerOnPermanentPlay` and
+# `CanTriggerWhenPermanentDigivolving`, both filtered to a permanent that is on
+# the OWNER's battle area AND IsDigimon (PermanentCondition →
+# `IsPermanentExistsOnOwnerBattleAreaDigimon`). The body suspends Owen first
+# (cost), then independently checks for an own [Greymon]-named Digimon (+1
+# memory) and an own [Garurumon]-named Digimon (+1 memory).
+#
+# DSL mapping:
+#   - `when: [on_enter_field_anyone, on_digivolve]` covers the play and
+#     digivolve halves (AD1-001 idiom). Both timings populate
+#     `TriggerContext.event_card` for normal plays / hand digivolves
+#     (G-ENTERING-PERMANENT-TRAIT partially closed 2026-04-29; DNA digivolve,
+#     effect-initiated digivolve, breeding-area observers remain open and
+#     covered by `#[ignore]` tests below).
+#   - `active_when: { all_turns: true }` per [All Turns] scoping.
+#   - `condition`: combine
+#       * `event_target_owner: you` — the entering/digivolving permanent must
+#         belong to the controller (matches DCGO
+#         `IsPermanentExistsOnOwnerBattleArea`),
+#       * `event_target_kind: digimon` — printed text says "your **Digimon**",
+#         so a Tamer entering must NOT trigger (matches DCGO
+#         `IsPermanentExistsOnOwnerBattleAreaDigimon`).
+#     Note: BT17-081 does NOT also gate on the entering card's name (the
+#     greymon / garurumon checks are board-state checks done at resolution
+#     time, not entering-card filters), so we don't need
+#     `event_card_name_contains` here.
+#   - `optional: true` — "by suspending this Tamer" is the activation cost.
+#     The player declines by passing the activation prompt without suspending.
+#   - Cost step: `suspend: { target: source }` (BT18-087 / BT24-082 idiom —
+#     `source` is CompiledBindingRef::Source → ctx.source_permanent).
+#   - Body: two independent `if any_permanent` checks for [Greymon] / [Garurumon]
+#     on own field (kind: digimon, name_contains), each running `gain_memory: 1`
+#     when satisfied. DCGO does these checks AFTER the suspend; we mirror that
+#     by placing both inside the process body after the suspend cost.
+#
+# ─── Clause 2 — [End of Your Turn][OPT] Omnimon may attack a player ───────────
+#
+# DCGO (BT17_081.cs:91-201): ActivateClass on EffectTiming.OnEndTurn with
+# maxCount: 1 (printed [Once Per Turn]) and isOwnerTurn gate ([End of Your Turn]
+# scoping). CanActivateCondition checks for any own Digimon whose top card
+# `ContainsCardName("Omnimon")` AND `CanAttack(activateClass)`. Body runs
+# SelectPermanentEffect Mode.Custom over the Omnimon-named candidates
+# (canNoSelect: false — the printed "1 of your Digimon ... may attack" is read
+# as: the OUTER activation is the "may", but ONCE the player elects to
+# activate, picking a target is mandatory; the eligible Digimon picks a player
+# target via `SelectAttackEffect` with `canAttackPlayerCondition: () => true`
+# and `defenderCondition: _ => false` — only player attacks, no Digimon).
+#
+# DSL mapping (G-MAY-ATTACK-NOW resolved 2026-05-03):
+#   - `when: end_of_your_turn`
+#   - `once_per_turn: true` (printed [Once Per Turn]; G-OPT-TRIGGERED tracks
+#     enforcement on triggered clauses — flag is authored but the engine may
+#     not yet enforce mid-turn lockout for triggered effects; the printed
+#     end-of-turn timing means the lockout is mostly moot since the trigger
+#     fires once per turn anyway).
+#   - `optional: true` — printed "may attack" makes the outer activation
+#     declinable.
+#   - Process:
+#       1. `select_own_permanent` over Omnimon-named Digimon — bound as
+#          `attacker`.
+#       2. `may_attack_now` with `attacker: attacker`, `targets: player` (DCGO
+#          `defenderCondition: _ => false` excludes Digimon targets), `optional:
+#          false` (the inner attack-target prompt is mandatory once the outer
+#          activation is accepted; the outer optionality is captured by the
+#          clause's `optional: true` flag).
+#
+# ─── Clause 3 — [Security] Play this card without paying the cost ─────────────
+#
+# DCGO (BT17_081.cs:205-211): EffectTiming.SecuritySkill →
+# CardEffectFactory.PlaySelfTamerSecurityEffect(card). Standard security-play
+# pattern. DSL: `when: on_security`, `play_from_security: {}` (BT22-084 /
+# BT18-087 idiom).
+
+card: BT17-081
+name: Tai Kamiya & Matt Ishida
+kind: tamer
+color: [red, blue]
+cost: 4
+
+effects:
+  # ─── Clause 1: [All Turns] on play/digivolve of own Digimon ────────────────
+  - when: [on_enter_field_anyone, on_digivolve]
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[All Turns] On own Digimon play/digivolve, suspend self → +1 memory per Greymon and per Garurumon on field"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    process:
+      # Cost: suspend this Tamer (the activation cost — "by suspending this
+      # Tamer"). `source` resolves to CompiledBindingRef::Source →
+      # ctx.source_permanent (the Tamer).
+      - suspend: { target: source }
+      # Greymon check: independently grant +1 memory if any own [Greymon]-named
+      # Digimon is on the field at resolution time.
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              name_contains: "Greymon"
+          then:
+            - gain_memory: 1
+      # Garurumon check: same, independent of the Greymon check.
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              name_contains: "Garurumon"
+          then:
+            - gain_memory: 1
+
+  # ─── Clause 2: [End of Your Turn][OPT] 1 own Omnimon may attack a player ───
+  - when: end_of_your_turn
+    optional: true
+    once_per_turn: true
+    summary: "[End of Your Turn][OPT] 1 of your Omnimon may attack a player"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        name_contains: "Omnimon"
+    process:
+      - select_own_permanent:
+          bind_as: attacker
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Omnimon"
+          prompt: "Select 1 of your [Omnimon]-named Digimon to attack a player"
+      - may_attack_now:
+          attacker: attacker
+          targets: player
+          optional: false
+
+  # ─── Clause 3: [Security] Play this card without paying the cost ───────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

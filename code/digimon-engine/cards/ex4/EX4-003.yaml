@@ -1,0 +1,155 @@
+# EX4-003 Tsunomon — Digi-Egg, Lv.2, Black, Cost 0.
+# Traits: [Lesser]. Form: In-Training (DigiEgg slot).
+#
+# Printed card text (cards.json inherited_effect_description_eng):
+#
+#   Inherited Effect [Your Turn] [Once Per Turn]
+#   When one of your other Digimon digivolves, <Draw 1>.
+#   (Draw 1 card from your deck.)
+#
+# (DigiEgg has no main / on-play effect — the only printed clause is the
+# inherited triggered draw that fires while Tsunomon is a digivolution
+# source under another carrier.)
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/EX4/Black/EX4_003.cs
+#
+# ─── DCGO crosscheck ────────────────────────────────────────────────────────
+#
+# Single ActivateClass on `EffectTiming.OnEnterFieldAnyone` (DCGO collapses
+# the digivolve-observer fan-out into the OnEnterFieldAnyone timing and
+# filters with `CanTriggerWhenPermanentDigivolving` — see EX4_003.cs:14-69).
+#
+#   `SetIsInheritedEffect(true)` — clause is inherited (fires from the
+#     digivolution-source slot, not from the top-card slot).
+#   `SetUpActivateClass(..., 1, false, ...)` — `oncePerTurn: 1`,
+#     `isOptional: false`. Mandatory trigger; no "you may" in printed text.
+#
+#   `CanUseCondition`:
+#     `IsExistOnBattleArea(card)` — Tsunomon's host permanent must still
+#       be on the battle area when the digivolve fires.
+#     `IsOwnerTurn(card)` — [Your Turn] gate.
+#     `CanTriggerWhenPermanentDigivolving(hashtable, PermanentCondition)` —
+#       a Digimon digivolved AND the per-event filter below matches.
+#
+#   `PermanentCondition(perm)` (EX4_003.cs:31-43):
+#     `IsPermanentExistsOnOwnerBattleAreaDigimon(perm, card)` — the
+#       digivolving permanent must be on the OWNER's (Tsunomon's
+#       controller's) battle area AND must be a Digimon. Maps to:
+#         event_target_owner: you
+#         event_target_kind: digimon
+#     `permanent != card.PermanentOfThisCard()` — the digivolving
+#       permanent must NOT be Tsunomon's own host carrier ("one of your
+#       OTHER Digimon"). DCGO compares `permanent` against the live
+#       `PermanentOfThisCard()` lookup.
+#
+#   `CanActivateCondition`:
+#     `IsExistOnBattleArea(card)` — re-checked at activation time.
+#
+#   `ActivateCoroutine`: `new DrawClass(card.Owner, 1, activateClass).Draw()`
+#     — straight Draw 1 to Tsunomon's owner.
+#
+# ─── Source-priority audit (printed text vs DCGO) ───────────────────────────
+#
+# Printed text: "[Your Turn] [Once Per Turn] When one of your other Digimon
+# digivolves, <Draw 1>." — no "you may"; mandatory once the trigger fires.
+# DCGO confirms `isOptional: false`. Faithful mapping uses no `optional:`.
+#
+# `[Your Turn]` → `active_when: { your_turn: true }` (DCGO `IsOwnerTurn`).
+# `[Once Per Turn]` → `once_per_turn: true` (DCGO `oncePerTurn: 1`).
+#
+# "Your other Digimon": "your" maps to `event_target_owner: you`;
+# "Digimon" maps to `event_target_kind: digimon`; "other" — see DSL gap
+# below.
+#
+# ─── Known gaps affecting this card ────────────────────────────────────────
+#
+# G-INHERITED-DISPATCH: closed for battle-area below-top dispatch on
+# 2026-04-29 (`enqueue_from_permanent` now scans `card_sources` for
+# inherited triggered effects). The dispatch path for THIS particular
+# clause requires `EffectTiming::OnDigivolve` to fire from a below-top
+# inherited source — same surface that BT22-005 / BT14-001 / BT21-001 /
+# BT24-001 sister DigiEgg DSL cards use for `OnEnterFieldAnyone`. Tests
+# that REQUIRE the clause to actually fire are gated `#[ignore]` under
+# G-INHERITED-DISPATCH because the digivolve-observer fan-out for
+# inherited sources is still being audited card-by-card; structural
+# tests (compile shape, scope, when, OPT flag, traits) run live.
+#
+# G-OPT-TRIGGERED: closed for permanent-backed queued triggered effects
+# on 2026-04-29 (`run_queued_effect_inner` now consults
+# `Permanent::activation_count`). The OPT-lockout test is `#[ignore]`'d
+# alongside G-INHERITED-DISPATCH (OPT can't be tested until the clause
+# fires at all in this dispatch path).
+#
+# G-DSL-EVENT-TARGET-IS-OTHER (sibling of G-DSL-EVENT-TARGET-IS-SELF
+# documented for BT15-101 in qa/dsl-vocab-gaps.md). DCGO uses
+# `permanent != card.PermanentOfThisCard()` to filter the digivolving
+# permanent against Tsunomon's own carrier. The DSL has no
+# `event_target_is_other` (or inverted `event_target_is_source: false`)
+# leaf. Without this leaf, the clause as authored will OVER-FIRE if
+# Tsunomon's own carrier itself digivolves (DCGO would suppress that
+# fire; the DSL faithful mapping currently cannot). This is the same
+# class of gap as BT15-101 — the engine has the comparison primitive
+# (`current_trigger_context.event_permanent` vs the inherited source's
+# host carrier handle), only the DSL surface and predicate evaluator
+# arm are missing. To file in qa/dsl-vocab-gaps.md as
+# G-DSL-EVENT-TARGET-IS-OTHER. The negative "own carrier digivolves"
+# case is covered by an `#[ignore]`'d test that documents the intended
+# behaviour and will go green when the leaf lands.
+
+card: EX4-003
+name: Tsunomon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  # ─── Inherited [Your Turn] [Once Per Turn] ───────────────────────────────
+  #
+  # Printed: "When one of your other Digimon digivolves, <Draw 1>."
+  #
+  # `scope: inherited` — fires while Tsunomon is a digivolution source under
+  # a carrier on the battle area (DCGO `SetIsInheritedEffect(true)`).
+  #
+  # `when: on_digivolve` — the printed timing is "when ... digivolves"; the
+  # engine timing dispatcher exposes `EffectTiming::OnDigivolve` directly
+  # (DCGO collapses to `OnEnterFieldAnyone + CanTriggerWhenPermanentDigivolving`,
+  # but the engine has the explicit timing — used by AD1-001, BT17-081,
+  # BT24-082, EX4-061 etc.).
+  #
+  # `active_when: { your_turn: true }` — [Your Turn] scoping (DCGO
+  # `IsOwnerTurn(card)`).
+  #
+  # `once_per_turn: true` — [Once Per Turn] (DCGO `oncePerTurn: 1`).
+  #
+  # No `optional:` flag — printed text has no "you may"; DCGO sets
+  # `isOptional: false`. The draw is mandatory once the trigger conditions
+  # are met.
+  #
+  # Condition:
+  #   - event_target_owner: you      — digivolving permanent is the
+  #                                    controller's (DCGO
+  #                                    `IsPermanentExistsOnOwnerBattleArea`)
+  #   - event_target_kind: digimon   — digivolving permanent is a Digimon
+  #                                    (DCGO `IsPermanentExistsOnOwnerBattleAreaDigimon`)
+  #
+  # The "other" qualifier from "one of your OTHER Digimon" is NOT expressible
+  # today — see G-DSL-EVENT-TARGET-IS-OTHER in the header comment. With the
+  # owner+kind gate the clause is faithful for every digivolve EXCEPT the
+  # digivolve of Tsunomon's own host carrier, where DCGO suppresses and the
+  # DSL would over-fire. The negative-case test for that scenario is
+  # `#[ignore]`'d pending the DSL gap closing.
+  - scope: inherited
+    when: on_digivolve
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] [OPT] When one of your other Digimon digivolves, Draw 1"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    process:
+      - draw: { of: you, count: 1 }

@@ -1,0 +1,239 @@
+# EX4-038 Agumon — Digimon, Lv.3, Black, DP 1000, Cost 3.
+# Traits: Reptile.
+# Standard digivolution: Lv2 Black / Cost 0 (printed evo_costs).
+#
+# Printed card text (cards.json effect_description_eng):
+#
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with
+#   [Greymon] in its name and 1 Digimon card with [Gabumon], [Garurumon] or
+#   [Omnimon] in its name among them to your hand. Place the rest on top of
+#   your deck in any order.
+#
+# Inherited (cards.json inherited_effect_description_eng):
+#
+#   [Your Turn] [Once Per Turn] When one of your other Digimon digivolves,
+#   gain 1 memory.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX4/Black/EX4_038.cs
+#
+# ─── DCGO crosscheck ────────────────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnEnterFieldAnyone` activate gated by
+#   `CardEffectCommons.CanTriggerOnPlay(hashtable, card)` AND
+#   `CardEffectCommons.IsExistOnBattleArea(card) && Owner.LibraryCards.Count >= 1`.
+#   Coroutine: `SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, ...)` with
+#   two buckets:
+#     - Bucket 1: `IsDigimon && HasGreymonName`,
+#         message "Select 1 Digimon card with [Greymon] in its name.",
+#         mode AddHand, maxCount 1.
+#     - Bucket 2: `IsDigimon && (ContainsCardName("Omnimon") ||
+#         ContainsCardName("Gabumon") || HasGarurumonName)`,
+#         message "Select 1 Digimon card with [Gabumon], [Garurumon], or
+#         [Omnimon] in its name.", mode AddHand, maxCount 1.
+#     - `mutualConditions: true` → no card may satisfy both buckets
+#       (`no_duplicate_cards: true`).
+#     - `remainingCardsPlace: RemainingCardsPlace.DeckTop` → trailing
+#       `place_remainder_on_deck { position: top }` step (engine surfaces an
+#       OrderedPermutation selection so the player chooses the order, per
+#       printed "Place the rest on top of your deck in any order").
+#   `SetUpActivateClass(..., -1, false, ...)` — outer trigger NOT optional.
+#
+# Clause 2 — `EffectTiming.OnEnterFieldAnyone` second ActivateClass with
+#   `SetIsInheritedEffect(true)` and `SetUpActivateClass(..., 1, false, ...)` —
+#   `oncePerTurn: 1`, `isOptional: false`. Mandatory when triggered.
+#   `CanUseCondition`:
+#     `IsExistOnBattleArea(card)` (the source card IS in battle area —
+#       satisfied for top-card EX4-038 directly, AND for inherited firing
+#       when EX4-038 is a digivolution source under another carrier; the
+#       carrier permanent is what counts for `IsExistOnBattleArea`),
+#     `IsOwnerTurn(card)` ([Your Turn] gate),
+#     `CanTriggerWhenPermanentDigivolving(hashtable, PermanentCondition)`
+#       where `PermanentCondition(perm)`:
+#         `IsPermanentExistsOnOwnerBattleArea(perm, card)` — the digivolving
+#           permanent is on the OWNER's battle area, AND
+#         `perm != card.PermanentOfThisCard()` — the digivolving permanent
+#           is NOT the carrier permanent (i.e. "OTHER Digimon").
+#   `ActivateCoroutine`: `card.Owner.AddMemory(1)`.
+#
+#   Clause 3 (no Security clause for EX4-038 — Digimon cards do not have
+#   a Security text on this card.)
+#
+# ─── Source-priority audit (printed text vs DCGO) ───────────────────────────
+#
+# Clause 1: Printed has no "you may" → outer trigger mandatory. DCGO
+# `isOptional: false` confirms. Each bucket is mandatory IF a matching card
+# is in the reveal (DCGO single-bucket maxCount: 1 with no `canNoSelect`
+# parameter); resolves silently when no candidate exists. `min: 1, max: 1`
+# in the DSL captures this.
+#
+# Clause 2: Printed "[Your Turn] [Once Per Turn]" → `active_when:
+# { your_turn: true }` + `once_per_turn: true`. No "you may" → not optional;
+# DCGO `isOptional: false` confirms. The "OTHER Digimon" exclusion (the
+# carrier digivolving must NOT trigger this on EX4-038's own stack) is the
+# G-DSL-EVENT-TARGET-IS-SELF gap (qa/dsl-vocab-gaps.md): no
+# `event_target_is_source` predicate exists yet, so the DSL workaround is
+# `event_target_owner: you, event_target_kind: digimon` — over-fires when
+# the carrier itself digivolves into a new top card while EX4-038 is in
+# its source stack. Tests asserting the "carrier-self exclusion" branch
+# are `#[ignore = "pending: G-DSL-EVENT-TARGET-IS-SELF"]`.
+#
+# ─── DSL precedent ──────────────────────────────────────────────────────────
+#
+# Clause 1 (two-bucket reveal, top-of-deck remainder):
+#   - BT12-059 Agumon — same shape, two buckets, but reveals 4 (vs 3) and
+#     uses `place_remainder_on_deck { position: bottom }`. EX4-038 reveals
+#     3 and places remainder on TOP — the engine's `place_remainder_on_deck`
+#     handles `position: top` by installing an OrderedPermutation selection
+#     (`code/digimon-engine/src/effect_context/mod.rs:1825`), correctly
+#     mapping printed "in any order" into a player choice over the
+#     permutation. Mirror BT12-059's two-bucket `select_reveal_buckets`
+#     shape exactly with the new buckets and `position: top`.
+#   - BT24-031 Iliad+TS — sister two-bucket reveal-3.
+#   - BT22-099 Kuremi Detective Agency / BT22-094 Yuugo Kamishiro — single
+#     bucket variants of the same reveal-N + add + place pattern.
+#
+# Clause 2 (inherited [Your Turn][OPT] on_digivolve, gain memory):
+#   - BT22-005 Tsumemon — inherited [Your Turn][OPT] `on_enter_field_anyone`
+#     +Draw 1, with G-INHERITED-DISPATCH (closed 2026-04-29 for battle area)
+#     and event-target-context predicates. Same shape; we swap timing to
+#     `on_digivolve` and the body to `gain_memory: 1`.
+#   - BT24-082 Owen Dreadnought — `when: on_digivolve` with event-target
+#     predicates. Confirms DSL surface for digivolve trigger condition.
+#   - EX4-061 Matt Ishida & Tai Kamiya — `when: on_digivolve` with
+#     `active_when: { your_turn: true }` precedent.
+#
+# ─── Known gaps affecting this card ──────────────────────────────────────────
+#
+# G-DSL-EVENT-TARGET-IS-SELF (qa/dsl-vocab-gaps.md):
+#   No predicate to compare event_permanent against source_permanent. For
+#   EX4-038 Clause 2, this means the "OTHER Digimon" exclusion in the
+#   printed text cannot be expressed in the DSL today. The workaround
+#   (`event_target_owner: you, event_target_kind: digimon`) over-fires when
+#   the carrier itself digivolves while EX4-038 is in its source stack.
+#   Tests for the negative branch (carrier-self digivolve) are
+#   `#[ignore = "pending: G-DSL-EVENT-TARGET-IS-SELF"]`.
+#
+# G-INHERITED-DISPATCH (qa/archetype-qa/engine-gaps.md):
+#   CLOSED for battle-area dispatch on 2026-04-29 (per engine-gaps.md
+#   line 163). Inherited triggered effects on non-top sources now fire
+#   when the carrier permanent's battle-area observer path dispatches a
+#   matching event. Clause 2 dispatch from below-top sources is therefore
+#   live; behavioral tests cover both top-card-source and stacked-source
+#   paths.
+#
+# G-OPT-TRIGGERED:
+#   `once_per_turn: true` on a triggered clause is authored faithfully but
+#   the engine queue-drain path does not yet enforce same-turn lockout for
+#   triggered clauses. The OPT flag compiles correctly. Lockout assertions
+#   are `#[ignore]`'d per existing G-OPT-TRIGGERED precedent.
+
+card: EX4-038
+name: Agumon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Reptile]
+
+effects:
+  # ─── Clause 1: [On Play] reveal-3, two buckets, top remainder ──────────────
+  #
+  # Printed text:
+  #   "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with
+  #   [Greymon] in its name and 1 Digimon card with [Gabumon], [Garurumon] or
+  #   [Omnimon] in its name among them to your hand. Place the rest on top of
+  #   your deck in any order."
+  #
+  # DCGO `SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, [bucket-1
+  # (Digimon + Greymon-name, AddHand, max 1), bucket-2 (Digimon + (Gabumon |
+  # Garurumon | Omnimon), AddHand, max 1)], remainingCardsPlace: DeckTop,
+  # mutualConditions: true)`. Outer trigger NOT optional.
+  #
+  # `min: 1, max: 1` per bucket: mandatory pick when a matching card exists
+  # in the reveal; silently resolves when none does. `no_duplicate_cards:
+  # true` enforces DCGO's `mutualConditions: true` (a card placed in one
+  # bucket cannot also satisfy the other).
+  #
+  # `place_remainder_on_deck { position: top }` triggers the engine's
+  # OrderedPermutation selection, exposing the player's "any order" choice
+  # to the RL action space (no auto-select; per the no-approximations
+  # policy for top-of-deck placement).
+  - when: on_play
+    summary: "[On Play] Reveal 3; add one Greymon Digimon and one Gabumon/Garurumon/Omnimon Digimon; top the rest in chosen order"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: greymon_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - name_contains: "Greymon"
+            - bind_as: gabu_garu_omni_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - name_contains: "Gabumon"
+                      - name_contains: "Garurumon"
+                      - name_contains: "Omnimon"
+          no_duplicate_cards: true
+          prompt: "Select 1 [Greymon] Digimon and 1 [Gabumon]/[Garurumon]/[Omnimon] Digimon"
+      - add_to_hand_from_reveal: { of: you, card: greymon_pick }
+      - add_to_hand_from_reveal: { of: you, card: gabu_garu_omni_pick }
+      - place_remainder_on_deck: { of: you, position: top }
+
+  # ─── Clause 2: [Your Turn][OPT] inherited gain-1-memory on ally digivolve ──
+  #
+  # Printed text:
+  #   "[Your Turn] [Once Per Turn] When one of your other Digimon digivolves,
+  #   gain 1 memory."
+  #
+  # DCGO `SetIsInheritedEffect(true)` + `SetUpActivateClass(..., 1, false,
+  # ...)` — inherited; `oncePerTurn: 1`; mandatory.
+  #
+  # `scope: inherited` — fires while EX4-038 is a digivolution source under
+  # another carrier on the battle area (G-INHERITED-DISPATCH closed
+  # 2026-04-29 for battle-area dispatch). For Lv3 Rookie sources this is
+  # the typical case (EX4-038 digivolves into a Champion that becomes the
+  # new top card; EX4-038 then sits below).
+  #
+  # `when: on_digivolve` — DCGO `OnEnterFieldAnyone +
+  # CanTriggerWhenPermanentDigivolving`. The engine's `on_digivolve` timing
+  # populates `TriggerContext.event_permanent` / `event_card` for normal
+  # hand-played digivolves (closed 2026-04-29), so event-target predicates
+  # are reliable for the common path.
+  #
+  # `active_when: { your_turn: true }` — [Your Turn] (DCGO IsOwnerTurn).
+  #
+  # `once_per_turn: true` — [Once Per Turn] (DCGO oncePerTurn: 1). G-OPT-
+  # TRIGGERED: the flag compiles correctly but engine queue-drain does not
+  # yet enforce same-turn lockout for triggered clauses; lockout asserts
+  # are `#[ignore]`'d per precedent.
+  #
+  # No `optional:` flag — printed has no "you may"; DCGO isOptional: false.
+  # Mandatory when triggered.
+  #
+  # Condition: `event_target_owner: you, event_target_kind: digimon` —
+  # standard DCGO `IsPermanentExistsOnOwnerBattleAreaDigimon` mapping. The
+  # "OTHER Digimon" sub-clause (`perm != card.PermanentOfThisCard()`) cannot
+  # be expressed today — G-DSL-EVENT-TARGET-IS-SELF gap. The workaround
+  # over-fires when the carrier itself digivolves while EX4-038 is in its
+  # source stack; tests asserting that exclusion are `#[ignore]`'d.
+  - scope: inherited
+    when: on_digivolve
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] When ally Digimon digivolves, gain 1 memory (G-DSL-EVENT-TARGET-IS-SELF: 'other' exclusion is approximated)"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    process:
+      - gain_memory: 1

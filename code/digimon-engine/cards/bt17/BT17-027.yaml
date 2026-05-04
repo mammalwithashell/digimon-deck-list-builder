@@ -1,0 +1,101 @@
+card: BT17-027
+name: MetalGarurumon
+kind: digimon
+level: 6
+color: [blue]
+cost: 11
+dp: 11000
+traits: [Cyborg]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, name_contains: "Garurumon" }
+    cost: 3
+
+effects:
+  # ─── Clause 1 — Cost reduction (Matt Ishida tamer) ──────────────────────────
+  # "When this card would be played, if you have a Tamer with [Matt Ishida] in
+  #  its name, reduce the play cost by 3."
+  # DCGO BT17_027.cs:36-110 — ChangeCostClass with CardSourceCondition gating
+  # to THIS card and an any-permanent Tamer name_contains check on owner field.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        name_contains: "Matt Ishida"
+    amount: 3
+    summary: "-3 cost with Matt Ishida tamer"
+
+  # ─── Clause 2 — [On Play][When Digivolving] 2-way choice ────────────────────
+  # "[On Play] [When Digivolving] Activate 1 of the effects below:
+  #  ・1 of your opponent's Digimon or Tamers can't suspend until the end of
+  #    their turn.
+  #  ・1 of your [Agumon] may digivolve into [WarGreymon] in your hand,
+  #    ignoring its digivolution requirements and without paying the cost."
+  # DCGO BT17_027.cs:139-551 — two ActivateClass blocks (OnEnterFieldAnyone for
+  # both timings) sharing identical body via the SharedCondition helpers.
+  # Branch 0: lock 1 opp Digimon/Tamer with CannotSuspend until end of opp turn.
+  # Branch 1: digivolve own Agumon into WarGreymon-from-hand free.
+  - when: [on_play, when_digivolving]
+    summary: "Lock opp Digimon/Tamer or digivolve Agumon into WarGreymon free"
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Lock 1 opp Digimon or Tamer (can't suspend until end of their turn)"
+            - "Digivolve 1 of your [Agumon] into [WarGreymon] from hand free"
+          prompt: "Choose effect"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - select_opponent_permanent:
+                bind_as: lock_target
+                filter:
+                  any_of:
+                    - kind: digimon
+                    - kind: tamer
+                prompt: "Choose 1 opp Digimon/Tamer — can't suspend until end of their turn"
+            - add_modifier:
+                target: lock_target
+                modifier: CannotSuspend
+                value: 1
+                expiry: end_of_opponents_turn
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - select_own_permanent:
+                bind_as: base
+                filter: { name_contains: "Agumon" }
+                prompt: "Choose Agumon"
+            - select_hand:
+                of: you
+                bind_as: evo
+                filter: { name_contains: "WarGreymon" }
+                prompt: "Digivolve into..."
+            - effect_initiated_digivolve:
+                target: base
+                from_hand: evo
+                cost: 0
+                ignore_requirements: true
+
+  # ─── Clause 3 — Inherited [When Attacking][OPT] ─────────────────────────────
+  # "[When Attacking] [Once Per Turn] If this Digimon has [Omnimon] in its
+  #  name, unsuspend this Digimon."
+  # DCGO BT17_027.cs:557-596 — ActivateClass at OnAllyAttack with hash
+  # "Unsuspend_BT17-027", inherited, gated on ContainsCardName("Omnimon") of
+  # the source permanent's top card.
+  #
+  # KNOWN GAP: source_name_contains predicate parses + compiles but is never
+  # evaluated (G-DSL-SOURCE-NAME-CONTAINS, see qa/qa-reports/validated_cards_dsl.json
+  # entry for BT17-015 — same shape). The negative-condition test is `#[ignore]`'d
+  # on this gap.
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition: { source_name_contains: "Omnimon" }
+    summary: "[When Attacking][OPT] If [Omnimon]-named, unsuspend self"
+    process:
+      - unsuspend: { target: source }

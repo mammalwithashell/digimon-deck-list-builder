@@ -1,0 +1,206 @@
+# BT17-078 Omnimon — Digimon, Lv.7, White, DP 15000, Cost 9.
+# Traits: Holy Warrior, Royal Knight
+# Evo: Lv.6 Red / Cost 5
+#
+# Printed card text (cards.json):
+#
+# [Hand] [Counter] <Blast DNA Digivolve ([WarGreymon] + [MetalGarurumon])>
+#   (1 of your specified Digimon and 1 specified card in hand may DNA digivolve
+#    into this card.)
+# <Raid>   (When this Digimon attacks, you may switch the target of attack to 1
+#           of your opponent's unsuspended Digimon with the highest DP.)
+# <Blocker>
+# [On Play] [When Digivolving] If DNA digivolving, choose 1 of your opponent's
+#   Digimon and return all of your opponent's Digimon with the same level as it
+#   to the bottom of the deck. Then, delete 1 of your opponent's Digimon.
+#
+# Inherited: Ace Overflow <-5>
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT17/White/BT17_078.cs
+#
+# Clause layout:
+#   alt-path 1: Standard digivolve (Lv.6 Red / Cost 5)
+#   alt-path 2: DNA digivolve (Lv.6 [Greymon] + Lv.6 [Garurumon] / Cost 0)
+#   alt-path 3: BLOCKED — Blast DNA Digivolve ([Hand][Counter] WarGreymon +
+#               MetalGarurumon, Cost 0). See G-BLAST-DNA-DIGIVOLVE in
+#               qa/dsl-vocab-gaps.md.
+#   Clause 1:  <Raid>      → grant_keyword (face-up declarative)
+#   Clause 2:  <Blocker>   → grant_keyword (face-up declarative)
+#   Clause 3:  BLOCKED — [On Play][When Digivolving] DNA-gated bottom-deck-by-
+#              chosen-level + delete. See BT17-078 entry already in
+#              qa/dsl-vocab-gaps.md (G-BIND-SELECTED-PROPERTY-FOR-EACH).
+#   Inherited: Ace Overflow <-5> via top-level `ace_overflow` field.
+
+card: BT17-078
+name: Omnimon
+kind: digimon
+level: 7
+color: [white]
+cost: 9
+dp: 15000
+traits: [Holy Warrior, Royal Knight]
+
+# ─── Inherited: Ace Overflow <-5> ────────────────────────────────────────────
+# Authored as a top-level `ace_overflow` field per Group 8 — scoped DigiXros
+# aliases, ACE Overflow metadata, and reveal overlays (RESOLVED 2026-05-02).
+# `CardData.ace_overflow` accepts negative values; -5 matches the printed
+# text "<-5>".
+ace_overflow: -5
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# 1) Standard digivolve: Lv.6 Red / Cost 5 (per evo_costs in cards.json).
+# 2) DNA digivolve: Lv.6 Greymon-named + Lv.6 Garurumon-named / Cost 0
+#    (per dna_costs in cards.json; DCGO BT17_078.cs lines 27-101 GetJogress).
+#
+# Note on DCGO vs printed text for DNA materials:
+#   - cards.json `dna_costs`: name_contains "Greymon" / name_contains "Garurumon"
+#   - DCGO PermanentCondition1/2: ContainsCardName("Greymon") / ContainsCardName("Garurumon")
+#   - Printed Blast DNA marker: "[WarGreymon] + [MetalGarurumon]" (specific names)
+#   The regular DNA digivolve path (modeled here) uses the broader Greymon /
+#   Garurumon name family. The Blast DNA path uses the specific WarGreymon /
+#   MetalGarurumon names — see BLOCKED alt-path comment below.
+#
+# 3) BLOCKED — Blast DNA Digivolve ([Hand][Counter], cost 0,
+#    materials: WarGreymon + MetalGarurumon).
+#    See G-BLAST-DNA-DIGIVOLVE in qa/dsl-vocab-gaps.md.
+#    The engine has `BurstDigivolve` (single-card hand-counter via
+#    BlastDigivolve keyword) and `dna_digivolve` (board-pair, normal timing),
+#    but no combined "BlastDnaDigivolve" alt-path that:
+#      (a) uses 2 specific named DNA materials,
+#      (b) fires from hand at counter timing,
+#      (c) skips the cost.
+#    Until this gap closes the [Hand][Counter] entry path is unavailable; only
+#    the standard digivolve and the regular DNA path are modeled.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 5
+
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, name_contains: "Greymon" }
+      - { level_eq: 6, name_contains: "Garurumon" }
+    cost: 0
+    stacks_unsuspended: true
+
+  # BLOCKED alt-path — Blast DNA Digivolve.
+  # When G-BLAST-DNA-DIGIVOLVE closes, add a new `kind: blast_dna_digivolve`
+  # variant analogous to:
+  #   - kind: blast_dna_digivolve
+  #     materials:
+  #       - { name_is: "WarGreymon" }
+  #       - { name_is: "MetalGarurumon" }
+  #     cost: 0
+  #     stacks_unsuspended: true
+
+effects:
+  # ─── Clause 1 — <Raid> (face-up declarative) ─────────────────────────────────
+  # "When this Digimon attacks, you may switch the target of attack to 1 of your
+  #  opponent's unsuspended Digimon with the highest DP."
+  # DCGO: RaidSelfEffect at OnAllyAttack timing, isInheritedEffect: false.
+  - kind: grant_keyword
+    keyword: Raid
+
+  # ─── Clause 2 — <Blocker> (face-up declarative) ──────────────────────────────
+  # "This Digimon can block in the blocker timing."
+  # DCGO: BlockerSelfStaticEffect at None timing, isInheritedEffect: false.
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # ─── Clause 3 — [On Play][When Digivolving] DNA-gated bottom-deck-by-level + delete ────
+  # "If DNA digivolving, choose 1 of your opponent's Digimon and return all of
+  #  your opponent's Digimon with the same level as it to the bottom of the deck.
+  #  Then, delete 1 of your opponent's Digimon."
+  #
+  # DCGO BT17_078.cs lines 142-487: shared OnEnterFieldAnyone body covering both
+  # OnPlay (CanTriggerOnPlay) and WhenDigivolving (CanTriggerWhenDigivolving),
+  # gated by CardEffectCommons.IsJogress(hashtable) for the bottom-deck arm.
+  # The "delete 1 opponent Digimon" arm fires unconditionally (i.e., even on a
+  # non-DNA play/digivolve) — it's outside the IsJogress branch in DCGO.
+  #
+  # Wait — re-read printed text: "If DNA digivolving, choose 1 ... and return ...
+  # to the bottom of the deck. Then, delete 1 of your opponent's Digimon."
+  # The "Then, delete 1" sentence is grammatically subordinate to the "If DNA
+  # digivolving" antecedent — both arms are gated by the DNA condition. DCGO's
+  # second SelectPermanentEffect (the delete) sits OUTSIDE the IsJogress block
+  # but INSIDE the same ActivateCoroutine that itself only runs when CanTrigger*
+  # passes — i.e., DCGO ALSO gates the delete on `if (CardEffectCommons.IsJogress(hashtable))`
+  # at line 173 (entry to the body). Re-reading lines 170-313: line 172 wraps
+  # the entire bottom-deck logic in `if (IsJogress(hashtable))`, and line 289
+  # opens a SECOND `if (HasMatchConditionPermanent(IsOpponentsDigimon))` for the
+  # delete that is NOT inside the IsJogress check — meaning the delete fires
+  # unconditionally per DCGO.
+  #
+  # Per source priority (printed text > DCGO), the printed text reads as a
+  # single conditional sentence with two effects gated by "If DNA digivolving".
+  # DCGO firing the delete unconditionally is an implementation-detail
+  # divergence; we follow the printed text which gates BOTH on DNA.
+  #
+  # BLOCKED: G-BIND-SELECTED-PROPERTY-FOR-EACH (already in qa/dsl-vocab-gaps.md
+  #   under "BT17-078 — bottom-deck all opponent Digimon sharing chosen level").
+  #
+  # The DSL has selection (`select_opponent_permanent`), bottom-deck return
+  # (`return_to_deck { position: bottom }`), and for-each iteration (`for_each`),
+  # but lacks the specific "bind selected permanent's property (level), then
+  # for-each opponent permanent matching that bound property" pattern. The
+  # `level_eq` predicate is `Option<u8>` (literal level only); there is no
+  # `level_eq_binding: <name>` form that compares against a captured binding.
+  #
+  # Suggested DSL syntax (already proposed in the gap entry):
+  #   - bind_selected:
+  #       name: chosen_level
+  #       selector: opponent_digimon
+  #       property: level
+  #   - for_each_opponent_permanent:
+  #       where: { level_eq: "$chosen_level" }
+  #       do: return_to_deck_bottom
+  #
+  # Until the gap closes, no raw_rust escape hatch is included — per skill
+  # rule §11, "Engine-gap vs DSL-vocab-gap discipline" requires a clean BLOCKED
+  # rather than a stub. The clause is documented as a commented stub below so
+  # the unblock is mechanical.
+  #
+  # Stub (commented — uncomment + remove BLOCKED note when the gap closes):
+  #
+  # - when: [on_play, when_digivolving]
+  #   summary: "[On Play][When Digivolving] If DNA, bottom-deck by chosen level then delete 1"
+  #   condition:
+  #     all_of:
+  #       - dna_origin: true
+  #       - any_permanent:
+  #           of: opponent
+  #           zone: [battle_area]
+  #           kind: digimon
+  #   process:
+  #     - select_opponent_permanent:
+  #         bind_as: chosen_dig
+  #         filter: { kind: digimon }
+  #         prompt: "Choose 1 opponent Digimon — return all of its level to the bottom of the deck"
+  #     - bind_selected:                            # ← BLOCKED: not a DSL verb
+  #         name: chosen_level
+  #         from: chosen_dig
+  #         property: level
+  #     - for_each:
+  #         over:
+  #           any_permanent:
+  #             of: opponent
+  #             zone: [battle_area]
+  #             kind: digimon
+  #             level_eq_binding: chosen_level     # ← BLOCKED: predicate form does not exist
+  #         bind_as: returnee
+  #         body:
+  #           - return_to_deck:
+  #               target: returnee
+  #               position: bottom
+  #     - if:
+  #         condition:
+  #           any_permanent:
+  #             of: opponent
+  #             zone: [battle_area]
+  #             kind: digimon
+  #         then:
+  #           - select_opponent_permanent:
+  #               bind_as: del_target
+  #               filter: { kind: digimon }
+  #               prompt: "Delete 1 of your opponent's Digimon"
+  #           - delete_permanent: { target: del_target }

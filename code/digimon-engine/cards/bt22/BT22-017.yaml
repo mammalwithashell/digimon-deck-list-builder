@@ -1,0 +1,222 @@
+# BT22-017 Gabumon — Digimon, Lv.3, Blue, DP 1000, Cost 3.
+# Traits: Reptile, CS.
+# Attribute: (Vaccine per the BT22 line; not load-bearing here).
+# Evo: Lv.2 Blue / cost 0 (per cards.json `evo_costs`).
+#
+# Printed effect:
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Omnimon]
+#   in its text and 1 card with the [CS] trait among them to the hand.
+#   Return the rest to the bottom of the deck.
+#
+# Inherited Effect:
+#   [End of Your Turn] This Digimon and any of your other Digimon may DNA
+#   digivolve into a Digimon card in the hand.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT22/Blue/BT22_017.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Three blocks in DCGO:
+#
+#   (A) `EffectTiming.None` self-digivolution-requirement static (lines 19-34):
+#       `permanentCondition = TopCard.EqualsCardName("Tsunomon")
+#                            || (TopCard.IsLevel2 && TopCard.HasCSTraits)`,
+#       `digivolutionCost: 0`, `ignoreDigivolutionRequirement: false`.
+#
+#       Per source priority: cards.json `evo_costs` shows the printed standard
+#       Lv.2 Blue / cost 0 path. The DCGO Tsunomon-name and Lv.2-CS extra
+#       sources are NOT printed-text constraints on this card — they are
+#       additional implementation alt-sources that widen the digivolve pool.
+#       BT22 Blue siblings (e.g. BT22-008's Koromon/Lv.2-CS path) DO print
+#       these as `xros_req` lines, but BT22-017's printed text and cards.json
+#       only list the standard Lv.2 Blue / cost 0 path. We therefore encode
+#       only the printed standard alt-path; the DCGO extra-source widening
+#       is treated as an unprinted implementation source and NOT authored
+#       in YAML (same pattern as BT22-015 / BT22-013 unprinted DCGO sources).
+#
+#   (B) `EffectTiming.OnEnterFieldAnyone` activate (lines 39-93) — the
+#       [On Play] reveal-3 + 2-bucket selection. Sister to BT12-059 which is
+#       reveal-4 + 2 buckets.
+#
+#       `SetUpActivateClass(..., -1, false, ...)` → outer trigger MANDATORY
+#       (printed text has no "you may"; reveal-and-add must fire if the
+#       activate condition holds). No `optional: true` on the clause.
+#
+#       Bucket 1: `SelectOmnimonInText(source) => source.HasText("Omnimon")`
+#         — DCGO `HasText` scans the card's `effect_text` (and inherited
+#         text) for "Omnimon" (case-sensitive substring on the printed
+#         marker; the parens are decorative — DCGO matches against the
+#         literal "Omnimon" string in card text). `mode: AddHand`,
+#         `maxCount: 1`.
+#
+#       Bucket 2: `SelectCS(source) => source.HasCSTraits` — `trait_has: CS`
+#         predicate. `mode: AddHand`, `maxCount: 1`.
+#
+#       `mutualConditions` is implicit (DCGO uses
+#       `SimplifiedRevealDeckTopCardsAndSelect` — see BT12-059 header for the
+#       cross-bucket no-duplicate semantic). Authored as
+#       `no_duplicate_cards: true` per the BT22-008-rev sister convention.
+#
+#       `remainingCardsPlace: RemainingCardsPlace.DeckBottom` →
+#       `place_remainder_on_deck { position: bottom }`.
+#
+#   (C) `EffectTiming.OnEndTurn` inherited activate (lines 100-181) — the
+#       end-of-your-turn DNA digivolve registration. `SetUpActivateClass(...,
+#       -1, true, ...)` (the `true` is `isOptional` — DNA digivolve is always
+#       opt-in via the action mask) and `SetIsInheritedEffect(true)`.
+#       Encoded via the `alt_path_registration` declarative (RESOLVED
+#       2026-05-02 in qa/dsl-vocab-gaps.md). Identical shape to BT22-008's
+#       inherited DNA registration.
+#
+# ─── Source-priority audit (printed text wins) ───────────────────────────────
+#
+# Printed [On Play] is mandatory: "Reveal the top 3 cards of your deck. Add
+# 1 card with [Omnimon] in its text and 1 card with the [CS] trait..." has
+# no "you may" gate at the trigger level. DCGO confirms `isOptional: false`
+# at line 43. → no `optional` flag on the clause.
+#
+# The two "Add 1 card with X" arms are described in the printed text as
+# unconditional adds — not "may add". DCGO's
+# `SimplifiedRevealDeckTopCardsAndSelect` with `maxCount: 1` per bucket
+# enforces "at most 1 from each bucket"; if a bucket has zero candidates in
+# the reveal, that bucket is skipped (engine auto-resolves the empty
+# bucket). This matches the printed semantic: "add 1 ... and 1 ... AMONG
+# THEM" — i.e. you only add what's actually present in the reveal.
+#
+# Inherited DNA-digivolve "may" is naturally captured by the alt-path
+# framework — DNA digivolve is always an opt-in player action surfaced
+# through the action mask.
+#
+# ─── DSL-GAP — `text_contains` (effect-text scan) predicate ────────────────
+#                                              [G-DSL-PREDICATE-TEXT-CONTAINS]
+#
+# Bucket 1 of the [On Play] reveal selects "1 card with [Omnimon] in its
+# TEXT" — i.e. a substring match against the candidate card's printed
+# `effect_text` / `inherited_text` / `security_text`, NOT against its
+# `card_name`. DCGO uses `source.HasText("Omnimon")` (BT22_017.cs line 63),
+# which scans the card's effect text for the literal "Omnimon" substring.
+#
+# The DSL `PredicateSpec` (`code/digimon-dsl/src/predicate.rs`) exposes
+# `name_contains: Option<String>` and `name_is: Option<String>` for name
+# scans, but has NO `text_contains` (or `effect_text_contains` /
+# `has_text` / `card_text_contains`) leaf for scanning a candidate's
+# effect / inherited / security text. The engine `CardData` struct DOES
+# carry `effect_text`, `inherited_text`, and `security_text` fields
+# (`code/digimon-engine/src/card_data.rs:87,99,124`), so the engine has the
+# data — the DSL just lacks the predicate verb to expose it to filters.
+#
+# Approximation chosen here (per the brief): use `name_contains: "Omnimon"`
+# in place of the printed "in its text" filter. This narrows the legal set:
+# all printed Omnimon cards (e.g. BT12-085 Omnimon, BT22-015 Omnimon, etc.)
+# are matched correctly because their card_name itself contains "Omnimon".
+# But cards that REFERENCE Omnimon in their effect_text WITHOUT carrying
+# Omnimon in their name (e.g. tutors / supports that print "[Omnimon]"
+# in body text) are wrongly excluded. The scope of the divergence is narrow
+# in practice (most "Omnimon-payoff" tutors are themselves named Omnimon
+# variants), but it is a faithful divergence and tests for the diverging
+# branch are #[ignore]'d under G-DSL-PREDICATE-TEXT-CONTAINS until the gap
+# closes.
+#
+# Closing the gap requires:
+#   (1) Adding `text_contains: Option<String>` to `predicate::PredicateSpec`,
+#       compiling through `CompiledPredicate`, and lowering in
+#       `dsl_cards/predicate.rs` evaluator to scan
+#       `card_data.effect_text + inherited_text + security_text` for the
+#       case-insensitive substring; OR
+#   (2) Promoting `name_contains` to also scan effect text — NOT
+#       recommended, since it changes existing semantics for callers like
+#       BT12-059 that intentionally restrict to name only.
+#
+# When G-DSL-PREDICATE-TEXT-CONTAINS resolves, swap the bucket-1 filter to
+# `text_contains: "Omnimon"` and un-#[ignore] the divergence test.
+
+card: BT22-017
+name: Gabumon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Reptile, CS]
+
+alt_paths:
+  # Standard printed digivolve: Lv.2 Blue / cost 0 (per cards.json evo_costs).
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+effects:
+  # ─── Clause (B) — [On Play] Reveal 3 + two-bucket selection ────────────────
+  #
+  # Printed: "[On Play] Reveal the top 3 cards of your deck. Add 1 card with
+  # [Omnimon] in its text and 1 card with the [CS] trait among them to the
+  # hand. Return the rest to the bottom of the deck."
+  #
+  # Mandatory clause (no "you may" — printed text has no optional gate).
+  # DCGO confirms `isOptional: false` on outer ActivateClass.
+  #
+  # Bucket 1: "[Omnimon] in its TEXT" — DCGO `source.HasText("Omnimon")`.
+  #   DSL-GAP G-DSL-PREDICATE-TEXT-CONTAINS: no `text_contains` predicate.
+  #   Approximated as `name_contains: "Omnimon"` — see header for the
+  #   narrowness diff and divergence test #[ignore] note.
+  #
+  # Bucket 2: "[CS] trait" — `trait_has: CS`. The CS trait disjunction is a
+  #   single trait, so a flat `trait_has: CS` leaf suffices.
+  #
+  # `no_duplicate_cards: true`: a single revealed card cannot satisfy BOTH
+  # buckets at once (e.g. an Omnimon-named CS-trait Digimon could nominally
+  # match bucket 1 AND bucket 2 — `mutualConditions` in DCGO prevents one
+  # card filling two slots, mirrored here).
+  #
+  # `place_remainder_on_deck { position: bottom }` → DCGO
+  # `RemainingCardsPlace.DeckBottom`.
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Omnimon-text] (approx by name) + 1 [CS] trait card; bottom rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: omnimon_pick
+              min: 1
+              max: 1
+              filter:
+                # G-DSL-PREDICATE-TEXT-CONTAINS approximation: printed
+                # "[Omnimon] in its text" is implemented as a name scan
+                # because the DSL lacks `text_contains`. See header.
+                # Empty-bucket case is handled by the engine (it skips
+                # buckets with zero candidates rather than locking on
+                # `min: 1`), matching DCGO `SimplifiedRevealDeckTopCardsAndSelect`
+                # behavior — see BT12-059's
+                # `bt12_059_on_play_only_greymon_found_skips_tamer_bucket`.
+                name_contains: "Omnimon"
+            - bind_as: cs_pick
+              min: 1
+              max: 1
+              filter:
+                trait_has: CS
+          no_duplicate_cards: true
+          prompt: "Add 1 [Omnimon] (text) and 1 [CS] trait card to hand"
+      - add_to_hand_from_reveal: { of: you, card: omnimon_pick }
+      - add_to_hand_from_reveal: { of: you, card: cs_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Clause (C) — Inherited [End of Your Turn] DNA digivolve registration ──
+  #
+  # Printed: "[End of Your Turn] This Digimon and any of your other Digimon
+  # may DNA digivolve into a Digimon card in the hand."
+  #
+  # Encoded via the `alt_path_registration` declarative (RESOLVED 2026-05-02
+  # in qa/dsl-vocab-gaps.md, BT22-008 / BT22-017 entry). Identical shape to
+  # BT22-008's inherited DNA registration. The optional "may" semantic is
+  # naturally captured by the alt-path framework — DNA digivolve is always
+  # an opt-in player action surfaced through the action mask.
+  - kind: alt_path_registration
+    scope: inherited
+    trigger: end_of_your_turn
+    registers:
+      kind: dna_digivolve
+    applies_to:
+      of: you
+      zone: [battle_area]

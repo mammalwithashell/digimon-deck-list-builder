@@ -1,0 +1,320 @@
+# EX5-015 Gabumon (X Antibody) — Digimon, Lv.3, Blue+Purple, DP 2000, Cost 3.
+# Traits: [Beast, X Antibody].
+#
+# Printed card text (cards.json effect_description_eng):
+#
+#   [On Play] [When Digivolving] Reveal the top 4 cards of your deck. Add 2
+#   cards with [Garurumon] or [X Antibody] in their names among them to the
+#   hand. Place the rest at the bottom of the deck. If you added cards, trash
+#   1 card in your hand.
+#
+# Inherited (cards.json inherited_effect_description_eng):
+#   [All Turns] [Once Per Turn] When this Digimon with [Garurumon] or [Omnimon]
+#   in its name would be deleted in battle, by returning 2 non-Digi-Egg cards
+#   from your trash to the bottom of the deck, prevent that deletion.
+#
+# Standard digivolve: Lv.2 Blue / cost 1.
+# Bonus alt-digivolve (xros_req): [Tsunomon]/[Gabumon] / cost 0.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/EX5/Blue/EX5_015.cs
+#
+# ─── DCGO crosscheck (high-level) ─────────────────────────────────────────────
+#
+# Clause A — `EffectTiming.OnEnterFieldAnyone` ActivateClass gated by
+#   `CanTriggerOnPlay`. `SetUpActivateClass(..., -1, false, ...)` — outer
+#   trigger NOT isOptional. Body: `SimplifiedRevealDeckTopCardsAndSelect(
+#       revealCount: 4,
+#       simplifiedSelectCardConditions: [
+#         { canTargetCondition: cardSource.HasGarurumonName ||
+#                               cardSource.HasXAntiBodyName,
+#           message: "Select 2 cards with [Garurumon]/[X Antibody]",
+#           mode: AddHand,
+#           maxCount: 2 }
+#       ],
+#       remainingCardsPlace: RemainingCardsPlace.DeckBottom,
+#       revealedCardsCoroutine: <sets `added = revealedCards.Count(matchPred) >= 1`>)`.
+#   THEN: if `added && card.Owner.HandCards.Count >= 1`:
+#       SelectHandEffect.SetUp(maxCount: 1, canNoSelect: false, mode: Discard).
+#
+# Clause B — `EffectTiming.OnEnterFieldAnyone` ActivateClass gated by
+#   `CanTriggerWhenDigivolving`. Body identical to Clause A. Two separate
+#   ActivateClass instances — DCGO models [On Play] and [When Digivolving]
+#   as separate triggers since both fire on `OnEnterFieldAnyone` but
+#   discriminate by gate function. The DSL idiom is
+#   `when: [on_play, when_digivolving]`.
+#
+# Clause C (Inherited Substitute) — `EffectTiming.WhenPermanentWouldBeDeleted`
+#   ActivateClass with `SetUpActivateClass(..., 1, true, ...)` (1 = once per
+#   turn, true = isOptional), `SetIsInheritedEffect(true)`, hash:
+#   `Substitute_EX5_015`. CanUseCondition: `IsExistOnBattleArea(card) &&
+#   CanTriggerWhenRemoveField(hashtable, card) && IsByBattle(hashtable)`.
+#   CanActivateCondition: `IsExistOnBattleArea(card) && Owner.TrashCards.Count(
+#       !IsDigiEgg) >= 2 && (TopCard.HasGarurumonName ||
+#       TopCard.ContainsCardName("Omnimon"))`. Body: SelectCardEffect over
+#   own trash, max 2, mode: Custom, root: Trash, then `AddLibraryBottomCards`
+#   for the picked 2, then `thisCardPermanent.willBeRemoveField = false`.
+#
+# ─── Implementation status (faithfulness diff) ────────────────────────────────
+#
+# | Card-text element                                                          | Status |
+# |----------------------------------------------------------------------------|--------|
+# | [On Play][When Digivolving] reveal-4 + add 2 [Garurumon]/[X Antibody]      | IMPLEMENTED via select_reveal_buckets (single bucket, max 2) |
+# | "Place the rest at the bottom of the deck"                                 | IMPLEMENTED via place_remainder_on_deck { position: bottom } |
+# | "If you added cards, trash 1 card in your hand"                            | PARTIAL — see G-DSL-BIND-PRESENT workaround below |
+# | [All Turns][OPT] inherited Substitute (return 2 trash, prevent deletion)   | OMITTED — see G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH note below |
+#
+# ─── DSL-GAP — bind-presence in conditional trash-from-hand  [G-DSL-BIND-PRESENT] ──
+#
+# Printed: "If you added cards, trash 1 card in your hand."
+#
+# DCGO sets a local `added` flag inside `RevealedCardsCoroutine` based on
+# whether the revealed pool contained at least one matching card; the
+# subsequent SelectHandEffect runs only if `added && Owner.HandCards.Count
+# >= 1`. The DSL has no `binding_present: <name>` predicate
+# (G-DSL-BIND-PRESENT, qa/dsl-vocab-gaps.md filed 2026-05-03 from EX9-066),
+# so we cannot mirror DCGO's `added` flag through a single-pass select.
+#
+# Workaround:
+#
+# After `select_reveal_buckets` resolves, we always present a binary
+# `select_effect_choice` ["Trash 1 from hand", "Skip"]. The Trash branch
+# runs `select_hand` (mandatory pick when hand is non-empty) +
+# `trash_from_hand_by_index`; the Skip branch is a no-op.
+#
+# Mapping vs DCGO's branches:
+#
+#   A. Reveal contained matching cards + added to hand + hand non-empty
+#      DCGO: SelectHandEffect (canNoSelect: false) — MUST pick 1 to trash.
+#      DSL:  player picks "Trash 1 from hand"; `select_hand` then forces a
+#            pick. Faithful to printed mandatory cost.
+#   B. Reveal contained NO matching cards (no add) — printed says no trash.
+#      DCGO: skips SelectHandEffect entirely.
+#      DSL:  player picks "Skip" branch; no trash. Player COULD pick the
+#            Trash branch and lose a card unnecessarily — divergence noted.
+#   C. Hand empty — printed text implies no trash possible.
+#      DCGO: `Owner.HandCards.Count >= 1` gate skips SelectHandEffect.
+#      DSL:  Trash branch's `select_hand` has zero candidates; degrades to
+#            no-op. Skip branch is also valid.
+#
+# Case B is the one structural divergence: the DSL trusts the player not to
+# pick the cost-paying branch when no add occurred. The action mask still
+# surfaces both choices so RL learns to skip dead branches. No
+# auto-selection is performed on the agent's behalf — the
+# no-approximations policy is preserved (sister case to EX9-066).
+#
+# ─── DSL-GAP — Inherited Substitute with multi-pick trash-to-deck cost  [G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH] ──
+#
+# Clause C requires:
+#   1. Inherited (`scope: inherited`) replacement effect on
+#      `WhenWouldBeDeleted`.
+#   2. Subject-filter: replacement subject (the host this card is stacked
+#      under) must have [Garurumon] or [Omnimon] in its top-card name.
+#   3. Cause-filter: deletion cause must be `battle`.
+#   4. Once-per-turn lockout (`once_per_turn: true`).
+#   5. Optional cost: select EXACTLY 2 non-Digi-Egg cards from own trash;
+#      return them to the bottom of the deck; cancel the deletion.
+#
+# Multiple gaps interact here, none individually closable in this card-only
+# YAML pass:
+#
+#   (a) **G-SELECT-MULTI-MIN**: `select_count_capped_multi` exists and binds
+#       a list of trash indices, but there is no `min: 2` enforcement —
+#       only `optional_zero` controls whether 0 picks is acceptable. Even
+#       with `optional_zero: false`, the player could pick 1 and end the
+#       selection, violating the printed "by returning 2 ... " required
+#       cost (must be exactly 2 to prevent the deletion).
+#
+#   (b) **G-ZONE-TRASH-TO-DECK**: no DSL verb to move a list of trash cards
+#       to the bottom of the deck (qa/dsl-vocab-gaps.md, LM-027 entry).
+#       The only sister precedent is `ex11_012_return_trash_to_deck_bottom`
+#       which moves a SINGLE card by binding name "r"; no multi-card variant
+#       exists in the engine raw_rust registry, and we are not authoring
+#       new raw_rust functions in this card-only DSL pass (see preamble
+#       constraint: "Files to write (ONLY): YAML + test").
+#
+#   (c) **G-DSL-INHERITED-REPLACEMENT-COST-CANCEL**: the standard DSL
+#       replacement primitive `cancel_replacement` runs unconditionally
+#       when reached. With a multi-step cost (pick 2, return 2, cancel),
+#       the engine has no atomic "cost-then-cancel" guard — if the player
+#       picks only 1 of 2, the cancel still fires. This violates the
+#       printed cost semantics ("by returning 2 ... prevent that deletion"
+#       — the 2-card cost is required, not optional after engagement).
+#
+# Faithful workaround (no approximation, no auto-selection):
+#
+# Until the gaps close, Clause C is OMITTED entirely from the YAML rather
+# than emit a half-implementation that would either (i) auto-cancel on
+# partial cost (violating printed cost), (ii) auto-select 2 cards
+# (violating no-approximations), or (iii) introduce a new raw_rust shim
+# outside the scope of this YAML-only pass.
+#
+# Behavioral effect: an EX5-015 stacked under a Garurumon or Omnimon will
+# proceed to be deleted in battle without the substitute opportunity. This
+# is the same posture taken by other cards with multi-pick trash-to-deck
+# substitute requirements (sister: any future "by returning N cards from
+# your trash to the bottom of the deck, prevent ..." card).
+#
+# Subject-filter design note (in case the gap closes with the predicate
+# leaves I would author): `name_contains: "Garurumon"` /
+# `name_contains: "Omnimon"` leaves on `active_when` evaluate against the
+# replacement subject (the leaving permanent). For an inherited Substitute,
+# the subject IS the host Digimon EX5-015 is stacked under, and we want to
+# match against that host's top-card name. This is the standard
+# `predicate_reads_replacement_subject` path (lower_replacement.rs:168-211)
+# and is correctly subject-aware. The pre-flight's
+# **G-DSL-SOURCE-NAME-CONTAINS** caveat applies to a different predicate
+# (`source_name_contains`, which targets the source permanent in inherited
+# context but is not currently evaluated in dsl_cards/predicate.rs); we
+# would avoid that leaf here by using `name_contains` against the
+# replacement subject directly.
+#
+# When the gaps close, the clause body should be:
+#
+#   - kind: replacement
+#     scope: inherited
+#     trigger: when_would_be_deleted
+#     optional: true
+#     once_per_turn: true
+#     active_when:
+#       all_of:
+#         - all_turns: true
+#         - replacement_subject_is_mine: true
+#         - any_of:
+#             - name_contains: "Garurumon"
+#             - name_contains: "Omnimon"
+#         - replacement_cause: battle
+#     summary: "[All Turns][OPT] Substitute on battle deletion"
+#     process:
+#       - select_count_capped_multi:
+#           of: you
+#           zone: trash
+#           max: 2
+#           min: 2                # G-SELECT-MULTI-MIN required
+#           bind_as: returned
+#           filter: { none_of: [{ kind: digi_egg }] }
+#           prompt: "Return 2 non-Digi-Egg cards from your trash to the bottom of the deck"
+#           optional_zero: false
+#       - return_trash_list_to_deck_bottom:    # G-ZONE-TRASH-TO-DECK required
+#           of: you
+#           cards: returned
+#       - cancel_replacement: {}
+
+card: EX5-015
+name: Gabumon (X Antibody)
+kind: digimon
+level: 3
+color: [blue, purple]
+cost: 3
+dp: 2000
+traits: [Beast, X Antibody]
+
+alt_paths:
+  # Standard digivolve: Lv.2 Blue / cost 1 (printed evo_costs).
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 1
+
+  # Bonus alt-digivolve from [Tsunomon] or [Gabumon] name: cost 0
+  # (xros_req printed text "[Digivolve] [Tsunomon]/[Gabumon]: Cost 0").
+  - kind: digivolve
+    from:
+      any_of:
+        - { name_is: "Tsunomon" }
+        - { name_is: "Gabumon" }
+    cost: 0
+
+effects:
+  # ─── Clause A+B: [On Play] [When Digivolving] reveal-4 + add 2 + bottom rest + cond. trash hand ──
+  #
+  # Printed: "[On Play] [When Digivolving] Reveal the top 4 cards of your
+  # deck. Add 2 cards with [Garurumon] or [X Antibody] in their names among
+  # them to the hand. Place the rest at the bottom of the deck. If you
+  # added cards, trash 1 card in your hand."
+  #
+  # DSL shape:
+  #   - reveal_top_deck count: 4
+  #   - select_reveal_buckets with TWO buckets EACH `min: 0, max: 1`
+  #     filtered to `name_contains` Garurumon OR X Antibody, plus
+  #     `no_duplicate_cards: true` so a single revealed card cannot be
+  #     consumed by both buckets. This mirrors the BT22-017 two-bucket
+  #     `no_duplicate_cards` idiom; each bucket's `add_to_hand_from_reveal`
+  #     consumes the singleton CardList binding.
+  #
+  #     Why TWO max:1 buckets instead of ONE max:2 bucket: the DSL
+  #     `add_to_hand_from_reveal` consumer step is implemented in
+  #     dsl_cards/step/zone_moves.rs:142 via `singleton_card`, which only
+  #     accepts a `CardList` of length 1 (or a single `Card`). A max:2
+  #     bucket binding holds a CardList of up to 2 entries that
+  #     `singleton_card` silently drops to `None`, leaving zero cards
+  #     added to hand. Splitting into two single-card buckets sidesteps
+  #     that shape mismatch.
+  #
+  #     min:0 on each bucket lets the bucket resolve gracefully when no
+  #     eligible card is present — DCGO `SimplifiedRevealDeckTopCardsAndSelect`
+  #     has the same behavior. Sister BT22-094 uses single-bucket min:1
+  #     because that card's printed text forces a pick when an eligible
+  #     card exists; EX5-015's "add 2 cards" is at most 2, not strictly
+  #     2, so min:0 fits the printed semantic.
+  #
+  #   - add_to_hand_from_reveal for each bucket binding.
+  #   - place_remainder_on_deck position: bottom.
+  #   - select_effect_choice ["Trash 1 from hand", "Skip"] — workaround
+  #     for G-DSL-BIND-PRESENT (see header docs).
+  #   - Branch 0: select_hand (any card) + trash_from_hand_by_index.
+  #   - Branch 1: no-op.
+  #
+  # Outer `optional` not set — DCGO `SetUpActivateClass(..., false, ...)`,
+  # printed text has no "you may". The inner trash-cost choice is the
+  # only opt-in surface, modelling DCGO's `added` flag indirectly.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Reveal 4; add up to 2 [Garurumon]/[X Antibody]; bottom rest; if added, trash 1 from hand"
+    process:
+      - reveal_top_deck: { of: you, count: 4, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: pick_a
+              min: 0
+              max: 1
+              filter:
+                any_of:
+                  - name_contains: "Garurumon"
+                  - name_contains: "X Antibody"
+            - bind_as: pick_b
+              min: 0
+              max: 1
+              filter:
+                any_of:
+                  - name_contains: "Garurumon"
+                  - name_contains: "X Antibody"
+          no_duplicate_cards: true
+          prompt: "Select up to 2 [Garurumon] or [X Antibody] cards to add to hand"
+      - add_to_hand_from_reveal: { of: you, card: pick_a }
+      - add_to_hand_from_reveal: { of: you, card: pick_b }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      # G-DSL-BIND-PRESENT workaround — surface the conditional trash as a
+      # binary choice. RL agent learns to pick "Skip" when no add occurred.
+      - select_effect_choice:
+          labels: ["Trash 1 from hand", "Skip"]
+          bind_as: trash_branch
+          prompt: "If you added cards, trash 1 card in your hand"
+      - if:
+          condition: { equals: [trash_branch, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: discard
+                optional: true
+                filter: {}
+                prompt: "Trash 1 card from your hand"
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+
+  # ─── Clause C: Inherited [All Turns][OPT] Substitute on battle deletion ─────
+  #
+  # OMITTED — see G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH note in header.
+  # No clause authored to avoid violating the no-approximations policy
+  # (would require auto-selection of 2 trash cards, an unenforceable min:2,
+  # or a new engine-side raw_rust shim outside the scope of this card-only
+  # DSL pass). When the gaps close, restore the suggested clause body
+  # documented in the header.

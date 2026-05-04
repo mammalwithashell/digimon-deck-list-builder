@@ -1,0 +1,126 @@
+card: AD1-001
+name: Greymon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+traits: [Dinosaur, ADVENTURE]
+
+# ─── Alternate Digivolution Path ─────────────────────────────────────────────
+#
+# DCGO (AD1_001.cs, EffectTiming.None, AddSelfDigivolutionRequirementStaticEffect):
+#   level: 3
+#   permanentCondition: TopCard.HasText("Omnimon") || TopCard.EqualsTraits("ADVENTURE")
+#   digivolutionCost: 2
+#   ignoreDigivolutionRequirement: false
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - name_contains: "Omnimon"
+            - trait_has: "ADVENTURE"
+    cost: 2
+
+effects:
+  # ─── Clause 1 — [On Play] [When Digivolving] trash → hand recursion ──────────
+  #
+  # Printed text:
+  #   "[On Play] [When Digivolving] You may return 1 card with [Greymon],
+  #   [Garurumon] or [Omnimon] in its name from your trash to the hand."
+  #
+  # DCGO analysis (AD1_001.cs, EffectTiming.OnEnterFieldAnyone × 2):
+  #   - Two activate classes — one gated on CanTriggerOnPlay, one on
+  #     CanTriggerWhenDigivolving — sharing the same body.
+  #   - Body: SelectCardEffect Mode.AddHand from Trash, canTargetCondition =
+  #     ContainsCardName("Greymon"|"Garurumon"|"Omnimon"), maxCount: 1,
+  #     canNoSelect: true.
+  #
+  # DSL: a single triggered clause with `when: [on_play, when_digivolving]`
+  # and `optional: true`. select_trash with name_contains any_of filter,
+  # then add_to_hand_from_trash.
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[OnPlay/WhenDigivolving] May return 1 Greymon/Garurumon/Omnimon-named card from trash to hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - name_contains: "Greymon"
+              - name_contains: "Garurumon"
+              - name_contains: "Omnimon"
+          prompt: "Return a card to hand"
+      - add_to_hand_from_trash: { of: you, card: pick }
+
+  # ─── Clause 2 — [All Turns] cross-permanent observer free-digivolve ──────────
+  #
+  # Printed text:
+  #   "[All Turns] When your Digimon or Tamers are played or digivolve, if
+  #   any of them have [Garurumon] or [Tai Kamiya] in their names, this
+  #   Digimon may digivolve into a Digimon card with [Greymon] in its name
+  #   in the hand without paying the cost."
+  #
+  # DCGO analysis (AD1_001.cs, EffectTiming.OnEnterFieldAnyone, third
+  # ActivateClass):
+  #   - CanUseCondition: IsExistOnBattleAreaDigimon(card)
+  #     && (CanTriggerOnPermanentPlay(...TriggerRequirement)
+  #         || CanTriggerWhenPermanentDigivolving(...TriggerRequirement))
+  #   - TriggerRequirement: permanent on owner's battle area, IsDigimon || IsTamer.
+  #   - CanActivateCondition: any played/digivolved permanent's TopCard
+  #     ContainsCardName("Garurumon" || "Tai Kamiya").
+  #   - Body: DigivolveIntoHandOrTrashCard onto card.PermanentOfThisCard()
+  #     selecting a Hand card with IsDigimon && ContainsCardName("Greymon"),
+  #     payCost: false.
+  #
+  # DSL mapping:
+  #   - `when: [on_enter_field_anyone, on_digivolve]` covers play + digivolve
+  #     halves. Note: DNA digivolve fires `on_digivolve` via
+  #     TriggerSource::PlayerBattleArea (no event_card) — known engine
+  #     limitation, see test file header.
+  #   - `active_when: { all_turns: true }` per [All Turns] scoping.
+  #   - `condition`: event_target_owner == you (the played/digivolved
+  #     permanent must belong to the controller) AND the event_card's name
+  #     contains "Garurumon" or "Tai Kamiya".
+  #   - `optional: true` because the printed "may digivolve".
+  #   - Process: select a Greymon-named Digimon from hand, then
+  #     `effect_initiated_digivolve` onto self with cost: 0.
+  - when: [on_enter_field_anyone, on_digivolve]
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[All Turns] On Garurumon/Tai Kamiya play or digivolve, may free-digivolve self into a Greymon-named hand card"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_card_name_contains: "Garurumon"
+            - event_card_name_contains: "Tai Kamiya"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Greymon"
+          prompt: "Free-digivolve into a Greymon-named Digimon card"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
+
+  # ─── Clause 3 — Inherited <Raid> ─────────────────────────────────────────────
+  #
+  # Printed inherited keyword. DCGO: RaidSelfEffect(isInheritedEffect: true).
+  # Declarative grant_keyword. Pending G-DECLARATIVE-KEYWORD: declarative
+  # clauses are compiled but not yet enqueued at runtime, so the modifier
+  # is not installed. Documented for future activation.
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Raid

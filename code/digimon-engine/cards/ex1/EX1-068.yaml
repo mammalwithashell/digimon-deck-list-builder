@@ -1,0 +1,177 @@
+# EX1-068 Ice Wall! — Option, Blue, Cost 1.
+# Traits: (none printed).
+#
+# Printed card text (data/cards.json):
+#
+#   [Main] All of your opponent's Digimon gain "[When Attacking] lose 2
+#   memory" until the end of their next turn.
+#
+# Inherited (Security):
+#   Security Effect [Security] Gain 2 memory.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX1/Blue/EX1_068.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OptionSkill` (= [Main] play). DCGO iterates every
+#   permanent on the opponent's battle area that is a Digimon and not
+#   protected by `CanNotBeAffected`, applies a debuff visual, then registers
+#   a single `AddSkillClass` against `card.Owner.UntilOpponentTurnEndEffects`.
+#   The AddSkillClass installs a synthetic `OnAllyAttack` `ActivateClass` on
+#   each opponent Digimon whose body runs `cardSource.Owner.AddMemory(-2,
+#   activateClass)`. The expiry list `UntilOpponentTurnEndEffects` is drained
+#   at the end of the opponent's next turn. `SetUpActivateClass(..., -1,
+#   false, ...)` — outer trigger is NOT optional.
+#
+# Clause 2 — `EffectTiming.SecuritySkill` →
+#   `card.Owner.AddMemory(2, activateClass)`. Standard "gain N memory"
+#   security effect. `SetIsSecurityEffect(true)`. No canNoSelect — mandatory.
+#
+# ─── Source-priority audit (printed text vs DCGO) ────────────────────────────
+#
+# Printed Clause 1: "All of your opponent's Digimon GAIN ... until the end
+# of THEIR next turn." The "their next turn" is the opponent's turn — the
+# expiry runs through the end of the opponent's next turn after this Option
+# resolves. DCGO confirms via `card.Owner.UntilOpponentTurnEndEffects` (the
+# owner's list of "until opponent turn end" hooks). Engine `Expiry` enum has
+# `EndOfOpponentsTurn`; this maps to "end of the immediately next opponent
+# turn" — which matches printed text in the standard case where the Option
+# is played on the controller's own turn.
+#
+# Printed text reads "Digimon gain ..." — no "may", so the granted [When
+# Attacking] memory loss is MANDATORY (the opponent's Digimon does not get
+# to opt out of losing 2 memory when it attacks). DCGO confirms the inner
+# ActivateClass is `SetUpActivateClass(..., -1, false, ...)` — not optional.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                   | Status |
+# |---------------------------------------------------------------------|--------|
+# | [Main] grant "[When Attacking] lose 2 memory" to opponent Digimon   | BLOCKED — see G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT |
+# | [Main] until-end-of-opponents-next-turn expiry on the granted effect | BLOCKED (depends on the grant primitive) |
+# | [Security] Gain 2 memory                                            | IMPLEMENTED via gain_memory: 2 |
+#
+# ─── DSL-GAP — grant a triggered effect to another permanent  [G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT] ──
+#
+# The DSL today exposes grants for STATIC effects only:
+#   - `grant_keyword` (e.g. Blocker, Rush, Piercing) — static keyword on
+#     the target permanent.
+#   - `add_modifier` / `add_dp_modifier` — typed numeric/flag modifiers
+#     (CannotSuspend, IgnoreColorRequirement, +DP, ...).
+#   - `grant_effect_immunity` — protect the target from a class of effects.
+#
+# What EX1-068 needs is fundamentally different: install a NEW triggered
+# effect (a `[When Attacking] lose 2 memory` clause whose owner is the
+# OPPONENT — i.e. when the opponent's Digimon declares an attack, the
+# OPPONENT loses 2 memory) on each opponent Digimon, with a turn-scoped
+# expiry. The Python engine handles this via
+# `permanent.grant_temp_effect(effect, expiry_turn)` — it carries an arbitrary
+# `ICardEffect` (timing + condition + process callback + observer flag) plus
+# an expiry tick that `clear_expired_effects()` drains at turn start.
+#
+# The Rust engine has `permanent.grant_temp_effect`-equivalent registry
+# infrastructure (`ModifierRegistry` carries per-permanent + per-player
+# typed modifiers with expiry), but no `GrantedTriggeredEffect` modifier
+# variant nor a `CompiledStep::GrantTriggeredEffect` DSL step. There is also
+# no DSL surface for AUTHORING the granted body inline:
+#   - No "synthetic clause" literal (e.g. an inline `triggered:` block that
+#     compiles to a `CompiledTriggeredClause` and is granted at runtime).
+#   - No catalog of pre-canned granted clauses (e.g. a registry of named
+#     "lose 2 memory when attacking" templates the DSL could reference).
+#
+# This is a NEW DSL gap — distinct from the existing G-MODIFIER-GRANT and
+# G-KEYWORD-GRANT slices. To close it the DSL needs either:
+#   A. A new `grant_triggered_effect` step shape:
+#      ```yaml
+#      - grant_triggered_effect:
+#          target:
+#            of: opponent
+#            kind: digimon
+#          when: when_attacking
+#          process:
+#            - lose_memory: 2          # affects the granted permanent's controller
+#          expiry: end_of_opponents_turn
+#      ```
+#      with the engine compiling the inline `process:` to a synthetic
+#      `CompiledTriggeredClause` and installing it on each matched permanent
+#      via a new `ModifierType::GrantedTrigger` (or extending `ModifierRegistry`
+#      with a typed grant slot) honoring the expiry; OR
+#   B. A registry-of-grants approach (`grant_named_effect: { id: "Memory -2 When Attacking", target: ..., expiry: ... }`)
+#      with the named templates living in `code/digimon-engine/src/cards/granted_effects/`
+#      and the runtime granting a `GrantedEffectHandle` keyed by template name.
+#
+# Until this gap closes the entire [Main] clause is OMITTED from the
+# `effects:` list below. A half-implementation (e.g. silently lose 2 memory
+# when the opponent declares any attack, ignoring per-permanent grant scope)
+# would over-fire on Digimon that should not be affected (e.g. opponent
+# Digimon played AFTER this Option resolves — those should NOT carry the
+# granted clause per DCGO's per-Permanent foreach loop). Per the no-
+# approximations policy, omission is preferable to silent over-fire.
+#
+# Tracked in `qa/dsl-vocab-gaps.md` under
+# `G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT`. Sister cards that will benefit:
+# any "[Main] all opponent Digimon gain '[When Attacking|When Digivolving|...]
+# <effect>'" — DCGO calls these `UntilOpponentTurnEndEffects.Add(...)`
+# patterns; a quick DCGO grep returns ~20+ cards across sets.
+#
+# ─── Engine-gap audit ────────────────────────────────────────────────────────
+#
+# The engine ALREADY has the substrate for the granted clause itself: an
+# `OnAllyAttack` (or `WhenAttacking` from the granted permanent's perspective)
+# observer + a per-player memory delta is identical to existing patterns
+# (e.g. BT15-008 Muchomon uses `OnAllyAttack` to mutate memory). What's
+# MISSING is the cross-permanent INSTALLATION primitive — the ability to
+# instantiate that clause on a permanent the source does NOT control with a
+# turn-scoped expiry. This is purely a DSL/lowering gap; no new engine
+# `EffectContext` method is required IF the engine grows a typed
+# `GrantedTriggeredEffect` modifier slot in `ModifierRegistry`. Engine half:
+# tracked in `qa/archetype-qa/engine-gaps.md` line 33 as RESOLVED for the
+# Python engine (`permanent.grant_temp_effect`), still OPEN for the Rust
+# engine's modifier registry.
+
+card: EX1-068
+name: "Ice Wall!"
+kind: option
+color: [blue]
+cost: 1
+traits: []
+
+effects:
+  # ─── Clause 1: [Main] grant "[When Attacking] lose 2 memory" — BLOCKED ──────
+  #
+  # Printed: "[Main] All of your opponent's Digimon gain '[When Attacking]
+  # lose 2 memory' until the end of their next turn."
+  #
+  # OMITTED entirely pending G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT. See
+  # the header docs for the full gap analysis. A half-implementation would
+  # over-fire on opponent Digimon played AFTER this Option resolves
+  # (DCGO's per-Permanent foreach loop runs ONCE at resolution time and
+  # captures the snapshot of opponent Digimon at that instant).
+  #
+  # When the gap closes, the intended shape is roughly:
+  #
+  #   - when: main_from_hand
+  #     summary: "[Main] Grant opponent Digimon '[When Attacking] -2 memory' until end of opponent turn"
+  #     process:
+  #       - grant_triggered_effect:
+  #           target:
+  #             of: opponent
+  #             zone: [battle_area]
+  #             kind: digimon
+  #           when: when_attacking
+  #           process:
+  #             - lose_memory: 2     # subtracts 2 from the granted permanent's controller's memory
+  #           expiry: end_of_opponents_turn
+
+  # ─── Clause 2: [Security] Gain 2 memory ─────────────────────────────────────
+  #
+  # Printed inherited (security): "Security Effect [Security] Gain 2 memory."
+  #
+  # DCGO: standard `card.Owner.AddMemory(2, activateClass)` with
+  # `SetIsSecurityEffect(true)`. No canNoSelect — mandatory ([Security]
+  # effects are not opt-out per RULES_CONTEXT.md §16). Identical shape to
+  # ST2-13 Hammer Spark Clause 2 (`when: on_security` + `gain_memory: 2`).
+  - when: on_security
+    summary: "[Security] Gain 2 memory"
+    process:
+      - gain_memory: 2

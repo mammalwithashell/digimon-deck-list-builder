@@ -1,0 +1,205 @@
+card: AD1-009
+name: BlitzGreymon
+kind: digimon
+level: 6
+color: [red, black]
+cost: 12
+dp: 12000
+traits: [Cyborg, ADVENTURE]
+
+# Standard digivolution: Lv5 Red / Cost 4 (printed evo_costs)
+# Alt-digivolve (xros_req): Lv5 with [Greymon] in name OR [ADVENTURE] trait / Cost 3
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color: red }
+    cost: 4
+
+  - kind: digivolve
+    from:
+      any_of:
+        - { level_eq: 5, name_contains: "Greymon" }
+        - { level_eq: 5, trait_has: ADVENTURE }
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  # ─── Declarative keywords ────────────────────────────────────────────────
+  #
+  # <Alliance> — DCGO: AllianceSelfEffect on OnAllyAttack timing.
+  - kind: grant_keyword
+    keyword: Alliance
+    summary: "<Alliance>"
+
+  # <Piercing> — DCGO: PierceSelfEffect on OnDetermineDoSecurityCheck.
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  # <Blocker> — DCGO: BlockerSelfStaticEffect on EffectTiming.None.
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── [On Play][When Digivolving] De-Digivolve 3 + Garurumon/self immunity ──
+  #
+  # Card text: "<De-Digivolve 3> 1 of your opponent's Digimon. Then, until
+  # your opponent's turn ends, their Digimon's effects don't affect this
+  # Digimon and 1 of your Digimon with [Garurumon] in its name."
+  #
+  # DCGO (AD1_009.cs lines 52–128, OnEnterFieldAnyone with CanTriggerOnPlay /
+  # CanTriggerWhenDigivolving):
+  #   1. If any opponent Digimon: mandatory `Mode.Degenerate` select-1
+  #      (canNoSelect: false), call SetDegenerationCount(3).
+  #   2. If any own Garurumon-named Digimon: mandatory select-1
+  #      (canNoSelect: false), grant DigimonEffectImmunity until opponent's
+  #      turn ends.
+  #   3. UNCONDITIONAL: grant DigimonEffectImmunity to self until opponent's
+  #      turn ends.
+  #
+  # Outer condition gates on opponent having any Digimon (matches DCGO step 1).
+  # If false, the entire clause body is skipped — including the self-immunity
+  # grant. This matches DCGO `HasMatchConditionOpponentsPermanent` outer
+  # check controlling the SharedActivateCoroutine entry.
+  #
+  # NOTE: "until your opponent's turn ends" → expiry: end_of_opponents_turn,
+  # source_kind: digimon, source_controller: opponent.
+  - when: [on_play, when_digivolving]
+    summary: "<De-Digivolve 3> opp Digimon; until opp turn ends self + chosen Garurumon ignore opp Digimon effects"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      # Step 1: De-Digivolve 3 target select (mandatory, opponent Digimon).
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Select 1 of your opponent's Digimon to De-Digivolve 3"
+      - de_digivolve:
+          target: tgt
+          amount: 3
+          stop_at_level: 3
+      # Step 2: gate the Garurumon select on existence of an own Garurumon.
+      # When at least one own Garurumon is on field, the select is MANDATORY
+      # (DCGO canNoSelect: false). When none, the select is skipped entirely.
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              name_contains: "Garurumon"
+          then:
+            - select_own_permanent:
+                bind_as: garu
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_contains: "Garurumon"
+                prompt: "Select 1 of your Digimon with [Garurumon] in its name to grant immunity"
+            - grant_effect_immunity:
+                target: garu
+                source_kind: digimon
+                source_controller: opponent
+                expiry: end_of_opponents_turn
+      # Step 3: unconditional self-immunity grant.
+      - grant_effect_immunity:
+          target: self
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+
+  # ─── [End of Your Turn] DNA into Omnimon Alter-S + may attack ────────────
+  #
+  # Card text: "2 of your Digimon may DNA digivolve into [Omnimon Alter-S] in
+  # the hand. Then, 1 of your Digimon may attack."
+  #
+  # "may" → optional: true.
+  # DCGO (AD1_009.cs lines 163–230): OnEndTurn ActivateClass.
+  #   - DNADigivolvePermanentsIntoHandOrTrashCard(filter: name == "Omnimon
+  #     Alter-S", isHand: true, payCost: true).
+  #   - If any own Digimon canAttack: SelectPermanentEffect Mode.Attack with
+  #     canNoSelect: true (optional may-attack-now on chosen Digimon).
+  #
+  # Engine NOTES:
+  #   - effect_initiated_dna_digivolve `cost: 0` matches the EX9-013
+  #     precedent (DCGO payCost: true means pay the printed dna cost; the
+  #     engine takes the cost from the target's `dna_costs` rather than from
+  #     this step argument; CostDelta::Literal(0) is the no-extra-delta
+  #     authoring convention used by EX9-013.yaml).
+  #   - `may_attack_now` was unblocked 2026-05-03 (qa/dsl-vocab-gaps.md
+  #     G-MAY-ATTACK-NOW) — `attacker: atk` resolves a previously-bound
+  #     own permanent.
+  - when: end_of_your_turn
+    optional: true
+    summary: "[End of Your Turn] May DNA digivolve 2 own Digimon into Omnimon Alter-S in hand; then 1 own Digimon may attack"
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+    process:
+      # Wrap the entire body in `- optional: [...]` so the player gets a
+      # single accept/decline prompt up front (the BT24-018 / AD1-012 idiom).
+      # This is more robust than relying on the empty-candidate path of
+      # `select_hand` — see engine-gaps.md G-SELECT-EMPTY-OUTER-TAIL for the
+      # legacy installer behavior.
+      - optional:
+          # Step 1: pick the Omnimon Alter-S in hand.
+          - select_hand:
+              of: you
+              bind_as: dna_card
+              filter:
+                all_of:
+                  - kind: digimon
+                  - name_contains: "Omnimon Alter-S"
+              prompt: "Select Omnimon Alter-S from hand to DNA digivolve into"
+          # Step 2: pick the 2 own Digimon as DNA materials.
+          - select_dna_pair:
+              left_filter:
+                all_of:
+                  - kind: digimon
+                  - of: you
+              right_filter:
+                all_of:
+                  - kind: digimon
+                  - of: you
+              bind_left_as: dna_src_a
+              bind_right_as: dna_src_b
+              prompt: "Select 2 Digimon to DNA digivolve into Omnimon Alter-S"
+          # Step 3: execute the DNA digivolve. Cost paid normally per dna_costs.
+          - effect_initiated_dna_digivolve:
+              target_a: dna_src_a
+              target_b: dna_src_b
+              from_hand: dna_card
+              cost: 0
+              ignore_requirements: false
+      # Step 4: "Then, 1 of your Digimon may attack." Wrap in `- optional:`
+      # so the player gets a clean accept/decline at the start.
+      - optional:
+          - select_own_permanent:
+              bind_as: atk
+              filter: { kind: digimon }
+              prompt: "Select 1 of your Digimon that may attack"
+          - may_attack_now:
+              attacker: atk
+              targets: any
+              optional: true
+              prompt: "Have the selected Digimon attack now?"
+
+  # ─── Inherited: <Security A. +1> ────────────────────────────────────────
+  #
+  # DCGO: ChangeSelfSAttackStaticEffect(changeValue: 1, isInheritedEffect: true).
+  # ST1-07 / BT5-093 idiom: scope: inherited + grant_keyword SecurityAttackPlus.
+  # Resolved at runtime via game.has_keyword() stack-walk.
+  - scope: inherited
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "Inherited <Security A. +1>"
