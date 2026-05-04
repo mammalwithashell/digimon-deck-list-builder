@@ -1,0 +1,24 @@
+card: EX11-044
+name: Pyramidimon
+kind: digimon
+level: 6
+color: [black]
+cost: 11
+dp: 12000
+traits: [Mineral, LIBERATOR]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+
+# Printed source-trash highest-play-cost delete and trash-to-source refill
+# clauses are not authored in this pass.
+
+effects:
+  - kind: grant_keyword
+    keyword: Reboot
+
+  - kind: grant_keyword
+    keyword: Fragment
+    value: 3

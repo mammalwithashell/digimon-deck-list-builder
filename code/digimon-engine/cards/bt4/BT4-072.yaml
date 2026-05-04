@@ -1,0 +1,24 @@
+card: BT4-072
+name: Gogmamon
+kind: digimon
+level: 5
+color: [black]
+cost: 8
+dp: 7000
+traits: [Rock]
+form: Ultimate
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+
+# Printed [Main] Digi-Burst 1 DP buff is not authored in this pass.
+
+effects:
+  - scope: inherited
+    kind: aura
+    active_when: { all_turns: true }
+    target: {}
+    dp_modifier: 1000
+    summary: "[All Turns] This Digimon gets +1000 DP"

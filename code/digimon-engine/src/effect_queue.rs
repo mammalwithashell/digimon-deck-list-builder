@@ -300,7 +300,9 @@ impl Game {
                     }
                 }
             }
-            TriggerSource::SourceTrashedFromStack { .. } => {
+            TriggerSource::SourceTrashedFromStack { player, card, .. } => {
+                let trigger_context = self.trigger_context_for_source(&source, None);
+                self.enqueue_from_trashed_source(timing, player, card, Some(trigger_context));
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
                     let count = self.player(player).battle_area.len();
@@ -319,6 +321,50 @@ impl Game {
         if matches!(source, TriggerSource::EventObserved { .. }) {
             let trigger_context = self.trigger_context_for_source(&source, None);
             self.enqueue_event_gated_delayed_options(timing, trigger_context);
+        }
+    }
+
+    /// Collect inherited effects from the exact source card that was just
+    /// trashed out of a digivolution stack. The card is no longer live under
+    /// its host by this point, so the queued effect intentionally carries no
+    /// source permanent and reads host/trashed-source details from trigger
+    /// context predicates such as `host_permanent_trait_has`.
+    fn enqueue_from_trashed_source(
+        &mut self,
+        timing: EffectTiming,
+        controller: PlayerId,
+        source_card: CardHandle,
+        trigger_context: Option<TriggerContext>,
+    ) {
+        let Some(card_data) = self.card_data_for_handle(source_card) else {
+            return;
+        };
+        let card_id = card_data.card_id.clone();
+        let source_kind = source_kind_for_card_kind(card_data.card_kind);
+        let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+            return;
+        };
+        let is_turn_player = controller == self.turn_player();
+        for (slot, effect) in effects.iter().enumerate() {
+            if !effect.inherited {
+                continue;
+            }
+            if !timing_flag_matches(effect, timing) {
+                continue;
+            }
+            self.effect_queue.push_back(QueuedEffect {
+                source_card,
+                source_permanent: None,
+                source_kind,
+                controller,
+                timing,
+                trigger_context,
+                effect_slot: slot as u8,
+                is_optional: effect.optional,
+                is_turn_player,
+                card_id: card_id.clone(),
+                allow_below_top_liveness: false,
+            });
         }
     }
 

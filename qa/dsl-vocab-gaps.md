@@ -15,6 +15,12 @@ Format per entry:
 - First reported: YYYY-MM-DD
 ```
 
+## Rocks pool pass residual DSL/engine gaps
+- Status: PARTIAL pool pass completed on 2026-05-04. After pulling main, production YAML/test slices now exist for 40 of 47 Rocks pool cards; the remaining 7 were explicitly routed as blocked rather than no-op authored.
+- Remaining blocked cards: `BT20-055`, `BT21-021`, `BT9-103`, `EX10-003`, `EX11-065`, `EX8-070`, `P-130`. Main now carries newer `P-123` coverage, so the stale Rocks blocked record was not retained.
+- Missing DSL/engine areas: face-up security lifecycle and security end-of-opponent-turn timing; conditional inherited keyword grants based on host traits; Save/Xros routing; attack-cancel effects; hand-or-source costs with source trait filtering; source placement from hand/trash; lowest-play-cost delete; effect move-from-breeding and same-side/costed `[When Moving]` follow-up shapes beyond the resolved base OnMove timing.
+- First reported: 2026-05-04 Rocks pool implementation pass.
+
 ## Zephagamon / Vortexdramon — remaining battle-engine prep gaps
 - Status: partial readiness slice added 2026-05-03. `EX11-074.yaml` now covers static `<Piercing>`, `<Vortex>`, `<Blocker>`, and a focused `battle:` pathway. The regression in `tests/cards_behavioral/ex11/ex11_074.rs` proves that an effect battle deletes the defender through DP battle but is not an attack: it must not trigger Piercing/security and must not leave `pending_attack` populated.
 - Rule boundary: `battle:` is the correct DSL step for effects that say a Digimon battles another Digimon. Do not model these as `attack` or force-follow-up attack effects. Attack-only timings and Piercing security continuation remain tied to declared attacks, not effect battles.
@@ -148,7 +154,7 @@ Format per entry:
 
 ## Rocks archetype refresh — authored YAML coverage note
 - Assessment target: the `Rocks` / `RockClose` archetype in `data/deck_library.json`, refreshed on 2026-04-28.
-- Finding: only `BT14-009`, `BT16-082`, `EX7-074`, and `P-206` currently have Rust YAML under `code/digimon-engine/cards/`; the main `EX8`/`EX10`/`EX11`/`P-167` Rocks shell is not authored in DSL yet.
+- Finding: as of the 2026-05-04 Rocks batch plus the pulled main updates, 40 of 47 Rocks pool cards have Rust YAML under `code/digimon-engine/cards/`. New Rocks pass coverage added or audited the `EX8`/`EX10`/`EX11`/`P-167` shell; the remaining missing cards are tracked in the residual gap entry above.
 - Existing DSL gaps reaffirmed by the refresh:
   - `EX11-008 — [When Moving] timing` no longer blocks on the `on_move` token or moved-card event context as of 2026-04-29; card bodies may still need separate target-selection, reveal, or follow-up action primitives.
   - `P-189 — play cost <= filter` was closed on 2026-05-01 for static `play_cost_lte` filters on `select_hand` / `select_trash`; remaining Rocks blockers are tracked separately.

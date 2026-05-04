@@ -17,5 +17,5 @@ effects:
   - kind: flood_gate
     active_when: { all_turns: true }
     modifier: CannotPlayDigimonByEffect
-    target: { kind: digimon }
+    target_player: any
     summary: "Players can't play Digimon by effects"

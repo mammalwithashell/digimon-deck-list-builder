@@ -1,0 +1,25 @@
+card: P-215
+name: Icemon
+kind: digimon
+level: 4
+color: [blue, black]
+cost: 5
+dp: 6000
+traits: [Ice-Snow]
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+# Printed [When Moving]/[On Play]/[When Digivolving] source-placement and
+# return/de-digivolve protection clause is not authored in this pass.
+
+effects:
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "Inherited <Blocker>"

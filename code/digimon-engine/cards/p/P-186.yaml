@@ -1,0 +1,23 @@
+card: P-186
+name: Gallantmon
+kind: digimon
+level: 6
+color: [red, purple]
+cost: 12
+dp: 12000
+traits: [Holy Warrior, Royal Knight]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+
+# Printed play-cost reduction and [On Play]/[When Digivolving] delete-or-recover
+# clause are not authored in this pass.
+
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+
+  - kind: grant_keyword
+    keyword: Blocker

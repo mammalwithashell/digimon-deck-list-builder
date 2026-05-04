@@ -1,0 +1,79 @@
+card: EX10-069
+name: "Unique Emblem: Gravel Hearts"
+kind: option
+color: [black]
+cost: 3
+
+# Printed option battle-area placement and [Your Turn] Delay digivolve when
+# Close suspends are not authored in this pass.
+
+effects:
+  - when: main_from_hand
+    optional: true
+    summary: "[Main] You may play 1 Sunarizamon or Close from hand or trash free"
+    process:
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "From which area do you play a card?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: picked_hand
+                optional: true
+                filter:
+                  any_of:
+                    - name_is: Sunarizamon
+                    - name_is: Close
+                prompt: "Select Sunarizamon or Close from your hand"
+            - play_from_hand_free: { of: you, hand_index: picked_hand }
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: picked_trash
+                optional: true
+                filter:
+                  any_of:
+                    - name_is: Sunarizamon
+                    - name_is: Close
+                prompt: "Select Sunarizamon or Close from your trash"
+            - play_from_trash_free: { of: you, hand_index: picked_trash }
+
+  - when: on_security
+    optional: true
+    summary: "[Security] Activate this card's Main effect"
+    process:
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "From which area do you play a card?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: picked_hand
+                optional: true
+                filter:
+                  any_of:
+                    - name_is: Sunarizamon
+                    - name_is: Close
+                prompt: "Select Sunarizamon or Close from your hand"
+            - play_from_hand_free: { of: you, hand_index: picked_hand }
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: picked_trash
+                optional: true
+                filter:
+                  any_of:
+                    - name_is: Sunarizamon
+                    - name_is: Close
+                prompt: "Select Sunarizamon or Close from your trash"
+            - play_from_trash_free: { of: you, hand_index: picked_trash }

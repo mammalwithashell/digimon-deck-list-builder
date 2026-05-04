@@ -1,1 +1,9 @@
 mod ex10_010;
+mod ex10_025;
+mod ex10_028;
+mod ex10_032;
+mod ex10_033;
+mod ex10_034;
+mod ex10_036;
+mod ex10_063;
+mod ex10_069;

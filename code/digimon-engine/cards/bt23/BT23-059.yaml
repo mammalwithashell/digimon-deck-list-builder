@@ -1,0 +1,20 @@
+card: BT23-059
+name: "Justimon: Blitz Arm"
+kind: digimon
+level: 6
+color: [black]
+cost: 11
+dp: 11000
+traits: [Cyborg, Hudie, CS]
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: CS }
+    cost: 3
+
+# Printed option-in-battle-area trash cost, lowest-play-cost delete,
+# option-trash unsuspend, and protection clauses are not authored in this pass.
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker

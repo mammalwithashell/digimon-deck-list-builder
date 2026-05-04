@@ -1,0 +1,41 @@
+card: BT21-055
+name: Sunarizamon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Reptile, LIBERATOR]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+# Printed face-up clause not authored in this pass:
+# [Your Turn] When this Digimon would digivolve into a [Mineral]/[Rock] card,
+# reduce the digivolution cost by 1. This needs a before-digivolve
+# target-card trait reduction shape.
+
+effects:
+  - scope: inherited
+    when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+        - trashed_source_card_id_is: BT21-055
+        - any_of:
+            - host_permanent_trait_has: Mineral
+            - host_permanent_trait_has: Rock
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            play_cost_lte: 4
+    summary: "When this source is trashed from a Mineral/Rock Digimon, delete an opponent Digimon cost 4 or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon, play_cost_lte: 4 }
+          prompt: "Choose 1 opponent Digimon with play cost 4 or less"
+      - delete_permanent: { target: target }
