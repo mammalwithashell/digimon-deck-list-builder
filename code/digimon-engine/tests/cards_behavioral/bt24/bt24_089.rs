@@ -11,18 +11,18 @@
 //! Digimon card with the \[Reptile\] or \[Dragonkin\] trait and the \[LIBERATOR\]
 //! trait in the hand with the digivolution cost reduced by 3.
 //!
-//! **Inherited:** Security Effect \[Security\] Activate this card's \[Main\] effects.
+//! **Security:** Activate this card's \[Main\] effects.
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/BT24/Red/BT24_089.cs
 //!
 //! # Known engine and DSL gaps affecting these tests
 //!
-//! **G-PLACE-SELF-AS-OPTION-PERMANENT [DSL gap]:**
-//!   There is no `place_option_in_battle_area: {}` step verb. The "Then, place
-//!   this card in the battle area" sub-step of the Main clause cannot be expressed.
-//!   Tests asserting the option lands in battle area are `#[ignore]`'d pending
-//!   this verb being added to the DSL vocabulary.
+//! **AUDIT drift — option-as-delay placement now expressible:**
+//!   The DSL now has `place_self_as_delay_option: {}`. BT24-089's Main and
+//!   Security-mirrored Main effect should include that step after the optional
+//!   Elizamon/Owen play branch. Structural tests below intentionally detect the
+//!   current YAML if it still relies on older no-placement comments.
 //!
 //! **G-DELAY-SUSPEND-CONDITION [DSL gap]:**
 //!   `kind: delay` only supports `DelayTrigger::EndOfThisTurn` /
@@ -40,11 +40,12 @@
 #![allow(dead_code, unused_imports)]
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, EffectTiming};
+use digimon_engine::permanent::OptionState;
 use digimon_engine::selection::TriggerSource;
 
 const YAML: &str = include_str!("../../../cards/bt24/BT24-089.yaml");
@@ -65,6 +66,31 @@ fn make_owen() -> CardData {
 
 fn make_filler(id: &str) -> CardData {
     make_test_card(id, id)
+}
+
+fn process_contains_place_self_as_delay_option(process: &[CompiledStep]) -> bool {
+    process.iter().any(|step| match step {
+        CompiledStep::PlaceSelfAsDelayOption => true,
+        CompiledStep::If {
+            then, else_branch, ..
+        } => {
+            process_contains_place_self_as_delay_option(then)
+                || process_contains_place_self_as_delay_option(else_branch)
+        }
+        CompiledStep::ForEach { body, .. }
+        | CompiledStep::PerSelected { body, .. }
+        | CompiledStep::ScheduleDelayed { body, .. }
+        | CompiledStep::Optional(body)
+        | CompiledStep::AsSelectingPlayer { body, .. } => {
+            process_contains_place_self_as_delay_option(body)
+        }
+        CompiledStep::SelectOwnSources { then, .. }
+        | CompiledStep::SelectOwnBreedingPermanent { then, .. }
+        | CompiledStep::SelectOpponentDpBudget { then, .. } => {
+            process_contains_place_self_as_delay_option(then)
+        }
+        _ => false,
+    })
 }
 
 // ─── §1 YAML parse + structural ───────────────────────────────────────────────
@@ -155,6 +181,38 @@ fn bt24_089_clause0_is_main_from_hand_optional_face_up() {
     );
 }
 
+/// Printed Main says "Then, place this card in the battle area."
+/// `place_self_as_delay_option` exists now, so the Main process must include it.
+#[test]
+fn bt24_089_main_clause_places_self_as_delay_option() {
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .memory(0)
+        .start();
+
+    let compiled = runner
+        .compiled_card("BT24-089")
+        .expect("BT24-089 compiled card present");
+
+    let main_clause = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .find(|t| t.when.contains(&CompiledTiming::MainFromHand))
+        .expect("must have a main_from_hand clause");
+
+    assert!(
+        process_contains_place_self_as_delay_option(&main_clause.process),
+        "Main process must include place_self_as_delay_option after resolving \
+         the optional Elizamon/Owen play; current YAML is missing the now-supported \
+         placement step"
+    );
+}
+
 /// Clause 1 is a declarative raw_rust clause (Delay stub).
 #[test]
 fn bt24_089_clause1_is_declarative_raw_rust() {
@@ -181,9 +239,9 @@ fn bt24_089_clause1_is_declarative_raw_rust() {
     );
 }
 
-/// Clause 2 fires at on_security, is optional, and has FaceUp scope.
+/// Clause 2 fires at on_security, is mandatory, and has FaceUp scope.
 #[test]
-fn bt24_089_clause2_is_on_security_optional_face_up() {
+fn bt24_089_clause2_is_on_security_mandatory_face_up() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -204,14 +262,46 @@ fn bt24_089_clause2_is_on_security_optional_face_up() {
         .find(|t| t.when.contains(&CompiledTiming::OnSecurity))
         .expect("must have an on_security clause");
 
-    // Note: DCGO uses AddActivateMainOptionSecurityEffect which is mandatory.
-    // The DSL models this as optional (to match printed "you may" semantics
-    // mirrored from the Main clause). Tests flag both approaches; optional
-    // is chosen to match the print-text-first policy.
+    assert!(
+        !security_clause.optional,
+        "Security must be mandatory: printed text says 'Activate this card's [Main] effects' \
+         and the YAML comment cites DCGO's mandatory AddActivateMainOptionSecurityEffect"
+    );
     assert_eq!(
         security_clause.scope,
         CompiledScope::FaceUp,
         "on_security clause must have FaceUp scope"
+    );
+}
+
+/// Security activates this card's [Main] effects, so it must also perform the
+/// Main clause's "Then, place this card in the battle area" step.
+#[test]
+fn bt24_089_security_clause_places_self_as_delay_option() {
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .memory(0)
+        .start();
+
+    let compiled = runner
+        .compiled_card("BT24-089")
+        .expect("BT24-089 compiled card present");
+
+    let security_clause = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .find(|t| t.when.contains(&CompiledTiming::OnSecurity))
+        .expect("must have an on_security clause");
+
+    assert!(
+        process_contains_place_self_as_delay_option(&security_clause.process),
+        "Security mirrors the Main effects and must include place_self_as_delay_option; \
+         current YAML is missing the now-supported placement step"
     );
 }
 
@@ -557,12 +647,34 @@ fn bt24_089_delay_body_digivolves_reptile_dragonkin_with_cost_reduction() {
     unimplemented!("blocked on G-DELAY-SUSPEND-CONDITION");
 }
 
-/// G-PLACE-SELF-AS-OPTION-PERMANENT: "Then, place this card in the battle area"
-/// cannot be expressed as a DSL step — the option-as-permanent placement is a gap.
+/// "Then, place this card in the battle area" is expressed with
+/// `place_self_as_delay_option`.
 #[test]
-#[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT — no place_option_in_battle_area step verb"]
 fn bt24_089_main_places_self_in_battle_area() {
-    unimplemented!("blocked on G-PLACE-SELF-AS-OPTION-PERMANENT");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_elizamon())
+        .add_card(make_filler("FILL"))
+        .hand(0, &["BT24-089", "ELIZAMON"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    assert!(runner.game.activate_hand_main(0, 0));
+    runner.auto_resolve().expect("main selections resolve");
+
+    let placed = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|permanent| permanent.top_card().card_id(&runner.game.card_data) == "BT24-089")
+        .expect("BT24-089 must become a battle-area Delay permanent");
+    assert!(matches!(
+        placed.option_state,
+        OptionState::Delayed { owner: 0, .. }
+    ));
 }
 
 // ─── §4 Security clause behavioral ───────────────────────────────────────────

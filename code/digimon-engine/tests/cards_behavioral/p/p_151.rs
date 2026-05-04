@@ -14,23 +14,19 @@
 //! DCGO/Assets/Scripts/CardEffect/P/White/P_151.cs
 //!
 //! # Patterns this test covers
-//! - D3 color ignore / bypass (while-condition on field state; G-IGNORE-COLOR-MASK)
+//! - D3 color ignore / bypass through option use_requirement
 //! - A1 searching by trait (top-3 reveal, add 1 LIBERATOR to hand)
 //! - A2 place_remainder_on_deck (bottom, any order)
 //! - E2-adjacent: optional free-play from hand (cost ≤ 3, LIBERATOR trait)
 //! - Inherited security clause activates Main effects
-//!
-//! # Known gaps
-//! - G-IGNORE-COLOR-MASK: IgnoreColorRequirement modifier not enforced in
-//!   Rust action mask. Clause 0 compiles but has zero runtime effect.
-//! - G-PLAY-COST-LTE: play_cost_lte predicate not in PredicateSpec. The free-play
-//!   selection prompt does not enforce the cost ≤ 3 cap at runtime.
 
 #![allow(dead_code, unused_imports, unused_variables)]
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::PLAY_HAND_START;
+use digimon_engine::build_action_mask;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -283,23 +279,50 @@ fn p_151_main_clause_is_not_optional() {
 // Section 2 — Condition gating: color-bypass (declarative, G-IGNORE-COLOR-MASK)
 // ---------------------------------------------------------------------------
 
-// NOTE: The IgnoreColorRequirement modifier is compiled into the flood_gate clause
-// but G-IGNORE-COLOR-MASK means it has zero runtime effect in the action mask.
-// Structural check: the clause is compiled. Runtime enforcement is #[ignore]'d.
-
 #[test]
-#[ignore = "pending: G-IGNORE-COLOR-MASK — IgnoreColorRequirement not enforced in Rust action mask; color bypass has zero runtime effect until this gap closes"]
 fn p_151_color_bypass_active_with_liberator_digimon_on_field() {
-    // When a LIBERATOR Digimon is in the battle area, P-151's play action
-    // should appear in the action mask even when color requirements would block it.
-    // Cannot assert this until G-IGNORE-COLOR-MASK closes.
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card({
+            let mut c = make_liberator_digimon("RED-LIBERATOR");
+            c.colors = vec![CardColor::Red];
+            c
+        })
+        .hand(0, &["P-151"])
+        .deck(0, &["RED-LIBERATOR", "RED-LIBERATOR", "RED-LIBERATOR"])
+        .memory(10)
+        .start();
+
+    let before = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        before[PLAY_HAND_START as usize], 0.0,
+        "P-151 should be blocked without matching color or LIBERATOR bypass"
+    );
+
+    runner.place_on_field(0, "RED-LIBERATOR", Some(0));
+
+    let after = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        after[PLAY_HAND_START as usize], 1.0,
+        "P-151 should be playable when a LIBERATOR Digimon enables its use requirement"
+    );
 }
 
 #[test]
-#[ignore = "pending: G-IGNORE-COLOR-MASK — IgnoreColorRequirement not enforced in Rust action mask; negative case not testable until gap closes"]
 fn p_151_color_bypass_inactive_without_liberator_on_field() {
-    // Without any LIBERATOR Digimon or Tamer in the battle area, color
-    // requirements must apply normally. Cannot assert until G-IGNORE-COLOR-MASK closes.
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .hand(0, &["P-151"])
+        .memory(10)
+        .start();
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[PLAY_HAND_START as usize], 0.0,
+        "without LIBERATOR board presence, color requirements must still apply"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -491,13 +514,41 @@ fn p_151_main_declining_free_play_does_not_add_to_field() {
     );
 }
 
-/// G-PLAY-COST-LTE: The free-play prompt should NOT show LIBERATOR cards with cost > 3.
-/// This test is #[ignore]'d until G-PLAY-COST-LTE closes.
+/// The free-play prompt should NOT show LIBERATOR cards with cost > 3.
 #[test]
-#[ignore = "pending: G-PLAY-COST-LTE — play_cost_lte predicate not enforced in select_hand; cost > 3 LIBERATOR cards incorrectly appear in the prompt"]
 fn p_151_main_free_play_excludes_cost_gt_3_liberator() {
-    // When a LIBERATOR card with cost > 3 (e.g. cost 4) is in hand, it must NOT
-    // appear in the free-play selection prompt.
+    let mut low = make_liberator_digimon("LOW-COST-LIB");
+    low.play_cost = 3;
+    let mut high = make_liberator_digimon("HIGH-COST-LIB");
+    high.play_cost = 4;
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(low)
+        .add_card(high)
+        .add_card(make_liberator_digimon("REVEAL-LIB"))
+        .hand(0, &["P-151", "LOW-COST-LIB", "HIGH-COST-LIB"])
+        .deck(0, &["REVEAL-LIB", "REVEAL-LIB", "REVEAL-LIB", "REVEAL-LIB"])
+        .memory(10)
+        .start();
+
+    runner.game.activate_hand_main(0, 0);
+    pick_first_pending_action(&mut runner);
+    resolve_required_prompts_until_optional_or_done(&mut runner);
+    resolve_until_optional_prompt(&mut runner);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("optional free-play prompt should be pending");
+    assert!(
+        view.valid_action_ids.contains(&(PLAY_HAND_START + 1)),
+        "cost-3 LIBERATOR should be offered"
+    );
+    assert!(
+        !view.valid_action_ids.contains(&(PLAY_HAND_START + 2)),
+        "cost-4 LIBERATOR must be excluded by play_cost_lte: 3"
+    );
 }
 
 /// Full-flow integration: play P-151 → auto_resolve all prompts → no panic.

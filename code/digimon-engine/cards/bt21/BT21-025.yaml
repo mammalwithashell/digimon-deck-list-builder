@@ -20,21 +20,18 @@ effects:
   # [Dragonkin] trait Digimon's attack targets change, trash your opponent's
   # top security card.
   #
-  # DSL gap G-ATK-TRAIT-FILTER: the DSL has no `attacker_trait_has` predicate
-  # to gate on the attacking permanent's traits. The `any_permanent` condition
-  # below checks that at least one matching Digimon is on your field — a
-  # necessary-but-not-sufficient approximation (fires even if a different
-  # Digimon is the attacker). Blocked tests are marked with G-ATK-TRAIT-FILTER.
+  # The engine's OnAttackTargetChange event context carries the attacker as
+  # event_target, so this condition gates on the attacking permanent's owner
+  # and trait instead of approximating with a broad board scan.
   - when: on_attack_target_change
     active_when: { your_turn: true }
     once_per_turn: true
     condition:
-      any_permanent:
-        of: you
-        zone: [battle_area]
-        any_of:
-          - trait_has: Reptile
-          - trait_has: Dragonkin
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_trait_has: Reptile
+            - event_target_trait_has: Dragonkin
     process:
       - trash_top_security: { of: opponent }
 

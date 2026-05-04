@@ -19,27 +19,17 @@
 //!
 //! # Patterns this test covers
 //! - A1 Searching (top-3 reveal, add by LIBERATOR trait)
-//! - D3 Color ignore / bypass [G-IGNORE-COLOR-MASK: runtime enforcement absent]
+//! - D3 Color ignore / bypass through option use_requirement
 //! - Effect-initiated digivolve with cost reduce 4 (main_from_hand option)
-//! - Security: hand-or-trash play (LIBERATOR, cost ≤ 4) + raw_rust self-to-hand
-//!   [G-ADD-OPTION-SELF-TO-HAND: runtime "add to hand" is a no-op placeholder]
-//!   [G-PLAY-COST-LTE: cost ≤ 4 predicate not enforced at selection time]
-//!
-//! # Known gaps inherited from this card
-//! - G-IGNORE-COLOR-MASK — flood_gate IgnoreColorRequirement compiles but has no runtime
-//!   effect in the Rust action mask (option_color_match_available in mask.rs does not
-//!   consult the IgnoreColorRequirement modifier).
-//! - G-ADD-OPTION-SELF-TO-HAND — no DSL step / engine method for returning the currently-
-//!   resolving security option card to the controller's hand. raw_rust placeholder lm_027_add_self_to_hand
-//!   is reused (EX7-074 uses the same no-op as LM-027).
-//! - G-PLAY-COST-LTE — `play_cost_lte: 4` predicate is not evaluated in eval_card_fields at
-//!   selection time; all LIBERATOR cards in hand/trash appear as candidates.
+//! - Security: hand-or-trash play (LIBERATOR, cost ≤ 4) + native self-to-hand
 
 #![allow(unused_imports, dead_code, unused_mut, unused_variables)]
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::PLAY_HAND_START;
+use digimon_engine::build_action_mask;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -224,16 +214,77 @@ fn ex7_074_color_bypass_compiles_as_declarative() {
     );
 }
 
-/// Runtime enforcement is absent (G-IGNORE-COLOR-MASK). This test documents the
-/// known gap — color bypass is a no-op at runtime in the Rust engine action mask.
-/// When G-IGNORE-COLOR-MASK is resolved, this test can be un-ignored.
+/// Runtime color bypass is wired through the Option use_requirement predicate.
 #[test]
-#[ignore = "pending: G-IGNORE-COLOR-MASK — IgnoreColorRequirement not enforced in Rust option action mask"]
 fn ex7_074_color_bypass_unlocks_play_when_liberator_on_field() {
-    // Setup: player 0 has a LIBERATOR Digimon on field.
-    // EX7-074 is green+blue; if player 0 has only colors not matching, normally unplayable.
-    // With LIBERATOR on field + IgnoreColorRequirement modifier, should become playable.
-    let _runner = ex7_074_runner();
+    let mut red_liberator = make_liberator_digimon("RED-LIBERATOR");
+    red_liberator.colors = vec![CardColor::Red];
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(EX7_074_YAML)
+        .expect("EX7-074 YAML must parse and compile")
+        .add_card(red_liberator)
+        .hand(0, &["EX7-074"])
+        .memory(10)
+        .start();
+
+    let before = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        before[PLAY_HAND_START as usize], 0.0,
+        "EX7-074 should be blocked without matching color or LIBERATOR bypass"
+    );
+
+    runner.place_on_field(0, "RED-LIBERATOR", Some(0));
+
+    let after = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        after[PLAY_HAND_START as usize], 1.0,
+        "EX7-074 should be playable when LIBERATOR board presence enables its use requirement"
+    );
+}
+
+#[test]
+fn ex7_074_security_uses_play_cost_filters_and_native_self_to_hand() {
+    let runner = ex7_074_runner();
+    let compiled = runner
+        .compiled_card("EX7-074")
+        .expect("EX7-074 must be in compiled_cards");
+    let CompiledClause::Triggered(security) = &compiled.effects[2] else {
+        panic!("security clause must be triggered");
+    };
+
+    fn has_select_with_cost_lte(steps: &[CompiledStep], cap: i32) -> bool {
+        steps.iter().any(|step| match step {
+            CompiledStep::SelectHand { filter, .. } | CompiledStep::SelectTrash { filter, .. } => {
+                filter.play_cost_lte == Some(cap)
+                    || filter
+                        .all_of
+                        .iter()
+                        .any(|nested| nested.play_cost_lte == Some(cap))
+            }
+            CompiledStep::If { then, .. } => has_select_with_cost_lte(then, cap),
+            _ => false,
+        })
+    }
+
+    assert!(
+        has_select_with_cost_lte(&security.process, 4),
+        "security hand/trash selections must enforce play_cost_lte: 4"
+    );
+    assert!(
+        security
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::AddThisOptionToHand)),
+        "security clause must use native add_this_option_to_hand"
+    );
+    assert!(
+        !security
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::RawRust { .. })),
+        "EX7-074 should not use the legacy raw_rust self-to-hand shim"
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -371,7 +422,7 @@ fn ex7_074_security_plays_liberator_from_trash_free() {
 /// G-PLAY-COST-LTE: predicate not enforced at selection time in current engine.
 /// When G-PLAY-COST-LTE is resolved, un-ignore this test.
 #[test]
-#[ignore = "pending: G-PLAY-COST-LTE — play_cost_lte predicate not evaluated in eval_card_fields"]
+#[ignore = "pending: security effect integration harness for EX7-074 hand/trash zone-choice flow"]
 fn ex7_074_security_filters_liberator_by_cost_lte_4() {
     // Arrange: hand has a LIBERATOR with cost 5 and another with cost 3.
     // Assert: only the cost-3 card appears in the selection prompt.
@@ -382,7 +433,7 @@ fn ex7_074_security_filters_liberator_by_cost_lte_4() {
 /// G-ADD-OPTION-SELF-TO-HAND: currently a no-op. When the gap is resolved,
 /// EX7-074 should appear in the controller's hand after security resolution.
 #[test]
-#[ignore = "pending: G-ADD-OPTION-SELF-TO-HAND — EffectContext::add_security_option_to_hand missing"]
+#[ignore = "pending: security effect integration harness for EX7-074 hand/trash zone-choice flow"]
 fn ex7_074_security_adds_self_to_hand_after_resolving() {
     // After security effect resolves: EX7-074 must be in player 0's hand.
     let _runner = ex7_074_runner();

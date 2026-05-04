@@ -18,23 +18,24 @@
 //!
 //! # Patterns this test covers
 //! - Structural: 1 triggered clause (OnPlay + WhenDigivolving), 1 inherited aura
-//! - Clause 1: as_selecting_player + select_hand + place_on_security(bottom) + trash_top_security
+//! - Clause 1: opponent security count condition + as_selecting_player +
+//!   select_hand + place_on_security(bottom) + trash_top_security
 //! - Clause 2: inherited [Your Turn] self-aura +4000 DP (D4 pattern)
 //!
 //! # Known gaps and test status
 //!
 //! | Clause | Gap | Status |
 //! |--------|-----|--------|
-//! | (1) "if opp ≤5 security" condition | G-OPP-SECURITY-COUNT-LTE | PARTIAL — condition not enforced; effect fires unconditionally |
-//! | (1) place-from-hand + trash-top-security | none (structural PASS) | behavioral tests PASS |
+//! | (1) "if opp ≤5 security" condition | YAML drift | AUDITED-DRIFT — current DSL can express this as `count_lte` over opponent security, but YAML still lacks the condition |
+//! | (1) place-from-hand + trash-top-security | condition drift | both printed sub-steps are conditional; current YAML runs them unconditionally |
 //! | (2) inherited +4000 DP self-aura structure | none (compile-only) | structural PASS |
 //! | (2) inherited aura runtime dispatch | G-INHERITED-DISPATCH | #[ignore] pending dispatch wiring |
 
 #![allow(dead_code, unused_imports)]
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
-    CompiledTriggeredClause,
+    CompiledClause, CompiledDeclarativeClause, CompiledPlayerRef, CompiledScope, CompiledTiming,
+    CompiledTriggeredClause, CompiledZone,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -169,7 +170,7 @@ fn bt21_024_clause1_is_mandatory_not_opt_own_scope() {
 
     assert!(
         !clause1.optional,
-        "clause 1 is NOT optional — opponent must place a card and top security is trashed"
+        "clause 1 is NOT optional when its printed opponent-security condition is met"
     );
     assert!(
         !clause1.once_per_turn,
@@ -179,6 +180,53 @@ fn bt21_024_clause1_is_mandatory_not_opt_own_scope() {
         clause1.scope,
         CompiledScope::FaceUp,
         "clause 1 is own-scope (FaceUp), not inherited"
+    );
+}
+
+/// Clause 1 must be gated by the printed condition:
+/// "If your opponent has 5 or fewer security cards..."
+///
+/// Current DSL capability note: the old `opponent_security_count_lte` gap is no
+/// longer the right target for this card. Aggregate predicates can count cards
+/// in zones for an owner, so the YAML should use:
+///
+/// ```yaml
+/// condition:
+///   count_lte:
+///     filter: { zone: [security], owner: opponent }
+///     n: 5
+/// ```
+#[test]
+fn bt21_024_clause1_condition_counts_opponent_security_lte_5() {
+    let card = compiled("BT21-024");
+    let clause1 = card
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .next()
+        .expect("clause 1 must be present");
+
+    let condition = clause1
+        .condition
+        .as_ref()
+        .expect("printed text requires a clause condition: opponent has ≤5 security");
+    let aggregate = condition
+        .count_lte
+        .as_ref()
+        .expect("condition should use count_lte over opponent security");
+    assert_eq!(aggregate.n, 5, "condition threshold must be ≤5 security");
+    assert_eq!(
+        aggregate.filter.owner,
+        Some(CompiledPlayerRef::Opponent),
+        "count_lte filter must count the opponent's security stack"
+    );
+    assert_eq!(
+        aggregate.filter.zone,
+        vec![CompiledZone::Security],
+        "count_lte filter must count security cards"
     );
 }
 
@@ -257,13 +305,14 @@ fn bt21_024_inherited_aura_has_active_when_your_turn() {
 // Section 2 — Condition gating
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// The printed condition ("if your opponent has 5 or fewer security cards") cannot
-// be expressed in the DSL. No `opponent_security_count_lte` predicate exists.
-// DSL vocab gap: G-OPP-SECURITY-COUNT-LTE (see qa/dsl-vocab-gaps.md).
+// Print text wins over DCGO. Both "they place 1 card from their hand as the
+// bottom security card" and "Then, trash their top security card" are under the
+// opponent-security condition. Current YAML still follows the older DCGO-shaped
+// implementation and runs clause 1 unconditionally.
 //
-// Current YAML runs clause 1 unconditionally (following DCGO behaviour where
-// trash_top_security always fires regardless of the inner security-count check).
-// Negative condition tests are `#[ignore]`'d pending gap closure.
+// Capability drift: current aggregate predicates can express the needed gate as
+// `count_lte` with `filter: { zone: [security], owner: opponent }, n: 5`, so the
+// AUDIT expectation is active rather than ignored.
 
 /// Positive condition: when opponent has 3 security cards (within ≤5), the effect
 /// fires and a pending selection installs (opponent prompted to place a hand card).
@@ -284,33 +333,49 @@ fn bt21_024_clause1_installs_selection_when_opponent_has_3_security() {
     );
 }
 
-/// Negative condition test (gap-blocked): clause 1 should NOT fire when opponent
-/// has more than 5 security cards, but due to G-OPP-SECURITY-COUNT-LTE the
-/// condition is not enforced and the effect still fires unconditionally.
-///
-/// Update this test to assert `pending_selection.is_none()` once the gap closes.
 #[test]
-#[ignore = "pending: G-OPP-SECURITY-COUNT-LTE — once closed, update to assert effect does NOT fire when opp has >5 security"]
 fn bt21_024_clause1_does_not_fire_when_opponent_has_more_than_5_security() {
-    // When G-OPP-SECURITY-COUNT-LTE closes:
-    //
-    //   let mut runner = DebugRunner::builder()
-    //       .dsl_card("BT21-024").expect("in pack")
-    //       .add_card(make_filler("FILLER"))
-    //       .add_card(make_filler("OPP-HAND"))
-    //       .hand(0, &["BT21-024"])
-    //       .security(1, &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER", "FILLER"]) // 6!
-    //       .hand(1, &["OPP-HAND"])
-    //       .deck(0, &["FILLER"]).deck(1, &["FILLER"])
-    //       .memory(10).start();
-    //
-    //   runner.play(0, 0);
-    //
-    //   assert!(
-    //       runner.game.pending_selection.is_none(),
-    //       "opponent has 6 security — clause 1 must NOT fire"
-    //   );
-    todo!("implement once G-OPP-SECURITY-COUNT-LTE closes");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-024")
+        .expect("BT21-024 in embedded DSL pack")
+        .add_card(make_filler("FILLER"))
+        .add_card(make_filler("OPP-HAND"))
+        .hand(0, &["BT21-024"])
+        .security(
+            1,
+            &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER", "FILLER"],
+        )
+        .hand(1, &["OPP-HAND"])
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
+        .memory(10)
+        .start();
+
+    let opp_hand_before = runner.hand_size(1);
+    let opp_sec_before = runner.security_count(1);
+    let opp_trash_before = runner.trash_size(1);
+
+    runner.play(0, 0);
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "opponent has 6 security, so printed clause 1 must not install a hand-selection prompt"
+    );
+    assert_eq!(
+        runner.hand_size(1),
+        opp_hand_before,
+        "opponent hand must not change when the printed condition is false"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        opp_sec_before,
+        "opponent security must not change when the printed condition is false"
+    );
+    assert_eq!(
+        runner.trash_size(1),
+        opp_trash_before,
+        "opponent trash must not change when the printed condition is false"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -380,9 +445,10 @@ fn bt21_024_clause1_places_hand_card_bottom_and_trashes_top_security_on_play() {
     );
 }
 
-/// When opponent has an empty hand but has security cards, no selection installs
-/// (no hand cards to select from), but the trash_top_security step still fires.
-/// This reflects the DCGO behavior where trash fires unconditionally.
+/// When opponent satisfies the security-count condition but has an empty hand,
+/// no selection installs (no hand cards to select from), but the
+/// trash_top_security step still needs to fire because it is the tail of the
+/// same conditional clause.
 ///
 /// IGNORED: When select_hand has no valid candidates (empty hand), the engine
 /// returns early from install_select_hand without installing a PendingSelection.
@@ -406,7 +472,7 @@ fn bt21_024_clause1_trashes_top_security_even_when_opponent_has_no_hand() {
         .memory(10)
         .start();
 
-    let opp_sec_before = runner.security_count(1); // 3
+    let _opp_sec_before = runner.security_count(1); // 3
     let opp_trash_before = runner.trash_size(1); // 0
 
     runner.play(0, 0);

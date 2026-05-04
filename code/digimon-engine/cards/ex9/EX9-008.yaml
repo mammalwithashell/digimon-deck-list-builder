@@ -1,0 +1,30 @@
+card: EX9-008
+name: Biyomon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Bird, DM, Ver.4]
+
+# Standard digivolution: Lv2 Red / Cost 0.
+# Alt-digivolve (xros_req): Lv2 with [DM] trait / Cost 0.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2 }
+    cost: 0
+
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: DM }
+    cost: 0
+    ignore_requirements: true
+
+effects:
+  # <Training> — printed keyword declared through the shared grant_keyword DSL.
+  - kind: grant_keyword
+    keyword: Training
+
+  # Inherited <Raid>.
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Raid

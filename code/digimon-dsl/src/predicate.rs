@@ -120,6 +120,8 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub all_turns: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_hatch: Option<PlayerRef>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub in_breeding: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub on_field: Option<bool>,

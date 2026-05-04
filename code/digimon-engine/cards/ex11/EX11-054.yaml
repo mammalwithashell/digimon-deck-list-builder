@@ -14,32 +14,10 @@ traits: [LIBERATOR]
 # have the [Reptile] or [Dragonkin] trait, by suspending this Tamer, <Draw 1>.
 # After, 1 of your Digimon with <Progress> gets +3000 DP for the turn.
 #
-# HYBRID GAP — this clause is a no-op raw_rust placeholder pending gap closure:
-#
-# Engine gap: `OnEnterFieldAnyone` and `OnDigivolve` observers fire with
-#   `TriggerContext { target_permanent: Some(owen_handle) }`, not the handle of the
-#   card that just entered/digivolved. The engine's `trigger_context_for_source`
-#   (effect_queue.rs) iterates permanents and sets `target_permanent = source_permanent`
-#   (i.e. the observer's own permanent), so observer cards have no way to inspect the
-#   traits of the entering/digivolving permanent. Additionally, `GameEvent::Digivolve`
-#   is "defined for future wiring — not emitted yet" (events.rs), blocking even
-#   event-log approaches for the digivolve half of the trigger.
-#
-# DSL gap: no `entering_permanent_trait_has` / `digivolving_permanent_trait_has`
-#   BoolPredicate leaf exists. Once the engine threads `entering_permanent:
-#   Option<PermanentHandle>` through TriggerContext, a matching DSL predicate would
-#   let this clause be expressed natively without raw_rust.
-#
-# G-DECLARATIVE-KEYWORD (Progress): The +3000 DP sub-step targets a Digimon with
-#   <Progress>. Progress is granted to Medusamon (EX11-012) via `kind: grant_keyword`,
-#   but the G-DECLARATIVE-KEYWORD gap means declarative clauses are never fired at
-#   runtime, so no Progress modifier is installed. Even if the observer mechanism
-#   worked, `select_own_permanent { has_keyword: Progress }` would find zero
-#   candidates. Both gaps must close before this clause is implementable.
-#
-# Placeholder registration: `ex11_054_all_turns_noop` (declarative, returns vec![]).
-# The function is registered in `code/digimon-engine/src/cards/raw_rust/mod.rs`.
-# See `qa/dsl-vocab-gaps.md` entry for `entering_permanent_trait_has`.
+# Event context now carries the played/digivolved permanent as event_target, so
+# this clause can gate natively with event_target_owner/event_target_trait_has.
+# The +3000 DP tail still selects a Progress Digimon. If none exists, the
+# selection naturally has no candidates.
 #
 # Clause 3 — [Security] Play this card without paying the cost.
 # DSL: when: on_security, process: play_from_security: {}
@@ -53,15 +31,36 @@ effects:
     process:
       - set_memory: 3
 
-  # ─── Clause 2: [All Turns] Reptile/Dragonkin observer — HYBRID GAP ─────────
-  #
-  # No-op placeholder. See gap commentary above and qa/dsl-vocab-gaps.md.
-  # Triggers: on_enter_field_anyone (play half) + on_digivolve (digivolve half).
-  # Both timings map to real engine timings; the raw_rust fn is a no-op until
-  # the TriggerContext gap is resolved.
-  - kind: raw_rust
-    fn: ex11_054_all_turns_noop
-    triggers: [on_enter_field_anyone, on_digivolve]
+  # ─── Clause 2: [All Turns] Reptile/Dragonkin observer ─────────────────────
+  - when: [on_enter_field_anyone, on_digivolve]
+    active_when: { all_turns: true }
+    optional: true
+    summary: "[All Turns] When your Reptile/Dragonkin is played or digivolves, suspend self -> Draw 1; Progress Digimon gets +3000 DP"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_trait_has: Reptile
+            - event_target_trait_has: Dragonkin
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "EX11-054"
+            is_unsuspended: true
+    process:
+      - suspend: { target: source }
+      - draw: { of: you, count: 1 }
+      - select_own_permanent:
+          bind_as: progress_target
+          filter:
+            all_of:
+              - kind: digimon
+              - has_keyword: Progress
+          prompt: "Choose a Digimon with Progress to get +3000 DP"
+      - add_dp_modifier:
+          target: progress_target
+          value: 3000
+          expiry: end_of_turn
 
   # ─── Clause 3: [Security] Play without paying the cost ─────────────────────
   - when: on_security

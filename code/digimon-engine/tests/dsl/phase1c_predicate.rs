@@ -1,6 +1,6 @@
 use digimon_dsl::compiled::{CompiledBindingCompare, CompiledCardKind, CompiledPredicate};
 use digimon_engine::card_source::CardHandle;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::debug_runner::{make_test_card, make_test_egg, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::predicate::{
     eval_predicate, eval_predicate_with_bindings, PredicateSubject,
@@ -15,6 +15,42 @@ fn fresh_runner() -> DebugRunner {
         // Put TEST-A in player 0's hand so we can grab a valid handle.
         .hand(0, &["TEST-A"])
         .build()
+}
+
+#[test]
+fn can_hatch_predicate_requires_empty_breeding_and_digitama() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TEST-A", "Test"))
+        .add_card(make_test_egg("EGG-A", "Egg"))
+        .hand(0, &["TEST-A"])
+        .digitama(0, &["EGG-A"])
+        .build();
+    let source = any_card_handle(&runner);
+    let pred = CompiledPredicate {
+        can_hatch: Some(digimon_dsl::compiled::CompiledPlayerRef::You),
+        ..Default::default()
+    };
+
+    let rctx = EffectReadContext::new(&runner.game, source, None, 0);
+    assert!(
+        eval_predicate(&pred, &rctx, PredicateSubject::None),
+        "fresh DebugRunner should have an empty breeding area and egg deck"
+    );
+
+    assert!(runner.game.hatch(0), "precondition: hatch succeeds");
+    let rctx = EffectReadContext::new(&runner.game, source, None, 0);
+    assert!(
+        !eval_predicate(&pred, &rctx, PredicateSubject::None),
+        "occupied breeding area must make can_hatch false"
+    );
+
+    runner.game.players[0].breeding_area = None;
+    runner.game.players[0].digitama_deck.clear();
+    let rctx = EffectReadContext::new(&runner.game, source, None, 0);
+    assert!(
+        !eval_predicate(&pred, &rctx, PredicateSubject::None),
+        "empty digitama deck must make can_hatch false"
+    );
 }
 
 fn any_card_handle(runner: &DebugRunner) -> CardHandle {

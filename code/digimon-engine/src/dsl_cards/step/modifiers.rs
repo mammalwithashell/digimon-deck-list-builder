@@ -209,8 +209,7 @@ pub fn try_run(
             let Some(kw) = crate::dsl_cards::modifier_map::lookup_keyword(keyword, *value) else {
                 return true;
             };
-            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
-            {
+            if let Some(h) = resolve_permanent_target(target, ctx, bindings) {
                 ctx.grant_keyword(h, kw, expiry);
             }
             true

@@ -16,24 +16,15 @@ effects:
   # "If your opponent has 5 or fewer security cards, they place 1 card from
   # their hand as the bottom security card. Then, trash their top security card."
   #
-  # PARTIAL — The clause-level "If opponent has ≤5 security" condition cannot
-  # be expressed in the DSL. The DSL predicate `security_count_lte` checks the
-  # CONTROLLER's security stack, not the opponent's. There is no
-  # `opponent_security_count_lte` predicate in the current vocabulary.
-  #
-  # DSL vocab gap: `opponent_security_count_lte` — see qa/dsl-vocab-gaps.md
-  # (G-OPP-SECURITY-COUNT-LTE). The predicate would lower to
-  # `rctx.security_count(rctx.opponent())` with the same comparison logic
-  # as the existing `security_count_lte` path.
-  #
-  # Following DCGO (BT21_024.cs): the DCGO implementation also runs the
-  # trash_top_security step unconditionally (outside the inner if-block at
-  # line 26); the security-count check only gates the "place from hand"
-  # sub-step. The printed card text ("If … they place … Then, trash")
-  # treats both as conditional but DCGO separates them. This implementation
-  # follows DCGO: both steps run unconditionally. The gap tracker entry
-  # documents the deviation from printed text.
+  # The printed card text gates both the bottom-security placement and the
+  # top-security trash under "If your opponent has 5 or fewer security cards".
+  # Print text wins over DCGO when they diverge, so this condition uses the
+  # aggregate count predicate over the opponent's security stack.
   - when: [on_play, when_digivolving]
+    condition:
+      count_lte:
+        filter: { zone: [security], owner: opponent }
+        n: 5
     process:
       - as_selecting_player:
           of: opponent

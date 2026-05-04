@@ -781,16 +781,29 @@ impl Game {
         if pa.effective_target == new_target {
             return;
         }
+        let attacker = pa.attacker;
         pa.effective_target = new_target;
 
-        // OnAttackTargetChange: global observer fan-out across both players'
-        // battle areas. Matches the Block-redirect fire site.
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                EffectTiming::OnAttackTargetChange,
-                TriggerSource::PlayerBattleArea(pid as PlayerId),
-            );
-        }
+        self.fire_attack_target_change_observers(attacker);
+    }
+
+    fn fire_attack_target_change_observers(&mut self, attacker: PermanentHandle) {
+        let Some(card) = self
+            .players
+            .get(attacker.player as usize)
+            .and_then(|p| p.battle_area.get(attacker.index as usize))
+            .map(|perm| perm.top_card().handle())
+        else {
+            return;
+        };
+        self.enqueue_triggered(
+            EffectTiming::OnAttackTargetChange,
+            TriggerSource::EventObserved {
+                player: attacker.player,
+                permanent: attacker,
+                card,
+            },
+        );
         self.drain_effect_queue();
     }
 
@@ -1385,15 +1398,9 @@ impl Game {
                     pa.state = AttackState::PostBlock;
                 }
                 // OnAttackTargetChange: fires in all players' battle areas
-                // when Block rewrites effective_target. Observer timing for
-                // "when an attack is redirected" effects (e.g. Medusamon).
-                for pid in 0..game.players.len() {
-                    game.enqueue_triggered(
-                        crate::enums::EffectTiming::OnAttackTargetChange,
-                        crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-                    );
-                }
-                game.drain_effect_queue();
+                // when Block rewrites effective_target. The event context
+                // carries the attacker so observers can filter its owner/traits.
+                game.fire_attack_target_change_observers(attacker);
 
                 // Phase 9 Task 8 — OnBlock fires globally after the blocker
                 // is declared. Both players' battle areas are scanned;
@@ -2567,7 +2574,13 @@ impl Game {
         }
 
         // Permanent may already have been removed by an OnDeletion effect
-        // (self-sacrifice patterns). Check before deleting.
+        // (self-sacrifice patterns). Check before deleting. Keep the deleted
+        // top card as event context for the subsequent OnAnyDeletion broadcast.
+        let deleted_top_card = self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|permanent| permanent.top_card().handle());
         if self
             .player(handle.player)
             .battle_area
@@ -2633,13 +2646,24 @@ impl Game {
         // OnAnyDeletion: global observer — fires in every player's battle area
         // after a permanent is deleted (battle-driven, effect-driven, or
         // security-check). The deleted permanent is already gone from
-        // battle_area at this point, so handle-based listeners won't encounter
-        // a stale entry.
-        for pid in 0..self.players.len() {
+        // battle_area at this point, so scan live listeners while carrying the
+        // deleted permanent/card as event context.
+        if let Some(card) = deleted_top_card {
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnAnyDeletion,
-                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+                crate::selection::TriggerSource::EventObserved {
+                    player: handle.player,
+                    permanent: handle,
+                    card,
+                },
             );
+        } else {
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    crate::enums::EffectTiming::OnAnyDeletion,
+                    crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
+                );
+            }
         }
         self.drain_effect_queue();
     }

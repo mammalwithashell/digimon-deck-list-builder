@@ -30,15 +30,6 @@ effects:
 
   # Clause (c): [When Digivolving] [End of Attack] [Once Per Turn]
   # You may delete 1 of your opponent's lowest DP Digimon.
-  #
-  # GAP G-PREDICATE-DP-FILTER: dp_lte formula predicates are compiled
-  # but not evaluated in predicate.rs eval_permanent_fields(). The
-  # selection will accept all opponent Digimon rather than only the
-  # lowest-DP ones. Tests for the DP filter constraint are
-  # #[ignore = "pending: G-PREDICATE-DP-FILTER"].
-  #
-  # GAP G-SELECT-OPP-FILTER: select_opponent_permanent ignores its
-  # compiled filter (Phase 2b limitation).
   - when: [when_digivolving, end_of_attack]
     once_per_turn: true
     optional: true
@@ -74,14 +65,14 @@ effects:
 
   # Clause (d) — deletion arm: [All Turns] [Once Per Turn]
   # When any of your opponent's Digimon are deleted → opponent plays Petrification Token.
-  #
-  # BLOCKED (G-EVENT-TARGET-OWNER): on_any_deletion fires for ALL
-  # deletions — own and opponent. The DSL predicate layer has no
-  # event_target_owner predicate to filter "deleted permanent belonged
-  # to opponent". Omitted until G-EVENT-TARGET-OWNER is closed.
-  # Once closed, implement as:
-  #   - when: on_any_deletion
-  #     once_per_turn: true
-  #     condition: { event_target_owner: opponent }
-  #     process:
-  #       - play_token: { controller: opponent, token_name: petrification }
+  - when: on_any_deletion
+    once_per_turn: true
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    summary: "Opponent plays Petrification Token when their Digimon is deleted"
+    process:
+      - play_token:
+          controller: opponent
+          token_name: petrification

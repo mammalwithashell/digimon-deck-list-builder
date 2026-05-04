@@ -697,17 +697,21 @@ impl<'a> EffectContext<'a> {
             };
             source_card
         } else {
-            let Some(pending) = self.game.pending_security.take() else {
-                return;
-            };
-            if pending.played
-                || pending.card.handle() != self.source_card
-                || pending.card.card_kind(&self.game.card_data) != CardKind::Option
-            {
-                self.game.pending_security = Some(pending);
-                return;
+            if let Some(pending) = self.game.pending_security.take() {
+                if pending.played
+                    || pending.card.handle() != self.source_card
+                    || pending.card.card_kind(&self.game.card_data) != CardKind::Option
+                {
+                    self.game.pending_security = Some(pending);
+                    return;
+                }
+                pending.card
+            } else {
+                let Some(source_card) = self.remove_source_option_from_controller_zones() else {
+                    return;
+                };
+                source_card
             }
-            pending.card
         };
 
         // The physical Option moves to its card owner/controller's battle area,
@@ -745,6 +749,35 @@ impl<'a> EffectContext<'a> {
             },
         );
         self.game.drain_effect_queue();
+    }
+
+    fn remove_source_option_from_controller_zones(
+        &mut self,
+    ) -> Option<crate::card_source::CardSource> {
+        if !matches!(
+            self.game.card_kind_for_handle(self.source_card),
+            Some(CardKind::Option)
+        ) {
+            return None;
+        }
+
+        if let Some(pos) = self
+            .game
+            .player(self.player)
+            .hand
+            .iter()
+            .position(|card| card.handle() == self.source_card)
+        {
+            return Some(self.game.player_mut(self.player).hand.remove(pos));
+        }
+
+        let pos = self
+            .game
+            .player(self.player)
+            .trash
+            .iter()
+            .position(|card| card.handle() == self.source_card)?;
+        Some(self.game.player_mut(self.player).trash.remove(pos))
     }
 
     fn remove_source_card_from_permanent(

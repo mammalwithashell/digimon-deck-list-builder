@@ -22,13 +22,10 @@ traits: [LIBERATOR]
 #
 # "Then, place this card in the battle area" — option-as-permanent placement.
 #
-# G-PLACE-SELF-AS-OPTION-PERMANENT [DSL gap]:
-#   There is no DSL step verb for "place this Option card in the battle area as
-#   a Delay permanent". The engine infers this from the presence of the Delay
-#   clause (kind: delay) together with a main_from_hand trigger, but no
-#   explicit `place_option_in_battle_area: {}` step exists yet in the vocabulary.
-#   Tests asserting the card lands in battle area after the Main effect are
-#   #[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT"].
+# The DSL now supports explicit source-option placement with
+# `place_self_as_delay_option: {}`. The step belongs after the optional
+# Elizamon/Owen play branch because the printed text says "Then, place this card
+# in the battle area."
 #
 # ─── Clause 2: [Your Turn] When any of your [Owen Dreadnought]s suspend ───────
 #
@@ -115,6 +112,7 @@ effects:
                     - name_contains: "Owen Dreadnought"
                 prompt: "Play 1 Elizamon or Owen Dreadnought from your trash without paying the cost"
             - play_from_trash_free: { of: you, hand_index: picked_trash }
+      - place_self_as_delay_option: {}
 
   # ─── Clause 2: [Your Turn] Delay — BLOCKED (G-DELAY-SUSPEND-CONDITION) ────
   # Structural raw_rust stub preserving clause index for structural tests.
@@ -128,7 +126,7 @@ effects:
   # Mirrors the Main clause process under on_security timing.
   # DCGO: AddActivateMainOptionSecurityEffect — mandatory (no canNoSelect).
   - when: on_security
-    optional: true
+    optional: false
     summary: "[Security] You may play 1 Elizamon or Owen Dreadnought from hand or trash free"
     process:
       - select_effect_choice:
@@ -161,3 +159,4 @@ effects:
                     - name_contains: "Owen Dreadnought"
                 prompt: "Play 1 Elizamon or Owen Dreadnought from your trash without paying the cost"
             - play_from_trash_free: { of: you, hand_index: picked_trash }
+      - place_self_as_delay_option: {}

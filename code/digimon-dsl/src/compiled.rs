@@ -208,6 +208,7 @@ pub struct CompiledPredicate {
     pub your_turn: Option<bool>,
     pub opponents_turn: Option<bool>,
     pub all_turns: Option<bool>,
+    pub can_hatch: Option<CompiledPlayerRef>,
     pub in_breeding: Option<bool>,
     pub on_field: Option<bool>,
     pub dna_origin: Option<bool>,

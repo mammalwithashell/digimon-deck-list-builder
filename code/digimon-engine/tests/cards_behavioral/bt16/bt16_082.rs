@@ -30,16 +30,18 @@
 //! - E2-adjacent (OPT + [Your Turn] gate) — structural assertions pass
 //! - B-hatch: "you may hatch" step — behavioral body documented
 //!
-//! # Status: BLOCKED (card body placeholder)
+//! # Status: IMPLEMENTED
 //!
-//! The YAML uses a `kind: raw_rust` no-op escape hatch (bt16_082_on_move_noop)
-//! as a placeholder for the real reveal/select/hatch body and still uses a
-//! structural stub timing. Behavioral tests remain #[ignore]'d until BT16-082's
-//! card-specific move-trigger effect is implemented. Structural tests (compiled
-//! card shape) pass.
+//! The YAML uses native `on_move`, reveal/select/add/remainder steps, and a
+//! `can_hatch`-guarded EffectChoice so the hatch prompt only appears when the
+//! controller can legally hatch.
 
-use digimon_dsl::compiled::{CompiledClause, CompiledScope};
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
+use digimon_engine::action::space::SEL_REVEAL_START;
+use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::{make_test_card, make_test_egg, DebugRunner};
+use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::selection::SelectionKind;
 
 // ---------------------------------------------------------------------------
 // Helper builders
@@ -51,6 +53,86 @@ fn ukkomon() -> DebugRunner {
         .expect("BT16-082 YAML parses and compiles")
         .memory(10)
         .build()
+}
+
+fn digimon(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(3);
+    card.dp = Some(2000);
+    card.play_cost = 3;
+    card.colors = vec![CardColor::Red];
+    card
+}
+
+fn tamer(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Tamer;
+    card.level = None;
+    card.dp = None;
+    card.play_cost = 3;
+    card.colors = vec![CardColor::White];
+    card
+}
+
+fn option(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Option;
+    card.level = None;
+    card.dp = None;
+    card.play_cost = 2;
+    card.colors = vec![CardColor::White];
+    card
+}
+
+fn bt16_behavior_runner(deck: &[&str], digitama: &[&str]) -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card("BT16-082")
+        .expect("BT16-082 YAML parses")
+        .add_card(digimon("MOVER"))
+        .add_card(digimon("PICK-DIGI"))
+        .add_card(tamer("PICK-TAMER"))
+        .add_card(option("NOPE-OPTION"))
+        .add_card(digimon("FILL"))
+        .add_card(make_test_egg("EGG-HATCH", "Egg Hatch"))
+        .deck(0, deck)
+        .digitama(0, digitama)
+        .memory(10)
+        .build()
+}
+
+fn trigger_ukkomon_move(deck: &[&str], digitama: &[&str]) -> DebugRunner {
+    let mut runner = bt16_behavior_runner(deck, digitama);
+    runner.place_on_field(0, "BT16-082", Some(0));
+    runner.place_in_breeding(0, "MOVER");
+    assert!(
+        runner.move_from_breeding(0),
+        "move_from_breeding should succeed"
+    );
+    runner
+}
+
+fn top_three_with_digimon_tamer_option() -> [&'static str; 4] {
+    ["FILL", "NOPE-OPTION", "PICK-TAMER", "PICK-DIGI"]
+}
+
+fn pick_reveal_and_order_remainder(runner: &mut DebugRunner, action_id: u16) {
+    let view = runner.pending_selection_view().expect("reveal prompt");
+    runner
+        .execute_action(view.selecting_player, action_id)
+        .expect("pick revealed card");
+    runner.game.drain_effect_queue();
+
+    while runner
+        .pending_selection_view()
+        .is_some_and(|view| matches!(view.kind, SelectionKind::OrderedPermutation { .. }))
+    {
+        let view = runner.pending_selection_view().expect("ordered prompt");
+        runner
+            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .expect("place revealed remainder");
+        runner.game.drain_effect_queue();
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -182,39 +264,53 @@ fn bt16_082_clause_has_your_turn_active_when() {
     );
 }
 
+#[test]
+fn bt16_082_clause_uses_on_move_timing_and_native_steps() {
+    let runner = ukkomon();
+    let compiled = runner
+        .compiled_card("BT16-082")
+        .expect("BT16-082 compiled card present");
+
+    let clause = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .next()
+        .expect("triggered clause present");
+
+    assert!(
+        clause.when.contains(&CompiledTiming::OnMove),
+        "Ukkomon's printed timing is [When Moving], not a placeholder OnPlay"
+    );
+    assert!(matches!(
+        clause.process[0],
+        CompiledStep::RevealTopDeck { count: 3, .. }
+    ));
+    assert!(
+        !clause
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::RawRust { .. })),
+        "BT16-082 should use native reveal/add/remainder/hatch steps"
+    );
+}
+
 // ---------------------------------------------------------------------------
-// Section 2 — Behavioral tests (ignored: BT16-082 body placeholder)
+// Section 2 — Behavioral tests
 // ---------------------------------------------------------------------------
 //
-// Shared OnMove dispatch and DSL event context are covered elsewhere. BT16-082's
-// YAML still has a structural stub clause with a raw_rust no-op body, so these
-// tests remain ignored until the card-specific reveal/select/hatch behavior is
-// implemented.
+// Shared OnMove dispatch and DSL event context are covered elsewhere; these
+// tests exercise BT16-082's card-specific reveal/select/hatch body.
 //
 
 /// After a Digimon moves from breeding to battle, Ukkomon's trigger should
 /// install a Reveal+Select prompt (3 cards, add 1 Digimon or Tamer to hand).
 #[test]
-#[ignore = "pending: BT16-082 card body still lacks the real move-trigger effect; shared OnMove dispatch is covered by timing_dispatch and DSL event-context tests"]
 fn bt16_082_trigger_fires_on_move_from_breeding() {
-    let mut runner = DebugRunner::builder()
-        .dsl_card("BT16-082")
-        .expect("BT16-082 YAML parses")
-        .dsl_card("ST1-03")
-        .expect("ST1-03 parses")
-        .memory(10)
-        .build();
-
-    // Place Ukkomon in battle area as the observer
-    runner.place_on_field(0, "BT16-082", None);
-
-    // Set up: a Digimon in the breeding area (hatched) and deck to reveal from
-    runner.game.hatch(0); // move egg from digitama deck to breeding
-
-    // Move Digimon from breeding to battle — should fire Ukkomon's trigger
-    let moved = runner.move_from_breeding(0);
-    assert!(moved, "move_from_breeding should succeed");
-
+    let runner = trigger_ukkomon_move(&top_three_with_digimon_tamer_option(), &["EGG-HATCH"]);
     assert!(
         runner.pending_selection().is_some(),
         "Ukkomon's trigger must install a pending selection after move_from_breeding"
@@ -223,74 +319,169 @@ fn bt16_082_trigger_fires_on_move_from_breeding() {
 
 /// The reveal+select step filters to Digimon and Tamer only (not Option cards).
 #[test]
-#[ignore = "pending: BT16-082 card body still lacks the real move-trigger effect; shared OnMove dispatch is covered by timing_dispatch and DSL event-context tests"]
 fn bt16_082_select_reveal_filters_to_digimon_or_tamer() {
-    // After OnMove fires and reveals 3 cards, the select_reveal pending
-    // selection must exclude Option cards from valid_action_ids.
-    unimplemented!("pending BT16-082 card-specific move-trigger body");
+    let runner = trigger_ukkomon_move(&top_three_with_digimon_tamer_option(), &["EGG-HATCH"]);
+    let view = runner
+        .pending_selection_view()
+        .expect("reveal selection should be pending");
+
+    assert_eq!(view.kind, SelectionKind::Reveal);
+    assert!(view.valid_action_ids.contains(&SEL_REVEAL_START));
+    assert!(view.valid_action_ids.contains(&(SEL_REVEAL_START + 1)));
+    assert!(
+        !view.valid_action_ids.contains(&(SEL_REVEAL_START + 2)),
+        "Option card among the revealed cards must not be selectable"
+    );
 }
 
 /// When the player picks a Digimon from the 3 revealed cards, it goes to hand.
 #[test]
-#[ignore = "pending: BT16-082 card body still lacks the real move-trigger effect; shared OnMove dispatch is covered by timing_dispatch and DSL event-context tests"]
 fn bt16_082_picked_digimon_goes_to_hand() {
-    unimplemented!("pending BT16-082 card-specific move-trigger body");
+    let mut runner = trigger_ukkomon_move(&top_three_with_digimon_tamer_option(), &["EGG-HATCH"]);
+    pick_reveal_and_order_remainder(&mut runner, SEL_REVEAL_START);
+
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "PICK-DIGI"),
+        "selected revealed Digimon should move to hand"
+    );
 }
 
 /// When the player picks a Tamer from the 3 revealed cards, it goes to hand.
 #[test]
-#[ignore = "pending: BT16-082 card body still lacks the real move-trigger effect; shared OnMove dispatch is covered by timing_dispatch and DSL event-context tests"]
 fn bt16_082_picked_tamer_goes_to_hand() {
-    unimplemented!("pending BT16-082 card-specific move-trigger body");
+    let mut runner = trigger_ukkomon_move(&top_three_with_digimon_tamer_option(), &["EGG-HATCH"]);
+    pick_reveal_and_order_remainder(&mut runner, SEL_REVEAL_START + 1);
+
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "PICK-TAMER"),
+        "selected revealed Tamer should move to hand"
+    );
 }
 
 /// The 2 un-picked revealed cards return to the BOTTOM of the deck.
 #[test]
-#[ignore = "pending: BT16-082 card body still lacks the real move-trigger effect; shared OnMove dispatch is covered by timing_dispatch and DSL event-context tests"]
 fn bt16_082_remainder_placed_at_deck_bottom() {
-    unimplemented!("pending BT16-082 card-specific move-trigger body");
+    let mut runner = trigger_ukkomon_move(&top_three_with_digimon_tamer_option(), &["EGG-HATCH"]);
+    pick_reveal_and_order_remainder(&mut runner, SEL_REVEAL_START);
+
+    let bottom_ids: Vec<_> = runner.game.players[0]
+        .deck
+        .iter()
+        .take(2)
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        bottom_ids,
+        vec!["NOPE-OPTION".to_string(), "PICK-TAMER".to_string()],
+        "unpicked revealed cards should be returned to the bottom in the chosen order"
+    );
 }
 
 /// After reveal+add, the "you may hatch" step installs an EffectChoice prompt
 /// ("Hatch" / "Don't hatch") when the player can hatch (digi-egg deck non-empty
 /// AND breeding area empty).
 #[test]
-#[ignore = "pending: BT16-082 card body still lacks the real move-trigger effect; shared OnMove dispatch is covered by timing_dispatch and DSL event-context tests"]
 fn bt16_082_may_hatch_prompts_effect_choice_when_can_hatch() {
-    unimplemented!("pending BT16-082 card-specific move-trigger body");
+    let mut runner = trigger_ukkomon_move(&top_three_with_digimon_tamer_option(), &["EGG-HATCH"]);
+    pick_reveal_and_order_remainder(&mut runner, SEL_REVEAL_START);
+
+    let hatch = runner
+        .pending_selection_view()
+        .expect("hatch choice should be pending");
+    assert_eq!(hatch.kind, SelectionKind::EffectChoice);
+    let choices = hatch.effect_choices.expect("effect choice labels");
+    let labels: Vec<_> = choices.iter().map(|choice| choice.label.as_str()).collect();
+    assert_eq!(labels, vec!["Hatch", "Don't hatch"]);
 }
 
 /// If the player chooses "Hatch", a new Digimon egg moves into the breeding area.
 #[test]
-#[ignore = "pending: BT16-082 card body still lacks the real move-trigger effect; shared OnMove dispatch is covered by timing_dispatch and DSL event-context tests"]
 fn bt16_082_hatch_yes_moves_egg_to_breeding() {
-    unimplemented!("pending BT16-082 card-specific move-trigger body");
+    let mut runner = trigger_ukkomon_move(&top_three_with_digimon_tamer_option(), &["EGG-HATCH"]);
+    pick_reveal_and_order_remainder(&mut runner, SEL_REVEAL_START);
+    let hatch = runner.pending_selection_view().expect("hatch choice");
+    runner
+        .execute_action(hatch.selecting_player, hatch.valid_action_ids[0])
+        .expect("choose Hatch");
+    runner.game.drain_effect_queue();
+
+    let breeding = runner.game.players[0]
+        .breeding_area
+        .as_ref()
+        .expect("hatch choice should put an egg in breeding");
+    assert_eq!(
+        breeding.top_card().card_id(&runner.game.card_data),
+        "EGG-HATCH"
+    );
 }
 
 /// If the player chooses "Don't hatch" (or cannot hatch), no hatching occurs.
 #[test]
-#[ignore = "pending: BT16-082 card body still lacks the real move-trigger effect; shared OnMove dispatch is covered by timing_dispatch and DSL event-context tests"]
 fn bt16_082_hatch_no_does_not_change_breeding_area() {
-    unimplemented!("pending BT16-082 card-specific move-trigger body");
+    let mut runner = trigger_ukkomon_move(&top_three_with_digimon_tamer_option(), &["EGG-HATCH"]);
+    pick_reveal_and_order_remainder(&mut runner, SEL_REVEAL_START);
+    let hatch = runner.pending_selection_view().expect("hatch choice");
+    runner
+        .execute_action(hatch.selecting_player, hatch.valid_action_ids[1])
+        .expect("choose Don't hatch");
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.game.players[0].breeding_area.is_none(),
+        "declining hatch should leave breeding empty after the moved Digimon left"
+    );
+    assert_eq!(
+        runner.game.players[0].digitama_deck.len(),
+        1,
+        "declining hatch should not consume the digitama deck"
+    );
+}
+
+#[test]
+fn bt16_082_does_not_prompt_hatch_when_player_cannot_hatch() {
+    let mut runner = trigger_ukkomon_move(&top_three_with_digimon_tamer_option(), &[]);
+    pick_reveal_and_order_remainder(&mut runner, SEL_REVEAL_START);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no hatch choice should be surfaced when the player has no digitama"
+    );
 }
 
 /// OPT lockout: second move-from-breeding in the same turn does NOT re-trigger.
 #[test]
-#[ignore = "pending: BT16-082 card body still lacks the real move-trigger effect; shared OnMove dispatch is covered by timing_dispatch and DSL event-context tests"]
+#[ignore = "pending: triggered OPT lockout coverage for OnMove effects"]
 fn bt16_082_opt_blocks_second_trigger_same_turn() {
     unimplemented!("pending BT16-082 card-specific move-trigger body");
 }
 
 /// OPT resets after end_turn: the trigger fires again on the player's next turn.
 #[test]
-#[ignore = "pending: BT16-082 card body still lacks the real move-trigger effect; shared OnMove dispatch is covered by timing_dispatch and DSL event-context tests"]
+#[ignore = "pending: triggered OPT reset coverage for OnMove effects"]
 fn bt16_082_opt_resets_after_end_turn() {
     unimplemented!("pending BT16-082 card-specific move-trigger body");
 }
 
 /// The trigger does NOT fire on the opponent's turn ([Your Turn] gate).
 #[test]
-#[ignore = "pending: BT16-082 card body still lacks the real move-trigger effect; shared OnMove dispatch is covered by timing_dispatch and DSL event-context tests"]
 fn bt16_082_does_not_trigger_on_opponent_turn() {
-    unimplemented!("pending BT16-082 card-specific move-trigger body");
+    let mut runner = bt16_behavior_runner(&top_three_with_digimon_tamer_option(), &["EGG-HATCH"]);
+    runner.place_on_field(0, "BT16-082", Some(0));
+    runner.place_in_breeding(0, "MOVER");
+    runner.game.turn_player_idx = 1;
+
+    assert!(
+        runner.move_from_breeding(0),
+        "move_from_breeding should still be possible in direct setup"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "[Your Turn] gate must suppress Ukkomon when it is not P0's turn"
+    );
 }
