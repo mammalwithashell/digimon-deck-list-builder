@@ -87,6 +87,8 @@ pub enum Timing {
     EndOfAttack,
     EndOfBattle,
     OnAttack,
+    OnAllyAttack,
+    OnOpponentAttack,
     OnDeletion,
     OnAnyDeletion,
     OnEnterFieldAnyone,

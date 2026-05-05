@@ -1,0 +1,23 @@
+card: ST19-14
+name: Arisa Kinosaki
+kind: tamer
+color: [yellow]
+cost: 4
+traits: [LIBERATOR]
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If memory is 2 or less, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # [Your Turn] When effects play one of your Tokens or Puppet Digimon, by
+  # suspending this Tamer, 1 of those Digimon gains Rush for the turn.
+  # Omitted rather than approximated: this needs effect-initiated play event
+  # context/provenance for the just-played Token/Puppet permanent (PUPPETS-G005).

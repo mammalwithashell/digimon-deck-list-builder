@@ -1,0 +1,50 @@
+card: BT16-055
+name: Namakemon
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 4000
+traits: [Puppet]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+  - kind: digivolve
+    from: { name_is: "Pulsemon" }
+    cost: 2
+
+effects:
+  # Printed high-security branch omitted:
+  # "If you have 3 or more security cards ... 1 of your Digimon can't have its
+  # DP reduced by your opponent's effects and isn't affected by <De-Digivolve>
+  # effects."
+  #
+  # Current DSL can express broad CannotBeAffected-style immunity and simple
+  # passive modifiers, but not the narrow reusable bundle that blocks only
+  # opponent DP reduction plus De-Digivolve without over-blocking other effects.
+
+  - when: [on_play, when_digivolving]
+    condition: { security_count_lte: 3 }
+    summary: "At 3 or fewer security, 1 of your Digimon gains Blocker and Reboot until your opponent's turn ends"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain Blocker and Reboot"
+      - grant_keyword:
+          target: target
+          keyword: Blocker
+          expiry: end_of_opponents_turn
+      - grant_keyword:
+          target: target
+          keyword: Reboot
+          expiry: end_of_opponents_turn
+
+  # Inherited text omitted:
+  # "[All Turns] While this Digimon has [Pulsemon] in its text, it gets +1000 DP."
+  #
+  # Current predicates cover names and source stack names, but not rules-text
+  # containment on the inherited carrier.

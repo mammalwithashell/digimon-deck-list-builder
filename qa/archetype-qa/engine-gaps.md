@@ -8,13 +8,13 @@ Last updated: 2026-05-04
 
 Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.md). This file tracks only open gaps and partial slices with remaining follow-up work.
 
-### Activate Another Card's When Digivolving Effect
+### Activate Another Card's When Digivolving Effect — PARTIALLY RESOLVED 2026-05-04
 - **Discovered in:** Jesmon (2026-03-17); Puppets/Nyabootmon assessment (2026-04-28)
 - **Card(s):** BT10-112 Jesmon GX, BT10-110 Seiken Meppa, BT22-042 Nyabootmon
 - **Effect text:** BT10-112 / BT10-110: "Activate 1 of that card's [When Digivolving] effects as an effect of this Digimon." BT22-042: "[All Turns] [Once Per Turn] When any of your other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects."
-- **What's missing:** No engine helper to enumerate a card's available [When Digivolving] effects and execute a player-selected one from another trigger. Nyabootmon needs this for its own top card, while Jesmon-style effects need it for another card/source.
-- **Suggested change:** Add a helper that enumerates [When Digivolving] effects on a specified source card/permanent, exposes a legal branch choice if multiple effects are available, and executes the selected effect using the correct source permanent/card attribution. The choice must flow through pending selection/action-mask machinery.
-- **Workaround:** BT10-112 and BT10-110 manually iterate `card.effect_list()` and present branch selection. BT22-042 has no authored Rust implementation yet.
+- **Status update:** The reusable Rust/DSL refire primitive now exists as `EffectContext::refire_effect_from_permanent(source, "when_digivolving", optional)` and YAML `refire_effect: { source: <binding>, timing: when_digivolving, optional: true }`. It enumerates refireable effects, preserves source identity, and exposes visible choices when needed.
+- **Remaining missing for Puppets:** BT22-040 / BT22-042 still cannot faithfully author the self-refire observer because `OnAnyDeletion` deleted-object context is not available for "your other Digimon" gating. Without that payload, `event_target_*` predicates can over-trigger on nonmatching deletions.
+- **Workaround:** Omit Puppet self-refire slices until deleted-permanent event context is available; do not approximate by firing on broad deletion observers.
 
 ### Event-Gated Delay Activation Windows [G-DELAY-EVENT-GATED]
 - **Discovered in:** Puppets/Nyabootmon assessment (2026-04-28)

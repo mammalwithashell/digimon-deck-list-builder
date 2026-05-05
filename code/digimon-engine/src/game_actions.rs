@@ -706,6 +706,14 @@ impl Game {
             {
                 return OptionPlayResult::Invalid;
             }
+            let has_active_body = if self.in_counter_window {
+                crate::action::mask::option_has_active_counter_effect(card, self, player_id)
+            } else {
+                crate::action::mask::option_has_active_main_effect(card, self, player_id)
+            };
+            if !has_active_body {
+                return OptionPlayResult::Invalid;
+            }
             if !crate::action::mask::option_use_requirement_or_color_available(
                 card, self, player_id,
             ) {

@@ -111,6 +111,26 @@ impl CardEffect for CounterOptionGainMemory {
     }
 }
 
+/// A Counter Option with no OptionMain body. It is still legal in the Counter
+/// window because its printed CounterEffect body is the effect being used.
+struct CounterOnlyOptionGainMemory {
+    counter_witness: Arc<Mutex<u32>>,
+}
+impl CardEffect for CounterOnlyOptionGainMemory {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let counter_w = self.counter_witness.clone();
+        vec![Effect::on_play(card)
+            .name("Counter-only body — gain 3 memory")
+            .counter()
+            .timing(EffectTiming::CounterEffect)
+            .process(move |ctx| {
+                *counter_w.lock().unwrap() += 1;
+                ctx.gain_memory(3);
+            })
+            .build()]
+    }
+}
+
 /// Field-activated Counter ability: a Digimon on the defender's battle area
 /// with `.counter()` + `.timing(CounterEffect)`. When the defender picks it
 /// during the Counter window, the body fires directly — no card play, no
@@ -335,6 +355,41 @@ fn counter_hand_option_resolves_through_play_option_pipeline() {
     assert_eq!(r.hand_size(1), hand_before - 1, "card left hand");
     assert_eq!(r.trash_size(1), trash_before + 1, "card in trash");
     // Counter body gained +3 memory (cost was zero).
+    assert_eq!(r.memory(), memory_before + 3);
+}
+
+#[test]
+fn counter_hand_option_without_option_main_still_resolves_counter_body() {
+    let counter_w = Arc::new(Mutex::new(0u32));
+
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("OPT-CTR-ONLY", 0, CardColor::Red))
+        .add_card(dgmn("ATK", 4, 3000))
+        .add_card(dgmn("BASE", 3, 5000))
+        .hand(1, &["OPT-CTR-ONLY"])
+        .memory(0)
+        .start();
+    r.register_effect(
+        "OPT-CTR-ONLY",
+        Arc::new(CounterOnlyOptionGainMemory {
+            counter_witness: counter_w.clone(),
+        }),
+    );
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let base = r.place_on_field(1, "BASE", Some(0));
+
+    let hand_before = r.hand_size(1);
+    let trash_before = r.trash_size(1);
+    let memory_before = r.memory();
+
+    r.attack_digimon(atk, base, false);
+    r.game
+        .resolve_selection(1, PLAY_HAND_START + 0)
+        .expect("counter-only hand Option resolves");
+
+    assert_eq!(*counter_w.lock().unwrap(), 1, "CounterEffect fired once");
+    assert_eq!(r.hand_size(1), hand_before - 1, "card left hand");
+    assert_eq!(r.trash_size(1), trash_before + 1, "card in trash");
     assert_eq!(r.memory(), memory_before + 3);
 }
 

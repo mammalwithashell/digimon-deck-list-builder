@@ -1,0 +1,54 @@
+card: P-105
+name: "Physical Training"
+kind: option
+color: [yellow]
+cost: 2
+
+effects:
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 2; add 1 yellow card to hand; place rest bottom; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 2
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            color_is: yellow
+          prompt: "Add 1 yellow card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - kind: delay
+    trigger: end_of_your_next_turn
+    summary: "[Main]<Delay> 1 of your Digimon may digivolve into a yellow Digimon in hand, cost -2"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            kind: digimon
+          prompt: "Choose 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: false
+          filter:
+            kind: digimon
+            color_is: yellow
+          prompt: "Choose a yellow Digimon card in your hand to digivolve into"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

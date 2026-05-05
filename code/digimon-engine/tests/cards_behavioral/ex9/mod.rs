@@ -1,6 +1,11 @@
 mod ex9_008;
-mod ex9_013;
 mod ex9_012;
+mod ex9_013;
 mod ex9_019;
 mod ex9_021;
+mod ex9_024;
+mod ex9_027;
+mod ex9_032;
+mod ex9_033;
 mod ex9_066;
+mod ex9_067;

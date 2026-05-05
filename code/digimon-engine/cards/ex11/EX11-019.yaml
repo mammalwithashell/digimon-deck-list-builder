@@ -1,0 +1,31 @@
+card: EX11-019
+name: Shoemon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Puppet, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  - when: on_deletion
+    summary: "You may play 1 Familiar Token"
+    process:
+      - select_effect_choice:
+          labels: ["Play Familiar Token", "Decline"]
+          bind_as: token_choice
+          prompt: "Play 1 Familiar Token?"
+      - if:
+          condition: { equals: [token_choice, 0] }
+          then:
+            - play_token:
+                controller: you
+                token_name: familiar
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier

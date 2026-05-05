@@ -1,0 +1,34 @@
+card: ST19-09
+name: Pandamon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 6
+dp: 7000
+traits: [Puppet]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: on_deletion
+    optional: true
+    summary: "You may play 1 level 3 Puppet Digimon from hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+              - trait_has: Puppet
+          prompt: "Play 1 level 3 Puppet Digimon from hand"
+      - play_from_hand_free:
+          of: you
+          hand_index: target

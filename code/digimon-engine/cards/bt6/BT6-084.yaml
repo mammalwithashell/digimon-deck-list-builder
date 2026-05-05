@@ -1,0 +1,27 @@
+card: BT6-084
+name: Sistermon Ciel
+kind: digimon
+level: 4
+color: [white]
+cost: 4
+dp: 5000
+traits: [Puppet]
+attribute: Data
+
+effects:
+  - kind: aura
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      any_of:
+        - name_contains: "Huckmon"
+        - trait_has: "Royal Knight"
+    dp_modifier: 2000
+    summary: "[All Turns] Your Huckmon/Royal Knight Digimon get +2000 DP"
+
+  - when: on_play
+    process:
+      - gain_memory: 1
+    summary: "[On Play] Gain 1 memory"

@@ -1,0 +1,21 @@
+card: ST19-01
+name: Kyaromon
+kind: digi_egg
+level: 2
+color: [yellow]
+cost: 0
+traits: [Lesser, LIBERATOR]
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking] [Once Per Turn] If you have another Digimon, Draw 1"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        other: true
+    process:
+      - draw: { of: you, count: 1 }

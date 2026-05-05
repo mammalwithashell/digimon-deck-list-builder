@@ -1,0 +1,65 @@
+card: EX11-023
+name: Kaguyamon
+kind: digimon
+level: 6
+color: [yellow, purple]
+cost: 12
+dp: 12000
+traits: [Puppet, LIBERATOR]
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: Puppet }
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  - kind: grant_keyword
+    keyword: Alliance
+
+  # <Scapegoat>
+  # Native Scapegoat exists in the engine, but DSL `grant_keyword` does not
+  # currently accept/lookup Scapegoat. Model the exact replacement shape
+  # directly: optional accept, choose another own Digimon, substitute it as
+  # the deletion subject, and suppress own-effect deletions.
+  - kind: replacement
+    timing: when_would_be_deleted
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    summary: "<Scapegoat>"
+    process:
+      - select_own_permanent:
+          bind_as: scapegoat_cost
+          filter:
+            all_of:
+              - other: true
+              - kind: digimon
+          prompt: "Delete 1 of your other Digimon to prevent this deletion"
+      - substitute_replacement:
+          subject: scapegoat_cost
+
+  - when: [when_digivolving, end_of_opponents_turn]
+    once_per_turn: true
+    summary: "Delete 1 opponent Digimon with the lowest level"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_matches_aggregate:
+                  selector: lowest_level
+                  of: opponent
+          prompt: "Delete 1 opponent Digimon with the lowest level"
+      - delete_permanent: { target: victim }
+
+  # [All Turns] [Once Per Turn] When other Digimon are deleted, you may play
+  # 1 level 4 or lower Puppet Digimon from trash without paying the cost.
+  # Omitted rather than approximated: current OnAnyDeletion YAML predicates
+  # cannot express "other Digimon" as deleted-object != this Kaguyamon. This is
+  # tracked by PUPPETS-G011.

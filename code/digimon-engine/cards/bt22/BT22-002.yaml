@@ -1,0 +1,23 @@
+card: BT22-002
+name: Kyaromon
+kind: digi_egg
+level: 2
+color: [blue]
+cost: 0
+traits: [Lesser, LIBERATOR]
+form: In-Training
+
+effects:
+  # BLOCKED: the inherited deletion observer is omitted rather than approximated.
+  #
+  # Printed text:
+  # [Your Turn] [Once Per Turn] When any of your Tokens or other [Puppet]
+  # trait Digimon are deleted, <Draw 1>.
+  #
+  # Required reusable capability:
+  # `on_any_deletion` observer fan-out must carry the deleted permanent/card in
+  # TriggerContext.event_permanent/event_card so `event_target_owner`,
+  # `event_target_kind`, and `event_target_trait_has` predicates evaluate the
+  # deleted object. Current OnAnyDeletion dispatch uses PlayerBattleArea and
+  # exposes the observing carrier as target, which would incorrectly draw for
+  # unrelated deletions and cannot faithfully enforce "Token or other Puppet".

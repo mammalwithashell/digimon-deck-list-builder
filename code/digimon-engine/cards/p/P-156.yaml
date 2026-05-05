@@ -1,0 +1,70 @@
+card: P-156
+name: "Future Potential!"
+kind: option
+color: [black]
+cost: 2
+
+# "While you have a Tamer, you can ignore this card's color requirements."
+# Native Option `use_requirement` participates in both the play action mask and
+# play_option_from_hand legality. This is narrower and more faithful than a
+# stale IgnoreColorRequirement flood_gate for this card.
+use_requirement:
+  any_field_permanent:
+    of: you
+    kind: tamer
+
+effects:
+  - when: main
+    condition:
+      any_permanent:
+        of: any
+        kind: tamer
+    summary: "[Main] Choose 1 Tamer; you may play 1 Digimon with the same color and play cost 3 or less from hand or trash"
+    process:
+      - select_any_permanent:
+          bind_as: chosen_tamer
+          filter:
+            kind: tamer
+          prompt: "Choose 1 Tamer"
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "Play from hand or trash?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: picked_hand
+                optional: true
+                filter:
+                  kind: digimon
+                  play_cost_lte: 3
+                  color_matches_binding: chosen_tamer
+                prompt: "You may play 1 Digimon with the same color as the chosen Tamer from your hand"
+            - play_from_hand_free: { of: you, hand_index: picked_hand }
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: picked_trash
+                optional: true
+                filter:
+                  kind: digimon
+                  play_cost_lte: 3
+                  color_matches_binding: chosen_tamer
+                prompt: "You may play 1 Digimon with the same color as the chosen Tamer from your trash"
+            - play_from_trash_free: { of: you, hand_index: picked_trash }
+
+  # Supported Security slice:
+  # "Then, add this card to your hand."
+  #
+  # Omitted from this clause:
+  # "You may play 1 Tamer card from your hand without paying the cost."
+  # PUPPETS-G017: current optional select_hand decline handling can skip
+  # mandatory tail steps, so the optional play sub-effect is not represented.
+  - when: on_security
+    summary: "[Security] Add this card to your hand"
+    process:
+      - add_this_option_to_hand: {}
