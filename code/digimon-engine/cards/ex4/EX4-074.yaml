@@ -1,0 +1,45 @@
+card: EX4-074
+name: "ShineGreymon: Ruin Mode"
+kind: digimon
+level: 7
+color: [purple, yellow]
+cost: 14
+dp: 15000
+traits: ["Light Dragon"]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: purple }
+    cost: 5
+  - kind: digivolve
+    from: { name_contains: "ShineGreymon" }
+    cost: 4
+
+# BLOCKED: the printed [When Digivolving] [On Deletion] mass DP reduction is
+# omitted rather than approximated:
+#
+# "Until the end of your opponent's next turn, all of your opponent's Digimon
+# get -5000DP."
+#
+# The DSL can scan all opponent Digimon with `for_each`, but modifier expiry
+# currently only supports `end_of_opponents_turn`, not the printed next-turn
+# duration. That would expire too early when this card is deleted during the
+# opponent's turn. Existing reusable blocker:
+# docs/RUST_ENGINE_GAPS.md "Condition-gated modifier entries + new Expiry
+# variants" (`Expiry::EndOfOpponentsNextTurn` / target-anchored next-turn
+# modifier expiry).
+
+# BLOCKED: the printed [End of Attack] chain is omitted rather than
+# approximated:
+#
+# "[End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and
+# <Recovery +1 (Deck)>. Then, if you have a Tamer in play, hatch 1 Digi-Egg
+# card to an empty space in your breeding area."
+#
+# The individual verbs exist for parts of the chain (`delete_permanent`,
+# `select_opponent_permanent`, `recover`, `hatch`), but this card needs a
+# PUPPETS-G031 fidelity pass for mandatory continuation when no opponent
+# target exists, deleting the resolving source while preserving the rest of the
+# chain, and gating the hatch tail on "you have a Tamer in play" without
+# exposing a no-op hatch branch.

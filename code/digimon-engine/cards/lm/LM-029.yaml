@@ -1,0 +1,54 @@
+card: LM-029
+name: "Yellow Scramble"
+kind: option
+color: [yellow]
+cost: 2
+
+# [Main] 1 of your yellow Digimon may digivolve into a yellow Digimon card in
+# the hand with the digivolution cost reduced by 3. Then, place this card in
+# the battle area.
+#
+# The digivolve choice is supported natively. The follow-up placement is tied
+# to Scramble's Delay clause; that clause is omitted until its body can be
+# expressed faithfully without raw_rust or placeholder steps.
+effects:
+  - when: main_from_hand
+    optional: true
+    summary: "[Main] You may have 1 yellow Digimon digivolve into a yellow Digimon in hand, cost -3"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+          prompt: "Choose 1 of your yellow Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+          prompt: "Choose a yellow Digimon card to digivolve into"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 3 }
+          ignore_requirements: false
+
+# Security Effect [Security] You may play 1 yellow Digimon card with 2000 DP
+# or less from your trash without paying the cost. Then, add this card to the
+# hand.
+#
+# The optional trash play is omitted rather than approximated because card-zone
+# DP predicates are not evaluated by the current select_trash predicate path,
+# and declining an optional select_trash cannot yet continue into the mandatory
+# "Then, add this card to hand" tail. The supported slice is the mandatory tail.
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Add this card to hand"
+    process:
+      - add_this_option_to_hand: {}

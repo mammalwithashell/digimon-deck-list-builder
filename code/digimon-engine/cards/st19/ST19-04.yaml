@@ -1,0 +1,37 @@
+card: ST19-04
+name: PawnChessmon
+kind: digimon
+level: 3
+color: [yellow, black]
+cost: 3
+dp: 2000
+traits: [Puppet]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 1
+
+effects:
+  - when: on_play
+    optional: true
+    summary: "By trashing a Puppet card from hand, Draw 2"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          trait_has: Puppet
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter: { trait_has: Puppet }
+          prompt: "Trash 1 Puppet card from hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - draw: { of: you, count: 2 }
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Reboot

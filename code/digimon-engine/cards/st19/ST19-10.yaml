@@ -1,0 +1,20 @@
+card: ST19-10
+name: ExTyrannomon
+kind: digimon
+level: 5
+color: [yellow, green]
+cost: 7
+dp: 7000
+traits: [Puppet]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: ArmorPurge
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier

@@ -1,0 +1,38 @@
+card: ST19-11
+name: Chaperomon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+traits: [Puppet, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "1 opponent Digimon gets -3000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get DP reduced"
+      - add_dp_modifier:
+          target: target
+          value: -3000
+          expiry: end_of_turn
+
+  # BLOCKED: the printed "If there are 3 or more Digimon, increase the DP
+  # reduction by -3000" branch is omitted rather than approximated.
+  #
+  # Required reusable capability:
+  # - Subjectless `if:` predicates must evaluate `count_gte` / `count_lte`
+  #   aggregates over battle-area permanents, or modifier formulas need a
+  #   threshold/clamp/add expression that can encode "extra -3000 at count >= 3".
+
+  # BLOCKED: inherited leave-prevention by deleting a Token or other Puppet is
+  # omitted rather than approximated. A face-up replacement with the same cost
+  # shape can be authored, but the inherited replacement does not currently
+  # install the cost prompt from a carrier stack in this card test.

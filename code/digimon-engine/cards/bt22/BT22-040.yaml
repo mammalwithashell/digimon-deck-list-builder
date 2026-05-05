@@ -1,0 +1,40 @@
+card: BT22-040
+name: Cendrillmon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 11
+dp: 11000
+traits: [Puppet, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter:
+      any_of:
+        - kind: token
+        - all_of:
+            - kind: digimon
+            - trait_has: Puppet
+
+  - when: [on_play, when_digivolving]
+    summary: "You may play 1 Familiar Token"
+    process:
+      - select_effect_choice:
+          labels: ["Play Familiar Token", "Decline"]
+          bind_as: token_choice
+          prompt: "Play 1 Familiar Token?"
+      - if:
+          condition: { equals: [token_choice, 0] }
+          then:
+            - play_token:
+                controller: you
+                token_name: familiar
+
+  # The printed [All Turns][Once Per Turn] re-fire effect is omitted rather
+  # than approximated. `refire_effect` exists, but OnAnyDeletion still needs
+  # deleted-permanent event context to faithfully enforce "your other Digimon".

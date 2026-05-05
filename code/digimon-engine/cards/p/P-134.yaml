@@ -1,0 +1,40 @@
+card: P-134
+name: Shoemon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Puppet, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "1 opponent Digimon gains Security Attack -1 until the end of their turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to gain Security Attack -1"
+      - add_modifier:
+          target: target
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][OPT] 1 opponent Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -2000 DP"
+      - add_dp_modifier:
+          target: target
+          value: -2000
+          expiry: end_of_turn

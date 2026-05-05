@@ -430,6 +430,48 @@ fn select_hand_color_matches_any_field_digimon_filters_by_live_board_colors() {
 }
 
 #[test]
+fn select_hand_color_matches_binding_filters_against_bound_tamer_colors() {
+    let mut yellow_tamer = make_test_card("YELLOW-TAMER", "Yellow Tamer");
+    yellow_tamer.colors = vec![CardColor::Yellow];
+    yellow_tamer.card_kind = CardKind::Tamer;
+    let mut yellow_digimon = make_test_card("YELLOW-DIGI", "Yellow Digimon");
+    yellow_digimon.colors = vec![CardColor::Yellow];
+    yellow_digimon.card_kind = CardKind::Digimon;
+    let mut red_digimon = make_test_card("RED-DIGI", "Red Digimon");
+    red_digimon.colors = vec![CardColor::Red];
+    red_digimon.card_kind = CardKind::Digimon;
+
+    let mut runner = DebugRunner::builder()
+        .add_card(yellow_tamer)
+        .add_card(yellow_digimon)
+        .add_card(red_digimon)
+        .hand(0, &["YELLOW-DIGI", "RED-DIGI"])
+        .build();
+    let source = runner.game.players[0].hand[0].handle();
+    let tamer = runner.place_on_field(0, "YELLOW-TAMER", Some(0));
+
+    let steps = vec![CompiledStep::SelectHand {
+        of: CompiledPlayerRef::You,
+        filter: CompiledPredicate {
+            kind: Some(CompiledCardKind::Digimon),
+            color_matches_binding: Some("chosen_tamer".to_string()),
+            ..Default::default()
+        },
+        bind_as: Some("pick".to_string()),
+        prompt: "Pick matching Digimon".to_string(),
+        prompt_key: None,
+        optional: false,
+    }];
+    let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("chosen_tamer", tamer);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    let pending = runner.game.pending_selection.as_ref().expect("selection");
+    assert_eq!(pending.valid_action_ids, vec![PLAY_HAND_START]);
+}
+
+#[test]
 fn color_matches_any_field_digimon_uses_dual_digimon_face_colors() {
     let mut dual = make_test_card("DUAL-FIELD", "Dual Field");
     dual.card_kind = CardKind::Dual;

@@ -1,0 +1,577 @@
+//! LM-054 Treadmill Training - Option, Cost 2, Yellow/Black.
+//!
+//! # Card text (cards.json)
+//!
+//! While you don't have [Treadmill Training] in the battle area, you can ignore
+//! this card's color requirements.
+//!
+//! [Main] Reveal the top 2 cards of your deck. Add 1 yellow or black card among
+//! them to the hand. Return the rest to the bottom of deck. Then, place this
+//! card in the battle area.
+//!
+//! [Main] <Delay> (By trashing this card after the placing turn, activate the
+//! effect below.) 1 of your Digimon may digivolve into a yellow or black Digimon
+//! card in your hand for its digivolution cost. When it would digivolve by this
+//! effect, reduce the cost by 2.
+//!
+//! Inherited: Security Effect [Security] Reveal the top 2 cards of your deck.
+//! Add 1 yellow or black card among them to the hand. Return the rest to the
+//! bottom of deck. Then, place this card in the battle area.
+//!
+//! # DCGO C# reference
+//! None found in local context.
+//!
+//! # Patterns this test covers
+//! - D3 conditional Option color-requirement bypass
+//! - A2 reveal 2, add 1 matching card, bottom the rest
+//! - Standard Delay body with optional own-Digimon selection
+//! - Effect-initiated digivolve with cost reduction
+//! - Inherited security mirror plus battle-area placement
+//!
+//! # Known gap
+//! Standard Delay main-phase activation action is still partial: the engine can
+//! park and automatically fire scheduled Delay effects, but it does not expose
+//! standard later-main-phase Delay activation through the action mask yet.
+
+use std::path::Path;
+
+use digimon_dsl::compiled::{
+    CompiledCardKind, CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledPredicate,
+    CompiledScope, CompiledStackPosition, CompiledStep, CompiledTiming,
+};
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+use digimon_engine::card_data::{CardData, EvoCost};
+use digimon_engine::combat::AttackResult;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
+use digimon_engine::permanent::OptionState;
+use digimon_engine::selection::{OptionPlayResult, SelectionKind, TriggerSource};
+
+fn lm_054_yaml() -> String {
+    std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("cards/lm/LM-054.yaml"))
+        .expect("LM-054 YAML must exist at cards/lm/LM-054.yaml")
+}
+
+fn lm_054_runner() -> DebugRunner {
+    let yaml = lm_054_yaml();
+    DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("LM-054 YAML must parse and compile")
+        .memory(10)
+        .start()
+}
+
+fn card(id: &str, kind: CardKind, colors: Vec<CardColor>) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = kind;
+    card.colors = colors;
+    card
+}
+
+fn digimon(id: &str, color: CardColor, level: u8) -> CardData {
+    let mut card = card(id, CardKind::Digimon, vec![color]);
+    card.level = Some(level);
+    card.dp = Some(3000);
+    card.play_cost = 4;
+    card
+}
+
+fn tamer(id: &str, color: CardColor) -> CardData {
+    card(id, CardKind::Tamer, vec![color])
+}
+
+fn option(id: &str, color: CardColor) -> CardData {
+    card(id, CardKind::Option, vec![color])
+}
+
+fn filler(id: &str) -> CardData {
+    make_test_card(id, id)
+}
+
+fn lv4_evo(id: &str, color: CardColor, base_color: CardColor, cost: u16) -> CardData {
+    let mut card = digimon(id, color, 4);
+    card.evo_costs = vec![EvoCost {
+        card_color: match base_color {
+            CardColor::Red => 0,
+            CardColor::Blue => 1,
+            CardColor::Yellow => 2,
+            CardColor::Green => 3,
+            CardColor::White => 4,
+            CardColor::Black => 5,
+            CardColor::Purple => 6,
+        },
+        level: 3,
+        memory_cost: cost,
+    }];
+    card
+}
+
+fn predicate_allows_color(predicate: &CompiledPredicate, color: CompiledColor) -> bool {
+    predicate.color_is == Some(color)
+        || predicate
+            .any_of
+            .iter()
+            .any(|child| predicate_allows_color(child, color))
+        || predicate
+            .all_of
+            .iter()
+            .any(|child| predicate_allows_color(child, color))
+}
+
+#[test]
+fn lm_054_yaml_parses_without_error() {
+    let _runner = lm_054_runner();
+}
+
+#[test]
+fn lm_054_is_yellow_black_option_cost_2() {
+    let runner = lm_054_runner();
+    let compiled = runner
+        .compiled_card("LM-054")
+        .expect("LM-054 must be registered");
+
+    assert_eq!(compiled.kind, CompiledCardKind::Option);
+    assert_eq!(
+        compiled.color,
+        vec![CompiledColor::Yellow, CompiledColor::Black]
+    );
+    assert_eq!(compiled.cost, Some(2));
+}
+
+#[test]
+fn lm_054_color_bypass_is_conditioned_on_no_treadmill_in_battle_area() {
+    let runner = lm_054_runner();
+    let compiled = runner
+        .compiled_card("LM-054")
+        .expect("LM-054 must be registered");
+
+    let use_requirement = compiled
+        .use_requirement
+        .as_ref()
+        .expect("no-Treadmill color bypass must compile as use_requirement");
+    let no_treadmill = use_requirement
+        .no_permanent
+        .as_ref()
+        .expect("color bypass must be disabled by your battle-area Treadmill");
+
+    assert_eq!(
+        no_treadmill.of,
+        digimon_dsl::compiled::CompiledPlayerRef::You
+    );
+    assert_eq!(
+        no_treadmill.predicate.card_number_is.as_deref(),
+        Some("LM-054"),
+        "bypass must check for the same named card in your battle area"
+    );
+}
+
+#[test]
+fn lm_054_action_mask_allows_color_bypass_only_without_battle_area_copy() {
+    let yaml = lm_054_yaml();
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("LM-054 YAML parses")
+        .add_card(tamer("RED-TAMER", CardColor::Red))
+        .add_card(filler("FILL"))
+        .hand(0, &["LM-054"])
+        .deck(0, &["FILL"; 4])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "RED-TAMER", Some(0));
+    runner.game.enter_main_phase();
+
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        1.0,
+        "LM-054 should be usable despite no yellow/black permanent when no LM-054 is in battle area"
+    );
+
+    runner.place_on_field(0, "LM-054", Some(0));
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PLAY_HAND_START as usize],
+        0.0,
+        "an existing battle-area LM-054 must disable the color-requirement bypass"
+    );
+}
+
+#[test]
+fn lm_054_has_main_delay_and_inherited_security_clauses() {
+    let runner = lm_054_runner();
+    let compiled = runner
+        .compiled_card("LM-054")
+        .expect("LM-054 must be registered");
+
+    assert_eq!(
+        compiled.effects.len(),
+        3,
+        "LM-054 has Main, Delay, and inherited Security effects"
+    );
+
+    match &compiled.effects[0] {
+        CompiledClause::Triggered(triggered) => {
+            assert!(triggered.when.contains(&CompiledTiming::MainFromHand));
+            assert!(
+                !triggered.optional,
+                "the reveal/add Main effect is mandatory"
+            );
+        }
+        other => panic!("clause 0 must be main_from_hand; got {other:?}"),
+    }
+
+    match &compiled.effects[1] {
+        CompiledClause::Declarative(CompiledDeclarativeClause::Delay {
+            trigger, process, ..
+        }) => {
+            assert_eq!(
+                *trigger,
+                CompiledTiming::EndOfYourNextTurn,
+                "scheduled Delay is the current PARTIAL workaround for standard main-phase Delay"
+            );
+            assert!(
+                process
+                    .iter()
+                    .any(|step| matches!(step, CompiledStep::EffectInitiatedDigivolve { .. })),
+                "Delay body must perform effect-initiated digivolution"
+            );
+        }
+        other => panic!("clause 1 must be a Delay declarative; got {other:?}"),
+    }
+
+    match &compiled.effects[2] {
+        CompiledClause::Triggered(triggered) => {
+            assert_eq!(triggered.scope, CompiledScope::Inherited);
+            assert!(triggered.when.contains(&CompiledTiming::OnSecurity));
+            assert!(triggered
+                .process
+                .iter()
+                .any(|step| matches!(step, CompiledStep::RevealTopDeck { count: 2, .. })));
+            assert!(triggered
+                .process
+                .iter()
+                .any(|step| matches!(step, CompiledStep::SelectReveal { .. })));
+            assert!(triggered.process.iter().any(|step| matches!(
+                step,
+                CompiledStep::PlaceRemainderOnDeck {
+                    position: CompiledStackPosition::Bottom,
+                    ..
+                }
+            )));
+            assert!(triggered
+                .process
+                .iter()
+                .any(|step| matches!(step, CompiledStep::PlaceSelfAsDelayOption)));
+        }
+        other => panic!("clause 2 must be inherited on_security; got {other:?}"),
+    }
+}
+
+#[test]
+fn lm_054_main_reveals_top_2_and_selects_yellow_or_black_card() {
+    let runner = lm_054_runner();
+    let compiled = runner
+        .compiled_card("LM-054")
+        .expect("LM-054 must be registered");
+    let main = match &compiled.effects[0] {
+        CompiledClause::Triggered(triggered) => triggered,
+        other => panic!("clause 0 must be triggered; got {other:?}"),
+    };
+
+    assert!(main
+        .process
+        .iter()
+        .any(|step| matches!(step, CompiledStep::RevealTopDeck { count: 2, .. })));
+
+    let select_filter = main
+        .process
+        .iter()
+        .find_map(|step| match step {
+            CompiledStep::SelectReveal {
+                filter, optional, ..
+            } => {
+                assert!(
+                    !*optional,
+                    "PASS must not be legal when a yellow/black revealed card exists"
+                );
+                Some(filter)
+            }
+            _ => None,
+        })
+        .expect("Main must select from revealed cards");
+
+    assert_eq!(
+        select_filter.kind, None,
+        "LM-054 adds a yellow or black card, not only a Digimon card"
+    );
+    assert!(predicate_allows_color(select_filter, CompiledColor::Yellow));
+    assert!(predicate_allows_color(select_filter, CompiledColor::Black));
+    assert!(main
+        .process
+        .iter()
+        .any(|step| matches!(step, CompiledStep::AddToHandFromReveal { .. })));
+    assert!(main.process.iter().any(|step| matches!(
+        step,
+        CompiledStep::PlaceRemainderOnDeck {
+            position: CompiledStackPosition::Bottom,
+            ..
+        }
+    )));
+}
+
+#[test]
+fn lm_054_main_selection_filters_to_yellow_or_black_and_pass_is_not_legal() {
+    let yaml = lm_054_yaml();
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("LM-054 YAML parses")
+        .add_card(option("YELLOW-OPT", CardColor::Yellow))
+        .add_card(tamer("BLACK-TAMER", CardColor::Black))
+        .add_card(digimon("RED-DIGI", CardColor::Red, 3))
+        .add_card(filler("FILL"))
+        .hand(0, &["LM-054"])
+        .deck(0, &["FILL", "FILL", "RED-DIGI", "YELLOW-OPT"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.game.enter_main_phase();
+
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Reveal));
+    let reveal = runner.pending_selection_view().unwrap();
+    assert_eq!(
+        reveal.valid_action_ids.len(),
+        1,
+        "only the yellow card among the top 2 should be selectable"
+    );
+    assert!(
+        !reveal.is_optional,
+        "PASS/decline must not be legal when an eligible card is revealed"
+    );
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PASS as usize],
+        0.0,
+        "action mask must not expose PASS for the mandatory reveal pick"
+    );
+
+    runner
+        .execute_action(0, reveal.valid_action_ids[0])
+        .expect("yellow reveal choice resolves");
+    let _ = runner.auto_resolve();
+
+    assert!(runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .any(|card| card.card_id(&runner.game.card_data) == "YELLOW-OPT"));
+    assert!(!runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .any(|card| card.card_id(&runner.game.card_data) == "RED-DIGI"));
+}
+
+#[test]
+fn lm_054_playing_main_places_it_as_delayed_option() {
+    let yaml = lm_054_yaml();
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("LM-054 YAML parses")
+        .add_card(option("YELLOW-OPT", CardColor::Yellow))
+        .add_card(filler("FILL"))
+        .hand(0, &["LM-054"])
+        .deck(0, &["FILL", "YELLOW-OPT"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.game.enter_main_phase();
+
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Trashed
+    );
+    runner
+        .auto_resolve()
+        .expect("resolve LM-054 placement as a delayed Option");
+
+    assert!(runner.game.player(0).battle_area.iter().any(|permanent| {
+        permanent.top_card().card_id(&runner.game.card_data) == "LM-054"
+            && matches!(
+                permanent.option_state,
+                OptionState::Delayed {
+                    trigger: DelayTrigger::EndOfYourNextTurn,
+                    ..
+                }
+            )
+    }));
+}
+
+#[test]
+fn lm_054_security_reveals_adds_matching_card_and_places_self_as_delay_option() {
+    let yaml = lm_054_yaml();
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("LM-054 YAML parses")
+        .add_card(digimon("ATTACKER", CardColor::Yellow, 3))
+        .add_card(option("YELLOW-OPT", CardColor::Yellow))
+        .add_card(digimon("RED-DIGI", CardColor::Red, 3))
+        .add_card(filler("FILL"))
+        .security(1, &["LM-054"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL", "RED-DIGI", "YELLOW-OPT"])
+        .memory(0)
+        .start();
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+
+    let result = runner.attack_player(attacker, 1, false);
+    assert_eq!(
+        result,
+        AttackResult::InProgress,
+        "security combat pauses while the mandatory reveal choice is pending"
+    );
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Reveal));
+    let reveal = runner
+        .pending_selection_view()
+        .expect("security reveal selection should be pending");
+    assert_eq!(
+        reveal.valid_action_ids.len(),
+        1,
+        "only the yellow card among the revealed pair should be selectable"
+    );
+    runner
+        .execute_action(reveal.selecting_player, reveal.valid_action_ids[0])
+        .expect("choose the yellow security reveal card");
+    runner
+        .auto_resolve()
+        .expect("resolve bottom placement and security option placement");
+
+    assert!(runner
+        .game
+        .player(1)
+        .hand
+        .iter()
+        .any(|card| card.card_id(&runner.game.card_data) == "YELLOW-OPT"));
+    assert_eq!(runner.security_count(1), 0, "LM-054 should leave security");
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "LM-054 should be placed in battle area instead of trashed"
+    );
+    let placed = runner
+        .game
+        .player(1)
+        .battle_area
+        .iter()
+        .find(|permanent| permanent.top_card().card_id(&runner.game.card_data) == "LM-054")
+        .expect("LM-054 should be placed as a battle-area delayed Option");
+    assert!(matches!(
+        placed.option_state,
+        OptionState::Delayed {
+            trigger: DelayTrigger::EndOfYourNextTurn,
+            ..
+        }
+    ));
+}
+
+#[test]
+fn lm_054_delay_body_selects_target_then_yellow_or_black_evolution_card() {
+    let yaml = lm_054_yaml();
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("LM-054 YAML parses")
+        .add_card(digimon("BASE", CardColor::Yellow, 3))
+        .add_card(lv4_evo(
+            "YELLOW-EVO",
+            CardColor::Yellow,
+            CardColor::Yellow,
+            3,
+        ))
+        .add_card(lv4_evo("RED-EVO", CardColor::Red, CardColor::Yellow, 3))
+        .hand(0, &["YELLOW-EVO", "RED-EVO"])
+        .memory(5)
+        .start();
+    let delay_perm = runner.place_on_field(0, "LM-054", Some(0));
+    runner.place_on_field(0, "BASE", Some(0));
+
+    runner.game.enqueue_triggered(
+        EffectTiming::DelayEffect,
+        TriggerSource::Permanent(delay_perm),
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
+    let target_pick = runner.pending_selection_view().unwrap();
+    assert!(
+        target_pick.is_optional,
+        "Delay digivolve is optional at the target selection"
+    );
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PASS as usize],
+        1.0,
+        "optional Delay target selection must expose PASS"
+    );
+    assert_eq!(
+        target_pick.valid_action_ids.len(),
+        1,
+        "the Option permanent itself is not a Digimon target"
+    );
+
+    runner
+        .execute_action(0, target_pick.valid_action_ids[0])
+        .expect("target selection resolves");
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    let evo_pick = runner.pending_selection_view().unwrap();
+    assert!(
+        !evo_pick.is_optional,
+        "after choosing a target, choosing a legal evolution card is mandatory"
+    );
+    assert_eq!(
+        evo_pick.valid_action_ids.len(),
+        1,
+        "only the yellow evolution card should be selectable"
+    );
+
+    runner
+        .execute_action(0, evo_pick.valid_action_ids[0])
+        .expect("evolution selection resolves");
+    runner.game.drain_effect_queue();
+
+    let base = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|permanent| permanent.is_digimon(&runner.game.card_data))
+        .expect("base Digimon remains in battle area");
+    assert_eq!(base.stack_size(), 2);
+    assert_eq!(
+        base.top_card().card_id(&runner.game.card_data),
+        "YELLOW-EVO"
+    );
+    assert_eq!(
+        runner.memory(),
+        4,
+        "printed evo cost 3 reduced by 2 should pay only 1 memory"
+    );
+}
+
+#[test]
+#[ignore = "pending: Standard Delay main-phase activation action — docs/RUST_ENGINE_GAPS.md"]
+fn lm_054_delay_should_be_main_phase_action_after_placing_turn() {
+    // Intended behavior after the gap closes:
+    // 1. Play LM-054 and let it remain in the battle area.
+    // 2. On the same placing turn, no Delay activation action is legal.
+    // 3. On a later own main phase, the action mask exposes a field/main action
+    //    for LM-054's <Delay> activation.
+    // 4. Choosing that action trashes LM-054 as cost and then installs the
+    //    optional own-Digimon digivolve selection.
+}
+
+#[test]
+#[ignore = "pending: Standard Delay main-phase activation action — docs/RUST_ENGINE_GAPS.md"]
+fn lm_054_declining_delay_should_leave_option_in_battle_area() {
+    // Intended behavior after the gap closes:
+    // A player can decline to activate LM-054's <Delay> in a legal main phase,
+    // preserving the battle-area Option for a future legal activation.
+}

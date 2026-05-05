@@ -179,6 +179,8 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::EndOfAttack => CompiledTiming::EndOfAttack,
         S::EndOfBattle => CompiledTiming::EndOfBattle,
         S::OnAttack => CompiledTiming::OnAttack,
+        S::OnAllyAttack => CompiledTiming::OnAllyAttack,
+        S::OnOpponentAttack => CompiledTiming::OnOpponentAttack,
         S::OnDeletion => CompiledTiming::OnDeletion,
         S::OnAnyDeletion => CompiledTiming::OnAnyDeletion,
         S::OnEnterFieldAnyone => CompiledTiming::OnEnterFieldAnyone,
@@ -428,6 +430,7 @@ fn compile_predicate(
         color_matches_any_field_digimon: p
             .color_matches_any_field_digimon
             .map(|s| compile_player_ref(s.player())),
+        color_matches_binding: p.color_matches_binding.clone(),
         trait_has: p.trait_has.clone(),
         form_is: p.form_is.clone(),
         attribute_is: p.attribute_is.clone(),

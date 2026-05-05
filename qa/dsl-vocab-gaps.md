@@ -785,3 +785,137 @@ Format per entry:
 - Also blocks: any future "while your Tamers have N or more total colours" or "if you have N or more distinct-colour Tamers" gate. Sibling to `G-DSL-DISTINCT-TAMER-COLORS-FORMULA` (BT21-102) — the formula-aggregate form lands the underlying primitive; this gap closes the BoolPredicate wrapping. Both should land together once the formula primitive is generalised to also expose its result as a comparable scalar.
 - Gap kind: dsl. Engine has the count primitive via `eval_aggregate`.
 - First reported: 2026-05-03 (ST20-10 Agumon, batch-implement-cards-rust-dsl). Sibling of `G-DSL-DISTINCT-TAMER-COLORS-FORMULA` (BT21-102).
+
+## Puppets Resolver Residual DSL/Hybrid Gaps (2026-05-04)
+
+## BT13-101 / P-136 — event predicates with suspend-this-Tamer cost  [PUPPETS-G023]
+
+- Effect text: `BT13-101`: "[All Turns] When you play a 2-color black/yellow Digimon, by suspending this Tamer, <Draw 1> and gain 1 memory." `P-136`: "[Your Turn] [Once Per Turn] When one of your Digimon digivolves into a Digimon with the [Puppet] trait, by suspending this Tamer, gain 1 memory."
+- Missing DSL verb / step kind / predicate: event-card predicates for exact color sets and color count, event-target owner/trait predicates for digivolve observers where needed, plus declarative source-bound triggered activation costs.
+- Companion engine state: the generic triggered activation-cost hook is tracked in `docs/RUST_ENGINE_GAPS.md`; DSL must be able to bind it to "suspend this Tamer" and preflight availability before exposing a prompt.
+- Suggested DSL syntax:
+  ```yaml
+  condition:
+    all:
+      - event_card_kind: digimon
+      - event_card_color_only: [black, yellow]
+      - event_card_color_count: 2
+      # or, for P-136-style digivolve observers:
+      - event_target_owner: you
+      - event_card_trait_has: Puppet
+  activation_cost:
+    suspend_this_tamer: {}
+  ```
+- Gap kind: hybrid. Event-card color predicates are DSL/evaluator vocabulary; source-bound triggered cost preflight needs the engine cost surface.
+- Workaround: None faithful. Name, trait, or broad color-includes filters would admit illegal cards for `BT13-101`, and auto-suspending the Tamer would hide a player-visible cost for both cards.
+- First reported: 2026-05-04 (Puppets resolver Batch 8, BT13-101). Updated 2026-05-04 by Batch 11 for `P-136`.
+
+---
+
+## BT16-055 — narrow protection and inherited rules-text predicate  [PUPPETS-G024/PUPPETS-G025]
+
+- Effect text: "While you have 3 or more security cards, this Digimon isn't affected by your opponent's DP reduction effects and can't be de-digivolved by their effects." / "[Your Turn] While this Digimon has [Pulsemon] in its text, it gets +1000 DP."
+- Missing DSL verb / step kind / predicate: category-scoped protection modifiers for opponent DP reduction and opponent De-Digivolve; inherited predicate over the carrier stack's printed rules text.
+- Companion engine state: broad `CannotBeAffected` is too strong for the protection branch, and current inherited predicates do not inspect rules text on the carrier.
+- Suggested DSL syntax:
+  ```yaml
+  protection:
+    from: opponent
+    categories: [dp_reduction, de_digivolve]
+    while: { security_count_gte: 3 }
+
+  active_when:
+    carrier_text_contains: "Pulsemon"
+  ```
+- Gap kind: hybrid for narrow protection, DSL for rules-text contains predicate.
+- Workaround: None faithful. Broad immunity or name predicates would over- or under-match printed behavior.
+- First reported: 2026-05-04 (Puppets resolver Batch 8, BT16-055)
+
+---
+
+## BT20-084 — trash-resident effect digivolve and stacked-card-to-security  [PUPPETS-G026/PUPPETS-G027]
+
+- Effect text: "[Trash] [All Turns] When any of your Digimon are played, 1 of your [Sistermon Ciel]s may digivolve into this card without paying the cost." / "[End of All Turns] Place this Digimon's top stacked card as the top security card."
+- Missing DSL verb / step kind / predicate: trash-resident global observer dispatch; effect-initiated digivolve from a trash source card; curated top-stacked-card extraction and security-top placement.
+- Companion engine state: existing effect-digivolve paths are not source-parametric for trash cards, and the reusable stack/security gap currently covers selected digivolution sources, not active top-card extraction with legal permanent cleanup.
+- Suggested DSL syntax:
+  ```yaml
+  - scope: trash
+    when: on_ally_played
+    optional: true
+    process:
+      - select_own_permanent:
+          bind_as: ciel
+          filter: { name_is: "Sistermon Ciel" }
+      - effect_digivolve_from_trash:
+          target: ciel
+          card: self
+          cost: 0
+
+  - place_top_stacked_card_as_security_top: { of: you }
+  ```
+- Gap kind: hybrid. The observer/source move needs engine support; DSL needs vocabulary for the new source and stack movement operations.
+- Workaround: None faithful. Hand-based digivolve or raw stack mutation would move the wrong card or bypass action-mask and cleanup contracts.
+- First reported: 2026-05-04 (Puppets resolver Batch 8, BT20-084)
+
+---
+
+## BT22-088 — return-this-Tamer cost before branch free-play  [PUPPETS-G028]
+
+- Effect text: "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] with a different card number in your hand without paying the cost, or play 1 [Shoemon] from your hand or trash without paying the cost."
+- Missing DSL verb / step kind / predicate: optional triggered activation cost that moves the source permanent to the bottom of deck, then an in-effect branch selector with origin-preserving hand/trash play consumers.
+- Companion engine state: the generic triggered activation-cost hook is tracked in `docs/RUST_ENGINE_GAPS.md`; this card also needs a source-zone move as the cost and a follow-on branch selector.
+- Suggested DSL syntax:
+  ```yaml
+  activation_cost:
+    return_this_tamer_to_bottom_deck: {}
+  choose_one:
+    - play_from_hand_free:
+        filter:
+          all_of:
+            - name_is: "Arisa Kinosaki"
+            - card_id_not: "BT22-088"
+    - play_from_hand_or_trash_free:
+        filter: { name_is: "Shoemon" }
+  ```
+- Gap kind: hybrid. The cost/preflight is engine-facing; branch and origin-preserving selection need DSL vocabulary.
+- Workaround: None faithful. Auto-returning the Tamer or auto-selecting Shoemon/Arisa would hide printed player-visible choices.
+- First reported: 2026-05-04 (Puppets resolver Batch 8, BT22-088)
+
+---
+
+## BT23-077 — self-scoped OnSuspend event predicate  [PUPPETS-G029]
+
+- Effect text: "[All Turns] When this Digimon suspends, <De-Digivolve 1> 1 of your opponent's Digimon."
+- Missing DSL verb / step kind / predicate: a predicate over `OnSuspend` event context that proves the suspending event permanent is the same permanent as the effect source.
+- Companion engine state: `OnSuspend` dispatch exists and event context is available for observed suspend events, but YAML cannot currently express `event_permanent_is_source`.
+- Suggested DSL syntax:
+  ```yaml
+  - when: on_suspend
+    condition: { event_permanent_is_source: true }
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+      - de_digivolve: { target: target, count: 1 }
+  ```
+- Gap kind: dsl predicate/evaluator gap.
+- Workaround: None faithful. A broad `on_suspend` trigger would over-fire when any other permanent suspends.
+- First reported: 2026-05-04 (Puppets resolver Batch 9, BT23-077)
+
+---
+
+## BT5-106 — effect-play On Play suppression provenance  [PUPPETS-G030]
+
+- Effect text: "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
+- Missing DSL verb / step kind / predicate: a play-from-trash/free-play consumer that carries `suppress_on_play: true` provenance for the played Digimon only.
+- Companion engine state: ordinary effect play from trash can enter the Digimon and normally fire On Play; this card needs the same player-visible trash selection but must skip the played permanent's On Play enqueue for that play event.
+- Suggested DSL syntax:
+  ```yaml
+  - play_from_trash_free:
+      target: chosen
+      suppress_on_play: true
+  ```
+- Gap kind: hybrid. Engine play provenance needs an On Play suppression flag, and DSL needs vocabulary to request it.
+- Workaround: None faithful. Omitting the play hides a legal security choice; ordinary play-from-trash would illegally fire the played Digimon's On Play effects.
+- First reported: 2026-05-04 (Puppets resolver Batch 9, BT5-106)

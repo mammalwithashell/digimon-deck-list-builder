@@ -207,8 +207,8 @@ pub fn eval_predicate_with_bindings(
     }
 
     match subject {
-        PredicateSubject::Card(card) => eval_card_fields(pred, rctx, card, false),
-        PredicateSubject::RevealedCard(card) => eval_card_fields(pred, rctx, card, true),
+        PredicateSubject::Card(card) => eval_card_fields(pred, rctx, card, false, bindings),
+        PredicateSubject::RevealedCard(card) => eval_card_fields(pred, rctx, card, true, bindings),
         PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h, bindings),
         PredicateSubject::BreedingPermanent(player) => {
             eval_breeding_permanent_fields(pred, rctx, player, bindings)
@@ -542,6 +542,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.color_is.is_none()
         && pred.color_only.is_none()
         && pred.color_matches_any_field_digimon.is_none()
+        && pred.color_matches_binding.is_none()
         && pred.trait_has.is_none()
         && pred.form_is.is_none()
         && pred.attribute_is.is_none()
@@ -783,6 +784,7 @@ fn eval_card_fields(
     rctx: &EffectReadContext<'_>,
     card: CardHandle,
     reveal_overlay_visible: bool,
+    bindings: Option<&Bindings>,
 ) -> bool {
     let data = match rctx.game.card_data_for_handle(card) {
         Some(d) => d,
@@ -837,6 +839,11 @@ fn eval_card_fields(
     }
     if let Some(of) = pred.color_matches_any_field_digimon {
         if !card_shares_color_with_any_field_digimon(rctx, of, &data.colors) {
+            return false;
+        }
+    }
+    if let Some(ref binding) = pred.color_matches_binding {
+        if !card_shares_color_with_bound_permanent(rctx, bindings, binding, data) {
             return false;
         }
     }
@@ -923,6 +930,35 @@ fn card_shares_color_with_any_field_digimon(
     false
 }
 
+fn card_shares_color_with_bound_permanent(
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+    binding: &str,
+    data: &crate::card_data::CardData,
+) -> bool {
+    let Some(bound) = bindings.and_then(|b| b.get_permanent(binding)) else {
+        return false;
+    };
+    let Some(permanent) = permanent_for_handle(rctx, bound) else {
+        return false;
+    };
+    let bound_colors = permanent.top_card().colors(rctx.card_data());
+    if bound_colors.is_empty() {
+        return false;
+    }
+
+    let candidate_colors = if kind_matches_card_search(CompiledCardKind::Digimon, data) {
+        data.digimon_colors()
+    } else if kind_matches_card_search(CompiledCardKind::Option, data) {
+        data.option_colors()
+    } else {
+        data.colors.as_slice()
+    };
+    candidate_colors
+        .iter()
+        .any(|candidate| bound_colors.iter().any(|bound| candidate == bound))
+}
+
 fn eval_permanent_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
@@ -952,7 +988,7 @@ fn eval_permanent_fields(
     };
     // Delegate the shared card fields to the card-handle path using the top card.
     let top_handle = perm.top_card().handle();
-    if !eval_card_fields(pred, rctx, top_handle, false) {
+    if !eval_card_fields(pred, rctx, top_handle, false, bindings) {
         return false;
     }
     if let Some(want) = pred.kind {
@@ -1119,7 +1155,7 @@ fn eval_breeding_permanent_fields(
 
     let mut card_pred = pred.clone();
     card_pred.kind = None;
-    if !eval_card_fields(&card_pred, rctx, top_handle, false) {
+    if !eval_card_fields(&card_pred, rctx, top_handle, false, bindings) {
         return false;
     }
 

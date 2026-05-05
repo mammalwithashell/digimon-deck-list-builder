@@ -1,0 +1,61 @@
+card: EX9-027
+name: Kokeshimon
+kind: digimon
+level: 4
+color: [yellow, purple]
+cost: 4
+dp: 4000
+traits: [Puppet, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - trait_has: Puppet
+    cost: 2
+
+effects:
+  - when: [when_digivolving, on_deletion]
+    summary: "By trashing 1 card in hand, 1 opponent Digimon gets -4000 DP for the turn"
+    condition:
+      all_of:
+        - count_gte:
+            filter: { of: you, zone: [hand] }
+            n: 1
+        - count_gte:
+            filter: { of: opponent, zone: [battle_area], kind: digimon }
+            n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -4000 DP"
+      - add_dp_modifier:
+          target: target
+          value: -4000
+          expiry: end_of_turn
+
+  - scope: inherited
+    when: on_opponent_attack
+    once_per_turn: true
+    active_when: { opponents_turn: true }
+    summary: "Opponent's Turn OPT: by deleting this Digimon, end the attack"
+    process:
+      - select_effect_choice:
+          labels: ["Delete this Digimon and end the attack", "Decline"]
+          bind_as: cancel_choice
+          prompt: "Delete this Digimon to end the attack?"
+      - if:
+          condition: { equals: [cancel_choice, 0] }
+          then:
+            - delete_permanent: { target: this }
+            - end_attack: true

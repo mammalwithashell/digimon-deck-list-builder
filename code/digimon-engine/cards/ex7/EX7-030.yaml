@@ -1,0 +1,52 @@
+card: EX7-030
+name: Cendrillmon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 12
+dp: 12000
+traits: [Puppet, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter:
+      any_of:
+        - kind: token
+        - all_of:
+            - kind: digimon
+            - trait_has: Puppet
+
+  - when: [start_of_your_main_phase, when_digivolving]
+    summary: "You may play 1 Familiar Token"
+    process:
+      - select_effect_choice:
+          labels: ["Play Familiar Token", "Decline"]
+          bind_as: token_choice
+          prompt: "Play 1 Familiar Token?"
+      - if:
+          condition: { equals: [token_choice, 0] }
+          then:
+            - play_token:
+                controller: you
+                token_name: familiar
+
+  - when: when_attacking
+    summary: "1 opponent Digimon gets -6000 DP for the turn"
+    condition:
+      count_gte:
+        filter: { of: opponent, zone: [battle_area], kind: digimon }
+        n: 1
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -6000 DP"
+      - add_dp_modifier:
+          target: target
+          value: -6000
+          expiry: end_of_turn

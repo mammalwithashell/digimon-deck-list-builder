@@ -1,0 +1,266 @@
+//! EX6-011 RagnaLoardmon.
+//!
+//! Printed evidence from data/cards.json:
+//! - Digimon, red/black, Lv.7, play cost 9, DP 15000.
+//! - Traits: Unique / Legend-Arms; attribute Virus.
+//! - Digivolve: red Lv.6 cost 5.
+//! - DNA Digivolve: red Lv.6 + black Lv.6 cost 0.
+//! - [Hand][Counter] Blast DNA Digivolve ([Durandamon] + [BryweLudramon]).
+//! - <Raid>, <Reboot>.
+//! - [On Play][When Digivolving] trash opponent top security; this Digimon is
+//!   unaffected by opponent effects until end of their turn. Then, if DNA
+//!   digivolving, De-Digivolve 1 all opponent Digimon and delete 1 of their
+//!   Digimon.
+//! - Inherited: Ace Overflow <-5>.
+
+use digimon_dsl::compiled::{
+    CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
+    CompiledDeclarativeClause,
+};
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::DNA_DIGIVOLVE_START;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{
+    CardColor, EffectSourceKind, EffectTiming, GamePhase, Keyword, ModifierType,
+};
+use digimon_engine::selection::{SelectionKind, TriggerSource};
+
+const YAML: &str = include_str!("../../../cards/ex6/EX6-011.yaml");
+
+fn compiled_ex6_011() -> digimon_dsl::compiled::CompiledCard {
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("EX6-011 YAML parses");
+    let registry =
+        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("EX6-011 YAML compiles");
+    registry
+        .lookup("EX6-011")
+        .expect("EX6-011 in registry")
+        .clone()
+}
+
+fn colored_lv6(id: &str, color: CardColor) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.level = Some(6);
+    card.dp = Some(11000);
+    card.colors = vec![color];
+    card
+}
+
+fn leveled_digimon(id: &str, level: u8) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.level = Some(level);
+    card.dp = Some(5000 + i32::from(level) * 1000);
+    card
+}
+
+fn runner() -> DebugRunner {
+    DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX6-011 YAML loads")
+        .add_card(make_test_card("SEC-BOTTOM", "Security Bottom"))
+        .add_card(make_test_card("SEC-TOP", "Security Top"))
+        .security(1, &["SEC-BOTTOM", "SEC-TOP"])
+        .memory(10)
+        .build()
+}
+
+fn fire_on_play(runner: &mut DebugRunner, source: digimon_engine::permanent::PermanentHandle) {
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(source));
+    runner.game.drain_effect_queue();
+}
+
+#[test]
+fn ex6_011_metadata_matches_printed_card() {
+    let card = compiled_ex6_011();
+
+    assert_eq!(card.card, "EX6-011");
+    assert_eq!(card.name, "RagnaLoardmon");
+    assert_eq!(card.kind, CompiledCardKind::Digimon);
+    assert_eq!(card.level, Some(7));
+    assert_eq!(card.cost, Some(9));
+    assert_eq!(card.dp, Some(15000));
+    assert_eq!(card.color, vec![CompiledColor::Red, CompiledColor::Black]);
+    assert!(card.traits.contains(&"Unique".to_string()));
+    assert!(card.traits.contains(&"Legend-Arms".to_string()));
+    assert_eq!(card.attribute.as_deref(), Some("Virus"));
+    assert_eq!(card.ace_overflow, Some(-5));
+}
+
+#[test]
+fn ex6_011_has_standard_red_lv6_and_dna_red_black_lv6_routes() {
+    let card = compiled_ex6_011();
+
+    let standard = card.alt_paths.iter().any(|path| {
+        path.kind == CompiledAltPathKind::Digivolve
+            && matches!(path.cost, Some(CompiledCost::Literal(5)))
+            && path.from.as_ref().is_some_and(|from| {
+                from.level_eq == Some(6) && from.color_is == Some(CompiledColor::Red)
+            })
+    });
+    assert!(standard, "missing red Lv.6 cost-5 digivolve route");
+
+    let dna = card.alt_paths.iter().any(|path| {
+        path.kind == CompiledAltPathKind::DnaDigivolve
+            && matches!(path.cost, Some(CompiledCost::Literal(0)))
+            && path.materials.len() == 2
+            && path.materials[0].filter.level_eq == Some(6)
+            && path.materials[0].filter.color_is == Some(CompiledColor::Red)
+            && path.materials[1].filter.level_eq == Some(6)
+            && path.materials[1].filter.color_is == Some(CompiledColor::Black)
+    });
+    assert!(dna, "missing red Lv.6 + black Lv.6 cost-0 DNA route");
+}
+
+#[test]
+fn ex6_011_has_raid_and_reboot_keyword_grants() {
+    let card = compiled_ex6_011();
+    let keywords: Vec<_> = card
+        .effects
+        .iter()
+        .filter_map(|clause| match clause {
+            CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
+                keyword,
+                ..
+            }) => Some(keyword.as_str()),
+            _ => None,
+        })
+        .collect();
+
+    assert!(keywords.contains(&"Raid"), "missing Raid keyword grant");
+    assert!(keywords.contains(&"Reboot"), "missing Reboot keyword grant");
+}
+
+#[test]
+fn ex6_011_on_play_trashes_security_and_grants_opponent_effect_immunity() {
+    let mut runner = runner();
+    let ragna = runner.place_on_field(0, "EX6-011", Some(0));
+
+    fire_on_play(&mut runner, ragna);
+
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "On Play must trash exactly one opponent security card"
+    );
+    assert_eq!(
+        runner.trash_size(1),
+        1,
+        "the trashed security card must move to opponent trash"
+    );
+    assert!(
+        runner
+            .game
+            .modifiers
+            .has(ragna, ModifierType::CannotBeAffected),
+        "RagnaLoardmon must carry CannotBeAffected after On Play"
+    );
+    for source_kind in [
+        EffectSourceKind::Digimon,
+        EffectSourceKind::Tamer,
+        EffectSourceKind::Option,
+        EffectSourceKind::Rule,
+    ] {
+        assert!(
+            runner
+                .game
+                .permanent_is_unaffected_by_effect(ragna, 1, source_kind),
+            "opponent {:?} effects must not affect RagnaLoardmon",
+            source_kind
+        );
+        assert!(
+            !runner
+                .game
+                .permanent_is_unaffected_by_effect(ragna, 0, source_kind),
+            "own {:?} effects must still affect RagnaLoardmon",
+            source_kind
+        );
+    }
+}
+
+#[test]
+fn ex6_011_dna_route_is_action_mask_legal_for_red_and_black_lv6() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX6-011 YAML loads")
+        .add_card(colored_lv6("RED-LV6", CardColor::Red))
+        .add_card(colored_lv6("BLACK-LV6", CardColor::Black))
+        .hand(0, &["EX6-011"])
+        .memory(10)
+        .start();
+
+    runner.game.current_phase = GamePhase::Main;
+    runner.place_on_field(0, "RED-LV6", Some(0));
+    runner.place_on_field(0, "BLACK-LV6", Some(0));
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[DNA_DIGIVOLVE_START as usize], 1.0,
+        "red Lv.6 + black Lv.6 materials must make the DNA action legal"
+    );
+}
+
+#[test]
+fn ex6_011_dna_origin_tail_dedigivolves_all_then_surfaces_delete_choice() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX6-011 YAML loads")
+        .add_card(colored_lv6("RED-LV6", CardColor::Red))
+        .add_card(colored_lv6("BLACK-LV6", CardColor::Black))
+        .add_card(leveled_digimon("OPP-LV3", 3))
+        .add_card(leveled_digimon("OPP-LV5", 5))
+        .add_card(make_test_card("SEC-TOP", "Security Top"))
+        .hand(0, &["EX6-011"])
+        .deck(0, &["SEC-TOP"])
+        .security(1, &["SEC-TOP"])
+        .memory(10)
+        .start();
+
+    runner.game.current_phase = GamePhase::Main;
+    runner.place_on_field(0, "RED-LV6", Some(0));
+    runner.place_on_field(0, "BLACK-LV6", Some(0));
+    let opponent = runner.place_stack(1, &["OPP-LV3", "OPP-LV5"]);
+
+    assert!(runner.game.initiate_dna_digivolve(0, 0));
+    runner
+        .game
+        .resolve_selection(0, 0)
+        .expect("first DNA material");
+    runner
+        .game
+        .resolve_selection(0, 1)
+        .expect("second DNA material");
+
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "When Digivolving from DNA must still trash top opponent security"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area[opponent.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "OPP-LV3",
+        "DNA-origin tail must De-Digivolve 1 all opponent Digimon before deletion"
+    );
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OppField),
+        "DNA-origin tail must surface the mandatory delete target choice"
+    );
+}
+
+#[test]
+fn ex6_011_runtime_keywords_are_available_on_field() {
+    let mut runner = runner();
+    let ragna = runner.place_on_field(0, "EX6-011", Some(0));
+
+    assert!(runner.game.has_keyword(ragna, Keyword::Raid));
+    assert!(runner.game.has_keyword(ragna, Keyword::Reboot));
+}
+
+#[test]
+#[ignore = "pending: PUPPETS-G032 — Counter window + Blast Digivolve activation flow lacks prompt_blast_dna_digivolve/action-mask support"]
+fn ex6_011_counter_blast_dna_uses_durandamon_and_bryweludramon() {
+    unimplemented!("Counter Blast DNA must select Durandamon + BryweLudramon through the Counter action surface");
+}

@@ -1,0 +1,41 @@
+card: EX7-027
+name: Chaperomon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+traits: [Puppet, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter:
+      any_of:
+        - kind: token
+        - all_of:
+            - kind: digimon
+            - trait_has: Puppet
+
+  - when: when_digivolving
+    optional: true
+    summary: "You may play 1 level 3 Puppet Digimon from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+              - trait_has: Puppet
+          prompt: "Play 1 level 3 Puppet Digimon from hand"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  # Inherited leave-prevention by deleting Token/Puppet is omitted pending the
+  # reusable replacement/cost coverage needed for this exact Puppet shape.
