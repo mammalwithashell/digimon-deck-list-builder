@@ -1,21 +1,23 @@
 ---
 name: implement-rust-dsl-archetype
-description: Use when Codex needs to implement a Digimon archetype, deck, card group, explicit card list, or DSL test pool as Rust engine YAML DSL cards in batches with TDD, per-card IMPLEMENT/AUDIT/SKIP modes, batch review, tracker updates, and no-approximations gap routing.
+description: Use when Codex needs to implement a Digimon archetype, deck, card group, explicit card list, or DSL test pool as Rust engine YAML DSL cards. Always resolve the full requested card pool, process all unblocked cards in batches of 4 with parallel per-card implementer/auditor subagents plus batch reviewers, continue across batches without waiting for user prodding, and report only after the requested pool is complete or a true blocker prevents further progress.
 ---
 
 # Implement Rust DSL Archetype
 
-## Overview
+## Operating Contract
 
-Implement an archetype by converting a resolved card pool into tested Rust engine YAML DSL cards. Process cards in small batches, like the Claude `batch-implement-cards-rust-dsl` skill: resolve and classify the pool, group related cards, run per-card TDD workers, review each batch, then merge, wire, test, and update trackers.
+Convert the requested card pool into tested Rust engine YAML DSL cards. Build the complete queue first, then execute every unblocked card in batches of exactly 4 where possible. Do not stop after the first batch to ask whether to continue.
 
-Preserve the no-approximations policy: every gameplay choice must go through engine actions or `PendingSelection`, and every behavior change must start with a failing Rust test.
+Use subagents as the normal execution model: one fresh implementer/auditor per non-skipped card and at least one reviewer per completed batch. If subagents are unavailable, report that limitation before implementation and ask whether to proceed locally.
 
-**REQUIRED SUB-SKILLS:** Use `superpowers:test-driven-development`, `superpowers:subagent-driven-development`, and `superpowers:verification-before-completion`. Use `assess-rust-engine-archetype` for card-pool and gap-resolution evidence.
+Preserve no approximations: every gameplay choice must go through engine actions or `PendingSelection`, and every behavior change must start with a failing Rust behavioral test.
+
+Required sub-skills: `superpowers:test-driven-development`, `superpowers:subagent-driven-development`, and `superpowers:verification-before-completion`. Use `assess-rust-engine-archetype` for card-pool and gap-resolution evidence.
 
 ## Required Docs
 
-Read these before dispatching implementation work:
+Read only what is needed before dispatching implementation work:
 
 - `AGENTS.md` and `CLAUDE.md`
 - `docs/RUST_DSL_AGENT_GUIDE.md`
@@ -26,67 +28,36 @@ Read these before dispatching implementation work:
 - `qa/dsl-vocab-gaps.md`
 - `qa/archetype-qa/engine-gaps.md`
 
-Load reference files only when needed:
+Load these references as soon as they become relevant:
 
-- `references/card-pool-resolution.md` for resolving archetype cards and implementation order.
-- `references/subagent-tdd-workflow.md` for batch task slicing, subagent roles, and prompt templates.
+- `references/card-pool-resolution.md`: archetype/deck/card-list resolution and queue shape.
+- `references/subagent-tdd-workflow.md`: batch orchestration, subagent roles, prompts, merge, and verification.
 
-## Batch Defaults
+## Defaults
 
 - Default batch size: `4`.
-- Supported modes:
-  - `IMPLEMENT`: no YAML exists at `code/digimon-engine/cards/<set>/<CARD-ID>.yaml`; write tests first, then YAML.
-  - `AUDIT`: YAML exists; audit faithfulness and test coverage before changing behavior.
-  - `SKIP`: prior tracker verdict is complete, or the user asked not to audit existing YAML.
-- Batch related cards together:
-  - Cards that name each other in printed text.
-  - Tamers plus the Digimon they explicitly buff.
-  - Options plus the named Digimon they target.
-  - Remaining slots in stable card-ID order.
-- Mixed batches are allowed. A batch may contain both `IMPLEMENT` and `AUDIT` cards.
-- The main orchestrator owns shared files: `mod.rs`, `main.rs`, QA trackers, gap trackers, and batch summaries. Per-card workers only own the card YAML and its card test file.
+- Modes:
+  - `IMPLEMENT`: no production YAML exists; write failing tests before YAML.
+  - `AUDIT`: YAML exists; verify printed-text faithfulness and add missing tests. Report drift before changing behavior.
+  - `SKIP`: prior tracker verdict is complete or the user excluded existing YAML.
+  - `BLOCKED`: faithful implementation needs a reusable DSL, engine, rules, test, or data gap first.
+- Batch related cards together, then fill remaining slots by stable card-ID order.
+- The main orchestrator owns shared files: `main.rs`, `mod.rs`, QA trackers, gap trackers, and summaries. Workers own only assigned YAML and per-card test files.
 
 ## Workflow
 
-1. Announce the skill and required sub-skills.
-2. Resolve the target card pool.
-   - Exact card IDs or a decklist win over archetype inference.
-   - For an archetype name, follow `references/card-pool-resolution.md`.
-   - Produce a queue grouped by dependency: supported DSL cards first, then cards that need reusable DSL gaps, then cards that need engine primitives.
-3. Run a readiness pass before writing code.
-   - Reuse `assess-rust-engine-archetype` logic.
-   - Classify each card/effect as `ready`, `dsl-gap`, `engine-gap`, `rules-gap`, `test-gap`, or `data-gap`.
-   - Do not implement blocked effects by no-op YAML, broad `raw_rust`, or hidden auto-selection.
-4. Classify and batch the work.
-   - Compute `IMPLEMENT`, `AUDIT`, or `SKIP` for each card from YAML existence and prior verdicts in `qa/qa-reports/validated_cards_dsl.json` when present.
-   - Print a batch plan before implementation: total cards, counts by mode, cards per batch, and any blocked prerequisites.
-   - If the user asked for report-only planning, stop after the batch plan.
-5. Pre-wire batch test discovery before dispatch.
-   - For each non-skipped planned card, ensure `code/digimon-engine/tests/cards_behavioral/<set>/mod.rs` contains `mod <card_id_lower>;`.
-   - Ensure `code/digimon-engine/tests/cards_behavioral/main.rs` contains `mod <set>;`.
-   - Ensure the per-card test file exists so workers can run `cargo test --test cards_behavioral -- <card_id_lower>`.
-   - Remove placeholder registration later for cards that end up `BLOCKED` and wrote no tests.
-6. Execute one batch at a time.
-   - Follow `references/subagent-tdd-workflow.md`.
-   - Gather per-card context from `data/cards.json`, DCGO if present, existing YAML/tests for `AUDIT`, and the relevant gap trackers.
-   - For each `IMPLEMENT` card, run a read-only scout pass when the card is complex or likely to expose DSL/engine gaps.
-   - Dispatch one fresh worker per non-skipped card in the batch. Workers must use disjoint paths: one YAML file and one test file.
-   - Dispatch one batch reviewer after all workers return. Review spec compliance first, then code quality and maintainability.
-   - Do not move to the next batch while review findings or targeted batch test failures remain open.
-7. Merge, wire, and summarize each batch.
-   - Reject worker output that modifies files outside its assigned YAML/test paths unless explicitly approved.
-   - Apply review fixes once. If targeted batch tests still fail, run one bounded fix pass, then stop and report the blocker.
-   - Update `qa/qa-reports/validated_cards_dsl.json` when present, per-archetype DSL QA artifacts, and reusable gap trackers.
-   - Print a per-batch table with `Card ID`, `Mode`, `Verdict`, `Review`, `Tests`, and `Notes`.
-8. Update trackers and archetype notes as behavior lands.
-   - `docs/RUST_ENGINE_GAPS.md` for missing engine primitives.
-   - `qa/dsl-vocab-gaps.md` for missing YAML schema/lowering vocabulary.
-   - Per-archetype notes under `qa/archetype-qa/` or `qa/archetype-qa/dsl/` for readiness status.
-9. Verify before completion.
-   - Run targeted Rust tests for changed card/primitive surfaces.
-   - Run broader DSL/action/selection suites when shared DSL, mask, selection, replacement, or engine behavior changed.
-   - Run `cargo test --manifest-path code/digimon-engine/Cargo.toml` after a full archetype or multi-batch run unless the user scoped verification narrower.
-   - Run `git diff --check`.
+1. Announce this skill and the required sub-skills.
+2. Resolve the full target pool using exact card IDs or decklists first, then `references/card-pool-resolution.md`.
+3. Run a readiness pass before code edits. Classify every card/effect as `ready`, `dsl-gap`, `engine-gap`, `rules-gap`, `test-gap`, or `data-gap`.
+4. Build the complete batch plan: totals by mode, blocked prerequisites, and all batches of up to 4 cards. If the user requested report-only planning, stop here.
+5. Pre-wire test discovery for every non-skipped card before dispatch.
+6. Execute all batches sequentially using `references/subagent-tdd-workflow.md`.
+   - Dispatch per-card workers in parallel inside each batch.
+   - Run batch review after workers return.
+   - Fix review findings and targeted test failures before advancing.
+   - Continue automatically to the next batch until the planned queue is exhausted or a true stop condition applies.
+7. Update trackers after each batch, but keep interim user-facing updates brief. Do not ask the user to confirm the next batch.
+8. Verify before completion with targeted Rust tests, broader suites for any touched shared surface, full engine tests after a full archetype or multi-batch run unless scoped narrower, and `git diff --check`.
 
 ## Task Requirements
 
@@ -118,10 +89,12 @@ Stop and report a blocker instead of implementing when:
 
 ## Output
 
-When reporting progress, lead with:
+During execution, send only short status updates unless there is a blocker. Do not present a first-batch summary as though the task is complete.
+
+Final reporting must lead with:
 
 - Cards implemented and tests run.
-- Batch totals and current batch number when running more than one batch.
+- Batch totals across the whole requested pool.
 - Remaining cards blocked by capability, not by one-off card chores.
 - Tracker files updated.
 - Any suites not run and why.
