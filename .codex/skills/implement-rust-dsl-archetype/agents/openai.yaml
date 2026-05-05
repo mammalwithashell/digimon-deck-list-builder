@@ -1,4 +1,4 @@
 interface:
   display_name: "Implement Rust DSL Archetype"
-  short_description: "Implement Rust DSL cards in reviewed TDD batches"
-  default_prompt: "Use $implement-rust-dsl-archetype to implement this Digimon archetype as Rust engine YAML DSL cards in reviewed TDD batches."
+  short_description: "Implement Rust DSL cards through all reviewed TDD batches"
+  default_prompt: "Use $implement-rust-dsl-archetype to resolve the full requested card pool and implement every unblocked Digimon Rust engine YAML DSL card in reviewed batches of 4 with per-card subagents."
