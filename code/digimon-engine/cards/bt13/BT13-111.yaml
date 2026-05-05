@@ -1,0 +1,26 @@
+card: BT13-111
+name: Gallantmon
+kind: digimon
+level: 6
+color: [red]
+cost: 13
+dp: 13000
+traits: [Royal Knight, Holy Warrior]
+form: Mega
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+
+# Stubbed:
+# - Play-cost reduction by 2 per 5 cards in both players' trash when played
+#   from hand needs a combined-trash-count cost formula.
+# - [On Play][When Digivolving][When Attacking] delete <=6000 DP, then if no
+#   deletion occurred delete >=13000 DP instead. This needs an effect-result
+#   branch/fallback primitive.

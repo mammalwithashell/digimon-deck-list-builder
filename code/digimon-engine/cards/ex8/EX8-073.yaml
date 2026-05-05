@@ -1,0 +1,24 @@
+card: EX8-073
+name: "Gallantmon (X Antibody)"
+kind: digimon
+level: 6
+color: [red, blue]
+cost: 12
+dp: 12000
+traits: [Holy Warrior, X Antibody, Royal Knight]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+
+effects: []
+
+# Stubbed:
+# - [When Digivolving][When Attacking] source-gated +4000 self DP and -4000
+#   opponent DP needs a source-name/source-trait condition on this Digimon.
+# - [When Digivolving][End of Attack][Once Per Turn] delete <=10000 DP; if no
+#   deletion occurred, trash top security and unsuspend. Needs effect-result
+#   branch/fallback.
+# - Memory <=0 opponent Digimon effect immunity needs a continuous memory aura.

@@ -1,0 +1,27 @@
+card: BT23-013
+name: Jesmon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+traits: [Holy Warrior, Royal Knight, CS]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+  - kind: grant_keyword
+    keyword: Alliance
+
+# Stubbed:
+# - [When Digivolving][When Attacking] may play Atho/Rene/Por token or a
+#   Sistermon from hand or trash, excluding names already on your field. Needs
+#   token registration plus union hand/trash play with field-name exclusion.
+# - [Your Turn][Once Per Turn] when another Digimon is played, this Digimon may
+#   attack. Needs other-ally-played observer and in-effect attack selection.

@@ -1,0 +1,25 @@
+card: BT13-075
+name: Alphamon
+kind: digimon
+level: 6
+color: [black]
+cost: 12
+dp: 12000
+traits: [Holy Warrior, Royal Knight, X Antibody]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+
+effects: []
+
+# Stubbed:
+# - [On Play][When Digivolving] by placing an X Antibody/Royal Knight from trash
+#   under this Digimon, prevent opponent play-cost 10+ Digimon from attacking
+#   players until end of their turn. The source-placement cost and attack-target
+#   restriction must resolve as one atomic clause.
+# - Leave-field replacement by trashing the top card of security needs a
+#   replacement-effect primitive with a security trash cost.

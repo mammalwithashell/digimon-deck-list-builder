@@ -1,0 +1,55 @@
+card: AD1-018
+name: LordKnightmon
+kind: digimon
+level: 6
+color: [purple, black]
+cost: 11
+dp: 11000
+traits: [Holy Warrior, Royal Knight]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Opponent Digimon effects don't affect 1 of your Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: protected
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to protect from opponent Digimon effects"
+      - grant_effect_immunity:
+          target: protected
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] De-Digivolve 1, then delete opponent Digimon with play cost 3 or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
+      - de_digivolve:
+          target: target
+          amount: 1
+          stop_at_level: 3
+      - select_opponent_permanent:
+          bind_as: victim
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte: 3
+          prompt: "Delete 1 opponent Digimon with play cost 3 or less"
+      - delete_permanent: { target: victim }
+
+  # Omitted:
+  # Play-cost reduction based on text in trash and the All Turns observer for
+  # Knightmon/Lucemon-text Digimon being played are blocked by text-search count
+  # predicates and event-card text predicates.

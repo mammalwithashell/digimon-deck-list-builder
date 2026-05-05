@@ -1,0 +1,41 @@
+card: EX4-065
+name: Trident Gaia
+kind: option
+color: [red, green]
+cost: 8
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Delete 1 opponent Digimon with the highest DP"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_gte:
+                  aggregate:
+                    selector: highest_dp
+                    scope: opponent
+          prompt: "Delete 1 opponent Digimon with the highest DP"
+      - delete_permanent: { target: victim }
+
+  - when: on_security
+    summary: "[Security] Activate this card's Main effect"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_gte:
+                  aggregate:
+                    selector: highest_dp
+                    scope: opponent
+          prompt: "Delete 1 opponent Digimon with the highest DP"
+      - delete_permanent: { target: victim }
+
+  # Omitted:
+  # "If a Digimon with 13000 DP or more is deleted by this effect, trash the
+  # top card of your opponent's security stack" needs a deleted-by-this-effect
+  # payload carrying the deleted permanent's DP.

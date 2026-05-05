@@ -1,0 +1,40 @@
+card: AD1-004
+name: WarGreymon
+kind: digimon
+level: 6
+color: [red, black]
+cost: 12
+dp: 12000
+traits: [Dragonkin, ADVENTURE, Hero]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+
+  - kind: grant_keyword
+    keyword: Piercing
+
+  - when: end_of_your_turn
+    summary: "[End of Your Turn] 1 of your Digimon may attack"
+    process:
+      - optional:
+          - select_own_permanent:
+              bind_as: attacker
+              filter: { kind: digimon }
+              prompt: "Choose 1 of your Digimon that may attack"
+          - may_attack_now:
+              attacker: attacker
+              targets: any
+              optional: true
+              prompt: "Have the selected Digimon attack now?"
+
+  # Omitted:
+  # [On Play][When Digivolving] delete opponent Digimon with DP <= this Digimon
+  # needs G-FORMULA-SOURCE-DP. Dynamic DP and SecurityAttackPlus from your
+  # Tamers' color count also need a field-color-count formula/aura.

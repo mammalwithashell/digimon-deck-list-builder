@@ -1,0 +1,33 @@
+card: BT20-091
+name: "Cool Boy"
+kind: tamer
+color: [white]
+cost: 4
+traits: [LIBERATOR]
+
+effects:
+  - when: [on_enter_field_anyone, on_digivolve]
+    active_when: { your_turn: true }
+    optional: true
+    summary: "[Your Turn] When your Royal Knight is played or digivolves, suspend self to Draw 1 and gain 1 memory"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_trait_has: "Royal Knight"
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "BT20-091"
+            is_unsuspended: true
+    process:
+      - suspend: { target: source }
+      - draw: { of: you, count: 1 }
+      - gain_memory: 1
+
+  # BLOCKED: RK-G004 — opponent-turn would-leave observer into optional
+  # [Omekamon] hand play without cancelling the leave.
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

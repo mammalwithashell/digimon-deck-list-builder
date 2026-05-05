@@ -1,0 +1,56 @@
+card: ST12-15
+name: "From Master to Disciple"
+kind: option
+color: [red]
+cost: 2
+traits: ["Royal Knight"]
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Reveal 3; add Huckmon/Sistermon/Royal Knight; trash rest; place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            any_of:
+              - name_contains: "Huckmon"
+              - name_contains: "Sistermon"
+              - trait_has: "Royal Knight"
+          prompt: "Add 1 Huckmon, Sistermon, or Royal Knight card"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }
+      - place_self_as_delay_option: {}
+
+  - when: on_security
+    summary: "[Security] Activate this card's Main effect"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            any_of:
+              - name_contains: "Huckmon"
+              - name_contains: "Sistermon"
+              - trait_has: "Royal Knight"
+          prompt: "Add 1 Huckmon, Sistermon, or Royal Knight card"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }
+      - place_self_as_delay_option: {}
+
+  # Omitted:
+  # [Delay] Next time one of your Digimon would digivolve this turn, reduce the
+  # digivolution cost by 1. Current DSL lacks a Delay activation that installs a
+  # one-shot next-digivolution cost reduction.
