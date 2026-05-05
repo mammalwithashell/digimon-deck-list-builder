@@ -4,13 +4,15 @@ Use this reference after the target card pool is resolved, classified, and group
 
 ## Controller Rules
 
-- Process one batch at a time; default batch size is 4.
+- Process the entire requested queue, one batch at a time; default batch size is 4.
 - Dispatch one fresh worker per non-skipped card in the current batch.
 - Provide exact card context; do not make workers rediscover the whole archetype.
 - Do not dispatch parallel workers that touch the same YAML file, Rust test file, Rust module, selection/action internals, or shared tracker.
 - Keep workers confined to `code/digimon-engine/cards/<set>/<CARD-ID>.yaml` and `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs`.
 - Keep the main session responsible for `main.rs`, `mod.rs`, `validated_cards_dsl.json`, gap trackers, QA artifacts, integration, and final verification.
 - Review each batch in two stages: spec compliance first, code quality second.
+- After a batch passes review and targeted tests, immediately continue to the next planned batch. Do not pause for user confirmation, and do not send a long per-batch report unless blocked.
+- Send brief progress updates while working; reserve full tables and totals for the final response after all planned batches complete or a true stop condition prevents further progress.
 
 If subagents are unavailable in the current environment, do not silently downgrade the workflow. Tell the user and ask whether to execute the same TDD gates locally.
 
@@ -182,7 +184,7 @@ After each batch:
 5. Update `qa/qa-reports/validated_cards_dsl.json` if present.
 6. Append gap entries to `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md`, or `qa/archetype-qa/engine-gaps.md` as appropriate.
 7. Append a batch row/table to `qa/archetype-qa/dsl/<archetype_slug>.md` or the relevant QA artifact.
-8. Print the batch summary:
+8. Record the batch summary for final reporting, but continue to the next batch immediately:
 
 ```text
 Batch <N> complete (<processed>/<total> cards)
@@ -191,6 +193,8 @@ Batch <N> complete (<processed>/<total> cards)
 
 Running totals: IMPLEMENTED=<n> AUDITED-OK=<n> PARTIAL=<n> BLOCKED=<n>
 ```
+
+Only surface this table before the final response when the batch is blocked, review found unresolved issues, or tests still fail after the bounded fix pass.
 
 ## Final Integration Review
 
