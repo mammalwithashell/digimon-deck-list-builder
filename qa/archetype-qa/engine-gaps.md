@@ -8,13 +8,13 @@ Last updated: 2026-05-04
 
 Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.md). This file tracks only open gaps and partial slices with remaining follow-up work.
 
-### Activate Another Card's When Digivolving Effect
+### Activate Another Card's When Digivolving Effect — PARTIALLY RESOLVED 2026-05-04
 - **Discovered in:** Jesmon (2026-03-17); Puppets/Nyabootmon assessment (2026-04-28)
 - **Card(s):** BT10-112 Jesmon GX, BT10-110 Seiken Meppa, BT22-042 Nyabootmon
 - **Effect text:** BT10-112 / BT10-110: "Activate 1 of that card's [When Digivolving] effects as an effect of this Digimon." BT22-042: "[All Turns] [Once Per Turn] When any of your other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects."
-- **What's missing:** No engine helper to enumerate a card's available [When Digivolving] effects and execute a player-selected one from another trigger. Nyabootmon needs this for its own top card, while Jesmon-style effects need it for another card/source.
-- **Suggested change:** Add a helper that enumerates [When Digivolving] effects on a specified source card/permanent, exposes a legal branch choice if multiple effects are available, and executes the selected effect using the correct source permanent/card attribution. The choice must flow through pending selection/action-mask machinery.
-- **Workaround:** BT10-112 and BT10-110 manually iterate `card.effect_list()` and present branch selection. BT22-042 has no authored Rust implementation yet.
+- **Status update:** The reusable Rust/DSL refire primitive now exists as `EffectContext::refire_effect_from_permanent(source, "when_digivolving", optional)` and YAML `refire_effect: { source: <binding>, timing: when_digivolving, optional: true }`. It enumerates refireable effects, preserves source identity, and exposes visible choices when needed.
+- **Remaining missing for Puppets:** BT22-040 / BT22-042 still cannot faithfully author the self-refire observer because `OnAnyDeletion` deleted-object context is not available for "your other Digimon" gating. Without that payload, `event_target_*` predicates can over-trigger on nonmatching deletions.
+- **Workaround:** Omit Puppet self-refire slices until deleted-permanent event context is available; do not approximate by firing on broad deletion observers.
 
 ### Event-Gated Delay Activation Windows [G-DELAY-EVENT-GATED]
 - **Discovered in:** Puppets/Nyabootmon assessment (2026-04-28)
@@ -173,3 +173,35 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **What's missing:** `code/digimon-engine/src/enums.rs:463-575` `ModifierType` enum has `CannotAttackTarget` (prevents attacking certain targets) but no `CannotChangeAttackTarget` (prevents the in-flight attacker's target from being switched). DCGO uses `CanNotSwitchAttackTargetClass` with `PermanentCondition` restricting to the source carrier (not all own Digimon).
 - **Suggested change:** Add `ModifierType::CannotChangeAttackTarget` variant to `enums.rs`. Wire enforcement in `EffectContext::redirect_attack` (`mod.rs:3099`) — reject the redirect when the in-flight attacker carries this modifier. Optionally route through Blocker/Raid retarget paths so reactive redirects are also gated. Active-when expiry: `EndOfTurn` plus DSL `active_when: { your_turn: true }`.
 - **Workaround:** None faithful — AD1-012's inherited clause is documented as commented stub in YAML and the behavioral test is `#[ignore = "pending: G-MOD-CANNOT-CHANGE-ATTACK-TARGET"]`.
+
+### `play_from_hand_free` Missing `bind_as` PermanentHandle Output  [G-PLAY-FROM-HAND-FREE-BIND-AS]
+- **Discovered in:** BT16-085 Davis Motomiya & Ken Ichijoji implementation (2026-05-04)
+- **Card(s):** BT16-085 — "[Start of Your Main Phase] You may play 1 [Veemon] or [Wormmon] from your hand without paying the cost. At the next end of your opponent's turn, return it to the hand."
+- **Effect text:** "return it to the hand" — the "it" refers to the permanent that was just played free.
+- **What's missing:** `CompiledStep::PlayFromHandFree` has no `bind_as` field. When `execute_play_from_hand_free` runs in `play_digivolve.rs`, the returned `Option<PermanentHandle>` is discarded. The `schedule_delayed` step clones bindings at schedule time, so if the just-played permanent's handle were inserted into bindings via `bind_as`, a subsequent `return_to_hand: { target: played }` in the delayed body could reference it. Without `bind_as`, the delayed return step cannot be expressed — `return_to_hand` requires a bound `PermanentHandle`.
+- **Suggested change:** Add `bind_as: Option<String>` to `PlayFromHandFreeArgs` in `digimon-dsl/src/step.rs` and `CompiledStep::PlayFromHandFree` in `compiled.rs`. In `execute_play_from_hand_free` (or its caller in `step.rs`), if the play succeeded and `bind_as` is set, call `bindings.insert_permanent(name, handle)` so the resulting permanent is available for downstream steps (including `schedule_delayed` body steps).
+- **Workaround:** None — the delayed-return sub-clause of BT16-085 Clause 0 is omitted from the YAML. The test `bt16_085_start_of_main_played_digimon_returns_at_opponent_eot` is `#[ignore = "BLOCKED: G-PLAY-FROM-HAND-FREE-BIND-AS"]`.
+
+### `event_card_color_has` Predicate Missing (Color-Gate on Digivolve/Enter Observer)  [G-EVENT-CARD-COLOR-IS]
+- **Discovered in:** BT16-085 Davis Motomiya & Ken Ichijoji implementation (2026-05-04)
+- **Card(s):** BT16-085 — "[Your Turn] When one of your Digimon digivolves into a **blue or green** Digimon, by suspending this Tamer, gain 1 memory." Also related: any card whose observer is conditioned on the entering/digivolving card's color.
+- **Effect text:** "digivolves into a blue or green Digimon" — a color-containment check on the new top card of the digivolving permanent.
+- **What's missing:** `PredicateSpec` (DSL) and `CompiledPredicate` (engine) have `event_card_trait_has` and `event_card_name_contains` predicates that inspect the entering/digivolving card, but no equivalent predicate for checking color membership. Related: PUPPETS-G023 (`event_card_color_only`, `event_card_color_count`) tracks exact multi-color checks; a single-color containment check (`event_card_color_has: blue`) belongs to the same family and is equally absent. Without it, BT16-085 Clause 1's "blue or green" gate cannot be expressed and the observer over-fires on any own Digimon digivolve.
+- **Suggested change:** Add `event_card_color_has: Option<CompiledColor>` to `CompiledPredicate` and the matching leaf to `BoolPredicateSpec` / `PredicateSpec` in `digimon-dsl`. In `eval_predicate` (`predicate.rs`), implement the check by calling `event_target_card(rctx)`, resolving its `digimon_colors` from card_data, and testing for color membership.
+- **Workaround:** Color gate omitted from YAML — observer over-fires on any own Digimon digivolve. Test `bt16_085_digivolve_observer_does_not_fire_on_non_blue_non_green_digivolve` is `#[ignore = "BLOCKED: G-EVENT-CARD-COLOR-IS"]`.
+
+### Opponent Digivolution-Card Source Selection Missing  [G-SELECT-OPPONENT-SOURCES]
+- **Discovered in:** BT16-085 Davis Motomiya & Ken Ichijoji implementation (2026-05-04)
+- **Card(s):** BT16-085 — "[Your Turn] … If DNA digivolving, trash any 3 digivolution cards under your opponent's Digimon."
+- **Effect text:** "trash any 3 digivolution cards under your opponent's Digimon" — selects up to 3 source cards from a specific opponent permanent's card_sources stack.
+- **What's missing:** DSL has `select_own_sources` (selects from a bound own permanent's digivolution stack) and `trash_selected_sources`, but has no `select_opponent_sources` verb for targeting a specific OPPONENT permanent's card_sources. The opponent permanent itself must also first be selected (requires a field selection step). Both verbs are missing.
+- **Suggested change:** Add `select_opponent_sources: { target: <binding>, count: N, bind_as: <name> }` DSL verb, mirroring `select_own_sources`. `target` resolves to an opponent `PermanentHandle` binding. `count` specifies how many sources to select (up to the permanent's stack depth). Implement in `step.rs`, lower in `compile.rs`, and execute in a new `CompiledStep::SelectOpponentSources` handler analogous to `execute_select_own_sources`.
+- **Workaround:** DNA trash sub-clause of BT16-085 Clause 1 is entirely omitted from the YAML (doubly blocked by this gap and `G-DSL-IS-DNA-DIGIVOLVING`). Test `bt16_085_dna_digivolve_trashes_3_opp_digi_cards` is `#[ignore = "BLOCKED: G-DSL-IS-DNA-DIGIVOLVING AND G-SELECT-OPPONENT-SOURCES"]`.
+
+### OPT Reset via Attack Cycle  [G-OPT-RESET-VIA-ATTACK-CYCLE]
+- **Discovered in:** BT16-040 Wormmon (2026-05-04 batch-implement-cards-rust-dsl)
+- **Card(s):** BT16-040, plus all inherited [When Attacking] [OPT] cards.
+- **Effect text:** "[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon."
+- **What's missing:** OPT lockout for inherited When Attacking does not reliably reset after a full turn cycle (player end_turn → opponent end_turn → player attacks again). Test `bt16_040_opt_resets_after_turn_cycle` is `#[ignore]`'d.
+- **Suggested change:** Investigate OPT key reset path in turn-state machine for inherited triggered clauses. The OPT key may persist across turn boundaries when the carrier permanent's source identity differs from the trigger source.
+- **Workaround:** OPT-reset behavioral test is `#[ignore]`'d; structural OPT flag and same-turn lockout still verified.

@@ -1897,6 +1897,281 @@
         "D6"
       ],
       "notes": "Color bypass + security inherited tamer-play implemented. Security-aura + main-shuffle BLOCKED on NEW G-PRED-NO-FACE-UP-SECURITY-NAMED + G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION + G-SECURITY-ZONE-AURA-SOURCE."
+    },
+    "BT3-002": {
+      "card_name": "DemiVeemon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt3/BT3-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_002.rs",
+      "notes": "carrier_has_keyword predicate gap; over-fires"
+    },
+    "BT12-002": {
+      "card_name": "DemiVeemon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_002.rs",
+      "notes": "Inherited When Attacking conditional Draw"
+    },
+    "BT12-021": {
+      "card_name": "Veemon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_021.rs",
+      "notes": "OnPlay reveal-add + inherited EOYT DNA registration"
+    },
+    "P-117": {
+      "card_name": "Veemon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/p/P-117.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_117.rs",
+      "notes": "Cost reduction omitted; color-count condition omitted"
+    },
+    "BT12-022": {
+      "card_name": "ExVeemon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_022.rs",
+      "notes": "Cost reduction + grant_keyword active_when both blocked"
+    },
+    "EX1-014": {
+      "card_name": "ExVeemon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/ex1/EX1-014.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex1/ex1_014.rs",
+      "notes": "Aura over-targets; trait arm of active_when blocked"
+    },
+    "BT21-037": {
+      "card_name": "Lighdramon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-037.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_037.rs",
+      "notes": "G-DECLARATIVE-KEYWORD blocks runtime keyword install"
+    },
+    "BT16-040": {
+      "card_name": "Wormmon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-040.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_040.rs",
+      "notes": "Effect-initiated digivolve from trash chain blocked"
+    },
+    "BT12-047": {
+      "card_name": "Wormmon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-047.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_047.rs",
+      "notes": "Sister to BT12-021 \u2014 Wormmon line reveal-add"
+    },
+    "BT12-050": {
+      "card_name": "Stingmon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-050.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_050.rs",
+      "notes": "Sister to BT12-022 \u2014 same gaps"
+    },
+    "ST9-09": {
+      "card_name": "Stingmon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/st9/ST9-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st9/st9_09.rs",
+      "notes": "Cost reduction on play + inherited When Attacking Draw"
+    },
+    "ST9-05": {
+      "card_name": "Paildramon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/st9/ST9-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st9/st9_05.rs",
+      "notes": "on_dna_digivolve return-to-deck-bottom + WhenAttacking unsuspend OPT"
+    },
+    "BT12-028": {
+      "card_name": "Paildramon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "hybrid",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-028.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_028.rs",
+      "notes": "All clauses gap-blocked: trash-top-N digi cards, DNA filter, source name"
+    },
+    "BT16-025": {
+      "card_name": "Paildramon",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-025.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_025.rs",
+      "notes": "Partition + DNA sub-clause + WhenAttacking ship; 2 clauses blocked"
+    },
+    "BT16-027": {
+      "card_name": "Imperialdramon: Fighter Mode",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-027.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_027.rs",
+      "notes": "Blast Digivolve + ACE -4 ship; OnPlay/EndOfAttack blocked"
+    },
+    "ST9-06": {
+      "card_name": "Imperialdramon Dragon Mode",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "BLOCKED",
+      "gap_kind": "dsl",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/st9/ST9-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st9/st9_06.rs",
+      "notes": "G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (whole card)"
+    },
+    "BT12-031": {
+      "card_name": "Imperialdramon: Fighter Mode",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt12/BT12-031.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_031.rs",
+      "notes": "OPT suspend-all + return + +DP-per-color ship; alt-cost + 2+colors aura blocked"
+    },
+    "BT16-028": {
+      "card_name": "Imperialdramon: Dragon Mode",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-028.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_028.rs",
+      "notes": "CannotUnsuspend ships; alt-cost branch + effect-initiated trigger blocked"
+    },
+    "BT17-077": {
+      "card_name": "Imperialdramon: Paladin Mode",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt17/BT17-077.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_077.rs",
+      "notes": "Blast Digivolve + ACE -5 + WhenAttacking ship; OnPlay mass trash blocked"
+    },
+    "BT20-020": {
+      "card_name": "Imperialdramon: Fighter Mode",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_020.rs",
+      "notes": "Raid + Piercing + WhenDigivolving ship; security-loss DP-LTE-source blocked"
+    },
+    "BT3-093": {
+      "card_name": "Davis Motomiya",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt3/BT3-093.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_093.rs",
+      "notes": "Start-of-turn memory swing + reveal-add + Security free-play"
+    },
+    "BT16-085": {
+      "card_name": "Davis Motomiya & Ken Ichijoji",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-085.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_085.rs",
+      "notes": "Free-play ships; delayed return + DNA trash blocked (3 new gaps)"
+    },
+    "BT3-103": {
+      "card_name": "Hidden Potential Discovered!",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt3/BT3-103.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_103.rs",
+      "notes": "Security add-to-hand ships; Main cost reduction blocked"
+    },
+    "BT17-097": {
+      "card_name": "Return to the Primogenitor",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/bt17/BT17-097.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_097.rs",
+      "notes": "Replaced fixture; Delay replacement + Security ship; effect-initiated digivolve blocked"
+    },
+    "LM-030": {
+      "card_name": "Green Scramble",
+      "validated_date": "2026-05-04",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "BG Imperial",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-030.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_030.rs",
+      "notes": "Main + Security ship; Delay clause blocked (4 known gaps)"
     }
   }
 }

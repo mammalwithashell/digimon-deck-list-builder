@@ -1,0 +1,87 @@
+card: ST9-09
+name: Stingmon
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 4000
+traits: [Insectoid]
+
+effects:
+  # ─── Clause 0 — BeforePayCost: cost reduction when playing this from hand ──────
+  #
+  # Printed text:
+  #   "When you would play this card from your hand, if you have a blue Digimon
+  #    in play, reduce its play cost by 1."
+  #
+  # DCGO (ST9_09.cs, EffectTiming.None / ChangeCostClass):
+  #   CanUseCondition: card.Owner.HandCards.Contains(card) (in hand gate)
+  #               AND HasMatchConditionOwnersPermanent(p => p.IsDigimon &&
+  #                   p.TopCard.CardColors.Contains(Blue))
+  #   CardSourceCondition: cardSource == card  (only this specific card)
+  #   RootCondition: root == Root.Hand         (must be played from hand)
+  #   isUpDown: true → reduces cost
+  #   ChangeCost: Cost -= 1
+  #
+  # DSL mapping:
+  #   - kind: cost_reduction (BeforePayCost hook)
+  #   - reduction_timing: before_pay_cost
+  #   - when_playing_this: true — fires only when THIS card is being played
+  #     from hand (encodes both CardSourceCondition and RootCondition)
+  #   - condition: any_permanent { of: you, kind: digimon, color_is: blue,
+  #     zone: [battle_area] } — checks for any blue Digimon in play
+  #   - amount: 1
+  #   - optional: false (printed text is mandatory, no "you may")
+  #
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        color_is: blue
+    amount: 1
+    summary: "Cost -1 when a blue Digimon is in play"
+
+  # ─── Clause 1 — Inherited [When Attacking] conditional Draw 1 ─────────────────
+  #
+  # Printed text:
+  #   "[When Attacking] If you have a blue Digimon in play, <Draw 1>
+  #    (Draw 1 card from your deck.)"
+  #
+  # DCGO (ST9_09.cs, EffectTiming.OnAllyAttack / ActivateClass):
+  #   SetIsInheritedEffect(true)
+  #   CanActivateCondition: IsExistOnBattleArea(card) (implicit — fires when source
+  #                         is in a battle-area permanent's sources)
+  #                     AND HasMatchConditionOwnersPermanent(p => p.IsDigimon &&
+  #                         p.TopCard.CardColors.Contains(Blue))
+  #                     AND Owner.LibraryCards.Count >= 1
+  #   ActivateCoroutine: DrawClass(card.Owner, 1)
+  #
+  # DSL mapping:
+  #   - scope: inherited — this effect is active when ST9-09 is a source
+  #     under another permanent
+  #   - when: when_attacking — fires on the owning player's attack declaration
+  #   - condition: any_permanent { of: you, kind: digimon, color_is: blue,
+  #     zone: [battle_area] } — board-state gate (matches DCGO CanActivateCondition
+  #     HasMatchConditionOwnersPermanent check)
+  #   - optional: false (printed "Draw 1" is mandatory when condition is met)
+  #   - process: draw { of: you, count: 1 }
+  #
+  # Note on deck-empty guard: the `draw` step in the engine silently handles
+  # deck-out (draws up to count, 0 if empty); no explicit condition needed.
+  #
+  - scope: inherited
+    when: when_attacking
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        color_is: blue
+    optional: false
+    summary: "[Inherited][When Attacking] If blue Digimon in play, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

@@ -52,3 +52,5 @@ mod ex5;
 mod st2;
 mod st20;
 mod st21;
+mod bt3;
+mod st9;

@@ -1,0 +1,149 @@
+card: BT3-093
+name: Davis Motomiya
+kind: tamer
+color: [blue]
+cost: 4
+traits: []
+
+# ─── Printed card text (data/cards.json) ─────────────────────────────────────
+#
+# [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#
+# [On Play] Reveal the top 3 cards of your deck. Add 1 blue and 1 green
+# Digimon card among them to your hand. Place the remaining cards at the
+# bottom of your deck in any order.
+#
+# Security Effect [Security] Play this card without paying the cost.
+#
+# ─── DCGO C# reference ───────────────────────────────────────────────────────
+#
+# DCGO/Assets/Scripts/CardEffect/BT3/Blue/BT3_093.cs
+#
+# Clause 1: EffectTiming.OnStartTurn →
+#   CardEffectFactory.SetMemoryTo3TamerEffect(card)
+#   — identical pattern to BT18-087, BT21-102, EX11-054, EX11-060, EX8-067,
+#     ST19-14. Mandatory (no "you may"); fires when memory ≤ 2.
+#
+# Clause 2: EffectTiming.OnEnterFieldAnyone →
+#   SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, ...)
+#   Bucket 1 (CanSelectCardCondition):  IsDigimon && HasCardColor(Blue)
+#                                        message "Select 1 blue Digimon card."
+#                                        maxCount 1
+#   Bucket 2 (CanSelectCardCondition1): IsDigimon && HasCardColor(Green)
+#                                        message "Select 1 green Digimon card."
+#                                        maxCount 1
+#   mutualConditions: true → no_duplicate_cards: true
+#   remainingCardsPlace: DeckBottom
+#
+#   CanActivateCondition: IsExistOnBattleArea(card) && LibraryCards.Count >= 1.
+#   The deck-size guard is implicit in reveal_top_deck (capped at deck size).
+#
+# Clause 3: EffectTiming.SecuritySkill →
+#   CardEffectFactory.PlaySelfTamerSecurityEffect(card)
+#   — standard play_from_security pattern (BT17-093, BT18-087, BT9-092, EX11-054).
+#
+# ─── Source-priority audit ───────────────────────────────────────────────────
+#
+# Clause 1: Printed text "If you have 2 or less memory, set it to 3."
+#   No "you may" gate → mandatory. `condition: { memory_lte: 2 }`, no
+#   `optional: true`. Identical to B1-pattern siblings.
+#
+# Clause 2: Printed text says "Add 1 blue and 1 green Digimon card among them
+#   to your hand." — "Add 1 ... and 1 ..." with no "you may". DCGO confirms
+#   `isOptional: false` on the outer ActivateClass. The bucket approach
+#   (select_reveal_buckets with min:1/max:1) mirrors DCGO's two distinct
+#   SimplifiedSelectCardConditionClass entries; when a bucket has zero
+#   candidates in the reveal, the engine auto-resolves the empty bucket
+#   (matching the "among them" qualifier — only add what's present).
+#
+# Clause 3: "[Security] Play this card without paying the cost." — Mandatory
+#   per rules §16; no optional flag.
+#
+# ─── DSL notes ───────────────────────────────────────────────────────────────
+#
+# `color_is: blue` and `color_is: green` predicates are supported in
+# PredicateSpec (code/digimon-dsl/src/predicate.rs:35) and evaluated in
+# code/digimon-engine/src/dsl_cards/predicate.rs:828 for card data filters.
+# They work on revealed card data (CardSource → CardData) correctly, confirmed
+# by the predicate evaluator's eval_card_source_fields path.
+#
+# `no_duplicate_cards: true` encodes DCGO `mutualConditions: true` — a blue-
+# AND-green Digimon (if any existed) could not be used to fill both slots.
+
+effects:
+  # ─── Clause 1: [Start of Your Turn] Memory floor ─────────────────────────
+  #
+  # Printed: "[Start of Your Turn] If you have 2 or less memory, set it to 3."
+  # Mandatory (no "you may"). Fires unconditionally when the condition holds.
+  # No `optional: true`.
+  #
+  # Identical DSL pattern: BT18-087 Clause 1, EX11-054 Clause 1, EX11-060,
+  # EX8-067, BT21-102 Clause (a), ST19-14.
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If memory ≤ 2, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  # ─── Clause 2: [On Play] Reveal 3, add 1 blue Digimon + 1 green Digimon ──
+  #
+  # Printed: "[On Play] Reveal the top 3 cards of your deck. Add 1 blue and
+  # 1 green Digimon card among them to your hand. Place the remaining cards
+  # at the bottom of your deck in any order."
+  #
+  # Mandatory outer trigger (no "you may" at the clause level; DCGO confirms
+  # isOptional: false on ActivateClass). The buckets may be empty if no
+  # matching color Digimon appears in the reveal — the engine auto-resolves
+  # empty buckets rather than locking the pick, matching "among them".
+  #
+  # `color_is: blue` filter: DCGO CanSelectCardCondition checks
+  #   IsDigimon && HasCardColor(CardColor.Blue)
+  # `color_is: green` filter: DCGO CanSelectCardCondition1 checks
+  #   IsDigimon && HasCardColor(CardColor.Green)
+  #
+  # `no_duplicate_cards: true`: DCGO `mutualConditions: true` — a single
+  # card cannot satisfy both the blue and green slot simultaneously.
+  # In practice no Digimon card is both blue-only and green-only, but the
+  # flag is set faithfully.
+  #
+  # `place_remainder_on_deck { position: bottom }` → DCGO
+  # `RemainingCardsPlace.DeckBottom`.
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 blue Digimon + 1 green Digimon; bottom rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: blue_digimon_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - color_is: blue
+            - bind_as: green_digimon_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - color_is: green
+          no_duplicate_cards: true
+          prompt: "Select 1 blue Digimon and 1 green Digimon"
+      - add_to_hand_from_reveal: { of: you, card: blue_digimon_pick }
+      - add_to_hand_from_reveal: { of: you, card: green_digimon_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Clause 3: [Security] Play without paying the cost ───────────────────
+  #
+  # Printed: "Security Effect [Security] Play this card without paying the
+  # cost."
+  #
+  # Standard play_from_security pattern (cf. BT17-093 Clause 3, BT18-087
+  # Clause 3, BT9-092, EX11-054 Clause 3). Mandatory — [Security] effects
+  # are not optional per rules manual §16.
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -1,0 +1,144 @@
+card: BT16-040
+name: Wormmon
+kind: digimon
+level: 3
+color: [green, white]
+cost: 3
+dp: 2000
+traits: [Larva]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2 }
+    cost: 1
+
+# ─── Clause 0: [Start of Your Main Phase] [On Play] digivolve from trash ────
+#
+# Printed text:
+#   "[Start of Your Main Phase] [On Play] If it's your turn, 1 of your Digimon
+#   may digivolve into a level 4 Digimon card with the [Insectoid] or [Free]
+#   trait in your trash with the digivolution cost reduced by 1."
+#
+# DCGO BT16_040.cs analysis (OnStartMainPhase timing):
+#   - CanUseCondition: IsExistOnBattleArea(card) && IsOwnerTurn(card).
+#   - CanActivateCondition: IsExistOnBattleArea(card) &&
+#       HasMatchConditionOwnersCardInTrash(CanSelectCardCondition) &&
+#       TrashCards.Count >= 1.
+#   - CanSelectCardCondition: (Insectoid || Free) && Level == 4 && Digimon.
+#   - CanSelectPermanentCondition: own battle-area Digimon with at least one
+#     eligible trash card that can be played onto its frame.
+#   - SelectPermanentEffect: canNoSelect=true (player may decline).
+#   - After permanent pick: SelectCard from trash filtered by Insectoid/Free Lv4.
+#   - After card pick: DigivolveIntoHandOrTrashCard(..., isHand=false,
+#     reduceCostTuple=(1, null)).
+#
+# NOTE: The DCGO OnPlay timing is NOT in the C# reference—the printed text
+# adds "[On Play]" as a second trigger window. Per source-priority policy,
+# printed text wins: the clause fires on both SOMP AND OnPlay.
+#
+# DSL modelling:
+#   - when: [start_of_your_main_phase, on_play]
+#   - active_when: { your_turn: true }    → "if it's your turn"
+#   - optional: true                       → "may"
+#   - process:
+#       1. select_own_permanent (optional: true, filter: digimon + has eligible
+#          trash card). The eligible-trash-card check on the permanent's frame
+#          is a runtime DCGO detail; the DSL filter below approximates it by
+#          requiring the permanent be a Digimon in the battle area. The trash
+#          card check is enforced implicitly by `select_trash` having no valid
+#          targets when trash is empty of eligible cards.
+#       2. select_trash (filter: digimon + level_eq:4 + (Insectoid OR Free))
+#       3. effect_initiated_digivolve: { target: perm, from_hand: evo,
+#          cost: { reduce: 1 } }
+#          NOTE: `from_hand` receives a TrashIndex binding from select_trash;
+#          resolve_card_source_ref maps TrashIndex → CardSourceRef::Trash, so
+#          the engine call uses effect_initiated_digivolve_from_source with a
+#          Trash source. The field name `from_hand` is a DSL naming artifact;
+#          the lowering correctly handles trash-origin bindings.
+#
+# Known gaps:
+#   - G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET: the chain
+#     `select_own_permanent → select_trash → effect_initiated_digivolve`
+#     terminates after the permanent pick in the current engine dispatch path.
+#     The tail steps (select_trash and the digivolve itself) do not execute.
+#     The YAML is structurally faithful but the behavioral tests are
+#     #[ignore]'d until this gap closes.
+#   - G-OPT-MULTI-TIMING-SHARED-LOCKOUT: when clause fires at SOMP and again
+#     on play in the same turn, each timing is treated as an independent OPT
+#     window rather than a shared lockout. The printed text treats them as one
+#     clause so ideally they share a lockout.
+#
+# The clause is authored faithfully in YAML; gap constraints are documented
+# and test assertions that depend on chain continuation are #[ignore]'d.
+
+effects:
+  - when: [start_of_your_main_phase, on_play]
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[SOMP][On Play][Your Turn] May have 1 of your Digimon digivolve into Lv4 Insectoid/Free from trash, cost -1"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose 1 of your Digimon to digivolve"
+      - select_trash:
+          of: you
+          bind_as: evo
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 4
+              - any_of:
+                  - trait_has: Insectoid
+                  - trait_has: Free
+          prompt: "Choose a Lv.4 [Insectoid] or [Free] Digimon from your trash"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 1 }
+          ignore_requirements: false
+
+# ─── Clause 1: Inherited [When Attacking] [Once Per Turn] suspend opp ────────
+#
+# Printed inherited text:
+#   "[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon."
+#
+# DCGO BT16_040.cs analysis (OnAllyAttack timing):
+#   - ActivateClass with oncePerTurn effectively via SetHashString.
+#   - SetIsInheritedEffect(true).
+#   - CanUseCondition: CanTriggerOnAttack(hashtable, card).
+#   - CanActivateCondition: IsExistOnBattleAreaDigimon(card).
+#   - Body: HasMatchConditionOpponentsPermanent(IsOpponentDigimon) →
+#     SelectPermanentEffect(maxCount=1, canNoSelect=false, Mode.Tap).
+#
+# DSL modelling:
+#   - scope: inherited    → fires as inherited effect from digi-stack
+#   - when: when_attacking
+#   - once_per_turn: true  → [Once Per Turn]
+#   - optional: false      → "Suspend 1" is mandatory once the effect fires;
+#     canNoSelect=false in DCGO means the player MUST pick a target if any
+#     exist. However, when no opponent Digimon exist the effect does nothing.
+#     The select_opponent_permanent filter handles the no-target case naturally
+#     (the step is a no-op when there are no valid targets).
+#   - process:
+#       1. select_opponent_permanent (filter: digimon, optional: false)
+#       2. suspend: { target: tgt }
+#
+# Implementation status: IMPLEMENTED. The select + suspend pattern is
+# battle-tested (EX8-074, BT17-081, BT13-012 precedents).
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: false
+    summary: "[Inherited][When Attacking][OPT] Suspend 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Suspend 1 of your opponent's Digimon"
+      - suspend: { target: tgt }

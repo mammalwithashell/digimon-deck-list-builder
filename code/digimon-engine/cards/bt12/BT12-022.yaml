@@ -1,0 +1,112 @@
+# BT12-022 ExVeemon — Digimon, Lv.4, Blue, DP 4000, Cost 4.
+# Traits: Mythical Dragon.
+# Evo: Lv.3 Blue / Cost 2 (printed default).
+#
+# Printed card text (cards.json):
+#
+#   Effect: [Your Turn] When this Digimon would DNA digivolve into a green
+#   Digimon card, gain 1 memory.
+#
+#   Inherited Effect: [Your Turn] While this Digimon has [Imperialdramon] in
+#   its name or the [Free] trait, it gains ＜Jamming＞ (This Digimon can't be
+#   deleted in battles against Security Digimon.).
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT12/Blue/BT12_022.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────────
+#
+#   Clause 0 (own effect): BLOCKED
+#     "[Your Turn] When this Digimon would DNA digivolve into a green Digimon
+#     card, gain 1 memory."
+#     DCGO: EffectTiming.BeforePayCost with CanTriggerWhenPermanentWouldDigivolveOfCard
+#     + IsJogress + target card must be green Digimon. This is a BeforePayCost
+#     triggered gain_memory effect gated on the digivolve target's color.
+#     BLOCKED on G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (already in qa/dsl-vocab-gaps.md)
+#     for the DNA-digivolve-target thread, PLUS a new sub-gap:
+#     G-BEFORE-PAY-COST-GAIN-MEMORY — BeforePayCost triggered effects currently
+#     only model `cost_reduction` in CostReductionBody; there is no triggered
+#     form for `gain_memory` at BeforePayCost timing.
+#     Note: `on_dna_digivolve` fires AFTER DNA completes and has no
+#     `event_card_color_is` predicate, so it cannot model the "would into green"
+#     gating faithfully even if timing were adjusted.
+#     See qa/dsl-vocab-gaps.md entries for this card.
+#
+#   Clause 1 (inherited): PARTIAL
+#     "[Your Turn] While this Digimon has [Imperialdramon] in its name or the
+#     [Free] trait, it gains <Jamming>"
+#     DCGO: EffectTiming.None, JammingSelfStaticEffect(isInheritedEffect: true),
+#     Condition: IsExistOnBattleArea && IsOwnerTurn &&
+#       (PermanentOfThisCard().TopCard.ContainsCardName("Imperialdramon")
+#        || PermanentOfThisCard().TopCard.CardTraits.Contains("Free"))
+#     Shipped as `kind: grant_keyword` (scope: inherited) with `active_when`
+#     carrying the condition. The `active_when` is compiled but NOT consumed
+#     by `lower_grant_keyword::lower` (mod.rs line 82-98 uses `..` to discard
+#     the field) — so the Jamming is granted unconditionally to any carrier.
+#     This over-fires for carriers without [Imperialdramon] in name or [Free]
+#     trait. The negative-condition test is #[ignore]'d under
+#     G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.
+#     The carrier-name condition would additionally require G-DSL-SELF-NAME-CONTAINS
+#     (BoolPredicate that checks the carrier top-card name from an inherited
+#     clause context — filed under AD1-014 in qa/dsl-vocab-gaps.md).
+#     The carrier-trait condition would require `source_permanent_trait_has`
+#     to be evaluated in predicate.rs (currently it exists in compiled.rs but
+#     has no evaluator arm).
+
+card: BT12-022
+name: ExVeemon
+kind: digimon
+level: 4
+color: [blue]
+cost: 4
+dp: 4000
+traits: [Mythical Dragon]
+
+effects:
+  # ─── Clause 0 — BLOCKED ──────────────────────────────────────────────────────
+  #
+  # "[Your Turn] When this Digimon would DNA digivolve into a green Digimon
+  #  card, gain 1 memory."
+  #
+  # BLOCKED on G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (BeforePayCost trigger with
+  # target-card predicate threading) and G-BEFORE-PAY-COST-GAIN-MEMORY (no
+  # triggered gain_memory form at BeforePayCost timing). Both gaps filed in
+  # qa/dsl-vocab-gaps.md. See card header for full analysis.
+  #
+  # Stub (commented — uncomment when both gaps close):
+  #
+  # - scope: own
+  #   kind: cost_reduction           # wrong kind — need triggered gain_memory
+  #   reduction_timing: before_pay_cost
+  #   when_this_digivolves_into:
+  #     target_color_is: green       # NEW: G-EVENT-CARD-COLOR-IS gap
+  #     target_kind_is: digimon
+  #     dna_only: true               # G-BEFORE-PAY-COST-DIGIVOLVE-TARGET
+  #   active_when: { your_turn: true }
+  #   # effect: gain_memory: 1       # needs triggered form, not cost_reduction
+
+  # ─── Clause 1 — Inherited [Your Turn] <Jamming> (conditional, over-fires) ───
+  #
+  # Printed text:
+  #   "[Your Turn] While this Digimon has [Imperialdramon] in its name or the
+  #    [Free] trait, it gains ＜Jamming＞"
+  #
+  # DCGO: JammingSelfStaticEffect(isInheritedEffect: true), condition checks
+  #   carrier's TopCard name or trait. Shipped with `active_when` encoding the
+  #   name condition via `self_digivolution_contains_name` and a `your_turn`
+  #   gate, but `active_when` is NOT consumed by the lowering (see header).
+  #   Trait branch (source_permanent_trait_has: "Free") also silently dropped.
+  #   Net effect: Jamming is granted unconditionally to every carrier at
+  #   any turn — over-fires for non-Imperialdramon/non-Free carriers and
+  #   on opponent's turn. Negative tests are #[ignore]'d under
+  #   G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Jamming
+    active_when:
+      all_of:
+        - your_turn: true
+        - any_of:
+            - self_digivolution_contains_name: "Imperialdramon"
+            - source_permanent_trait_has: "Free"
+    summary: "[Inherited][Your Turn] Carrier gains <Jamming> if name has [Imperialdramon] or [Free] trait (active_when over-fires: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED)"
