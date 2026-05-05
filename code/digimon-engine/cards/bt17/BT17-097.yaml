@@ -1,24 +1,252 @@
+# BT17-097 Return to the Primogenitor — Option, Cost 2, Blue+Green.
+# Traits: (none printed).
+#
+# Printed card text (data/cards.json, authoritative):
+#
+#   [Main] 1 of your Digimon may digivolve into a level 5 or higher Digimon
+#   card with the [Free] trait in your hand with the digivolution cost reduced
+#   by 4. Then, place this card in the battle area.
+#
+#   [All Turns] When one of your Digimon with the [Free] trait would be deleted
+#   other than by one of your effects, ＜Delay＞ (By trashing this card after
+#   the placing turn, activate the effect below.)
+#   ・By digivolving that Digimon into a Digimon card with [Imperialdramon] in
+#   its name in your hand without paying the cost, prevent that deletion.
+#
+# Inherited (Security):
+#   Security Effect [Security] You may play 1 Tamer card with [Davis Motomiya]
+#   or [Ken Ichijoji] in its name from your hand or trash without paying the
+#   cost. Then, place this card in the battle area.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT17/Blue/BT17_097.cs
+#
+# ─── DCGO crosscheck ──────────────────────────────────────────────────────────
+#
+# Clause A — `EffectTiming.OptionSkill` (Main play). DCGO prompts a Digimon
+#   selection (select 1 own battle-area Digimon that has a hand-card eligible to
+#   digivolve onto it from the filtered set Lv5+, [Free] trait, reduced cost 4),
+#   then calls `CardEffectCommons.DigivolveIntoHandOrTrashCard` with
+#   `reduceCost: 4`, `isHand: true`. After the digivolve, calls
+#   `CardEffectCommons.PlaceDelayOptionCards(card)` — which moves this Option
+#   from the hand to the battle area as a Delay-Option permanent.
+#   `canNoSelect: true` on BOTH the Digimon pick and the hand-card pick — the
+#   entire effect is optional.
+#
+# Clause B — `EffectTiming.WhenPermanentWouldBeDeleted`. Cross-permanent
+#   replacement observer. CanUseCondition checks:
+#     • `CanDeclareOptionDelayEffect(card)` — this Option is on the field as a
+#       Delay permanent (after the placing turn).
+#     • `CanTriggerWhenPermanentRemoveField(hashtable, IsOwnerPermanentCondition)`
+#       — the leaving permanent is an own Digimon with [Free] trait and at
+#       least one Imperialdramon-name hand card that can digivolve onto it.
+#     • `!CardEffectCommons.IsByEffect(hashtable, cardEffect => IsOwnerEffect(cardEffect, card))`
+#       — deletion must NOT be by the controller's own effects. This is the
+#       printed "other than by one of your effects" gate.
+#   ActivateCoroutine:
+#     1. `DeletePermanentAndProcessAccordingToResult(card.PermanentOfThisCard())`
+#        — pays the Delay cost (trash this Option from the battle area).
+#     2. On success: `SelectPermanentEffect` over qualifying own Digimon with
+#        [Free] trait (the would-be-deleted subject). `canNoSelect: false` (once
+#        the Delay cost is paid, the player MUST attempt the digivolve).
+#     3. `DigivolveIntoHandOrTrashCard` with `isHand: true`, `payCost: false`
+#        (free digivolve), filtered to Imperialdramon-name Digimon. If the
+#        digivolve lands, the deletion is implicitly cancelled because the
+#        subject permanent now carries the new top card and is no longer
+#        "would-be-deleted" in the same way.
+#     4. Formally: DCGO's `DeletePermanentAndProcessAccordingToResult` on the
+#        delay card trashes it (paying the cost), then `DigivolveIntoHandOrTrashCard`
+#        performs the free digivolve on the subject. The printed "prevent that
+#        deletion" is implemented by the replacement machinery: choosing to
+#        activate this replacement + paying the Delay cost = the deletion is
+#        replaced by the digivolve.
+#
+# Clause C — `EffectTiming.SecuritySkill` (Security/Inherited). Same
+#   hand-or-trash optional Tamer play (Davis Motomiya OR Ken Ichijoji name
+#   filter). After optional play:
+#   `CardEffectCommons.PlaceDelayOptionCards(card)` — "Then, place this card in
+#   the battle area."
+#
+# ─── Implementation status (faithfulness diff) ────────────────────────────────
+#
+# | Card-text element                                                   | Status |
+# |---------------------------------------------------------------------|--------|
+# | [Main] select own Digimon + digivolve from hand Lv5+ [Free] cost-4 | BLOCKED — G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET |
+# | [Main] "Then, place this card in the battle area"                   | IMPLEMENTED via place_self_as_delay_option |
+# | [All Turns] subject is own Digimon with [Free] trait                | IMPLEMENTED via trait_has: Free + replacement_subject_is_mine |
+# | [All Turns] "other than by one of your effects"                     | IMPLEMENTED via none_of: [replacement_cause: own_effect] |
+# | [All Turns] <Delay> cost (trash this card)                          | IMPLEMENTED via cost: delay_self: true |
+# | [All Turns] digivolve subject into Imperialdramon-name hand card    | IMPLEMENTED via choose: from: hand + digivolve_without_cost |
+# | [All Turns] prevent the deletion                                    | IMPLEMENTED via outcome: prevent |
+# | [Security] play Davis/Ken Tamer from hand or trash, free            | PARTIAL — hand branch via select_hand/play_from_hand_free; trash branch via select_trash/play_from_trash_free; zone-choice workaround for G-DSL-UNION-PLAY-FREE |
+# | [Security] "Then, place this card in the battle area"               | IMPLEMENTED via place_self_as_delay_option |
+#
+# ─── DSL gap: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET ────
+#
+# Clause A's core mechanic (select own Digimon → select hand card Lv5+ [Free]
+# trait cost-4 → digivolve) is the same gap family as BT16-040 Wormmon.
+# The process chain terminates after the Digimon pick; the subsequent hand-card
+# pick and `effect_initiated_digivolve` verb do not resume. Tracked in
+# qa/dsl-vocab-gaps.md §G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET.
+#
+# Consequence: Clause A's process only surfaces the Main timing trigger to
+# install this card as a Delay-Option permanent (via `place_self_as_delay_option`).
+# The digivolve prompt is omitted until the gap closes. Behavioral tests for
+# the digivolve sub-clause are #[ignore]'d.
+#
+# ─── DSL gap: G-DSL-UNION-PLAY-FREE ──────────────────────────────────────────
+#
+# Clause C prints "from your hand or trash". `select_union_zone` binds a
+# Card-typed handle; `play_from_hand_free` / `play_from_trash_free` need a
+# HandIndex / TrashIndex binding. Workaround: explicit `select_effect_choice`
+# (From hand / From trash) with branching per BT17-095 / BT21-015 pattern.
+# The engine does not auto-collapse when only one zone is populated.
+# Tracked in qa/dsl-vocab-gaps.md §G-DSL-UNION-PLAY-FREE.
+#
+# ─── option_flow/replacement_integration.rs compatibility ─────────────────────
+#
+# The existing tests in option_flow/replacement_integration.rs use
+# `dsl_card("BT17-097")` and exercise the Clause B shape (trait_has, Delay
+# cost, choose, digivolve_without_cost, prevent). Those tests continue to
+# pass against this YAML because the Clause B structure is preserved
+# faithfully. The three key changes from the old fixture:
+#   1. `replacement_cause: opponent_effect` (old, too-restrictive) →
+#      `none_of: [replacement_cause: own_effect]` (new, faithful to printed
+#      "other than by one of your effects" — allows battle, security_check,
+#      cost, and opponent_effect triggers).
+#   2. The card is now the real card (cost 2, blue+green, correct name).
+#   3. Two new clauses (A and C) are added.
+
 card: BT17-097
-name: "BT17-097 Delay Prevention Fixture"
+name: "Return to the Primogenitor"
 kind: option
-color: [blue]
-cost: 0
+color: [blue, green]
+cost: 2
 traits: []
 
 effects:
+  # ─── Clause A — [Main] digivolve into Lv5+ [Free] hand card, cost -4, place self ──
+  #
+  # Printed: "[Main] 1 of your Digimon may digivolve into a level 5 or higher
+  # Digimon card with the [Free] trait in your hand with the digivolution cost
+  # reduced by 4. Then, place this card in the battle area."
+  #
+  # BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET
+  #   (qa/dsl-vocab-gaps.md). The `select_own_permanent → select_hand →
+  #   effect_initiated_digivolve` chain does not resume after the Digimon pick.
+  #   Until the gap closes the digivolve sub-clause is omitted; only
+  #   `place_self_as_delay_option` fires, which correctly installs this card
+  #   as a Delay-Option permanent so Clause B can observe.
+  #
+  # `optional: true` — DCGO `canNoSelect: true` on both picks; the player may
+  # decline entirely (and even skip the Delay-Option placement, per the printed
+  # "may digivolve" grammar — the placement is a tail of the same "may"
+  # action; however, per DCGO, `PlaceDelayOptionCards` runs unconditionally
+  # after the (possibly no-op) digivolve attempt, so the card always becomes a
+  # Delay permanent when the Main effect activates). We model the outer
+  # activate as `optional: true` (the player may decline the trigger), but
+  # once activated, `place_self_as_delay_option` runs unconditionally.
+  #
+  # Since the DSL has no auto-selection suppression for the digivolve sub-
+  # clause, we omit it entirely and list `place_self_as_delay_option` as the
+  # sole process step.
+  - when: main_from_hand
+    optional: true
+    summary: "[Main] (BLOCKED: digivolve into Lv5+ [Free] hand card cost-4) Then place self in battle area as Delay permanent"
+    process:
+      # BLOCKED step (digivolve) — omitted pending G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET.
+      # When gap closes, add before place_self_as_delay_option:
+      #   - select_own_permanent:
+      #       bind_as: digi_target
+      #       filter:
+      #         all_of:
+      #           - kind: digimon
+      #           - any_hand_card_can_digivolve_onto: true   # (hypothetical; engine needs support)
+      #       optional: true
+      #       prompt: "Select 1 of your Digimon to digivolve"
+      #   - select_hand:
+      #       of: you
+      #       bind_as: digi_card
+      #       optional: true
+      #       filter:
+      #         all_of:
+      #           - kind: digimon
+      #           - level_gte: 5
+      #           - trait_has: "Free"
+      #       prompt: "Select a Lv5+ [Free] trait hand card to digivolve (cost -4)"
+      #   - effect_initiated_digivolve:
+      #       target: digi_target
+      #       from_hand: digi_card
+      #       cost_reduction: 4
+      #
+      # Final step: place this Option in the battle area as a Delay permanent.
+      # DCGO: `CardEffectCommons.PlaceDelayOptionCards` always fires after the
+      # digivolve attempt.
+      - place_self_as_delay_option: {}
+
+  # ─── Clause B — [All Turns] Delay replacement on own [Free] deletion ──────────
+  #
+  # Printed: "[All Turns] When one of your Digimon with the [Free] trait would
+  # be deleted other than by one of your effects, ＜Delay＞ (By trashing this
+  # card after the placing turn, activate the effect below.)
+  # ・By digivolving that Digimon into a Digimon card with [Imperialdramon] in
+  # its name in your hand without paying the cost, prevent that deletion."
+  #
+  # Implementation:
+  #   - `kind: replacement`, `timing: when_would_be_deleted` — observes ALL
+  #     would-be-deleted events, then filters via `active_when`.
+  #   - `trait_has: "Free"` — the replacement subject must have the [Free] trait
+  #     (evaluated against the leaving permanent's top card, per
+  #     `predicate_reads_replacement_subject` path).
+  #   - `replacement_subject_is_mine: true` — gate to "your Digimon".
+  #   - `none_of: [replacement_cause: own_effect]` — the printed "other than
+  #     by one of your effects" gate. Allows battle, opponent_effect,
+  #     security_check, cost-driven deletion (DCGO: `!IsByEffect(hashtable,
+  #     cardEffect => IsOwnerEffect(cardEffect, card))`).
+  #   - mandatory (no `optional: true`) — the replacement fires unconditionally
+  #     when the active_when conditions match. The player's "may decline"
+  #     semantics (DCGO `SetUpActivateClass(..., isOptional=true)`) are captured
+  #     by the `SelectHand { optional: true }` step: the player passes the hand
+  #     pick to decline the benefit, in which case the Delay cost (self-trash)
+  #     has already been paid but the digivolve is skipped. This mandatory model
+  #     is consistent with the existing engine tests and avoids requiring an
+  #     extra REPLACEMENT_ACCEPT step for the common accept path.
+  #   - `cost: delay_self: true` — pays the Delay cost by trashing this Option
+  #     from the battle area.
+  #   - `choose: from: hand, card_filter: name_contains: "Imperialdramon", min: 1, max: 1`
+  #     — selects the hand card to digivolve onto the subject. DCGO: player must
+  #     pick a hand Digimon with "Imperialdramon" in name. `min: 1` makes the
+  #     selection mandatory once the cost is paid (DCGO: `canNoSelect: false`).
+  #   - `then: digivolve_without_cost: target: replacement_subject, card: chosen`
+  #     — performs the free digivolve of the subject into the chosen hand card.
+  #   - `outcome: prevent` — cancel the replacement; the subject is not deleted.
+  #
+  # `all_turns: true` — the [All Turns] printed tag. This fires on both
+  # players' turns, not only your own.
+  #
+  # Compatibility note: the `option_flow/replacement_integration.rs` tests use
+  # `dsl_card("BT17-097")` and pass `ReplacementCause::OpponentEffect` as the
+  # deletion cause. Under the new `none_of: [replacement_cause: own_effect]`
+  # predicate, `OpponentEffect` is NOT in the excluded set, so those tests
+  # continue to pass. Tests using `ReplacementCause::OwnEffect` (i.e., own-
+  # effect deletions) should NOT trigger this replacement — those are the
+  # newly-faithful gate.
   - kind: replacement
     timing: when_would_be_deleted
     active_when:
-      all:
-        - subject_trait: Free
-        - replacement_cause: opponent_effect
-    summary: "Delay: prevent deletion and digivolve from hand"
+      all_of:
+        - all_turns: true
+        - trait_has: "Free"
+        - replacement_subject_is_mine: true
+        - none_of:
+            - replacement_cause: own_effect
+    summary: "[All Turns] Delay: when own [Free] Digimon would be deleted (not by own effect), pay Delay cost → digivolve subject into Imperialdramon-name hand card → prevent deletion"
     cost:
       delay_self: true
     choose:
       from: hand
       card_filter:
-        trait: Imperialdramon
+        name_contains: "Imperialdramon"
       min: 1
       max: 1
     outcome: prevent
@@ -26,3 +254,78 @@ effects:
       - digivolve_without_cost:
           target: replacement_subject
           card: chosen
+
+  # ─── Clause C — [Security] (inherited) play Davis/Ken Tamer + place self ───────
+  #
+  # Printed (inherited): "Security Effect [Security] You may play 1 Tamer card
+  # with [Davis Motomiya] or [Ken Ichijoji] in its name from your hand or trash
+  # without paying the cost. Then, place this card in the battle area."
+  #
+  # `optional: true` — DCGO `canNoSelect: true` on both per-zone picks; player
+  # may decline without playing any Tamer.
+  #
+  # Workaround for G-DSL-UNION-PLAY-FREE: hand-or-trash union play requires a
+  # `select_union_zone` step but the resulting Card-typed binding cannot feed
+  # `play_from_hand_free` / `play_from_trash_free`. Per BT17-095 / BT21-015
+  # pattern: explicit `select_effect_choice` (From hand / From trash) with
+  # branching select_hand/select_trash per branch.
+  #
+  # "Then, place this card in the battle area." — `place_self_as_delay_option: {}`
+  # is the correct verb (cf. BT17-095 Clause A). This seats this Option as a
+  # Delay permanent on the field, enabling Clause B's cross-permanent observer.
+  # DCGO: `CardEffectCommons.PlaceDelayOptionCards(card, cardEffect)`.
+  #
+  # Note: DCGO restricts the eligible Tamer to `IsTamer` AND ContainsCardName.
+  # The printed text says "1 Tamer card with [Davis Motomiya] or [Ken Ichijoji]
+  # in its name" — in the current card pool there are no non-Tamer cards with
+  # these names, so the name filter is equivalent in practice. Mirrored as
+  # name filter only to match printed text.
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security][Inherited] You may play 1 [Davis Motomiya]/[Ken Ichijoji] Tamer from hand or trash free; then place self in battle area"
+    process:
+      # G-DSL-UNION-PLAY-FREE workaround: surface the zone choice explicitly.
+      # DCGO would auto-collapse to the populated zone when only one has
+      # eligible cards; this DSL form always presents both branches.
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "From which area do you play a [Davis Motomiya] or [Ken Ichijoji] Tamer?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: picked_hand
+                optional: true
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - any_of:
+                        - name_contains: "Davis Motomiya"
+                        - name_contains: "Ken Ichijoji"
+                prompt: "Play 1 [Davis Motomiya] or [Ken Ichijoji] Tamer from hand (free)"
+            - play_from_hand_free:
+                of: you
+                hand_index: picked_hand
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: picked_trash
+                optional: true
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - any_of:
+                        - name_contains: "Davis Motomiya"
+                        - name_contains: "Ken Ichijoji"
+                prompt: "Play 1 [Davis Motomiya] or [Ken Ichijoji] Tamer from trash (free)"
+            - play_from_trash_free:
+                of: you
+                hand_index: picked_trash
+      # Final step: place this Option in controller's battle area as a Delay
+      # permanent. DCGO: `CardEffectCommons.PlaceDelayOptionCards(card, ...)`.
+      - place_self_as_delay_option: {}

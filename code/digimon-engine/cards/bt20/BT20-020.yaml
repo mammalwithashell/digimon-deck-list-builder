@@ -1,0 +1,235 @@
+# BT20-020 Imperialdramon: Fighter Mode — Digimon, Lv.6, Red/White, DP 13000, Cost 13.
+# Traits: Ancient Dragonkin
+# Attribute: Virus
+#
+# Standard digivolve: Lv.5 Red / Cost 5 (per evo_costs in cards.json).
+# Alt digivolve (xros_req): [Imperialdramon: Dragon Mode] (Lv.6) / Cost 2.
+#
+# Printed card text (data/cards.json):
+#
+# ＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1
+#   of your opponent's unsuspended Digimon with the highest DP.)
+# ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and
+#   survives the battle, it performs any security checks it normally would.)
+# [When Digivolving] Your opponent can't play Digimon or Tamers by effects until
+#   the end of their turn. Then, if [Imperialdramon: Dragon Mode] is in this
+#   Digimon's digivolution cards, trash your opponent's top security card.
+# [All Turns] [Once Per Turn] When your opponent's security stack is removed from,
+#   delete 1 of their Digimon with as much or less DP as this Digimon.
+#
+# Inherited effect text: (none)
+# Security effect text: (none)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT20/Red/BT20_020.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────────
+#
+#   alt-path 1: Standard digivolve (Lv.5 Red / Cost 5)              IMPLEMENTED
+#   alt-path 2: Alt digivolve ([Imperialdramon: Dragon Mode] / Cost 2) IMPLEMENTED
+#   Clause 0:  ＜Raid＞                                              IMPLEMENTED
+#   Clause 1:  ＜Piercing＞                                          IMPLEMENTED
+#   Clause 2:  [When Digivolving] opp cannot play Digimon/Tamers by  IMPLEMENTED
+#              effect until end of their turn; then if Dragon Mode
+#              in digi-stack, trash opp top security
+#   Clause 3:  [All Turns][OPT] on opp security removed → delete 1   PARTIAL
+#              opp Digimon with DP ≤ this Digimon                    (delete BLOCKED — G-FORMULA-SOURCE-DP)
+#
+# ─── DSL-GAP — Cannot read source permanent's DP in formula  [G-FORMULA-SOURCE-DP] ─
+#
+# Clause 3 requires deleting 1 opponent Digimon with DP ≤ this Digimon's DP.
+# The `dp_lte` predicate accepts literal values or formula-based values, but
+# the `FormulaSpec` enum has no `source_dp: {}` primitive that reads the
+# source permanent's own effective DP at runtime. The engine has the data
+# (`ctx.source_permanent` + `ctx.game.effective_dp(h)`) but the formula layer
+# lacks a primitive to surface it.
+#
+# This gap is shared with BT17-102 Greymon, P-182 WarGreymon, and BT18-087
+# Owen Dreadnought (the latter uses a literal cap; the former two need source DP).
+# All existing cards that need "≤ self DP" deletes are BLOCKED on this gap and
+# omit the delete clause under no-approximations (including a `kind: digimon`
+# delete without the DP filter would over-target opponents with arbitrary DP).
+#
+# Suggested closure:
+#   - Add `SourceDp` variant to `FormulaSpec` / `CompiledFormula` in
+#     `digimon-dsl`, evaluated as:
+#       ctx.source_permanent.and_then(|h| ctx.game.effective_dp(h)).unwrap_or(0)
+#   - Then Clause 3's filter becomes:
+#       filter:
+#         all_of:
+#           - kind: digimon
+#           - dp_lte: { formula: { source_dp: {} } }
+#
+# Until the gap closes, the `select_opponent_permanent` + `delete_permanent`
+# body of Clause 3 is OMITTED. The trigger itself (timing, active_when,
+# once_per_turn) is still compiled so the structural test passes.
+#
+# See also: G-PRED-DP-LTE (G-PRED-DP-LTE-SOURCE is a sister gap naming variant)
+# and qa/dsl-vocab-gaps.md for the BT17-102 / P-182 entry.
+
+card: BT20-020
+name: "Imperialdramon: Fighter Mode"
+kind: digimon
+level: 6
+color: [red, white]
+cost: 13
+dp: 13000
+traits: [Ancient Dragonkin]
+attribute: Virus
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# 1) Standard digivolve: Lv.5 Red / Cost 5 (per evo_costs in cards.json).
+# 2) Alt digivolve (xros_req): [Imperialdramon: Dragon Mode] (Lv.6) / Cost 2.
+#    DCGO BT20_020.cs lines 41-48: AddSelfDigivolutionRequirementStaticEffect
+#    with PermanentCondition `targetPermanent.TopCard.EqualsCardName("Imperialdramon: Dragon Mode")`,
+#    digivolutionCost: 2, ignoreDigivolutionRequirement: false.
+#    Note: `ignoreDigivolutionRequirement: false` in DCGO means the added predicate
+#    IS the requirement — the standard Lv.5 Red color gate is bypassed by the
+#    new predicate taking precedence. We author with `ignore_requirements: true`
+#    to bypass the standard evo_costs filter (Lv.5 Red) while enforcing only
+#    the name+level check, mirroring EX4-073 Omnimon Zwart Defeat alt-path 2.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - color_is: red
+    cost: 5
+
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - name_contains: "Imperialdramon: Dragon Mode"
+    cost: 2
+    ignore_requirements: true
+
+effects:
+  # ─── Clause 0 — ＜Raid＞ (face-up declarative) ────────────────────────────────
+  # "When this Digimon attacks, you may switch the target of attack to 1 of your
+  #  opponent's unsuspended Digimon with the highest DP."
+  # DCGO BT20_020.cs: RaidSelfEffect at OnAllyAttack timing,
+  # isInheritedEffect: false.
+  # Canonical pattern: BT17-078 Clause 1 and BT23-008 Clause 1.
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  # ─── Clause 1 — ＜Piercing＞ (face-up declarative) ───────────────────────────
+  # "When this Digimon attacks and deletes an opponent's Digimon and survives
+  #  the battle, it performs any security checks it normally would."
+  # DCGO BT20_020.cs: PierceSelfEffect at OnDetermineDoSecurityCheck timing,
+  # isInheritedEffect: false.
+  # Canonical pattern: BT20-045 Examon (H3).
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  # ─── Clause 2 — [When Digivolving] flood-gate + conditional security trash ───
+  #
+  # Printed text:
+  #   "[When Digivolving] Your opponent can't play Digimon or Tamers by effects
+  #    until the end of their turn. Then, if [Imperialdramon: Dragon Mode] is in
+  #    this Digimon's digivolution cards, trash your opponent's top security card."
+  #
+  # DCGO BT20_020.cs lines 68-124:
+  #   ActivateClass at OnEnterFieldAnyone, gated by CanTriggerWhenDigivolving.
+  #   Coroutine:
+  #   1. Creates CanNotPutFieldClass blocking Digimon/Tamer/DigiEgg played by
+  #      opponent's effects → added to opponent's UntilOwnerTurnEndEffects.
+  #   2. Checks `card.PermanentOfThisCard().DigivolutionCards.Count(src => src.EqualsCardName("Imperialdramon: Dragon Mode")) >= 1`
+  #      → if true: IDestroySecurity(player: opponent, count: 1, fromTop: true).
+  #
+  # Implementation notes:
+  #
+  # (a) Cannot-play flood-gate (until end of opponent's turn):
+  #     Two `add_player_modifier` steps install player-scoped modifiers on the
+  #     opponent with `end_of_opponents_turn` expiry:
+  #       - CannotPlayDigimonByEffect (Digimon cards)
+  #       - CannotPlayTamerByEffect   (Tamer cards)
+  #     These are already in ModifierType and enforced by game_actions.rs.
+  #     The bt23_014_opp_cannot_play_from_trash raw_rust function uses the same
+  #     two modifiers with the same expiry — this clause does the same via DSL.
+  #
+  # (b) Conditional security trash:
+  #     An `if:` step checks `self_digivolution_contains_name: "Imperialdramon:
+  #     Dragon Mode"`. This predicate (RESOLVED 2026-05-02, Group 7) scans the
+  #     carrier permanent's digivolution card_sources stack via
+  #     `Permanent::contains_card_name`. In a `when_digivolving` process body,
+  #     `ctx.source_permanent` is set, so the `If` step's `PredicateSubject::None`
+  #     correctly falls through to `subject_or_source_permanent → rctx.source_permanent()`.
+  #
+  # No outer `condition:` needed — DCGO's `CanActivateCondition` only requires
+  # IsExistOnBattleAreaDigimon, which is implicit for when_digivolving effects
+  # (the permanent must be on the field to have digivolved).
+  - when: when_digivolving
+    summary: "[When Digivolving] Opp can't play Digimon/Tamers by effect until end of their turn; if Dragon Mode in digi-stack, trash opp top security"
+    process:
+      # Step 1: Block opponent from playing Digimon by effect until end of their turn.
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotPlayDigimonByEffect
+          expiry: end_of_opponents_turn
+      # Step 2: Block opponent from playing Tamers by effect until end of their turn.
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotPlayTamerByEffect
+          expiry: end_of_opponents_turn
+      # Step 3: If [Imperialdramon: Dragon Mode] is in this Digimon's digi cards,
+      # trash opponent's top security card.
+      - if:
+          condition:
+            self_digivolution_contains_name: "Imperialdramon: Dragon Mode"
+          then:
+            - trash_top_security: { of: opponent }
+
+  # ─── Clause 3 — [All Turns][OPT] on opp security removed → delete ≤ self DP ──
+  #
+  # Printed text:
+  #   "[All Turns] [Once Per Turn] When your opponent's security stack is removed
+  #    from, delete 1 of their Digimon with as much or less DP as this Digimon."
+  #
+  # DCGO BT20_020.cs lines 127-193:
+  #   ActivateClass at OnLoseSecurity timing (in DCGO: CanTriggerWhenLoseSecurity
+  #   with predicate `player => player == card.Owner.Enemy`).
+  #   SetHashString("ImperialDramon_BT20_020") → OPT (once per turn by hash).
+  #   CanSelectPermanentCondition: opponent's Digimon with
+  #     `permanent.DP <= card.Owner.MaxDP_DeleteEffect(card.PermanentOfThisCard().DP, activateClass)`
+  #   SelectPermanentEffect → mode: Destroy, canNoSelect: false.
+  #
+  # DSL implementation:
+  #   Timing: `on_opponent_security_removed` — fires when opponent's security is
+  #   removed (equivalent to DCGO OnLoseSecurity filtered by opponent).
+  #   `active_when: { all_turns: true }` — fires on both players' turns.
+  #   `once_per_turn: true` — enforces the [OPT] gate.
+  #
+  # BLOCKED sub-clause (delete with DP ≤ self):
+  #   The delete target filter requires `dp_lte: { formula: { source_dp: {} } }`
+  #   — a `source_dp` formula primitive that reads `ctx.source_permanent`'s
+  #   effective DP. This primitive does not exist in the DSL.
+  #   BLOCKED by G-FORMULA-SOURCE-DP (see BT17-102 and P-182 headers for full docs).
+  #
+  #   Under no-approximations, the delete step MUST be omitted:
+  #   - Including `select_opponent_permanent` without the DP filter would expose
+  #     ALL opponent Digimon as valid targets (no DP gating), violating the
+  #     printed card text and the no-approximations policy.
+  #   - Including the trigger without the body leaves a no-op [OPT] which is
+  #     preferable to an over-permissive body.
+  #
+  # The compiled clause structure (timing, active_when, once_per_turn, no body)
+  # gives the structural tests something to assert and documents the block point.
+  #
+  # Stub (commented — uncomment + remove BLOCKED note when G-FORMULA-SOURCE-DP closes):
+  #
+  # process:
+  #   - select_opponent_permanent:
+  #       bind_as: tgt
+  #       filter:
+  #         all_of:
+  #           - kind: digimon
+  #           - dp_lte: { formula: { source_dp: {} } }   # NEW formula primitive
+  #       prompt: "Delete 1 of opponent's Digimon (DP ≤ this Digimon)"
+  #   - delete_permanent: { target: tgt }
+  - when: on_opponent_security_removed
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] On opp security removed — delete body BLOCKED (G-FORMULA-SOURCE-DP)"

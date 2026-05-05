@@ -1,0 +1,228 @@
+# BT16-027 Imperialdramon: Fighter Mode — Digimon, Lv.6, Blue/Green, DP 13000, Cost 8.
+# Traits: Ancient Dragonkin
+# Evo: Lv.5 Blue / Cost 5
+#
+# Printed card text (cards.json):
+#
+# [Hand] [Counter] <Blast Digivolve>
+#   (Your Digimon may digivolve into this card without paying the cost.)
+#
+# [On Play] [When Digivolving]
+#   Return 1 of your opponent's Digimon with as many or fewer digivolution cards
+#   as this Digimon to the bottom of the deck.
+#
+# [End of Attack] [Once Per Turn]
+#   Unsuspend this Digimon. Then, if [Imperialdramon: Dragon Mode] is in this
+#   Digimon's digivolution cards, return 1 of your opponent's suspended Digimon
+#   to the bottom of the deck.
+#
+# Inherited effect:
+#   Ace Overflow <-4> (As this card moves from the field or under a card to an
+#   area other than those, lose 4 memory.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT16/Blue/BT16_027.cs
+#
+# Clause layout:
+#   Alt-path 1: Standard digivolve (Lv.5 Blue / Cost 5, per evo_costs in cards.json).
+#   Alt-path 2: Activated digivolve from [Imperialdramon: Dragon Mode] on field / Cost 2.
+#               DCGO: AddSelfDigivolutionRequirementStaticEffect (permanentCondition: TopCard
+#               EqualsCardName("Imperialdramon: Dragon Mode"), digivolutionCost: 2).
+#   Alt-path 3: Burst digivolve (Blast Digivolve keyword — [Hand][Counter], cost 0).
+#               DCGO: BlastDigivolveEffect at OnCounterTiming.
+#   Clause 1:   <Blast Digivolve> keyword grant (face-up declarative).
+#   Clause 2:   BLOCKED — [On Play][When Digivolving] return-to-bottom filtered by
+#               ≤ digi-cards-as-this. See G-PRED-STACK-SIZE-LTE-SOURCE below.
+#   Clause 3:   BLOCKED — [End of Attack][OPT] unsuspend self + conditional return.
+#               Unsuspend step is expressible; the conditional "if [Imperialdramon:
+#               Dragon Mode] in digi-cards" requires G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME.
+#   Inherited:  Ace Overflow <-4> via top-level `ace_overflow` field.
+#
+# ─── DSL Gap: G-PRED-STACK-SIZE-LTE-SOURCE  [Clause 2] ───────────────────────────
+#
+# Effect text: "Return 1 of your opponent's Digimon with as many or fewer
+#   digivolution cards as this Digimon to the bottom of the deck."
+#
+# The filter on the opponent's target permanent requires:
+#   target.card_sources.len() <= source.card_sources.len()
+# (where source is this Digimon's permanent).
+#
+# The DSL predicate `stack_size_lte` takes a literal `u8` (parsed at compile time
+# from the YAML). There is no `stack_size_lte_source` or `stack_size_lte_binding`
+# variant that compares the target's stack size against the source's stack size at
+# runtime.
+#
+# The DCGO condition:
+#   `permanent.DigivolutionCards.Count <= card.PermanentOfThisCard().DigivolutionCards.Count`
+# is a dynamic runtime comparison between two permanent stack sizes.
+#
+# Proposed DSL syntax (to file in qa/dsl-vocab-gaps.md):
+#   filter:
+#     stack_size_lte_source: true   # target.card_sources.len() <= ctx.source.card_sources.len()
+# OR (more general):
+#   filter:
+#     stack_size_lte_binding: <binding_name>   # compare against a bound integer
+#
+# Lowers to engine API: The predicate evaluator already has access to
+# `ctx.source_permanent()` via `ReadEffectContext`; adding a new leaf that compares
+# the candidate's `card_sources.len()` against the source's is straightforward.
+#
+# Until this gap closes, Clause 2 is BLOCKED. Authoring the clause without the
+# dynamic predicate would select any opponent Digimon regardless of stack size —
+# violating the printed text and the no-approximations policy.
+#
+# Stub (commented — uncomment + adjust when G-PRED-STACK-SIZE-LTE-SOURCE closes):
+#
+# - when: [on_play, when_digivolving]
+#   summary: "[On Play][When Digivolving] Return 1 opp Digimon with ≤ digi-cards as this to bottom of deck"
+#   condition:
+#     any_permanent:
+#       of: opponent
+#       zone: [battle_area]
+#       kind: digimon
+#       stack_size_lte_source: true        # ← BLOCKED: predicate not in DSL
+#   process:
+#     - select_opponent_permanent:
+#         bind_as: target
+#         filter:
+#           all_of:
+#             - kind: digimon
+#             - stack_size_lte_source: true  # ← BLOCKED: predicate not in DSL
+#         prompt: "Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck"
+#     - return_to_deck:
+#         target: target
+#         position: bottom
+#         include_sources: false
+#
+# ─── DSL Gap: G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME  [Clause 3 conditional] ─────
+#
+# Effect text: "if [Imperialdramon: Dragon Mode] is in this Digimon's digivolution
+#   cards, return 1 of your opponent's suspended Digimon to the bottom of the deck."
+#
+# The condition checks whether a card named "Imperialdramon: Dragon Mode" is
+# present in the source permanent's digivolution stack (card_sources), as a
+# source card (not the top card). DCGO models this as
+# `CardEffectCommons.ExistsHaveSourceCondition(card, HasSourceCondition)` where
+# `HasSourceCondition(cardSource) = cardSource.EqualsCardName("Imperialdramon: Dragon Mode")`.
+#
+# The DSL has no predicate or condition leaf that checks whether the SOURCE's own
+# digivolution stack contains a card with a specific name. Existing condition
+# leaves scope to other permanents on the field (any_permanent: of: you / opponent)
+# or to the event context (event_card_name_contains, event_target_*). There is no
+# `self_digivolution_contains_name` or `source_has_digivolution_named` leaf.
+#
+# This is analogous to the gap referenced in the task brief as
+# "G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME" (investigate if already filed as
+# G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT analog, or file new entry).
+#
+# Proposed DSL syntax:
+#   condition:
+#     source_digivolution_contains: { name_is: "Imperialdramon: Dragon Mode" }
+#
+# Lowers to engine API: `ctx.source_permanent()?.card_sources.iter().any(|src|
+#   src.card_data()?.name.eq_ignore_ascii_case("Imperialdramon: Dragon Mode"))`.
+# The engine already exposes `source_permanent()` and `card_sources`.
+#
+# The unsuspend arm of Clause 3 (unsuspend self) is NOT blocked — it needs only
+# `unsuspend: { target: source }`. The conditional arm (return-suspended) is blocked
+# by G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME. Because the two arms are sequential
+# under the same trigger, and the printed text reads the conditional as "Then, if
+# [Imperialdramon: Dragon Mode] is in digi-cards, …" — the unsuspend always fires
+# and the return only fires under the condition — the unsuspend alone could be
+# modeled as a partial clause. However, partially implementing the clause while
+# silently dropping the conditional return would produce an incorrect result (the
+# unsuspend would always fire with no selection when the condition is NOT met, which
+# is correct, but the conditional return would NEVER fire even when the condition IS
+# met). Because the no-approximations policy requires faithful implementation of
+# every choice, and the RL agent must learn when the return fires, the entire clause
+# is BLOCKED until G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME closes.
+#
+# Stub (commented — uncomment + adjust when G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME closes):
+#
+# - when: end_of_attack
+#   once_per_turn: true
+#   summary: "[End of Attack][OPT] Unsuspend self; if Dragon Mode in digi-cards, return 1 opp suspended Digimon to bottom"
+#   process:
+#     - unsuspend: { target: source }
+#     - if:
+#         condition:
+#           source_digivolution_contains:         # ← BLOCKED: not a DSL predicate
+#             name_is: "Imperialdramon: Dragon Mode"
+#         then:
+#           - select_opponent_permanent:
+#               bind_as: opp_susp
+#               filter:
+#                 all_of:
+#                   - kind: digimon
+#                   - is_suspended: true
+#               prompt: "Return 1 of your opponent's suspended Digimon to the bottom of the deck"
+#           - return_to_deck:
+#               target: opp_susp
+#               position: bottom
+#               include_sources: false
+
+card: BT16-027
+name: "Imperialdramon: Fighter Mode"
+kind: digimon
+level: 6
+color: [blue, green]
+cost: 8
+dp: 13000
+traits: [Ancient Dragonkin]
+
+# ─── Inherited: Ace Overflow <-4> ────────────────────────────────────────────
+# "Ace Overflow <-4> (As this card moves from the field or under a card to an
+#  area other than those, lose 4 memory.)"
+ace_overflow: -4
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
+# 1) Standard digivolve: Lv.5 Blue / Cost 5 (per evo_costs in cards.json).
+# 2) Activated digivolve: from [Imperialdramon: Dragon Mode] on own field / Cost 2.
+#    DCGO: AddSelfDigivolutionRequirementStaticEffect at EffectTiming.None,
+#    permanentCondition: TopCard.EqualsCardName("Imperialdramon: Dragon Mode"),
+#    digivolutionCost: 2, ignoreDigivolutionRequirement: false.
+# 3) Burst digivolve: Blast Digivolve ([Hand][Counter], cost 0, any own Digimon).
+#    DCGO: BlastDigivolveEffect at EffectTiming.OnCounterTiming.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 5
+
+  - kind: activated_digivolve
+    from:
+      of: you
+      zone: [battle_area]
+      name_contains: "Imperialdramon: Dragon Mode"
+    cost: 2
+
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
+
+effects:
+  # ─── Clause 1 — <Blast Digivolve> (face-up declarative keyword) ───────────────
+  # "[Hand] [Counter] <Blast Digivolve>
+  #  (Your Digimon may digivolve into this card without paying the cost.)"
+  # DCGO: BlastDigivolveEffect at OnCounterTiming.
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
+  # ─── Clause 2 — BLOCKED [On Play][When Digivolving] return ≤-digi-card opp ────
+  # "[On Play] [When Digivolving] Return 1 of your opponent's Digimon with as
+  #  many or fewer digivolution cards as this Digimon to the bottom of the deck."
+  #
+  # BLOCKED: G-PRED-STACK-SIZE-LTE-SOURCE — see header comment.
+  # The DSL `stack_size_lte` predicate takes a literal u8, not a dynamic
+  # runtime comparison against the source permanent's card_sources count.
+  # Authoring this clause without the predicate would yield an over-permissive
+  # selection — any opponent Digimon regardless of stack size — violating
+  # the printed text and the no-approximations policy.
+
+  # ─── Clause 3 — BLOCKED [End of Attack][OPT] unsuspend + conditional return ───
+  # "[End of Attack] [Once Per Turn] Unsuspend this Digimon. Then, if
+  #  [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards,
+  #  return 1 of your opponent's suspended Digimon to the bottom of the deck."
+  #
+  # BLOCKED: G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME — see header comment.
+  # The `if` condition requires checking whether the source permanent's own
+  # digivolution stack (card_sources) contains a card named
+  # "Imperialdramon: Dragon Mode". No such DSL predicate exists today.

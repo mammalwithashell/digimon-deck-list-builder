@@ -1,0 +1,154 @@
+# BT3-103 Hidden Potential Discovered! — Option, Green, Cost 4.
+#
+# Printed card text (cards.json, effect_description_eng):
+#
+#   [Main] For the turn, when one of your green Digimon would next digivolve,
+#     by suspending 1 of your Digimon, reduce the digivolution cost by 5.
+#
+# Inherited (Security):
+#   Security Effect [Security] Add this card to the hand.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT3/Green/BT3_103.cs
+#
+# ─── Clause map ───────────────────────────────────────────────────────────────
+#
+# Clause 0 (Main):   [Main] one-shot turn-scoped cost reduction with suspend
+#                    cost — BLOCKED (see below).
+# Clause 1 (Security): [Security] Add this card to the hand — IMPLEMENTED via
+#                    `add_this_option_to_hand: {}`.
+#
+# ─── Clause 0 — BLOCKED on DSL vocab gap ─────────────────────────────────────
+#
+# Printed text: "[Main] For the turn, when one of your green Digimon would
+# next digivolve, by suspending 1 of your Digimon, reduce the digivolution
+# cost by 5."
+#
+# DCGO C# structure (BT3_103.cs):
+#   OptionSkill timing → ActivateCoroutine:
+#     1. Install a BeforePayCost observer (AddEffectToPlayer, UntilEachTurnEnd)
+#        that fires when CanTriggerWhenPermanentWouldDigivolve passes for a
+#        green-colored owner Digimon.
+#     2. The observer's CanActivateCondition: HasMatchConditionPermanent for
+#        any own unsuspended Digimon (CanActivateSuspendCostEffect).
+#     3. The observer is optional (isOptional: true on the outer ActivateClass),
+#        but the installation (SetUpActivateClass) is NOT optional — playing
+#        the Option always arms the observer for this turn.
+#     4. The observer's ActivateCoroutine:
+#        a. SelectPermanentEffect → any own Digimon (unsuspended),
+#           mode Tap, maxCount 1, canNoSelect: true (opt-in).
+#        b. If selected: install a ChangeCostClass (Cost -= 5) for the
+#           immediate next cost calculation.
+#        c. Install a "Remove Effect" background process (also UntilEachTurnEnd)
+#           that removes the ChangeCostClass once the digivolve resolves
+#           (the "next" single-fire qualifier).
+#
+# Required DSL primitives (all missing):
+#
+#   (a) `when_any_ally_would_digivolve` trigger form on `CostReductionBody`:
+#       `CostReductionBody` in `digimon-dsl/src/clause.rs` only has
+#       `when_playing_this: bool` and `when_any_ally_played:
+#       Option<PredicateSpec>`. There is no `when_any_ally_would_digivolve`
+#       (or `when_any_green_ally_would_digivolve`) trigger variant. The
+#       engine's `scan_before_pay_cost_reduction` fires on PLAYING actions
+#       only; it does not intercept BeforePayCost events during digivolve
+#       resolution. This matches the BT5-092 gap (BT5-092 header:
+#       "CostReductionBody has no `when_any_ally_digivolves_into` trigger
+#       form keyed on the target hand card's name") but extends it to the
+#       SOURCE GREEN DIGIMON form — the trigger here is color on the source
+#       stack, not the target card.
+#   (b) Source-color predicate: `color_is: green` evaluated against the
+#       digivolving permanent's top card (or stack union). No `source_color_is`
+#       predicate leaf exists in `CompiledPredicate`.
+#   (c) Single-fire "next" qualifier: the "next digivolve" wording means
+#       the cost reduction should fire at most once per activation of this
+#       card (not `once_per_turn`, which would re-arm each turn). No
+#       "one-shot on first fire then self-remove" variant exists for
+#       `CostReductionBody`; DCGO achieves this via an explicit "Remove
+#       Effect" background coroutine that unregisters the ChangeCostClass
+#       immediately after the first application.
+#   (d) `pay_cost` with arbitrary-select: the `pay_cost` step list on
+#       CostReductionBody can contain `suspend: { target: source }` (as
+#       in ST21-13 / BT22-094), but the printed text says "by suspending
+#       ANY 1 of your Digimon" — requiring a `select_own_permanent` step
+#       inside `pay_cost`, which is currently untested/unsupported in the
+#       BeforePayCost cost-reduction flow (DCGO uses a separate
+#       SelectPermanentEffect inside the ActivateCoroutine, not a shared
+#       step list evaluated at scan time).
+#
+# Gap IDs (new, to be tracked in qa/dsl-vocab-gaps.md):
+#   G-COST-REDUCE-ALLY-DIGIVOLVE — no `when_any_ally_would_digivolve`
+#     (source-color form) trigger on CostReductionBody; engine's
+#     scan_before_pay_cost_reduction does not intercept digivolve actions.
+#   G-COST-REDUCE-NEXT-SINGLE-FIRE — no single-fire one-shot qualifier
+#     on CostReductionBody; DCGO removes the ChangeCostClass after the
+#     first fire but the DSL has no analogue.
+#   G-PAY-COST-SELECT-ARBITRARY-SUSPEND — no `select_own_permanent` step
+#     in pay_cost step lists; BeforePayCost scanning does not support
+#     interactive player selections as part of the cost evaluation.
+#
+# Alternative modelling approaches considered:
+#   - `kind: raw_rust` clause that arms a one-shot observer at main_from_hand
+#     time. Not implemented here — raw-rust stubs for complex observer
+#     patterns violate the no-approximations policy unless the observer is
+#     fully faithful, and the required engine hooks do not exist yet.
+#   - Route through `when: main_from_hand` triggered clause that installs
+#     nothing and marks the full effect as absent. This is the approach
+#     taken (omit the clause entirely in the YAML effects list, document
+#     the block in this comment and in the test file).
+#
+# Until primitives (a)–(d) land, Clause 0 is INTENTIONALLY OMITTED from
+# the YAML effects list. The behavioral test file documents all blocked
+# branches with `#[ignore]` markers.
+#
+# ─── Clause 1 — [Security] Add this card to the hand ─────────────────────────
+#
+# Printed inherited text: "Security Effect [Security] Add this card to the
+# hand."
+#
+# DCGO C# (BT3_103.cs, SecuritySkill block):
+#   The security activation routes the card to the controller's hand instead
+#   of trashing it. DCGO uses an `AfterSelectPermanentCoroutine`-style flow
+#   that pushes the card to the Owner's hand list.
+#
+# DSL modelling:
+#   `add_this_option_to_hand: {}` — resolved primitive (2026-05-01,
+#   qa/resolved-gaps.md). Lowers to
+#   `EffectContext::add_pending_security_to_hand()`, which moves the
+#   currently-resolving security Option from `Game.pending_security` to
+#   the defender/controller hand instead of letting security disposal trash
+#   it. Precedents: BT17-095 Clause C, EX7-074, EX6-072 (earlier raw_rust
+#   shim now superseded), LM-027.
+#
+# Scope note: The inherited text says "Security Effect [Security] Add this
+# card to the hand." The `scope: inherited` + `when: on_security` shape
+# is standard for Option cards whose security trigger is printed on the
+# inherited face (cf. BT7-107 in _examples/, BT17-095 Clause C).
+# No `optional:` flag — "[Security]" effects are mandatory per the rules
+# manual and DCGO (no `isOptional: true` on the SecuritySkill ActivateClass).
+
+card: BT3-103
+name: "Hidden Potential Discovered!"
+kind: option
+color: [green]
+cost: 4
+
+effects:
+  # ─── Clause 0: [Main] one-shot green-Digimon-digivolve cost reduction ────────
+  #
+  # BLOCKED — DSL primitives G-COST-REDUCE-ALLY-DIGIVOLVE,
+  # G-COST-REDUCE-NEXT-SINGLE-FIRE, G-PAY-COST-SELECT-ARBITRARY-SUSPEND
+  # are all absent. The clause is intentionally omitted until the DSL
+  # and engine grow the required vocabulary. See file header for full
+  # analysis.
+
+  # ─── Clause 1 (inherited Security): Add this card to the hand ───────────────
+  #
+  # Printed: "Security Effect [Security] Add this card to the hand."
+  # Mandatory — no optional: flag. Lowers to
+  # EffectContext::add_pending_security_to_hand() via add_this_option_to_hand.
+  - scope: inherited
+    when: on_security
+    summary: "[Security][Inherited] Add this card to the hand"
+    process:
+      - add_this_option_to_hand: {}

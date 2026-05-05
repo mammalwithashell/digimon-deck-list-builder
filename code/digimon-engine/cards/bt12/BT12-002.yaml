@@ -1,0 +1,44 @@
+# BT12-002 DemiVeemon — Digi-Egg, Lv.2, Blue.
+# Traits: Baby Dragon.
+#
+# Printed effect:
+#   Inherited Effect [When Attacking] [Once Per Turn]
+#   If you have a green Digimon in play, <Draw 1>
+#   (Draw 1 card from your deck.)
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT12/Blue/BT12_002.cs
+#
+# Clause notes (from printed text + DCGO):
+#   * Single inherited [When Attacking] [Once Per Turn] clause.
+#   * Condition: at least 1 green Digimon in your battle area.
+#     (DCGO: HasMatchConditionOwnersPermanent — IsDigimon && TopCard.CardColors.Contains(Green))
+#   * When condition is met, Draw 1 (deterministic; no player choice).
+#     DCGO: isOptional=false (ActivateCoroutine runs DrawClass automatically).
+#     Printed text: no "you may" — mandatory when triggered.
+#   * Gate: inherited effect from a digi-egg source in the digivolution stack.
+
+card: BT12-002
+name: DemiVeemon
+kind: digi_egg
+level: 2
+color: [blue]
+cost: 0
+traits: [Baby Dragon]
+form: In-Training
+
+effects:
+  # Inherited [When Attacking] [Once Per Turn]
+  # "If you have a green Digimon in play, <Draw 1>"
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        color_is: green
+    summary: "[When Attacking][OPT] If green Digimon in play, Draw 1 (inherited)"
+    process:
+      - draw: { of: you, count: 1 }

@@ -252,6 +252,26 @@ Format per entry:
     amount: 1
   ```
 - First reported: 2026-04-27 (BT23-005 batch-implement-cards-rust-dsl)
+- Also blocks: P-117 clause 0 — "[Your Turn][OPT] When this Digimon would digivolve into a card with the [Free] trait, if you have a Tamer, reduce the digivolution cost by 1." Same structural gap: need `target_trait_has: Free` in a `when_this_digivolves_into` trigger form. Cross-listed 2026-05-04.
+
+---
+
+## P-117 — inherited When Attacking color-count predicate  [G-DSL-SELF-COLOR-COUNT-GTE]
+- Effect text: "[When Attacking] If this Digimon has 2 or more colors, ＜Draw 1＞ (Draw 1 card from your deck.)"
+- Missing DSL verb / step kind / predicate: `self_color_count_gte: N` boolean predicate (or equivalent) evaluating whether the carrier permanent's top card has N or more distinct colors. No such predicate exists in the DSL's `PredicateSpec` / `CompiledPredicate` hierarchy.
+- DCGO reference: `P_117.cs` lines 203-211 — `card.PermanentOfThisCard().TopCard.CardColors.Count >= 2`. Note: DCGO checks ONLY the top card's colors, not the union of the full digivolution stack. The DSL predicate should align with DCGO behavior: count the top card's colors only.
+- Lowers to engine API: `Game::player(p).battle_area[i].top_card()` → `card_data[idx].colors.len()` comparison; no new engine primitive needed, only a DSL predicate leaf that invokes `ctx.source_permanent` top-card color count.
+- Suggested DSL syntax:
+  ```yaml
+  condition:
+    self_color_count_gte: 2
+  ```
+  Evaluates as: `ctx.source_permanent.and_then(|h| perm.top_card().colors().len()).unwrap_or(0) >= 2`.
+  Alternative: `source_top_card_color_count_gte: 2` if the naming convention favors explicit subject.
+- Workaround: omit condition (over-fires — Draw fires unconditionally on all carriers including mono-color). Negative-condition tests are `#[ignore = "pending: G-DSL-SELF-COLOR-COUNT-GTE from qa/dsl-vocab-gaps.md"]`.
+- Gap kind: DSL only (engine has the data; only the predicate leaf is missing).
+- Cards blocked: P-117 clause 1 (inherited When Attacking); BT12-031 clause 1b ([All Turns] SecurityAttackPlus+Blocker conditional on 2+ colors in digi-cards — same predicate needed, but evaluated against the FULL digivolution stack's union of colors, not just the top card).
+- First reported: 2026-05-04 (P-117 batch-implement-cards-rust-dsl)
 
 ---
 
@@ -975,6 +995,320 @@ Format per entry:
 - Workaround: None faithful. Omitting the play hides a legal security choice; ordinary play-from-trash would illegally fire the played Digimon's On Play effects.
 - First reported: 2026-05-04 (Puppets resolver Batch 9, BT5-106)
 
+## BT3-002 — `carrier_has_keyword` predicate for inherited clause conditions  [G-DSL-CARRIER-HAS-KEYWORD]
+
+- Effect text: "Inherited Effect [When Attacking] [Once Per Turn] If this Digimon has <Jamming>, <Draw 1> (Draw 1 card from your deck.)"
+- Card first discovered in: BT3-002 DemiVeemon (Digi-Egg, Lv.2, Blue)
+- Missing DSL verb / step kind / predicate: `carrier_has_keyword` — a `PredicateSpec` / `BoolPredicate` leaf for inherited triggered clauses that checks whether the TOP CARD of the permanent carrying the egg source has a given keyword (printed OR modifier-granted). The existing `has_keyword` predicate in `CompiledPredicate` evaluates on `source_permanent` (the egg slot itself), not the carrier permanent. For inherited effects, `source_permanent` is the bottom-of-stack source card, not the carrier Digimon.
+- Lowers to engine API: `Game::has_keyword(carrier_handle, Keyword::Jamming)` — the engine has this method (used in `combat.rs`, `game.rs`). The gap is that the DSL predicate evaluator has no path to resolve the carrier handle from `EffectReadContext` for inherited clauses. The carrier handle is `EffectReadContext.source_permanent` (if it exists) but only when the source IS the top card; for sub-stack inherited sources, the context's `source_permanent` is the egg, not the carrier.
+- Suggested DSL syntax:
+  ```yaml
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    condition: { carrier_has_keyword: Jamming }
+    process:
+      - draw: { of: you, count: 1 }
+  ```
+- Gap kind: dsl (engine has `Game::has_keyword` and modifier tracking; DSL lowering just needs a new predicate leaf that reads the carrier handle from the inherited-effect dispatch context rather than the source permanent).
+- Workaround: Omit the `condition` from the YAML entirely (preferred). The clause over-fires without the Jamming gate — any carrier with BT3-002 in its digivolution cards will draw on attack regardless of Jamming. The over-fire is documented in BT3-002.yaml. The negative-condition test `bt3_002_does_not_fire_without_jamming` is `#[ignore = "pending: G-DSL-CARRIER-HAS-KEYWORD from qa/dsl-vocab-gaps.md"]`.
+- Trade-off of omission vs. un-gated clause: omission is preferred because the Draw 1 step is safe (no permanent game-state harm), the positive case (carrier has Jamming → draw) is the common path this egg was designed for, and over-firing without Jamming is a minor accuracy loss rather than a silent break.
+
+---
+
+## BT12-022 — `active_when` on `kind: grant_keyword` declarative clauses is not consumed  [G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED]
+
+- Effect text: "[Your Turn] While this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains ＜Jamming＞" (BT12-022 ExVeemon, inherited)
+- Missing DSL verb / step kind / predicate: `DeclarativeClause.active_when` is compiled into `CompiledDeclarativeClause::GrantKeyword { active_when, .. }` but is silently discarded by `lower_grant_keyword::lower` in `code/digimon-engine/src/dsl_cards/mod.rs` (line 82-98 uses `..` to destructure, ignoring `active_when`). The `lower_grant_keyword::lower` function signature has no `active_when` parameter.
+- Companion state: `CompiledDeclarativeClause::GrantKeyword` does carry the `active_when: Option<CompiledPredicate>` field (compiled.rs:432). The `lower_aura::lower` function accepts and uses `active_when` correctly. The gap is that `lower_grant_keyword::lower` does not accept or apply it.
+- Consequence: any `kind: grant_keyword` clause with `active_when:` specified will grant the keyword unconditionally — the condition is silently dropped. Cards relying on `active_when` to gate keyword grants over-fire.
+- Lowers to engine API: `Effect::declarative(card).condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None))` — the condition closure already exists in `lower_aura::lower`; the same pattern needs to be applied in `lower_grant_keyword::lower`. Additionally, `Game::has_keyword` checks `effect.condition` for inherited declarative effects (game.rs lines 1717-1727) — so adding the condition to the `Effect` struct (not only the modifier tick) would gate the keyword check correctly without a declarative tick.
+- Suggested fix:
+  1. Add `active_when: Option<CompiledPredicate>` parameter to `lower_grant_keyword::lower`.
+  2. In `mod.rs`, pass `active_when.clone()` to the call.
+  3. Inside `lower_grant_keyword::lower`, add `if let Some(aw) = active_when { builder = builder.condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None)); }`.
+- Gap kind: dsl (engine has condition support on `Effect` struct; only the lowering wire-up is missing).
+- Workaround: Ship the clause without `active_when` (unconditional keyword grant, over-fires). Or omit the clause entirely. BT12-022 ships with `active_when` specified but unconditionally firing. Negative-condition tests are `#[ignore = "pending: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED from qa/dsl-vocab-gaps.md"]`.
+- Cards affected: BT12-022 ExVeemon (inherited conditional Jamming).
+- First reported: 2026-05-04 (BT12-022 batch-implement-cards-rust-dsl)
+
+---
+
+## BT12-022 — BeforePayCost triggered gain_memory for "would DNA digivolve into" target  [G-BEFORE-PAY-COST-GAIN-MEMORY]
+
+- Effect text: "[Your Turn] When this Digimon would DNA digivolve into a green Digimon card, gain 1 memory." (BT12-022 ExVeemon)
+- Missing DSL verb / step kind / predicate: The DSL `kind: cost_reduction` with `reduction_timing: before_pay_cost` models only cost reductions (integer decrements to `memory_cost`). There is no triggered declarative form for `gain_memory` at `BeforePayCost` timing. DCGO uses `EffectTiming.BeforePayCost` with `CanTriggerWhenPermanentWouldDigivolveOfCard + IsJogress` + `card.Owner.AddMemory(1)` — the memory gain is an arbitrary effect (not a cost reduction) triggered at pre-pay-cost time.
+- Companion gap: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (already in qa/dsl-vocab-gaps.md) — the target-card threading (checking the would-digivolve-into card's color) is also missing. Both gaps must close before BT12-022 clause 0 can be implemented.
+- Companion note on `on_dna_digivolve` alternative: `on_dna_digivolve` timing fires AFTER DNA digivolve completes, so it could not faithfully model the "would" semantics. Also, no `event_card_color_is` predicate exists in `PredicateSpec` for filtering by the result card's color.
+- Lowers to engine API: `BeforePayCost` timing dispatch exists in `scan_before_pay_cost_reduction`; the gap is that it only updates `cost_delta`, not an arbitrary `gain_memory` side effect. A new DSL form (e.g., `kind: before_pay_cost_trigger`) with a `process:` body (not a `CostReductionBody`) would be needed.
+- Suggested DSL syntax (once G-BEFORE-PAY-COST-DIGIVOLVE-TARGET also closes):
+  ```yaml
+  - scope: own
+    kind: before_pay_cost_trigger       # NEW form — triggered effect at BeforePayCost
+    when_this_digivolves_into:
+      target_color_is: green            # NEW predicate (needs G-BEFORE-PAY-COST-DIGIVOLVE-TARGET)
+      dna_only: true
+    active_when: { your_turn: true }
+    process:
+      - gain_memory: 1
+  ```
+- Gap kind: hybrid (engine-side: BeforePayCost dispatch handles only cost_delta; DSL-side: no `before_pay_cost_trigger` kind with process body).
+- Cards blocked: BT12-022 clause 0 (BLOCKED, omitted from YAML).
+- First reported: 2026-05-04 (BT12-022 batch-implement-cards-rust-dsl)
+- First reported: 2026-05-04 (BT3-002 DemiVeemon DSL implementation)
+
+## EX1-014 — `aura` declarative target scoping  [G-DSL-AURA-TARGET-SOURCE-PERMANENT]
+
+- Effect text: "[Your Turn] While this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains ＜Jamming＞" — should grant Jamming ONLY to the carrier permanent (the Digimon containing this card in its digivolution stack), not all controller-side Digimon.
+- Card first discovered in: EX1-014 ExVeemon (Digimon, Lv.4, Blue), also in BT12-022 (sister card).
+- Missing DSL verb / step kind / predicate: `target_is_source: true` BoolPredicate (or equivalent) usable inside `kind: aura` `target:` filter, so the aura applies only to the carrier of the source permanent — not the entire `target: { owner: you, kind: digimon }` set. Currently `lower_aura.rs` applies to all matches of the target predicate.
+- Lowers to engine API: `target` filter check `handle == ctx.source_permanent` (or `handle == carrier_of(source)` for inherited-source clauses).
+- Suggested DSL syntax:
+  ```yaml
+  - kind: aura
+    target: { owner: you, kind: digimon, is_carrier_of_source: true }
+    grant_keyword: jamming
+    active_when: { ... }
+  ```
+- Gap kind: dsl. Engine has the carrier handle resolution; only the predicate leaf is missing.
+- Workaround: ship aura with broad target (over-fires to all your Digimon).
+- First reported: 2026-05-04 (EX1-014 batch-implement-cards-rust-dsl)
+
+---
+
+## EX1-014 — `self_digivolution_contains_trait` predicate  [G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT]
+
+- Effect text: "...has [Imperialdramon] in its name or the [Free] trait..." — needs a predicate that evaluates whether the carrier permanent's digivolution stack contains a card with a given trait.
+- Card first discovered in: EX1-014 ExVeemon (Digimon, Lv.4, Blue).
+- Missing DSL verb / step kind / predicate: `self_digivolution_contains_trait: <trait>` — boolean predicate over carrier permanent's digivolution stack. `source_permanent_trait_has` exists in `CompiledPredicate` spec but is not evaluated at runtime in `predicate.rs`.
+- Lowers to engine API: `rctx.source_permanent()?.has_trait(name, rctx.card_data())` — engine has the data.
+- Suggested DSL syntax:
+  ```yaml
+  active_when: { self_digivolution_contains_trait: "Free" }
+  ```
+- Gap kind: dsl.
+- Workaround: omit the trait arm of the active_when (only name arm fires).
+- First reported: 2026-05-04 (EX1-014 batch-implement-cards-rust-dsl)
+
+---
+
+## BT16-040 — effect-initiated digivolve from hand with permanent-target chain  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET]
+
+- Effect text: "[Start of Your Main Phase] [On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Insectoid] or [Free] trait in your trash with the digivolution cost reduced by 1." — process chain: select_own_permanent → select_trash_card → effect_initiated_digivolve.
+- Card first discovered in: BT16-040 Wormmon (Digimon, Lv.3, Green/White). Same gap blocks BT17-015, BT17-027 clause 0.
+- Missing DSL verb / step kind / predicate: process chain terminates after the permanent pick; the trash-pick prompt and `effect_initiated_digivolve` verb never execute when the source target is bound from a previous `select_own_permanent` step.
+- Lowers to engine API: `EffectContext::effect_initiated_digivolve` exists; the chain orchestration in the lowering layer does not resume after the first pick when the resolved source binding feeds into a subsequent select prompt.
+- Suggested DSL syntax: existing chain syntax should work; the gap is in the process-step continuation mechanism.
+- Gap kind: dsl.
+- Workaround: clause omitted from runtime; structural test passes, behavioral tests `#[ignore]`'d.
+- First reported: 2026-05-04 (BT16-040 batch-implement-cards-rust-dsl)
+
+## BT12-028 / BT16-025 / BT16-027 — `stack_size_lte_source` predicate  [G-PRED-STACK-SIZE-LTE-SOURCE]
+
+- Effect text variants: "Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck." (BT16-027) / "Suspend all of your opponent's Digimon with as many or fewer digivolution cards as this Digimon" (BT16-025).
+- Card first discovered in: BT16-027 Imperialdramon: Fighter Mode. Cross-listed in BT16-025 Paildramon (same gap).
+- Missing DSL verb / step kind / predicate: `stack_size_lte_source: bool` BoolPredicate leaf evaluating `candidate.card_sources.len() <= source_permanent.card_sources.len()` at runtime. The existing `stack_size_lte: <u8>` takes a literal, not a dynamic source-stack reference.
+- Lowers to engine API: `Game::permanent(handle).card_sources.len()` for both candidate and source — engine has the data; only the predicate dispatch is missing.
+- Suggested DSL syntax: `filter: { stack_size_lte_source: true }` inside `select_opp_field` / `select_permanent`.
+- Gap kind: dsl.
+- Workaround: clauses omitted from runtime; structural tests pass; behavioral tests `#[ignore]`'d.
+- First reported: 2026-05-04 (BT16-027 batch-implement-cards-rust-dsl).
+
+---
+
+## BT12-028 / BT16-027 — `self_digivolution_contains_name` predicate  [G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME]
+
+- Effect text: "if [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards" (BT16-027). Sister of `G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT` (EX1-014).
+- Card first discovered in: BT16-027 Imperialdramon: Fighter Mode. Cross-listed in BT12-028 (`source_name_contains` family).
+- Missing DSL verb / step kind / predicate: `self_digivolution_contains_name: <name>` BoolPredicate leaf evaluating whether the source permanent's own `card_sources` stack contains a card matching the given name. `source_name_contains` is defined in `PredicateSpec` and validated, but has no runtime evaluation branch in `predicate.rs`.
+- Lowers to engine API: `Permanent::contains_card_name` — engine has the primitive; only the predicate dispatch wiring is missing.
+- Suggested DSL syntax: `condition: { self_digivolution_contains_name: "Imperialdramon: Dragon Mode" }`.
+- Gap kind: dsl.
+- Workaround: clause omitted from runtime; behavioral tests `#[ignore]`'d.
+- First reported: 2026-05-04 (BT16-027 batch-implement-cards-rust-dsl).
+
+---
+
+## BT12-028 — `trash_top_n_digivolution_cards` step + engine primitive  [G-DSL-TRASH-TOP-N-DIGI-CARDS]
+
+- Effect text: "Trash the top 3 digivolution cards of all of your opponent's Digimon." (BT12-028 clause 0a).
+- Card first discovered in: BT12-028 Paildramon. Sibling to G-ASL-07 (BT17-077 all-source mass trash).
+- Missing DSL verb / step kind / predicate: `trash_top_n_digivolution_cards: { target: <handle>, count: N }` — removes N source cards from BELOW the top card of a permanent (keeping the Digimon on the field), firing `OnDigivolutionCardTrashed` per source. Distinct from `de_digivolve` (removes top card → demotes Digimon) and `trash_top_source` (removes the active Digimon card itself).
+- Lowers to engine API: `EffectContext::trash_top_n_digivolution_sources(target, count)` — NEW primitive needed; engine substrate currently lacks a "remove sources from below the top" operation.
+- Suggested DSL syntax: `trash_top_n_digivolution_cards: { target: opp_digimon, count: 3 }`.
+- Gap kind: hybrid (DSL verb + engine primitive both missing).
+- Workaround: clause omitted from runtime; structural tests pass.
+- First reported: 2026-05-04 (BT12-028 batch-implement-cards-rust-dsl).
+
+---
+
+## BT16-025 — `binding_is_none` / "if-no-target" predicate  [G-DSL-IF-NO-TARGET]
+
+- Effect text: "Suspend 1 of your opponent's unsuspended Digimon. If this effect didn't suspend, unsuspend this Digimon." (BT16-025 clause 2).
+- Card first discovered in: BT16-025 Paildramon.
+- Missing DSL verb / step kind / predicate: `select_opponent_permanent` with `optional: true` skips silently when no targets exist, but does not bind a "skipped" flag. Need `binding_is_none: <name>` BoolPredicate for subsequent `if` conditions to test whether the previous selection was taken or skipped.
+- Lowers to engine API: existing binding mechanism — only the BoolPredicate leaf is missing.
+- Suggested DSL syntax:
+  ```yaml
+  - if:
+      condition: { binding_is_none: tgt }
+      then: [ unsuspend: { target: source } ]
+  ```
+- Gap kind: dsl.
+- Workaround: conditional unsuspend-self omitted from runtime; behavioral test `#[ignore]`'d.
+- First reported: 2026-05-04 (BT16-025 batch-implement-cards-rust-dsl).
+- Also blocks: BT16-028 clause 0b — "[When Digivolving] by suspending 1 of their Digimon or Tamers, unsuspend 1 of your Digimon." Same structural gap: the optional suspend-cost step produces no binding result flag, so the own-unsuspend reward arm cannot be made conditional on the cost being paid. Cross-listed 2026-05-04.
+
+---
+
+## BT16-028 — `event_is_effect_initiated` predicate  [G-IS-EFFECT-INITIATED]
+
+- Effect text: "[All Turns] When an effect plays or digivolves an opponent's Digimon, if you have a Tamer, this Digimon may digivolve into [Imperialdramon: Fighter Mode] in the hand without paying the cost."
+- Card first discovered in: BT16-028 Imperialdramon: Dragon Mode (2026-05-04).
+- Missing DSL verb / step kind / predicate: `event_is_effect_initiated: bool` — a BoolPredicate leaf that evaluates to `true` only when the entering/digivolving permanent was placed by a card effect (DCGO's `IsByEffect`) rather than by a player's normal main-phase play action. Without this gate, the `on_enter_field_anyone` / `on_digivolve` observer timings fire on ALL enters/digivolves regardless of cause, over-firing for normal player plays. This violates the printed "when an EFFECT plays or digivolves" condition.
+- Companion engine gap: the engine must thread an `is_effect_initiated` flag through `TriggerContext` (or the event payload) when dispatching `OnEnterFieldAnyone` and `OnDigivolve`. Normal `Game::play_from_hand` and `Game::digivolve_from_hand` would emit `is_effect_initiated: false`; effect-driven entry/digivolve paths (e.g. `EffectContext::effect_play_card`, `EffectContext::effect_initiated_digivolve`) would emit `is_effect_initiated: true`. The DCGO `IsByEffect` check uses the `hashtable` context carried into each coroutine, which records the originating cause.
+- Lowers to engine API: `TriggerContext` (or `EventPayload`) would need a new field `cause_is_effect: bool`. The DSL predicate would evaluate `rctx.game.current_trigger_context.map(|ctx| ctx.cause_is_effect).unwrap_or(false)`.
+- Suggested DSL syntax:
+  ```yaml
+  - when: [on_enter_field_anyone, on_digivolve]
+    optional: true
+    active_when: { all_turns: true }
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - event_is_effect_initiated: true    # ← new predicate leaf
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+    process:
+      - select_hand:
+          of: you
+          bind_as: fighter
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Imperialdramon: Fighter Mode"
+          prompt: "Digivolve into Imperialdramon: Fighter Mode (free, ignore reqs)"
+      - effect_initiated_digivolve:
+          target: self
+          from_hand: fighter
+          cost: 0
+          ignore_requirements: true
+  ```
+- Gap kind: hybrid (engine must thread the cause flag through TriggerContext; DSL then needs the predicate leaf).
+- Workaround: Clause omitted from BT16-028.yaml while this gap is open. Authoring it without the `event_is_effect_initiated` gate would fire on all plays/digivolves (violates printed text and no-approximations policy).
+- Behavioral tests: 4 tests `#[ignore = "pending: G-IS-EFFECT-INITIATED from qa/dsl-vocab-gaps.md"]`.
+- First reported: 2026-05-04 (BT16-028 batch-implement-cards-rust-dsl).
+
+---
+
+## BT12-031 — Alt-cost: return named source card from own digi-stack to hand  [G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME]
+- Effect text (BT12-031 Clause 0, Step C): "By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's digivolution cards to its owner's hand, return all of your opponent's suspended Digimon to the bottom of their owners' decks instead."
+- Missing DSL verb / step kind / predicate: Two sub-gaps combine to block this step:
+  1. **G-DSL-SELECT-OWN-SOURCES-FILTER** (see EX4-073 entry) — `select_own_sources` installs with `|_game, _source| true` hardcoded. There is no `filter:` key to restrict the selection to sources matching a specific card name.
+  2. **G-DSL-BIND-PRESENT** (see EX9-066 entry) — After the optional selection, the alternative outcome must be conditioned on whether the player made a selection or passed. The `binding_present` predicate does not exist.
+- Synthesizing gap ID: `G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME` — filing as a composite gap for the BT12-031 context.
+- DCGO reference: `BT12_031.cs` — step C via optional `AddSelectCard` from own digi-cards filtered by `EqualsCardName("Imperialdramon: Dragon Mode")`, `canNoSelect: () => true`. If selected, card returns to hand and all suspended opp Digimon return to bottom of deck; if declined, only the single return-to-hand fires.
+- Suggested DSL syntax:
+  ```yaml
+  - select_own_sources:
+      bind_as: dragon_mode_src
+      optional: true
+      filter:
+        name_is: "Imperialdramon: Dragon Mode"
+      prompt: "Return [Imperialdramon: Dragon Mode] from your digivolution cards to hand to return ALL opponent suspended Digimon to bottom of decks instead"
+  - if:
+      condition:
+        binding_present: dragon_mode_src
+      then:
+        - return_to_hand: { target: dragon_mode_src }
+        - for_each:
+            over:
+              all_of:
+                - of: opponent
+                - zone: [battle_area]
+                - kind: digimon
+                - is_suspended: true
+            bind_as: susp_opp
+            body:
+              - return_to_deck:
+                  target: susp_opp
+                  position: bottom
+                  include_sources: false
+      else:
+        - select_opponent_permanent:
+            bind_as: suspended_target
+            filter:
+              all_of:
+                - kind: digimon
+                - is_suspended: true
+            prompt: "Return 1 of your opponent's suspended Digimon to its owner's hand"
+        - return_to_hand: { target: suspended_target }
+  ```
+- Lowers to engine API: both sub-gaps are DSL-only additions; engine already stores the data.
+  - `select_own_sources` filter: add `filter: Option<CompiledPredicate>` to `CompiledSelectOwnSources`, evaluate against each `card_source` entry.
+  - `binding_present` predicate: add leaf that checks `ctx.bindings.get(name).is_some()`.
+- Gap kind: DSL only.
+- Workaround: Steps A (for_each suspend no-digi-card targets) and B (select 1 suspended opp → return to hand) are authored in BT12-031.yaml. Step C is commented out as BLOCKED.
+- Behavioral tests: 2 tests `#[ignore = "pending: G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME from qa/dsl-vocab-gaps.md ..."]` in `code/digimon-engine/tests/cards_behavioral/bt12/bt12_031.rs`.
+- First reported: 2026-05-04 (BT12-031 TDD implementation).
+
+---
+
+## BT17-077 — `return_all_trash_to_deck_bottom` step + player-choice target  [G-RETURN-ALL-TRASH-TO-DECK-BOTTOM]
+
+- Effect text: "Then, return all cards from your or your opponent's trash to the bottom of the deck." (BT17-077 Clause 1b).
+- Card first discovered in: BT17-077 Imperialdramon: Paladin Mode.
+- Missing DSL verb / step kind / predicate: `return_all_trash_to_deck_bottom: { of: <player_ref> }` — moves every card currently in the specified player's trash zone to the bottom of their deck. Requires: (a) a zone-bulk-move primitive in the engine, (b) a DSL step that accepts `of: you` or `of: opponent`, and (c) owner routing (each card returns to its own deck bottom, not the controller's).
+- Lowers to engine API: `EffectContext::return_all_trash_to_deck_bottom(player)` — NEW primitive; the engine currently has no "drain entire zone" bulk-move.
+- Companion gap: the printed text says "your or your opponent's trash" — the choice of whose trash is returned is a player decision (DCGO: `BoolSelection`). This requires either `select_effect_choice` (choose 0 or 1) + `if` conditional wiring the correct `of:` player, or a single parametric verb `return_all_trash_to_deck_bottom: { of: chosen_player }` where `chosen_player` is a binding. Neither is currently in the DSL.
+- Suggested DSL syntax:
+  ```yaml
+  - select_effect_choice:
+      bind_as: whose_trash
+      labels: ["Your Trash", "Opponent's Trash"]
+      prompt: "Return all cards from your or your opponent's trash to the bottom of the deck"
+  - if:
+      condition: { equals: [whose_trash, 0] }
+      then:
+        - return_all_trash_to_deck_bottom: { of: you }    # ← new verb
+      else:
+        - return_all_trash_to_deck_bottom: { of: opponent }  # ← new verb
+  ```
+- Gap kind: hybrid (engine bulk-move primitive + DSL verb + owner-routing semantics all missing).
+- Workaround: Clause 1b (and the dependent Clause 1c memory rider) are omitted from BT17-077.yaml pending G-ASL-07 closure. Behavioral tests #[ignore]'d.
+- Cross-ref: G-ASL-07 (qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md) tracks the broader mass-cleanup-and-trash-return family. G-DSL-TRASH-TOP-N-DIGI-CARDS (above) blocks Clause 1a (the mass-source-trash step that precedes this).
+- First reported: 2026-05-04 (BT17-077 batch-implement-cards-rust-dsl).
+
+---
+
+## BT17-077 — `any_returned_card` result predicate  [G-ANY-RETURNED-CARD-PREDICATE]
+
+- Effect text: "If this effect returned a white level 7 card, gain 3 memory." (BT17-077 Clause 1c).
+- Card first discovered in: BT17-077 Imperialdramon: Paladin Mode. Clause 1c fires after the `return_all_trash_to_deck_bottom` step (Clause 1b) completes; the memory gain is conditional on at least one of the moved cards satisfying `color: white AND level: 7`.
+- Missing DSL verb / step kind / predicate: `any_returned_card: { color_is: white, level_eq: 7 }` — a BoolPredicate that evaluates to true if the immediately preceding zone-move step returned at least one card matching the given filter. There is no "result-set predicate" that can inspect the set of cards moved by a prior step.
+- Lowers to engine API: the step would need to bind a `Vec<CardData>` of moved cards as an effect-local result, which the subsequent `if` condition can test via `any_returned_card` iterating over that result set.
+- Suggested DSL syntax:
+  ```yaml
+  - return_all_trash_to_deck_bottom:
+      of: opponent
+      bind_returned_as: returned_cards    # optional result binding
+  - if:
+      condition:
+        any_returned_card:                # new BoolPredicate leaf
+          binding: returned_cards
+          color_is: white
+          level_eq: 7
+      then:
+        - gain_memory: 3
+  ```
+- Gap kind: dsl (engine result-binding infrastructure would also need extending for the `bind_returned_as` step argument).
+- Workaround: Clause 1c is omitted from BT17-077.yaml; behavioral test #[ignore]'d.
+- Cross-ref: G-RETURN-ALL-TRASH-TO-DECK-BOTTOM (above) must close first (Clause 1b provides the moved-card set that Clause 1c predicates on).
+- First reported: 2026-05-04 (BT17-077 batch-implement-cards-rust-dsl).
 ---
 
 ## Royal Knights — Delay/keyword leave-prevention replacements  [RK-G003]

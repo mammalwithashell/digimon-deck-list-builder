@@ -1,3 +1,116 @@
+# BT17-077 Imperialdramon: Paladin Mode — Digimon, Lv.7, Blue, DP 16000, Cost 9.
+# Traits: Free, Mythical Dragon.
+# Evo: Lv.6 Blue / Cost 6 (standard, per cards.json evo_costs).
+#
+# Printed card text (data/cards.json, authoritative):
+#
+# [Hand] [Counter] <Blast Digivolve>
+#   (Your Digimon may digivolve into this card without paying the cost.)
+#
+# [On Play] [When Digivolving]
+#   Trash all digivolution cards of all of your opponent's Digimon. Then,
+#   return all cards from your or your opponent's trash to the bottom of the
+#   deck. If this effect returned a white level 7 card, gain 3 memory.
+#
+# [When Attacking]
+#   By returning 1 of your opponent's Digimon with no digivolution cards to
+#   the bottom of the deck, unsuspend this Digimon.
+#
+# Inherited: Ace Overflow <-5>
+#   (As this card moves from the field or under a card to an area other than
+#    those, lose 5 memory.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT17/White/BT17_077.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Alt-path 1: Standard digivolve from Lv.6 Blue / Cost 6 (cards.json
+#   evo_costs: card_color=1, level=6, memory_cost=6).
+#
+# Alt-path 2: DCGO `AddSelfDigivolutionRequirementStaticEffect` at
+#   EffectTiming.None — digivolve from Lv.6 [Imperialdramon]-named at cost 5,
+#   ignoreDigivolutionRequirement: false. This is a named-ancestor bonus
+#   digivolve path that many Imperialdramon variants carry.
+#
+# Alt-path 3: Blast Digivolve (`[Hand][Counter]`) via
+#   `CardEffectFactory.BlastDigivolveEffect` at EffectTiming.OnCounterTiming.
+#   Modelled as `kind: burst_digivolve, marker: true, cost: 0` per BT17-018
+#   (Gallantmon: Crimson Mode) canonical pattern.
+#
+# Clause 0 — [Hand][Counter] <Blast Digivolve>
+#   grant_keyword: BlastDigivolve — IMPLEMENTABLE.
+#   `marker: true` on the burst_digivolve alt-path records the keyword marker
+#   in the compiled card. BT17-018 is the canonical example.
+#
+# Clause 1 — [On Play][When Digivolving] mass source trash + trash return + conditional memory
+#
+#   Clause 1a: "Trash all digivolution cards of all of your opponent's Digimon."
+#   BLOCKED: G-ASL-07 (qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md)
+#             AND G-DSL-TRASH-TOP-N-DIGI-CARDS (qa/dsl-vocab-gaps.md).
+#   The DSL has no `for_each_opponent_digimon: { trash_all_sources }` verb.
+#   Trashing ALL sources of EACH opponent Digimon (not just one) requires:
+#     (a) iteration over all opponent permanents (for_each could serve), AND
+#     (b) a `trash_all_sources` or `trash_top_n_digivolution_cards: { count: all }` step.
+#   The engine primitive `EffectContext::trash_top_n_digivolution_sources(target, count)`
+#   does not yet exist. No raw_rust escape: a raw_rust fn for the full clause
+#   would entangle all three sub-effects and is not a reusable primitive.
+#
+#   Clause 1b: "Return all cards from your or your opponent's trash to the bottom
+#   of the deck."
+#   BLOCKED: G-ASL-07. No DSL verb for bulk trash→deck-bottom movement. Requires:
+#     (a) player selects "your trash" vs "opponent's trash" (DCGO: BoolSelection),
+#     (b) move every card in the chosen trash zone to its owner's deck bottom.
+#   The `return_to_deck` step targets a single bound permanent, not an entire zone.
+#   A new `return_all_trash_to_deck_bottom` step (or parametric zone iterator) is
+#   needed. Suggested DSL syntax when the gap closes:
+#     - select_effect_choice:
+#         bind_as: whose_trash
+#         labels: ["Your Trash", "Opponent's Trash"]
+#         prompt: "Return all cards from your or your opponent's trash to the bottom of the deck"
+#     - if:
+#         condition: { equals: [whose_trash, 0] }
+#         then:
+#           - return_all_trash_to_deck_bottom: { of: you }   # ← BLOCKED: verb missing
+#         else:
+#           - return_all_trash_to_deck_bottom: { of: opponent }   # ← BLOCKED: verb missing
+#
+#   Clause 1c: "If this effect returned a white level 7 card, gain 3 memory."
+#   BLOCKED: G-ASL-07. No DSL support for "if a moved card had property X, gain Y".
+#   A `moved_card_predicate` result-binding pattern is needed:
+#     - if:
+#         condition: { any_returned_card: { color_is: white, level_eq: 7 } }   # ← BLOCKED
+#         then:
+#           - gain_memory: 3
+#
+# Clause 2 — [When Attacking] by-return-opp-no-digi unsuspend self
+#   IMPLEMENTABLE. See process body below.
+#   `optional: true` — DCGO `SelectPermanentEffect.SetUp(canNoSelect: true)` means
+#   the player may choose to return no targets (i.e., decline the cost/effect).
+#   Per printed text "By returning ... unsuspend" — this is an optional by-cost
+#   construction. The condition requires at least one eligible target to even
+#   present the choice.
+#
+#   "No digivolution cards" = stack_size_lte: 1
+#   (perm.card_sources.len() is the total stack including the top card; a
+#    Digimon with no sources below equals 1 total card in card_sources).
+#
+# Clause 3 — Inherited Ace Overflow <-5>
+#   IMPLEMENTABLE via top-level `ace_overflow: -5` field.
+#
+# ─── Color note ───────────────────────────────────────────────────────────────
+# cards.json lists Colors: ['black', 'blue']. DCGO places the script under
+# White/. The printed card text and Paladin Mode lore are white. cards.json
+# color data may be incomplete/incorrect for this archetype. YAML uses
+# the DCGO + printed card canonical colors (white) to match engine behavior,
+# but to avoid breaking pack loading we record the cards.json colors until a
+# data correction is filed. Tracking note: resolve via card_overrides.json when
+# confirmed.
+#
+# ─── Trait note ──────────────────────────────────────────────────────────────
+# scout block (type_eng): ['Ancient Holy Warrior']. Prompt says "Free + Mythical
+# Dragon" per archetype family. cards.json is authoritative; recording both for
+# reference.
+
 card: BT17-077
 name: "Imperialdramon: Paladin Mode"
 kind: digimon
@@ -6,32 +119,139 @@ color: [black, blue]
 cost: 9
 dp: 16000
 traits: [Ancient Holy Warrior]
+
 attribute: Vaccine
+# ─── Inherited: Ace Overflow <-5> ────────────────────────────────────────────
+# Printed: "Ace Overflow <-5> (As this card moves from the field or under a
+#  card to an area other than those, lose 5 memory.)"
+# Modelled via top-level `ace_overflow` field per Group 8 closure (2026-05-02).
 ace_overflow: -5
 
+# ─── Alt-paths ────────────────────────────────────────────────────────────────
 alt_paths:
+  # 1) Standard digivolve: Lv.6 Blue / Cost 6 (per cards.json evo_costs).
   - kind: digivolve
     from: { level_eq: 6, color_is: blue }
     cost: 6
 
+  # 2) Named-ancestor bonus: Lv.6 [Imperialdramon]-named / Cost 5.
+  #    DCGO BT17_077.cs, EffectTiming.None, AddSelfDigivolutionRequirementStaticEffect:
+  #    permanentCondition: Level == 6 && ContainsCardName("Imperialdramon")
+  #    digivolutionCost: 5, ignoreDigivolutionRequirement: false.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - name_contains: "Imperialdramon"
+    cost: 5
+
+  # 3) Blast Digivolve: [Hand][Counter], cost 0, no digivolve requirements.
+  #    DCGO: CardEffectFactory.BlastDigivolveEffect at EffectTiming.OnCounterTiming.
+  #    `marker: true` records the <Blast Digivolve> keyword marker on the card.
+  #    Canonical reference: BT17-018 (Gallantmon: Crimson Mode).
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
+
 effects:
-  - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] Trash all sources of all opponent Digimon"
+  # ─── Clause 0 — [Hand][Counter] <Blast Digivolve> ────────────────────────────
+  # "Blast Digivolve (Your Digimon may digivolve into this card without paying
+  #  the cost.)"
+  # DCGO: BlastDigivolveEffect at OnCounterTiming.
+  # Face-up declarative keyword grant per BT17-018 canonical pattern.
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
+  # ─── Clause 1 — [On Play][When Digivolving] mass trash + return trash + memory ─
+  #
+  # BLOCKED: G-ASL-07 (hybrid engine-gap + dsl-gap, filed 2026-05-03 in
+  #   qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md).
+  #   Also cross-refs G-DSL-TRASH-TOP-N-DIGI-CARDS (qa/dsl-vocab-gaps.md).
+  #
+  # The three sub-clauses (1a: mass trash sources, 1b: return chosen trash to
+  # deck bottom, 1c: conditional memory if white Lv7 returned) all depend on
+  # reusable zone-iteration primitives that don't yet exist in the engine or DSL.
+  #
+  # Stub (uncomment when G-ASL-07 closes):
+  #
+  # - when: [on_play, when_digivolving]
+  #   summary: "[On Play][When Digivolving] Trash all opp digi sources; return all trash to deck bottom; +3 memory if white Lv7 returned"
+  #   process:
+  #     # Step 1a — Trash all digivolution cards of each opponent Digimon.
+  #     # BLOCKED: G-ASL-07 / G-DSL-TRASH-TOP-N-DIGI-CARDS
+  #     # When gap closes, add:
+  #     #   - for_each_opponent_permanent:
+  #     #       filter: { kind: digimon }
+  #     #       bind_as: opp_dig
+  #     #       body:
+  #     #         - trash_all_digivolution_cards: { target: opp_dig }
+  #     #
+  #     # Step 1b — Player chooses whose trash to return; return all cards.
+  #     # BLOCKED: G-ASL-07 (return_all_trash_to_deck_bottom verb missing)
+  #     # When gap closes, add:
+  #     #   - select_effect_choice:
+  #     #       bind_as: whose_trash
+  #     #       labels: ["Your Trash", "Opponent's Trash"]
+  #     #       prompt: "Return all cards from your or your opponent's trash to the bottom of the deck"
+  #     #   - if:
+  #     #       condition: { equals: [whose_trash, 0] }
+  #     #       then:
+  #     #         - return_all_trash_to_deck_bottom: { of: you }
+  #     #       else:
+  #     #         - return_all_trash_to_deck_bottom: { of: opponent }
+  #     #
+  #     # Step 1c — Conditional memory gain.
+  #     # BLOCKED: G-ASL-07 (any_returned_card predicate missing)
+  #     # When gap closes, add:
+  #     #   - if:
+  #     #       condition: { any_returned_card: { color_is: white, level_eq: 7 } }
+  #     #       then:
+  #     #         - gain_memory: 3
+
+  # ─── Clause 2 — [When Attacking] return opp Digimon (no digi cards) → unsuspend ─
+  #
+  # Printed: "[When Attacking] By returning 1 of your opponent's Digimon with no
+  #  digivolution cards to the bottom of the deck, unsuspend this Digimon."
+  #
+  # DCGO: EffectTiming.OnAllyAttack, SetUpActivateClass(..., isOptional=false),
+  #   SelectPermanentEffect.SetUp(canNoSelect: true, maxCount: 1).
+  #   CanActivateCondition: IsExistOnBattleAreaDigimon(card) &&
+  #     HasMatchConditionPermanent(IsOpponentsDigimon) — where IsOpponentsDigimon
+  #     filters to: IsOnOpponentBattleArea && DigivolutionCards.Count == 0.
+  #   On successful return: IUnsuspendPermanents([card.PermanentOfThisCard()]).
+  #
+  # `optional: true` — DCGO canNoSelect: true means player may skip (pay no cost
+  #   and skip the unsuspend). Per "By returning ... unsuspend" printed grammar,
+  #   the whole effect is a by-cost optional idiom.
+  #
+  # "No digivolution cards" = stack_size_lte: 1
+  #   (perm.card_sources.len() includes the top card; stack_size_lte: 1 means
+  #    at most 1 card total → no sources below the top card).
+  #
+  # Condition: at least 1 eligible opponent Digimon must exist to present the
+  #   choice. CanActivateCondition in DCGO checks HasMatchConditionPermanent
+  #   before offering the selection.
+  - when: when_attacking
+    optional: true
+    summary: "[When Attacking] By returning 1 opp Digimon (no digi cards) to deck bottom, unsuspend self"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        stack_size_lte: 1
     process:
-      - for_each:
-          over:
+      # Select 1 opponent Digimon with no digivolution cards.
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          filter:
             all_of:
               - kind: digimon
-              - of: opponent
-              - zone: [battle_area]
-          bind_as: stack
-          body:
-            - trash_all_sources: { target: stack }
-
-# Stubbed:
-# - [Hand][Counter] Blast Digivolve is not modeled in this card entry.
-# - Returning all cards from either trash to deck bottom, checking whether a
-#   white level 7 was returned, and gaining memory needs bulk-trash-to-deck
-#   movement plus a returned-card binding.
-# - [When Attacking] return a sourceless opponent Digimon to deck bottom to
-#   unsuspend this Digimon needs filtered bottom-deck-as-cost.
+              - stack_size_lte: 1
+          prompt: "Select 1 opponent Digimon with no digivolution cards to return to the bottom of the deck"
+      # Return selected Digimon to the bottom of the deck (cost + movement).
+      - return_to_deck:
+          target: bounce_target
+          position: bottom
+      # Unsuspend this Digimon (the effect source — Imperialdramon: Paladin Mode).
+      - unsuspend: { target: source }

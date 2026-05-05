@@ -1,0 +1,133 @@
+# ST9-05 Paildramon — Digimon, Lv.5, Blue+Green, DP 8000, Cost 8.
+# Traits: Dragonkin.
+# Evo: Lv.4 Blue / Cost 4
+# DNA Digivolve: Blue Lv.4 + Green Lv.4 / Cost 0 (stacks unsuspended)
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [When Digivolving] When DNA digivolving, return 1 of your opponent's
+#   Digimon with 6000 DP or less to the bottom of its owner's deck.
+#   [When Attacking] [Once Per Turn] Unsuspend this Digimon.
+#
+# Inherited: (none)
+# Security: (none)
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/ST9/Blue/ST9_05.cs
+#
+# ─── Source-priority cross-check (printed text + RULES_CONTEXT.md > DCGO) ─────
+#
+# Clause 0 — [When Digivolving] When DNA digivolving:
+#   Printed text: "[When Digivolving] When DNA digivolving, return 1 of your
+#   opponent's Digimon with 6000 DP or less to the bottom of its owner's deck."
+#   The "[When Digivolving] When DNA digivolving" phrasing means: this is a
+#   [When Digivolving] trigger, but it only resolves when the digivolution is
+#   a DNA digivolve (not a regular digivolve). DCGO confirms:
+#   `CanTriggerWhenDigivolving(hashtable, card) && CardEffectCommons.IsJogress(hashtable)`.
+#   The DSL provides a dedicated `when: on_dna_digivolve` timing that fires ONLY
+#   on DNA digivolve (verified in tests/dsl/phase3e_on_dna_digivolve.rs).
+#   This is the correct lowering — no DNA filter predicate needed.
+#
+#   Target filter: opp Digimon with DP <= 6000. DCGO: `permanent.DP <= 6000`.
+#   dp_lte: 6000 literal predicate (wired, cf. EX4-060 dp_lte: 8000 / BT21-015).
+#   Return-to-deck-bottom: DCGO mode PutLibraryBottom. DSL: return_to_deck with
+#   position: bottom and include_sources: true (return the whole stack including
+#   digivolution sources, matching DCGO's permanent-move semantics).
+#   Optionality: DCGO canNoSelect: false — mandatory if an eligible target exists.
+#   Printed text has no "you may". Mandatory.
+#
+# Clause 1 — [When Attacking] [Once Per Turn] Unsuspend this Digimon:
+#   Printed text: "[When Attacking] [Once Per Turn] Unsuspend this Digimon."
+#   DCGO: OnAllyAttack ActivateClass, maxUsableCount: 1 (OPT), body unsuspends
+#   THIS card's permanent. The WhenAttacking timing in DSL fires for every
+#   permanent in the attacker's battle area — matching DCGO OnAllyAttack fan-out.
+#   Target: source (the ST9-05 permanent). Mandatory (no "you may").
+#   OPT flag: once_per_turn: true. Effect body: unsuspend: { target: source }.
+#
+# ─── Implementation status (faithfulness diff) ─────────────────────────────────
+#
+# | Card-text element                                               | Status |
+# |-----------------------------------------------------------------|--------|
+# | Standard digivolve Lv.4 Blue / Cost 4                          | IMPLEMENTED (alt_paths kind: digivolve) |
+# | DNA digivolve Blue Lv.4 + Green Lv.4 / Cost 0, unsuspended     | IMPLEMENTED (alt_paths kind: dna_digivolve, stacks_unsuspended: true) |
+# | [When Digivolving/DNA] Return 1 opp Digimon DP<=6000 to bottom | IMPLEMENTED (when: on_dna_digivolve, select_opponent_permanent dp_lte: 6000, return_to_deck position: bottom) |
+# | [When Attacking][OPT] Unsuspend this Digimon                   | IMPLEMENTED (when: when_attacking, once_per_turn: true, unsuspend: {target: source}) |
+
+card: ST9-05
+name: Paildramon
+kind: digimon
+level: 5
+color: [blue, green]
+cost: 8
+dp: 8000
+traits: [Dragonkin]
+
+# ─── Alt-paths ─────────────────────────────────────────────────────────────────
+# 1) Standard digivolve: Lv.4 Blue / Cost 4 (per evo_costs in cards.json).
+# 2) DNA digivolve: Blue Lv.4 + Green Lv.4 / Cost 0, stacks unsuspended
+#    (per dna_costs + xros_req in cards.json; DCGO ST9_05.cs AddJogressConditionClass).
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 4, color_is: blue }
+      - { level_eq: 4, color_is: green }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  # ─── Clause 0 — [When Digivolving / DNA] Return opp Digimon DP<=6000 to deck bottom ─
+  #
+  # Printed: "[When Digivolving] When DNA digivolving, return 1 of your
+  # opponent's Digimon with 6000 DP or less to the bottom of its owner's deck."
+  #
+  # `when: on_dna_digivolve` fires ONLY when the digivolution was a DNA
+  # digivolve (verified: phase3e_on_dna_digivolve.rs). This is the faithful
+  # encoding of "[When Digivolving] When DNA digivolving" — the trigger
+  # fires on the WhenDigivolving window but only for the DNA path.
+  #
+  # DCGO ST9_05.cs lines 127-200 (OnEnterFieldAnyone block):
+  #   CanUseCondition: CanTriggerWhenDigivolving(hashtable, card) && IsJogress(hashtable)
+  #   CanSelectPermanentCondition: IsPermanentExistsOnOpponentBattleAreaDigimon(perm, card)
+  #                             && perm.DP <= 6000
+  #   mode: PutLibraryBottom, maxCount: 1, canNoSelect: false (mandatory)
+  #
+  # Mandatory: no "you may" in printed text. If no eligible opp Digimon with
+  # DP <= 6000, the engine's existential guard on select_opponent_permanent
+  # silently skips (matching DCGO HasMatchConditionPermanent gate).
+  - when: on_dna_digivolve
+    summary: "[When Digivolving / DNA] Return 1 opp Digimon DP<=6000 to bottom of its owner's deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 6000
+          prompt: "Return 1 of your opponent's Digimon with 6000 DP or less to the bottom of its owner's deck"
+      - return_to_deck:
+          target: target
+          position: bottom
+          include_sources: true
+
+  # ─── Clause 1 — [When Attacking] [Once Per Turn] Unsuspend this Digimon ─────
+  #
+  # Printed: "[When Attacking] [Once Per Turn] Unsuspend this Digimon."
+  #
+  # DCGO ST9_05.cs lines 203-247 (OnAllyAttack block):
+  #   SetHashString("Unsuspend_ST9_05")
+  #   maxUsableCount: 1 → once_per_turn: true
+  #   ActivateCoroutine: UnsuspendEffect on card.PermanentOfThisCard()
+  #
+  # `when: when_attacking` fires for every permanent in the attacker's battle
+  # area at the WhenAttacking timing window. The `once_per_turn: true` flag
+  # enforces the [OPT] lockout. `target: source` resolves to the ST9-05
+  # permanent on the battle area. Mandatory (no "you may").
+  - when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][OPT] Unsuspend this Digimon"
+    process:
+      - unsuspend: { target: source }
