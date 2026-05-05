@@ -1,0 +1,22 @@
+card: BT5-033
+name: Cutemon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 3000
+traits: [Fairy]
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from:
+      level_eq: 2
+      color_is: yellow
+    cost: 0
+
+effects:
+  - kind: flood_gate
+    summary: "[Opponent's Turn] Opponent can't reduce digivolution costs"
+    active_when: { opponents_turn: true }
+    target_player: opponent
+    modifier: CannotReduceDigivolveCost

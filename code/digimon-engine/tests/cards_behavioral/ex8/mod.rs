@@ -1,4 +1,5 @@
 mod ex8_005;
+mod ex8_030;
 mod ex8_046;
 mod ex8_047;
 mod ex8_048;

@@ -73,6 +73,32 @@ effects:
 }
 
 #[test]
+fn parse_attack_observer_timings() {
+    let yaml = r#"
+card: OBSERVER
+name: Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+effects:
+  - scope: inherited
+    when: [on_ally_attack, on_opponent_attack]
+    process:
+      - end_attack: true
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+    let t = spec.effects[0].as_triggered().unwrap();
+    match &t.when {
+        TimingSet::Multi(v) => {
+            assert_eq!(v, &vec![Timing::OnAllyAttack, Timing::OnOpponentAttack]);
+        }
+        _ => panic!("expected multi"),
+    }
+}
+
+#[test]
 fn parse_declarative_grant_keyword_clause() {
     let yaml = r#"
 card: AD1-025

@@ -1,0 +1,37 @@
+card: BT13-101
+name: Miki Kurosaki & Megumi Shirakawa
+kind: tamer
+color: [black, yellow]
+cost: 4
+traits: []
+
+effects:
+  - when: on_play
+    optional: true
+    summary: "[On Play] You may play 1 PawnChessmon Digimon from hand for free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pawn
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "PawnChessmon"
+          prompt: "Play 1 PawnChessmon Digimon from hand"
+      - play_from_hand_free: { of: you, hand_index: pawn }
+
+  # [All Turns] When you play a 2-color black/yellow Digimon, by suspending
+  # this Tamer, <Draw 1> and gain 1 memory.
+  #
+  # Omitted pending reusable event-card color predicates and a visible
+  # triggered activation-cost/preflight surface for "by suspending this
+  # Tamer". The DSL can check event owner/kind and can suspend source/draw/gain
+  # memory, but cannot faithfully express "the just played card is exactly
+  # 2-color black and yellow" or expose the source-bound suspend cost without
+  # approximating by name/trait or hidden auto-payment.
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

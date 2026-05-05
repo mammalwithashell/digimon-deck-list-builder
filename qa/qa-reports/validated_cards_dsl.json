@@ -2563,6 +2563,1101 @@
         "SECURITY"
       ],
       "notes": "Security De-Digivolve 2/add-to-hand implemented; color bypass, Link, and Main link grant remain gap-routed."
+    },
+    "BT22-029": {
+      "card_name": "Shoemon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 1",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_029.rs",
+      "test_count": 2,
+      "patterns": [
+        "KEYWORD-GRANT",
+        "INHERITED-DP-MODIFIER"
+      ],
+      "notes": "On Play/On Deletion Puppet Blocker grant and inherited When Attacking -2000 DP slice shipped without raw_rust."
+    },
+    "BT22-032": {
+      "card_name": "ShoeShoemon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 1",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-032.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_032.rs",
+      "test_count": 2,
+      "patterns": [
+        "F-PLAY-FROM-HAND-FREE",
+        "INHERITED-DP-MODIFIER"
+      ],
+      "notes": "Optional On Deletion play-level-3-Puppet-from-hand and decline path shipped, plus inherited When Attacking -2000 DP slice."
+    },
+    "EX9-067": {
+      "card_name": "Mirai Kinosaki",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 1",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-067.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_067.rs",
+      "test_count": 2,
+      "patterns": [
+        "REVEAL-SEARCH",
+        "SECURITY-PLAY-SELF"
+      ],
+      "notes": "On Play mandatory reveal search and Security self-play shipped. The Your Turn digivolve observer/reduced-cost play rider remains omitted pending PUPPETS-G005 effect-initiated event-context/provenance coverage."
+    },
+    "ST19-03": {
+      "card_name": "Shoemon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Puppets Batch 1",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-03.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_03.rs",
+      "test_count": 1,
+      "patterns": [
+        "REVEAL-BUCKETS",
+        "NO-DUPLICATE-REVEAL-PICKS"
+      ],
+      "notes": "On Play dual-bucket Puppet/LIBERATOR reveal search shipped. Inherited opponent security Digimon -3000 DP aura is omitted pending G-OPPONENT-SECURITY-DP-AURA."
+    },
+    "ST19-04": {
+      "card_name": "PawnChessmon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 2",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_04.rs",
+      "test_count": 3,
+      "patterns": [
+        "TRASH-FROM-HAND-COST",
+        "DRAW",
+        "INHERITED-KEYWORD"
+      ],
+      "notes": "On Play Puppet hand discard for Draw 2, decline path, and inherited Reboot shipped without raw_rust."
+    },
+    "ST19-05": {
+      "card_name": "PawnChessmon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 2",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_05.rs",
+      "test_count": 2,
+      "patterns": [
+        "KEYWORD-GRANT",
+        "TRASH-FROM-HAND-COST",
+        "DRAW"
+      ],
+      "notes": "Face-up Blocker and On Deletion Puppet hand discard for Draw 2 shipped without raw_rust."
+    },
+    "ST19-06": {
+      "card_name": "Doggymon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 2",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_06.rs",
+      "test_count": 2,
+      "patterns": [
+        "SECURITY-ATTACK-MODIFIER",
+        "TARGET-OPPONENT-DIGIMON"
+      ],
+      "notes": "On Play/On Deletion target opponent Digimon Security Attack -1 shipped using the engine SecurityAttackChange modifier path."
+    },
+    "ST19-07": {
+      "card_name": "Tobucatmon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 3",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-07.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_07.rs",
+      "test_count": 2,
+      "patterns": [
+        "KEYWORD-GRANT",
+        "INHERITED-KEYWORD"
+      ],
+      "notes": "Face-up Jamming and inherited Barrier shipped without raw_rust."
+    },
+    "ST19-09": {
+      "card_name": "Pandamon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 2",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_09.rs",
+      "test_count": 2,
+      "patterns": [
+        "KEYWORD-GRANT",
+        "F-PLAY-FROM-HAND-FREE"
+      ],
+      "notes": "Face-up Blocker and optional On Deletion play level 3 Puppet from hand shipped without raw_rust."
+    },
+    "ST19-10": {
+      "card_name": "ExTyrannomon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 3",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-10.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_10.rs",
+      "test_count": 2,
+      "patterns": [
+        "KEYWORD-GRANT",
+        "INHERITED-KEYWORD"
+      ],
+      "notes": "Face-up Armor Purge and inherited Barrier shipped without raw_rust."
+    },
+    "ST19-12": {
+      "card_name": "Cendrillmon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 3",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_12.rs",
+      "test_count": 2,
+      "patterns": [
+        "OVERCLOCK",
+        "KEYWORD-GRANT",
+        "PLAY-TOKEN"
+      ],
+      "notes": "Puppet Overclock, Blocker, and optional When Digivolving play 2 Familiar Tokens shipped without raw_rust."
+    },
+    "ST19-14": {
+      "card_name": "Arisa Kinosaki",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets Batch 3",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-14.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_14.rs",
+      "test_count": 2,
+      "patterns": [
+        "MEMORY-SETTER",
+        "SECURITY-PLAY-SELF"
+      ],
+      "notes": "Start-of-turn memory setter and Security self-play shipped. Effect-played Token/Puppet Rush observer remains omitted pending PUPPETS-G005 effect-initiated event context/provenance."
+    },
+    "EX9-024": {
+      "card_name": "Hanimon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-a",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_024.rs",
+      "test_count": 3,
+      "patterns": [
+        "TRASH-FROM-HAND-COST",
+        "TRASH-TO-HAND",
+        "PUPPET-TRAIT-FILTER",
+        "INHERITED-ATTACK-CANCEL"
+      ],
+      "notes": "Resolver-backed Puppets card from `code/tools/resolve_deck.py Puppets --json`. Production YAML and focused tests cover the On Play optional discard-cost path, Puppet Digimon recursion from trash, decline path, and inherited opponent-turn attack cancellation by explicit EffectChoice, deleting the carrier Digimon, and ending the pending attack without a security check."
+    },
+    "EX9-027": {
+      "card_name": "Kokeshimon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-027.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_027.rs",
+      "test_count": 3,
+      "patterns": [
+        "TRASH-FROM-HAND-COST",
+        "DP-MODIFIER",
+        "ON-DELETION",
+        "WHEN-DIGIVOLVING",
+        "INHERITED-ATTACK-CANCEL"
+      ],
+      "notes": "Production YAML and focused tests cover the shared When Digivolving/On Deletion body: trash 1 card in hand as a visible cost, then select an opponent Digimon and apply -4000 DP. Inherited opponent-turn attack cancellation is implemented through the DSL on_opponent_attack timing, explicit EffectChoice, delete-this carrier cost, and end_attack step."
+    },
+    "EX11-019": {
+      "card_name": "Shoemon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-019.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_019.rs",
+      "test_count": 2,
+      "patterns": [
+        "EFFECT-CHOICE",
+        "TOKEN-PLAY",
+        "INHERITED-KEYWORD"
+      ],
+      "notes": "Production YAML and focused tests cover On Deletion optional Familiar Token play and inherited Barrier. The optional token play is an explicit EffectChoice prompt with a decline branch, not a hidden auto-selection."
+    },
+    "P-134": {
+      "card_name": "Shoemon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-134.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_134.rs",
+      "test_count": 2,
+      "patterns": [
+        "SECURITY-ATTACK-CHANGE",
+        "INHERITED-DP-MODIFIER"
+      ],
+      "notes": "Production YAML and focused tests cover On Play opponent Digimon Security Attack -1 through the opponent turn and inherited When Attacking OPT -2000 DP."
+    },
+    "EX7-025": {
+      "card_name": "ShoeShoemon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-025.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_025.rs",
+      "test_count": 1,
+      "patterns": [
+        "CONDITIONAL-TAMER-COUNT",
+        "PLAY-FROM-HAND-FREE"
+      ],
+      "notes": "Production YAML and focused test cover When Digivolving optional Arisa Kinosaki play from hand when you have 1 or fewer Tamers. Inherited opponent-security Digimon -3000 DP aura remains omitted pending `G-OPPONENT-SECURITY-DP-AURA` / `PUPPETS-G008`."
+    },
+    "EX7-027": {
+      "card_name": "Chaperomon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-027.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_027.rs",
+      "test_count": 2,
+      "patterns": [
+        "OVERCLOCK",
+        "PLAY-FROM-HAND-FREE"
+      ],
+      "notes": "Production YAML and focused tests cover Puppet Overclock and When Digivolving optional level 3 Puppet play from hand. Inherited leave-prevention by deleting a Token or other Puppet remains omitted pending the reusable Puppet/token replacement-cost body tracked in `qa/dsl-vocab-gaps.md`."
+    },
+    "EX7-063": {
+      "card_name": "Arisa Kinosaki",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-063.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_063.rs",
+      "test_count": 2,
+      "patterns": [
+        "START-OF-MAIN",
+        "SECURITY-PLAY-SELF"
+      ],
+      "notes": "Production YAML and focused tests cover Start of Your Main Phase memory gain when the opponent has a Digimon and Security play-self. The all-turns Token/Puppet deletion observer that suspends this Tamer to play a level 3 Puppet from hand remains omitted pending reusable event-context plus suspend-cost support."
+    },
+    "EX11-021": {
+      "card_name": "Kokeshimon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_021.rs",
+      "test_count": 2,
+      "patterns": [
+        "CONDITIONAL-TAMER-COUNT",
+        "PLAY-FROM-HAND-FREE",
+        "INHERITED-ATTACK-CANCEL"
+      ],
+      "notes": "Production YAML and focused tests cover When Digivolving optional Mirai Kinosaki play from hand when you have 1 or fewer Tamers, plus inherited opponent-turn attack cancellation by explicit EffectChoice, delete-this carrier cost, and end_attack. This batch also added DSL vocabulary/mapping for on_ally_attack and on_opponent_attack."
+    },
+    "BT4-104": {
+      "card_name": "Blinding Ray",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt4/BT4-104.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_104.rs",
+      "test_count": 4,
+      "patterns": [
+        "OPTION-MAIN",
+        "TRASH-TOP-SECURITY",
+        "GAIN-MEMORY"
+      ],
+      "notes": "Resolver-backed Batch 1 card. Production YAML and focused tests cover mandatory [Main] trash own top security, gain 2 memory afterward, no hidden choices, opponent security unchanged, and empty-security no-panic sequencing. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt4_104 p_037 lm_035 lm_037 --nocapture` (32 passed for batch filter)."
+    },
+    "P-037": {
+      "card_name": "Yellow Memory Boost!",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-1",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-037.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_037.rs",
+      "test_count": 9,
+      "patterns": [
+        "MEMORY-BOOST",
+        "REVEAL-SEARCH",
+        "DELAY",
+        "SECURITY-PLACE-OPTION"
+      ],
+      "notes": "Production YAML and focused tests cover reveal top 4, mandatory yellow-Digimon pick when eligible, bottom remainder, security placement as a delayed Option, and current engine Delay lifecycle gaining 2 memory. Marked PARTIAL because standard Delay is still modeled by the engine as scheduled delayed resolution rather than a visible post-placement [Main] activation/decline window."
+    },
+    "LM-035": {
+      "card_name": "Amber Memory Boost!",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-1",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-035.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_035.rs",
+      "test_count": 10,
+      "patterns": [
+        "MEMORY-BOOST",
+        "USE-REQUIREMENT",
+        "REVEAL-SEARCH",
+        "DELAY",
+        "SECURITY-PLACE-OPTION"
+      ],
+      "notes": "Production YAML and focused tests cover yellow Option metadata, purple alternate use requirement in the action mask, no bypass from unrelated colors, reveal top 3 with mandatory yellow/purple Digimon pick when eligible, security placement as a delayed Option, and current engine Delay lifecycle gaining 2 memory. Marked PARTIAL because standard Delay is still modeled by the engine as scheduled delayed resolution rather than a visible post-placement [Main] activation/decline window."
+    },
+    "LM-037": {
+      "card_name": "Sepia Memory Boost!",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-1",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-037.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_037.rs",
+      "test_count": 9,
+      "patterns": [
+        "MEMORY-BOOST",
+        "USE-REQUIREMENT",
+        "REVEAL-SEARCH",
+        "DELAY",
+        "SECURITY-PLACE-OPTION"
+      ],
+      "notes": "Production YAML and focused tests cover black Option metadata, yellow alternate use requirement in the action mask and execution path, reveal top 3 with mandatory black/yellow Digimon pick when eligible, security placement as a delayed Option, and current engine Delay lifecycle gaining 2 memory. Marked PARTIAL because standard Delay is still modeled by the engine as scheduled delayed resolution rather than a visible post-placement [Main] activation/decline window."
+    },
+    "ST19-01": {
+      "card_name": "Kyaromon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-01.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_01.rs",
+      "test_count": 5,
+      "patterns": [
+        "INHERITED-WHEN-ATTACKING",
+        "COUNT-OTHER-DIGIMON",
+        "DRAW",
+        "ONCE-PER-TURN"
+      ],
+      "notes": "Production YAML and focused tests cover inherited When Attacking Draw 1 only when another own battle-area Digimon exists, exclude the carrier itself through `other: true`, and enforce once-per-turn lockout."
+    },
+    "BT15-003": {
+      "card_name": "Nyaromon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-2",
+      "status": "BLOCKED",
+      "gap_kind": "dsl",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/_examples/BT15-003.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_003.rs",
+      "test_count": 5,
+      "patterns": [
+        "INHERITED-WHEN-ATTACKING",
+        "EFFECT-CHOICE",
+        "SECURITY-TRASH",
+        "GAIN-MEMORY"
+      ],
+      "notes": "Focused tests document the visible top/bottom security choice, top-security trash branch, no-security gating, and the blocked bottom-security branch. Full production YAML is blocked until native DSL can trash a selected/bottom security card and the existing `_examples/BT15-003.yaml` duplicate card-id/raw_rust fixture is retired or promoted safely."
+    },
+    "BT22-002": {
+      "card_name": "Kyaromon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-2",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_002.rs",
+      "test_count": 8,
+      "patterns": [
+        "INHERITED-ON-ANY-DELETION",
+        "EVENT-CONTEXT",
+        "TOKEN-FILTER",
+        "OTHER-PUPPET-FILTER",
+        "DRAW"
+      ],
+      "notes": "Production YAML preserves metadata and intentionally omits the inherited deletion observer. Focused tests document that full behavior is blocked until OnAnyDeletion fan-out carries the deleted permanent/card in TriggerContext so event_target predicates can distinguish own Tokens, own other Puppet Digimon, opponent Puppets, and the carrier itself."
+    },
+    "EX11-020": {
+      "card_name": "Hanimon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-2",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_020.rs",
+      "test_count": 5,
+      "patterns": [
+        "INHERITED-OPPONENT-ATTACK",
+        "ATTACK-CANCEL",
+        "DELETE-OTHER-DIGIMON-COST",
+        "ON-DELETION-CAUSE"
+      ],
+      "notes": "Production YAML and focused tests cover the inherited opponent-turn attack cancel by optional selection, deleting one other Digimon as cost, and ending the attack. The printed On Deletion free-play slice is omitted pending a DSL predicate that reads EffectContext::deletion_cause() so YAML can express 'deleted other than in battle'."
+    },
+    "EX7-024": {
+      "card_name": "Shoemon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-3",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_024.rs",
+      "test_count": 6,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "SOURCE-SCOPED-COST-REDUCTION",
+        "OPPONENT-SECURITY-DP-AURA"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata plus yellow Lv2 cost-0 digivolution path. The own-turn source-scoped cost reduction when this Digimon would digivolve into a Puppet is omitted pending the reusable when_this_digivolves_into + target-trait cost hook, and the inherited opponent-security Digimon DP aura remains omitted pending PUPPETS-G008."
+    },
+    "ST19-08": {
+      "card_name": "ShoeShoemon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-3",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_08.rs",
+      "test_count": 4,
+      "patterns": [
+        "OVERCLOCK",
+        "TOKEN-OR-PUPPET-COST-FILTER",
+        "UNION-ZONE-PLAY",
+        "OPPONENT-SECURITY-DP-AURA"
+      ],
+      "notes": "Production YAML and focused tests cover Puppet/Token Overclock cost filtering. The Security hand-or-trash LIBERATOR play is omitted pending filtered origin-preserving union-zone play, and the inherited opponent-security Digimon DP aura remains omitted pending PUPPETS-G008."
+    },
+    "ST19-11": {
+      "card_name": "Chaperomon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-3",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-11.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_11.rs",
+      "test_count": 5,
+      "patterns": [
+        "ON-PLAY",
+        "WHEN-DIGIVOLVING",
+        "DP-MODIFIER",
+        "COUNT-THRESHOLD",
+        "INHERITED-REPLACEMENT"
+      ],
+      "notes": "Production YAML and focused tests cover On Play/When Digivolving selection of one opponent Digimon and -3000 DP for the turn. The extra -3000 branch at 3+ total Digimon is omitted pending evaluated subjectless count aggregates or threshold formulas, and the inherited prevent-leave-by-deleting Token/other Puppet slice remains omitted pending the reusable Puppet/token replacement-cost body from inherited stacks."
+    },
+    "P-165": {
+      "card_name": "ShoeShoemon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-3",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-165.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_165.rs",
+      "test_count": 5,
+      "patterns": [
+        "SECURITY-PLAY-SELF",
+        "PLAY-TOKEN",
+        "INHERITED-KEYWORD",
+        "TOKEN-CLEANUP"
+      ],
+      "notes": "Production YAML and focused tests cover security play-self, On Play/When Digivolving Familiar Token play, and inherited Barrier. The printed delayed cleanup that deletes that token at the end of the opponent's turn is omitted pending token-handle provenance from play_token and scheduled cleanup keyed to the specific token."
+    },
+    "EX7-030": {
+      "card_name": "Cendrillmon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-4",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-030.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_030.rs",
+      "test_count": 8,
+      "patterns": [
+        "OVERCLOCK",
+        "TOKEN-PLAY",
+        "START-OF-MAIN",
+        "WHEN-DIGIVOLVING",
+        "WHEN-ATTACKING",
+        "DP-MODIFIER"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, yellow Lv5 digivolve route, Puppet/Token Overclock cost filtering with action-mask assertions, optional Familiar Token play at Start of Your Main Phase and When Digivolving with decline branch, and When Attacking -6000 DP to one opponent Digimon."
+    },
+    "EX11-024": {
+      "card_name": "Cendrillmon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-4",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_024.rs",
+      "test_count": 5,
+      "patterns": [
+        "KEYWORD-GRANT",
+        "OVERCLOCK",
+        "PLAY-FROM-HAND-FREE",
+        "PLAY-TOKEN-PER-COUNT",
+        "FORMULA-DP-MODIFIER"
+      ],
+      "notes": "Production YAML and focused tests cover Alliance, Puppet/Token Overclock, optional level 4 or lower Puppet free-play from hand, optional Familiar Token generation once per opponent Digimon via for_each, and When Digivolving/When Attacking -3000 DP per own Digimon using a filtered card_count_in_zone formula."
+    },
+    "BT22-040": {
+      "card_name": "Cendrillmon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-4",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-040.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_040.rs",
+      "test_count": 8,
+      "patterns": [
+        "OVERCLOCK",
+        "TOKEN-PLAY",
+        "EFFECT-CHOICE",
+        "EFFECT-REFIRE"
+      ],
+      "notes": "Production YAML and focused tests cover Puppet/Token Overclock and optional On Play/When Digivolving Familiar Token play with explicit Play/Decline choices. The All Turns OPT refire slice is omitted because refire_effect exists but OnAnyDeletion still lacks deleted-permanent event context to enforce 'your other Digimon' without over-triggering."
+    },
+    "BT22-042": {
+      "card_name": "Nyabootmon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-4",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-042.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_042.rs",
+      "test_count": 9,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "OVERCLOCK",
+        "PLAY-FROM-HAND-FREE",
+        "FORMULA-DP-MODIFIER",
+        "EFFECT-REFIRE"
+      ],
+      "notes": "Production YAML and focused tests cover standard yellow Lv6 digivolve cost 4 and Puppet/Token Overclock. The conditional Arisa+Chaperomon cost-6 route is omitted pending conditional alt-path support; the When Digivolving may-play-plus-mandatory-DP compound body is omitted pending reliable optional substep continuation for this shape; the other-deletion refire is omitted pending deleted-permanent event context even though refire_effect itself exists."
+    },
+    "EX9-032": {
+      "card_name": "Karakurumon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-5",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-032.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_032.rs",
+      "test_count": 7,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "COSTED-SELF-DIGIVOLVE",
+        "INHERITED-REPLACEMENT"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata plus normal yellow Lv5 and Puppet Lv5 digivolve paths. The active On Play/When Digivolving delete Token/Puppet cost into self-digivolve is omitted because deleting the cost body can shift battle-area indices before target:self resolves, and the cost preflight cannot faithfully decide availability. The inherited Token/Puppet leave-prevention replacement is omitted pending inherited replacement dispatch and Puppet-token cost body support."
+    },
+    "EX9-033": {
+      "card_name": "Kaguyamon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-5",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_033.rs",
+      "test_count": 9,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "AURA-KEYWORD-GRANT",
+        "PLAY-FROM-TRASH-FREE",
+        "ON-ANY-DELETION"
+      ],
+      "notes": "Production YAML and focused tests cover yellow Lv5 cost 4 plus Puppet Lv5 cost 3 digivolve paths, Alliance/Blocker aura for own Puppet Digimon and Tokens only, and optional End of Your Turn play of a level 4 or lower Puppet from trash. The All Turns other-deletion lowest-level delete observer is omitted pending deleted-permanent event context for OnAnyDeletion."
+    },
+    "BT22-036": {
+      "card_name": "Chaperomon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-5",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-036.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_036.rs",
+      "test_count": 9,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "OVERCLOCK",
+        "HAND-MAIN",
+        "INHERITED-REPLACEMENT"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, yellow Lv4 cost 3 digivolve path, and Puppet/Token Overclock with action-mask assertions. The Hand Main Arisa-gated ShoeShoemon trash-to-Shoemon source placement, then Shoemon digivolves into this hand card for cost 3 ignoring requirements, is omitted pending hand-main trash preflight and hand-card digivolve support. The inherited Token/Puppet leave-prevention replacement is omitted pending inherited replacement dispatch and Puppet-token cost body support."
+    },
+    "EX11-022": {
+      "card_name": "Karakurumon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-5",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_022.rs",
+      "test_count": 7,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "SCAPEGOAT",
+        "UNION-ZONE-PLAY",
+        "EFFECT-PLAY-CLEANUP",
+        "INHERITED-REPLACEMENT"
+      ],
+      "notes": "Production YAML and focused tests cover yellow Lv4 cost 4 plus Puppet Lv3 cost 2 digivolve paths and Scapegoat replacement using another own Digimon while excluding own-effect deletion. The On Play/When Digivolving hand-or-trash Puppet DP<=4000 free-play plus turn-end cleanup is omitted pending hidden-zone DP filtering and effect-played permanent provenance. The inherited Token/Puppet leave-prevention replacement is omitted pending inherited replacement dispatch and Puppet-token cost body support."
+    },
+    "EX11-023": {
+      "card_name": "Kaguyamon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-6",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_023.rs",
+      "test_count": 14,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "KEYWORD-GRANT",
+        "SCAPEGOAT",
+        "LOWEST-LEVEL-DELETE",
+        "ON-ANY-DELETION"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, yellow Lv5 cost 4 and Puppet Lv5 cost 3 digivolve paths, Alliance, Scapegoat, mandatory lowest-level opponent Digimon deletion on When Digivolving and End of Opponent's Turn, tied-lowest target choice, and no-target no-prompt behavior. The All Turns other-Digimon-deleted optional level 4 or lower Puppet trash play is omitted pending deleted-object event context and source-exclusion support for OnAnyDeletion."
+    },
+    "EX11-060": {
+      "card_name": "Arisa Kinosaki",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-6",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-060.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_060.rs",
+      "test_count": 5,
+      "patterns": [
+        "MEMORY-SETTER",
+        "SECURITY-PLAY",
+        "ON-ANY-DELETION",
+        "SUSPEND-COST",
+        "OVERCLOCK-CAUSE"
+      ],
+      "notes": "Production YAML and focused tests cover the start-of-turn memory setter when memory is 2 or less, the negative case when memory is already above 2, and Security play-self. The All Turns Token/Puppet deletion observer, suspend-this-Tamer Draw 1 cost, and Overclock-gated optional level 4 or lower Puppet play from hand are omitted pending deleted-object event context, Overclock deletion-cause context, and suspend-this-Tamer cost vocabulary."
+    },
+    "EX11-061": {
+      "card_name": "Mirai Kinosaki",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-6",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-061.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_061.rs",
+      "test_count": 6,
+      "patterns": [
+        "START-OF-MAIN",
+        "SECURITY-PLAY",
+        "DIGIVOLVE-OBSERVER",
+        "EFFECT-PLAY-CLEANUP"
+      ],
+      "notes": "Production YAML and focused tests cover Start of Your Main Phase memory gain when the opponent has a Digimon, the negative no-op case without opponent Digimon, and Security play-self. The Your Turn Puppet digivolve observer that suspends this Tamer to play a level 3 Puppet from hand, then deletes the exact played Digimon at turn end, is omitted pending effect-initiated digivolve observer context and effect-played permanent cleanup provenance."
+    },
+    "P-229": {
+      "card_name": "Unique Emblem: Narrative Ronde",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-6",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-229.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_229.rs",
+      "test_count": 9,
+      "patterns": [
+        "REVEAL-SEARCH",
+        "DUAL-BUCKET",
+        "SECURITY-ACTIVATE-MAIN",
+        "DELAY",
+        "EFFECT-DIGIVOLVE"
+      ],
+      "notes": "Production YAML and focused tests cover Main and Security reveal-top-3 dual-bucket search, adding 1 Puppet Digimon and 1 LIBERATOR without double-picking the same card and bottoming the remainder. The option battle-area placement and event-gated Delay when Mirai Kinosaki is played, followed by reduced-cost level 6 or lower LIBERATOR digivolve from hand, are omitted pending option placement plus on_ally_played Delay timing and reduced-cost effect-digivolve support."
+    },
+    "BT22-098": {
+      "card_name": "Unique Emblem: Fable Waltz",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-7",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-098.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_098.rs",
+      "test_count": 11,
+      "patterns": [
+        "FREE-PLAY-FROM-HAND",
+        "SECURITY-ACTIVATE-MAIN",
+        "EVENT-GATED-DELAY",
+        "EFFECT-DIGIVOLVE"
+      ],
+      "notes": "Production YAML and focused tests cover the supported hand-origin Main slice for Shoemon/Arisa free-play, the inherited Security mirror of that hand-origin slice, and the Arisa-suspend event-gated Delay body with Puppet base selection, Puppet+LIBERATOR hand evolution selection, and cost reduction 3. Exact hand-or-trash origin-preserving Main/Security play and full integrated option placement remain omitted pending PUPPETS-G014 and PUPPETS-G009."
+    },
+    "LM-029": {
+      "card_name": "Yellow Scramble",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-7",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_029.rs",
+      "test_count": 10,
+      "patterns": [
+        "EFFECT-DIGIVOLVE",
+        "OPTION-SELF-TO-HAND",
+        "SCRAMBLE-DELAY"
+      ],
+      "notes": "Production YAML and focused tests cover the supported Main digivolve path into yellow Digimon with cost reduction 3, visible field and hand choices, and the mandatory Security add-this-option-to-hand tail. The optional Security play of a yellow 2000 DP or less Digimon from trash and the Scramble Delay trash-to-deck-top body remain omitted pending hidden-zone DP filtering and optional-substep mandatory tail support."
+    },
+    "P-105": {
+      "card_name": "Physical Training",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-7",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-105.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_105.rs",
+      "test_count": 12,
+      "patterns": [
+        "REVEAL-SEARCH",
+        "DELAY",
+        "EFFECT-DIGIVOLVE",
+        "SECURITY-PLACE-OPTION"
+      ],
+      "notes": "Production YAML and focused tests cover Main reveal-top-2 add 1 yellow card of any kind, option pipeline placement as a delayed Option, inherited Security placement into battle area, and the scheduled Delay body with optional target selection and yellow Digimon hand evolution cost reduction 2. Standard Delay remains partial because the engine does not expose later Main-phase Delay activation as a player-visible action yet."
+    },
+    "LM-054": {
+      "card_name": "Treadmill Training",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-7",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-054.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_054.rs",
+      "test_count": 12,
+      "patterns": [
+        "COLOR-BYPASS",
+        "REVEAL-SEARCH",
+        "DELAY",
+        "EFFECT-DIGIVOLVE",
+        "SECURITY-PLACE-OPTION"
+      ],
+      "notes": "Production YAML and focused tests cover conditional color-requirement bypass while no Treadmill is in battle area, Main reveal-top-2 yellow/black search, option pipeline placement as a delayed Option, inherited Security reveal/search plus battle-area placement, and the scheduled Delay body with yellow/black hand evolution cost reduction 2. Standard Delay remains partial because the engine does not expose later Main-phase Delay activation as a player-visible action yet."
+    },
+    "BT13-101": {
+      "card_name": "Miki Kurosaki & Megumi Shirakawa",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-8",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-101.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_101.rs",
+      "test_count": 10,
+      "patterns": [
+        "PLAY-FROM-HAND-FREE",
+        "SECURITY-PLAY",
+        "ON-ENTER-FIELD-OBSERVER"
+      ],
+      "notes": "Production YAML and focused tests cover the optional On Play free play of a PawnChessmon-named Digimon from hand and Security play-self. The All Turns observer that suspends this Tamer when you play an exactly two-color black/yellow Digimon is omitted pending event-card color-only/color-count predicates and source-bound suspend-cost preflight."
+    },
+    "BT16-055": {
+      "card_name": "Namakemon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-8",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-055.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_055.rs",
+      "test_count": 7,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "CONDITIONAL-BRANCH",
+        "KEYWORD-GRANT",
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, normal black Lv3 and Pulsemon-name digivolution paths, and the <=3 security On Play/When Digivolving branch that grants Blocker and Reboot to 1 own Digimon until opponent turn end. The >=3 security narrow protection against opponent DP reduction and De-Digivolve, plus inherited text-contains-Pulsemon DP aura, are omitted pending reusable protection and text predicate support."
+    },
+    "BT20-084": {
+      "card_name": "Sistermon Ciel (Awakened)",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-8",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-084.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_084.rs",
+      "test_count": 6,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "CANNOT-SUSPEND",
+        "TRASH-RESIDENT-OBSERVER",
+        "SOURCE-TO-SECURITY"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, Sistermon Ciel cost-1 digivolution path, and On Play/When Digivolving selection of an opponent Digimon or Tamer to receive CannotSuspend until opponent turn end. The Trash All Turns observer that digivolves one of your Sistermon Ciels into this card from trash and the End of All Turns top-stack-card-to-security movement are omitted pending reusable trash-resident observer and source-stack-to-security support."
+    },
+    "BT22-088": {
+      "card_name": "Arisa Kinosaki",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-8",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-088.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_088.rs",
+      "test_count": 7,
+      "patterns": [
+        "SECURITY-PLAY",
+        "OPTIONAL-COST",
+        "ON-ENTER-FIELD-OBSERVER",
+        "SUSPEND-COST"
+      ],
+      "notes": "Production YAML and focused tests cover Security play-self. The Start of Your Main Phase optional return-this-Tamer-to-deck-bottom cost into exact Arisa/Shoemon free-play branches and the All Turns Token/Puppet played observer with suspend-this-Tamer Draw 1 cost are omitted pending optional trigger-cost support and faithful play-event context."
+    },
+    "BT23-077": {
+      "card_name": "Sistermon Ciel",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-9",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-077.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_077.rs",
+      "test_count": 6,
+      "patterns": [
+        "KEYWORD",
+        "ON-PLAY-DELETE",
+        "PLAY-COST-FILTER",
+        "ON-SUSPEND-OBSERVER"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, face-up Blocker, and mandatory On Play selection/deletion of an opponent Digimon with play cost 4 or less. The All Turns self-suspend De-Digivolve 1 observer is omitted pending PUPPETS-G029 self-scoped OnSuspend event predicates."
+    },
+    "BT5-033": {
+      "card_name": "Cutemon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-9",
+      "status": "IMPLEMENTED",
+      "gap_kind": "none",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt5/BT5-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_033.rs",
+      "test_count": 3,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "FLOOD-GATE",
+        "COST-REDUCTION-SUPPRESSION"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, yellow Lv2 digivolve path for cost 0, and the opponent-turn floodgate that prevents the opponent from reducing digivolution costs while leaving ordinary digivolve actions legal."
+    },
+    "BT5-106": {
+      "card_name": "Demonic Disaster",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-9",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt5/BT5-106.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_106.rs",
+      "test_count": 7,
+      "patterns": [
+        "MAIN-FROM-HAND",
+        "OPTIONAL-SELECTION",
+        "DELETE-COST",
+        "UNSUSPEND",
+        "SECURITY-PLAY-FROM-TRASH"
+      ],
+      "notes": "Production YAML and focused tests cover the Main effect as an optional visible own-Digimon delete selection followed by a visible own suspended purple Digimon unsuspend selection, including decline and no-target tail behavior. The Security play-from-trash slice is omitted pending PUPPETS-G030 effect-play provenance that suppresses the played Digimon's On Play effects."
+    },
+    "BT6-084": {
+      "card_name": "Sistermon Ciel",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-9",
+      "status": "IMPLEMENTED",
+      "gap_kind": "none",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-084.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_084.rs",
+      "test_count": 6,
+      "patterns": [
+        "AURA",
+        "DP-MODIFIER",
+        "ON-PLAY-MEMORY"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, face-up All Turns +2000 DP aura for own Huckmon-name or Royal Knight-trait Digimon, aura refresh when the source leaves field, and On Play gain 1 memory. Duplicated ingestion inherited text is not implemented as inherited behavior."
+    },
+    "BT9-033": {
+      "card_name": "Pillomon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-10",
+      "status": "IMPLEMENTED",
+      "gap_kind": "none",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_033.rs",
+      "test_count": 3,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "FLOOD-GATE",
+        "EFFECT-PLAY-LOCK"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, yellow Lv2 digivolve path for cost 0, and the all-turns all-player floodgate preventing Digimon from being played by effects while normal hand play remains legal."
+    },
+    "EX4-074": {
+      "card_name": "ShineGreymon: Ruin Mode",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-10",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex4/EX4-074.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_074.rs",
+      "test_count": 5,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "MASS-DP-REDUCTION",
+        "END-OF-ATTACK",
+        "RECOVERY",
+        "HATCH"
+      ],
+      "notes": "Production YAML and focused tests cover metadata plus purple Lv6 and ShineGreymon digivolve paths. The When Digivolving/On Deletion opponent-wide -5000 DP clause is omitted pending opponent-next-turn expiry support; the End of Attack self-delete/opponent-delete/Recovery/conditional-hatch chain is omitted pending PUPPETS-G031."
+    },
+    "EX6-011": {
+      "card_name": "RagnaLoardmon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-10",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex6/EX6-011.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex6/ex6_011.rs",
+      "test_count": 8,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "DNA-DIGIVOLVE",
+        "KEYWORD",
+        "ACE-OVERFLOW",
+        "SECURITY-TRASH",
+        "EFFECT-IMMUNITY",
+        "DNA-ORIGIN"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, Ace Overflow -5, red Lv6 digivolve path, red+black Lv6 DNA route, Raid/Reboot, On Play/When Digivolving top-security trash and opponent-effect immunity, and the DNA-origin De-Digivolve-all plus delete-one tail. The Hand Counter Blast DNA Digivolve activation is omitted pending PUPPETS-G032 / G-COUNTER-BLAST-DNA-ACTIVATION."
+    },
+    "EX8-030": {
+      "card_name": "Tapirmon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-10",
+      "status": "IMPLEMENTED",
+      "gap_kind": "none",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-030.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_030.rs",
+      "test_count": 2,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "FLOOD-GATE",
+        "MEMORY-GAIN-SOURCE-FILTER"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, yellow Lv2 and NSo Lv2 digivolve paths for cost 0, and the opponent memory-gain floodgate that blocks non-Tamer-source memory gain while allowing Tamer-source gain and clears when Tapirmon leaves field."
+    },
+    "P-136": {
+      "card_name": "Arisa Kinosaki",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-11",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-136.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_136.rs",
+      "test_count": 10,
+      "patterns": [
+        "TAMER",
+        "FREE-PLAY",
+        "SECURITY-PLAY-SELF",
+        "SOURCE-BOUND-SUSPEND-COST"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, optional On Play exact Shoemon hand free-play with decline/negative filtering, and Security play-self. The Your Turn Puppet-digivolve observer with source-bound suspend-this-Tamer cost remains omitted pending PUPPETS-G023."
+    },
+    "P-156": {
+      "card_name": "Future Potential!",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-11",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-156.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_156.rs",
+      "test_count": 10,
+      "patterns": [
+        "OPTION-USE-REQUIREMENT",
+        "BINDING-COLOR-MATCH",
+        "HAND-TRASH-FREE-PLAY",
+        "SECURITY-ADD-THIS-OPTION-TO-HAND"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, Tamer-based option color bypass, Main chosen-Tamer binding into hand/trash Digimon free-play filtered by bound Tamer color and play cost <=3, and the mandatory Security add-this-option-to-hand tail. The Security optional Tamer play before the mandatory tail remains omitted pending PUPPETS-G017."
     }
   }
 }

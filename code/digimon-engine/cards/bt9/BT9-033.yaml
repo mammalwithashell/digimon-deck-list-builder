@@ -1,0 +1,21 @@
+card: BT9-033
+name: Pillomon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Mammal]
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  - kind: flood_gate
+    scope: face_up
+    active_when: { all_turns: true }
+    modifier: CannotPlayDigimonByEffect
+    target_player: any
+    summary: "Players can't play Digimon by effects"

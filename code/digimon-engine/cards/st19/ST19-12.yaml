@@ -1,0 +1,36 @@
+card: ST19-12
+name: Cendrillmon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 11
+dp: 11000
+traits: [Puppet, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter:
+      any_of:
+        - kind: token
+        - all_of:
+            - kind: digimon
+            - trait_has: Puppet
+
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: when_digivolving
+    optional: true
+    summary: "You may play 2 Familiar Tokens"
+    process:
+      - play_token:
+          controller: you
+          token_name: familiar
+      - play_token:
+          controller: you
+          token_name: familiar

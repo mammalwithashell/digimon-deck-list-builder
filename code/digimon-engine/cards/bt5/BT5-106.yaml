@@ -1,0 +1,40 @@
+card: BT5-106
+name: Demonic Disaster
+kind: option
+color: [purple]
+cost: 1
+
+effects:
+  # Supported slice:
+  # [Main] You may delete 1 of your Digimon to unsuspend 1 of your purple Digimon.
+  #
+  # The printed "You may" is surfaced through the optional sacrifice selection.
+  # After a sacrifice is chosen and deleted, the follow-up purple Digimon
+  # selection remains player-visible even when only one legal target exists.
+  - when: main_from_hand
+    summary: "Delete 1 of your Digimon to unsuspend 1 purple Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: sacrifice
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your Digimon"
+      - delete_permanent: { target: sacrifice }
+      - select_own_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+              - is_suspended: true
+          prompt: "Unsuspend 1 of your purple Digimon"
+      - unsuspend: { target: target }
+
+  # Omitted unsupported slice:
+  # [Security] You may play 1 level 3 purple Digimon card from your trash
+  # without paying its memory cost. Any [On Play] effects on Digimon played
+  # with this effect don't activate.
+  #
+  # Current YAML can select/play from trash, but this card also needs
+  # PUPPETS-G030 effect provenance that suppresses On Play effects only for the
+  # played Digimon.

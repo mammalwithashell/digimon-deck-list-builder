@@ -1,0 +1,37 @@
+card: BT22-088
+name: Arisa Kinosaki
+kind: tamer
+color: [yellow]
+cost: 3
+traits: [LIBERATOR]
+
+# Printed text:
+# [Start of Your Main Phase] By returning this Tamer to the bottom of the
+# deck, you may play 1 [Arisa Kinosaki] from your hand without paying the
+# cost. Then, if you don't have a Digimon, you may play 1 [Shoemon] from your
+# trash without paying the cost.
+#
+# [All Turns] When any of your Tokens or [Puppet] trait Digimon are played, by
+# suspending this Tamer, <Draw 1>.
+#
+# Security Effect [Security] Play this card without paying the cost.
+#
+# Supported faithfully:
+# - Security plays this Tamer without paying the cost.
+#
+# Omitted rather than approximated:
+# - The start-of-main clause needs a visible optional activation before the
+#   return-this-Tamer-to-bottom-deck cost is paid. Current single optional
+#   triggered effects auto-fire, and `optional` process bodies do not expose a
+#   decline choice, so paying the cost would be hidden/forced
+#   (G-OPTIONAL-TRIGGER-COST).
+# - The All Turns observer needs event context for an own Token or exact
+#   Puppet-trait Digimon being played, plus a preflighted source-bound
+#   suspend-this-Tamer cost before Draw 1. This remains covered by
+#   PUPPETS-G005.
+
+effects:
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

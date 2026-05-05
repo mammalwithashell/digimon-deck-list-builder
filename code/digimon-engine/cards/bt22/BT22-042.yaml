@@ -1,0 +1,44 @@
+card: BT22-042
+name: Nyabootmon
+kind: digimon
+level: 7
+color: [yellow]
+cost: 14
+dp: 14000
+traits: [Puppet, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - color_is: yellow
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter:
+      any_of:
+        - kind: token
+        - all_of:
+            - kind: digimon
+            - trait_has: Puppet
+
+  # Omitted until the DSL can gate an alternate digivolve route with
+  # "while you have [Arisa Kinosaki]" instead of exposing a permanently legal
+  # Chaperomon route.
+  #
+  # Omitted until optional sub-selections can continue into mandatory tail
+  # steps on decline for this When Digivolving shape. This card's text is not
+  # one optional effect: "You may play ..." is optional, but the following
+  # "Then" DP reduction still resolves and must count only your Digimon via a
+  # filtered card_count_in_zone formula.
+  #
+  # Omitted until OnAnyDeletion carries deleted-permanent event context for
+  # "your other Digimon"; once that substrate is available, use:
+  #   when: on_any_deletion
+  #   once_per_turn: true
+  #   optional: true
+  #   condition: { ... your other Digimon ... }
+  #   process:
+  #     - refire_effect: { source: source, timing: when_digivolving, optional: true }

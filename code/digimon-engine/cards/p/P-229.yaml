@@ -1,0 +1,80 @@
+card: P-229
+name: "Unique Emblem: Narrative Ronde"
+kind: option
+color: [yellow]
+cost: 2
+traits: [LIBERATOR]
+
+# Printed text:
+# [Main] Reveal the top 3 cards of your deck. Add 1 [Puppet] trait Digimon card
+# and 1 [LIBERATOR] trait card among them to the hand. Return the rest to the
+# bottom of the deck. Then, place this card in the battle area.
+#
+# [Your Turn] When any of your [Mirai Kinosaki]s are played, <Delay>
+# 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card
+# in the hand with the digivolution cost reduced by 3.
+#
+# Security Effect [Security] Activate this card's [Main] effects.
+#
+# Supported faithfully here:
+# - The top-3 dual-bucket reveal search, using no_duplicate_cards so one revealed
+#   Puppet+LIBERATOR card cannot satisfy both printed additions.
+# - The security effect mirrors the supported [Main] search body.
+#
+# Omitted rather than approximated:
+# - "Then, place this card in the battle area" plus the event-gated Delay are
+#   blocked by PUPPETS-G004/PUPPETS-G009. Adding a scheduled standard Delay or
+#   raw no-op stub would hide the printed player-visible Mirai-played activation
+#   window, so this YAML stays partial until those reusable primitives exist.
+
+effects:
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 3; add 1 Puppet Digimon and 1 LIBERATOR; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: puppet_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - trait_has: Puppet
+            - bind_as: liberator_pick
+              min: 1
+              max: 1
+              filter: { trait_has: LIBERATOR }
+          prompt: "Select 1 [Puppet] Digimon and 1 [LIBERATOR] card"
+      - add_to_hand_from_reveal: { of: you, card: puppet_pick }
+      - add_to_hand_from_reveal: { of: you, card: liberator_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Activate [Main] search effects"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: puppet_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - trait_has: Puppet
+            - bind_as: liberator_pick
+              min: 1
+              max: 1
+              filter: { trait_has: LIBERATOR }
+          prompt: "Select 1 [Puppet] Digimon and 1 [LIBERATOR] card"
+      - add_to_hand_from_reveal: { of: you, card: puppet_pick }
+      - add_to_hand_from_reveal: { of: you, card: liberator_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }

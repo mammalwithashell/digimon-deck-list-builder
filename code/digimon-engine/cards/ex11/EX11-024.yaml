@@ -1,0 +1,103 @@
+card: EX11-024
+name: Cendrillmon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 11
+dp: 12000
+traits: [Puppet, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Alliance
+
+  - kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter:
+      any_of:
+        - kind: token
+        - all_of:
+            - kind: digimon
+            - trait_has: Puppet
+
+  - when: [on_play, when_digivolving]
+    summary: "You may play 1 level 4 or lower Puppet Digimon from hand, then may play Familiar Tokens per opponent Digimon"
+    process:
+      - select_effect_choice:
+          labels: ["Play Puppet Digimon", "Decline"]
+          bind_as: puppet_choice
+          prompt: "Play 1 level 4 or lower Puppet Digimon from hand?"
+      - if:
+          condition: { equals: [puppet_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: puppet
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 4
+                    - trait_has: Puppet
+                prompt: "Play 1 level 4 or lower Puppet Digimon from hand"
+            - play_from_hand_free: { of: you, hand_index: puppet }
+            - select_effect_choice:
+                labels: ["Play Familiar Tokens", "Decline"]
+                bind_as: token_choice
+                prompt: "Play 1 Familiar Token for each opponent Digimon?"
+            - if:
+                condition: { equals: [token_choice, 0] }
+                then:
+                  - for_each:
+                      over:
+                        all_of:
+                          - kind: digimon
+                          - owner: opponent
+                          - zone: [battle_area]
+                      bind_as: opponent_digimon
+                      body:
+                        - play_token:
+                            controller: you
+                            token_name: familiar
+          else:
+            - select_effect_choice:
+                labels: ["Play Familiar Tokens", "Decline"]
+                bind_as: token_choice
+                prompt: "Play 1 Familiar Token for each opponent Digimon?"
+            - if:
+                condition: { equals: [token_choice, 0] }
+                then:
+                  - for_each:
+                      over:
+                        all_of:
+                          - kind: digimon
+                          - owner: opponent
+                          - zone: [battle_area]
+                      bind_as: opponent_digimon
+                      body:
+                        - play_token:
+                            controller: you
+                            token_name: familiar
+
+  - when: [when_digivolving, when_attacking]
+    summary: "Give 1 opponent Digimon -3000 DP for each of your Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Give -3000 DP per own Digimon"
+      - add_dp_modifier:
+          target: dp_target
+          value:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  of: you
+                  zone: battle_area
+                  filter: { kind: digimon }
+              delta: -3000
+          expiry: end_of_turn

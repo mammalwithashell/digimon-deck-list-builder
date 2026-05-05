@@ -871,6 +871,28 @@ Resolved by Group 3:
 
 ---
 
+## DSL Gap: P-156 — Color Match Against a Chosen Tamer Binding  [G-COLOR-MATCH-BOUND-PERMANENT]
+
+- **Status:** RESOLVED on 2026-05-04 for card/selection predicates that compare a candidate card's colors against a previously selected permanent binding.
+- **Effect text:** P-156 Future Potential!: "[Main] Choose 1 Tamer. You may play 1 Digimon card with the same color as the chosen Tamer with a play cost of 3 or less from your hand or trash without paying the cost."
+- **Implemented DSL predicate:** `color_matches_binding: chosen_tamer`
+- **Resolution:** `PredicateSpec` and `CompiledPredicate` now carry `color_matches_binding`; card predicate evaluation resolves the named permanent binding through `Bindings`, reads the bound permanent's live top-card colors, and filters hand/trash candidates by color overlap. The evaluator handles Digimon/Dual candidates through Digimon-face colors and Options/Dual through Option-face colors, matching the existing card-color split.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_predicate_batch --nocapture` includes `select_hand_color_matches_binding_filters_against_bound_tamer_colors`.
+- **Card evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_156 --nocapture` covers own and opponent Tamer choices, hand and trash branches, play-cost filtering, and free play without paying cost.
+- **Remaining related blockers:** P-156's Security optional Tamer play before the mandatory add-to-hand tail remains open under `PUPPETS-G017`; this resolved predicate only covers same-color filtering against a chosen permanent.
+
+---
+
+## Rust Engine Gap: Option Use Active-Body Preflight  [G-OPTION-ACTIVE-BODY-PREFLIGHT]
+
+- **Status:** RESOLVED on 2026-05-04 for ordinary Main-phase Option hand/trash use and Counter-window Option use.
+- **Problem:** Partial Security-only Option YAML, or an Option whose mandatory Main precondition has no legal candidates, could still appear as a legal hand-play action and resolve as a no-effect Option. P-156 exposed this when its Main effect needs at least one Tamer choice before any branch can resolve.
+- **Resolution:** Option play masks and `play_option_from_hand`/`play_option_from_trash` now preflight that ordinary Option use has an active `OptionMain` body whose condition passes. During a Counter window, the preflight accepts an active `CounterEffect` body instead, preserving legal Counter Options that do not also have an `OptionMain` body.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_156 --nocapture` covers masking/direct rejection when P-156 has a matching black source but no Tamer to choose. `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- counter_hand_option_without_option_main_still_resolves_counter_body counter_hand_option_resolves_through_play_option_pipeline --nocapture` covers Counter-window compatibility.
+- **Remaining related blockers:** This does not implement optional-subeffect mandatory-tail continuation; P-156 Security remains tracked under `PUPPETS-G017`.
+
+---
+
 ## Rust Engine Gap Group Summaries
 
 - **Group 6 modifiers / auras / keywords closure (2026-05-02):** Status: resolved for the planned Group 6 primitives. Option color bypass uses the existing player-scoped modifier in both masks and decode/execution; source-scoped return/de-digivolve immunity blocks opponent effects while allowing own effects, battle, costs, and rule cleanup; filtered/dynamic auras refresh without stale materialized modifiers; dynamic DP and Security Attack formulas recompute from existing tensor/action surfaces; Collision, Piercing, Reboot, Retaliation, and Progress use existing combat/action paths; Overclock uses the field-effect sub-slot; and DigiXros aliases remain scoped to DigiXros material matching only. Passing targeted coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test flood_gates -- group6_option_color --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- source_scoped_immunity --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_auras group6_dynamic_formulas --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords group6_overclock --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords parses_digixros_scoped_alias_without_global_name_alias --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action -- digixros_matching_accepts_scoped_alias_but_generic_name_checks_do_not --nocapture`. Broad Rust gates passed with Cargo's required no-filter separator forms for `--nocapture`. Python gates are not closure evidence as of this review: `DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_rust_backend_parity.py -v` failed one tensor-shape parity test (`(1375,)` legacy vs `(8320,)` Rust default), and `python -m pytest code/tests/rl -v` failed three legacy/Rust parity tests plus `test_same_seed_reproduces_first_action`.

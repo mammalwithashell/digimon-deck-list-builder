@@ -1,0 +1,1573 @@
+{
+  "archetype_name": "Puppets",
+  "input_name": "Puppets",
+  "total_decklists": 25,
+  "unique_cards": [
+    {
+      "card_id": "BT13-101",
+      "card_name": "Miki Kurosaki & Megumi Shirakawa",
+      "card_kind": "Tamer",
+      "level": null,
+      "colors": [
+        "Black",
+        "Yellow"
+      ],
+      "traits": "",
+      "dp": null,
+      "play_cost": 4,
+      "evo_costs": [],
+      "effect_text": "[On Play] You may play 1 Digimon card with [PawnChessmon] in its name from your hand without paying its cost.\r\n[All Turns] When you play a 2-color black and yellow Digimon, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.",
+      "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 3
+    },
+    {
+      "card_id": "BT15-003",
+      "card_name": "Nyaromon",
+      "card_kind": "DigiEgg",
+      "level": 2,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "In-Training, Lesser",
+      "dp": null,
+      "play_cost": 0,
+      "evo_costs": [],
+      "effect_text": "Inherited Effect [When Attacking] [Once Per Turn] By trashing the top or bottom card of your security stack, gain 1 memory.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 3
+    },
+    {
+      "card_id": "BT16-055",
+      "card_name": "Namakemon",
+      "card_kind": "Digimon",
+      "level": 4,
+      "colors": [
+        "Black"
+      ],
+      "traits": "Virus, Puppet",
+      "dp": 4000,
+      "play_cost": 4,
+      "evo_costs": [
+        {
+          "color": "Black",
+          "cost": 2,
+          "level": 3
+        }
+      ],
+      "effect_text": "[On Play] [When Digivolving] If you have 3 or more security cards, until the end of your opponent's turn, 1 of your Digimon can't have its DP reduced by your opponent's effects and isn't affected by ＜De-Digivolve＞ effects. If you have 3 or fewer, 1 of your Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.) until the end of your opponent's turn.",
+      "inherited_text": "[All Turns] While this Digimon has [Pulsemon] in its text, it gets +1000 DP.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 19
+    },
+    {
+      "card_id": "BT20-084",
+      "card_name": "Sistermon Ciel (Awakened)",
+      "card_kind": "Digimon",
+      "level": 4,
+      "colors": [
+        "White"
+      ],
+      "traits": "Data, Puppet",
+      "dp": 6000,
+      "play_cost": 5,
+      "evo_costs": [],
+      "effect_text": "[Trash] [All Turns] When any of your Digimon are played, 1 of your [Sistermon Ciel]s may digivolve into this card without paying the cost.\r\n[On Play] [When Digivolving] 1 of your opponent's Digimon or Tamers can't suspend until the end of their turn.\r\n[End of All Turns] Place this Digimon's top stacked card as the top security card.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 1
+    },
+    {
+      "card_id": "BT22-002",
+      "card_name": "Kyaromon",
+      "card_kind": "DigiEgg",
+      "level": 2,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Lesser, LIBERATOR",
+      "dp": null,
+      "play_cost": 0,
+      "evo_costs": [],
+      "effect_text": "Inherited Effect [Your Turn] [Once Per Turn] When any of your Tokens or other [Puppet] trait Digimon are deleted, ＜Draw 1＞ (Draw 1 card from your deck.).",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 18
+    },
+    {
+      "card_id": "BT22-029",
+      "card_name": "Shoemon",
+      "card_kind": "Digimon",
+      "level": 3,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 1000,
+      "play_cost": 3,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 0,
+          "level": 2
+        }
+      ],
+      "effect_text": "[On Play] [On Deletion] 1 of your Digimon with the [Puppet] trait gains ＜Blocker＞ (This Digimon can block in the blocker timing.) until your opponent's turn ends.",
+      "inherited_text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 12
+    },
+    {
+      "card_id": "BT22-032",
+      "card_name": "ShoeShoemon",
+      "card_kind": "Digimon",
+      "level": 4,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 5000,
+      "play_cost": 5,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 2,
+          "level": 3
+        }
+      ],
+      "effect_text": "[On Deletion] You may play 1 level 3 Digimon card with the [Puppet] trait from your hand without paying the cost.",
+      "inherited_text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 2
+    },
+    {
+      "card_id": "BT22-036",
+      "card_name": "Chaperomon",
+      "card_kind": "Digimon",
+      "level": 5,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 7000,
+      "play_cost": 7,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 3,
+          "level": 4
+        }
+      ],
+      "effect_text": "[Hand] [Main] If you have [Arisa Kinosaki], by placing 1 [ShoeShoemon] from your trash as any of your [Shoemon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.\r\n＜Overclock ([Puppet] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)",
+      "inherited_text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, it doesn't leave.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 11
+    },
+    {
+      "card_id": "BT22-040",
+      "card_name": "Cendrillmon",
+      "card_kind": "Digimon",
+      "level": 6,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 11000,
+      "play_cost": 11,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 3,
+          "level": 5
+        }
+      ],
+      "effect_text": "＜Overclock ([Puppet] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)\r\n[On Play] [When Digivolving] You may play 1 [Familiar] Token. (Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.)\r\n[All Turns] [Once Per Turn] When any of your other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 4
+    },
+    {
+      "card_id": "BT22-042",
+      "card_name": "Nyabootmon",
+      "card_kind": "Digimon",
+      "level": 7,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 14000,
+      "play_cost": 14,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 4,
+          "level": 6
+        }
+      ],
+      "effect_text": "＜Overclock ([Puppet] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)\r\n[When Digivolving] You may play 1 level 4 or lower [Puppet] trait Digimon card from your hand without paying the cost. Then, to 1 of your opponent's Digimon, give -3000 DP until their turn ends for each of your Digimon.\r\n[All Turns] [Once Per Turn] When any of your other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 25
+    },
+    {
+      "card_id": "BT22-088",
+      "card_name": "Arisa Kinosaki",
+      "card_kind": "Tamer",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "LIBERATOR",
+      "dp": null,
+      "play_cost": 3,
+      "evo_costs": [],
+      "effect_text": "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] from your hand without paying the cost. Then, if you don't have a Digimon, you may play 1 [Shoemon] from your trash without paying the cost.\r\n[All Turns] When any of your Tokens or [Puppet] trait Digimon are played, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.)",
+      "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 6
+    },
+    {
+      "card_id": "BT22-098",
+      "card_name": "Unique Emblem: Fable Waltz",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "LIBERATOR",
+      "dp": null,
+      "play_cost": 3,
+      "evo_costs": [],
+      "effect_text": "[Main] You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand or trash without paying the cost. Then, place this card in the battle area.\r\n[Your Turn] When any of your [Arisa Kinosaki] suspend, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.",
+      "inherited_text": "Security Effect [Security] Activate this card's [Main] effects.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 16
+    },
+    {
+      "card_id": "BT23-077",
+      "card_name": "Sistermon Ciel",
+      "card_kind": "Digimon",
+      "level": 4,
+      "colors": [
+        "White"
+      ],
+      "traits": "Data, Puppet, CS",
+      "dp": 4000,
+      "play_cost": 4,
+      "evo_costs": [],
+      "effect_text": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] Delete 1 of your opponent's Digimon with a play cost of 4 or less.\r\n[All Turns] When this Digimon suspends, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+      "inherited_text": "Card Effect(s) ＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] Delete 1 of your opponent's Digimon with a play cost of 4 or less.\r\n[All Turns] When this Digimon suspends, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 2
+    },
+    {
+      "card_id": "BT4-104",
+      "card_name": "Blinding Ray",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "",
+      "dp": null,
+      "play_cost": 0,
+      "evo_costs": [],
+      "effect_text": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 1
+    },
+    {
+      "card_id": "BT5-033",
+      "card_name": "Cutemon",
+      "card_kind": "Digimon",
+      "level": 3,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Rookie, Vaccine, Fairy",
+      "dp": 3000,
+      "play_cost": 3,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 0,
+          "level": 2
+        }
+      ],
+      "effect_text": "[Opponent's Turn] Your opponent can't reduce digivolution costs.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 1
+    },
+    {
+      "card_id": "BT5-106",
+      "card_name": "Demonic Disaster",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "Purple"
+      ],
+      "traits": "",
+      "dp": null,
+      "play_cost": 1,
+      "evo_costs": [],
+      "effect_text": "[Main] You may delete 1 of your Digimon to unsuspend 1 of your purple Digimon.",
+      "inherited_text": "Security Effect [Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 2
+    },
+    {
+      "card_id": "BT6-084",
+      "card_name": "Sistermon Ciel",
+      "card_kind": "Digimon",
+      "level": 4,
+      "colors": [
+        "White"
+      ],
+      "traits": "Data, Puppet",
+      "dp": 5000,
+      "play_cost": 4,
+      "evo_costs": [],
+      "effect_text": "[All Turns] All of your Digimon with [Huckmon] in their name or [Royal Knight] trait get +2000 DP.\r\n[On Play] Gain 1 memory.",
+      "inherited_text": "Card Effect(s) [All Turns] All of your Digimon with [Huckmon] in their name or [Royal Knight] trait get +2000 DP.\r\n[On Play] Gain 1 memory.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 7
+    },
+    {
+      "card_id": "BT9-033",
+      "card_name": "Pillomon",
+      "card_kind": "Digimon",
+      "level": 3,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Vaccine, Mammal",
+      "dp": 2000,
+      "play_cost": 3,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 0,
+          "level": 2
+        }
+      ],
+      "effect_text": "[All Turns] Players can't play Digimon by effects.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 2
+    },
+    {
+      "card_id": "BT9-112",
+      "card_name": "DeathXmon",
+      "card_kind": "Digimon",
+      "level": 7,
+      "colors": [
+        "Purple",
+        "Black"
+      ],
+      "traits": "Virus, Unanalyzable, X Program",
+      "dp": 15000,
+      "play_cost": 20,
+      "evo_costs": [
+        {
+          "color": "Purple",
+          "cost": 6,
+          "level": 6
+        }
+      ],
+      "effect_text": "When you would play this card, reduce its memory cost by 3 for each Digimon and Tamer your opponent has in play.\r\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ all of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, delete all of your opponent's level 4 or lower Digimon.\r\n[End of Opponent's Turn] [Once Per Turn] Delete all of your opponent's Digimon with the lowest play cost.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 1
+    },
+    {
+      "card_id": "EX11-019",
+      "card_name": "Shoemon",
+      "card_kind": "Digimon",
+      "level": 3,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 2000,
+      "play_cost": 3,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 0,
+          "level": 2
+        }
+      ],
+      "effect_text": "[On Deletion] You may play 1 [Familiar] Token. (Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.)",
+      "inherited_text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 8
+    },
+    {
+      "card_id": "EX11-020",
+      "card_name": "Hanimon",
+      "card_kind": "Digimon",
+      "level": 3,
+      "colors": [
+        "Yellow",
+        "Purple"
+      ],
+      "traits": "Data, Puppet, LIBERATOR",
+      "dp": 1000,
+      "play_cost": 3,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 1,
+          "level": 2
+        }
+      ],
+      "effect_text": "[On Deletion] If deleted other than in battle, you may play 1 [Shoemon] trait from your hand without paying the cost.",
+      "inherited_text": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 2
+    },
+    {
+      "card_id": "EX11-021",
+      "card_name": "Kokeshimon",
+      "card_kind": "Digimon",
+      "level": 4,
+      "colors": [
+        "Yellow",
+        "Purple"
+      ],
+      "traits": "Data, Puppet, LIBERATOR",
+      "dp": 6000,
+      "play_cost": 5,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 3,
+          "level": 3
+        }
+      ],
+      "effect_text": "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Mirai Kinosaki] from your hand without paying the cost.",
+      "inherited_text": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 9
+    },
+    {
+      "card_id": "EX11-022",
+      "card_name": "Karakurumon",
+      "card_kind": "Digimon",
+      "level": 5,
+      "colors": [
+        "Yellow",
+        "Purple"
+      ],
+      "traits": "Data, Puppet, LIBERATOR",
+      "dp": 7000,
+      "play_cost": 7,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 4,
+          "level": 4
+        }
+      ],
+      "effect_text": "＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)\r\n[On Play] [When Digivolving] You may play 1 [Puppet] trait Digimon card with 4000 DP or less from your hand or trash without paying the cost. At turn end, delete the Digimon this effect played.",
+      "inherited_text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, it doesn't leave.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 8
+    },
+    {
+      "card_id": "EX11-023",
+      "card_name": "Kaguyamon",
+      "card_kind": "Digimon",
+      "level": 6,
+      "colors": [
+        "Yellow",
+        "Purple"
+      ],
+      "traits": "Data, Puppet, LIBERATOR",
+      "dp": 12000,
+      "play_cost": 12,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 4,
+          "level": 5
+        }
+      ],
+      "effect_text": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)\r\n[When Digivolving] [End of Opponent's Turn] [Once Per Turn] Delete 1 of your opponent's Digimon with the lowest level.\r\n[All Turns] [Once Per Turn] When other Digimon are deleted, you may play 1 level 4 or lower [Puppet] trait Digimon card from your trash without paying the cost.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 4
+    },
+    {
+      "card_id": "EX11-024",
+      "card_name": "Cendrillmon",
+      "card_kind": "Digimon",
+      "level": 6,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 12000,
+      "play_cost": 11,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 3,
+          "level": 5
+        }
+      ],
+      "effect_text": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n＜Overclock ([Puppet] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)\r\n[On Play] [When Digivolving] You may play 1 level 4 or lower [Puppet] trait Digimon card from your hand without paying the cost. Then, you may play 1 [Familiar] Token for each of your opponent's Digimon. (Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.)\r\n[When Digivolving] [When Attacking] To 1 of your opponent's Digimon, give -3000 DP for the turn for each of your Digimon.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 9
+    },
+    {
+      "card_id": "EX11-060",
+      "card_name": "Arisa Kinosaki",
+      "card_kind": "Tamer",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "LIBERATOR",
+      "dp": null,
+      "play_cost": 4,
+      "evo_costs": [],
+      "effect_text": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When any of your Tokens or [Puppet] trait Digimon are deleted, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) If deleted by ＜Overclock＞, you may play 1 level 4 or lower [Puppet] trait Digimon card from your hand without paying the cost.",
+      "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 2
+    },
+    {
+      "card_id": "EX11-061",
+      "card_name": "Mirai Kinosaki",
+      "card_kind": "Tamer",
+      "level": null,
+      "colors": [
+        "Yellow",
+        "Purple"
+      ],
+      "traits": "LIBERATOR",
+      "dp": null,
+      "play_cost": 4,
+      "evo_costs": [],
+      "effect_text": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Your Turn] When any of your Digimon digivolve into a [Puppet] trait Digimon, by suspending this Tamer, you may play 1 level 3 [Puppet] trait Digimon card from your hand without paying the cost. At turn end, delete the Digimon this effect played.",
+      "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 7
+    },
+    {
+      "card_id": "EX4-074",
+      "card_name": "ShineGreymon: Ruin Mode",
+      "card_kind": "Digimon",
+      "level": 7,
+      "colors": [
+        "Purple",
+        "Yellow"
+      ],
+      "traits": "Vaccine, Light Dragon",
+      "dp": 15000,
+      "play_cost": 14,
+      "evo_costs": [
+        {
+          "color": "Purple",
+          "cost": 5,
+          "level": 6
+        }
+      ],
+      "effect_text": "[When Digivolving] [On Deletion] Until the end of your opponent's next turn, all of your opponent's Digimon get -5000DP.\r\n[End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and ＜Recovery +1 (Deck)＞. Then, if you have a Tamer in play, hatch 1 Digi-Egg card to an empty space in your breeding area.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 3
+    },
+    {
+      "card_id": "EX6-011",
+      "card_name": "RagnaLoardmon",
+      "card_kind": "Digimon",
+      "level": 7,
+      "colors": [
+        "Red",
+        "Black"
+      ],
+      "traits": "Virus, Unique, Legend-Arms",
+      "dp": 15000,
+      "play_cost": 9,
+      "evo_costs": [
+        {
+          "color": "Red",
+          "cost": 5,
+          "level": 6
+        }
+      ],
+      "effect_text": "[Hand] [Counter] ＜Blast DNA Digivolve ([Durandamon] + [BryweLudramon])＞ (1 of your specified Digimon and 1 specified card in hand may DNA digivolve into this card.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n[On Play] [When Digivolving] Trash the top card of your opponent's security stack and this Digimon isn't affected by your opponent's effects until the end of their turn. Then, if DNA digivolving, ＜De-Digivolve 1＞ all of your opponent's Digimon and delete 1 of their Digimon.",
+      "inherited_text": "Ace Overflow ＜-5＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 1
+    },
+    {
+      "card_id": "EX7-024",
+      "card_name": "Shoemon",
+      "card_kind": "Digimon",
+      "level": 3,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 1000,
+      "play_cost": 3,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 0,
+          "level": 2
+        }
+      ],
+      "effect_text": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Puppet] trait, reduce the digivolution cost by 1.",
+      "inherited_text": "[Your Turn] All of your opponent's Security Digimon get -3000 DP.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 21
+    },
+    {
+      "card_id": "EX7-025",
+      "card_name": "ShoeShoemon",
+      "card_kind": "Digimon",
+      "level": 4,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 4000,
+      "play_cost": 4,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 2,
+          "level": 3
+        }
+      ],
+      "effect_text": "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Arisa Kinosaki] from your hand without paying the cost.",
+      "inherited_text": "[Your Turn] All of your opponent's Security Digimon get -3000 DP.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 15
+    },
+    {
+      "card_id": "EX7-027",
+      "card_name": "Chaperomon",
+      "card_kind": "Digimon",
+      "level": 5,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 7000,
+      "play_cost": 7,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 3,
+          "level": 4
+        }
+      ],
+      "effect_text": "＜Overclock ([Puppet] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)\r\n [When Digivolving] You may play 1 level 3 Digimon card with the [Puppet] trait from your hand without paying the cost.",
+      "inherited_text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait trait Digimon, prevent it from leaving.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 18
+    },
+    {
+      "card_id": "EX7-030",
+      "card_name": "Cendrillmon",
+      "card_kind": "Digimon",
+      "level": 6,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 12000,
+      "play_cost": 12,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 4,
+          "level": 5
+        }
+      ],
+      "effect_text": "＜Overclock ([Puppet] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)\r\n[Start of Your Main Phase] [When Digivolving] You may play 1 [Familiar] Token. (Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.)\r\n[When Attacking] 1 of your opponent's Digimon gets -6000 DP for the turn.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 10
+    },
+    {
+      "card_id": "EX7-063",
+      "card_name": "Arisa Kinosaki",
+      "card_kind": "Tamer",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "LIBERATOR",
+      "dp": null,
+      "play_cost": 3,
+      "evo_costs": [],
+      "effect_text": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[All Turns] When one of your Tokens or Digimon with the [Puppet] trait is deleted, by suspending this Tamer, you may play 1 level 3 Digimon card with the [Puppet] trait from your hand without paying the cost.",
+      "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 15
+    },
+    {
+      "card_id": "EX7-074",
+      "card_name": "Vortex Resonance",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "Green",
+        "Yellow"
+      ],
+      "traits": "LIBERATOR",
+      "dp": null,
+      "play_cost": 3,
+      "evo_costs": [],
+      "effect_text": "While you have [LIBERATOR] trait Digimon or Tamer, you can ignore this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 card with the [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck. Then, 1 of your Digimon may digivolve into a Digimon card in your hand with the digivolution cost reduced by 4.",
+      "inherited_text": "Security Effect [Security] You may play 1 card with the [LIBERATOR] trait with a play cost of 4 or less from your hand or trash without paying the cost. Then, add this card to the hand.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 1
+    },
+    {
+      "card_id": "EX8-030",
+      "card_name": "Tapirmon",
+      "card_kind": "Digimon",
+      "level": 3,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Vaccine, Holy Beast, NSo",
+      "dp": 2000,
+      "play_cost": 3,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 0,
+          "level": 2
+        }
+      ],
+      "effect_text": "[All Turns] Your opponent can't gain memory other than by Tamer effects.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 1
+    },
+    {
+      "card_id": "EX9-024",
+      "card_name": "Hanimon",
+      "card_kind": "Digimon",
+      "level": 3,
+      "colors": [
+        "Yellow",
+        "Purple"
+      ],
+      "traits": "Data, Puppet, LIBERATOR",
+      "dp": 1000,
+      "play_cost": 3,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 1,
+          "level": 2
+        }
+      ],
+      "effect_text": "[On Play] By trashing 1 card in your hand, you may return 1 Digimon card with the [Puppet] trait from your trash to the hand.",
+      "inherited_text": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 25
+    },
+    {
+      "card_id": "EX9-027",
+      "card_name": "Kokeshimon",
+      "card_kind": "Digimon",
+      "level": 4,
+      "colors": [
+        "Yellow",
+        "Purple"
+      ],
+      "traits": "Data, Puppet, LIBERATOR",
+      "dp": 4000,
+      "play_cost": 4,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 3,
+          "level": 3
+        }
+      ],
+      "effect_text": "[When Digivolving] [On Deletion] By trashing 1 card in your hand, 1 of your opponent's Digimon gets -4000 DP for the turn.",
+      "inherited_text": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 17
+    },
+    {
+      "card_id": "EX9-032",
+      "card_name": "Karakurumon",
+      "card_kind": "Digimon",
+      "level": 5,
+      "colors": [
+        "Yellow",
+        "Purple"
+      ],
+      "traits": "Data, Puppet, LIBERATOR",
+      "dp": 7000,
+      "play_cost": 7,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 4,
+          "level": 4
+        }
+      ],
+      "effect_text": "[On Play] [When Digivolving] By deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon may digivolve into a Digimon card with the [Puppet] trait in the hand without paying the cost.",
+      "inherited_text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait trait Digimon, prevent it from leaving.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 25
+    },
+    {
+      "card_id": "EX9-033",
+      "card_name": "Kaguyamon",
+      "card_kind": "Digimon",
+      "level": 6,
+      "colors": [
+        "Yellow",
+        "Purple"
+      ],
+      "traits": "Data, Puppet, LIBERATOR",
+      "dp": 12000,
+      "play_cost": 12,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 4,
+          "level": 5
+        }
+      ],
+      "effect_text": "[All Turns] All of your Tokens and [Puppet] trait Digimon gain ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.) and ＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[All Turns] [Once Per Turn] When other Digimon are deleted, delete 1 of your opponent's lowest level Digimon.\r\n[End of Your Turn] [Once Per Turn] You may play 1 level 4 or lower [Puppet] trait Digimon card from your trash without paying the cost.",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 25
+    },
+    {
+      "card_id": "EX9-067",
+      "card_name": "Mirai Kinosaki",
+      "card_kind": "Tamer",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "LIBERATOR",
+      "dp": null,
+      "play_cost": 3,
+      "evo_costs": [],
+      "effect_text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Puppet] or [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck.\r\n[Your Turn] When any of your Digimon digivolve into a [Puppet] trait Digimon, by returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] or 1 [Puppet] trait Digimon card from your hand with the play cost reduced by 3.",
+      "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 25
+    },
+    {
+      "card_id": "LM-029",
+      "card_name": "Yellow Scramble",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "",
+      "dp": null,
+      "play_cost": 2,
+      "evo_costs": [],
+      "effect_text": "[Main] 1 of your yellow Digimon may digivolve into a yellow Digimon card in the hand with the digivolution cost reduced by 3. Then, place this card in the battle area.\r\n[Start of Your Turn] If your opponent has a Digimon, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Return 1 yellow Digimon card from your trash to the top of the deck. Then, if you don't have a Digimon, you may play 1 yellow Digimon card with 2000 DP or less from your trash without paying the cost.",
+      "inherited_text": "Security Effect [Security] You may play 1 yellow Digimon card with 2000 DP or less from your trash without paying the cost. Then, add this card to the hand.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 15
+    },
+    {
+      "card_id": "LM-035",
+      "card_name": "Amber Memory Boost!",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "",
+      "dp": null,
+      "play_cost": 3,
+      "evo_costs": [],
+      "effect_text": "Purple also meets this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 yellow or purple Digimon card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+      "inherited_text": "Security Effect [Security] Place this card in the battle area.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 1
+    },
+    {
+      "card_id": "LM-037",
+      "card_name": "Sepia Memory Boost!",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "Black"
+      ],
+      "traits": "",
+      "dp": null,
+      "play_cost": 3,
+      "evo_costs": [],
+      "effect_text": "Yellow also meets this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 black or yellow Digimon card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+      "inherited_text": "Security Effect [Security] Place this card in the battle area.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 1
+    },
+    {
+      "card_id": "LM-054",
+      "card_name": "Treadmill Training",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "Yellow",
+        "Black"
+      ],
+      "traits": "",
+      "dp": null,
+      "play_cost": 2,
+      "evo_costs": [],
+      "effect_text": "While you don't have [Treadmill Training] in the batttle area, you can ignore this card's color requirements.\r\n[Main] Reveal the top 2 cards of your deck. Add 1 yellow or black card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon may digivolve into a yellow or black Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2.",
+      "inherited_text": "Security Effect [Security] Reveal the top 2 cards of your deck. Add 1 yellow or black card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 2
+    },
+    {
+      "card_id": "P-037",
+      "card_name": "Yellow Memory Boost!",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "",
+      "dp": null,
+      "play_cost": 3,
+      "evo_costs": [],
+      "effect_text": "[Main] Reveal the top 4 cards of your deck. Add 1 yellow Digimon card among them to the hand. Place the remaining cards at the bottom of your deck in any order. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+      "inherited_text": "Security Effect [Security] Place this card in the battle area.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 1
+    },
+    {
+      "card_id": "P-105",
+      "card_name": "Physical Training",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "",
+      "dp": null,
+      "play_cost": 2,
+      "evo_costs": [],
+      "effect_text": "[Main] Reveal the top 2 cards of your deck. Add 1 yellow card among them to your hand. Place the rest at the bottom of your deck in any order. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon may digivolve into a yellow Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2.",
+      "inherited_text": "Security Effect [Security] Place this card in the battle area.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 10
+    },
+    {
+      "card_id": "P-134",
+      "card_name": "Shoemon",
+      "card_kind": "Digimon",
+      "level": 3,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Rookie, Virus, Puppet, LIBERATOR",
+      "dp": 1000,
+      "play_cost": 3,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 0,
+          "level": 2
+        }
+      ],
+      "effect_text": "[On Play] 1 of your opponent's Digimon gains ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until the end of their turn.",
+      "inherited_text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 2
+    },
+    {
+      "card_id": "P-136",
+      "card_name": "Arisa Kinosaki",
+      "card_kind": "Tamer",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "LIBERATOR",
+      "dp": null,
+      "play_cost": 4,
+      "evo_costs": [],
+      "effect_text": "[On Play] You may play 1 [Shoemon] from your hand without paying the cost.\r\n[Your Turn] [Once Per Turn] When one of your Digimon digivolves into a Digimon with the [Puppet] trait, by suspending this Tamer, gain 1 memory.",
+      "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 5
+    },
+    {
+      "card_id": "P-156",
+      "card_name": "Future Potential!",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "White"
+      ],
+      "traits": "",
+      "dp": null,
+      "play_cost": 2,
+      "evo_costs": [],
+      "effect_text": "While you have a Tamer, you can ignore this card's color requirements.\r\n[Main] Choose 1 Tamer. You may play 1 Digimon card with the same color as the chosen Tamer with a play cost of 3 or less from your hand or trash without paying the cost.",
+      "inherited_text": "Security Effect [Security] You may play 1 Tamer card from your hand without paying the cost. Then, add this card to your hand.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 3
+    },
+    {
+      "card_id": "P-165",
+      "card_name": "ShoeShoemon",
+      "card_kind": "Digimon",
+      "level": 4,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 4000,
+      "play_cost": 4,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 2,
+          "level": 3
+        }
+      ],
+      "effect_text": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] Play 1 [Familiar] Token. (Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.) At the end of your opponent's turn, delete that token.",
+      "inherited_text": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 24
+    },
+    {
+      "card_id": "P-206",
+      "card_name": "Digital Gate Open",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "White"
+      ],
+      "traits": "",
+      "dp": null,
+      "play_cost": 4,
+      "evo_costs": [],
+      "effect_text": "You can ignore this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 Digimon card and 1 Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・You may play 1 Tamer card with the same color as any of your Digimon on the field from your hand with the play cost reduced by 4.",
+      "inherited_text": "Security Effect [Security] You may play 1 Digimon card with a play cost of 3 or less from your hand or trash without paying the cost. Then, add this card to the hand.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 4
+    },
+    {
+      "card_id": "P-229",
+      "card_name": "Unique Emblem: Narrative Ronde",
+      "card_kind": "Option",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "LIBERATOR",
+      "dp": null,
+      "play_cost": 2,
+      "evo_costs": [],
+      "effect_text": "[Main] Reveal the top 3 cards of your deck. Add 1 [Puppet] trait Digimon card and 1 [LIBERATOR] trait card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Your Turn] When any of your [Mirai Kinosaki]s are played, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3.",
+      "inherited_text": "Security Effect [Security] Activate this card's [Main] effects.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 9
+    },
+    {
+      "card_id": "ST19-01",
+      "card_name": "Kyaromon",
+      "card_kind": "DigiEgg",
+      "level": 2,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Lesser, LIBERATOR",
+      "dp": null,
+      "play_cost": 0,
+      "evo_costs": [],
+      "effect_text": "Inherited Effect [When Attacking] [Once Per Turn] If you have another Digimon, ＜Draw 1＞ (Draw 1 card from your deck.)",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 3
+    },
+    {
+      "card_id": "ST19-03",
+      "card_name": "Shoemon",
+      "card_kind": "Digimon",
+      "level": 3,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 1000,
+      "play_cost": 3,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 0,
+          "level": 2
+        }
+      ],
+      "effect_text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Puppet] trait and 1 card with the [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck.",
+      "inherited_text": "[Your Turn] All of your opponent's security Digimon get -3000 DP.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 25
+    },
+    {
+      "card_id": "ST19-04",
+      "card_name": "PawnChessmon",
+      "card_kind": "Digimon",
+      "level": 3,
+      "colors": [
+        "Yellow",
+        "Black"
+      ],
+      "traits": "Virus, Puppet",
+      "dp": 2000,
+      "play_cost": 3,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 1,
+          "level": 2
+        }
+      ],
+      "effect_text": "[On Play] By trashing 1 card with the [Puppet] trait in your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+      "inherited_text": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 5
+    },
+    {
+      "card_id": "ST19-05",
+      "card_name": "PawnChessmon",
+      "card_kind": "Digimon",
+      "level": 3,
+      "colors": [
+        "Black",
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet",
+      "dp": 2000,
+      "play_cost": 3,
+      "evo_costs": [
+        {
+          "color": "Black",
+          "cost": 1,
+          "level": 2
+        }
+      ],
+      "effect_text": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Deletion] By trashing 1 card with the [Puppet] trait in your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 3
+    },
+    {
+      "card_id": "ST19-08",
+      "card_name": "ShoeShoemon",
+      "card_kind": "Digimon",
+      "level": 4,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 5000,
+      "play_cost": 6,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 2,
+          "level": 3
+        }
+      ],
+      "effect_text": "[Security] You may play 1 card with the [LIBERATOR] trait and a play cost of 4 or less from your hand or trash without paying the cost.\r\n＜Overclock ([Puppet] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)",
+      "inherited_text": "[Your Turn] All of your opponent's security Digimon get -3000 DP.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 6
+    },
+    {
+      "card_id": "ST19-11",
+      "card_name": "Chaperomon",
+      "card_kind": "Digimon",
+      "level": 5,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 7000,
+      "play_cost": 7,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 3,
+          "level": 4
+        }
+      ],
+      "effect_text": "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn. If there are 3 or more Digimon, increase the DP reduction of this effect by -3000.",
+      "inherited_text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait trait Digimon, prevent it from leaving.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 5
+    },
+    {
+      "card_id": "ST19-12",
+      "card_name": "Cendrillmon",
+      "card_kind": "Digimon",
+      "level": 6,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "Virus, Puppet, LIBERATOR",
+      "dp": 11000,
+      "play_cost": 11,
+      "evo_costs": [
+        {
+          "color": "Yellow",
+          "cost": 3,
+          "level": 5
+        }
+      ],
+      "effect_text": "＜Overclock ([Puppet] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] You may play 2 [Familiar] Tokens. (Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.)",
+      "inherited_text": "",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 1
+    },
+    {
+      "card_id": "ST19-14",
+      "card_name": "Arisa Kinosaki",
+      "card_kind": "Tamer",
+      "level": null,
+      "colors": [
+        "Yellow"
+      ],
+      "traits": "LIBERATOR",
+      "dp": null,
+      "play_cost": 4,
+      "evo_costs": [],
+      "effect_text": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When effects play one of your Tokens or a Digimon with the [Puppet] trait, by suspending this Tamer, 1 of those Digimon gains ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)",
+      "inherited_text": "Security Effect [Security] Play this card without paying the cost.",
+      "security_text": "",
+      "script_status": "missing",
+      "script_path": null,
+      "csharp_path": null,
+      "deck_frequency": 20
+    }
+  ],
+  "meta_share": 0.013158,
+  "coverage_pct": 0.0,
+  "frozen_count": 0,
+  "generated_count": 0,
+  "missing_count": 61,
+  "missing_cards": [
+    "BT13-101",
+    "BT15-003",
+    "BT16-055",
+    "BT20-084",
+    "BT22-002",
+    "BT22-029",
+    "BT22-032",
+    "BT22-036",
+    "BT22-040",
+    "BT22-042",
+    "BT22-088",
+    "BT22-098",
+    "BT23-077",
+    "BT4-104",
+    "BT5-033",
+    "BT5-106",
+    "BT6-084",
+    "BT9-033",
+    "BT9-112",
+    "EX11-019",
+    "EX11-020",
+    "EX11-021",
+    "EX11-022",
+    "EX11-023",
+    "EX11-024",
+    "EX11-060",
+    "EX11-061",
+    "EX4-074",
+    "EX6-011",
+    "EX7-024",
+    "EX7-025",
+    "EX7-027",
+    "EX7-030",
+    "EX7-063",
+    "EX7-074",
+    "EX8-030",
+    "EX9-024",
+    "EX9-027",
+    "EX9-032",
+    "EX9-033",
+    "EX9-067",
+    "LM-029",
+    "LM-035",
+    "LM-037",
+    "LM-054",
+    "P-037",
+    "P-105",
+    "P-134",
+    "P-136",
+    "P-156",
+    "P-165",
+    "P-206",
+    "P-229",
+    "ST19-01",
+    "ST19-03",
+    "ST19-04",
+    "ST19-05",
+    "ST19-08",
+    "ST19-11",
+    "ST19-12",
+    "ST19-14"
+  ],
+  "best_decklist": [
+    "BT22-002",
+    "BT22-002",
+    "BT22-002",
+    "BT22-002",
+    "EX7-024",
+    "EX7-024",
+    "EX7-024",
+    "EX7-024",
+    "ST19-03",
+    "ST19-03",
+    "ST19-03",
+    "ST19-03",
+    "EX11-019",
+    "EX11-019",
+    "EX9-024",
+    "EX9-024",
+    "EX11-021",
+    "EX11-021",
+    "EX11-021",
+    "EX11-021",
+    "EX9-027",
+    "EX9-027",
+    "EX9-027",
+    "P-165",
+    "P-165",
+    "P-165",
+    "BT16-055",
+    "BT16-055",
+    "EX9-032",
+    "EX9-032",
+    "EX9-032",
+    "EX9-032",
+    "EX11-022",
+    "EX11-022",
+    "EX11-022",
+    "EX11-023",
+    "EX11-023",
+    "EX11-023",
+    "EX11-024",
+    "EX11-024",
+    "EX9-033",
+    "EX9-033",
+    "BT22-042",
+    "BT22-042",
+    "EX9-067",
+    "EX9-067",
+    "EX9-067",
+    "EX9-067",
+    "EX11-061",
+    "P-229",
+    "P-229",
+    "P-229",
+    "P-229",
+    "LM-029"
+  ],
+  "deck_pool_path": "qa\\archetype-qa\\puppets\\deck_pool.json"
+}

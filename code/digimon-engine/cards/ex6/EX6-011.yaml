@@ -1,0 +1,77 @@
+card: EX6-011
+name: RagnaLoardmon
+kind: digimon
+level: 7
+color: [red, black]
+cost: 9
+dp: 15000
+traits: [Unique, Legend-Arms]
+attribute: Virus
+ace_overflow: -5
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, color_is: red }
+      - { level_eq: 6, color_is: black }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+
+  - kind: grant_keyword
+    keyword: Reboot
+
+  - when: [on_play, when_digivolving]
+    summary: "Trash opponent top security and gain opponent-effect immunity; DNA tail De-Digivolves all and deletes one"
+    process:
+      - trash_top_security: { of: opponent }
+      - grant_effect_immunity:
+          target: self
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: tamer
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: option
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: rule
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - for_each:
+                over:
+                  of: opponent
+                  zone: [battle_area]
+                  kind: digimon
+                bind_as: opp_digimon
+                body:
+                  - de_digivolve:
+                      target: opp_digimon
+                      amount: 1
+                      stop_at_level: 3
+            - select_opponent_permanent:
+                bind_as: delete_target
+                filter: { kind: digimon }
+                prompt: "Delete 1 of your opponent's Digimon"
+            - delete_permanent: { target: delete_target }
+
+  # [Hand][Counter] Blast DNA Digivolve ([Durandamon] + [BryweLudramon]) is
+  # blocked by PUPPETS-G032 / the reusable Counter-window Blast DNA activation
+  # gap. The normal DNA route above is implemented; the Counter activation is
+  # not approximated.
