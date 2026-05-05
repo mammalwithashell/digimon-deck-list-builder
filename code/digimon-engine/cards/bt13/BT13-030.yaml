@@ -1,0 +1,25 @@
+card: BT13-030
+name: UlforceVeedramon
+kind: digimon
+level: 6
+color: [blue]
+cost: 11
+dp: 11000
+traits: [Holy Warrior, Royal Knight]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 3
+
+effects: []
+
+# Stubbed:
+# - [On Play][When Digivolving] for each own Royal Knight trait and blue Tamer,
+#   trash 2 digivolution cards from one opponent Digimon. This needs a counted
+#   foreach loop where the count is derived from multiple object groups.
+# - [Your Turn] when one of the opponent's Digimon has no digivolution cards,
+#   gain Jamming and unblockability. This needs a continuous opponent-board
+#   source-count aura.

@@ -1,0 +1,40 @@
+card: BT22-009
+name: Effecmon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+traits: ["Effect (App Name)"]
+form: Sup.
+attribute: Entertainment
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 opponent Digimon with 4000 DP or less"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        dp_lte: 4000
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 4000
+          prompt: "Delete 1 opponent Digimon with 4000 DP or less"
+      - delete_permanent: { target: target }
+
+  # Omitted:
+  # [Security] At the end of the battle, play this card without paying the cost.
+  # This needs a security end-of-battle delayed play hook instead of immediate
+  # on_security resolution.
+  #
+  # Link Requirements are omitted pending Link/plug-in action support.

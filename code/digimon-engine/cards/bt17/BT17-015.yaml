@@ -1,0 +1,78 @@
+card: BT17-015
+name: WarGreymon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 11000
+traits: [Dragonkin]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, name_contains: "Greymon" }
+    cost: 3
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        name_contains: "Tai Kamiya"
+    amount: 3
+    summary: "-3 play cost if you have a Tai Kamiya Tamer"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 8000 DP or digivolve Gabumon into MetalGarurumon free"
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Delete opponent Digimon (8000 DP or less)"
+            - "Digivolve Gabumon into MetalGarurumon free"
+          prompt: "Choose WarGreymon's effect"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - select_opponent_permanent:
+                bind_as: target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 8000
+                prompt: "Delete 1 opponent Digimon with 8000 DP or less"
+            - delete_permanent: { target: target }
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - select_own_permanent:
+                bind_as: base
+                filter: { name_contains: "Gabumon" }
+                prompt: "Choose 1 Gabumon"
+            - select_hand:
+                of: you
+                bind_as: evo
+                filter: { name_contains: "MetalGarurumon" }
+                prompt: "Choose MetalGarurumon in hand"
+            - effect_initiated_digivolve:
+                target: base
+                from_hand: evo
+                cost: 0
+                ignore_requirements: true
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition: { source_name_contains: "Omnimon" }
+    summary: "[Inherited][When Attacking][Once Per Turn] If top is Omnimon, trash opponent top security"
+    process:
+      - trash_top_security: { of: opponent }
+
+  # Omitted:
+  # The Gabumon branch currently has an ignored test for effect-initiated
+  # digivolve from hand with a permanent target. The inherited source-name
+  # predicate also has an ignored negative test until source_name_contains is
+  # evaluated by the predicate path.

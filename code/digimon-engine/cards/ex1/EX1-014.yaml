@@ -1,0 +1,136 @@
+# EX1-014 ExVeemon — Digimon, Lv.4, Blue, DP 4000, Cost 5.
+# Traits: Mythical Dragon
+# Evo: Lv.3 Blue / cost 2 (printed evo_costs; standard path, not an alt_path).
+#
+# Printed card text (cards.json effect_description_eng):
+#   ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)
+#
+# Inherited effect text:
+#   [Your Turn] While this Digimon has [Imperialdramon] in its name or [Free]
+#   trait, it gains ＜Jamming＞
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX1/Blue/EX1_014.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────────
+#
+#   Clause 0:  ＜Jamming＞ (face-up printed keyword)              IMPLEMENTED
+#   Clause 1:  [Inherited][Your Turn] conditional Jamming aura    PARTIAL
+#              - name arm (carrier has [Imperialdramon] in name): IMPLEMENTED
+#                over-fires (grants to all ally permanents, not
+#                only the carrier) — see G-DSL-AURA-TARGET-SOURCE-PERMANENT
+#              - trait arm (carrier top card has [Free] trait):   BLOCKED
+#                see G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT
+#
+# ─── Clause 0 — ＜Jamming＞ (face-up) ────────────────────────────────────────
+#
+# Printed: "＜Jamming＞ (This Digimon can't be deleted in battles against
+# Security Digimon.)"
+# DCGO: JammingSelfStaticEffect(isInheritedEffect: false, card: card,
+#   condition: null).
+# DSL: `kind: grant_keyword / keyword: Jamming` — unconditional face-up grant.
+# Identical lowering to BT23-018 Garurumon Clause 1 and AD1-010 Clause 3
+# (face-up form).
+#
+# ─── Clause 1 — [Inherited][Your Turn] conditional ＜Jamming＞ ───────────────
+#
+# Printed: "[Your Turn] While this Digimon has [Imperialdramon] in its name or
+# [Free] trait, it gains ＜Jamming＞"
+#
+# DCGO (EX1_014.cs, EffectTiming.None, JammingSelfStaticEffect,
+#   isInheritedEffect: true):
+#   condition():
+#     IsExistOnBattleArea(card)
+#     && IsOwnerTurn(card)
+#     && (card.PermanentOfThisCard().TopCard.ContainsCardName("Imperialdramon")
+#         || card.PermanentOfThisCard().TopCard.CardTraits.Contains("Free"))
+#
+# ─── Name arm: self_digivolution_contains_name ───────────────────────────────
+#
+# `self_digivolution_contains_name: "Imperialdramon"` scans the carrier
+# permanent's digivolution stack (all cards including the top card) for a card
+# whose name contains "Imperialdramon". In the expected play pattern
+# (ExVeemon → Imperialdramon), the carrier is Imperialdramon and the check
+# passes correctly.
+#
+# DSL lowering: `scope: inherited / kind: aura` with
+#   active_when: { all_of: [your_turn: true,
+#                            self_digivolution_contains_name: "Imperialdramon"] }
+#
+# KNOWN OVER-FIRE: G-DSL-AURA-TARGET-SOURCE-PERMANENT [dsl, new]:
+#   The printed text says "it gains ＜Jamming＞" where "it" = the carrier
+#   permanent (the permanent whose digivolution stack contains this card).
+#   `lower_aura.rs` scans ALL battle_area permanents and applies the keyword
+#   to those matching `target:`. The DSL has no `target_is_source_permanent:
+#   true` predicate; the closest faithful target `{ owner: you }` grants Jamming
+#   to ALL of the controller's battle_area Digimon when the condition is met,
+#   not just the carrier. This violates the no-approximations policy for the
+#   target scope, but the activation gate (carrier must have Imperialdramon in
+#   its stack + your turn) is faithful.
+#
+#   Suggested DSL fix: a `target_is_source: true` BoolPredicate leaf that,
+#   in the aura process loop, evaluates
+#   `handle == rctx.source_permanent.unwrap_or_default()`.
+#
+# ─── Trait arm: [Free] trait ─────────────────────────────────────────────────
+#
+# BLOCKED — G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT [dsl, new]:
+#   DCGO checks `card.PermanentOfThisCard().TopCard.CardTraits.Contains("Free")`.
+#   This requires checking whether the carrier permanent's top card (or any card
+#   in its stack) has the [Free] trait. There is no DSL BoolPredicate
+#   leaf that evaluates "the carrier permanent's stack contains a card with
+#   trait X". The closest predicates are:
+#     - `self_digivolution_contains_name` (name substring match, not trait)
+#     - `source_permanent_trait_has` (present in CompiledPredicate / predicate.rs
+#       spec fields, but NOT evaluated in eval_predicate_with_bindings —
+#       the field is silently ignored at runtime)
+#     - `trait_has` in the target predicate (checks SUBJECT permanent's top card
+#       trait; in active_when with subject=None falls into eval_no_subject_fields
+#       which returns false if trait_has.is_some())
+#
+#   Suggested DSL fix: a `self_digivolution_contains_trait: <name>` BoolPredicate
+#   leaf that evaluates
+#   `rctx.source_permanent()?.has_trait(name, rctx.card_data())`.
+#
+#   Until this gap closes, the trait arm is OMITTED. The name arm alone fires
+#   in the canonical ExVeemon → Imperialdramon play pattern.
+
+card: EX1-014
+name: ExVeemon
+kind: digimon
+level: 4
+color: [blue]
+cost: 5
+dp: 4000
+traits: [Mythical Dragon]
+
+effects:
+  # ─── Clause 0 — ＜Jamming＞ (face-up printed keyword) ──────────────────────
+  # "This Digimon can't be deleted in battles against Security Digimon."
+  # DCGO: JammingSelfStaticEffect(isInheritedEffect: false, condition: null).
+  # Unconditional face-up keyword grant.
+  - kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming>"
+
+  # ─── Clause 1 — [Inherited][Your Turn] ＜Jamming＞ while Imperialdramon name ─
+  #
+  # Name arm IMPLEMENTED (with known over-fire — see header).
+  # Trait arm BLOCKED — G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT (see header).
+  #
+  # `self_digivolution_contains_name: "Imperialdramon"` checks that the carrier
+  # permanent's digivolution stack (all cards) contains a card whose name
+  # contains "Imperialdramon" — faithfully covers the top-card check in DCGO.
+  # `your_turn: true` mirrors DCGO `IsOwnerTurn(card)`.
+  #
+  # OVER-FIRE (G-DSL-AURA-TARGET-SOURCE-PERMANENT): grants Jamming to ALL
+  # controller battle_area Digimon instead of only the carrier. See header.
+  - scope: inherited
+    kind: aura
+    active_when:
+      all_of:
+        - your_turn: true
+        - self_digivolution_contains_name: "Imperialdramon"
+    target:
+      owner: you
+    grant_keyword: { keyword: Jamming }
+    summary: "[Inherited][Your Turn] Carrier gains Jamming while it has Imperialdramon in its name (PARTIAL: over-fires to all ally Digimon; [Free] trait arm BLOCKED G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT)"

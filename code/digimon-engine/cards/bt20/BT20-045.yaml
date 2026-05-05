@@ -1,0 +1,33 @@
+card: BT20-045
+name: Examon
+kind: digimon
+level: 7
+color: [green, red]
+cost: 9
+dp: 15000
+traits: [Holy Warrior, Royal Knight]
+attribute: Data
+ace_overflow: -5
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: green }
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+  - kind: grant_keyword
+    keyword: Piercing
+  - kind: grant_keyword
+    keyword: Blocker
+  - kind: grant_keyword
+    keyword: Evade
+
+# Stubbed:
+# - [Hand][Counter] Blast DNA Digivolve (Breakdramon + Slayerdramon) needs the
+#   combined Blast DNA alt-path primitive.
+# - DNA-gated highest-DP bottom-deck sweep needs DNA-origin gating plus highest
+#   DP aggregate selection over all opponent Digimon.
+# - [All Turns][Once Per Turn] when any Digimon suspends, may unsuspend this
+#   Digimon needs event-target suspend observer dispatch.

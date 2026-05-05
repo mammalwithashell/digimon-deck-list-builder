@@ -528,7 +528,7 @@ fn bt17_097_delay_prevents_deletion_and_digivolves_from_hand() {
         .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
         .add_card(trait_digimon_card(
             "IMPERIAL-HAND",
-            "Imperial Hand",
+            "Imperialdramon Hand",
             &["Imperialdramon"],
         ))
         .hand(0, &["IMPERIAL-HAND"])
@@ -584,7 +584,7 @@ fn bt17_097_delay_before_subject_re_resolves_shifted_target() {
         .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
         .add_card(trait_digimon_card(
             "IMPERIAL-HAND",
-            "Imperial Hand",
+            "Imperialdramon Hand",
             &["Imperialdramon"],
         ))
         .hand(0, &["IMPERIAL-HAND"])
@@ -618,7 +618,7 @@ fn bt17_097_paid_delay_decline_commits_original_deletion() {
         .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
         .add_card(trait_digimon_card(
             "IMPERIAL-HAND",
-            "Imperial Hand",
+            "Imperialdramon Hand",
             &["Imperialdramon"],
         ))
         .hand(0, &["IMPERIAL-HAND"])
@@ -665,7 +665,7 @@ fn bt17_097_unpaid_delay_cost_does_not_prevent_original_deletion() {
         .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
         .add_card(trait_digimon_card(
             "IMPERIAL-HAND",
-            "Imperial Hand",
+            "Imperialdramon Hand",
             &["Imperialdramon"],
         ))
         .add_card(digimon_card("COST-GATE", CardColor::Red))
@@ -703,7 +703,7 @@ fn bt17_097_delay_waits_for_pending_cost_replacement_before_hand_choice() {
         .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
         .add_card(trait_digimon_card(
             "IMPERIAL-HAND",
-            "Imperial Hand",
+            "Imperialdramon Hand",
             &["Imperialdramon"],
         ))
         .add_card(digimon_card("COST-PROMPT", CardColor::Red))
@@ -763,12 +763,12 @@ fn bt17_097_delay_rebuilds_hand_candidates_after_cost_triggers() {
         .add_card(trait_digimon_card("FREE-TARGET", "Free Target", &["Free"]))
         .add_card(trait_digimon_card(
             "IMPERIAL-OLD",
-            "Imperial Old",
+            "Imperialdramon Old",
             &["Imperialdramon"],
         ))
         .add_card(trait_digimon_card(
             "IMPERIAL-NEW",
-            "Imperial New",
+            "Imperialdramon New",
             &["Imperialdramon"],
         ))
         .add_card(digimon_card("HAND-MUTATOR", CardColor::Red))
@@ -791,11 +791,11 @@ fn bt17_097_delay_rebuilds_hand_candidates_after_cost_triggers() {
         .and_then(|selection| selection.effect_choices.as_ref())
         .expect("Delay hand choice is exposed");
     assert!(
-        choices.iter().any(|choice| choice.label == "Imperial New"),
+        choices.iter().any(|choice| choice.label == "Imperialdramon New"),
         "post-cost hand card is offered"
     );
     assert!(
-        !choices.iter().any(|choice| choice.label == "Imperial Old"),
+        !choices.iter().any(|choice| choice.label == "Imperialdramon Old"),
         "pre-cost stale hand card is not offered"
     );
 

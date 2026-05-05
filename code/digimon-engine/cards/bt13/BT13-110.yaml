@@ -1,0 +1,24 @@
+card: BT13-110
+name: "Royal Knights of the Purge"
+kind: option
+color: [white]
+cost: 6
+traits: ["Royal Knight"]
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Draw 1; place this card in the battle area"
+    process:
+      - draw: { of: you, count: 1 }
+      # BLOCKED: RK-G001 — optional hand Digimon placement under a filtered
+      # [King Drasil_7D6] in breeding.
+      - place_self_as_delay_option: {}
+
+  # BLOCKED: RK-G001 — Delay play from breeding digivolution sources with On
+  # Play suppression and Rush cannot be expressed without breeding-source play.
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

@@ -1,0 +1,162 @@
+card: BT12-028
+name: Paildramon
+kind: digimon
+level: 5
+color: [blue, green]
+cost: 8
+dp: 8000
+traits: [Dragonkin]
+
+# ─── Card text (authoritative: data/cards.json) ──────────────────────────────
+#
+# Effect:
+#   [When Digivolving] Trash the top 3 digivolution cards of all of your
+#   opponent's Digimon. Then, if DNA digivolving, 2 of your opponent's Digimon
+#   with no digivolution cards can't attack until the end of your opponent's
+#   turn.
+#
+# Inherited Effect:
+#   [End of Attack] If this Digimon has [Imperialdramon] in its name or [Free]
+#   trait, gain 1 memory.
+#
+# ─── DCGO C# reference ───────────────────────────────────────────────────────
+#
+# DCGO/Assets/Scripts/CardEffect/BT12/Blue/BT12_028.cs
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# Clause 0a ([When Digivolving] trash top 3 divi-cards from all opp Digimon):
+#   BLOCKED on G-DSL-TRASH-TOP-N-DIGI-CARDS (qa/dsl-vocab-gaps.md).
+#   No DSL step trashes N source cards from *below* the top card of a target
+#   permanent while keeping the top card on the field. `trash_top_source`
+#   removes the actual top card; `de_digivolve` also pops the top card. Both
+#   produce wrong board state. Omitted per no-approximations.
+#
+# Clause 0b ([When Digivolving] DNA sub-condition → CannotAttack):
+#   BLOCKED on G-DSL-IS-DNA-DIGIVOLVING (qa/dsl-vocab-gaps.md).
+#   DSL has no `is_dna_digivolving` predicate; engine TriggerSource::Digivolved
+#   has no `via_dna` flag. Omitted per no-approximations.
+#
+# Clause 1 ([Inherited][End of Attack] conditional gain memory):
+#   BLOCKED on G-DSL-SOURCE-NAME-CONTAINS (qa/dsl-vocab-gaps.md).
+#   `source_name_contains` and `source_permanent_trait_has` parse and compile
+#   but are not evaluated at runtime (always-false / silent no-op). Omitted
+#   per no-approximations.
+#
+# ─── DNA digivolve definition (EffectTiming.None block) ──────────────────────
+#
+# DCGO defines the DNA conditions at EffectTiming.None via
+# AddJogressConditionClass — requires a Lv4 Blue source + a Lv4 Green source.
+# The standard evo_costs array encodes the printed Lv4/Blue/Cost-4 path.
+# The dual-material DNA path (Lv4-Blue + Lv4-Green) is encoded as a
+# dna_digivolve alt-path.
+#
+# DCGO PermanentCondition1: TopCard.Colors.Contains(Blue) && Levels_ForJogress(card).Contains(4)
+# DCGO PermanentCondition2: TopCard.Colors.Contains(Green) && Levels_ForJogress(card).Contains(4)
+alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - { color_is: blue,  level_eq: 4 }
+      - { color_is: green, level_eq: 4 }
+    cost: 0
+
+effects:
+  # ─── ALL CLAUSES BLOCKED — no process body authored ──────────────────────
+  #
+  # ─── Clause 0a — [When Digivolving] trash top 3 divi-cards (BLOCKED) ─────
+  #
+  # Printed text:
+  #   "Trash the top 3 digivolution cards of all of your opponent's Digimon."
+  #
+  # DCGO: foreach (Permanent p in Enemy.GetBattleAreaDigimons())
+  #           TrashDigivolutionCardsFromTopOrBottom(p, trashCount: 3, isFromTop: true, ...)
+  #
+  # Intended DSL form (once G-DSL-TRASH-TOP-N-DIGI-CARDS closes):
+  #   - when: when_digivolving
+  #     process:
+  #       - for_each:
+  #           over:
+  #             of: opponent
+  #             zone: [battle_area]
+  #             kind: digimon
+  #           bind_as: opp_digi
+  #           body:
+  #             - trash_top_n_digivolution_cards:  # ← verb does not exist yet
+  #                 target: opp_digi
+  #                 count: 3
+  #
+  # BLOCKED: no DSL step trashes N source cards from below the top card.
+  # `trash_top_source` removes card_sources.last() (the active Digimon card).
+  # `de_digivolve` also pops the top card (changing the active Digimon).
+  # Both produce incorrect board state. See G-DSL-TRASH-TOP-N-DIGI-CARDS.
+  #
+  # ─── Clause 0b — [When Digivolving] DNA sub-condition (BLOCKED) ──────────
+  #
+  # Printed text:
+  #   "Then, if DNA digivolving, 2 of your opponent's Digimon with no
+  #   digivolution cards can't attack until the end of your opponent's turn."
+  #
+  # DCGO: if (CardEffectCommons.IsJogress(_hashtable))
+  #         SelectPermanentEffect (maxCount: min(2, matchCount),
+  #                                canNoSelect: false, canEndNotMax: false)
+  #         per-selected: GainCanNotAttack(... EffectDuration.UntilOpponentTurnEnd ...)
+  #
+  # Intended DSL form (once G-DSL-IS-DNA-DIGIVOLVING closes):
+  #   - if:
+  #       condition: { is_dna_digivolving: true }        # ← predicate does not exist yet
+  #       then:
+  #         - select_count_capped_multi:
+  #             of: opponent
+  #             zone: [battle_area]
+  #             max: 2
+  #             filter:
+  #               all_of:
+  #                 - kind: digimon
+  #                 - stack_size_lte: 1
+  #             bind_as: no_digi_targets
+  #             prompt: "Select up to 2 opponent Digimon with no digivolution cards"
+  #             optional_zero: false
+  #         - per_selected:
+  #             selection: no_digi_targets
+  #             bind_as: tgt
+  #             body:
+  #               - add_modifier:
+  #                   target: { binding: tgt }
+  #                   modifier: CannotAttack
+  #                   value: 1
+  #                   expiry: end_of_opponents_turn
+  #
+  # BLOCKED: G-DSL-IS-DNA-DIGIVOLVING — no `is_dna_digivolving` predicate and
+  # no `via_dna` flag on TriggerSource::Digivolved. Omitted per no-approximations.
+  #
+  # ─── Clause 1 — Inherited [End of Attack] conditional gain memory (BLOCKED) ─
+  #
+  # Printed text:
+  #   "[End of Attack] If this Digimon has [Imperialdramon] in its name or
+  #   [Free] trait, gain 1 memory."
+  #
+  # "This Digimon" in an inherited context = the carrier (the permanent that
+  # has BT12-028 in its digivolution stack). The condition checks the
+  # carrier's TOP card: name contains "Imperialdramon" OR trait includes "Free".
+  #
+  # DCGO (EffectTiming.OnEndAttack, isInheritedEffect: true):
+  #   CanActivateCondition:
+  #     carrier.TopCard.ContainsCardName("Imperialdramon")
+  #     || carrier.TopCard.TypeTexts.Contains(TypeText.Free)
+  #   ActivateCoroutine: GainMemory(+1)
+  #
+  # Intended DSL form (once G-DSL-SOURCE-NAME-CONTAINS closes):
+  #   - scope: inherited
+  #     when: end_of_attack
+  #     condition:
+  #       any_of:
+  #         - source_name_contains: "Imperialdramon"
+  #         - source_permanent_trait_has: "Free"
+  #     process:
+  #       - gain_memory: 1
+  #     summary: "[Inherited][End of Attack] If carrier has Imperialdramon in name or Free trait, +1 memory"
+  #
+  # BLOCKED: G-DSL-SOURCE-NAME-CONTAINS — both `source_name_contains` and
+  # `source_permanent_trait_has` parse/compile but have no runtime evaluation
+  # branch in predicate.rs. Applying them would produce always-false or silent
+  # no-op behavior. Omitted per no-approximations.

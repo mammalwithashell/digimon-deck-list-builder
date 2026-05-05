@@ -1,0 +1,193 @@
+# BT16-025 Paildramon — Digimon, Lv.5, Blue/Green, DP 8000, Cost 8.
+# Traits: Dragonkin
+# Evo: Lv.4 any color / Cost 4
+# DNA digivolve (printed xros_req): Blue Lv.4 + Green Lv.4 / Cost 0
+#
+# Printed card text (data/cards.json effect_description_eng — verbatim):
+#
+#   <Partition (Blue Lv.4 & Green Lv.4)>
+#   [When Digivolving] Suspend all of your opponent's Digimon with as many
+#   or fewer digivolution cards as this Digimon. Then, if DNA digivolving,
+#   none of their Digimon can unsuspend until the end of their turn.
+#   [When Attacking] [Once Per Turn] Suspend 1 of your opponent's unsuspended
+#   Digimon. If this effect didn't suspend, unsuspend this Digimon.
+#
+# Inherited effect text:
+#   <Partition (Blue Lv.4 & Green Lv.4)>
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT16/Blue/BT16_025.cs
+#
+# ─── Source-priority cross-check ─────────────────────────────────────────────
+#
+# Partition keyword: printed on both effect and inherited scopes. DCGO confirms
+# two PartitionSelfEffect calls with isInheritedEffect: false and true.
+#
+# Clause 1 — [When Digivolving] suspend by stack comparison:
+#   DCGO: opponentSuspendable = opponentDigimon.Where(p =>
+#     p.DigivolutionCards.Count <= card.PermanentOfThisCard().DigivolutionCards.Count)
+#   The filter is dynamic — each opp Digimon is compared against THIS Digimon's
+#   digivolution card count at resolution time. This is NOT expressible in the
+#   current DSL: `for_each.over.stack_size_lte` takes a literal u8 value and
+#   cannot reference the source permanent's stack size at runtime.
+#
+# Clause 1 — DNA sub-condition (CannotUnsuspend):
+#   DCGO: if (CardEffectCommons.IsJogress(hashtable)) {
+#     GainCanNotUnsuspendPlayerEffect(...)
+#   }
+#   Implementation: `when: on_dna_digivolve` as a separate triggered clause
+#   with an `add_modifier` over all opponent battle_area Digimon. This is
+#   semantically equivalent to the "if DNA digivolving" branch — `on_dna_digivolve`
+#   fires only when the preceding digivolve was via DNA. NOTE: the `dna_origin: true`
+#   predicate in `if { condition: ... }` process steps is NOT evaluated by the
+#   engine's predicate evaluator (the `current_dna_origin` field exists on Game
+#   but is not read in `eval_predicate_with_bindings`). This is a separate gap
+#   tracked as G-ENGINE-DNA-ORIGIN-PRED; using `on_dna_digivolve` timing avoids it.
+#   IMPLEMENTED via on_dna_digivolve timing.
+#
+# Clause 2 — [When Attacking][OPT] suspend + unsuspend-self fallback:
+#   DCGO: Suspend 1 opp unsuspended Digimon (optional select, can no-select if
+#   none available). Then checks if ANY suspension happened — if not, unsuspend
+#   self. The "if this effect didn't suspend" branch requires branching on the
+#   RESULT of the prior selection step (empty / no target available). The DSL
+#   has no `if_no_target` predicate or result binding from suspend steps, so
+#   the self-unsuspend fallback is BLOCKED.
+#
+# ─── Implementation status ────────────────────────────────────────────────────
+#
+# | Card-text element                                               | Status           |
+# |----------------------------------------------------------------|------------------|
+# | Partition (own scope)                                           | IMPLEMENTED      |
+# | Partition (inherited scope)                                     | IMPLEMENTED      |
+# | Standard digivolve Lv.4 / Cost 4                               | IMPLEMENTED      |
+# | DNA digivolve Blue Lv.4 + Green Lv.4 / Cost 0                  | IMPLEMENTED      |
+# | [When Digivolving] Suspend all opp Digimon ≤ source stack size  | BLOCKED — G-DSL-STACK-SIZE-LTE-SOURCE |
+# | [When Digivolving] If DNA: CannotUnsuspend all opp Digimon     | IMPLEMENTED (via on_dna_digivolve) |
+# | [When Attacking][OPT] Suspend 1 opp unsuspended Digimon        | IMPLEMENTED      |
+# | [When Attacking] If didn't suspend, unsuspend self             | BLOCKED — G-DSL-IF-NO-TARGET |
+#
+# Gaps:
+#   G-DSL-STACK-SIZE-LTE-SOURCE: No DSL predicate that compares a candidate
+#     permanent's stack_size against the SOURCE permanent's stack_size at
+#     runtime. `stack_size_lte` takes a literal u8. A new predicate leaf
+#     `stack_size_lte_source: true` would need to evaluate
+#     `candidate.card_sources.len() <= source_permanent.card_sources.len()`.
+#
+#   G-DSL-IF-NO-TARGET: No DSL control-flow form that branches on whether a
+#     prior optional selection produced a target vs. produced nothing (the
+#     player passed / no eligible targets existed). `select_opponent_permanent`
+#     with `optional: true` skips the step when no targets exist but does not
+#     bind a "skipped" flag; subsequent `if` conditions have no binding to test.
+
+card: BT16-025
+name: Paildramon
+kind: digimon
+level: 5
+color: [blue, green]
+cost: 8
+dp: 8000
+traits: [Dragonkin]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4 }
+    cost: 4
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 4, color_is: blue }
+      - { level_eq: 4, color_is: green }
+    cost: 0
+
+effects:
+  # ─── Clause 0: <Partition (Blue Lv.4 & Green Lv.4)> ─────────────────────────
+  # Declarative. DCGO: PartitionSelfEffect(isInheritedEffect: false).
+  - kind: partition
+    summary: "<Partition (Blue Lv.4 & Green Lv.4)>"
+    sources:
+      - { level_eq: 4, color_is: blue }
+      - { level_eq: 4, color_is: green }
+    exclude_cause: [own_effect, battle]
+
+  # ─── Clause 1a: [When Digivolving] suspend all opp Digimon ≤ source stack ────
+  #
+  # BLOCKED: G-DSL-STACK-SIZE-LTE-SOURCE.
+  # The primary "suspend all opp Digimon with ≤ digi-cards as this Digimon" step
+  # cannot be expressed because `stack_size_lte` is a literal u8 predicate leaf
+  # that cannot reference the SOURCE permanent's stack size at runtime.
+  #
+  # When G-DSL-STACK-SIZE-LTE-SOURCE closes, this clause replaces the stub below:
+  #   - when: when_digivolving
+  #     summary: "[WD] Suspend all opp Digimon ≤ source stack size"
+  #     process:
+  #       - for_each:
+  #           over:
+  #             of: opponent
+  #             zone: [battle_area]
+  #             kind: digimon
+  #             stack_size_lte_source: true     # ← new predicate leaf needed
+  #           bind_as: digi
+  #           body:
+  #             - suspend: { target: digi }
+
+  # ─── Clause 1b: [On DNA Digivolve] CannotUnsuspend all opp Digimon ───────────
+  #
+  # "Then, if DNA digivolving, none of their Digimon can unsuspend until the end
+  # of their turn." — printed text.
+  #
+  # Implemented as `when: on_dna_digivolve` (fires only on DNA digivolves) rather
+  # than `if { condition: { dna_origin: true } }` inside the when_digivolving
+  # process. The `dna_origin` predicate leaf is not evaluated in the engine's
+  # process-step `if` condition evaluator (G-ENGINE-DNA-ORIGIN-PRED gap); using
+  # the separate `on_dna_digivolve` timing avoids this and is semantically
+  # equivalent — both fire when and only when the digivolve was via DNA.
+  - when: on_dna_digivolve
+    summary: "[On DNA Digivolve] CannotUnsuspend all opp Digimon until end of their turn"
+    process:
+      - add_modifier:
+          target:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── Clause 2: [When Attacking][OPT] suspend 1 opp unsuspended ───────────────
+  #
+  # Suspend 1 of your opponent's unsuspended Digimon (optional: `optional: true`
+  # on the selection skips the step when no unsuspended Digimon are present,
+  # matching DCGO's `canNoSelect: true` when no eligible targets exist).
+  #
+  # "If this effect didn't suspend, unsuspend this Digimon" is BLOCKED
+  # (G-DSL-IF-NO-TARGET). When that gap closes, add:
+  #   - if:
+  #       condition: { binding_is_none: wa_target }   # ← hypothetical predicate
+  #       then:
+  #         - unsuspend: { target: source }
+  - when: when_attacking
+    once_per_turn: true
+    optional: true
+    summary: "[WA][OPT] Suspend 1 opp unsuspended Digimon (unsuspend-self fallback blocked G-DSL-IF-NO-TARGET)"
+    process:
+      - select_opponent_permanent:
+          bind_as: wa_target
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          optional: true
+          prompt: "Suspend 1 of your opponent's unsuspended Digimon"
+      - suspend: { target: wa_target }
+      # Self-unsuspend fallback — BLOCKED: G-DSL-IF-NO-TARGET
+      # The DSL cannot branch on whether wa_target was bound (i.e. whether
+      # the player passed the selection or no targets existed).
+
+  # ─── Clause 3: Inherited <Partition (Blue Lv.4 & Green Lv.4)> ────────────────
+  # Declarative inherited. DCGO: PartitionSelfEffect(isInheritedEffect: true).
+  - kind: partition
+    scope: inherited
+    summary: "Inherited <Partition (Blue Lv.4 & Green Lv.4)>"
+    sources:
+      - { level_eq: 4, color_is: blue }
+      - { level_eq: 4, color_is: green }
+    exclude_cause: [own_effect, battle]

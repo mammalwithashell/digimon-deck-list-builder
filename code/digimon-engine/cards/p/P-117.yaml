@@ -1,0 +1,101 @@
+# P-117 Veemon — Digimon, Lv.3, Blue, DP 1000, Cost 3.
+# Traits: Mini Dragon.
+# Evo costs: Lv.2 Blue / cost 0.
+#
+# Printed effect text (data/cards.json — verbatim):
+#   [Your Turn] [Once Per Turn] When this Digimon would digivolve into a card
+#   with the [Free] trait, if you have a Tamer, reduce the digivolution cost by 1.
+#
+# Inherited effect text (data/cards.json — verbatim):
+#   [When Attacking] If this Digimon has 2 or more colors, <Draw 1>
+#   (Draw 1 card from your deck.)
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/P/Blue/P_117.cs
+#
+# ─── Faithfulness diff vs. card text ─────────────────────────────────────────
+#
+# | Card-text element                                          | Implementation status |
+# |------------------------------------------------------------|-----------------------|
+# | [Your Turn][OPT] When digivolving into [Free], if Tamer → cost -1 | BLOCKED — G-BEFORE-PAY-COST-DIGIVOLVE-TARGET |
+# | Inherited [When Attacking] If 2+ colors, <Draw 1>         | PARTIAL — Draw ships unconditionally; condition G-DSL-SELF-COLOR-COUNT-GTE omitted |
+#
+# ─── DSL-GAP — Clause 0 BLOCKED [G-BEFORE-PAY-COST-DIGIVOLVE-TARGET] ────────
+#
+# The "[Your Turn][OPT] When this Digimon would digivolve into a card with the
+# [Free] trait, if you have a Tamer, reduce the digivolution cost by 1" clause
+# needs a `when_this_digivolves_into:` trigger predicate referencing the
+# target card's trait. The DSL `CostReductionBody` has no `when_this_digivolves_into`
+# + `target_trait_has` trigger form. `scan_before_pay_cost_reduction` in
+# `game_actions.rs` does not thread the digivolution-target card into the
+# condition closure.
+#
+# Same gap as BT23-005 (see `qa/dsl-vocab-gaps.md` entry for BT23-005).
+# Cross-listed: P-117 clause 0 also blocks on G-BEFORE-PAY-COST-DIGIVOLVE-TARGET.
+#
+# Suggested DSL syntax (same as BT23-005):
+#   - scope: own
+#     kind: cost_reduction
+#     reduction_timing: before_pay_cost
+#     when_this_digivolves_into:
+#       target_trait_has: Free
+#     active_when: { your_turn: true }
+#     once_per_turn: true
+#     amount: 1
+#
+# ─── DSL-GAP — Clause 1 condition PARTIAL [G-DSL-SELF-COLOR-COUNT-GTE] ───────
+#
+# The "[When Attacking] If this Digimon has 2 or more colors, <Draw 1>" clause
+# needs a `self_color_count_gte: 2` predicate evaluating the distinct color count
+# of the carrier permanent's full color list (top card color + all colors from
+# digivolution sources). No such predicate exists in the DSL.
+#
+# DCGO P_117.cs lines 203-211:
+#   if (card.PermanentOfThisCard().TopCard.CardColors.Count >= 2) { return true; }
+# This checks ONLY the top card's colors. Carrier's digivolution source colors
+# are NOT included — this is a simpler check than the full stack union.
+#
+# Trade-off documented: Clause 1 ships WITHOUT the color-count condition.
+# The Draw fires unconditionally on [When Attacking] — it over-fires on
+# mono-color carriers. The negative branch (carrier 1 color → no draw) is
+# `#[ignore]`'d in the test suite pending G-DSL-SELF-COLOR-COUNT-GTE closure.
+#
+# Filed as NEW gap: G-DSL-SELF-COLOR-COUNT-GTE in qa/dsl-vocab-gaps.md.
+#
+# max-count from DCGO: -1 (unlimited fires per turn). So no once_per_turn here.
+
+card: P-117
+name: Veemon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Mini Dragon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+
+effects:
+  # ─── Clause 0 — [Your Turn][OPT] When digivolving into [Free], cost -1 ──────
+  # BLOCKED: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET — omitted entirely.
+  # See header docs for gap details and suggested syntax.
+
+  # ─── Clause 1 — Inherited [When Attacking] <Draw 1> (PARTIAL) ───────────────
+  # Printed text:
+  #   "[When Attacking] If this Digimon has 2 or more colors, <Draw 1>"
+  #
+  # DCGO P_117.cs lines 190-230: ActivateClass at OnAllyAttack,
+  # IsInheritedEffect=true, max-count -1 (unlimited per turn).
+  # CanActivateCondition gates on:
+  #   card.PermanentOfThisCard().TopCard.CardColors.Count >= 2
+  #
+  # PARTIAL: condition omitted pending G-DSL-SELF-COLOR-COUNT-GTE.
+  # Draw fires unconditionally (over-fires on mono-color carriers).
+  - scope: inherited
+    when: when_attacking
+    summary: "[When Attacking] <Draw 1> (partial: color-count condition omitted, G-DSL-SELF-COLOR-COUNT-GTE)"
+    process:
+      - draw: { of: you, count: 1 }

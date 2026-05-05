@@ -1,0 +1,126 @@
+# BT12-047 Wormmon — Digimon, Lv.3, Green, DP 1000, Cost 3.
+# Traits: Larva.
+#
+# Printed effect:
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with
+#   [Imperialdramon] in its name or [Free] trait and 1 Tamer card with
+#   [Ken Ichijoji] in its name among them to your hand. Place the rest at
+#   the bottom of your deck in any order.
+#
+# Inherited Effect:
+#   [End of Your Turn] This Digimon and any of your other Digimon may DNA
+#   digivolve into a Digimon card in the hand.
+#
+# Standard digivolve: Lv.2 Green / cost 0 (printed evo_costs).
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT12/Green/BT12_047.cs
+#
+# Sister card:
+#   BT12-021 Veemon — identical shape (OnPlay reveal-3 two-bucket + inherited
+#   EOYT DNA digivolve). Only the Tamer-bucket name filter differs (Ken Ichijoji
+#   here vs Davis Motomiya for BT12-021).
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 0 (OnPlay) — EffectTiming.OnEnterFieldAnyone:
+#   `CanSelectCardCondition`:  IsDigimon AND
+#     (ContainsCardName("Imperialdramon") OR CardTraits.Contains("Free")).
+#     DSL: `kind: digimon` AND `any_of: [name_contains: "Imperialdramon",
+#     trait_has: "Free"]`.
+#   `CanSelectCardCondition1`: IsTamer AND ContainsCardName("Ken Ichijoji").
+#     DSL: `kind: tamer` AND `name_contains: "Ken Ichijoji"`.
+#   `mutualConditions: true`  → `no_duplicate_cards: true`.
+#   `RemainingCardsPlace.DeckBottom` → `place_remainder_on_deck { position: bottom }`.
+#   `CanActivateCondition`: deck >= 1 card — implicit in `reveal_top_deck`
+#     (reveals up to count, capped at deck size); no explicit DSL condition needed.
+#
+# Clause 1 (Inherited EOYT) — EffectTiming.OnEndTurn + SetIsInheritedEffect(true):
+#   Encoded via `alt_path_registration` declarative (RESOLVED 2026-05-02 in
+#   qa/dsl-vocab-gaps.md). Optional "may" semantic is captured by the alt-path
+#   framework — DNA digivolve is always an opt-in player action surfaced through
+#   the action mask.
+
+card: BT12-047
+name: Wormmon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Larva]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+
+effects:
+  # ─── Clause 0 — [On Play] reveal 3 + two-bucket selection ────────────────
+  #
+  # Printed text:
+  #   "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with
+  #   [Imperialdramon] in its name or [Free] trait and 1 Tamer card with
+  #   [Ken Ichijoji] in its name among them to your hand. Place the rest at
+  #   the bottom of your deck in any order."
+  #
+  # DCGO (BT12_047.cs, EffectTiming.OnEnterFieldAnyone):
+  #   - SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, ...)
+  #   - Bucket 1 (CanSelectCardCondition):  IsDigimon &&
+  #       (ContainsCardName("Imperialdramon") || CardTraits.Contains("Free")),
+  #       message "Select 1 Digimon card with [Imperialdramon] in its name
+  #       or a [Free] trait.", maxCount 1.
+  #   - Bucket 2 (CanSelectCardCondition1): IsTamer &&
+  #       ContainsCardName("Ken Ichijoji"),
+  #       message "Select 1 Tamer card with [Ken Ichijoji] in its name.",
+  #       maxCount 1.
+  #   - mutualConditions: true → no_duplicate_cards: true.
+  #   - remainingCardsPlace: DeckBottom → place_remainder_on_deck bottom.
+  - when: on_play
+    summary: "[On Play] Reveal 3; add one Imperialdramon/Free Digimon and one Ken Ichijoji Tamer"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: imperialdramon_or_free_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - name_contains: "Imperialdramon"
+                      - trait_has: "Free"
+            - bind_as: ken_ichijoji_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: tamer
+                  - name_contains: "Ken Ichijoji"
+          no_duplicate_cards: true
+          prompt: "Select 1 [Imperialdramon]/[Free] Digimon and 1 [Ken Ichijoji] Tamer"
+      - add_to_hand_from_reveal: { of: you, card: imperialdramon_or_free_pick }
+      - add_to_hand_from_reveal: { of: you, card: ken_ichijoji_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Clause 1 — Inherited [End of Your Turn] DNA digivolve registration ───
+  #
+  # Printed text (inherited):
+  #   "[End of Your Turn] This Digimon and any of your other Digimon may DNA
+  #   digivolve into a Digimon card in the hand."
+  #
+  # Encoded via the `alt_path_registration` declarative (RESOLVED
+  # 2026-05-02 in qa/dsl-vocab-gaps.md). The optional "may" semantic is
+  # naturally captured by the alt-path framework — DNA digivolve is always
+  # an opt-in player action surfaced through the action mask. Identical
+  # shape to BT17-019, BT22-008, BT22-017 (same inherited clause).
+  - kind: alt_path_registration
+    scope: inherited
+    trigger: end_of_your_turn
+    registers:
+      kind: dna_digivolve
+    applies_to:
+      of: you
+      zone: [battle_area]

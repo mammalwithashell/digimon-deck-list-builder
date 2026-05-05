@@ -1,0 +1,40 @@
+card: BT23-035
+name: Dynasmon
+kind: digimon
+level: 6
+color: [yellow, red]
+cost: 12
+dp: 12000
+traits: [Holy Warrior, Royal Knight, CS]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash top security; all opponent Digimon get -6000 DP"
+    process:
+      - trash_top_security: { of: you }
+      - for_each:
+          over:
+            all_of:
+              - kind: digimon
+              - of: opponent
+              - zone: [battle_area]
+          bind_as: victim
+          body:
+            - add_dp_modifier:
+                target: victim
+                value: -6000
+                expiry: end_of_turn
+
+# Stubbed:
+# - [All Turns][Once Per Turn] when security is removed, this Digimon gains
+#   Security A. +1 until your turn ends and may recover at 3 or fewer security.
+#   Needs security-removed observer plus until-your-turn-ends expiry.

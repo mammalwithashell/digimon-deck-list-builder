@@ -1,0 +1,33 @@
+card: BT20-056
+name: Alphamon
+kind: digimon
+level: 6
+color: [purple, yellow]
+cost: 0
+dp: 11000
+traits: [Holy Warrior, X Antibody, Royal Knight, Chronicle]
+form: Mega
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Recovery +1 (Deck)"
+    process:
+      - recover: { of: you, count: 1 }
+
+# Stubbed:
+# - During-attack tail that digivolves a breeding Digimon into level 6 or lower
+#   Chronicle from hand or trash needs an attack-context condition plus breeding
+#   digivolve from union zones.
+# - [All Turns][Once Per Turn] when security stacks are removed from, opponent
+#   Digimon gets -8000 DP needs cross-player security-removed observer.
+# - Inherited leave-field replacement for Alphamon: Ouryuken needs a named-top
+#   carrier check plus security-trash replacement cost.

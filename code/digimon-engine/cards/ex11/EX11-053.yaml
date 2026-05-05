@@ -1,0 +1,18 @@
+card: EX11-053
+name: Omekamon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 5000
+traits: [Puppet, X Antibody, LIBERATOR]
+attribute: Data
+
+effects: []
+
+# Stubbed:
+# - [On Play] place a Royal Knight from hand as bottom source of any fielded
+#   King Drasil_7D6 to draw 1. Needs filtered field target plus hand-to-source.
+# - [On Deletion] at 1 or fewer security, play Omnimon (X Antibody) from hand
+#   or under fielded King Drasil_7D6, then place this card under it. Needs union
+#   hand/source play plus binding the played Digimon for source placement.

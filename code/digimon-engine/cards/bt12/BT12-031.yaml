@@ -1,0 +1,321 @@
+# BT12-031 Imperialdramon: Fighter Mode — Digimon, Lv.6, Blue/Green, DP 13000, Cost 13.
+# Traits: Ancient Dragonkin
+# Evo: Lv.5 / Cost 5 (printed evo_costs: card_color: 1, level: 5, memory_cost: 5)
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [When Digivolving] Suspend all of your opponent's Digimon with no
+#   digivolution cards. Then, return 1 of your opponent's suspended Digimon to
+#   its owner's hand. By returning 1 [Imperialdramon: Dragon Mode] from this
+#   Digimon's digivolution cards to its owner's hand, return all of your
+#   opponent's suspended Digimon at the bottom of their owners' decks instead.
+#
+#   [All Turns] This Digimon gets +1000 DP for each color in its digivolution
+#   cards. While there are 2 or more colors in its digivolution cards, it gains
+#   ＜Security A. +1＞ and ＜Blocker＞.
+#
+# Inherited effect text: (none)
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT12/Blue/BT12_031.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────────
+#
+# Clause 0 — [When Digivolving] suspend + return composite:
+#   0a. for_each over opp Digimon with no divi-cards → suspend: IMPLEMENTED
+#   0b. Return 1 opp suspended Digimon to hand: IMPLEMENTED
+#   0c. Alt-cost: By returning 1 [Dragon Mode] from own divi-cards → return ALL
+#       suspended to bottom of decks instead: BLOCKED G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME
+#
+# Clause 1 — [All Turns] DP formula + conditional keyword aura:
+#   1a. +1000 DP for each color in its digi cards: IMPLEMENTED
+#   1b. While 2+ colors → Security A. +1 and Blocker: BLOCKED G-DSL-SELF-COLOR-COUNT-GTE
+#
+# ─── Implementation status ────────────────────────────────────────────────────
+#
+# | Card-text element                                          | Status                 |
+# |------------------------------------------------------------|-----------------------|
+# | [When Digivolving] Suspend all opp Digimon with no digi-cards | IMPLEMENTED        |
+# | [When Digivolving] Return 1 opp suspended Digimon to hand  | IMPLEMENTED           |
+# | Alt-cost: Return Dragon Mode from digi-cards → return ALL to bottom | BLOCKED     |
+# | [All Turns] +1000 DP per color in digi-cards               | IMPLEMENTED           |
+# | [All Turns] While 2+ colors: Security A. +1 + Blocker      | BLOCKED               |
+#
+# ─── DSL-GAP — Alt-cost return-source-by-name-to-hand [G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME]
+#
+# Printed text (alt-cost branch):
+#   "By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's
+#    digivolution cards to its owner's hand, return all of your opponent's
+#    suspended Digimon at the bottom of their owners' decks instead."
+#
+# DCGO BT12_031.cs (EffectTiming.OnEnterFieldAnyone coroutine):
+#   - CanSelectCardCondition gates on: cardSource.Owner == card.Owner &&
+#       cardSource.CardNames.Contains("Imperialdramon: Dragon Mode") (with
+#       space/colon variations for DCGO naming quirks).
+#   - SelectCardEffect: canNoSelect: () => true (optional — player may skip).
+#   - If player selects a Dragon Mode source card:
+#       • AfterSelectCardCoroutine: return the selected source card to hand.
+#       • Then: SelectPermanentEffect over ALL currently-suspended opp Digimon,
+#         mode: BottomDeck (not Bounce). This replaces the Bounce step below.
+#   - If player declines (canNoSelect → no card selected):
+#       • SelectPermanentEffect over 1 opp suspended Digimon, mode: Bounce.
+#
+# The entire alt-cost clause needs two primitives both absent from the DSL:
+#
+# (A) `select_own_sources` with a name-based filter. The current
+#     `select_own_sources` verb (DSL step.rs line 138) accepts `min/max/then`
+#     but has no `filter:` predicate field. `EffectContext::select_own_sources`
+#     already takes a `candidate_filter` closure at the Rust level, but
+#     `install_select_own_sources` (selections.rs:1330) hard-codes
+#     `|_game, _source| true` — rejecting all filter YAML. This gap is
+#     `G-DSL-SELECT-OWN-SOURCES-FILTER` (filed under EX4-073 in
+#     qa/dsl-vocab-gaps.md).
+#
+# (B) Once a source is selected (and returned to hand), the effect branches on
+#     that selection result: the "did the player return a Dragon Mode?" check
+#     controls whether 1 suspended goes to hand or ALL go to deck-bottom.
+#     The DSL has no `binding_present` predicate for checking whether an
+#     optional `select_own_sources` produced a binding (filed as
+#     `G-DSL-BIND-PRESENT` in qa/dsl-vocab-gaps.md).
+#
+# New gap filed (synthesises both sub-gaps as a single card-level entry):
+#   G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME
+#
+# Workaround: Omit the alt-cost branch per no-approximations policy.
+#   The mandatory base effect (suspend-all + return-1-to-hand) is authored
+#   without the optional upgrade, so the RL agent always sees the base outcome.
+#   No auto-selection is made on the agent's behalf.
+#
+# ─── DSL-GAP — Self color-count predicate for conditional aura
+# [G-DSL-SELF-COLOR-COUNT-GTE] ───────────────────────────────────────────────
+#
+# Printed text (conditional aura):
+#   "While there are 2 or more colors in its digivolution cards, it gains
+#   ＜Security A. +1＞ and ＜Blocker＞."
+#
+# DCGO (EffectTiming.None declarative block):
+#   ChangeSelfSAttackStaticEffect(changeValue: 1) and BlockerSelfStaticEffect
+#   conditioned on the permanent's digivolution-stack color count >= 2.
+#   `card.PermanentOfThisCard().TopCard.CardColors.Count >= 2` (though DCGO
+#   reads the whole stack union for this card — distinct from P-117 which
+#   checks only the top card).
+#
+# The aura condition would require a `self_color_count_gte: 2` DSL predicate
+# evaluating the distinct-color count of the source permanent's full
+# digivolution stack (the same data `DigivolutionColorCount` already reads
+# for the +1000 DP formula). This predicate does not exist in the DSL today.
+# See qa/dsl-vocab-gaps.md entry `G-DSL-SELF-COLOR-COUNT-GTE` (P-117 section,
+# also cross-listed for BT12-031).
+#
+# Workaround: Omit the conditional SecurityAttackPlus / Blocker aura per
+#   no-approximations policy. The +1000 DP formula aura (Clause 1a) ships;
+#   the keyword-grant aura (Clause 1b) is omitted.
+#
+# ─── Clause 0 — [When Digivolving] notes ─────────────────────────────────────
+#
+# DCGO (EffectTiming.OnEnterFieldAnyone, CanTriggerWhenDigivolving):
+#   Step 1: Scan ALL opponent Digimon for HasNoDigivolutionCards. For each
+#     match: SuspendPermanentsClass.Tap() (suspend without CanNotBe checks
+#     on the effect, but with CanNotBeAffected on the permanent). This is a
+#     for-each suspension — no selection, no order.
+#   Step 2: SelectPermanentEffect over opp IsSuspended Digimon, maxCount 1,
+#     canNoSelect: false (mandatory — Bounce mode). The printed "Then, return
+#     1..." uses mandatory DCGO params.
+#   Step 3 (optional alt-cost): SelectCardEffect over own digi-cards named
+#     "Imperialdramon: Dragon Mode", canNoSelect: () => true (opt-in). If
+#     player returns Dragon Mode → AfterSelectCard returns it to hand →
+#     SelectPermanentEffect(BottomDeck, ALL suspended). Replaces step 2.
+#
+# Step 1 maps to `for_each` over `{ of: opponent, zone: [battle_area],
+#   all_of: [kind: digimon, stack_size_lte: 1] }` → `suspend`.
+#
+# `stack_size_lte: 1` matches permanents with exactly 1 card_source (only the
+# top card, no digivolution sources below it). The engine defines
+# `Permanent::stack_size() = card_sources.len()`, and a freshly-played Digimon
+# with no digivolution cards has `card_sources.len() == 1`.
+#
+# Step 2 maps to `select_opponent_permanent { filter: is_suspended, kind: digimon }
+# → return_to_hand`.
+#
+# Step 3 is BLOCKED: G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME.
+#
+# ─── Clause 1a — [All Turns] +1000 DP per color in digi-cards ────────────────
+#
+# DCGO (EffectTiming.None, ChangeSelfDPStaticEffect):
+#   changeValue closure = DigivolutionColorCount * 1000. The formula
+#   `DigivolutionColorCount` counts distinct colors across all card_sources
+#   in the stack (top card + all digivolution sources). This is the SAME
+#   formula primitive used by BT18-102.yaml (Susanoomon) in its `dp_lte`
+#   filter formula.
+#
+# DSL: `kind: aura, target: {} (self), active_when: { all_turns: true },
+#   dp_modifier_fn: { base: 0, per: digivolution_color_count, delta: 1000 }`.
+# `digivolution_color_count` is `CompiledPerSelector::DigivolutionColorCount`
+# (formula.rs:134), evaluated at `formula_eval.rs:323-336` as a u8 bitmask
+# popcount across the permanent's card_sources. For a self-aura, the formula
+# is evaluated with `self_only == true` (lower_aura.rs:163-165), so it reads
+# the source permanent's own stack — exactly the printed "in its digi cards".
+
+card: BT12-031
+name: "Imperialdramon: Fighter Mode"
+kind: digimon
+level: 6
+color: [blue, green]
+cost: 13
+dp: 13000
+traits: [Ancient Dragonkin]
+
+effects:
+  # ─── Clause 0 — [When Digivolving] suspend + return ──────────────────────────
+  #
+  # Part A (suspend-all opp with no digi-cards) + Part B (return 1 suspended to
+  # hand) are IMPLEMENTED.
+  # Part C (alt-cost Dragon Mode → return-all-to-bottom) is BLOCKED on
+  # G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME.
+  #
+  # Printed: "[When Digivolving] Suspend all of your opponent's Digimon with no
+  # digivolution cards. Then, return 1 of your opponent's suspended Digimon to
+  # its owner's hand."
+  #
+  # Step A — for_each over opp Digimon with no divi-cards:
+  #   `stack_size_lte: 1` = exactly 1 card_source (the top card only, no
+  #   digivolution cards below it) — i.e., "no digivolution cards."
+  #   DCGO uses `permanent.HasNoDigivolutionCards` which is defined as
+  #   `DigivolutionCards.Count == 0`; the engine equivalent is
+  #   `card_sources.len() == 1` (stack_size == 1).
+  #
+  # Step B — select 1 opp suspended Digimon → return_to_hand:
+  #   DCGO SelectPermanentEffect(maxCount: 1, canNoSelect: false [mandatory],
+  #   mode: Bounce) over opponent IsSuspended Digimon. Mandatory once fired.
+  #   The DSL `select_opponent_permanent` with no `optional: true` is mandatory.
+  #
+  # Step C — BLOCKED:
+  #   "By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's
+  #   digivolution cards to its owner's hand, return all of your opponent's
+  #   suspended Digimon at the bottom of their owners' decks instead."
+  #   BLOCKED: G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME
+  #   Requires: (A) `select_own_sources` with name filter (G-DSL-SELECT-OWN-SOURCES-FILTER)
+  #             (B) `binding_present` predicate to branch on selection result (G-DSL-BIND-PRESENT)
+  #             (C) `return_to_deck { position: bottom }` for ALL currently-suspended
+  #                 opp Digimon (would need for_each over binding of suspended perms).
+  #   When G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME closes, replace this clause
+  #   body with the full three-step flow.
+  - when: when_digivolving
+    summary: "[When Digivolving] Suspend all opp Digimon with no digi-cards; return 1 opp suspended Digimon to hand (alt-cost Dragon Mode → bottom-deck-all BLOCKED G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME)"
+    process:
+      # Step A: suspend all opp Digimon with no digivolution cards.
+      # `for_each` over opponent battle-area Digimon with stack_size_lte: 1.
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+              - stack_size_lte: 1
+          bind_as: no_digi_target
+          body:
+            - suspend: { target: no_digi_target }
+
+      # Step B: return 1 opp suspended Digimon to its owner's hand.
+      # Mandatory selection (no optional: true) matching DCGO canNoSelect: false.
+      - select_opponent_permanent:
+          bind_as: suspended_target
+          filter:
+            all_of:
+              - kind: digimon
+              - is_suspended: true
+          prompt: "Return 1 of your opponent's suspended Digimon to its owner's hand"
+      - return_to_hand: { target: suspended_target }
+
+      # Step C (BLOCKED) — alt-cost: return [Imperialdramon: Dragon Mode] from
+      # own digi-cards → return ALL opp suspended Digimon to bottom of decks.
+      #
+      # Intended form (once G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME closes):
+      #
+      # - select_own_sources:
+      #     min: 0
+      #     max: 1
+      #     filter:
+      #       name_contains: "Imperialdramon: Dragon Mode"   # ← G-DSL-SELECT-OWN-SOURCES-FILTER
+      #     bind_as: dragon_mode_source
+      #     prompt: "By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's digi-cards to hand, return all opponent's suspended Digimon to bottom of decks instead"
+      # - if:
+      #     condition: { binding_present: dragon_mode_source }  # ← G-DSL-BIND-PRESENT
+      #     then:
+      #       - return_source_to_hand: { source: dragon_mode_source }  # new verb for source→hand
+      #       - for_each:
+      #           over:
+      #             all_of:
+      #               - of: opponent
+      #               - zone: [battle_area]
+      #               - kind: digimon
+      #               - is_suspended: true
+      #           bind_as: all_susp
+      #           body:
+      #             - return_to_deck: { target: all_susp, position: bottom, include_sources: false }
+
+  # ─── Clause 1a — [All Turns] +1000 DP per color in digi-cards ───────────────
+  #
+  # Printed text:
+  #   "[All Turns] This Digimon gets +1000 DP for each color in its
+  #    digivolution cards."
+  #
+  # DSL: self-aura with `dp_modifier_fn` using `digivolution_color_count`.
+  # The formula evaluates as `distinct-color-count across card_sources * 1000`.
+  # DCGO: ChangeSelfDPStaticEffect(changeValue: DigivolutionColorCount * 1000).
+  # Lower: `self_only == true` in `dynamic_formula_fn` ensures the formula
+  # reads the SOURCE permanent's own stack (not filtered by target predicate).
+  #
+  # NOTE on `active_when`: DCGO uses `EffectTiming.None` (declarative), which
+  # is always active. The printed "[All Turns]" mirrors DCGO behavior:
+  # active_when: { all_turns: true } in the DSL. However for self-auras, the
+  # condition closure is installed by `builder.condition(...)` (lower_aura.rs:48)
+  # which evaluates `active_when` as a PredicateSubject::None predicate at tick
+  # time. The `all_turns` predicate always returns true. This is correct.
+  - kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier_fn:
+      base: 0
+      per: digivolution_color_count
+      delta: 1000
+    summary: "[All Turns] +1000 DP per color in own digi-cards (DigivolutionColorCount formula)"
+
+  # ─── Clause 1b — [All Turns] While 2+ colors: Security A. +1 + Blocker ───────
+  #
+  # Printed text:
+  #   "While there are 2 or more colors in its digivolution cards, it gains
+  #    ＜Security A. +1＞ and ＜Blocker＞."
+  #
+  # BLOCKED: G-DSL-SELF-COLOR-COUNT-GTE
+  #   No DSL predicate evaluates `distinct_color_count_in_digivolution_stack >= 2`.
+  #   The engine has `DigivolutionColorCount` as a formula primitive but not as a
+  #   BoolPredicate leaf that can gate a keyword-grant aura's `active_when`. The
+  #   `G-DSL-SELF-COLOR-COUNT-GTE` gap (filed under P-117 in qa/dsl-vocab-gaps.md)
+  #   tracks this predicate leaf.
+  #
+  # Cross-referenced gap: P-117 clause 1 ("[When Attacking] If this Digimon has
+  #   2 or more colors, <Draw 1>") and BT12-031 clause 1b share the same root gap.
+  #   Once `self_color_count_gte: 2` closes in the DSL, this clause can be
+  #   authored as:
+  #
+  # - kind: aura
+  #   target: {}
+  #   active_when:
+  #     all_of:
+  #       - all_turns: true
+  #       - self_color_count_gte: 2    # ← BLOCKED: G-DSL-SELF-COLOR-COUNT-GTE
+  #   grant_keyword:
+  #     keyword: SecurityAttackPlus
+  #     value: 1
+  #   summary: "[All Turns] While 2+ colors in digi-cards: Security A. +1"
+  #
+  # - kind: aura
+  #   target: {}
+  #   active_when:
+  #     all_of:
+  #       - all_turns: true
+  #       - self_color_count_gte: 2    # ← BLOCKED: G-DSL-SELF-COLOR-COUNT-GTE
+  #   grant_keyword:
+  #     keyword: Blocker
+  #   summary: "[All Turns] While 2+ colors in digi-cards: Blocker"

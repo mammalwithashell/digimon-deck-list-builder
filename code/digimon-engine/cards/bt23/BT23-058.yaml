@@ -1,0 +1,52 @@
+card: BT23-058
+name: Craniamon
+kind: digimon
+level: 6
+color: [white]
+cost: 11
+dp: 11000
+traits: ["Holy Warrior", "Royal Knight", CS]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: white }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: CS }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Reboot
+
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # [All Turns] When any of your Digimon or Tamers would leave the battle area
+  # by your opponent's effects, by suspending this Digimon, 1 of those Digimon
+  # or Tamers doesn't leave.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - replacement_cause: opponent_effect
+        - any_of:
+            - kind: digimon
+            - kind: tamer
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "BT23-058"
+            is_unsuspended: true
+    summary: "[All Turns] By suspending this Digimon, 1 of your Digimon or Tamers doesn't leave by opponent effects"
+    process:
+      - suspend: { target: source }
+      - cancel_replacement: {}
+
+  # [All Turns][OPT] when this Digimon suspends, delete all opponent Digimon
+  # with the lowest play cost is omitted: current DSL cannot both gate the
+  # on_suspend event to this exact permanent and express aggregate lowest
+  # play-cost delete-all.

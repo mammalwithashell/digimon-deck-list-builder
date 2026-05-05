@@ -1,0 +1,38 @@
+card: EX11-069
+name: Yuuki
+kind: tamer
+color: [purple, red]
+cost: 4
+traits: [LIBERATOR]
+
+effects:
+  - when: [start_of_your_main_phase, on_play]
+    summary: "[Start of Your Main Phase][On Play] Trash 1 card in hand to gain 1 memory"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # Omitted:
+  # - [Your Turn][OPT] attack observer that digivolves from trash into a Dark
+  #   Dragon/Evil Dragon with cost reduced by 1.
+  # - [End of All Turns] hand-size-gated suspend-self cost to return an Evil,
+  #   Dark Dragon, or Evil Dragon card from trash to hand.
+  #
+  # These require trash-zone effect digivolve and an end-of-all-turns
+  # source-bound suspend-cost recursion shape.

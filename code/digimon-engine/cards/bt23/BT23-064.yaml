@@ -1,0 +1,44 @@
+card: BT23-064
+name: Bakemon
+kind: digimon
+level: 4
+color: [purple]
+cost: 4
+dp: 4000
+traits: [Ghost, LIBERATOR]
+attribute: Virus
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 of your Digimon to delete 1 opponent level 4 or lower Digimon"
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            level_lte: 4
+    process:
+      - select_own_permanent:
+          bind_as: sacrifice
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your Digimon"
+      - delete_permanent: { target: sacrifice }
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Delete 1 opponent level 4 or lower Digimon"
+      - delete_permanent: { target: target }
+
+  - scope: inherited
+    when: on_deletion
+    summary: "[On Deletion] Gain 1 memory"
+    process:
+      - gain_memory: 1

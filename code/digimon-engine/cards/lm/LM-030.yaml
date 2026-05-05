@@ -1,0 +1,220 @@
+card: LM-030
+name: "Green Scramble"
+kind: option
+color: [green]
+cost: 2
+
+# ─── Clause A: [Main] digivolve with cost -3 ──────────────────────────────────
+#
+# "[Main] 1 of your green Digimon may digivolve into a green Digimon card in
+# the hand with the digivolution cost reduced by 3. Then, place this card in
+# the battle area."
+#
+# DCGO (LM_030.cs, EffectTiming.OptionSkill):
+#   1. SelectPermanentEffect over controller's battle area (canNoSelect: true —
+#      the entire clause is optional via "may"). Filter: IsDigimon && IsGreen(card).
+#   2. If selected: DigivolveIntoHandOrTrashCard(
+#          targetPermanent: selected,
+#          cardCondition: IsGreen,
+#          isHand: true,
+#          reduceCost: 3).
+#   3. PlaceDelayOptionCards — moves LM-030 from hand to battle area as a
+#      Delay permanent.
+#
+# DSL modelling:
+#   - when: main_from_hand
+#   - optional: true  (DCGO canNoSelect: true at the SelectPermanentEffect level)
+#   - select_own_permanent (optional: true, filter: digimon + color_is: green)
+#   - select_hand (filter: digimon + color_is: green)
+#   - effect_initiated_digivolve { cost: { reduce: 3 }, ignore_requirements: false }
+#
+# "Then, place this card in the battle area" — Delay-Option auto-placement.
+# The engine classifies this Option as a Delay-Option (Clause B raw_rust Delay
+# clause) and auto-seats it in battle area at MainEffectDrain. No explicit step
+# needed (see G-PLACE-SELF-AS-OPTION-PERMANENT notes in dsl-vocab-gaps.md and
+# the LM-027 precedent).
+#
+# ─── Clause B: [Start of Your Turn] Delay — BLOCKED (G-DELAY-START-OF-TURN) ──
+#
+# "[Start of Your Turn] If your opponent has a Digimon, ＜Delay＞ (By trashing
+# this card after the placing turn, activate the effect below.)
+# ・Return 1 green Digimon card from your trash to the top of the deck.
+#   Then, if you don't have a Digimon, you may play 1 green Digimon card with
+#   2000 DP or less from your trash without paying the cost."
+#
+# DCGO (LM_030.cs, EffectTiming.OnStartTurn):
+#   CanUseCondition:
+#     IsOwnerTurn + IsExistOnBattleArea (self) + opponent HasAtLeastOneDigimon +
+#     CanDeclareOptionDelayEffect (this card is a Delay option permanent)
+#   ActivateCoroutine:
+#     1. Trash this Delay card (DeletePeremanentAndProcessAccordingToResult).
+#     2. SelectTrashCardEffect: controller's trash, filter IsGreen && IsDigimon,
+#        canNoSelect: false (mandatory — must pick if eligible exists).
+#     3. AddLibraryTopCards (move selected card to top of deck).
+#     4. If HasNoDigimon(controller):
+#          SelectTrashCardEffect: controller's trash, filter IsGreen && IsDigimon
+#          && DP ≤ 2000, canNoSelect: true (optional).
+#          PlayFromTrashEffect (free play of selected card).
+#
+# G-DELAY-START-OF-TURN [engine gap]:
+#   The engine's `DelayTrigger` enum only has `EndOfThisTurn` and
+#   `EndOfYourNextTurn`. The DSL `kind: delay` lowerer maps everything except
+#   `EndOfYourTurn` to `EndOfYourNextTurn` — always end-of-turn, never
+#   start-of-turn. There is no `DelayTrigger::StartOfYourNextTurn` variant.
+#   DCGO fires this at `EffectTiming.OnStartTurn` (start of the owner's turn),
+#   which is a fundamentally different timing. The Delay clause is omitted from
+#   this pass until the gap is resolved (following the LM-029 precedent).
+#
+# Inner body gaps (both blocked by the outer timing gap anyway):
+#
+# G-ZONE-TRASH-TO-DECK [DSL gap]:
+#   "Return 1 green Digimon card from your trash to the top of the deck" — no
+#   native DSL verb for trash → deck-top transfer. Tracked in
+#   qa/archetype-qa/engine-gaps.md.
+#
+# G-PRED-DP-LTE [engine gap]:
+#   The `dp_lte: 2000` predicate is parsed but not evaluated at selection time
+#   for trash cards (eval_card_fields in predicate.rs does not check dp_lte).
+#   Tracked in qa/archetype-qa/engine-gaps.md.
+#
+# ─── Clause C: [Security] (Inherited) ────────────────────────────────────────
+#
+# "Security Effect [Security] You may play 1 green Digimon card with 2000 DP or
+# less from your trash without paying the cost. Then, add this card to the hand."
+#
+# DCGO (LM_030.cs, EffectTiming.SecuritySkill):
+#   1. SelectTrashCardEffect: controller's trash, filter IsGreen && IsDigimon &&
+#      DP ≤ 2000, canNoSelect: true (optional).
+#   2. PlayFromTrashEffect (free play of selected card).
+#   3. AddThisCardToHand — moves LM-030 from security-resolution staging to
+#      controller's hand.
+#
+# DSL modelling:
+#   - scope: inherited
+#   - when: on_security
+#   - optional: true  (DCGO canNoSelect: true at SelectTrashCardEffect — "you may")
+#   - select_trash (filter: digimon + color_is: green [+ dp_lte: 2000 blocked])
+#   - play_from_trash_free
+#   - add_this_option_to_hand
+#
+# G-PRED-DP-LTE: dp_lte: 2000 is parsed but not enforced by eval_card_fields for
+# trash card subjects. All green Digimon in trash appear as candidates until the
+# gap closes. The mandatory "Then, add this card to the hand" tail runs regardless
+# (not gated on whether a card was selected and played).
+
+effects:
+  # ─── Clause A: [Main] ───────────────────────────────────────────────────────
+  # "1 of your green Digimon may digivolve into a green Digimon card in the hand
+  # with the digivolution cost reduced by 3."
+  # DCGO: SelectPermanentEffect(canNoSelect: true) → DigivolveIntoHandOrTrashCard.
+  # optional: true — printed "may" gates the entire clause.
+  - when: main_from_hand
+    optional: true
+    summary: "[Main] You may have 1 green Digimon digivolve into a green Digimon in hand, cost -3; place this in battle area"
+    process:
+      # Step 1: choose source Digimon (optional — "may").
+      # DCGO: SelectPermanentEffect with canNoSelect: true over battle area.
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: green
+          prompt: "Choose 1 of your green Digimon to digivolve"
+      # Step 2: choose the digivolve target from hand.
+      # DCGO: DigivolveIntoHandOrTrashCard(isHand: true) — hand only.
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: green
+          prompt: "Choose a green Digimon card to digivolve into"
+      # Step 3: execute effect-initiated digivolve with cost -3.
+      # DCGO: reduceCost: 3, payCost: true, ignore_requirements: false.
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 3 }
+          ignore_requirements: false
+
+  # ─── Clause B: [Start of Your Turn] Delay — BLOCKED (G-DELAY-START-OF-TURN) ─
+  # Omitted: the engine has no StartOfYourTurn DelayTrigger variant. This clause
+  # will be added when G-DELAY-START-OF-TURN is resolved (see LM-027 raw_rust
+  # placeholder precedent and LM-029 omission precedent — both are valid; this
+  # pass follows the LM-029 omit approach as the simpler structural model).
+  #
+  # When G-DELAY-START-OF-TURN and inner body gaps are resolved, add:
+  #   - kind: delay
+  #     trigger: start_of_your_next_turn
+  #     condition:
+  #       any_permanent:
+  #         of: opponent
+  #         kind: digimon
+  #     summary: "[Start of Your Turn] If opponent has Digimon, <Delay>: return green Digimon to deck top; optionally play ≤2000 DP green Digimon from trash"
+  #     process:
+  #       - select_trash:
+  #           of: you
+  #           bind_as: to_return
+  #           optional: false
+  #           filter:
+  #             all_of:
+  #               - kind: digimon
+  #               - color_is: green
+  #           prompt: "Return 1 green Digimon card from your trash to the top of the deck"
+  #       - move_trash_to_deck_top:   # G-ZONE-TRASH-TO-DECK
+  #           of: you
+  #           card: to_return
+  #       - if:
+  #           condition:
+  #             not:
+  #               any_permanent:
+  #                 of: you
+  #                 kind: digimon
+  #           then:
+  #             - select_trash:
+  #                 of: you
+  #                 bind_as: to_play
+  #                 optional: true
+  #                 filter:
+  #                   all_of:
+  #                     - kind: digimon
+  #                     - color_is: green
+  #                     - dp_lte: 2000   # G-PRED-DP-LTE
+  #                 prompt: "You may play 1 green Digimon with 2000 DP or less from your trash without paying its cost"
+  #             - play_from_trash_free:
+  #                 of: you
+  #                 hand_index: to_play
+
+  # ─── Clause C: [Security] (Inherited) ──────────────────────────────────────
+  # "You may play 1 green Digimon card with 2000 DP or less from your trash
+  # without paying the cost. Then, add this card to the hand."
+  # DCGO: SecuritySkill timing → SelectTrashCardEffect(canNoSelect: true) →
+  #        PlayFromTrashEffect → AddThisCardToHand.
+  # optional: true — "you may" gates the entire clause.
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security][Inherited] You may play 1 green Digimon (≤2000 DP) from trash free; then add this card to hand"
+    process:
+      # Step 1: optional trash selection — green Digimon (≤2000 DP gated by G-PRED-DP-LTE).
+      # DCGO: canNoSelect: true; filter IsGreen && IsDigimon && DP ≤ 2000.
+      # G-PRED-DP-LTE: dp_lte: 2000 is parsed but not enforced at selection time.
+      # All green Digimon in trash appear as candidates until the gap closes.
+      - select_trash:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: green
+          prompt: "You may play 1 green Digimon with 2000 DP or less from your trash without paying its cost"
+      # Step 2: play the selected card from trash without paying the cost.
+      - play_from_trash_free:
+          of: you
+          hand_index: picked
+      # Step 3: add this card (LM-030) to the hand.
+      - add_this_option_to_hand: {}

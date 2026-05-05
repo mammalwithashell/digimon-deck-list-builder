@@ -1,0 +1,29 @@
+card: BT22-025
+name: UlforceVeedramon
+kind: digimon
+level: 6
+color: [blue]
+cost: 7
+dp: 12000
+traits: [Holy Warrior, Royal Knight, CS]
+attribute: Vaccine
+ace_overflow: -4
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+
+effects:
+  - when: when_attacking
+    optional: true
+    once_per_turn: true
+    summary: "[When Attacking][Once Per Turn] This Digimon may unsuspend"
+    process:
+      - unsuspend: { target: source }
+
+# Stubbed:
+# - [Hand][Counter] Blast Digivolve is not modeled in this card entry.
+# - [On Play][When Digivolving] activate one of two modes: bottom-deck the
+#   opponent's lowest-level Digimon OR play a blue Tamer cost 4 or lower from
+#   hand. Needs modal choice plus lowest-level aggregate bottom-deck.

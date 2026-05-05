@@ -1,0 +1,18 @@
+card: BT19-093
+name: Queen Device
+kind: option
+color: [yellow]
+cost: 3
+traits: [Device]
+
+effects: []
+
+# Stubbed:
+# - Ignore color requirements while you do not have Queen Device in battle area
+#   needs a negative battle-area-name predicate for this card.
+# - Main and trashed-from-battle-area effects target one opponent Digimon with
+#   CannotActivateWhenDigivolvingEffects and -3000 DP, then the Main clause
+#   places this Option in the battle area. The battle-area Option placement is
+#   required for the later trash trigger and is not approximated here.
+# - [Security] give two opponent Digimon Security A. -2, then add this card to
+#   hand. Needs multi-target temporary SecurityAttackMinus and security-to-hand.

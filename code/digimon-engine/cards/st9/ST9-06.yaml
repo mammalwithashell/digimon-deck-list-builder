@@ -1,0 +1,141 @@
+# ST9-06 Imperialdramon Dragon Mode — Digimon, Lv.6, Blue+Green, DP 12000, Cost 13.
+# Traits: Ancient Dragon.
+# Evo: Lv.5 Blue / Cost 4 (per evo_costs in cards.json).
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   [When Digivolving] You may play 1 level 4 or lower blue Digimon card and
+#     1 level 4 or lower green Digimon card from this Digimon's digivolution
+#     cards without paying their memory costs.
+#
+# Inherited / Security: (none)
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/ST9/Blue/ST9_06.cs
+#
+# ─── Source-priority cross-check (printed text + RULES_CONTEXT.md > DCGO) ───
+#
+# Printed text governs. DCGO ST9_06.cs matches the printed text exactly:
+#
+# Block 1 (DCGO OnEnterFieldAnyone + CanTriggerWhenDigivolving) —
+#   ActivateClass with isOptional: true (outer "you may" on the whole effect).
+#   CanActivateCondition gates on IsExistOnBattleArea AND the digivolution
+#   stack having at least one card that satisfies CanSelectCardCondition (blue
+#   Lv<=4 Digimon) OR CanSelectCardCondition1 (green Lv<=4 Digimon).
+#
+#   Body (ActivateCoroutine):
+#     1. If any blue Lv<=4 Digimon exists in THIS permanent's DigivolutionCards:
+#        SelectCardEffect over DigivolutionCards filtered by:
+#          - IsDigimon, Level <= 4, HasCardColor(Blue), HasLevel,
+#            CanPlayAsNewPermanent(payCost: false)
+#        canNoSelect: () => false (mandatory pick IF the outer optional was accepted
+#        and a candidate exists).
+#        max: 1, canEndNotMax: false.
+#     2. After the blue pick, the remaining cards (DigivolutionCards minus
+#        the already-selected card) are checked for any green Lv<=4 candidate.
+#        `canNoSelect` for the green pick is `true` only in the special case
+#        where the first-selected card ALSO satisfies the green condition AND
+#        was the only card that could satisfy the blue condition (i.e. it was
+#        consumed for the blue slot and is no longer available for the green
+#        pick). In standard setups this evaluates to `false` (mandatory pick
+#        if any green Lv<=4 exists).
+#     3. PlayPermanentCards over selectedCards, payCost: false, activateETB: true.
+#
+#   "you may" applies to the OUTER ActivateClass (isOptional: true). The
+#   internal picks within the accepted activation are mandatory given their
+#   conditions; the canNoSelect guard is complex edge-case logic (see item 2
+#   above) but the default case (mandatory once accepted) is what the printed
+#   "you may" governs.
+#
+# Source priority note: printed text says "you may play 1 level 4 or lower
+# blue Digimon card and 1 level 4 or lower green Digimon card". The "you may"
+# is on the whole clause (accepting = committing to both picks when both exist).
+# DCGO confirms outer optional + mandatory inner selections once accepted.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                    | Status |
+# |----------------------------------------------------------------------|--------|
+# | Standard digivolve Lv.5 Blue / Cost 4                                | IMPLEMENTED (alt_paths kind: digivolve) |
+# | [When Digivolving] optional play 1 Lv<=4 blue from digivolution cards | BLOCKED — G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES |
+# | [When Digivolving] optional play 1 Lv<=4 green from digivolution cards | BLOCKED — G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES |
+#
+# ─── DSL-GAP — Play card from own digivolution sources [G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES] ─
+#
+# Printed: "you may play 1 level 4 or lower blue Digimon card and 1 level 4
+# or lower green Digimon card from this Digimon's digivolution cards without
+# paying their memory costs."
+#
+# This is the SAME engine gap blocking EX4-060 (BlitzGreymon/CresGarurumon)
+# and EX9-021 (Greymon|Ver.1/Garurumon|Ver.2). The printed mechanic requires:
+#   A. A DSL bind step `select_self_digivolution_source` that selects a card
+#      from THIS permanent's digivolution stack, filtered by level/color/kind.
+#   B. A DSL play step `play_from_own_digivolution_free` that removes the
+#      selected source from the stack and plays it as a new Permanent
+#      without paying the memory cost.
+#   OR equivalently a single combined verb such as
+#   `play_from_own_digivolution_cards: { filter: ..., optional: true }`.
+#
+# Engine substrate needed: `EffectContext::play_from_own_digivolution_cards(
+#   source_perm: PermanentHandle, candidate_filter: ..., pay_cost: bool)` →
+# (a) walk the carrier's source stack to find candidates, (b) install a
+# SelectionKind variant surfacing the source picks, (c) on resolution remove
+# the picked source from the stack and route through the existing
+# play-as-new-permanent path with payCost overridden.
+#
+# Until the gap closes, the entire [When Digivolving] clause is OMITTED.
+# Per the no-approximations rule no stub is authored; tests for the clause
+# are #[ignore]'d under this gap tag.
+#
+# Also blocks: EX4-060 [All Turns], EX9-021 [End of Attack], BT22-015 Decode.
+# This is the same gap — different color filters / timings, same primitive.
+#
+# Suggested DSL syntax (for when the gap closes):
+#
+#   - when: when_digivolving
+#     optional: true
+#     summary: "[When Digivolving] May play 1 Lv<=4 blue + 1 Lv<=4 green from own digivolution cards free"
+#     process:
+#       - select_self_digivolution_source:
+#           bind_as: blue_pick
+#           filter:
+#             all_of:
+#               - kind: digimon
+#               - color_is: blue
+#               - level_lte: 4
+#           prompt: "Select 1 level 4 or lower blue Digimon card to play"
+#       - play_from_own_digivolution_free: { source: blue_pick }
+#       - select_self_digivolution_source:
+#           bind_as: green_pick
+#           filter:
+#             all_of:
+#               - kind: digimon
+#               - color_is: green
+#               - level_lte: 4
+#           prompt: "Select 1 level 4 or lower green Digimon card to play"
+#       - play_from_own_digivolution_free: { source: green_pick }
+
+card: ST9-06
+name: Imperialdramon Dragon Mode
+kind: digimon
+level: 6
+color: [blue, green]
+cost: 13
+dp: 12000
+traits: [Ancient Dragon]
+
+alt_paths:
+  # Standard digivolve: Lv.5 Blue / Cost 4 (per evo_costs in cards.json).
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+
+effects:
+  # ─── BLOCKED — [When Digivolving] play 1 Lv<=4 blue + 1 Lv<=4 green ─────────
+  # Printed: "[When Digivolving] You may play 1 level 4 or lower blue Digimon
+  # card and 1 level 4 or lower green Digimon card from this Digimon's
+  # digivolution cards without paying their memory costs."
+  #
+  # BLOCKED — G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES. No DSL select/play verb
+  # pair for cards from THIS permanent's digivolution stack. Omitted per
+  # no-approximations; tests #[ignore]'d under the gap tag.

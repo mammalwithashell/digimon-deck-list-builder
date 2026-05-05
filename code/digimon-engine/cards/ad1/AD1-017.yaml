@@ -1,0 +1,27 @@
+card: AD1-017
+name: Dynasmon
+kind: digimon
+level: 6
+color: [yellow, red]
+cost: 11
+dp: 11000
+traits: [Holy Warrior, Royal Knight]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 3
+
+effects: []
+
+# Stubbed:
+# - Play-cost reduction based on 4+ trash cards whose text mentions Lucemon or
+#   Witchelny needs text-search count formulas.
+# - [On Play][When Digivolving] has a top-or-bottom security trash cost before
+#   applying -6000 DP to all opponent Digimon; current DSL can trash top
+#   security only, so implementing just that would be an approximation.
+# - [All Turns][Once Per Turn] security-removed observer needs an own-security
+#   removed event payload plus lowest-DP aggregate deletion.
+# - Inherited [Security] debuff needs inherited security timing coverage for
+#   SecurityAttackMinus and a follow-up -3000 DP lasting until your turn ends.

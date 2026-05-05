@@ -1,0 +1,23 @@
+card: BT13-112
+name: Omnimon
+kind: digimon
+level: 7
+color: [black]
+cost: 14
+dp: 14000
+traits: [Holy Warrior, Royal Knight]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 4
+
+effects: []
+
+# Stubbed:
+# - [On Play][When Digivolving] modal delete 1 opponent Digimon OR play one
+#   of each differently named Royal Knight from breeding sources, trash the
+#   breeding Digimon, and grant Rush. This needs a modal branch with source
+#   play from breeding, different-name grouping, breeding trash, and per-play
+#   Rush grant.

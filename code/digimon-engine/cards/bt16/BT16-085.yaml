@@ -1,0 +1,233 @@
+# BT16-085 Davis Motomiya & Ken Ichijoji — Tamer, Blue + Green, Cost 4.
+#
+# Printed card text (data/cards.json effect_text):
+#
+#   [Start of Your Main Phase] You may play 1 [Veemon] or [Wormmon] from your
+#   hand without paying the cost. At the next end of your opponent's turn,
+#   return it to the hand.
+#
+#   [Your Turn] When one of your Digimon digivolves into a blue or green
+#   Digimon, by suspending this Tamer, gain 1 memory. If DNA digivolving,
+#   trash any 3 digivolution cards under your opponent's Digimon.
+#
+# Inherited / Security text (cards.json inherited_text):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT16/Blue/BT16_085.cs
+#
+# ─── Clause 0 — [Start of Your Main Phase] free-play Veemon/Wormmon + delayed return
+#
+# DCGO (BT16_085.cs:39-191): EffectTiming.OnStartMainPhase activate;
+#   CanActivateCondition: IsExistOnBattleArea + hand has >= 1 Veemon/Wormmon card
+#   that can be legally played. CanSelectCardCondition: card name contains "Veemon"
+#   or "Wormmon" AND CanPlayAsNewPermanent(payCost=false). After PlayPermanentCards
+#   resolves, the played permanent's handle is stored and an
+#   UntilOpponentTurnEndEffects.Add() installs a bounce-to-hand effect on that
+#   permanent for EffectTiming.OnEndTurn (when opp is turn player = opponent's EOT).
+#   isOptional: true (outer activation can be declined; inner canNoSelect: true).
+#
+# DSL mapping:
+#   - `when: start_of_your_main_phase` — correct timing.
+#   - `optional: true` — "You may" makes the outer activation declinable.
+#   - Free-play: `select_hand` with name filter + `play_from_hand_free`.
+#
+# DSL GAP — `play_from_hand_free` does NOT produce a PermanentHandle binding
+# [G-PLAY-FROM-HAND-FREE-BIND-AS]:
+#
+#   The "return it to the hand" step requires referencing the just-played
+#   permanent inside a `schedule_delayed` body. `play_from_hand_free` discards
+#   the `Option<PermanentHandle>` return value; `CompiledStep::PlayFromHandFree`
+#   has no `bind_as` field, and `schedule_delayed` only captures bindings that
+#   were present in the caller's `Bindings` map at schedule time. After
+#   `play_from_hand_free` runs, no named binding points to the new permanent.
+#   `return_to_hand` requires a `target: <PermanentHandle-binding>`, so the
+#   delayed return step cannot be expressed.
+#
+#   Required fix: add `bind_as: Option<String>` to `PlayFromHandFreeArgs` (DSL)
+#   and `CompiledStep::PlayFromHandFree` (compiled), then in `play_digivolve.rs`
+#   insert `bindings.insert_permanent(bind_as, handle)` if the play succeeded.
+#   Once that field exists, the schedule_delayed body can use `return_to_hand:
+#   { target: played }` with `played` resolved from the captured bindings.
+#
+#   Until resolved, the delayed-return step is OMITTED. The free-play half is
+#   implemented; the return obligation is not enforced. Test
+#   `bt16_085_start_of_main_played_digimon_returns_at_opponent_eot` is
+#   #[ignore = "pending: G-PLAY-FROM-HAND-FREE-BIND-AS"].
+#
+# ─── Clause 1 — [Your Turn] digivolve observer, suspend-tamer cost, +1 memory;
+#                DNA sub-condition: trash 3 opp Digimon digi-cards
+#
+# DCGO (BT16_085.cs; not included in scout block, inferred from card text +
+# sister Tamers BT17-081 / AD1-010):
+#   - Timing: OnEnterFieldAnyone gate + CanTriggerWhenPermanentDigivolving =
+#     `on_digivolve` in DSL, restricted to owner's turn ([Your Turn]).
+#   - Event-card color filter ("into a blue or green Digimon"):
+#     DCGO would check the new top card's color set for blue or green.
+#   - Optional activation cost: "by suspending this Tamer".
+#   - Immediate body: gain 1 memory.
+#   - DNA sub-condition body: trash any 3 digi-cards under one of the
+#     opponent's Digimon.
+#
+# DSL gaps:
+#
+#   [G-EVENT-CARD-COLOR-IS] — no `event_card_color_is` predicate exists.
+#   `PredicateSpec` has `event_card_trait_has` and `event_card_name_contains`
+#   but no predicate evaluating the color list of the entering/digivolving card.
+#   PUPPETS-G023 tracks `event_card_color_only` and `event_card_color_count`
+#   for exact multi-color checks; a single-color containment check
+#   (`event_card_color_has: blue`) belongs to the same family and is equally
+#   missing. Without it, the "blue or green" gate cannot be expressed and
+#   the observer over-fires on any digivolve, not just into blue/green.
+#   Tests for the color-gate are #[ignore = "pending: G-EVENT-CARD-COLOR-IS"].
+#
+#   [G-DSL-IS-DNA-DIGIVOLVING] — already filed. `dna_origin: true` is present
+#   in `PredicateSpec` and `CompiledPredicate` but is NOT evaluated in
+#   `predicate.rs`'s `eval_predicate`. The `if: condition: { dna_origin: true }`
+#   guard inside process: never fires, so the DNA trash sub-clause cannot be
+#   expressed. The behavioral test for the DNA branch is
+#   #[ignore = "pending: G-DSL-IS-DNA-DIGIVOLVING"].
+#
+#   [G-SELECT-OPPONENT-SOURCES] — no `select_opponent_sources` verb exists.
+#   DSL has `select_own_sources` and `trash_selected_sources` but no equivalent
+#   that targets a SPECIFIC OPPONENT'S permanent's digivolution cards. The
+#   Rocks gap entry (G-ROCKS-SOURCE-SELECTION-DSL) covers own-side source
+#   selection; opponent-side targeting is a separate, unfiled gap. The "trash
+#   any 3 digivolution cards under your opponent's Digimon" step is therefore
+#   doubly blocked: by the DNA predicate gap AND by missing opponent source
+#   selection. Both are omitted from the YAML.
+#
+# Partial implementation authored:
+#   - Observer timing + optional suspend cost + gain 1 memory are expressible.
+#   - Color filter omitted (over-fires without it).
+#   - DNA + trash sub-clause omitted entirely.
+#
+# ─── Clause 2 — [Security] Play this card without paying the cost ─────────────
+#
+# Standard play_from_security pattern (cf. BT17-081, BT22-089).
+# Mandatory per rules §16.
+
+card: BT16-085
+name: Davis Motomiya & Ken Ichijoji
+kind: tamer
+color: [blue, green]
+cost: 4
+
+effects:
+  # ─── Clause 0 — [Start of Your Main Phase] free-play Veemon or Wormmon ──────
+  #
+  # Printed: "[Start of Your Main Phase] You may play 1 [Veemon] or [Wormmon]
+  # from your hand without paying the cost. At the next end of your opponent's
+  # turn, return it to the hand."
+  #
+  # `optional: true` — "You may" makes the activation declinable.
+  #
+  # Condition: this tamer must be on the field. The start-of-main timing
+  # already implies it is the controller's turn. Additional CanActivateCondition
+  # check: at least one Veemon or Wormmon card in hand (DCGO-consistent gate to
+  # avoid presenting an empty selection prompt). Encoded as count_gte over
+  # matching hand cards. If no qualifying card exists the trigger silently
+  # declines — consistent with sister tamers BT22-089 and AD1-010.
+  #
+  # PARTIAL: free-play is implemented; delayed return is OMITTED pending
+  # G-PLAY-FROM-HAND-FREE-BIND-AS (see header note).
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "[SoMP][OPT] Free-play 1 Veemon or Wormmon from hand (return at opp EOT OMITTED: G-PLAY-FROM-HAND-FREE-BIND-AS)"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - name_contains: "Veemon"
+            - name_contains: "Wormmon"
+        n: 1
+    process:
+      # Select 1 Veemon or Wormmon from own hand (optional — player may decline).
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - name_contains: "Veemon"
+              - name_contains: "Wormmon"
+          prompt: "Play 1 [Veemon] or [Wormmon] from your hand without paying the cost"
+      # Play the selected card for free.
+      - play_from_hand_free: { of: you, hand_index: pick }
+      # OMITTED: schedule_delayed for return_to_hand at end_of_opponents_next_turn.
+      # Requires G-PLAY-FROM-HAND-FREE-BIND-AS to be closed first.
+      # Intended YAML once fixed:
+      #   - schedule_delayed:
+      #       when: end_of_opponents_next_turn
+      #       body:
+      #         - return_to_hand: { target: played }
+      # where `played` would be bound by play_from_hand_free's bind_as field.
+
+  # ─── Clause 1 — [Your Turn] digivolve observer; suspend tamer → +1 memory ───
+  #
+  # Printed: "[Your Turn] When one of your Digimon digivolves into a blue or
+  # green Digimon, by suspending this Tamer, gain 1 memory. If DNA digivolving,
+  # trash any 3 digivolution cards under your opponent's Digimon."
+  #
+  # `optional: true` — "by suspending this Tamer" is the activation cost that
+  # the player may decline (same idiom as BT17-081 and AD1-010).
+  # `active_when: { your_turn: true }` — [Your Turn] scoping.
+  #
+  # Condition:
+  #   - `event_target_owner: you` — the digivolving permanent belongs to the
+  #     controller (mirrors DCGO IsOwnerBattleArea gate).
+  #   - `event_target_kind: digimon` — must be a Digimon, not a Tamer.
+  #   - OMITTED: `event_card_color_has: blue` or `event_card_color_has: green`
+  #     gate (G-EVENT-CARD-COLOR-IS — not yet expressible). Without it this
+  #     observer fires on ANY own Digimon digivolve, not just into blue/green.
+  #
+  # Cost: suspend this Tamer (`target: source` resolves to the tamer's own
+  # source_permanent via CompiledBindingRef::Source). Tamer must be unsuspended
+  # for the cost to be payable; DCGO's `CanActivateCondition` implicitly gates
+  # on the tamer being on-field and not already suspended (engine will decline
+  # to suspend an already-suspended permanent).
+  #
+  # DNA sub-clause: OMITTED entirely — doubly blocked by
+  # G-DSL-IS-DNA-DIGIVOLVING (dna_origin predicate not evaluated) and
+  # G-SELECT-OPPONENT-SOURCES (no verb to select 3 opponent digi-cards).
+  - when: on_digivolve
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] On own Digimon digivolve (into blue/green — color gate OMITTED G-EVENT-CARD-COLOR-IS), suspend self → +1 memory (DNA trash OMITTED G-DSL-IS-DNA-DIGIVOLVING + G-SELECT-OPPONENT-SOURCES)"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    process:
+      # Cost: suspend this Tamer.
+      - suspend: { target: source }
+      # Immediate effect: gain 1 memory.
+      - gain_memory: 1
+      # OMITTED: DNA sub-clause.
+      # Intended YAML once G-DSL-IS-DNA-DIGIVOLVING and G-SELECT-OPPONENT-SOURCES close:
+      #   - if:
+      #       condition: { dna_origin: true }
+      #       then:
+      #         - select_opponent_permanent:
+      #             bind_as: opp_stack
+      #             filter: { kind: digimon }
+      #             prompt: "Choose an opponent Digimon to trash 3 digivolution cards from"
+      #         - select_opponent_sources:
+      #             target: opp_stack
+      #             count: 3
+      #             bind_as: trashed_sources
+      #         - trash_selected_sources: { sources: trashed_sources }
+
+  # ─── Clause 2 — [Security] Play this card without paying the cost ───────────
+  #
+  # Printed (inherited_text): "Security Effect [Security] Play this card without
+  # paying the cost."
+  #
+  # Standard tamer security-play pattern (cf. BT17-081, BT22-089, BT13-101,
+  # BT18-087). Mandatory — no [Security] effect has an opt-out per rules §16.
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
