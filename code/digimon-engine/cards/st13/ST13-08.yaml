@@ -1,0 +1,20 @@
+card: ST13-08
+name: Chikurimon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 3000
+traits: [Mine]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  - kind: flood_gate
+    active_when: { all_turns: true }
+    modifier: CannotReducePlayCost
+    target_player: any
+    summary: "Players can't reduce play costs"

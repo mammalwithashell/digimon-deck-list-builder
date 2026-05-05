@@ -1,0 +1,22 @@
+card: BT8-090
+name: Kari Kamiya
+kind: tamer
+color: [yellow]
+cost: 4
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If memory is 2 or less, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # Omitted:
+  # [Your Turn] When a card is added to your security stack, you may suspend
+  # this Tamer to gain 1 memory. This needs a global own-security-added observer
+  # with a source-bound suspend cost.

@@ -1,0 +1,24 @@
+card: BT23-057
+name: Gankoomon
+kind: digimon
+level: 6
+color: [purple]
+cost: 11
+dp: 11000
+traits: [Holy Warrior, Royal Knight, CS]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 3
+
+effects: []
+
+# Stubbed:
+# - Play-cost reduction by returning 3 Huckmon/Sistermon/Jesmon cards from
+#   trash to top or bottom of deck needs multi-card trash-to-deck placement
+#   with top/bottom choice.
+# - [On Play][When Digivolving] may play Hinukamuy token, then delete by play
+#   cost 6 plus 3 per other Digimon. Needs token registration and dynamic
+#   play-cost-threshold formula.

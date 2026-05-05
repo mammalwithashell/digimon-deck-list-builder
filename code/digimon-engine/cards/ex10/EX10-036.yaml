@@ -1,0 +1,21 @@
+card: EX10-036
+name: Magneticdramon
+kind: digimon
+level: 7
+color: [black]
+cost: 14
+dp: 14000
+traits: [Rock Dragon, LIBERATOR]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
+    cost: 6
+
+# Printed source-trash delete/security-trash and trash-to-source unsuspend
+# clauses are not authored in this pass.
+
+effects:
+  - kind: grant_keyword
+    keyword: Fragment
+    value: 3

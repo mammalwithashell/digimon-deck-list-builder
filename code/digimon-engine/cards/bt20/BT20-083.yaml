@@ -1,0 +1,40 @@
+card: BT20-083
+name: Omekamon
+kind: digimon
+level: 4
+color: [white]
+cost: 5
+dp: 5000
+traits: [Puppet, X Antibody, LIBERATOR]
+attribute: Data
+
+# Printed clauses omitted rather than approximated:
+#
+# - [On Deletion] You may place this card as the bottom digivolution card of
+#   your [King Drasil_7D6] in the breeding area. This needs RK-G001: filtered
+#   select_own_breeding_permanent so the target is actually King Drasil.
+#
+# - Inherited [Breeding][Opponent's Turn] security-removed trigger: by
+#   suspending the carrier, play 1 [Omekamon] from this Digimon's sources for
+#   free. This is blocked by breeding inherited observer fan-out
+#   (G-BREEDING-TRIGGER-DISPATCH) and source-play-from-materials support.
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: on_play
+    optional: true
+    condition: { security_count_lte: 1 }
+    summary: "[On Play] At 1 or fewer security, may free digivolve into Omnimon (X Antibody)"
+    process:
+      - select_hand:
+          of: you
+          bind_as: omni_x
+          filter: { name_is: "Omnimon (X Antibody)" }
+          prompt: "Choose [Omnimon (X Antibody)] in hand"
+      - effect_initiated_digivolve:
+          target: self
+          from_hand: omni_x
+          cost: 0
+          ignore_requirements: true

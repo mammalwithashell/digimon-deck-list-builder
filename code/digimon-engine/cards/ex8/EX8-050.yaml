@@ -1,0 +1,21 @@
+card: EX8-050
+name: Gogmamon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+traits: [Rock]
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 3
+
+# Printed on-deletion reveal/play and inherited attack-redirection clauses are
+# not authored in this pass.
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"

@@ -1,0 +1,32 @@
+card: BT22-036
+name: Chaperomon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+attribute: Virus
+traits: [Puppet, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter:
+      any_of:
+        - kind: token
+        - all_of:
+                  - kind: digimon
+                  - trait_has: Puppet
+
+  # The [Hand][Main] effect is omitted rather than approximated. The current
+  # hand-action mask can gate on Arisa/Shoemon permanents, but this card also
+  # needs the hand effect to be hidden when no [ShoeShoemon] exists in trash.
+  # Keep the ignored tests in bt22_036.rs until that preflight is proven.
+  #
+  # The inherited leave-prevention effect is also omitted. Current replacement
+  # dispatch does not install this inherited-source replacement from beneath a
+  # carrier, so the Token/other-Puppet cost body cannot be claimed as live.

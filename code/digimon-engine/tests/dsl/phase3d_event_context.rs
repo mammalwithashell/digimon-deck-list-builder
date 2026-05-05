@@ -4,7 +4,7 @@ use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming, PlaySource};
 use digimon_engine::permanent::{Permanent, PermanentHandle};
-use digimon_engine::selection::TriggerSource;
+use digimon_engine::selection::{OptionPlayResult, TriggerSource};
 use std::sync::Arc;
 
 fn digimon_card(id: &str, name: &str, traits: &[&str], dp: i32) -> CardData {
@@ -61,6 +61,7 @@ struct DelayOptionNoop;
 impl CardEffect for DelayOptionNoop {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         vec![Effect::on_play(card)
+            .option_main()
             .name("Delay noop")
             .delay(DelayTrigger::EndOfYourNextTurn)
             .process(|_ctx| {})
@@ -632,7 +633,8 @@ effects:
 
     let before = runner.memory();
     let battle_before = runner.battle_area_size(0);
-    let _ = runner.game.play_option_from_hand(0, 0);
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert_eq!(result, OptionPlayResult::Trashed);
 
     assert_eq!(
         runner.battle_area_size(0),

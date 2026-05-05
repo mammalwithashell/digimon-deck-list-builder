@@ -1,0 +1,34 @@
+card: EX7-049
+name: Metallicdramon
+kind: digimon
+level: 6
+color: [black]
+cost: 13
+dp: 13000
+traits: [Sky Dragon]
+attribute: Data
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 5
+
+# Printed [When Digivolving] digivolve-prevention and leave-battle-area
+# replacement play clauses are not authored in this pass.
+
+effects:
+  - when: [on_play, when_attacking]
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[On Play][When Attacking] De-Digivolve 4 1 opponent Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 4"
+      - de_digivolve:
+          target: target
+          amount: 4
+          stop_at_level: 3

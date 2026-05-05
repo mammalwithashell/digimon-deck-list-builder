@@ -1,0 +1,103 @@
+card: BT22-098
+name: "Unique Emblem: Fable Waltz"
+kind: option
+color: [yellow]
+cost: 3
+traits: [LIBERATOR]
+
+# Printed text:
+# [Main] You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand or trash
+# without paying the cost. Then, place this card in the battle area.
+#
+# [Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> (By trashing
+# this card after the placing turn, activate the effect below.)
+# 1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and
+# [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced
+# by 3.
+#
+# Supported faithfully here:
+# - Hand-origin slice of the [Main] play effect. The target choice is visible,
+#   optional, filtered to [Shoemon] or [Arisa Kinosaki], and plays the selected
+#   hand card without paying its cost.
+# - Battle-area Delay placement via the standard delayed-option pipeline.
+# - Event-gated Delay activation after the placing turn when your Arisa Kinosaki
+#   suspends, with visible Puppet base and Puppet+LIBERATOR hand-evolution
+#   selections before effect_initiated_digivolve with cost reduced by 3.
+#
+# Omitted rather than approximated:
+# - The exact hand-or-trash [Main] choice is blocked by
+#   G-UNION-ZONE-PLAY-FROM-ORIGIN / PUPPETS-G014. Current select_union_zone DSL
+#   lowering uses an accept-all filter and does not preserve enough origin data
+#   for a single faithful play-from-original-zone consumer step.
+# - The [Security] clause mirrors only the currently supported hand-origin slice
+#   of [Main]. Exact hand-or-trash security play and security battle-area
+#   placement remain blocked by PUPPETS-G014/PUPPETS-G009.
+
+effects:
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] You may play 1 Shoemon or Arisa Kinosaki from hand free; place this in battle area"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - name_is: Shoemon
+              - name_is: Arisa Kinosaki
+          prompt: "You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: pick
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Activate supported [Main] hand-origin play slice"
+    process:
+      - select_hand:
+          of: you
+          bind_as: sec_pick
+          optional: true
+          filter:
+            any_of:
+              - name_is: Shoemon
+              - name_is: Arisa Kinosaki
+          prompt: "You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: sec_pick
+
+  - kind: delay
+    trigger: on_suspend
+    active_when:
+      your_turn: true
+      event_target_owner: you
+      event_card_name_contains: "Arisa Kinosaki"
+    summary: "[Your Turn] When your Arisa Kinosaki suspends, Delay: Puppet may digivolve into Puppet+LIBERATOR in hand, cost -3"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Puppet
+              - zone: [battle_area]
+          prompt: "Choose 1 of your [Puppet] Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Puppet
+              - trait_has: LIBERATOR
+          prompt: "Choose a [Puppet] and [LIBERATOR] Digimon card to digivolve into"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 3 }
+          ignore_requirements: false

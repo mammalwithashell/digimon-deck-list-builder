@@ -1,0 +1,40 @@
+card: P-037
+name: "Yellow Memory Boost!"
+kind: option
+color: [yellow]
+cost: 3
+
+# [Main] Reveal top 4; add 1 yellow Digimon; bottom the rest in any order.
+# Then place this card in the battle area. Delay placement from hand is handled
+# by option disposition when a card has a kind: delay clause.
+effects:
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 4; add 1 yellow Digimon to hand; place rest at bottom; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 4
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+          prompt: "Add 1 yellow Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - kind: delay
+    trigger: end_of_your_next_turn
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security][Inherited] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-05-04",
+  "last_updated": "2026-05-05",
   "cards": {
     "BT21-093": {
       "card_name": "Raging Serpentine",
@@ -116,7 +116,7 @@
         "A2",
         "Option-as-permanent Delay (standard EndOfYourNextTurn)"
       ],
-      "notes": "11 active tests pass; 6 ignored. Clause 0 ([Main] reveal 4 + select + add to hand + place rest bottom) fully DSL-implemented: reveal_top_deck(4) + select_reveal(optional, filter:kind:digimon+color_is:red) + add_to_hand_from_reveal + place_remainder_on_deck(bottom). Clause 1 ([Delay] gain 2 memory) fully DSL-implemented: kind:delay trigger:end_of_your_next_turn + gain_memory:2. Clause 2 ([Inherited][Security] place self in battle area) empty-process triggered clause (scope:inherited, when:on_security, process:[]) \u2014 G-PLACE-SELF-AS-OPTION-PERMANENT. 4 filter-enforcement tests ignored pending Phase 2b (install_select_reveal accept-all filter). 2 Delay/security behavioral tests ignored pending G-PLACE-SELF-AS-OPTION-PERMANENT."
+      "notes": "11 active tests pass; 6 ignored. Clause 0 ([Main] reveal 4 + select + add to hand + place rest bottom) fully DSL-implemented: reveal_top_deck(4) + select_reveal(optional, filter:kind:digimon+color_is:red) + add_to_hand_from_reveal + place_remainder_on_deck(bottom). Clause 1 ([Delay] gain 2 memory) fully DSL-implemented: kind:delay trigger:end_of_your_next_turn + gain_memory:2. Clause 2 ([Inherited][Security] place self in battle area) empty-process triggered clause (scope:inherited, when:on_security, process:[]) — G-PLACE-SELF-AS-OPTION-PERMANENT. 4 filter-enforcement tests ignored pending Phase 2b (install_select_reveal accept-all filter). 2 Delay/security behavioral tests ignored pending G-PLACE-SELF-AS-OPTION-PERMANENT."
     },
     "LM-027": {
       "card_name": "Red Scramble",
@@ -133,7 +133,7 @@
         "E1",
         "G1-adjacent"
       ],
-      "notes": "13 active tests pass; 6 ignored pending gaps. Clause A ([Main] effect_initiated_digivolve cost -3 from option card) fully DSL-implemented \u2014 optional select_own_permanent + select_hand + effect_initiated_digivolve. Clause B ([Start of Your Turn] Delay) registered as raw_rust declarative lm_027_delay_start_of_turn_noop (no-op) pending G-DELAY-START-OF-TURN (engine has no DelayTrigger::StartOfYourNextTurn). Clause C ([Security] play small red Digimon from trash) DSL-implemented with select_trash + play_from_trash_free; add-self-to-hand step is raw_rust no-op pending G-ADD-OPTION-SELF-TO-HAND. dp_lte: 2000 filter compiled but unenforced pending G-PRED-DP-LTE."
+      "notes": "13 active tests pass; 6 ignored pending gaps. Clause A ([Main] effect_initiated_digivolve cost -3 from option card) fully DSL-implemented — optional select_own_permanent + select_hand + effect_initiated_digivolve. Clause B ([Start of Your Turn] Delay) registered as raw_rust declarative lm_027_delay_start_of_turn_noop (no-op) pending G-DELAY-START-OF-TURN (engine has no DelayTrigger::StartOfYourNextTurn). Clause C ([Security] play small red Digimon from trash) DSL-implemented with select_trash + play_from_trash_free; add-self-to-hand step is raw_rust no-op pending G-ADD-OPTION-SELF-TO-HAND. dp_lte: 2000 filter compiled but unenforced pending G-PRED-DP-LTE."
     },
     "LM-055": {
       "card_name": "Sprint Dash Training",
@@ -268,7 +268,7 @@
         "A4",
         "F9-adjacent"
       ],
-      "notes": "OnPlay optional cost-as-trash \u00e2\u2020\u2019 draw 2 implemented + tested. Inherited OPT clause shipped. 11 active, 2 ignored for sub-gaps (select_hand filter eval + trash-from-hand event)."
+      "notes": "OnPlay optional cost-as-trash â†’ draw 2 implemented + tested. Inherited OPT clause shipped. 11 active, 2 ignored for sub-gaps (select_hand filter eval + trash-from-hand event)."
     },
     "EX11-008": {
       "card_name": "Elizamon",
@@ -334,7 +334,7 @@
         "D-DELETE-DP-LTE",
         "D4"
       ],
-      "notes": "All 3 clauses ship: [Security] play-self-after-battle (engine fix landed in src/dsl_cards/step/play_digivolve.rs), [On Play]+[When Digivolving] delete \u00e2\u2030\u00a44000 DP, inherited [Your Turn] +2000 DP aura. 14 active, 2 ignored pending G-DP-LTE-PREDICATE."
+      "notes": "All 3 clauses ship: [Security] play-self-after-battle (engine fix landed in src/dsl_cards/step/play_digivolve.rs), [On Play]+[When Digivolving] delete â‰¤4000 DP, inherited [Your Turn] +2000 DP aura. 14 active, 2 ignored pending G-DP-LTE-PREDICATE."
     },
     "BT24-011": {
       "card_name": "Cyclonemon",
@@ -403,7 +403,7 @@
         "H1-RUSH",
         "H_PROGRESS"
       ],
-      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave \u00e2\u2020\u2019 delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
+      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave â†’ delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
     },
     "BT24-018": {
       "card_name": "Styracomon",
@@ -456,7 +456,7 @@
         "B3",
         "F9"
       ],
-      "notes": "All 3 clauses ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3, [All Turns] on_opponent_security_removed suspend-cost + delete \u00e2\u2030\u00a44000 DP, [Security] play_from_security. 14 active tests pass. 1 ignored (G-PRED-DP-LTE: dp_lte filter not evaluated at runtime). Key fix: `target: source` (not `source_permanent`) required for suspend step to resolve CompiledBindingRef::Source \u00e2\u2020\u2019 ctx.source_permanent; `source_permanent` is not a recognized DSL keyword (falls through to named-binding lookup, returning None silently)."
+      "notes": "All 3 clauses ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3, [All Turns] on_opponent_security_removed suspend-cost + delete â‰¤4000 DP, [Security] play_from_security. 14 active tests pass. 1 ignored (G-PRED-DP-LTE: dp_lte filter not evaluated at runtime). Key fix: `target: source` (not `source_permanent`) required for suspend step to resolve CompiledBindingRef::Source â†’ ctx.source_permanent; `source_permanent` is not a recognized DSL keyword (falls through to named-binding lookup, returning None silently)."
     },
     "EX11-054": {
       "card_name": "Owen Dreadnought",
@@ -472,7 +472,7 @@
         "B2",
         "F9"
       ],
-      "notes": "Clauses 1 and 3 ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3 (tested, passes) and [Security] play_from_security (tested, passes). Clause 2 ([All Turns] Reptile/Dragonkin ally played/digivolves \u00e2\u2020\u2019 suspend self, draw 1, give Progress Digimon +3000 DP) is a no-op raw_rust placeholder pending two hybrid gaps: G-ON-ENTER-FIELD-ANYONE-TRAIT-FILTER (OnEnterFieldAnyone observer TriggerContext doesn't carry entering permanent handle) and G-GAME-EVENT-DIGIVOLVE (GameEvent::Digivolve not emitted, blocking digivolve-detection in raw_rust). 8 non-ignored tests pass, 4 ignored (entering_permanent_trigger_context + G-DECLARATIVE-KEYWORD). Raw_rust fn: ex11_054_all_turns_noop registered in src/cards/raw_rust/mod.rs."
+      "notes": "Clauses 1 and 3 ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3 (tested, passes) and [Security] play_from_security (tested, passes). Clause 2 ([All Turns] Reptile/Dragonkin ally played/digivolves â†’ suspend self, draw 1, give Progress Digimon +3000 DP) is a no-op raw_rust placeholder pending two hybrid gaps: G-ON-ENTER-FIELD-ANYONE-TRAIT-FILTER (OnEnterFieldAnyone observer TriggerContext doesn't carry entering permanent handle) and G-GAME-EVENT-DIGIVOLVE (GameEvent::Digivolve not emitted, blocking digivolve-detection in raw_rust). 8 non-ignored tests pass, 4 ignored (entering_permanent_trigger_context + G-DECLARATIVE-KEYWORD). Raw_rust fn: ex11_054_all_turns_noop registered in src/cards/raw_rust/mod.rs."
     },
     "BT21-081": {
       "card_name": "Owen Dreadnought",
@@ -489,7 +489,7 @@
         "F9",
         "H3-PIERCING"
       ],
-      "notes": "All 3 clauses ship: (a) [Start of Your Main Phase] gain 1 memory if opp has Digimon, (b) [End of Your Turn] optional suspend-cost \u00e2\u2020\u2019 select Reptile/Dragonkin \u00e2\u2020\u2019 grant Piercing for the turn, (c) [Security] play_from_security. 14 active tests pass, 1 ignored. Gap: G-MAY-ATTACK-NOW (DSL-GAP \u00e2\u20ac\u201d 'Then, that Digimon attacks' step omitted; MayAttack/ForceAttack ModifierTypes not in lookup_modifier_type, and no DSL verb for effect-initiated mandatory EOT attack on a specific Digimon). Key fixes during implementation: (1) DSL binding `target: source` (not `source_permanent`) required for Suspend step \u00e2\u20ac\u201d 'source_permanent' is not a recognized keyword in compile_binding_ref, falls through to CompiledBindingRef::Named and silently no-ops; (2) test helpers need filler decks for both players to prevent deckout on P1's first draw, which would set game_over and skip end-of-turn expiry in multi-turn tests."
+      "notes": "All 3 clauses ship: (a) [Start of Your Main Phase] gain 1 memory if opp has Digimon, (b) [End of Your Turn] optional suspend-cost â†’ select Reptile/Dragonkin â†’ grant Piercing for the turn, (c) [Security] play_from_security. 14 active tests pass, 1 ignored. Gap: G-MAY-ATTACK-NOW (DSL-GAP â€” 'Then, that Digimon attacks' step omitted; MayAttack/ForceAttack ModifierTypes not in lookup_modifier_type, and no DSL verb for effect-initiated mandatory EOT attack on a specific Digimon). Key fixes during implementation: (1) DSL binding `target: source` (not `source_permanent`) required for Suspend step â€” 'source_permanent' is not a recognized keyword in compile_binding_ref, falls through to CompiledBindingRef::Named and silently no-ops; (2) test helpers need filler decks for both players to prevent deckout on P1's first draw, which would set game_over and skip end-of-turn expiry in multi-turn tests."
     },
     "BT21-017": {
       "card_name": "Dimetromon",
@@ -506,7 +506,7 @@
         "G-COUNT-GATE",
         "G-INHERITED-OPT"
       ],
-      "notes": "WhenDigivolving optional Owen Dreadnought play ships (select_hand name_contains filter + play_from_hand_free). Tamer-count gate (count_lte n:1) is compiled but NOT evaluated at runtime \u00e2\u20ac\u201d G-COUNT-LTE-EVAL (new gap): eval_predicate_with_bindings has no count_lte match arm for non-security zones; gate always passes. 1 condition test #[ignore = pending: G-COUNT-LTE-EVAL]. Inherited [Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 3 inherited tests #[ignore]. 12 active tests pass, 4 ignored total."
+      "notes": "WhenDigivolving optional Owen Dreadnought play ships (select_hand name_contains filter + play_from_hand_free). Tamer-count gate (count_lte n:1) is compiled but NOT evaluated at runtime â€” G-COUNT-LTE-EVAL (new gap): eval_predicate_with_bindings has no count_lte match arm for non-security zones; gate always passes. 1 condition test #[ignore = pending: G-COUNT-LTE-EVAL]. Inherited [Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 3 inherited tests #[ignore]. 12 active tests pass, 4 ignored total."
     },
     "P-189": {
       "card_name": "Dimetromon",
@@ -523,7 +523,7 @@
         "H_PROGRESS",
         "G-INHERITED-OPT"
       ],
-      "notes": "Clause 1 [Security] optional play-LIBERATOR-free-from-hand-or-trash ships via select_effect_choice + two separate if: blocks + select_hand/select_trash + play_from_hand_free/play_from_trash_free. Cost-\u00e2\u2030\u00a44 filter (G-PLAY-COST-LTE) cannot be enforced \u00e2\u20ac\u201d play_cost_lte predicate absent from PredicateSpec; select_hand/select_trash accept-all (Phase 2b). Clause 2 Progress declarative ships structurally; modifier not installed at runtime (G-DECLARATIVE-KEYWORD). Clause 3 [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 8 active tests pass, 8 ignored. New gap reported: G-PLAY-COST-LTE."
+      "notes": "Clause 1 [Security] optional play-LIBERATOR-free-from-hand-or-trash ships via select_effect_choice + two separate if: blocks + select_hand/select_trash + play_from_hand_free/play_from_trash_free. Cost-â‰¤4 filter (G-PLAY-COST-LTE) cannot be enforced â€” play_cost_lte predicate absent from PredicateSpec; select_hand/select_trash accept-all (Phase 2b). Clause 2 Progress declarative ships structurally; modifier not installed at runtime (G-DECLARATIVE-KEYWORD). Clause 3 [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 8 active tests pass, 8 ignored. New gap reported: G-PLAY-COST-LTE."
     },
     "BT24-012": {
       "card_name": "Dimetromon",
@@ -623,7 +623,7 @@
         "E5-TRASH-TOP-SECURITY",
         "D4-INHERITED-DP-AURA"
       ],
-      "notes": "Clause 1 [OnPlay/WhenDigivolving]: opponent places hand card as bottom security + trash top security. YAML fix: place_on_security moved inside as_selecting_player body so binding 'pick' is in scope for the callback (outer-tail binding propagation gap). select_hand optional:true so trash_top_security in outer tail fires even when opponent has hand cards. G-SELECT-EMPTY-OUTER-TAIL: when empty hand skips install_select_hand (no valid_action_ids), outer tail is lost (1 test #[ignore]). Opponent-security-count gate (<=5) dropped \u00e2\u20ac\u201d DSL has no opponent_security_count_lte predicate (G-OPP-SECURITY-COUNT-LTE, 1 test #[ignore]). WhenDigivolving dispatch blocked by G-OPT-TRIGGERED (1 test #[ignore]). Clause 2 Inherited [Your Turn] +4000 DP aura ships (2 tests #[ignore] G-INHERITED-DISPATCH). 11 active pass, 5 ignored."
+      "notes": "Clause 1 [OnPlay/WhenDigivolving]: opponent places hand card as bottom security + trash top security. YAML fix: place_on_security moved inside as_selecting_player body so binding 'pick' is in scope for the callback (outer-tail binding propagation gap). select_hand optional:true so trash_top_security in outer tail fires even when opponent has hand cards. G-SELECT-EMPTY-OUTER-TAIL: when empty hand skips install_select_hand (no valid_action_ids), outer tail is lost (1 test #[ignore]). Opponent-security-count gate (<=5) dropped â€” DSL has no opponent_security_count_lte predicate (G-OPP-SECURITY-COUNT-LTE, 1 test #[ignore]). WhenDigivolving dispatch blocked by G-OPT-TRIGGERED (1 test #[ignore]). Clause 2 Inherited [Your Turn] +4000 DP aura ships (2 tests #[ignore] G-INHERITED-DISPATCH). 11 active pass, 5 ignored."
     },
     "ST1-07": {
       "card_name": "Greymon",
@@ -720,7 +720,7 @@
     "BT21-026": {
       "status": "IMPLEMENTED",
       "date": "2026-04-28",
-      "notes": "11/11 runnable tests pass. 5 ignored: G-DECLARATIVE-KEYWORD (Rush/Blocker not installed at runtime x2), G-EVENT-TARGET-OWNER (deletion arm omitted \u2014 no event_target_owner predicate x3). Cost reduction (-2 per opp battle area permanent) fully working. Keywords Rush/Raid/Blocker declared as grant_keyword. Unsuspend on opp deletion blocked until G-EVENT-TARGET-OWNER closes."
+      "notes": "11/11 runnable tests pass. 5 ignored: G-DECLARATIVE-KEYWORD (Rush/Blocker not installed at runtime x2), G-EVENT-TARGET-OWNER (deletion arm omitted — no event_target_owner predicate x3). Cost reduction (-2 per opp battle area permanent) fully working. Keywords Rush/Raid/Blocker declared as grant_keyword. Unsuspend on opp deletion blocked until G-EVENT-TARGET-OWNER closes."
     },
     "BT9-112": {
       "card_name": "DeathXmon",
@@ -739,7 +739,7 @@
         "C1",
         "raw_rust"
       ],
-      "notes": "Lv7 Black/Purple Cost 20. Three clauses: (A) BeforePayCost cost_reduction -3 per opp battle-area permanent; (B) [On Play][When Digivolving] for_each de_digivolve(1, stop_at_level:3) then for_each delete \u2264Lv4 (snapshot semantics); (C) [End of Opponent's Turn][OPT] delete lowest-play-cost opp Digimon via raw_rust bt9_112_delete_lowest_cost_digimon. 12/13 tests runnable; 1 ignored (G-OPT-TRIGGERED \u2014 triggered OPT lockout not wired). Gaps: G-PLAY-COST-LTE (no play_cost_lte aggregate predicate in DSL, worked around with raw_rust), G-OPT-TRIGGERED (once_per_turn on triggered clause not enforced at runtime)."
+      "notes": "Lv7 Black/Purple Cost 20. Three clauses: (A) BeforePayCost cost_reduction -3 per opp battle-area permanent; (B) [On Play][When Digivolving] for_each de_digivolve(1, stop_at_level:3) then for_each delete ≤Lv4 (snapshot semantics); (C) [End of Opponent's Turn][OPT] delete lowest-play-cost opp Digimon via raw_rust bt9_112_delete_lowest_cost_digimon. 12/13 tests runnable; 1 ignored (G-OPT-TRIGGERED — triggered OPT lockout not wired). Gaps: G-PLAY-COST-LTE (no play_cost_lte aggregate predicate in DSL, worked around with raw_rust), G-OPT-TRIGGERED (once_per_turn on triggered clause not enforced at runtime)."
     },
     "BT23-014": {
       "card_name": "Gallantmon",
@@ -779,7 +779,7 @@
         "E5-TRASH-TOP-SECURITY",
         "raw_rust"
       ],
-      "notes": "Lv7 Red Blast Digivolve ACE (Agumon - Bond of Bravery). Three clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete any number of opp Digimon with total DP \u2264 14000 \u2014 implemented as raw_rust:lm_021_delete_dp_sum single-pick fallback pending G-MULTI-SELECT-OPP-DP-SUM (engine lacks multi-select of opponent battle-area permanents with running DP-sum cap); (3) [When Attacking][Once Per Turn] if you have a Tamer, trash_top_security \u2014 tamer condition gating works, behavioral tests pass. ace_overflow: -5. 13/15 active tests pass; 2 ignored for G-OPT-TRIGGERED (triggered once_per_turn lockout not enforced at runtime). Bug fix during TDD: bt17_018 tests were failing due to summoning sickness (turn_count=0 when using .build() \u2014 added r.game.turn_count = 1 to runner_with_p1_security() helper so permanents placed with turn_played_override=Some(0) are not fresh at attack time). Full suite after fix: 412 passed, 0 failed, 146 ignored."
+      "notes": "Lv7 Red Blast Digivolve ACE (Agumon - Bond of Bravery). Three clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete any number of opp Digimon with total DP ≤ 14000 — implemented as raw_rust:lm_021_delete_dp_sum single-pick fallback pending G-MULTI-SELECT-OPP-DP-SUM (engine lacks multi-select of opponent battle-area permanents with running DP-sum cap); (3) [When Attacking][Once Per Turn] if you have a Tamer, trash_top_security — tamer condition gating works, behavioral tests pass. ace_overflow: -5. 13/15 active tests pass; 2 ignored for G-OPT-TRIGGERED (triggered once_per_turn lockout not enforced at runtime). Bug fix during TDD: bt17_018 tests were failing due to summoning sickness (turn_count=0 when using .build() — added r.game.turn_count = 1 to runner_with_p1_security() helper so permanents placed with turn_played_override=Some(0) are not fresh at attack time). Full suite after fix: 412 passed, 0 failed, 146 ignored."
     },
     "BT17-018": {
       "card_name": "Gallantmon: Crimson Mode",
@@ -801,7 +801,7 @@
         "raw_rust",
         "once_per_turn"
       ],
-      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP \u2264 15000 \u2014 raw_rust:bt17_018_delete_opp_digimon_dp_budget single-pick fallback, blocked on G-DP-BUDGET-MULTI-SELECT (now tracked also as G-MULTI-SELECT-OPP-DP-SUM); (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security \u2014 raw_rust:bt17_018_trash_security_per_ten_trash (floor division loop), DSL gap G-LOSE-COUNT-BOUND. 11/16 tests pass; 3 ignored for G-DP-BUDGET-MULTI-SELECT multi-pick; 2 ignored for G-OPT-TRIGGERED (triggered OPT lockout not enforced). TDD fix required: summoning sickness blocked attack tests (turn_count=0 \u2192 is_fresh=true \u2192 can_attack()=false); fix: r.game.turn_count = 1 in runner setup."
+      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP ≤ 15000 — raw_rust:bt17_018_delete_opp_digimon_dp_budget single-pick fallback, blocked on G-DP-BUDGET-MULTI-SELECT (now tracked also as G-MULTI-SELECT-OPP-DP-SUM); (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security — raw_rust:bt17_018_trash_security_per_ten_trash (floor division loop), DSL gap G-LOSE-COUNT-BOUND. 11/16 tests pass; 3 ignored for G-DP-BUDGET-MULTI-SELECT multi-pick; 2 ignored for G-OPT-TRIGGERED (triggered OPT lockout not enforced). TDD fix required: summoning sickness blocked attack tests (turn_count=0 → is_fresh=true → can_attack()=false); fix: r.game.turn_count = 1 in runner setup."
     },
     "ST22-08": {
       "card_name": "Offensive Plug-In V",
@@ -886,7 +886,7 @@
         "A2-remainder-bottom",
         "E2-optional-free-play"
       ],
-      "notes": "Purple Option Cost 3, [LIBERATOR] trait. use_requirement color bypass is active in the hand-play mask when a LIBERATOR Digimon/Tamer is present. [Main] reveal_top_deck(3), LIBERATOR reveal-pick, bottom remainder, optional play LIBERATOR cost\u22643 from hand free all pass with play_cost_lte:3 enforced. [Security] mirrors the Main effects. 18 active tests pass, 0 ignored."
+      "notes": "Purple Option Cost 3, [LIBERATOR] trait. use_requirement color bypass is active in the hand-play mask when a LIBERATOR Digimon/Tamer is present. [Main] reveal_top_deck(3), LIBERATOR reveal-pick, bottom remainder, optional play LIBERATOR cost≤3 from hand free all pass with play_cost_lte:3 enforced. [Security] mirrors the Main effects. 18 active tests pass, 0 ignored."
     },
     "P-206": {
       "card_name": "Digital Gate Open",
@@ -1253,7 +1253,7 @@
         "D4",
         "B3"
       ],
-      "notes": "WhenDigivolving Koromon DP buff (via self_digivolution_contains_name), OnDeletion play-tamer-or-hatch implemented. Delete-DP-\u2264-self BLOCKED on G-FORMULA-SOURCE-DP (NEW). [All Turns] dynamic-name-alias-from-stack BLOCKED on G-DYNAMIC-NAME-ALIAS-FROM-STACK (NEW)."
+      "notes": "WhenDigivolving Koromon DP buff (via self_digivolution_contains_name), OnDeletion play-tamer-or-hatch implemented. Delete-DP-≤-self BLOCKED on G-FORMULA-SOURCE-DP (NEW). [All Turns] dynamic-name-alias-from-stack BLOCKED on G-DYNAMIC-NAME-ALIAS-FROM-STACK (NEW)."
     },
     "BT17-081": {
       "card_name": "Tai Kamiya & Matt Ishida",
@@ -1382,7 +1382,7 @@
         "D4",
         "H4"
       ],
-      "notes": "_examples YAML has YAML BUG: target.of vs target.owner (G-PREDICATE-OF-ALIAS \u2014 over-fires on opp Omnimon). ENGINE GAP: aura-granted SecurityAttackPlus not consumed by security loop (G-AURA-GRANTED-SECURITY-KEYWORD)."
+      "notes": "_examples YAML has YAML BUG: target.of vs target.owner (G-PREDICATE-OF-ALIAS — over-fires on opp Omnimon). ENGINE GAP: aura-granted SecurityAttackPlus not consumed by security loop (G-AURA-GRANTED-SECURITY-KEYWORD)."
     },
     "EX4-061": {
       "card_name": "Matt Ishida & Tai Kamiya",
@@ -1528,7 +1528,7 @@
         "A2",
         "G2"
       ],
-      "notes": "select_reveal_buckets + alt_path_registration. NEW G-DSL-PREDICATE-TEXT-CONTAINS \u2014 text_contains approximated as name_contains. 14 pass / 1 ignored."
+      "notes": "select_reveal_buckets + alt_path_registration. NEW G-DSL-PREDICATE-TEXT-CONTAINS — text_contains approximated as name_contains. 14 pass / 1 ignored."
     },
     "BT22-026": {
       "card_name": "MetalGarurumon",
@@ -2172,6 +2172,2715 @@
       "yaml_path": "code/digimon-engine/cards/lm/LM-030.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_030.rs",
       "notes": "Main + Security ship; Delay clause blocked (4 known gaps)"
+    },
+    "BT14-009": {
+      "card_name": "Gotsumon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-batch-1-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/bt14/BT14-009.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt14/bt14_009.rs",
+      "test_count": 2,
+      "patterns": [
+        "FLOOD-GATE",
+        "PLAYER-SCOPED-PASSIVE"
+      ],
+      "notes": "Promoted from example-only YAML to production DSL. Player-scoped CannotPlayDigimonByEffect flood gate covers both players while in battle area."
+    },
+    "BT18-064": {
+      "card_name": "Mercurymon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-batch-1-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-064.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_064.rs",
+      "test_count": 3,
+      "patterns": [
+        "SOURCE-SCOPED-IMMUNITY",
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "On Play/When Digivolving grants hand/deck return immunity until end of opponent turn. Inherited opponent-turn +2000 DP is represented through source_dp_contribution, matching the existing static inherited aura contract."
+    },
+    "BT20-055": {
+      "card_name": "Invisimon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "FACE-UP-SECURITY",
+        "SECURITY-END-OPPONENT-TURN"
+      ],
+      "notes": "Pass complete: blocked on face-up security lifecycle and security end-of-opponent-turn play timing before faithful YAML."
+    },
+    "BT21-021": {
+      "card_name": "OmniShoutmon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "SAVE",
+        "CONDITIONAL-INHERITED-KEYWORD"
+      ],
+      "notes": "Pass complete: inherited Rush is conditional on host trait and face-up clauses need Save/Xros Heart play routing."
+    },
+    "BT21-055": {
+      "card_name": "Bombermon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-055.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_055.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DELETE-PLAY-COST-LTE"
+      ],
+      "notes": "Inherited source-trash delete implemented; face-up reduction/source clauses remain gap-routed."
+    },
+    "BT23-059": {
+      "card_name": "Justimon: Blitz Arm",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-059.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_059.rs",
+      "test_count": 1,
+      "patterns": [
+        "KEYWORD"
+      ],
+      "notes": "Blocker implemented; option-permanent cost, lowest-cost delete, unsuspend, and protection remain gap-routed."
+    },
+    "BT4-072": {
+      "card_name": "Gogmamon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/bt4/BT4-072.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_072.rs",
+      "test_count": 1,
+      "patterns": [
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "Inherited +1000 DP implemented; Digi-Burst main effect remains gap-routed."
+    },
+    "BT8-094": {
+      "card_name": "Digimon Emperor",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/bt8/BT8-094.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_094.rs",
+      "test_count": 1,
+      "patterns": [
+        "SECURITY-PLAY"
+      ],
+      "notes": "Security play implemented; deletion level-filter draw and breeding-move memory remain gap-routed."
+    },
+    "BT9-103": {
+      "card_name": "Kongou",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "TEMP-ATTACK-RESTRICTION",
+        "SECURITY-STACK-LOCK"
+      ],
+      "notes": "Pass complete: needs faithful opponent Digimon attack-player restriction by play cost and security-add lock validation."
+    },
+    "EX10-003": {
+      "card_name": "Tumblemon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "ATTACK-CANCEL",
+        "SOURCE-TRASH-COST"
+      ],
+      "notes": "Pass complete: inherited opponent-turn attack cancellation by trashing three Mineral/Rock sources needs attack-cancel and source-cost selection support."
+    },
+    "EX10-025": {
+      "card_name": "KoDokugumon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-025.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_025.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DELETE-PLAY-COST-LTE"
+      ],
+      "notes": "Inherited source-trash delete implemented; On Play source placement remains gap-routed."
+    },
+    "EX10-028": {
+      "card_name": "Golemon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-028.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_028.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DELETE-PLAY-COST-LTE"
+      ],
+      "notes": "Inherited source-trash delete implemented; face-up source-trash buff remains gap-routed."
+    },
+    "EX10-032": {
+      "card_name": "Proganomon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-032.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_032.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DE-DIGIVOLVE"
+      ],
+      "notes": "Inherited source-trash De-Digivolve implemented; hand-main and face-up buff remain gap-routed."
+    },
+    "EX10-033": {
+      "card_name": "Pyramidimon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_033.rs",
+      "test_count": 1,
+      "patterns": [
+        "FRAGMENT"
+      ],
+      "notes": "Fragment(3) implemented; source-placement and source-trash play-cost reduction remain gap-routed."
+    },
+    "EX10-034": {
+      "card_name": "Blastmon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-034.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_034.rs",
+      "test_count": 1,
+      "patterns": [
+        "KEYWORD",
+        "FRAGMENT"
+      ],
+      "notes": "Collision, Fragment(3), and Blocker implemented; forced-attack and source-trash buff remain gap-routed."
+    },
+    "EX10-036": {
+      "card_name": "Magneticdramon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-036.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_036.rs",
+      "test_count": 1,
+      "patterns": [
+        "FRAGMENT"
+      ],
+      "notes": "Fragment(3) implemented; source-trash delete/security-trash and trash-to-source unsuspend remain gap-routed."
+    },
+    "EX10-063": {
+      "card_name": "Close",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-063.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_063.rs",
+      "test_count": 1,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "SUSPEND-COST",
+        "GAIN-MEMORY"
+      ],
+      "notes": "All-turns source-trash memory trigger implemented; start-main hand/trash play remains gap-routed."
+    },
+    "EX10-069": {
+      "card_name": "Unique Emblem: Gravel Hearts",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_069.rs",
+      "test_count": 1,
+      "patterns": [
+        "HAND-TRASH-PLAY",
+        "SECURITY-MAIN-MIRROR"
+      ],
+      "notes": "Main/security hand-or-trash Sunarizamon/Close play path implemented; option placement and Close-suspend Delay remain gap-routed."
+    },
+    "EX11-038": {
+      "card_name": "Gotsumon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-038.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_038.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DRAW"
+      ],
+      "notes": "Inherited source-trash Draw 1 implemented; face-up hand/source cost clause remains gap-routed."
+    },
+    "EX11-044": {
+      "card_name": "Pyramidimon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-044.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_044.rs",
+      "test_count": 1,
+      "patterns": [
+        "KEYWORD",
+        "FRAGMENT"
+      ],
+      "notes": "Reboot and Fragment(3) implemented; highest-cost delete and source refill remain gap-routed."
+    },
+    "EX11-065": {
+      "card_name": "Close",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "HAND-OR-SOURCE-COST",
+        "SOURCE-PLACEMENT"
+      ],
+      "notes": "Pass complete: both clauses hinge on hand-or-source costs and source placement from hand/trash."
+    },
+    "EX7-049": {
+      "card_name": "Metallicdramon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-049.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_049.rs",
+      "test_count": 2,
+      "patterns": [
+        "DE-DIGIVOLVE"
+      ],
+      "notes": "On Play/When Attacking De-Digivolve 4 implemented; digivolve-prevention and leave-area replacement remain gap-routed."
+    },
+    "EX8-005": {
+      "card_name": "Sakuttomon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_005.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "GAIN-MEMORY"
+      ],
+      "notes": "Inherited source-trash gain-memory clause implemented and covered."
+    },
+    "EX8-046": {
+      "card_name": "Golemon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-046.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_046.rs",
+      "test_count": 3,
+      "patterns": [
+        "ON-DELETION",
+        "HAND-TRASH-COST",
+        "DRAW",
+        "KEYWORD"
+      ],
+      "notes": "On Deletion hand-trash Draw 2 and inherited Blocker implemented."
+    },
+    "EX8-047": {
+      "card_name": "Sunarizamon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-047.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_047.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DELETE-PLAY-COST-LTE"
+      ],
+      "notes": "Inherited source-trash delete implemented; reveal two-pick search remains gap-routed."
+    },
+    "EX8-048": {
+      "card_name": "Landramon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-048.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_048.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DELETE-PLAY-COST-LTE"
+      ],
+      "notes": "Inherited source-trash delete implemented; hand-play Close clause remains gap-routed."
+    },
+    "EX8-050": {
+      "card_name": "Gogmamon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-050.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_050.rs",
+      "test_count": 1,
+      "patterns": [
+        "KEYWORD"
+      ],
+      "notes": "Face-up Blocker implemented; on-deletion reveal/play and inherited redirect remain gap-routed."
+    },
+    "EX8-051": {
+      "card_name": "Proganomon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-batch-1-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-051.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_051.rs",
+      "test_count": 2,
+      "patterns": [
+        "KEYWORDS",
+        "SOURCE-TRASH-CONTEXT",
+        "DE-DIGIVOLVE"
+      ],
+      "notes": "Collision, Piercing, and Fragment(3) keywords plus inherited exact-source-trash De-Digivolve 1. Added reusable queue support for the trashed source card to fire its own inherited OnDigivolutionCardTrashed effect from trigger context."
+    },
+    "EX8-055": {
+      "card_name": "Pyramidimon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-055.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_055.rs",
+      "test_count": 1,
+      "patterns": [
+        "FRAGMENT"
+      ],
+      "notes": "Fragment(3) implemented; source-trash, unsuspend, Security Attack, and source-placement clauses remain gap-routed."
+    },
+    "EX8-067": {
+      "card_name": "Close",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-067.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_067.rs",
+      "test_count": 2,
+      "patterns": [
+        "MEMORY-SETTER",
+        "SECURITY-PLAY"
+      ],
+      "notes": "Start-of-turn memory setter and security play implemented; digivolve-trigger source placement remains gap-routed."
+    },
+    "EX8-070": {
+      "card_name": "Zofr Kabus",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "SOURCE-COST",
+        "TEMP-PROTECTION",
+        "LOWEST-COST-DELETE"
+      ],
+      "notes": "Pass complete: main clause needs source-cost selection plus temporary protection; security needs lowest-play-cost delete primitive."
+    },
+    "LM-031": {
+      "card_name": "Black Scramble",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-031.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_031.rs",
+      "test_count": 1,
+      "patterns": [
+        "EFFECT-DIGIVOLVE"
+      ],
+      "notes": "Main hand digivolve cost reduction implemented; start-turn Delay and security tail remain gap-routed."
+    },
+    "LM-032": {
+      "card_name": "Purple Scramble",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-032.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_032.rs",
+      "test_count": 1,
+      "patterns": [
+        "EFFECT-DIGIVOLVE"
+      ],
+      "notes": "Main hand digivolve cost reduction implemented; start-turn Delay and security tail remain gap-routed."
+    },
+    "P-039": {
+      "card_name": "Black Memory Boost!",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/p/P-039.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_039.rs",
+      "test_count": 1,
+      "patterns": [
+        "REVEAL-SEARCH",
+        "DELAY"
+      ],
+      "notes": "Main reveal/search and Delay gain memory implemented; security option placement remains gap-routed."
+    },
+    "P-107": {
+      "card_name": "Defense Training",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/p/P-107.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_107.rs",
+      "test_count": 1,
+      "patterns": [
+        "REVEAL-SEARCH",
+        "DELAY",
+        "EFFECT-DIGIVOLVE"
+      ],
+      "notes": "Main reveal/search and Delay digivolve body implemented; security option placement remains gap-routed."
+    },
+    "P-130": {
+      "card_name": "Lui Ohwada",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "MOVE-FROM-BREEDING",
+        "ON-MOVE"
+      ],
+      "notes": "Pass complete: On Play move-from-breeding and on-move suspend-memory trigger need move primitives/event timing."
+    },
+    "P-167": {
+      "card_name": "Landramon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/p/P-167.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_167.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DE-DIGIVOLVE"
+      ],
+      "notes": "Inherited source-trash De-Digivolve implemented; reveal search/source placement remains gap-routed."
+    },
+    "P-169": {
+      "card_name": "Close",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/p/P-169.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_169.rs",
+      "test_count": 2,
+      "patterns": [
+        "GAIN-MEMORY",
+        "SECURITY-PLAY"
+      ],
+      "notes": "Start-main memory clause and security play implemented; source-trash trash-to-source clause remains gap-routed."
+    },
+    "P-186": {
+      "card_name": "Gallantmon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/p/P-186.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_186.rs",
+      "test_count": 1,
+      "patterns": [
+        "KEYWORD"
+      ],
+      "notes": "Rush and Blocker implemented; cost reduction and delete-or-recover remain gap-routed."
+    },
+    "P-215": {
+      "card_name": "Gogmamon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/p/P-215.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_215.rs",
+      "test_count": 1,
+      "patterns": [
+        "KEYWORD"
+      ],
+      "notes": "Inherited Blocker implemented; face-up source-placement/protection remain gap-routed."
+    },
+    "ST13-08": {
+      "card_name": "Chikurimon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-batch-1-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/st13/ST13-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st13/st13_08.rs",
+      "test_count": 2,
+      "patterns": [
+        "FLOOD-GATE",
+        "PLAYER-SCOPED-PASSIVE"
+      ],
+      "notes": "Player-scoped CannotReducePlayCost flood gate covers both players while in battle area."
+    },
+    "ST22-11": {
+      "card_name": "Defense Plug-In F",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/st22/ST22-11.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st22/st22_11.rs",
+      "test_count": 1,
+      "patterns": [
+        "DE-DIGIVOLVE",
+        "SECURITY"
+      ],
+      "notes": "Security De-Digivolve 2/add-to-hand implemented; color bypass, Link, and Main link grant remain gap-routed."
+    },
+    "BT22-029": {
+      "card_name": "Shoemon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 1",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_029.rs",
+      "test_count": 2,
+      "patterns": [
+        "KEYWORD-GRANT",
+        "INHERITED-DP-MODIFIER"
+      ],
+      "notes": "On Play/On Deletion Puppet Blocker grant and inherited When Attacking -2000 DP slice shipped without raw_rust."
+    },
+    "BT22-032": {
+      "card_name": "ShoeShoemon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 1",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-032.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_032.rs",
+      "test_count": 2,
+      "patterns": [
+        "F-PLAY-FROM-HAND-FREE",
+        "INHERITED-DP-MODIFIER"
+      ],
+      "notes": "Optional On Deletion play-level-3-Puppet-from-hand and decline path shipped, plus inherited When Attacking -2000 DP slice."
+    },
+    "EX9-067": {
+      "card_name": "Mirai Kinosaki",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 1",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-067.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_067.rs",
+      "test_count": 2,
+      "patterns": [
+        "REVEAL-SEARCH",
+        "SECURITY-PLAY-SELF"
+      ],
+      "notes": "On Play mandatory reveal search and Security self-play shipped. The Your Turn digivolve observer/reduced-cost play rider remains omitted pending PUPPETS-G005 effect-initiated event-context/provenance coverage."
+    },
+    "ST19-03": {
+      "card_name": "Shoemon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Puppets Batch 1",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-03.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_03.rs",
+      "test_count": 1,
+      "patterns": [
+        "REVEAL-BUCKETS",
+        "NO-DUPLICATE-REVEAL-PICKS"
+      ],
+      "notes": "On Play dual-bucket Puppet/LIBERATOR reveal search shipped. Inherited opponent security Digimon -3000 DP aura is omitted pending G-OPPONENT-SECURITY-DP-AURA."
+    },
+    "ST19-04": {
+      "card_name": "PawnChessmon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 2",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_04.rs",
+      "test_count": 3,
+      "patterns": [
+        "TRASH-FROM-HAND-COST",
+        "DRAW",
+        "INHERITED-KEYWORD"
+      ],
+      "notes": "On Play Puppet hand discard for Draw 2, decline path, and inherited Reboot shipped without raw_rust."
+    },
+    "ST19-05": {
+      "card_name": "PawnChessmon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 2",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_05.rs",
+      "test_count": 2,
+      "patterns": [
+        "KEYWORD-GRANT",
+        "TRASH-FROM-HAND-COST",
+        "DRAW"
+      ],
+      "notes": "Face-up Blocker and On Deletion Puppet hand discard for Draw 2 shipped without raw_rust."
+    },
+    "ST19-06": {
+      "card_name": "Doggymon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 2",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_06.rs",
+      "test_count": 2,
+      "patterns": [
+        "SECURITY-ATTACK-MODIFIER",
+        "TARGET-OPPONENT-DIGIMON"
+      ],
+      "notes": "On Play/On Deletion target opponent Digimon Security Attack -1 shipped using the engine SecurityAttackChange modifier path."
+    },
+    "ST19-07": {
+      "card_name": "Tobucatmon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 3",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-07.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_07.rs",
+      "test_count": 2,
+      "patterns": [
+        "KEYWORD-GRANT",
+        "INHERITED-KEYWORD"
+      ],
+      "notes": "Face-up Jamming and inherited Barrier shipped without raw_rust."
+    },
+    "ST19-09": {
+      "card_name": "Pandamon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 2",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_09.rs",
+      "test_count": 2,
+      "patterns": [
+        "KEYWORD-GRANT",
+        "F-PLAY-FROM-HAND-FREE"
+      ],
+      "notes": "Face-up Blocker and optional On Deletion play level 3 Puppet from hand shipped without raw_rust."
+    },
+    "ST19-10": {
+      "card_name": "ExTyrannomon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 3",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-10.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_10.rs",
+      "test_count": 2,
+      "patterns": [
+        "KEYWORD-GRANT",
+        "INHERITED-KEYWORD"
+      ],
+      "notes": "Face-up Armor Purge and inherited Barrier shipped without raw_rust."
+    },
+    "ST19-12": {
+      "card_name": "Cendrillmon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets Batch 3",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_12.rs",
+      "test_count": 2,
+      "patterns": [
+        "OVERCLOCK",
+        "KEYWORD-GRANT",
+        "PLAY-TOKEN"
+      ],
+      "notes": "Puppet Overclock, Blocker, and optional When Digivolving play 2 Familiar Tokens shipped without raw_rust."
+    },
+    "ST19-14": {
+      "card_name": "Arisa Kinosaki",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype puppets",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets Batch 3",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-14.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_14.rs",
+      "test_count": 2,
+      "patterns": [
+        "MEMORY-SETTER",
+        "SECURITY-PLAY-SELF"
+      ],
+      "notes": "Start-of-turn memory setter and Security self-play shipped. Effect-played Token/Puppet Rush observer remains omitted pending PUPPETS-G005 effect-initiated event context/provenance."
+    },
+    "EX9-024": {
+      "card_name": "Hanimon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-a",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_024.rs",
+      "test_count": 3,
+      "patterns": [
+        "TRASH-FROM-HAND-COST",
+        "TRASH-TO-HAND",
+        "PUPPET-TRAIT-FILTER",
+        "INHERITED-ATTACK-CANCEL"
+      ],
+      "notes": "Resolver-backed Puppets card from `code/tools/resolve_deck.py Puppets --json`. Production YAML and focused tests cover the On Play optional discard-cost path, Puppet Digimon recursion from trash, decline path, and inherited opponent-turn attack cancellation by explicit EffectChoice, deleting the carrier Digimon, and ending the pending attack without a security check."
+    },
+    "EX9-027": {
+      "card_name": "Kokeshimon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-027.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_027.rs",
+      "test_count": 3,
+      "patterns": [
+        "TRASH-FROM-HAND-COST",
+        "DP-MODIFIER",
+        "ON-DELETION",
+        "WHEN-DIGIVOLVING",
+        "INHERITED-ATTACK-CANCEL"
+      ],
+      "notes": "Production YAML and focused tests cover the shared When Digivolving/On Deletion body: trash 1 card in hand as a visible cost, then select an opponent Digimon and apply -4000 DP. Inherited opponent-turn attack cancellation is implemented through the DSL on_opponent_attack timing, explicit EffectChoice, delete-this carrier cost, and end_attack step."
+    },
+    "EX11-019": {
+      "card_name": "Shoemon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-019.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_019.rs",
+      "test_count": 2,
+      "patterns": [
+        "EFFECT-CHOICE",
+        "TOKEN-PLAY",
+        "INHERITED-KEYWORD"
+      ],
+      "notes": "Production YAML and focused tests cover On Deletion optional Familiar Token play and inherited Barrier. The optional token play is an explicit EffectChoice prompt with a decline branch, not a hidden auto-selection."
+    },
+    "P-134": {
+      "card_name": "Shoemon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-a",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-134.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_134.rs",
+      "test_count": 2,
+      "patterns": [
+        "SECURITY-ATTACK-CHANGE",
+        "INHERITED-DP-MODIFIER"
+      ],
+      "notes": "Production YAML and focused tests cover On Play opponent Digimon Security Attack -1 through the opponent turn and inherited When Attacking OPT -2000 DP."
+    },
+    "EX7-025": {
+      "card_name": "ShoeShoemon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-025.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_025.rs",
+      "test_count": 1,
+      "patterns": [
+        "CONDITIONAL-TAMER-COUNT",
+        "PLAY-FROM-HAND-FREE"
+      ],
+      "notes": "Production YAML and focused test cover When Digivolving optional Arisa Kinosaki play from hand when you have 1 or fewer Tamers. Inherited opponent-security Digimon -3000 DP aura remains omitted pending `G-OPPONENT-SECURITY-DP-AURA` / `PUPPETS-G008`."
+    },
+    "EX7-027": {
+      "card_name": "Chaperomon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-027.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_027.rs",
+      "test_count": 2,
+      "patterns": [
+        "OVERCLOCK",
+        "PLAY-FROM-HAND-FREE"
+      ],
+      "notes": "Production YAML and focused tests cover Puppet Overclock and When Digivolving optional level 3 Puppet play from hand. Inherited leave-prevention by deleting a Token or other Puppet remains omitted pending the reusable Puppet/token replacement-cost body tracked in `qa/dsl-vocab-gaps.md`."
+    },
+    "EX7-063": {
+      "card_name": "Arisa Kinosaki",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-063.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_063.rs",
+      "test_count": 2,
+      "patterns": [
+        "START-OF-MAIN",
+        "SECURITY-PLAY-SELF"
+      ],
+      "notes": "Production YAML and focused tests cover Start of Your Main Phase memory gain when the opponent has a Digimon and Security play-self. The all-turns Token/Puppet deletion observer that suspends this Tamer to play a level 3 Puppet from hand remains omitted pending reusable event-context plus suspend-cost support."
+    },
+    "EX11-021": {
+      "card_name": "Kokeshimon",
+      "validated_date": "2026-05-03",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-b",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_021.rs",
+      "test_count": 2,
+      "patterns": [
+        "CONDITIONAL-TAMER-COUNT",
+        "PLAY-FROM-HAND-FREE",
+        "INHERITED-ATTACK-CANCEL"
+      ],
+      "notes": "Production YAML and focused tests cover When Digivolving optional Mirai Kinosaki play from hand when you have 1 or fewer Tamers, plus inherited opponent-turn attack cancellation by explicit EffectChoice, delete-this carrier cost, and end_attack. This batch also added DSL vocabulary/mapping for on_ally_attack and on_opponent_attack."
+    },
+    "BT4-104": {
+      "card_name": "Blinding Ray",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt4/BT4-104.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_104.rs",
+      "test_count": 4,
+      "patterns": [
+        "OPTION-MAIN",
+        "TRASH-TOP-SECURITY",
+        "GAIN-MEMORY"
+      ],
+      "notes": "Resolver-backed Batch 1 card. Production YAML and focused tests cover mandatory [Main] trash own top security, gain 2 memory afterward, no hidden choices, opponent security unchanged, and empty-security no-panic sequencing. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt4_104 p_037 lm_035 lm_037 --nocapture` (32 passed for batch filter)."
+    },
+    "P-037": {
+      "card_name": "Yellow Memory Boost!",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-1",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-037.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_037.rs",
+      "test_count": 9,
+      "patterns": [
+        "MEMORY-BOOST",
+        "REVEAL-SEARCH",
+        "DELAY",
+        "SECURITY-PLACE-OPTION"
+      ],
+      "notes": "Production YAML and focused tests cover reveal top 4, mandatory yellow-Digimon pick when eligible, bottom remainder, security placement as a delayed Option, and current engine Delay lifecycle gaining 2 memory. Marked PARTIAL because standard Delay is still modeled by the engine as scheduled delayed resolution rather than a visible post-placement [Main] activation/decline window."
+    },
+    "LM-035": {
+      "card_name": "Amber Memory Boost!",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-1",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-035.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_035.rs",
+      "test_count": 10,
+      "patterns": [
+        "MEMORY-BOOST",
+        "USE-REQUIREMENT",
+        "REVEAL-SEARCH",
+        "DELAY",
+        "SECURITY-PLACE-OPTION"
+      ],
+      "notes": "Production YAML and focused tests cover yellow Option metadata, purple alternate use requirement in the action mask, no bypass from unrelated colors, reveal top 3 with mandatory yellow/purple Digimon pick when eligible, security placement as a delayed Option, and current engine Delay lifecycle gaining 2 memory. Marked PARTIAL because standard Delay is still modeled by the engine as scheduled delayed resolution rather than a visible post-placement [Main] activation/decline window."
+    },
+    "LM-037": {
+      "card_name": "Sepia Memory Boost!",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-1",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-037.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_037.rs",
+      "test_count": 9,
+      "patterns": [
+        "MEMORY-BOOST",
+        "USE-REQUIREMENT",
+        "REVEAL-SEARCH",
+        "DELAY",
+        "SECURITY-PLACE-OPTION"
+      ],
+      "notes": "Production YAML and focused tests cover black Option metadata, yellow alternate use requirement in the action mask and execution path, reveal top 3 with mandatory black/yellow Digimon pick when eligible, security placement as a delayed Option, and current engine Delay lifecycle gaining 2 memory. Marked PARTIAL because standard Delay is still modeled by the engine as scheduled delayed resolution rather than a visible post-placement [Main] activation/decline window."
+    },
+    "ST19-01": {
+      "card_name": "Kyaromon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-01.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_01.rs",
+      "test_count": 5,
+      "patterns": [
+        "INHERITED-WHEN-ATTACKING",
+        "COUNT-OTHER-DIGIMON",
+        "DRAW",
+        "ONCE-PER-TURN"
+      ],
+      "notes": "Production YAML and focused tests cover inherited When Attacking Draw 1 only when another own battle-area Digimon exists, exclude the carrier itself through `other: true`, and enforce once-per-turn lockout."
+    },
+    "BT15-003": {
+      "card_name": "Nyaromon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-2",
+      "status": "BLOCKED",
+      "gap_kind": "dsl",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/_examples/BT15-003.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_003.rs",
+      "test_count": 5,
+      "patterns": [
+        "INHERITED-WHEN-ATTACKING",
+        "EFFECT-CHOICE",
+        "SECURITY-TRASH",
+        "GAIN-MEMORY"
+      ],
+      "notes": "Focused tests document the visible top/bottom security choice, top-security trash branch, no-security gating, and the blocked bottom-security branch. Full production YAML is blocked until native DSL can trash a selected/bottom security card and the existing `_examples/BT15-003.yaml` duplicate card-id/raw_rust fixture is retired or promoted safely."
+    },
+    "BT22-002": {
+      "card_name": "Kyaromon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-2",
+      "status": "BLOCKED",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-002.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_002.rs",
+      "test_count": 8,
+      "patterns": [
+        "INHERITED-ON-ANY-DELETION",
+        "EVENT-CONTEXT",
+        "TOKEN-FILTER",
+        "OTHER-PUPPET-FILTER",
+        "DRAW"
+      ],
+      "notes": "Production YAML preserves metadata and intentionally omits the inherited deletion observer. Focused tests document that full behavior is blocked until OnAnyDeletion fan-out carries the deleted permanent/card in TriggerContext so event_target predicates can distinguish own Tokens, own other Puppet Digimon, opponent Puppets, and the carrier itself."
+    },
+    "EX11-020": {
+      "card_name": "Hanimon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-2",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_020.rs",
+      "test_count": 5,
+      "patterns": [
+        "INHERITED-OPPONENT-ATTACK",
+        "ATTACK-CANCEL",
+        "DELETE-OTHER-DIGIMON-COST",
+        "ON-DELETION-CAUSE"
+      ],
+      "notes": "Production YAML and focused tests cover the inherited opponent-turn attack cancel by optional selection, deleting one other Digimon as cost, and ending the attack. The printed On Deletion free-play slice is omitted pending a DSL predicate that reads EffectContext::deletion_cause() so YAML can express 'deleted other than in battle'."
+    },
+    "EX7-024": {
+      "card_name": "Shoemon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-3",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_024.rs",
+      "test_count": 6,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "SOURCE-SCOPED-COST-REDUCTION",
+        "OPPONENT-SECURITY-DP-AURA"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata plus yellow Lv2 cost-0 digivolution path. The own-turn source-scoped cost reduction when this Digimon would digivolve into a Puppet is omitted pending the reusable when_this_digivolves_into + target-trait cost hook, and the inherited opponent-security Digimon DP aura remains omitted pending PUPPETS-G008."
+    },
+    "ST19-08": {
+      "card_name": "ShoeShoemon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-3",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_08.rs",
+      "test_count": 4,
+      "patterns": [
+        "OVERCLOCK",
+        "TOKEN-OR-PUPPET-COST-FILTER",
+        "UNION-ZONE-PLAY",
+        "OPPONENT-SECURITY-DP-AURA"
+      ],
+      "notes": "Production YAML and focused tests cover Puppet/Token Overclock cost filtering. The Security hand-or-trash LIBERATOR play is omitted pending filtered origin-preserving union-zone play, and the inherited opponent-security Digimon DP aura remains omitted pending PUPPETS-G008."
+    },
+    "ST19-11": {
+      "card_name": "Chaperomon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-3",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/st19/ST19-11.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_11.rs",
+      "test_count": 5,
+      "patterns": [
+        "ON-PLAY",
+        "WHEN-DIGIVOLVING",
+        "DP-MODIFIER",
+        "COUNT-THRESHOLD",
+        "INHERITED-REPLACEMENT"
+      ],
+      "notes": "Production YAML and focused tests cover On Play/When Digivolving selection of one opponent Digimon and -3000 DP for the turn. The extra -3000 branch at 3+ total Digimon is omitted pending evaluated subjectless count aggregates or threshold formulas, and the inherited prevent-leave-by-deleting Token/other Puppet slice remains omitted pending the reusable Puppet/token replacement-cost body from inherited stacks."
+    },
+    "P-165": {
+      "card_name": "ShoeShoemon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-3",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-165.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_165.rs",
+      "test_count": 5,
+      "patterns": [
+        "SECURITY-PLAY-SELF",
+        "PLAY-TOKEN",
+        "INHERITED-KEYWORD",
+        "TOKEN-CLEANUP"
+      ],
+      "notes": "Production YAML and focused tests cover security play-self, On Play/When Digivolving Familiar Token play, and inherited Barrier. The printed delayed cleanup that deletes that token at the end of the opponent's turn is omitted pending token-handle provenance from play_token and scheduled cleanup keyed to the specific token."
+    },
+    "EX7-030": {
+      "card_name": "Cendrillmon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-4",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-030.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_030.rs",
+      "test_count": 8,
+      "patterns": [
+        "OVERCLOCK",
+        "TOKEN-PLAY",
+        "START-OF-MAIN",
+        "WHEN-DIGIVOLVING",
+        "WHEN-ATTACKING",
+        "DP-MODIFIER"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, yellow Lv5 digivolve route, Puppet/Token Overclock cost filtering with action-mask assertions, optional Familiar Token play at Start of Your Main Phase and When Digivolving with decline branch, and When Attacking -6000 DP to one opponent Digimon."
+    },
+    "EX11-024": {
+      "card_name": "Cendrillmon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-4",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-024.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_024.rs",
+      "test_count": 5,
+      "patterns": [
+        "KEYWORD-GRANT",
+        "OVERCLOCK",
+        "PLAY-FROM-HAND-FREE",
+        "PLAY-TOKEN-PER-COUNT",
+        "FORMULA-DP-MODIFIER"
+      ],
+      "notes": "Production YAML and focused tests cover Alliance, Puppet/Token Overclock, optional level 4 or lower Puppet free-play from hand, optional Familiar Token generation once per opponent Digimon via for_each, and When Digivolving/When Attacking -3000 DP per own Digimon using a filtered card_count_in_zone formula."
+    },
+    "BT22-040": {
+      "card_name": "Cendrillmon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-4",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-040.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_040.rs",
+      "test_count": 8,
+      "patterns": [
+        "OVERCLOCK",
+        "TOKEN-PLAY",
+        "EFFECT-CHOICE",
+        "EFFECT-REFIRE"
+      ],
+      "notes": "Production YAML and focused tests cover Puppet/Token Overclock and optional On Play/When Digivolving Familiar Token play with explicit Play/Decline choices. The All Turns OPT refire slice is omitted because refire_effect exists but OnAnyDeletion still lacks deleted-permanent event context to enforce 'your other Digimon' without over-triggering."
+    },
+    "BT22-042": {
+      "card_name": "Nyabootmon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-4",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-042.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_042.rs",
+      "test_count": 9,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "OVERCLOCK",
+        "PLAY-FROM-HAND-FREE",
+        "FORMULA-DP-MODIFIER",
+        "EFFECT-REFIRE"
+      ],
+      "notes": "Production YAML and focused tests cover standard yellow Lv6 digivolve cost 4 and Puppet/Token Overclock. The conditional Arisa+Chaperomon cost-6 route is omitted pending conditional alt-path support; the When Digivolving may-play-plus-mandatory-DP compound body is omitted pending reliable optional substep continuation for this shape; the other-deletion refire is omitted pending deleted-permanent event context even though refire_effect itself exists."
+    },
+    "EX9-032": {
+      "card_name": "Karakurumon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-5",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-032.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_032.rs",
+      "test_count": 7,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "COSTED-SELF-DIGIVOLVE",
+        "INHERITED-REPLACEMENT"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata plus normal yellow Lv5 and Puppet Lv5 digivolve paths. The active On Play/When Digivolving delete Token/Puppet cost into self-digivolve is omitted because deleting the cost body can shift battle-area indices before target:self resolves, and the cost preflight cannot faithfully decide availability. The inherited Token/Puppet leave-prevention replacement is omitted pending inherited replacement dispatch and Puppet-token cost body support."
+    },
+    "EX9-033": {
+      "card_name": "Kaguyamon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-5",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_033.rs",
+      "test_count": 9,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "AURA-KEYWORD-GRANT",
+        "PLAY-FROM-TRASH-FREE",
+        "ON-ANY-DELETION"
+      ],
+      "notes": "Production YAML and focused tests cover yellow Lv5 cost 4 plus Puppet Lv5 cost 3 digivolve paths, Alliance/Blocker aura for own Puppet Digimon and Tokens only, and optional End of Your Turn play of a level 4 or lower Puppet from trash. The All Turns other-deletion lowest-level delete observer is omitted pending deleted-permanent event context for OnAnyDeletion."
+    },
+    "BT22-036": {
+      "card_name": "Chaperomon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-5",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-036.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_036.rs",
+      "test_count": 9,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "OVERCLOCK",
+        "HAND-MAIN",
+        "INHERITED-REPLACEMENT"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, yellow Lv4 cost 3 digivolve path, and Puppet/Token Overclock with action-mask assertions. The Hand Main Arisa-gated ShoeShoemon trash-to-Shoemon source placement, then Shoemon digivolves into this hand card for cost 3 ignoring requirements, is omitted pending hand-main trash preflight and hand-card digivolve support. The inherited Token/Puppet leave-prevention replacement is omitted pending inherited replacement dispatch and Puppet-token cost body support."
+    },
+    "EX11-022": {
+      "card_name": "Karakurumon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-5",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-022.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_022.rs",
+      "test_count": 7,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "SCAPEGOAT",
+        "UNION-ZONE-PLAY",
+        "EFFECT-PLAY-CLEANUP",
+        "INHERITED-REPLACEMENT"
+      ],
+      "notes": "Production YAML and focused tests cover yellow Lv4 cost 4 plus Puppet Lv3 cost 2 digivolve paths and Scapegoat replacement using another own Digimon while excluding own-effect deletion. The On Play/When Digivolving hand-or-trash Puppet DP<=4000 free-play plus turn-end cleanup is omitted pending hidden-zone DP filtering and effect-played permanent provenance. The inherited Token/Puppet leave-prevention replacement is omitted pending inherited replacement dispatch and Puppet-token cost body support."
+    },
+    "EX11-023": {
+      "card_name": "Kaguyamon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-6",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-023.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_023.rs",
+      "test_count": 14,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "KEYWORD-GRANT",
+        "SCAPEGOAT",
+        "LOWEST-LEVEL-DELETE",
+        "ON-ANY-DELETION"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, yellow Lv5 cost 4 and Puppet Lv5 cost 3 digivolve paths, Alliance, Scapegoat, mandatory lowest-level opponent Digimon deletion on When Digivolving and End of Opponent's Turn, tied-lowest target choice, and no-target no-prompt behavior. The All Turns other-Digimon-deleted optional level 4 or lower Puppet trash play is omitted pending deleted-object event context and source-exclusion support for OnAnyDeletion."
+    },
+    "EX11-060": {
+      "card_name": "Arisa Kinosaki",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-6",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-060.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_060.rs",
+      "test_count": 5,
+      "patterns": [
+        "MEMORY-SETTER",
+        "SECURITY-PLAY",
+        "ON-ANY-DELETION",
+        "SUSPEND-COST",
+        "OVERCLOCK-CAUSE"
+      ],
+      "notes": "Production YAML and focused tests cover the start-of-turn memory setter when memory is 2 or less, the negative case when memory is already above 2, and Security play-self. The All Turns Token/Puppet deletion observer, suspend-this-Tamer Draw 1 cost, and Overclock-gated optional level 4 or lower Puppet play from hand are omitted pending deleted-object event context, Overclock deletion-cause context, and suspend-this-Tamer cost vocabulary."
+    },
+    "EX11-061": {
+      "card_name": "Mirai Kinosaki",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-6",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-061.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_061.rs",
+      "test_count": 6,
+      "patterns": [
+        "START-OF-MAIN",
+        "SECURITY-PLAY",
+        "DIGIVOLVE-OBSERVER",
+        "EFFECT-PLAY-CLEANUP"
+      ],
+      "notes": "Production YAML and focused tests cover Start of Your Main Phase memory gain when the opponent has a Digimon, the negative no-op case without opponent Digimon, and Security play-self. The Your Turn Puppet digivolve observer that suspends this Tamer to play a level 3 Puppet from hand, then deletes the exact played Digimon at turn end, is omitted pending effect-initiated digivolve observer context and effect-played permanent cleanup provenance."
+    },
+    "P-229": {
+      "card_name": "Unique Emblem: Narrative Ronde",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-6",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-229.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_229.rs",
+      "test_count": 9,
+      "patterns": [
+        "REVEAL-SEARCH",
+        "DUAL-BUCKET",
+        "SECURITY-ACTIVATE-MAIN",
+        "DELAY",
+        "EFFECT-DIGIVOLVE"
+      ],
+      "notes": "Production YAML and focused tests cover Main and Security reveal-top-3 dual-bucket search, adding 1 Puppet Digimon and 1 LIBERATOR without double-picking the same card and bottoming the remainder. The option battle-area placement and event-gated Delay when Mirai Kinosaki is played, followed by reduced-cost level 6 or lower LIBERATOR digivolve from hand, are omitted pending option placement plus on_ally_played Delay timing and reduced-cost effect-digivolve support."
+    },
+    "BT22-098": {
+      "card_name": "Unique Emblem: Fable Waltz",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-7",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-098.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_098.rs",
+      "test_count": 11,
+      "patterns": [
+        "FREE-PLAY-FROM-HAND",
+        "SECURITY-ACTIVATE-MAIN",
+        "EVENT-GATED-DELAY",
+        "EFFECT-DIGIVOLVE"
+      ],
+      "notes": "Production YAML and focused tests cover the supported hand-origin Main slice for Shoemon/Arisa free-play, the inherited Security mirror of that hand-origin slice, and the Arisa-suspend event-gated Delay body with Puppet base selection, Puppet+LIBERATOR hand evolution selection, and cost reduction 3. Exact hand-or-trash origin-preserving Main/Security play and full integrated option placement remain omitted pending PUPPETS-G014 and PUPPETS-G009."
+    },
+    "LM-029": {
+      "card_name": "Yellow Scramble",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-7",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_029.rs",
+      "test_count": 10,
+      "patterns": [
+        "EFFECT-DIGIVOLVE",
+        "OPTION-SELF-TO-HAND",
+        "SCRAMBLE-DELAY"
+      ],
+      "notes": "Production YAML and focused tests cover the supported Main digivolve path into yellow Digimon with cost reduction 3, visible field and hand choices, and the mandatory Security add-this-option-to-hand tail. The optional Security play of a yellow 2000 DP or less Digimon from trash and the Scramble Delay trash-to-deck-top body remain omitted pending hidden-zone DP filtering and optional-substep mandatory tail support."
+    },
+    "P-105": {
+      "card_name": "Physical Training",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-7",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-105.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_105.rs",
+      "test_count": 12,
+      "patterns": [
+        "REVEAL-SEARCH",
+        "DELAY",
+        "EFFECT-DIGIVOLVE",
+        "SECURITY-PLACE-OPTION"
+      ],
+      "notes": "Production YAML and focused tests cover Main reveal-top-2 add 1 yellow card of any kind, option pipeline placement as a delayed Option, inherited Security placement into battle area, and the scheduled Delay body with optional target selection and yellow Digimon hand evolution cost reduction 2. Standard Delay remains partial because the engine does not expose later Main-phase Delay activation as a player-visible action yet."
+    },
+    "LM-054": {
+      "card_name": "Treadmill Training",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-7",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-054.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_054.rs",
+      "test_count": 12,
+      "patterns": [
+        "COLOR-BYPASS",
+        "REVEAL-SEARCH",
+        "DELAY",
+        "EFFECT-DIGIVOLVE",
+        "SECURITY-PLACE-OPTION"
+      ],
+      "notes": "Production YAML and focused tests cover conditional color-requirement bypass while no Treadmill is in battle area, Main reveal-top-2 yellow/black search, option pipeline placement as a delayed Option, inherited Security reveal/search plus battle-area placement, and the scheduled Delay body with yellow/black hand evolution cost reduction 2. Standard Delay remains partial because the engine does not expose later Main-phase Delay activation as a player-visible action yet."
+    },
+    "BT13-101": {
+      "card_name": "Miki Kurosaki & Megumi Shirakawa",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-8",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-101.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_101.rs",
+      "test_count": 10,
+      "patterns": [
+        "PLAY-FROM-HAND-FREE",
+        "SECURITY-PLAY",
+        "ON-ENTER-FIELD-OBSERVER"
+      ],
+      "notes": "Production YAML and focused tests cover the optional On Play free play of a PawnChessmon-named Digimon from hand and Security play-self. The All Turns observer that suspends this Tamer when you play an exactly two-color black/yellow Digimon is omitted pending event-card color-only/color-count predicates and source-bound suspend-cost preflight."
+    },
+    "BT16-055": {
+      "card_name": "Namakemon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-8",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt16/BT16-055.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_055.rs",
+      "test_count": 7,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "CONDITIONAL-BRANCH",
+        "KEYWORD-GRANT",
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, normal black Lv3 and Pulsemon-name digivolution paths, and the <=3 security On Play/When Digivolving branch that grants Blocker and Reboot to 1 own Digimon until opponent turn end. The >=3 security narrow protection against opponent DP reduction and De-Digivolve, plus inherited text-contains-Pulsemon DP aura, are omitted pending reusable protection and text predicate support."
+    },
+    "BT20-084": {
+      "card_name": "Sistermon Ciel (Awakened)",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-8",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-084.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_084.rs",
+      "test_count": 6,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "CANNOT-SUSPEND",
+        "TRASH-RESIDENT-OBSERVER",
+        "SOURCE-TO-SECURITY"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, Sistermon Ciel cost-1 digivolution path, and On Play/When Digivolving selection of an opponent Digimon or Tamer to receive CannotSuspend until opponent turn end. The Trash All Turns observer that digivolves one of your Sistermon Ciels into this card from trash and the End of All Turns top-stack-card-to-security movement are omitted pending reusable trash-resident observer and source-stack-to-security support."
+    },
+    "BT22-088": {
+      "card_name": "Arisa Kinosaki",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-8",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-088.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_088.rs",
+      "test_count": 7,
+      "patterns": [
+        "SECURITY-PLAY",
+        "OPTIONAL-COST",
+        "ON-ENTER-FIELD-OBSERVER",
+        "SUSPEND-COST"
+      ],
+      "notes": "Production YAML and focused tests cover Security play-self. The Start of Your Main Phase optional return-this-Tamer-to-deck-bottom cost into exact Arisa/Shoemon free-play branches and the All Turns Token/Puppet played observer with suspend-this-Tamer Draw 1 cost are omitted pending optional trigger-cost support and faithful play-event context."
+    },
+    "BT23-077": {
+      "card_name": "Sistermon Ciel",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-9",
+      "status": "PARTIAL",
+      "gap_kind": "dsl",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-077.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_077.rs",
+      "test_count": 6,
+      "patterns": [
+        "KEYWORD",
+        "ON-PLAY-DELETE",
+        "PLAY-COST-FILTER",
+        "ON-SUSPEND-OBSERVER"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, face-up Blocker, and mandatory On Play selection/deletion of an opponent Digimon with play cost 4 or less. The All Turns self-suspend De-Digivolve 1 observer is omitted pending PUPPETS-G029 self-scoped OnSuspend event predicates."
+    },
+    "BT5-033": {
+      "card_name": "Cutemon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-9",
+      "status": "IMPLEMENTED",
+      "gap_kind": "none",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt5/BT5-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_033.rs",
+      "test_count": 3,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "FLOOD-GATE",
+        "COST-REDUCTION-SUPPRESSION"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, yellow Lv2 digivolve path for cost 0, and the opponent-turn floodgate that prevents the opponent from reducing digivolution costs while leaving ordinary digivolve actions legal."
+    },
+    "BT5-106": {
+      "card_name": "Demonic Disaster",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-9",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt5/BT5-106.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_106.rs",
+      "test_count": 7,
+      "patterns": [
+        "MAIN-FROM-HAND",
+        "OPTIONAL-SELECTION",
+        "DELETE-COST",
+        "UNSUSPEND",
+        "SECURITY-PLAY-FROM-TRASH"
+      ],
+      "notes": "Production YAML and focused tests cover the Main effect as an optional visible own-Digimon delete selection followed by a visible own suspended purple Digimon unsuspend selection, including decline and no-target tail behavior. The Security play-from-trash slice is omitted pending PUPPETS-G030 effect-play provenance that suppresses the played Digimon's On Play effects."
+    },
+    "BT6-084": {
+      "card_name": "Sistermon Ciel",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-9",
+      "status": "IMPLEMENTED",
+      "gap_kind": "none",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-084.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_084.rs",
+      "test_count": 6,
+      "patterns": [
+        "AURA",
+        "DP-MODIFIER",
+        "ON-PLAY-MEMORY"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, face-up All Turns +2000 DP aura for own Huckmon-name or Royal Knight-trait Digimon, aura refresh when the source leaves field, and On Play gain 1 memory. Duplicated ingestion inherited text is not implemented as inherited behavior."
+    },
+    "BT9-033": {
+      "card_name": "Pillomon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-10",
+      "status": "IMPLEMENTED",
+      "gap_kind": "none",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_033.rs",
+      "test_count": 3,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "FLOOD-GATE",
+        "EFFECT-PLAY-LOCK"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, yellow Lv2 digivolve path for cost 0, and the all-turns all-player floodgate preventing Digimon from being played by effects while normal hand play remains legal."
+    },
+    "EX4-074": {
+      "card_name": "ShineGreymon: Ruin Mode",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-10",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex4/EX4-074.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_074.rs",
+      "test_count": 5,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "MASS-DP-REDUCTION",
+        "END-OF-ATTACK",
+        "RECOVERY",
+        "HATCH"
+      ],
+      "notes": "Production YAML and focused tests cover metadata plus purple Lv6 and ShineGreymon digivolve paths. The When Digivolving/On Deletion opponent-wide -5000 DP clause is omitted pending opponent-next-turn expiry support; the End of Attack self-delete/opponent-delete/Recovery/conditional-hatch chain is omitted pending PUPPETS-G031."
+    },
+    "EX6-011": {
+      "card_name": "RagnaLoardmon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-10",
+      "status": "PARTIAL",
+      "gap_kind": "engine",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex6/EX6-011.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex6/ex6_011.rs",
+      "test_count": 8,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "DNA-DIGIVOLVE",
+        "KEYWORD",
+        "ACE-OVERFLOW",
+        "SECURITY-TRASH",
+        "EFFECT-IMMUNITY",
+        "DNA-ORIGIN"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, Ace Overflow -5, red Lv6 digivolve path, red+black Lv6 DNA route, Raid/Reboot, On Play/When Digivolving top-security trash and opponent-effect immunity, and the DNA-origin De-Digivolve-all plus delete-one tail. The Hand Counter Blast DNA Digivolve activation is omitted pending PUPPETS-G032 / G-COUNTER-BLAST-DNA-ACTIVATION."
+    },
+    "EX8-030": {
+      "card_name": "Tapirmon",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-10",
+      "status": "IMPLEMENTED",
+      "gap_kind": "none",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-030.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_030.rs",
+      "test_count": 2,
+      "patterns": [
+        "ALT-DIGIVOLVE",
+        "FLOOD-GATE",
+        "MEMORY-GAIN-SOURCE-FILTER"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, yellow Lv2 and NSo Lv2 digivolve paths for cost 0, and the opponent memory-gain floodgate that blocks non-Tamer-source memory gain while allowing Tamer-source gain and clears when Tapirmon leaves field."
+    },
+    "P-136": {
+      "card_name": "Arisa Kinosaki",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-11",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-136.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_136.rs",
+      "test_count": 10,
+      "patterns": [
+        "TAMER",
+        "FREE-PLAY",
+        "SECURITY-PLAY-SELF",
+        "SOURCE-BOUND-SUSPEND-COST"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, optional On Play exact Shoemon hand free-play with decline/negative filtering, and Security play-self. The Your Turn Puppet-digivolve observer with source-bound suspend-this-Tamer cost remains omitted pending PUPPETS-G023."
+    },
+    "P-156": {
+      "card_name": "Future Potential!",
+      "validated_date": "2026-05-04",
+      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-11",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid",
+      "archetype": "Puppets",
+      "yaml_path": "code/digimon-engine/cards/p/P-156.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_156.rs",
+      "test_count": 10,
+      "patterns": [
+        "OPTION-USE-REQUIREMENT",
+        "BINDING-COLOR-MATCH",
+        "HAND-TRASH-FREE-PLAY",
+        "SECURITY-ADD-THIS-OPTION-TO-HAND"
+      ],
+      "notes": "Production YAML and focused tests cover metadata, Tamer-based option color bypass, Main chosen-Tamer binding into hand/trash Digimon free-play filtered by bound Tamer color and play cost <=3, and the mandatory Security add-this-option-to-hand tail. The Security optional Tamer play before the mandatory tail remains omitted pending PUPPETS-G017."
+    },
+    "BT6-082": {
+      "card_name": "Sistermon Blanc",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype/royal-knights-batch-1",
+      "status": "IMPLEMENTED",
+      "gap_kind": "none",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt6/BT6-082.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt6/bt6_082.rs",
+      "test_count": 4,
+      "patterns": [
+        "AURA",
+        "GRANT-KEYWORD",
+        "ON-PLAY-DRAW"
+      ],
+      "notes": "Production YAML and focused tests cover printed metadata, All Turns Blocker aura for own Sistermon-name Digimon while an own Huckmon-name or Royal Knight-trait Digimon is in play, aura inactivity without an anchor, target scoping, and On Play Draw 1."
+    },
+    "BT13-093": {
+      "card_name": "Omekamon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype/royal-knights-batch-1",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-093.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_093.rs",
+      "test_count": 3,
+      "patterns": [
+        "ON-PLAY-DRAW"
+      ],
+      "notes": "On Play Draw 1 implemented and tested. On Deletion hand Royal Knight source placement under King Drasil is stubbed with an ignored regression pending RK-G001 filtered select_own_breeding_permanent support."
+    },
+    "BT20-083": {
+      "card_name": "Omekamon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype/royal-knights-batch-1",
+      "status": "PARTIAL",
+      "gap_kind": "hybrid-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-083.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_083.rs",
+      "test_count": 2,
+      "patterns": [
+        "GRANT-KEYWORD",
+        "LOW-SECURITY-DIGIVOLVE"
+      ],
+      "notes": "Face-up Blocker and low-security optional free Omnimon (X Antibody) digivolve from hand are authored and structurally tested. On Deletion King Drasil placement is stubbed pending RK-G001; inherited breeding security-removed source play is stubbed pending breeding trigger dispatch and source/material play support."
+    },
+    "EX11-071": {
+      "card_name": "Cool Boy",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype/royal-knights-batch-1",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-071.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_071.rs",
+      "test_count": 2,
+      "patterns": [
+        "REVEAL-BUCKETS",
+        "ON-PLAY-SEARCH"
+      ],
+      "notes": "On Play dual-bucket reveal top 3 search is authored and tested with no-duplicate-card bucket semantics and bottom remainder. Main return-this-Tamer cost into reduced-cost hand play is stubbed pending RK-G002."
+    },
+    "BT20-060": {
+      "card_name": "Alphamon: Ouryuken",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype royal-knights",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-060.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_060.rs",
+      "test_count": 5,
+      "tests_passing": 2,
+      "tests_ignored": 3,
+      "patterns": [
+        "ACE",
+        "DNA-ROUTE",
+        "DP-MODIFIER"
+      ],
+      "notes": "Royal Knights batch 2. ACE metadata, standard/DNA routes, and -15000 DP target slice implemented; Blast DNA counter, DNA security trash/recovery, and security-removed memory remain gap-routed."
+    },
+    "BT20-100": {
+      "card_name": "The Last Guardian",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype royal-knights",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-100.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_100.rs",
+      "test_count": 4,
+      "tests_passing": 3,
+      "tests_ignored": 1,
+      "patterns": [
+        "REVEAL-BUCKETS",
+        "OPTION-AS-PERMANENT",
+        "HAND-TRASH-BRANCH"
+      ],
+      "notes": "Royal Knights batch 2. Main search/place and Security hand/trash branch implemented; Delay Omnimon leave-prevention blocked by RK-G003."
+    },
+    "BT23-054": {
+      "card_name": "Magnamon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype royal-knights",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-054.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_054.rs",
+      "test_count": 3,
+      "tests_passing": 2,
+      "tests_ignored": 1,
+      "patterns": [
+        "BLOCKER",
+        "PROTECTION-MODIFIERS"
+      ],
+      "notes": "Royal Knights batch 2. Blocker, routes, Draw 1, and selected return protection implemented; Armor Purge blocked by RK-G003."
+    },
+    "BT23-058": {
+      "card_name": "Craniamon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype royal-knights",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-058.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_058.rs",
+      "test_count": 3,
+      "tests_passing": 2,
+      "tests_ignored": 1,
+      "patterns": [
+        "REBOOT",
+        "BLOCKER",
+        "REPLACEMENT"
+      ],
+      "notes": "Royal Knights batch 2. Reboot, Blocker, routes, and suspend-self leave prevention replacement implemented; self on_suspend lowest-play-cost delete-all remains gap-routed."
+    },
+    "BT13-110": {
+      "card_name": "Royal Knights of the Purge",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype royal-knights",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-110.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_110.rs",
+      "test_count": 5,
+      "tests_passing": 3,
+      "tests_ignored": 2,
+      "patterns": [
+        "DRAW",
+        "OPTION-AS-PERMANENT"
+      ],
+      "notes": "Royal Knights batch 3. Main Draw 1/place self and Security place self implemented; King Drasil source placement/play with On Play suppression and Rush blocked by RK-G001."
+    },
+    "BT20-091": {
+      "card_name": "Cool Boy",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype royal-knights",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-091.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_091.rs",
+      "test_count": 4,
+      "tests_passing": 3,
+      "tests_ignored": 1,
+      "patterns": [
+        "EVENT-OBSERVER",
+        "SUSPEND-COST",
+        "SECURITY-PLAY"
+      ],
+      "notes": "Royal Knights batch 3. Royal Knight play/digivolve suspend-cost draw+memory and Security play implemented; opponent-turn Omekamon response blocked by RK-G004."
+    },
+    "BT19-072": {
+      "card_name": "LordKnightmon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype royal-knights",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-072.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_072.rs",
+      "test_count": 3,
+      "tests_passing": 2,
+      "tests_ignored": 1,
+      "patterns": [
+        "TRASH-PLAY"
+      ],
+      "notes": "Royal Knights batch 3. Optional level 4 or lower Digimon play from trash implemented; opponent-turn attack retarget blocked by G-ATTACK-RETARGET."
+    },
+    "BT13-019": {
+      "card_name": "Gankoomon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-019.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_019.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Blocker implemented; play Sistermon/Royal Knight from trash/breeding sources with exclusions is gap-stubbed."
+    },
+    "BT13-030": {
+      "card_name": "UlforceVeedramon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "BLOCKED",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-030.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_030.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-STUB",
+        "GAP-STUB"
+      ],
+      "notes": "Load-only gap stub; counted source trash and sourceless-opponent aura are not faithfully expressible yet."
+    },
+    "BT13-075": {
+      "card_name": "Alphamon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "BLOCKED",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-075.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_075.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-STUB",
+        "GAP-STUB"
+      ],
+      "notes": "Load-only gap stub; source-placement cost tied to high-play-cost attack restriction and security-trash leave replacement remain blocked."
+    },
+    "BT13-087": {
+      "card_name": "Dynasmon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-087.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_087.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Reveal top 4, add up to 2 Lucemon/Royal Knight cards, trash rest implemented; played-another matching Digimon observer delete-all is gap-stubbed."
+    },
+    "BT13-102": {
+      "card_name": "Keenan Crier",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-102.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_102.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Security play implemented; opponent hidden-hand choice and opponent-turn effect-play observer are gap-stubbed."
+    },
+    "BT13-111": {
+      "card_name": "Gallantmon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-111.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_111.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Rush implemented; combined-trash play-cost reduction and delete-fallback branch are gap-stubbed."
+    },
+    "BT13-112": {
+      "card_name": "Omnimon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "BLOCKED",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-112.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_112.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-STUB",
+        "GAP-STUB"
+      ],
+      "notes": "Load-only gap stub; modal delete or different-name Royal Knight source play from breeding remains blocked."
+    },
+    "BT15-092": {
+      "card_name": "Revelation of Light",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "BLOCKED",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt15/BT15-092.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_092.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-STUB",
+        "GAP-STUB"
+      ],
+      "notes": "Load-only gap stub; security-trash self-dispatch, security search/play, self-to-security top, and security-Digimon debuff remain blocked."
+    },
+    "BT17-077": {
+      "card_name": "Imperialdramon: Paladin Mode",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt17/BT17-077.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_077.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "ACE metadata and source-trash-all-opponent-Digimon slice implemented; Blast Digivolve, bulk trash-to-deck, returned-card binding, and sourceless bottom-deck cost remain blocked."
+    },
+    "BT19-093": {
+      "card_name": "Queen Device",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "BLOCKED",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-093.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_093.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-STUB",
+        "GAP-STUB"
+      ],
+      "notes": "Load-only gap stub; option battle-area carrier lifecycle and security target pair remain blocked."
+    },
+    "BT20-017": {
+      "card_name": "Jesmon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "BLOCKED",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-017.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_017.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-STUB",
+        "GAP-STUB"
+      ],
+      "notes": "Load-only gap stub; Atho/Rene/Por token and other-Digimon-played delete/may-attack observer remain blocked."
+    },
+    "BT20-021": {
+      "card_name": "Jesmon GX",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "BLOCKED",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_021.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-STUB",
+        "GAP-STUB"
+      ],
+      "notes": "ACE metadata and standard route recorded; Royal Knight hand/trash source cost, DP comparison, unsuspend, and source-count security trash remain blocked."
+    },
+    "BT20-045": {
+      "card_name": "Examon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-045.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_045.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "ACE metadata plus Raid/Piercing/Blocker/Evade implemented; Blast DNA, DNA-gated highest-DP sweep, and suspend observer remain blocked."
+    },
+    "BT20-056": {
+      "card_name": "Alphamon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt20/BT20-056.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_056.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Barrier and Recovery +1 implemented; during-attack breeding digivolve, security-removed observer, and inherited replacement remain blocked."
+    },
+    "BT22-025": {
+      "card_name": "UlforceVeedramon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-025.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_025.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "ACE metadata and when-attacking optional unsuspend implemented; Blast Digivolve and modal lowest-level bottom-deck/blue Tamer play remain blocked."
+    },
+    "BT22-041": {
+      "card_name": "Kentaurosmon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-041.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_041.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Blocker, Barrier, and optional yellow hand-to-top-security implemented; total-security cost reduction and suspend-trigger security-trash unsuspend remain blocked."
+    },
+    "BT22-052": {
+      "card_name": "Leopardmon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-052.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_052.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "ACE metadata, optional 5000 DP-or-lower hand play, and temporary Blocker grant to own level 3+ Digimon implemented; Blast Digivolve and other-would-leave observer remain blocked."
+    },
+    "BT23-013": {
+      "card_name": "Jesmon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-013.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_013.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Rush and Alliance implemented; Atho/Rene/Por token or Sistermon union play with name exclusion and other-played may-attack observer remain blocked."
+    },
+    "BT23-035": {
+      "card_name": "Dynasmon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-035.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_035.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Barrier and top-security-cost -6000 DP board debuff implemented; security-removed bonus/recovery tail remains blocked."
+    },
+    "BT23-047": {
+      "card_name": "Examon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-047.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_047.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Piercing and Security A +1 implemented; Partition, five-target suspend, next-unsuspend lock, may-attack, and security-removed tail remain blocked."
+    },
+    "BT23-057": {
+      "card_name": "Gankoomon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "BLOCKED",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-057.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_057.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-STUB",
+        "GAP-STUB"
+      ],
+      "notes": "Load-only gap stub; multi-trash-to-deck cost, Hinukamuy token, and dynamic play-cost delete remain blocked."
+    },
+    "BT23-072": {
+      "card_name": "King Drasil_7D6",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "BLOCKED",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-072.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_072.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-STUB",
+        "GAP-STUB"
+      ],
+      "notes": "Load-only gap stub; hand-main source placement, played-Digimon keyword grant, and breeding source play remain blocked."
+    },
+    "EX10-068": {
+      "card_name": "Digimon Emperor",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-068.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_068.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "On Play delete play cost 5 or lower and Security play implemented; opponent distinct-color count and returned-card color binding tail remain blocked."
+    },
+    "EX11-053": {
+      "card_name": "Omekamon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "BLOCKED",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-053.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_053.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-STUB",
+        "GAP-STUB"
+      ],
+      "notes": "Load-only gap stub; Royal Knight hand-to-King-Drasil source placement and union hand/source Omnimon X play remain blocked."
+    },
+    "EX8-073": {
+      "card_name": "Gallantmon (X Antibody)",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
+      "status": "BLOCKED",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-073.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_073.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-STUB",
+        "GAP-STUB"
+      ],
+      "notes": "Load-only gap stub; source-gated DP swings, delete-or-security fallback, and memory aura immunity remain blocked."
+    },
+    "AD1-004": {
+      "card_name": "WarGreymon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-004.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_004.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Raid and Piercing implemented; unsupported printed follow-up clauses remain gap-stubbed in tests/comments."
+    },
+    "AD1-017": {
+      "card_name": "Dynasmon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "BLOCKED",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-017.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_017.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Load-only gap stub; top-or-bottom security-trash cost into board-wide debuff remains blocked."
+    },
+    "AD1-018": {
+      "card_name": "LordKnightmon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-018.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_018.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Play-cost 3 or lower delete slice implemented; inherited/security-removed follow-up remains gap-stubbed."
+    },
+    "BT13-007": {
+      "card_name": "King Drasil_7D6",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-007.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_007.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "King Drasil support slice implemented where current DSL allows; breeding/source event fan-out remains gap-stubbed."
+    },
+    "BT13-040": {
+      "card_name": "Magnamon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-040.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_040.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Blocker and recovery/security slice implemented; remaining security/search and prevention clauses are gap-stubbed."
+    },
+    "BT13-095": {
+      "card_name": "Marcus Damon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt13/BT13-095.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_095.rs",
+      "test_count": 3,
+      "tests_passing": 2,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Supported Marcus Damon tamer slice implemented; remaining activation/observer pieces gap-stubbed."
+    },
+    "BT15-084": {
+      "card_name": "Kari Kamiya",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt15/BT15-084.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_084.rs",
+      "test_count": 3,
+      "tests_passing": 1,
+      "tests_ignored": 2,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Supported Kari Kamiya tamer slice implemented; remaining security / conditional clauses gap-stubbed."
+    },
+    "BT21-086": {
+      "card_name": "Marcus Damon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-086.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_086.rs",
+      "test_count": 3,
+      "tests_passing": 2,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Supported Marcus Damon tamer slice implemented; remaining unsupported observer/costed clauses gap-stubbed."
+    },
+    "BT22-009": {
+      "card_name": "Effecmon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-009.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_009.rs",
+      "test_count": 4,
+      "tests_passing": 2,
+      "tests_ignored": 2,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Supported Effecmon slices implemented; remaining security end-of-battle and unsupported clauses gap-stubbed."
+    },
+    "BT23-064": {
+      "card_name": "Bakemon",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-064.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_064.rs",
+      "test_count": 3,
+      "tests_passing": 3,
+      "tests_ignored": 0,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-IMPLEMENTED"
+      ],
+      "notes": "On Play/When Digivolving own-delete cost into opponent level 4 or lower delete and inherited On Deletion gain-memory implemented."
+    },
+    "BT8-090": {
+      "card_name": "Kari Kamiya",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt8/BT8-090.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_090.rs",
+      "test_count": 3,
+      "tests_passing": 2,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Supported Kari Kamiya tamer slice implemented; remaining unsupported clauses gap-stubbed."
+    },
+    "BT9-092": {
+      "card_name": "Cool Boy",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-092.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_092.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Supported Cool Boy slice implemented; remaining X Antibody search/option follow-ups gap-stubbed."
+    },
+    "EX11-069": {
+      "card_name": "Yuuki",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_069.rs",
+      "test_count": 4,
+      "tests_passing": 2,
+      "tests_ignored": 2,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Supported Yuuki tamer slice implemented; remaining unsupported clauses gap-stubbed."
+    },
+    "EX4-065": {
+      "card_name": "Trident Gaia",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/ex4/EX4-065.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_065.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Supported Trident Gaia slice implemented where faithful; remaining unsupported branch gap-stubbed."
+    },
+    "RB1-035": {
+      "card_name": "Hokuto Amanokawa",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/rb1/RB1-035.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/rb1/rb1_035.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Supported Hokuto Amanokawa tamer slice implemented; remaining unsupported clauses gap-stubbed."
+    },
+    "ST12-12": {
+      "card_name": "Sistermon Blanc",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/st12/ST12-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st12/st12_12.rs",
+      "test_count": 3,
+      "tests_passing": 2,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Supported Sistermon Blanc slice implemented; remaining unsupported clauses gap-stubbed."
+    },
+    "ST12-15": {
+      "card_name": "From Master to Disciple",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 4-8",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
+      "yaml_path": "code/digimon-engine/cards/st12/ST12-15.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st12/st12_15.rs",
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "Reveal/add/trash option slice implemented; remaining unsupported activation/flow clauses gap-stubbed."
     }
   }
 }

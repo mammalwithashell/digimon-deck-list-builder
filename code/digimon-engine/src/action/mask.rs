@@ -11,7 +11,9 @@
 use crate::action::space::*;
 use crate::card_data::CardData;
 use crate::effect_context::{AttackTargetRestriction, EffectReadContext};
-use crate::enums::{CardColor, CardKind, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId};
+use crate::enums::{
+    CardColor, CardKind, EffectSourceKind, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId,
+};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
 use crate::tensor::FIELD_SLOTS;
@@ -99,6 +101,9 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 // the player has a matching-color Digimon/Tamer, or when a
                 // printed Use Req. predicate satisfies that requirement.
                 if is_option_use {
+                    if !option_has_active_main_effect(card, game, player_id) {
+                        continue;
+                    }
                     if !option_use_requirement_or_color_available(card, game, player_id) {
                         continue;
                     }
@@ -698,6 +703,68 @@ pub(crate) fn option_use_requirement_or_color_available(
             .option_color_requirement_bypass
             .as_ref()
             .is_some_and(|condition| condition(&ctx))
+    })
+}
+
+/// An Option hand/trash use must have a currently active `OptionMain` body.
+/// This prevents partial Security-only YAML from becoming a legal no-effect
+/// hand play, and lets card-level conditions preflight mandatory Main choices.
+pub(crate) fn option_has_active_main_effect(
+    card: &crate::card_source::CardSource,
+    game: &Game,
+    player_id: PlayerId,
+) -> bool {
+    let card_id = card.card_id(&game.card_data);
+    let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
+        return false;
+    };
+    let ctx = EffectReadContext::new_with_source_kind(
+        game,
+        card.handle(),
+        None,
+        EffectSourceKind::Option,
+        player_id,
+    );
+    effects.iter().any(|effect| {
+        if effect.delay_trigger.is_some() {
+            return true;
+        }
+        if effect.timing != EffectTiming::OptionMain {
+            return false;
+        }
+        effect
+            .condition
+            .as_ref()
+            .is_none_or(|condition| condition(&ctx))
+    })
+}
+
+/// Counter-window Option uses are legal through a `CounterEffect` body even
+/// when the card has no ordinary `OptionMain` body.
+pub(crate) fn option_has_active_counter_effect(
+    card: &crate::card_source::CardSource,
+    game: &Game,
+    player_id: PlayerId,
+) -> bool {
+    let card_id = card.card_id(&game.card_data);
+    let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
+        return false;
+    };
+    let ctx = EffectReadContext::new_with_source_kind(
+        game,
+        card.handle(),
+        None,
+        EffectSourceKind::Option,
+        player_id,
+    );
+    effects.iter().any(|effect| {
+        if effect.timing != EffectTiming::CounterEffect || !effect.counter {
+            return false;
+        }
+        effect
+            .condition
+            .as_ref()
+            .is_none_or(|condition| condition(&ctx))
     })
 }
 

@@ -1,0 +1,15 @@
+card: BT8-094
+name: "Digimon Emperor"
+kind: tamer
+color: [black]
+cost: 3
+
+# Printed deletion draw and breeding-move memory clauses are not authored in
+# this pass. The deletion clause needs event-target level predicates; the
+# breeding clause needs OnMove support.
+
+effects:
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

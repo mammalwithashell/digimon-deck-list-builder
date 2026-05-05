@@ -1,0 +1,43 @@
+card: AD1-025
+name: Omnimon
+kind: digimon
+level: 7
+color: [red, white]
+cost: 15
+dp: 15000
+traits: [Holy Warrior, Royal Knight, ADVENTURE, Hero]
+
+alt_paths:
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, name_contains: "Greymon" }
+      - { level_eq: 6, name_contains: "Garurumon" }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - kind: partition
+    sources:
+      - { name_contains: "WarGreymon" }
+      - { name_contains: "MetalGarurumon" }
+    exclude_cause: [own_effect, battle]
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Return opponent Digimon with <= this source count, then delete 1"
+    process:
+      # BLOCKED: G-SOURCE-COUNT-BOUND-BOUNCE-THEN-DELETE — this requires an
+      # aggregate comparison against this Digimon's source count followed by a
+      # second mandatory delete prompt. The historical example uses a raw Rust
+      # hook that remains unregistered; keep the clause visible for audit tests.
+      - raw_rust: { fn: ad1_025_on_play_process }
+
+  # Omitted:
+  # [All Turns][Once Per Turn] When any opponent Digimon leaves the battle
+  # area, trash 1 of their battle-area Options and their top security. Current
+  # DSL lacks the observer payload and once-per-turn coverage for that shape.

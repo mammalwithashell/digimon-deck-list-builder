@@ -1,0 +1,49 @@
+card: BT22-052
+name: Leopardmon
+kind: digimon
+level: 6
+color: [green]
+cost: 7
+dp: 12000
+traits: [Holy Warrior, Royal Knight, CS]
+attribute: Data
+ace_overflow: -4
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+
+effects:
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] Play 1 5000 DP or lower Digimon from hand; your level 3+ Digimon gain Blocker"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 5000
+          prompt: "Play 1 5000 DP or lower Digimon card from your hand"
+      - play_from_hand_free: { of: you, hand_index: pick }
+      - for_each:
+          over:
+            all_of:
+              - kind: digimon
+              - of: you
+              - zone: [battle_area]
+              - level_gte: 3
+          bind_as: ally
+          body:
+            - grant_keyword:
+                target: ally
+                keyword: Blocker
+                expiry: end_of_opponents_turn
+
+# Stubbed:
+# - [Hand][Counter] Blast Digivolve is not modeled in this card entry.
+# - [All Turns][Once Per Turn] when another Digimon would leave battle area,
+#   gain 2 memory needs replacement/event observer for another permanent.

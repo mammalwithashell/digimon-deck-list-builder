@@ -1,0 +1,12 @@
+card: BT4-104
+name: Blinding Ray
+kind: option
+color: [yellow]
+cost: 0
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Trash the top card of your security stack. Then, gain 2 memory."
+    process:
+      - trash_top_security: { of: you }
+      - gain_memory: 2

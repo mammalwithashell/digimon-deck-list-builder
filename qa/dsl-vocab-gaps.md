@@ -15,6 +15,61 @@ Format per entry:
 - First reported: YYYY-MM-DD
 ```
 
+## Royal Knights — filtered breeding permanent target  [RK-G001]
+- Effect text: BT13-093: "[On Deletion] Place 1 Digimon card with the [Royal Knight] trait from your hand under a [King Drasil_7D6] in the breeding area as its bottom digivolution card." BT20-083: "[On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area."
+- Missing DSL verb / step kind / predicate: `select_own_breeding_permanent` has no `filter` field, so YAML cannot require that the selected breeding permanent is actually `[King Drasil_7D6]`.
+- Lowers to engine API: existing breeding pending-selection and `place_as_bottom_source` flow once the selected breeding permanent can be filtered by top-card name/card id.
+- Suggested DSL syntax:
+  ```yaml
+  - select_own_breeding_permanent:
+      bind_as: kd
+      filter: { name_is: "King Drasil_7D6" }
+      prompt: "Choose your [King Drasil_7D6]"
+      then:
+        - place_as_bottom_source: { source: ..., target: kd }
+  ```
+- First reported: 2026-05-05 Royal Knights batch 1 implementation pass.
+
+## Royal Knights — source-bound return-self cost into reduced-cost hand play  [RK-G002]
+- Effect text: EX11-071: "[Main] By returning this Tamer to the bottom of the deck, you may play 1 play cost 4 or higher [Royal Knight] or [LIBERATOR] trait card from your hand with the play cost reduced by 2."
+- Missing DSL verb / step kind / predicate: a Main-phase activation that pays a source-bound `return_to_deck { target: source, position: bottom }` cost and then opens a player-visible hand play selection whose actual payment is reduced by 2.
+- Lowers to engine API: existing source permanent binding, hand selection, and pay-cost flow need a reusable action/pending-selection wrapper so the return cost and reduced play payment stay one legal choice.
+- Suggested DSL syntax:
+  ```yaml
+  - when: main
+    optional: true
+    pay_cost:
+      - return_to_deck: { target: source, position: bottom }
+    process:
+      - select_hand:
+          bind_as: played
+          filter:
+            all_of:
+              - play_cost_gte: 4
+              - any_of:
+                  - trait_has: "Royal Knight"
+                  - trait_has: LIBERATOR
+          prompt: "Play a cost 4+ Royal Knight/LIBERATOR"
+      - play_from_hand:
+          target: played
+          cost: { reduce: 2 }
+  ```
+- First reported: 2026-05-05 Royal Knights batch 1 implementation pass.
+
+## Royal Knights full pool pass — residual reusable DSL/engine gaps  [RK-G005]
+- Status: PARTIAL pool pass completed on 2026-05-05. The Royal Knights resolver pool has 72 unique cards and now has 72 Rust DSL YAML entries. Fully unsupported clauses were left as explicit YAML comments plus ignored Rust tests instead of hidden approximations.
+- Newly routed or reaffirmed blocked cards/clauses: `BT13-019`, `BT13-030`, `BT13-075`, `BT13-087`, `BT13-102`, `BT13-111`, `BT13-112`, `BT15-092`, `BT17-077`, `BT19-093`, `BT20-017`, `BT20-021`, `BT20-045`, `BT20-056`, `BT22-025`, `BT22-041`, `BT22-052`, `BT23-013`, `BT23-035`, `BT23-047`, `BT23-057`, `BT23-072`, `EX8-073`, `EX10-068`, and `EX11-053`.
+- Missing DSL/engine areas: union selection across hand/trash/breeding/source zones; play from King Drasil or other source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; Blast Digivolve and Blast DNA action paths; Option battle-area carrier lifecycle for non-Delay options; security-trash self-dispatch; security search/play and self-to-security placement; global security-removed observers; immediate may-attack/action prompts; Partition; and replacement/security-trash costs tied atomically to prevention.
+- Workaround policy: no approximations were used for these blockers. If a printed clause required one of the missing primitives, the YAML either implemented an independent faithful slice such as a keyword/security play/simple trigger, or used a load-only gap stub.
+- Verification: targeted `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- <card_filter> --nocapture` passed for the final 25 filters, with one active load test and one ignored gap test per card.
+- First reported: 2026-05-05 Royal Knights full pool implementation pass.
+
+## Rocks pool pass residual DSL/engine gaps
+- Status: PARTIAL pool pass completed on 2026-05-04. After pulling main, production YAML/test slices now exist for 40 of 47 Rocks pool cards; the remaining 7 were explicitly routed as blocked rather than no-op authored.
+- Remaining blocked cards: `BT20-055`, `BT21-021`, `BT9-103`, `EX10-003`, `EX11-065`, `EX8-070`, `P-130`. Main now carries newer `P-123` coverage, so the stale Rocks blocked record was not retained.
+- Missing DSL/engine areas: face-up security lifecycle and security end-of-opponent-turn timing; conditional inherited keyword grants based on host traits; Save/Xros routing; attack-cancel effects; hand-or-source costs with source trait filtering; source placement from hand/trash; lowest-play-cost delete; effect move-from-breeding and same-side/costed `[When Moving]` follow-up shapes beyond the resolved base OnMove timing.
+- First reported: 2026-05-04 Rocks pool implementation pass.
+
 ## Zephagamon / Vortexdramon — remaining battle-engine prep gaps
 - Status: partial readiness slice added 2026-05-03. `EX11-074.yaml` now covers static `<Piercing>`, `<Vortex>`, `<Blocker>`, and a focused `battle:` pathway. The regression in `tests/cards_behavioral/ex11/ex11_074.rs` proves that an effect battle deletes the defender through DP battle but is not an attack: it must not trigger Piercing/security and must not leave `pending_attack` populated.
 - Rule boundary: `battle:` is the correct DSL step for effects that say a Digimon battles another Digimon. Do not model these as `attack` or force-follow-up attack effects. Attack-only timings and Piercing security continuation remain tied to declared attacks, not effect battles.
@@ -148,7 +203,7 @@ Format per entry:
 
 ## Rocks archetype refresh — authored YAML coverage note
 - Assessment target: the `Rocks` / `RockClose` archetype in `data/deck_library.json`, refreshed on 2026-04-28.
-- Finding: only `BT14-009`, `BT16-082`, `EX7-074`, and `P-206` currently have Rust YAML under `code/digimon-engine/cards/`; the main `EX8`/`EX10`/`EX11`/`P-167` Rocks shell is not authored in DSL yet.
+- Finding: as of the 2026-05-04 Rocks batch plus the pulled main updates, 40 of 47 Rocks pool cards have Rust YAML under `code/digimon-engine/cards/`. New Rocks pass coverage added or audited the `EX8`/`EX10`/`EX11`/`P-167` shell; the remaining missing cards are tracked in the residual gap entry above.
 - Existing DSL gaps reaffirmed by the refresh:
   - `EX11-008 — [When Moving] timing` no longer blocks on the `on_move` token or moved-card event context as of 2026-04-29; card bodies may still need separate target-selection, reveal, or follow-up action primitives.
   - `P-189 — play cost <= filter` was closed on 2026-05-01 for static `play_cost_lte` filters on `select_hand` / `select_trash`; remaining Rocks blockers are tracked separately.
@@ -1254,3 +1309,79 @@ Format per entry:
 - Workaround: Clause 1c is omitted from BT17-077.yaml; behavioral test #[ignore]'d.
 - Cross-ref: G-RETURN-ALL-TRASH-TO-DECK-BOTTOM (above) must close first (Clause 1b provides the moved-card set that Clause 1c predicates on).
 - First reported: 2026-05-04 (BT17-077 batch-implement-cards-rust-dsl).
+---
+
+## Royal Knights — Delay/keyword leave-prevention replacements  [RK-G003]
+
+- Effect text: `BT20-100` The Last Guardian: "[All Turns] When any of your Digimon with [Omnimon] in its name would leave the battle area, <Delay> ... 1 of those Digimon doesn't leave." `BT23-054` Magnamon: "<Armor Purge> (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)"
+- Missing DSL verb / step kind / predicate: reusable Delay replacement and Armor Purge keyword lowering that pay the printed cost, bind the replacement subject, and cancel the pending would-leave/deletion event without approximating the subject or cause.
+- Companion engine state: generic replacement lowering exists for some cancel flows, but Royal Knights needs option-as-Delay source costs and keyword-provided top-card trash costs that are not yet represented as reusable declarative keyword/replacement emitters.
+- Suggested DSL syntax:
+  ```yaml
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    source_is_delay_option: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - name_contains: "Omnimon"
+    cost:
+      trash_source_delay_option: {}
+    process:
+      - cancel_replacement: {}
+
+  - kind: grant_keyword
+    keyword: ArmorPurge
+  ```
+- Gap kind: hybrid. The engine replacement framework handles cancellation, but DSL/keyword lowering needs reusable costed replacement emitters and subject filters for these printed shapes.
+- Workaround: None faithful. Auto-cancelling without the cost or omitting the replacement changes a player-visible prevention choice.
+- First reported: 2026-05-05 (Royal Knights Batch 2: BT20-100, BT23-054).
+
+---
+
+## Royal Knights — would-leave observer that plays from hand without cancelling  [RK-G004]
+
+- Effect text: `BT20-091` Cool Boy: "[Opponent's Turn] [Once Per Turn] When any of your Digimon with the [Royal Knight] trait would leave the battle area, you may play 1 [Omekamon] from your hand without paying the cost."
+- Missing DSL verb / step kind / predicate: a would-leave observer that sees the replacement subject and can run an optional hand play while allowing the original leave event to proceed.
+- Companion engine state: `kind: replacement` can observe would-leave events, but current authoring patterns are cancellation/prevention-centric. This card needs a non-cancelling reaction at the same timing with event subject filters, OPT accounting, and ordinary pending hand selection/play.
+- Suggested DSL syntax:
+  ```yaml
+  - when: when_would_leave_battle_area
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - replacement_subject_is_mine: true
+        - trait_has: "Royal Knight"
+    optional: true
+    once_per_turn: true
+    process:
+      - select_hand:
+          bind_as: omekamon
+          filter: { name_is: "Omekamon" }
+      - play_from_hand_free: { of: you, hand_index: omekamon }
+  ```
+- Gap kind: hybrid. Engine timing/context exists through replacement context, but DSL needs a first-class non-cancelling would-leave observer or a documented replacement form whose default outcome proceeds safely.
+- Workaround: None faithful. A cancellation replacement would prevent the leaving Digimon incorrectly; omitting the clause hides a legal optional response.
+- First reported: 2026-05-05 (Royal Knights Batch 3: BT20-091).
+
+---
+
+## Royal Knights — attack target retarget response  [G-ATTACK-RETARGET]
+
+- Effect text: `BT19-072` LordKnightmon: "[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, you may switch the attack target to 1 of your Digimon with the [Royal Knight] trait."
+- Missing DSL verb / step kind / predicate: attack-state pending selection that can replace the current defender/security target with a selected own permanent matching a filter.
+- Companion engine state: attack declaration and blocker/Raid-like retargeting are action-state concerns; a normal triggered effect after attack declaration cannot faithfully mutate the target without a dedicated interrupt point.
+- Suggested DSL syntax:
+  ```yaml
+  - when: opponent_attacks
+    optional: true
+    once_per_turn: true
+    process:
+      - select_own_permanent:
+          bind_as: new_target
+          filter: { kind: digimon, trait_has: "Royal Knight" }
+      - switch_attack_target: { target: new_target }
+  ```
+- Gap kind: engine and DSL. The engine needs an attack-retarget pending state; DSL needs vocabulary to request it.
+- Workaround: None faithful. Preselecting targets at attack declaration or auto-retargeting hides the printed optional timing.
+- First reported: 2026-05-05 (Royal Knights Batch 3: BT19-072).

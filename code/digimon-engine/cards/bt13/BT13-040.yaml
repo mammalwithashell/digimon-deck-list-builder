@@ -1,0 +1,24 @@
+card: BT13-040
+name: Magnamon
+kind: digimon
+level: 4
+color: [yellow, blue]
+cost: 7
+dp: 7000
+traits: [Holy Warrior, Royal Knight]
+form: "Armor Form"
+attribute: Free
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+
+  # Omitted:
+  # [All Turns] When this Digimon would leave the battle area, draw 1, then may
+  # play 1 Veemon from hand or this Digimon's sources. This needs a would-leave
+  # replacement/observer that can play from either hand or source after drawing.

@@ -1,0 +1,46 @@
+card: P-136
+name: Arisa Kinosaki
+kind: tamer
+color: [yellow]
+cost: 4
+traits: [LIBERATOR]
+
+# Printed text:
+# [On Play] You may play 1 [Shoemon] from your hand without paying the cost.
+#
+# [Your Turn] [Once Per Turn] When one of your Digimon digivolves into a
+# Digimon with the [Puppet] trait, by suspending this Tamer, gain 1 memory.
+#
+# Security Effect [Security] Play this card without paying the cost.
+#
+# Supported faithfully here:
+# - Optional [On Play] exact-name [Shoemon] hand play without paying cost.
+# - [Security] play this Tamer without paying cost.
+#
+# Omitted rather than approximated:
+# - The [Your Turn][Once Per Turn] Puppet-digivolve observer requires a
+#   reusable source-bound suspend-cost preflight: the trigger should only be
+#   offered when this exact Tamer is unsuspended and can be suspended as the
+#   printed cost. Implementing that by auto-suspending or by a broad event
+#   observer would hide a player-visible cost decision.
+
+effects:
+  - when: on_play
+    optional: true
+    summary: "[On Play] You may play 1 Shoemon from hand for free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: shoemon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: Shoemon
+          prompt: "Play 1 [Shoemon] from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: shoemon }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

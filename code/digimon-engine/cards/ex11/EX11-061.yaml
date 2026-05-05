@@ -1,0 +1,30 @@
+card: EX11-061
+name: Mirai Kinosaki
+kind: tamer
+color: [yellow, purple]
+cost: 4
+traits: [LIBERATOR]
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # [Your Turn] when any of your Digimon digivolve into Puppet, suspend this
+  # Tamer to optionally play 1 level 3 Puppet from hand for free. At turn end,
+  # delete the Digimon this effect played.
+  #
+  # Omitted pending PUPPETS-G003: identity-stable provenance and turn-end
+  # cleanup for "the Digimon this effect played." A partial play-only body
+  # would leave the temporary Digimon on field and is not faithful.

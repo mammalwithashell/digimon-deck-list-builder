@@ -1,0 +1,29 @@
+card: EX7-024
+name: Shoemon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Puppet, LIBERATOR]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+# Own [Your Turn] cost reduction:
+# "When this Digimon would digivolve into a Digimon card with the [Puppet] trait,
+# reduce the digivolution cost by 1."
+#
+# BLOCKED: same reusable gap as BT23-005. The DSL/engine currently lacks a
+# `when_this_digivolves_into` + target-trait hook for source-scoped digivolution
+# cost reduction. Do not encode this as `cost_reduction` for playing this card or
+# as an unconditional alt_path cost change; those would change legality/costs.
+#
+# Inherited [Your Turn] opponent security DP aura:
+# "All of your opponent's Security Digimon get -3000 DP."
+#
+# BLOCKED: same Puppet gap as ST19-03/EX7-025. The engine has
+# `EffectBuilder::applies_to_opponent_security_dp()`, but YAML DSL has no bridge
+# for an inherited opponent-security-Digimon DP aura. Omitted rather than
+# approximated.

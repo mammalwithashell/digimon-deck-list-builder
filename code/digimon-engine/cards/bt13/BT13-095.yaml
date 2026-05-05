@@ -1,0 +1,38 @@
+card: BT13-095
+name: Marcus Damon
+kind: tamer
+color: [red, yellow]
+cost: 5
+traits: [Hero]
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If you have 2 memory or less, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  - when: on_play
+    summary: "[On Play] This Marcus Damon may suspend"
+    process:
+      - select_own_permanent:
+          bind_as: marcus
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - name_contains: "Marcus Damon"
+              - is_unsuspended: true
+          prompt: "Suspend this Marcus Damon"
+      - suspend: { target: marcus }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # Omitted:
+  # [All Turns] When this Tamer suspends, 1 opponent Digimon gets -3000 DP for
+  # the turn; if you have a Digimon with [Agumon] or [Greymon] in name, gain 1
+  # memory. Current DSL cannot gate on the on_suspend event target being this
+  # exact source Tamer without over-firing when another permanent suspends.

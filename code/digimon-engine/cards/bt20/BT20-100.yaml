@@ -1,0 +1,78 @@
+card: BT20-100
+name: "The Last Guardian"
+kind: option
+color: [white]
+cost: 4
+traits: ["Royal Knight"]
+
+effects:
+  # [Main] reveal top 3; add 1 Cool Boy and 1 Royal Knight/X Antibody trait
+  # card; bottom the rest; then place this card in the battle area.
+  - when: main_from_hand
+    summary: "[Main] Reveal top 3; add Cool Boy and Royal Knight/X Antibody; bottom rest; place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: cool_boy
+              min: 1
+              max: 1
+              filter: { name_is: "Cool Boy" }
+            - bind_as: trait_card
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - trait_has: "Royal Knight"
+                  - trait_has: "X Antibody"
+          prompt: "Select 1 [Cool Boy] and 1 [Royal Knight]/[X Antibody] trait card"
+      - add_to_hand_from_reveal: { of: you, card: cool_boy }
+      - add_to_hand_from_reveal: { of: you, card: trait_card }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  # The printed Delay replacement ("1 of those [Omnimon]-named Digimon doesn't
+  # leave") is omitted until the DSL can express a Delay option cancelling a
+  # cross-permanent would-leave event for the replacement subject.
+
+  # Security Effect: may play [Omekamon] or [Cool Boy] from hand or trash free;
+  # then place this card in the battle area. Branching mirrors existing union
+  # hand/trash play workarounds.
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security] You may play [Omekamon] or [Cool Boy] from hand or trash free; then place self in battle area"
+    process:
+      - select_effect_choice:
+          labels: ["From hand", "From trash"]
+          bind_as: zone_choice
+          prompt: "From which area do you play [Omekamon] or [Cool Boy]?"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: picked_hand
+                optional: true
+                filter:
+                  any_of:
+                    - name_is: "Omekamon"
+                    - name_is: "Cool Boy"
+                prompt: "Play [Omekamon] or [Cool Boy] from hand"
+            - play_from_hand_free: { of: you, hand_index: picked_hand }
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: picked_trash
+                optional: true
+                filter:
+                  any_of:
+                    - name_is: "Omekamon"
+                    - name_is: "Cool Boy"
+                prompt: "Play [Omekamon] or [Cool Boy] from trash"
+            - play_from_trash_free: { of: you, hand_index: picked_trash }
+      - place_self_as_delay_option: {}

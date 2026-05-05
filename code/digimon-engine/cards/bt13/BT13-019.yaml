@@ -1,0 +1,24 @@
+card: BT13-019
+name: Gankoomon
+kind: digimon
+level: 6
+color: [red, black]
+cost: 13
+dp: 13000
+traits: [Holy Warrior, Royal Knight]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+
+# Stubbed:
+# - [On Play][When Digivolving] may play Sistermon from trash or a Royal Knight
+#   from breeding sources, excluding Gankoomon and Omnimon. This needs a reusable
+#   union selection over trash plus breeding sources with name-exclusion filters.

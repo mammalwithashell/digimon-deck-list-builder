@@ -19,6 +19,14 @@ fn compiled_timing_mapping_covers_common_triggered_timings() {
         Some(EffectTiming::OnAttack)
     );
     assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::OnAllyAttack),
+        Some(EffectTiming::OnAllyAttack)
+    );
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::OnOpponentAttack),
+        Some(EffectTiming::OnOpponentAttack)
+    );
+    assert_eq!(
         compiled_timing_to_engine(CompiledTiming::EndOfYourTurn),
         Some(EffectTiming::EndOfYourTurn)
     );

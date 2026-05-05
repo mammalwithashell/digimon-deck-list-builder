@@ -1,0 +1,16 @@
+card: BT15-092
+name: Revelation of Light
+kind: option
+color: [yellow]
+cost: 4
+
+effects: []
+
+# Stubbed:
+# - When this card is trashed from security by an effect, activate this card's
+#   Security effect. Needs security-trash observer dispatch for the trashed card.
+# - [Main] search security, play a yellow level 4 or lower Digimon from it,
+#   shuffle security, then if you have Kari Kamiya place this card on top of
+#   security. Needs filtered security search/play and self-to-security top.
+# - [Security] all opponent Digimon and security Digimon get -5000 DP. Needs
+#   security-Digimon battle modifiers in addition to board-wide debuff.

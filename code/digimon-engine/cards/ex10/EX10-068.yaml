@@ -1,0 +1,30 @@
+card: EX10-068
+name: Digimon Emperor
+kind: tamer
+color: [black]
+cost: 5
+
+effects:
+  - when: on_play
+    summary: "[On Play] Delete 1 opponent play cost 5 or lower Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte: 5
+          prompt: "Delete 1 opponent Digimon with play cost 5 or lower"
+      - delete_permanent: { target: victim }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+# Stubbed:
+# - [Start of Your Main Phase] gain memory for every 2 colors among opponent
+#   Digimon and Tamers needs distinct-color counting across opponent permanents.
+# - The On Play tail returns one opponent trash Digimon to deck bottom, then
+#   may play a level 4 or lower Digimon from hand/trash with the same color.
+#   Needs returned-card color binding plus union hand/trash play.

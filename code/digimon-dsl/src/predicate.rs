@@ -37,6 +37,8 @@ pub struct PredicateSpec {
     pub color_only: Option<Vec<ColorSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_matches_any_field_digimon: Option<PlayerRefSelector>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_matches_binding: Option<String>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         alias = "trait",

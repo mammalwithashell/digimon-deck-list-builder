@@ -1,0 +1,25 @@
+card: EX11-060
+name: Arisa Kinosaki
+kind: tamer
+color: [yellow]
+cost: 4
+traits: [LIBERATOR]
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If memory is 2 or less, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # [All Turns] When any of your Tokens or Puppet Digimon are deleted, by
+  # suspending this Tamer, Draw 1. If deleted by Overclock, you may play 1
+  # level 4 or lower Puppet Digimon from hand without paying the cost.
+  # Omitted rather than approximated: this needs deleted-object event context,
+  # Overclock cause context, suspend-this-Tamer cost payment, draw, and the
+  # optional play branch surfaced through action/pending-selection contracts.

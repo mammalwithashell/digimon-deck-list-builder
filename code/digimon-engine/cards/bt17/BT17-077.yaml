@@ -115,11 +115,12 @@ card: BT17-077
 name: "Imperialdramon: Paladin Mode"
 kind: digimon
 level: 7
-color: [blue]
+color: [black, blue]
 cost: 9
 dp: 16000
-traits: [Free, Mythical Dragon]
+traits: [Ancient Holy Warrior]
 
+attribute: Vaccine
 # ─── Inherited: Ace Overflow <-5> ────────────────────────────────────────────
 # Printed: "Ace Overflow <-5> (As this card moves from the field or under a
 #  card to an area other than those, lose 5 memory.)"

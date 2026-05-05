@@ -1,0 +1,23 @@
+card: EX8-067
+name: Close
+kind: tamer
+color: [black]
+cost: 4
+traits: [LIBERATOR]
+
+# Printed [Your Turn] digivolve-into-Mineral/Rock trigger that suspends this
+# Tamer to place up to 2 Mineral/Rock cards from trash as sources is not
+# authored in this pass.
+
+effects:
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

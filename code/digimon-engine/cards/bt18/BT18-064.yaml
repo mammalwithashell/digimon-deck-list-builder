@@ -1,0 +1,34 @@
+card: BT18-064
+name: Mercurymon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 5000
+traits: [Hybrid, Variable, Mutant]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "This Digimon can't be returned to hand or deck by opponent effects"
+    process:
+      - add_modifier:
+          target: source
+          modifier: CannotBeReturnedToHand
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: source
+          modifier: CannotBeReturnedToDeck
+          value: 1
+          expiry: end_of_opponents_turn
+
+  - scope: inherited
+    kind: aura
+    active_when: { opponents_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Opponent's Turn] This Digimon gets +2000 DP"

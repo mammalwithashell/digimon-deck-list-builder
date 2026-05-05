@@ -1,0 +1,56 @@
+card: P-107
+name: "Defense Training"
+kind: option
+color: [black]
+cost: 2
+
+effects:
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 2; add 1 black card to hand; place rest at bottom; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 2
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            color_is: black
+          prompt: "Add 1 black card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      # Option self-placement is inferred from the Delay clause. Security
+      # placement remains blocked by G-PLACE-SELF-AS-OPTION-PERMANENT.
+
+  - kind: delay
+    trigger: end_of_your_next_turn
+    summary: "[Main]<Delay> 1 of your Digimon may digivolve into a black Digimon in hand, cost -2"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: black
+          prompt: "Choose a black Digimon card to digivolve into"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process: []

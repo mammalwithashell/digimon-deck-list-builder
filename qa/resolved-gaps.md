@@ -315,6 +315,28 @@ Resolved by Group 3:
 
 ---
 
+## Engine Gap: Effect Re-Firing / Cross-Timing Self-Trigger
+
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Dark Masters (2026-04-18); Puppets/Nyabootmon assessment (2026-04-28).
+- **Scope:** Rust engine effect context and DSL lowering.
+- **Card(s):** EX8-074 MedievalGallantmon; BT22-042 Nyabootmon for the permanent-sourced `[When Digivolving]` self-refire slice.
+- **Status:** Resolved for constrained permanent-sourced `WhenDigivolving` re-firing. `EffectContext::refire_effect_from_permanent(source, "when_digivolving")` enumerates refireable effects, queues the selected effect slot through the normal `QueuedEffect` path, preserves `source_card` / `source_permanent` identity, and reuses existing once-per-turn accounting. DSL authors can use `refire_effect: { source: <binding>, timing: when_digivolving, optional: true|false }`.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- effect_refiring --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- effect_refiring --nocapture`.
+- **Remaining limits:** Foreign-card `[On Play]` re-firing and Puppet deleted-object gating for "your other Digimon are deleted" remain separate open/partial gaps; this entry only archives the reusable permanent-sourced WhenDigivolving refire primitive.
+
+---
+
+## Engine Gap: Exact Trashed-Source Inherited Dispatch  [G-ROCKS-TRASHED-SOURCE-INHERITED-DISPATCH]
+
+- **Discovered in:** Rocks pool implementation pass (2026-05-04).
+- **Scope:** Rust engine effect queue.
+- **Card(s):** EX8-051 Proganomon, EX8-047 Sunarizamon, EX8-005 Tumblemon, EX10-025 Sunarizamon, EX10-028 Landramon, EX10-032 Proganomon, BT21-055 Sunarizamon, EX11-038 Sunarizamon, and other Rocks inherited effects that trigger when the source card itself is trashed from a [Mineral]/[Rock] stack.
+- **Status:** Resolved for source-trash events that already emit `TriggerSource::SourceTrashedFromStack`. The queue now enqueues inherited effects from the exact source card that was just trashed, even though that card is no longer live under its former host, and relies on trigger context predicates such as `host_permanent_trait_has` / `trashed_source_trait_has` for the former host and source-card facts.
+- **Regression coverage:** Rocks behavioral tests including `ex8_051` exercise an inherited effect firing from the exact trashed source card. The source-trash event-context regression remains covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase3d_event_context --nocapture`.
+- **Remaining limits:** This does not make every source-trash producer emit the event. Fragment, Digi-Burst, replacement costs, de-digivolve, and older source movement paths still need their own producer coverage before cards depending on those paths can be marked complete.
+
+---
+
 ## Engine Gap: ~~`IgnoreColorRequirement` Modifier Not Enforced in Rust Option Action Mask~~ — RESOLVED 2026-05-02 [G-IGNORE-COLOR-MASK]
 
 - **Discovered in:** Medusamon Batch 11, ST22-08 Offensive Plug-In V DSL implementation (2026-04-27)
@@ -846,6 +868,28 @@ Resolved by Group 3:
 - Gap kind: dsl (engine can express this in a raw_rust loop; DSL has no filter for handle-set exclusion).
 - Workaround: none needed for handle-set exclusion after 2026-05-01. Card YAML/tests may still need separate migration away from any raw_rust bridge if other blockers remain.
 - First reported: 2026-04-27 (BT20-102 batch-implement-cards-rust-dsl, Medusamon Batch 11)
+
+---
+
+## DSL Gap: P-156 — Color Match Against a Chosen Tamer Binding  [G-COLOR-MATCH-BOUND-PERMANENT]
+
+- **Status:** RESOLVED on 2026-05-04 for card/selection predicates that compare a candidate card's colors against a previously selected permanent binding.
+- **Effect text:** P-156 Future Potential!: "[Main] Choose 1 Tamer. You may play 1 Digimon card with the same color as the chosen Tamer with a play cost of 3 or less from your hand or trash without paying the cost."
+- **Implemented DSL predicate:** `color_matches_binding: chosen_tamer`
+- **Resolution:** `PredicateSpec` and `CompiledPredicate` now carry `color_matches_binding`; card predicate evaluation resolves the named permanent binding through `Bindings`, reads the bound permanent's live top-card colors, and filters hand/trash candidates by color overlap. The evaluator handles Digimon/Dual candidates through Digimon-face colors and Options/Dual through Option-face colors, matching the existing card-color split.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- group7_predicate_batch --nocapture` includes `select_hand_color_matches_binding_filters_against_bound_tamer_colors`.
+- **Card evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_156 --nocapture` covers own and opponent Tamer choices, hand and trash branches, play-cost filtering, and free play without paying cost.
+- **Remaining related blockers:** P-156's Security optional Tamer play before the mandatory add-to-hand tail remains open under `PUPPETS-G017`; this resolved predicate only covers same-color filtering against a chosen permanent.
+
+---
+
+## Rust Engine Gap: Option Use Active-Body Preflight  [G-OPTION-ACTIVE-BODY-PREFLIGHT]
+
+- **Status:** RESOLVED on 2026-05-04 for ordinary Main-phase Option hand/trash use and Counter-window Option use.
+- **Problem:** Partial Security-only Option YAML, or an Option whose mandatory Main precondition has no legal candidates, could still appear as a legal hand-play action and resolve as a no-effect Option. P-156 exposed this when its Main effect needs at least one Tamer choice before any branch can resolve.
+- **Resolution:** Option play masks and `play_option_from_hand`/`play_option_from_trash` now preflight that ordinary Option use has an active `OptionMain` body whose condition passes. During a Counter window, the preflight accepts an active `CounterEffect` body instead, preserving legal Counter Options that do not also have an `OptionMain` body.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_156 --nocapture` covers masking/direct rejection when P-156 has a matching black source but no Tamer to choose. `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- counter_hand_option_without_option_main_still_resolves_counter_body counter_hand_option_resolves_through_play_option_pipeline --nocapture` covers Counter-window compatibility.
+- **Remaining related blockers:** This does not implement optional-subeffect mandatory-tail continuation; P-156 Security remains tracked under `PUPPETS-G017`.
 
 ---
 

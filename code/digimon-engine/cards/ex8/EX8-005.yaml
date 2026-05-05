@@ -1,0 +1,20 @@
+card: EX8-005
+name: Tumblemon
+kind: digi_egg
+level: 2
+color: [black]
+traits: [Rock, LIBERATOR]
+
+effects:
+  - scope: inherited
+    when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+        - trashed_source_card_id_is: EX8-005
+        - any_of:
+            - host_permanent_trait_has: Mineral
+            - host_permanent_trait_has: Rock
+    summary: "When this source is trashed from a Mineral/Rock Digimon, gain 1 memory"
+    process:
+      - gain_memory: 1

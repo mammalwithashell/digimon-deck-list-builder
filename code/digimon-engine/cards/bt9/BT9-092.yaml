@@ -1,0 +1,43 @@
+card: BT9-092
+name: Cool Boy
+kind: tamer
+color: [white]
+cost: 2
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 X Antibody Digimon and 1 X Antibody Option"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: digimon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "X Antibody"
+          prompt: "Add 1 X Antibody Digimon card"
+      - add_to_hand_from_reveal: { of: you, card: digimon }
+      - select_reveal:
+          of: you
+          bind_as: option
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - trait_has: "X Antibody"
+          prompt: "Add 1 X Antibody Option card"
+      - add_to_hand_from_reveal: { of: you, card: option }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # Omitted:
+  # [All Turns] When one of your Digimon would digivolve into a same-level
+  # Digimon with [X Antibody] in traits, this Tamer may suspend to draw 1 and
+  # gain 1 memory. Current DSL cannot observe/gate that exact same-level
+  # X-Antibody digivolution event with a suspend-self cost.

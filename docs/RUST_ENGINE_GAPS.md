@@ -74,6 +74,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Condition-gated modifier entries](#condition-gated-modifier-entries) | 🔴 | 1 | `modifiers.rs`, `effect.rs` |
 | [Player-scoped modifier registry (CannotPlayFromTrash, CannotPlayDigimonByEffect, OpponentCannotReduceDigivolveCost, IgnoreColorRequirement)](#player-scoped-modifier-registry-cannotplayfromtrash-cannotplaydigimonbyeffect-opponentcannotreducedigivolvecost-ignorecolorrequirement) | 🔴 | 6+ | `modifiers.rs`, `enums.rs`, `action/`, `effect_context.rs` |
 | [Option card play flow (resolve + trash vs. place-on-field; [Main]/[Security] activation) + Plug-In / Link mechanic](#option-card-play-flow-resolve--trash-vs-place-on-field-mainsecurity-activation--plug-in--link-mechanic) | 🔴 | 11 | `game.rs`, `effect.rs`, `effect_context.rs`, `action/` |
+| [Standard Delay main-phase activation action](#standard-delay-main-phase-activation-action) | 🟡 | 3+ | `game_actions.rs`, `action/mask.rs`, `effect_context.rs` |
 | [Scheduled end-of-turn effect queue (for transient Options)](#scheduled-end-of-turn-effect-queue-for-transient-options) | ✅ | 1 | resolved in Group 5 Task 7 |
 | [Effect re-firing / cross-timing self-trigger](#effect-re-firing--cross-timing-self-trigger) | ✅ | 1 | resolved in Task 9 |
 | [Effect-initiated digivolve from non-hand source zones](#effect-initiated-digivolve-from-non-hand-source-zones) | ✅ | 4+ | resolved in Group 4 |
@@ -119,6 +120,10 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 **Closed by Phase 1 (2026-04-19):** Both fire sites wired in `digimon-engine` — see `fire_on_enter_field_anyone()` in `code/digimon-engine/src/game_actions.rs` (called after OnPlay from `play_from_hand_with_cost` and `play_from_trash_with_cost`) and `fire_on_any_deletion()` in `code/digimon-engine/src/combat.rs` (called from `delete_permanent_with_effects`). Builders: `Effect::on_enter_field_anyone(card)` and `Effect::on_any_deletion(card)` in `code/digimon-engine/src/effect.rs`. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher and observer timing documentation.
 
 **Updated 2026-04-29 (Task 3):** Normal hand-played battle-area permanents now dispatch `OnEnterFieldAnyone` through `TriggerSource::EnteredField { player, permanent, card }`, preserving the global battle-area observer scan while populating `TriggerContext.event_permanent`, `TriggerContext.event_card`, and `source_player` with the entering permanent/card. Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_enter_field_anyone_event_card_trait_predicate_matches_entering_card`. Follow-up paths remain open unless separately tested: effect-created permanents, token play, option placement, play-from-trash context, and breeding-area observer fan-out.
+
+**Updated 2026-05-04 (Puppets Batch 2):** `BT22-002` surfaces a narrower remaining `OnAnyDeletion` context gap. The observer fan-out exists, but YAML predicates such as `event_target_owner`, `event_target_kind`, and `event_target_trait_has` need the deleted permanent/card snapshot and former controller, not the observing carrier. Required regression: delete an own Token or other Puppet while `BT22-002` is inherited, and prove the event-target predicates read the deleted object while rejecting opponent Puppets, own non-Puppets, and the carrier itself. This is tracked archetype-locally as `PUPPETS-G011`.
+
+**Updated 2026-05-04 (Puppets Batch 6):** `EX11-023` and `EX11-060` add fresh consumers for the same deleted-object payload. `EX11-023` needs "other Digimon are deleted" source exclusion before it can offer the optional level 4 or lower Puppet trash play. `EX11-060` additionally needs deletion cause/source context so the Overclock-only hand-play branch is exposed only for Overclock-caused deletion while ordinary Token/Puppet deletion resolves only the suspend-this-Tamer Draw 1 branch.
 
 ### Phase-granular turn timings (`StartOfYourTurn`, `StartOfYourMainPhase`, `WhenAttacking`, `EndOfAttack`, `EndOfBattle`)
 - **Severity:** 🔴 BLOCKING
@@ -356,6 +361,16 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay link`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed`.
 - **Remaining related work:** Card-level tests/YAML that still carry `G-DELAY-START-OF-TURN` or `G-PLACE-SELF-AS-OPTION-PERMANENT` ignores need follow-up migration from old raw/stub shapes to the native Delay/placement vocabulary. Do not reopen this generic Delay primitive for those stale card fixtures; leave actual blockers under their specific entries, such as `G-COLOR-MATCH-AGAINST-BOARD`, `G-BINDING-DP-FORMULA`, play-cost/DP predicate gaps, or card process-body gaps.
 - **Related:** Option card play flow, replacement framework, and card-specific DSL predicate entries.
+
+### Standard Delay main-phase activation action
+- **Severity:** 🟡 PARTIAL
+- **Discovered in:** Puppets (2026-05-03 batch implementation)
+- **Card(s):** P-037 Yellow Memory Boost!, P-105 Physical Training, LM-035 Physical Training, LM-037 Yellow Scramble, LM-054 Treadmill Training; also standard Memory Boost/Training/Scramble cards whose `<Delay>` text is activated by the controller during a later main phase.
+- **Effect text:** "`<Delay>` (By trashing this card after the placing turn, activate the effect below.)"
+- **What's missing:** The Group 5 Delay lifecycle supports persistent delayed Options, placement-turn gating, start/end/event drains, and replacement-aware self-trash costs. Standard main-phase Delay cards are still modeled in DSL/YAML as scheduled automatic effects such as `end_of_your_next_turn`, which hides the player's later `[Main]` decision to activate or decline the Delay effect after the placing turn. Batch 7 added `P-105` and `LM-054` with this partial scheduled workaround and ignored action-mask tests for the true later Main-phase activation.
+- **Suggested API shape:** Expose delayed Option field effects through the normal main-phase action mask after the placing turn. Choosing the action trashes the Option as cost, then runs the stored Delay body; passing/declining must leave the Option in the battle area for a later legal activation. The action should reuse existing field-effect or pending-selection surfaces without expanding `ACTION_SPACE_SIZE`.
+- **Workaround:** Scheduled automatic activation is acceptable only for PARTIAL card YAML while this gap is open; it is not faithful enough for full IMPLEMENT status.
+- **Related:** `PUPPETS-G009` in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`; Option card play flow; Group 5 Delay lifecycle.
 
 ### Raid target-switch interrupt (scripting-surface, not mask-only) + effect-driven attack redirect
 - **Severity:** 🔴 BLOCKING
@@ -698,8 +713,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 ### Digivolution-stack source extraction (`pop_top_source` from named permanent)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** TS Olympos (2026-04-18)
-- **Card(s):** BT24-093 Temple of Beginnings
-- **Effect text:** "You may place the top stacked card of any of your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card."
+- **Card(s):** BT24-093 Temple of Beginnings — Puppets adds: BT20-084 Sistermon Ciel (Awakened) ("Place this Digimon's top stacked card as the top security card" at End of All Turns; requires active-top-card extraction and legal empty-stack cleanup).
+- **Effect text:** "You may place the top stacked card of any of your Digimon with [Aegiochusmon] or [Jupitermon] in their names as the top security card." / "Place this Digimon's top stacked card as the top security card."
 - **What's missing:** No helper to extract a `CardSource` from the top of a specific permanent's `card_sources` for arbitrary re-routing. `ctx.de_digivolve` pops+trashes and does not return the extracted card. Needs `ctx.pop_top_digivolution_source(target) -> Option<CardSource>` that removes the topmost digivolution source (not the active top card), returning it for caller placement (e.g., to security top), with no `OnDeletion` fire since the card is moved not deleted.
 - **Suggested API shape:** `ctx.pop_top_digivolution_source(target: PermanentHandle) -> Option<CardSource>` — removes `card_sources.last()`, returns it for caller re-routing. Combined with `ctx.place_security_top(player, card)` from the security-stack-operations gap.
 - **Workaround:** "None — BLOCKED." Raw `battle_area[i].card_sources.pop()` skips any `OnLeaveField` / inherited-stack recomputation and breaks the curated-API contract.
@@ -738,12 +753,12 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 ### Effect-spawned permanent with end-of-turn deletion rider (`delete the Digimon this effect played`)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Dark Masters (2026-04-18)
-- **Card(s):** EX10-012 MetalSeadramon, EX10-020 Puppetmon, EX10-035 Machinedramon, EX10-057 Piedmon, EX10-061 Apocalymon, EX10-072 Spiral Mountain, P-216 WaruMonzaemon
-- **Effect text:** "At turn end, delete the Digimon this effect played." / "The Digimon this effect played can't digivolve and is deleted at turn end."
+- **Card(s):** EX10-012 MetalSeadramon, EX10-020 Puppetmon, EX10-035 Machinedramon, EX10-057 Piedmon, EX10-061 Apocalymon, EX10-072 Spiral Mountain, P-216 WaruMonzaemon — Puppets adds: P-165 ShoeShoemon ("delete that token" at the end of the opponent's turn)
+- **Effect text:** "At turn end, delete the Digimon this effect played." / "The Digimon this effect played can't digivolve and is deleted at turn end." / "At the end of your opponent's turn, delete that token."
 - **What's missing:** No mechanism for an Effect to (a) capture the `PermanentHandle` of the card it just played via a free-play helper and (b) schedule a deferred end-of-turn cleanup tied to that specific permanent (no-op if the card was already deleted earlier in the turn). `Permanent` has no `played_by_effect: Option<{source_card, effect_slot, expiry}>` provenance field. The end-of-turn drain (existing for transient Options under "Scheduled end-of-turn effect queue") does not key on per-permanent identity. Sibling-but-distinct from that scheduled-EOT entry: that gap covers arbitrary closures from trash; this gap covers per-permanent provenance-anchored cleanup that survives stack shifts.
 - **Suggested API shape:** `ctx.play_from_X_free_then(...)` variants returning the resulting `PermanentHandle`, paired with `ctx.schedule_delete_at_end_of_turn(handle: PermanentHandle, source: CardHandle)` that enqueues a closure surviving stack-shift (snapshot the card_index, look it up at EOT, no-op if absent). Backed by `Game.scheduled_eot_deletions: Vec<{card_index, source}>` drained inside `end_turn` after standard `EndOfYourTurn` triggers but before memory reset. Alternative: `ModifierType::DeleteAtEndOfTurn` permanent-scoped modifier consumed by the EOT pass.
 - **Workaround:** "None — BLOCKED." Hand-rolling a `Vec<PermanentHandle>` snapshot in a closure desyncs after stack shifts; an unconditional EOT scan would over-delete unrelated permanents.
-- **Related:** "Scheduled end-of-turn effect queue (for transient Options)" (sibling — generic closure scheduling vs. provenance-anchored deletion); "Zone-manipulation: play-from-hand / trash without paying cost (+ cost override)" (the play-free helpers must return a handle for this to chain); "Token creation + `CardKind::Token` + Petrification Token definition" (Tokens get the same EOT cleanup for free; this gap covers the non-Token case).
+- **Related:** "Scheduled end-of-turn effect queue (for transient Options)" (sibling — generic closure scheduling vs. provenance-anchored deletion); "Zone-manipulation: play-from-hand / trash without paying cost (+ cost override)" (the play-free helpers must return a handle for this to chain); "Token creation + `CardKind::Token` + Petrification Token definition" (P-165 needs the token sibling: `play_token` must bind the newly created token handle before the cleanup can target exactly "that token").
 
 ### Effect-driven play of a Digimon from hand to an empty breeding-area slot (without paying cost)
 - **Severity:** 🔴 BLOCKING
@@ -828,10 +843,10 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Final API:** `ctx.deletion_cause() -> Option<ReplacementCause>` returns the raw cause (`Battle` / `OwnEffect` / `OpponentEffect` / `SecurityCheck` / `Cost`) when fired inside an `OnDeletion` body, `None` otherwise. `ctx.was_deleted_by_effect()` is the convenience predicate for `Some(OwnEffect | OpponentEffect)`. `ctx.was_deleted_by_opponent()` matches only `Some(OpponentEffect)`.
 - **Related:** "WhenWouldBeDeleted / leave-field replacement-effect framework"; "Play / digivolve origin context flag"; "Observer timings tied to specific events".
 
-### Counter window + `<Blast Digivolve>` activation flow ([Hand][Counter] play path)
+### Counter window + `<Blast Digivolve>` activation flow ([Hand][Counter] play path) [G-COUNTER-BLAST-DNA-ACTIVATION]
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Dark Masters (2026-04-18); DNA Omnimon (2026-04-28)
-- **Card(s):** EX10-010 BlackWarGreymon, BT16-026 Vikemon, EX8-026 MetalSeadramon, LM-043 Darkdramon, EX10-074 Beelzemon, BT16-046 GranKuwagamon, BT21-051 Puppetmon, BT19-064 Justimon: Blitz Arm — DNA Omnimon adds: BT17-078 Omnimon (`[Hand][Counter] Blast DNA Digivolve` using WarGreymon + MetalGarurumon material pair)
+- **Card(s):** EX10-010 BlackWarGreymon, BT16-026 Vikemon, EX8-026 MetalSeadramon, LM-043 Darkdramon, EX10-074 Beelzemon, BT16-046 GranKuwagamon, BT21-051 Puppetmon, BT19-064 Justimon: Blitz Arm — DNA Omnimon adds: BT17-078 Omnimon (`[Hand][Counter] Blast DNA Digivolve` using WarGreymon + MetalGarurumon material pair) — Puppets resolver adds: EX6-011 RagnaLoardmon (`[Hand][Counter] Blast DNA Digivolve ([Durandamon] + [BryweLudramon])`).
 - **Effect text:** "[Hand] [Counter] <Blast Digivolve> (Your Digimon may digivolve into this card without paying the cost.)" / "[Hand] [Counter] Blast DNA Digivolve ([WarGreymon] + [MetalGarurumon])"
 - **What's missing:** RUST_ENGINE_API.md §9 lists "Block / Counter / Alliance interrupt phases" as not-yet-wired; combat is atomic. The `[Hand][Counter]` activation timing is a defender-side reactive window opened during the opponent's attack. `<Blast Digivolve>` is also unimplemented as a flow: it digivolves a friendly battle-area permanent into the Counter-window card from hand without paying digivolve cost AND (per parity §4.6d) without honoring digivolution requirements. No `EffectTiming::CounterWindow` fire site, no `ctx.prompt_blast_digivolve(...)` primitive. BT17-078 adds a stricter Blast DNA variant: the Counter action must surface the DNA material pair choice and merge both materials into the Omnimon hand card through the same pending-selection/action-mask contracts as normal DNA, rather than treating Blast as a single-base digivolve. Distinct from the existing "Zone-manipulation: effect-initiated digivolve" gap, which is framed around active-player initiated digivolves on resolved permanents.
 - **Suggested API shape:** Add `EffectTiming::CounterWindow` fired from `combat::begin_attack` to the defender. Builder: `Effect::counter(card)` constructor. `ctx.prompt_blast_digivolve(this_card_handle, base_filter, ignore_reqs: bool)` installs an own-permanent selection on the defender side; on accept, removes the card from hand and pushes onto the chosen base's `card_sources`, fires `WhenDigivolving` with cost = 0, then yields back to the attack state machine. Add sibling `ctx.prompt_blast_dna_digivolve(this_card_handle, material_a_filter, material_b_filter, cost)` that reuses the DNA pair-selection machinery and sets the DNA-origin context. Native `<Blast Digivolve>` / `Blast DNA Digivolve` printed-keyword parsing emits the constructor at registry-build time. Action-mask emission: `BLAST_DIGIVOLVE_FROM_HAND_<i>` / `BLAST_DNA_DIGIVOLVE_FROM_HAND_<i>` slots gated to hand cards with the relevant keyword and to material candidates meeting printed requirements.
@@ -851,8 +866,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 ### Generic `.activation_cost(...)` builder hook for triggered abilities (suspend-self / pay-as-cost on triggered abilities)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Dark Masters (2026-04-18)
-- **Card(s):** BT4-097 Kari Kamiya, BT8-090 Kari Kamiya, ST6-14 Matt Ishida, BT8-094 Digimon Emperor, EX9-068 Analogman, BT13-102 Keenan Crier, RB1-035 Hokuto Amanokawa
-- **Effect text:** "by suspending this Tamer, gain 1 memory" / "by suspending this Tamer to <Draw 1>" / "by suspending this Tamer, gain 1 memory if that Digimon is level 4 or higher, and <Draw 1> if it is level 3"
+- **Card(s):** BT4-097 Kari Kamiya, BT8-090 Kari Kamiya, ST6-14 Matt Ishida, BT8-094 Digimon Emperor, EX9-068 Analogman, BT13-102 Keenan Crier, RB1-035 Hokuto Amanokawa — Puppets adds: BT13-101 Miki Kurosaki & Megumi Shirakawa (suspend this Tamer cost on a color-gated play observer), P-136 Arisa Kinosaki (suspend this Tamer cost on a Puppet-digivolve observer), BT22-088 Arisa Kinosaki (return this Tamer to bottom deck as Start-of-Main activation cost).
+- **Effect text:** "by suspending this Tamer, gain 1 memory" / "by suspending this Tamer to <Draw 1>" / "by suspending this Tamer, gain 1 memory if that Digimon is level 4 or higher, and <Draw 1> if it is level 3" / "By returning this Tamer to the bottom of the deck..."
 - **What's missing:** Distinct from "Dynamic cost reduction at BeforePayCost" which lists suspend-self-as-cost only in the context of cost reduction for plays/digivolves. These cards have no cost-reduction component — the entire ability body is cost-payment-gated on suspending the source permanent itself, on a triggered ability (not on a play action). Requires (a) a generic `EffectBuilder::activation_cost(|ctx| bool)` hook usable for any triggered timing, (b) a `ctx.suspend_self_as_cost() -> bool` helper that returns false if the permanent is already suspended, (c) propagation of the cost-failure path so the body does not execute. Distinct from `.optional()` — cost-failure is not a player decline.
 - **Suggested API shape:** `EffectBuilder::activation_cost(predicate: Fn(&mut Ctx) -> bool)` — runs predicate before `process`; if it returns false the effect is consumed without firing. `ctx.suspend_self_as_cost() -> bool`. Pairs with `.optional()` (player accepts the prompt, then must successfully pay cost).
 - **Workaround:** "None — faithful." Ad-hoc inline `if !perm.suspended { suspend; gain_memory(1); }` skips the failure-on-already-suspended path and cannot be re-used across cards.
@@ -1108,6 +1123,88 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Suggested API shape:** Add `Keyword::DigiBurst(u8)`. Use the new `.pay_cost_trash_n_own_sources(n)` builder hook (see "`.pay_cost()` builder hook" new gap above). Implementation walks `permanent.card_sources[1..]`, installs a multi-select, trashes picks before `.process` runs.
 - **Workaround:** Inline source-trash selection in each Digi-Burst card's `process` closure — functional but duplicates across every `<Digi-Burst>` card and risks divergence from the keyword's canonical cost → effect ordering. Should collapse to the `.pay_cost` hook when it lands.
 - **Related:** Existing "Dynamic cost reduction at `BeforePayCost`"; existing "`<Armor Purge>` keyword" (sibling trash-top-source-of-self); existing "Native printed keyword parsing"; new "`OnDigivolutionCardTrashed` observer timing".
+## Puppets Batch 5/6 Residual Engine Gaps
+
+### Costed self-digivolve stable source binding
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets Batch 5 (2026-05-04)
+- **Card(s):** `EX9-032` Karakurumon
+- **Effect text:** "[On Play] [When Digivolving] By deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon may digivolve into a [Puppet] trait Digimon card in your hand without paying the cost."
+- **What's missing:** Effect resolution needs a stable binding for the resolving source permanent before paying a deletion cost. If the chosen cost body is earlier in the battle-area vector, deleting it shifts indices before a later self-digivolve step resolves. Preflight also needs to prove that a legal Token/Puppet cost body exists while excluding the source itself.
+- **Suggested API shape:** Bind the source as a `PermanentHandle` or equivalent stable identity at trigger dispatch, evaluate cost predicates against that binding, and let effect-initiated digivolve consume the stable handle instead of `target: self` as a mutable index.
+- **Workaround:** None faithful. Omitting the active slice is safer than hidden auto-costing or index-based self-digivolve.
+- **First test:** Trigger `EX9-032`, delete a lower-index own Puppet as the cost, and assert the original `EX9-032` stack digivolves into the selected hand Puppet.
+
+### Inherited Token/Puppet leave-prevention replacement dispatch
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets Batch 5 (2026-05-04)
+- **Card(s):** `EX9-032`, `BT22-036`, `EX11-022`; also related to `EX7-027` and `ST19-11`
+- **Effect text:** "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, prevent it from leaving."
+- **What's missing:** Leave-field replacement dispatch must scan inherited source effects under the threatened permanent, not only face-up field replacement effects. The replacement context must keep both the buried source identity and the threatened carrier subject, expose a pending cost selection for Tokens/other Puppet Digimon, and then cancel only the original leave event.
+- **Suggested API shape:** Extend the replacement scanner to enumerate inherited effects from the threatened stack, construct an `EffectContext` whose source is the buried card and whose replacement subject is the carrier, and route the cost selection through existing pending-selection masks with source/carrier exclusion predicates.
+- **Workaround:** None faithful. A face-up-only replacement omits legal protection; a broad automatic deletion hides a player-visible cost choice.
+- **First test:** Put `BT22-036` or `EX11-022` as a source under a Puppet stack, try to remove the stack by an opponent effect, choose a Familiar Token as the cost, and assert the stack remains.
+
+### Effect-played permanent cleanup provenance
+- **Severity:** 🔴 BLOCKING
+- **Updated from Puppets Batch 5:** `EX11-022` adds a fresh consumer for the existing "delete the Digimon this effect played" provenance gap.
+- **Card(s):** `EX11-022`, `EX11-061`, and other effect-played cleanup riders
+- **Effect text:** "At turn end, delete the Digimon this effect played."
+- **What's missing:** The engine must remember the exact permanent played by a specific effect, then find and delete that same permanent at the printed cleanup timing even if battle-area indices shift.
+- **Suggested API shape:** Store a stable `PermanentHandle` or provenance token returned by effect-play helpers and schedule a turn-end cleanup keyed to that identity.
+- **Workaround:** None faithful. Broad cleanup by name/trait can delete the wrong permanent.
+- **First test:** Resolve `EX11-022`, play a legal Puppet, shift battle-area indices, advance to turn end, and assert only the effect-played permanent is deleted.
+
+### Suspend-this-Tamer deletion observer with Overclock cause branch
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets Batch 6 (2026-05-04)
+- **Card(s):** `EX11-060` Arisa Kinosaki
+- **Effect text:** "[All Turns] When any of your Tokens or [Puppet] trait Digimon are deleted, by suspending this Tamer, <Draw 1>. If this effect was activated by <Overclock>, you may play 1 level 4 or lower [Puppet] trait Digimon card from your hand without paying the cost."
+- **What's missing:** `OnAnyDeletion` needs deleted-object context plus deletion cause/source details, and the engine/DSL need a suspend-this-Tamer cost that preflights legal unsuspended Tamers and consumes the suspend through a visible pending-selection/action path. The Overclock rider must not appear for normal deletions.
+- **Suggested API shape:** Carry `{deleted_card, deleted_permanent_snapshot, former_controller, deletion_cause, deletion_source}` through deletion observer context, add a source-bound Tamer suspend cost primitive, and allow branch predicates to inspect `deletion_cause == Overclock`.
+- **Workaround:** None faithful. Auto-suspending hides the printed cost choice, and trait-only deletion observers cannot distinguish normal deletes from Overclock deletes.
+- **First test:** Delete an own Puppet by Overclock while `EX11-060` is unsuspended, assert the Tamer suspend cost then Draw 1 then optional level 4 Puppet hand-play branch; repeat for a normal deletion and assert no hand-play branch is exposed.
+
+### Narrow opponent-effect protection for DP reduction and De-Digivolve
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets Batch 8 (2026-05-04)
+- **Card(s):** `BT16-055` Namakemon
+- **Effect text:** "While you have 3 or more security cards, this Digimon isn't affected by your opponent's DP reduction effects and can't be de-digivolved by their effects."
+- **What's missing:** A category-scoped protection modifier that blocks only opponent DP reduction and opponent De-Digivolve effects under a live security-count predicate. Existing broad immunity would over-block legal effects; source-scoped zone-return immunity does not cover DP reduction.
+- **Suggested API shape:** Add effect-category protection entries such as `ModifierType::ImmuneToOpponentDpReduction` and `ModifierType::ImmuneToOpponentDeDigivolve`, or a parametric `EffectCategoryProtection { source_player, categories, predicate }`, and consult them at DP-reduction and De-Digivolve effect sites.
+- **Workaround:** None faithful. Do not model this as `CannotBeAffected`.
+- **First test:** With `BT16-055` in battle and 3 security, resolve opponent DP reduction and De-Digivolve effects against it and assert both are blocked; repeat at 2 security and assert both apply.
+
+### Trash-resident observer with effect digivolve from trash
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets Batch 8 (2026-05-04)
+- **Card(s):** `BT20-084` Sistermon Ciel (Awakened)
+- **Effect text:** "[Trash] [All Turns] When any of your Digimon are played, 1 of your [Sistermon Ciel]s may digivolve into this card without paying the cost."
+- **What's missing:** Trash-zone effects must register as observers for global play events, and the follow-up needs effect-initiated digivolve from a trash `CardSource` into a selected field permanent. Current effect-digivolve helpers do not expose a trash source card activation path.
+- **Suggested API shape:** Add trash-resident observer fan-out for eligible timings, then a source-parametric `ctx.effect_digivolve_from_zone(target, source_zone = Trash, card_ref, cost = 0, ignore_reqs = true)` that removes the trash card and pushes it onto the chosen stack while firing `WhenDigivolving`.
+- **Workaround:** None faithful. Hand-based digivolve or auto-targeting a Sistermon Ciel would move the wrong card or hide choices.
+- **First test:** Put `BT20-084` in trash, control a `Sistermon Ciel`, play another own Digimon, and assert the optional action-mask path digivolves the Sistermon Ciel into the trash card for cost 0.
+
+### Effect play with played-Digimon On Play suppression
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets Batch 9 (2026-05-04)
+- **Card(s):** `BT5-106` Demonic Disaster. Royal Knights has adjacent source-play consumers (`BT13-110`, `BT13-112`) that also care about On Play suppression.
+- **Effect text:** "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
+- **What's missing:** Effect-play helpers need provenance that suppresses only the played permanent's On Play enqueue for this play event. Ordinary play-from-trash support is insufficient because it fires On Play normally; broad global On Play suppression would affect unrelated permanents/effects.
+- **Suggested API shape:** Add a `PlayOptions { suppress_on_play: bool, ... }` or equivalent parameter to effect-play helpers, carry it through the play event context, and make On Play enqueue skip the just-played permanent's On Play clauses when set. DSL consumers should expose this as `suppress_on_play: true`.
+- **Workaround:** None faithful. Omit the security slice until the played-Digimon On Play suppression flag is available.
+- **First test:** Security-check `BT5-106`, select a level 3 purple Digimon from trash with a visible On Play memory-gain effect, and assert the Digimon enters play while its On Play effect does not fire.
+
+### End-of-attack mandatory self-delete chain with recovery and conditional hatch
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets resolver Batch 10 (2026-05-04)
+- **Card(s):** `EX4-074` ShineGreymon: Ruin Mode
+- **Effect text:** "[End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and <Recovery +1 (Deck)>. Then, if you have a Tamer in play, hatch 1 Digi-Egg card to an empty space in your breeding area."
+- **What's missing:** This chain needs faithful continuation across several edge cases: deleting the resolving source while preserving the rest of the queued chain, selecting/deleting one opponent Digimon without hiding a target choice, running Recovery +1 even when no opponent target exists if rules require the mandatory chain to continue, and conditionally hatching only when the player has a Tamer and an empty breeding area. The individual movement verbs exist, but this exact mandatory chain needs a card/engine fidelity pass.
+- **Suggested API shape:** Support source-stable self-delete inside a triggered chain, mandatory target-selection continuation semantics for no-eligible-target branches, and a guarded hatch step such as `hatch_if: { condition: has_own_tamer, requires_empty_breeding: true }` that does not expose a no-op hatch action.
+- **Workaround:** None faithful. Auto-selecting the opponent Digimon or dropping later tail steps would violate no-approximations and printed mandatory sequencing.
+- **First test:** Attack with `EX4-074`, resolve End of Attack with a Tamer and a legal opponent Digimon, and assert Ruin Mode deletes itself, the chosen opponent Digimon is deleted, Recovery +1 resolves, and a Digi-Egg is hatched only when the Tamer/breeding conditions are met.
+
 ## Resolved gaps
 
 Resolved Rust engine group summaries have been moved to [qa/resolved-gaps.md](../qa/resolved-gaps.md#rust-engine-gap-group-summaries).

@@ -1,0 +1,25 @@
+card: EX7-063
+name: Arisa Kinosaki
+kind: tamer
+color: [yellow]
+cost: 3
+traits: [LIBERATOR]
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # All-turns Token/Puppet deletion observer that suspends this Tamer to play a
+  # level 3 Puppet is omitted pending event context / suspend-cost follow-up.
