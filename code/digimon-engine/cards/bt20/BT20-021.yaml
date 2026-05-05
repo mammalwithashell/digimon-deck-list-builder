@@ -1,0 +1,25 @@
+card: BT20-021
+name: Jesmon GX
+kind: digimon
+level: 7
+color: [red, purple]
+cost: 9
+dp: 16000
+traits: [Holy Warrior, X Antibody, Royal Knight]
+attribute: Data
+ace_overflow: -5
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 6
+
+effects: []
+
+# Stubbed:
+# - [Hand][Counter] Blast Digivolve is not modeled in this card entry.
+# - Place a Royal Knight from hand or trash as bottom source as a cost, then
+#   delete by this Digimon's DP, needs union hand/trash source placement and a
+#   source-DP comparison predicate.
+# - [When Attacking][Once Per Turn] unsuspend, then trash opponent security per
+#   two Royal Knight sources needs source-count formula for security trash.

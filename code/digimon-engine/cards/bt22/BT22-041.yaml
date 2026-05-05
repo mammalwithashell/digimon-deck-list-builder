@@ -1,0 +1,42 @@
+card: BT22-041
+name: Kentaurosmon
+kind: digimon
+level: 6
+color: [yellow]
+cost: 12
+dp: 12000
+traits: [Holy Warrior, Royal Knight, CS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+  - kind: grant_keyword
+    keyword: Barrier
+
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] You may place 1 yellow card from hand as top security"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter: { color_is: yellow }
+          prompt: "Place 1 yellow card from your hand as your top security card"
+      - place_on_security:
+          of: you
+          source: { binding: pick, zone: hand }
+          position: top
+          face_up: false
+
+# Stubbed:
+# - Play-cost reduction by 6 when total security count is 6 or fewer needs a
+#   before-pay-cost condition over both players' security stacks.
+# - [All Turns][Once Per Turn] when this Digimon suspends, trash top security
+#   to unsuspend needs self-suspend event gating plus security-trash cost.

@@ -1,0 +1,17 @@
+card: BT13-102
+name: Keenan Crier
+kind: tamer
+color: [white]
+cost: 3
+
+effects:
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+# Stubbed:
+# - [On Play] opponent may trash a Tamer/Option from hidden hand; if they do
+#   not, you gain 1 memory and draw 1. This needs opponent hidden-hand choice.
+# - [Opponent's Turn] when an effect plays a Digimon, suspend this Tamer to
+#   gain 1 memory. This needs an effect-play observer with suspend-self cost.

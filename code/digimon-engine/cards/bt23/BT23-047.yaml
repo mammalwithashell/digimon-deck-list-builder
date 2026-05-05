@@ -1,0 +1,31 @@
+card: BT23-047
+name: Examon
+kind: digimon
+level: 7
+color: [green, red]
+cost: 15
+dp: 15000
+traits: [Holy Warrior, Royal Knight, CS]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: green }
+    cost: 5
+
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+
+# Stubbed:
+# - Partition (green Lv.5 & blue Lv.5) needs a typed Partition DSL clause with
+#   two material filters and leave-field replacement play.
+# - [On Play][When Digivolving] suspend 5 opponent Digimon/Tamers, prevent all
+#   opponent Digimon unsuspend next phase, then may attack. Needs N-target
+#   suspend, next-unsuspend-phase blanket lock, and in-effect attack.
+# - [Your Turn][Once Per Turn] when opponent security removed, trash an Option
+#   in their battle area then delete a suspended Digimon/Tamer. Needs security-
+#   removed observer and Option-permanent trash.

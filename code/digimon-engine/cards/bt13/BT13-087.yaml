@@ -1,0 +1,61 @@
+card: BT13-087
+name: Dynasmon
+kind: digimon
+level: 6
+color: [purple]
+cost: 10
+dp: 11000
+traits: [Holy Warrior, Royal Knight]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Reveal top 4; add up to 2 Lucemon/Royal Knight cards; trash the rest"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 4
+          bind_as: revealed
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: pick_a
+              min: 0
+              max: 1
+              filter:
+                any_of:
+                  - name_contains: Lucemon
+                  - trait_has: Royal Knight
+            - bind_as: pick_b
+              min: 0
+              max: 1
+              filter:
+                any_of:
+                  - name_contains: Lucemon
+                  - trait_has: Royal Knight
+          no_duplicate_cards: true
+          prompt: "Add up to 2 Lucemon or Royal Knight cards"
+      - add_to_hand_from_reveal:
+          of: you
+          card: pick_a
+      - add_to_hand_from_reveal:
+          of: you
+          card: pick_b
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+# Stubbed:
+# - [All Turns] when another Lucemon/Royal Knight is played, delete all opposing
+#   level 4 or lower Digimon. This needs an event observer for another matching
+#   Digimon being played plus a delete-all filtered board operation.

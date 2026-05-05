@@ -1,0 +1,32 @@
+card: ST12-12
+name: Sistermon Blanc
+kind: digimon
+level: 3
+color: [white]
+cost: 3
+dp: 3000
+traits: [Puppet]
+attribute: Vaccine
+
+effects:
+  - when: on_play
+    summary: "[On Play] Trash 1 card in hand to draw 2"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - draw: { of: you, count: 2 }
+
+  # Omitted:
+  # [All Turns] While you have a Huckmon or Royal Knight, this Digimon gains
+  # Decoy (Red/Black). This needs conditional keyword aura lowering that can
+  # express Decoy's protected color set.

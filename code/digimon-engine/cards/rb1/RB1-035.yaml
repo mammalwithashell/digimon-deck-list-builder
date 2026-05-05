@@ -1,0 +1,28 @@
+card: RB1-035
+name: Hokuto Amanokawa
+kind: tamer
+color: [white]
+cost: 2
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If opponent has 3 or more Tamers, gain 1 memory"
+    condition:
+      count_gte:
+        filter:
+          of: opponent
+          zone: [battle_area]
+          kind: tamer
+        n: 3
+    process:
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
+  # Omitted:
+  # [All Turns] When an opponent plays a Digimon, by suspending this Tamer, gain
+  # 1 memory if that Digimon is level 4 or higher, and Draw 1 if it is level 3.
+  # This needs event-card level predicates and source-bound suspend-cost gating.

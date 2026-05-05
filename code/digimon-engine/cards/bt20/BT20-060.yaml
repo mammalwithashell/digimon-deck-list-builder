@@ -1,0 +1,49 @@
+card: BT20-060
+name: "Alphamon: Ouryuken"
+kind: digimon
+level: 7
+color: [black, purple, red]
+cost: 6
+dp: 16000
+traits: ["X Antibody", "Royal Knight", Chronicle]
+attribute: Vaccine
+ace_overflow: -5
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
+    cost: 6
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 6, color_is: black }
+      - all_of:
+          - level_eq: 6
+          - any_of:
+              - color_is: yellow
+              - color_is: red
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  # [Hand][Counter] Blast DNA Digivolve ([Alphamon] + [Ouryumon]) is omitted:
+  # the action/mask contract does not yet expose a counter-window Blast DNA
+  # choice using one field Digimon plus one named card in hand.
+
+  # [On Play][When Digivolving] 1 opponent Digimon gets -15000 DP until the
+  # end of their turn. The DNA-origin tail (security trash + Recovery) is
+  # omitted until the DNA-origin tail can sequence those security operations
+  # faithfully from this shared On Play/When Digivolving trigger.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 opponent Digimon gets -15000 DP until the end of their turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Give 1 opponent Digimon -15000 DP"
+      - add_dp_modifier:
+          target: dp_target
+          value: -15000
+          expiry: end_of_opponents_turn
+
+  # [All Turns][OPT] security stacks removed -> gain 3 memory is omitted:
+  # no faithful reusable security-removed observer is available for this batch.

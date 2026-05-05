@@ -1,0 +1,20 @@
+card: BT23-072
+name: King Drasil_7D6
+kind: digimon
+color: [black]
+cost: 6
+dp: 9000
+traits: ["9000", CS]
+form: Mega
+attribute: Unknown
+
+effects: []
+
+# Stubbed:
+# - [Hand][Main] pay 3 and place this card under King Drasil_7D6/Mother Eater
+#   in breeding to draw 1. Needs hand-activated source placement into breeding.
+# - [All Turns] when a Royal Knight/CS Digimon is played, suspend this Digimon
+#   to grant Rush/Raid/Reboot/Blocker until opponent turn ends. Needs played-
+#   Digimon event binding from breeding/battle and suspend-self cost.
+# - Inherited [Breeding][Start of Your Main Phase] play King Drasil from this
+#   Digimon's sources needs breeding inherited observer and play-from-sources.

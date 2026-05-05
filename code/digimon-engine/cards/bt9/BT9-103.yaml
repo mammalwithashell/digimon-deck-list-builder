@@ -1,0 +1,50 @@
+card: BT9-103
+name: Kongou
+kind: option
+color: [black]
+cost: 2
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Opponent Digimon with play cost 7 or less can't attack players; opponent can't add security by effects"
+    process:
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotAddSecurityByEffect
+          expiry: end_of_opponents_turn
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+              - play_cost_lte: 7
+          bind_as: attacker
+          body:
+            - add_modifier:
+                target: attacker
+                modifier: CannotAttackPlayer
+                value: 1
+                expiry: end_of_opponents_turn
+
+  - when: on_security
+    summary: "[Security] Activate this card's Main effect"
+    process:
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotAddSecurityByEffect
+          expiry: end_of_opponents_turn
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+              - play_cost_lte: 7
+          bind_as: attacker
+          body:
+            - add_modifier:
+                target: attacker
+                modifier: CannotAttackPlayer
+                value: 1
+                expiry: end_of_opponents_turn

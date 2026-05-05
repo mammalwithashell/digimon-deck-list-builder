@@ -1,0 +1,34 @@
+card: BT6-082
+name: Sistermon Blanc
+kind: digimon
+level: 3
+color: [white]
+cost: 3
+dp: 3000
+traits: [Puppet]
+attribute: Vaccine
+
+effects:
+  - kind: aura
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            any_of:
+              - name_contains: "Huckmon"
+              - trait_has: "Royal Knight"
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      name_contains: "Sistermon"
+    grant_keyword: { keyword: Blocker }
+    summary: "[All Turns] With Huckmon/Royal Knight in play, your Sistermon gain Blocker"
+
+  - when: on_play
+    summary: "[On Play] Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

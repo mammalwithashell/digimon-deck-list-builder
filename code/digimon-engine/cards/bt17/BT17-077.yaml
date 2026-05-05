@@ -1,0 +1,37 @@
+card: BT17-077
+name: "Imperialdramon: Paladin Mode"
+kind: digimon
+level: 7
+color: [black, blue]
+cost: 9
+dp: 16000
+traits: [Ancient Holy Warrior]
+attribute: Vaccine
+ace_overflow: -5
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 6
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash all sources of all opponent Digimon"
+    process:
+      - for_each:
+          over:
+            all_of:
+              - kind: digimon
+              - of: opponent
+              - zone: [battle_area]
+          bind_as: stack
+          body:
+            - trash_all_sources: { target: stack }
+
+# Stubbed:
+# - [Hand][Counter] Blast Digivolve is not modeled in this card entry.
+# - Returning all cards from either trash to deck bottom, checking whether a
+#   white level 7 was returned, and gaining memory needs bulk-trash-to-deck
+#   movement plus a returned-card binding.
+# - [When Attacking] return a sourceless opponent Digimon to deck bottom to
+#   unsuspend this Digimon needs filtered bottom-deck-as-cost.

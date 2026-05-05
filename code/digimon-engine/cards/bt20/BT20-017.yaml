@@ -1,0 +1,24 @@
+card: BT20-017
+name: Jesmon
+kind: digimon
+level: 6
+color: [red]
+cost: 11
+dp: 11000
+traits: [Holy Warrior, Royal Knight]
+form: Mega
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+
+effects: []
+
+# Stubbed:
+# - [On Play][When Digivolving] may play 1 Atho/Rene/Por token. The token is
+#   not registered in the Rust token registry yet.
+# - [Your Turn][Once Per Turn] when another Digimon is played, delete <=8000 DP
+#   then one of your Digimon may attack. Needs other-ally-played observer and
+#   in-effect attack selection.

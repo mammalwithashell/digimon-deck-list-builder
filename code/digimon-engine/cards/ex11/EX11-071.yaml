@@ -1,0 +1,43 @@
+card: EX11-071
+name: Cool Boy
+kind: tamer
+color: [white]
+cost: 3
+traits: [LIBERATOR]
+
+# Printed [Main] is intentionally omitted.
+#
+# By returning this Tamer to the bottom of the deck, the player may play a
+# play-cost-4-or-higher [Royal Knight]/[LIBERATOR] card from hand with the play
+# cost reduced by 2. The current DSL has source-bound return costs for some
+# cost-reduction hooks, but this clause needs that source-bound return to feed a
+# Main-phase hand play selection with a reduced actual payment. Tracked as
+# RK-G002.
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal top 3; add Omekamon/Omnimon X and Royal Knight/LIBERATOR"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: omeka_or_omni_x
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - name_is: "Omekamon"
+                  - name_is: "Omnimon (X Antibody)"
+            - bind_as: rk_or_liberator
+              min: 1
+              max: 1
+              filter:
+                any_of:
+                  - trait_has: "Royal Knight"
+                  - trait_has: LIBERATOR
+          prompt: "Select 1 Omekamon/Omnimon X and 1 Royal Knight/LIBERATOR"
+      - add_to_hand_from_reveal: { of: you, card: omeka_or_omni_x }
+      - add_to_hand_from_reveal: { of: you, card: rk_or_liberator }
+      - place_remainder_on_deck: { of: you, position: bottom }
