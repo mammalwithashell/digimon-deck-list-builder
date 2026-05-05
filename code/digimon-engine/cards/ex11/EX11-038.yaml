@@ -1,0 +1,32 @@
+card: EX11-038
+name: Sunarizamon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Reptile, LIBERATOR]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+# Printed [When Moving]/[On Play] clause not authored in this pass:
+# by trashing 1 [Mineral]/[Rock] card from hand or digivolution cards, Draw 1.
+# That needs a faithful hand-or-source cost choice without adding unavailable
+# choices when only one zone has candidates.
+
+effects:
+  - scope: inherited
+    when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+        - trashed_source_card_id_is: EX11-038
+        - any_of:
+            - host_permanent_trait_has: Mineral
+            - host_permanent_trait_has: Rock
+    summary: "When this source is trashed from a Mineral/Rock Digimon, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }

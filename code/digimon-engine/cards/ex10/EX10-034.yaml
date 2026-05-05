@@ -1,0 +1,30 @@
+card: EX10-034
+name: Blastmon
+kind: digimon
+level: 6
+color: [black, purple]
+cost: 13
+dp: 13000
+traits: [Mineral, Bagra Army]
+attribute: Vaccine
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 5
+
+# Printed forced-attack grant and attack-triggered source-trash buff clauses
+# are not authored in this pass.
+
+effects:
+  - kind: grant_keyword
+    keyword: Collision
+
+  - kind: grant_keyword
+    keyword: Fragment
+    value: 3
+
+  - kind: grant_keyword
+    keyword: Blocker

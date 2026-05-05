@@ -1,0 +1,33 @@
+card: EX10-063
+name: Close
+kind: tamer
+color: [black]
+cost: 3
+traits: [LIBERATOR]
+
+# Printed [Start of Your Main Phase] return-self-to-deck hand-play and trash
+# fallback are not authored in this pass.
+
+effects:
+  - when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - host_permanent_trait_has: Mineral
+            - host_permanent_trait_has: Rock
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "EX10-063"
+            is_unsuspended: true
+    summary: "[All Turns] When effects trash a Mineral/Rock Digimon's source, suspend this Tamer to gain 1 memory"
+    process:
+      - suspend: { target: source }
+      - gain_memory: 1
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -1,0 +1,28 @@
+card: ST22-11
+name: "Defense Plug-In F"
+kind: option
+color: [black]
+cost: 3
+traits: [Plug-In]
+
+# Printed color-bypass, Link requirements, and Main link/Reboot/+3000 DP clause
+# are not authored in this pass.
+
+effects:
+  - when: on_security
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Security] De-Digivolve 2 1 opponent Digimon, then add this card to hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
+      - de_digivolve:
+          target: target
+          amount: 2
+          stop_at_level: 3
+      - add_this_option_to_hand: {}

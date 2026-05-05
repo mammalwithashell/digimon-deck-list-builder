@@ -116,7 +116,7 @@
         "A2",
         "Option-as-permanent Delay (standard EndOfYourNextTurn)"
       ],
-      "notes": "11 active tests pass; 6 ignored. Clause 0 ([Main] reveal 4 + select + add to hand + place rest bottom) fully DSL-implemented: reveal_top_deck(4) + select_reveal(optional, filter:kind:digimon+color_is:red) + add_to_hand_from_reveal + place_remainder_on_deck(bottom). Clause 1 ([Delay] gain 2 memory) fully DSL-implemented: kind:delay trigger:end_of_your_next_turn + gain_memory:2. Clause 2 ([Inherited][Security] place self in battle area) empty-process triggered clause (scope:inherited, when:on_security, process:[]) — G-PLACE-SELF-AS-OPTION-PERMANENT. 4 filter-enforcement tests ignored pending Phase 2b (install_select_reveal accept-all filter). 2 Delay/security behavioral tests ignored pending G-PLACE-SELF-AS-OPTION-PERMANENT."
+      "notes": "11 active tests pass; 6 ignored. Clause 0 ([Main] reveal 4 + select + add to hand + place rest bottom) fully DSL-implemented: reveal_top_deck(4) + select_reveal(optional, filter:kind:digimon+color_is:red) + add_to_hand_from_reveal + place_remainder_on_deck(bottom). Clause 1 ([Delay] gain 2 memory) fully DSL-implemented: kind:delay trigger:end_of_your_next_turn + gain_memory:2. Clause 2 ([Inherited][Security] place self in battle area) empty-process triggered clause (scope:inherited, when:on_security, process:[]) \u2014 G-PLACE-SELF-AS-OPTION-PERMANENT. 4 filter-enforcement tests ignored pending Phase 2b (install_select_reveal accept-all filter). 2 Delay/security behavioral tests ignored pending G-PLACE-SELF-AS-OPTION-PERMANENT."
     },
     "LM-027": {
       "card_name": "Red Scramble",
@@ -133,7 +133,7 @@
         "E1",
         "G1-adjacent"
       ],
-      "notes": "13 active tests pass; 6 ignored pending gaps. Clause A ([Main] effect_initiated_digivolve cost -3 from option card) fully DSL-implemented — optional select_own_permanent + select_hand + effect_initiated_digivolve. Clause B ([Start of Your Turn] Delay) registered as raw_rust declarative lm_027_delay_start_of_turn_noop (no-op) pending G-DELAY-START-OF-TURN (engine has no DelayTrigger::StartOfYourNextTurn). Clause C ([Security] play small red Digimon from trash) DSL-implemented with select_trash + play_from_trash_free; add-self-to-hand step is raw_rust no-op pending G-ADD-OPTION-SELF-TO-HAND. dp_lte: 2000 filter compiled but unenforced pending G-PRED-DP-LTE."
+      "notes": "13 active tests pass; 6 ignored pending gaps. Clause A ([Main] effect_initiated_digivolve cost -3 from option card) fully DSL-implemented \u2014 optional select_own_permanent + select_hand + effect_initiated_digivolve. Clause B ([Start of Your Turn] Delay) registered as raw_rust declarative lm_027_delay_start_of_turn_noop (no-op) pending G-DELAY-START-OF-TURN (engine has no DelayTrigger::StartOfYourNextTurn). Clause C ([Security] play small red Digimon from trash) DSL-implemented with select_trash + play_from_trash_free; add-self-to-hand step is raw_rust no-op pending G-ADD-OPTION-SELF-TO-HAND. dp_lte: 2000 filter compiled but unenforced pending G-PRED-DP-LTE."
     },
     "LM-055": {
       "card_name": "Sprint Dash Training",
@@ -268,7 +268,7 @@
         "A4",
         "F9-adjacent"
       ],
-      "notes": "OnPlay optional cost-as-trash â†’ draw 2 implemented + tested. Inherited OPT clause shipped. 11 active, 2 ignored for sub-gaps (select_hand filter eval + trash-from-hand event)."
+      "notes": "OnPlay optional cost-as-trash \u00e2\u2020\u2019 draw 2 implemented + tested. Inherited OPT clause shipped. 11 active, 2 ignored for sub-gaps (select_hand filter eval + trash-from-hand event)."
     },
     "EX11-008": {
       "card_name": "Elizamon",
@@ -334,7 +334,7 @@
         "D-DELETE-DP-LTE",
         "D4"
       ],
-      "notes": "All 3 clauses ship: [Security] play-self-after-battle (engine fix landed in src/dsl_cards/step/play_digivolve.rs), [On Play]+[When Digivolving] delete â‰¤4000 DP, inherited [Your Turn] +2000 DP aura. 14 active, 2 ignored pending G-DP-LTE-PREDICATE."
+      "notes": "All 3 clauses ship: [Security] play-self-after-battle (engine fix landed in src/dsl_cards/step/play_digivolve.rs), [On Play]+[When Digivolving] delete \u00e2\u2030\u00a44000 DP, inherited [Your Turn] +2000 DP aura. 14 active, 2 ignored pending G-DP-LTE-PREDICATE."
     },
     "BT24-011": {
       "card_name": "Cyclonemon",
@@ -403,7 +403,7 @@
         "H1-RUSH",
         "H_PROGRESS"
       ],
-      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave â†’ delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
+      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave \u00e2\u2020\u2019 delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
     },
     "BT24-018": {
       "card_name": "Styracomon",
@@ -456,7 +456,7 @@
         "B3",
         "F9"
       ],
-      "notes": "All 3 clauses ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3, [All Turns] on_opponent_security_removed suspend-cost + delete â‰¤4000 DP, [Security] play_from_security. 14 active tests pass. 1 ignored (G-PRED-DP-LTE: dp_lte filter not evaluated at runtime). Key fix: `target: source` (not `source_permanent`) required for suspend step to resolve CompiledBindingRef::Source â†’ ctx.source_permanent; `source_permanent` is not a recognized DSL keyword (falls through to named-binding lookup, returning None silently)."
+      "notes": "All 3 clauses ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3, [All Turns] on_opponent_security_removed suspend-cost + delete \u00e2\u2030\u00a44000 DP, [Security] play_from_security. 14 active tests pass. 1 ignored (G-PRED-DP-LTE: dp_lte filter not evaluated at runtime). Key fix: `target: source` (not `source_permanent`) required for suspend step to resolve CompiledBindingRef::Source \u00e2\u2020\u2019 ctx.source_permanent; `source_permanent` is not a recognized DSL keyword (falls through to named-binding lookup, returning None silently)."
     },
     "EX11-054": {
       "card_name": "Owen Dreadnought",
@@ -472,7 +472,7 @@
         "B2",
         "F9"
       ],
-      "notes": "Clauses 1 and 3 ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3 (tested, passes) and [Security] play_from_security (tested, passes). Clause 2 ([All Turns] Reptile/Dragonkin ally played/digivolves â†’ suspend self, draw 1, give Progress Digimon +3000 DP) is a no-op raw_rust placeholder pending two hybrid gaps: G-ON-ENTER-FIELD-ANYONE-TRAIT-FILTER (OnEnterFieldAnyone observer TriggerContext doesn't carry entering permanent handle) and G-GAME-EVENT-DIGIVOLVE (GameEvent::Digivolve not emitted, blocking digivolve-detection in raw_rust). 8 non-ignored tests pass, 4 ignored (entering_permanent_trigger_context + G-DECLARATIVE-KEYWORD). Raw_rust fn: ex11_054_all_turns_noop registered in src/cards/raw_rust/mod.rs."
+      "notes": "Clauses 1 and 3 ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3 (tested, passes) and [Security] play_from_security (tested, passes). Clause 2 ([All Turns] Reptile/Dragonkin ally played/digivolves \u00e2\u2020\u2019 suspend self, draw 1, give Progress Digimon +3000 DP) is a no-op raw_rust placeholder pending two hybrid gaps: G-ON-ENTER-FIELD-ANYONE-TRAIT-FILTER (OnEnterFieldAnyone observer TriggerContext doesn't carry entering permanent handle) and G-GAME-EVENT-DIGIVOLVE (GameEvent::Digivolve not emitted, blocking digivolve-detection in raw_rust). 8 non-ignored tests pass, 4 ignored (entering_permanent_trigger_context + G-DECLARATIVE-KEYWORD). Raw_rust fn: ex11_054_all_turns_noop registered in src/cards/raw_rust/mod.rs."
     },
     "BT21-081": {
       "card_name": "Owen Dreadnought",
@@ -489,7 +489,7 @@
         "F9",
         "H3-PIERCING"
       ],
-      "notes": "All 3 clauses ship: (a) [Start of Your Main Phase] gain 1 memory if opp has Digimon, (b) [End of Your Turn] optional suspend-cost â†’ select Reptile/Dragonkin â†’ grant Piercing for the turn, (c) [Security] play_from_security. 14 active tests pass, 1 ignored. Gap: G-MAY-ATTACK-NOW (DSL-GAP â€” 'Then, that Digimon attacks' step omitted; MayAttack/ForceAttack ModifierTypes not in lookup_modifier_type, and no DSL verb for effect-initiated mandatory EOT attack on a specific Digimon). Key fixes during implementation: (1) DSL binding `target: source` (not `source_permanent`) required for Suspend step â€” 'source_permanent' is not a recognized keyword in compile_binding_ref, falls through to CompiledBindingRef::Named and silently no-ops; (2) test helpers need filler decks for both players to prevent deckout on P1's first draw, which would set game_over and skip end-of-turn expiry in multi-turn tests."
+      "notes": "All 3 clauses ship: (a) [Start of Your Main Phase] gain 1 memory if opp has Digimon, (b) [End of Your Turn] optional suspend-cost \u00e2\u2020\u2019 select Reptile/Dragonkin \u00e2\u2020\u2019 grant Piercing for the turn, (c) [Security] play_from_security. 14 active tests pass, 1 ignored. Gap: G-MAY-ATTACK-NOW (DSL-GAP \u00e2\u20ac\u201d 'Then, that Digimon attacks' step omitted; MayAttack/ForceAttack ModifierTypes not in lookup_modifier_type, and no DSL verb for effect-initiated mandatory EOT attack on a specific Digimon). Key fixes during implementation: (1) DSL binding `target: source` (not `source_permanent`) required for Suspend step \u00e2\u20ac\u201d 'source_permanent' is not a recognized keyword in compile_binding_ref, falls through to CompiledBindingRef::Named and silently no-ops; (2) test helpers need filler decks for both players to prevent deckout on P1's first draw, which would set game_over and skip end-of-turn expiry in multi-turn tests."
     },
     "BT21-017": {
       "card_name": "Dimetromon",
@@ -506,7 +506,7 @@
         "G-COUNT-GATE",
         "G-INHERITED-OPT"
       ],
-      "notes": "WhenDigivolving optional Owen Dreadnought play ships (select_hand name_contains filter + play_from_hand_free). Tamer-count gate (count_lte n:1) is compiled but NOT evaluated at runtime â€” G-COUNT-LTE-EVAL (new gap): eval_predicate_with_bindings has no count_lte match arm for non-security zones; gate always passes. 1 condition test #[ignore = pending: G-COUNT-LTE-EVAL]. Inherited [Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 3 inherited tests #[ignore]. 12 active tests pass, 4 ignored total."
+      "notes": "WhenDigivolving optional Owen Dreadnought play ships (select_hand name_contains filter + play_from_hand_free). Tamer-count gate (count_lte n:1) is compiled but NOT evaluated at runtime \u00e2\u20ac\u201d G-COUNT-LTE-EVAL (new gap): eval_predicate_with_bindings has no count_lte match arm for non-security zones; gate always passes. 1 condition test #[ignore = pending: G-COUNT-LTE-EVAL]. Inherited [Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 3 inherited tests #[ignore]. 12 active tests pass, 4 ignored total."
     },
     "P-189": {
       "card_name": "Dimetromon",
@@ -523,7 +523,7 @@
         "H_PROGRESS",
         "G-INHERITED-OPT"
       ],
-      "notes": "Clause 1 [Security] optional play-LIBERATOR-free-from-hand-or-trash ships via select_effect_choice + two separate if: blocks + select_hand/select_trash + play_from_hand_free/play_from_trash_free. Cost-â‰¤4 filter (G-PLAY-COST-LTE) cannot be enforced â€” play_cost_lte predicate absent from PredicateSpec; select_hand/select_trash accept-all (Phase 2b). Clause 2 Progress declarative ships structurally; modifier not installed at runtime (G-DECLARATIVE-KEYWORD). Clause 3 [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 8 active tests pass, 8 ignored. New gap reported: G-PLAY-COST-LTE."
+      "notes": "Clause 1 [Security] optional play-LIBERATOR-free-from-hand-or-trash ships via select_effect_choice + two separate if: blocks + select_hand/select_trash + play_from_hand_free/play_from_trash_free. Cost-\u00e2\u2030\u00a44 filter (G-PLAY-COST-LTE) cannot be enforced \u00e2\u20ac\u201d play_cost_lte predicate absent from PredicateSpec; select_hand/select_trash accept-all (Phase 2b). Clause 2 Progress declarative ships structurally; modifier not installed at runtime (G-DECLARATIVE-KEYWORD). Clause 3 [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 8 active tests pass, 8 ignored. New gap reported: G-PLAY-COST-LTE."
     },
     "BT24-012": {
       "card_name": "Dimetromon",
@@ -623,7 +623,7 @@
         "E5-TRASH-TOP-SECURITY",
         "D4-INHERITED-DP-AURA"
       ],
-      "notes": "Clause 1 [OnPlay/WhenDigivolving]: opponent places hand card as bottom security + trash top security. YAML fix: place_on_security moved inside as_selecting_player body so binding 'pick' is in scope for the callback (outer-tail binding propagation gap). select_hand optional:true so trash_top_security in outer tail fires even when opponent has hand cards. G-SELECT-EMPTY-OUTER-TAIL: when empty hand skips install_select_hand (no valid_action_ids), outer tail is lost (1 test #[ignore]). Opponent-security-count gate (<=5) dropped â€” DSL has no opponent_security_count_lte predicate (G-OPP-SECURITY-COUNT-LTE, 1 test #[ignore]). WhenDigivolving dispatch blocked by G-OPT-TRIGGERED (1 test #[ignore]). Clause 2 Inherited [Your Turn] +4000 DP aura ships (2 tests #[ignore] G-INHERITED-DISPATCH). 11 active pass, 5 ignored."
+      "notes": "Clause 1 [OnPlay/WhenDigivolving]: opponent places hand card as bottom security + trash top security. YAML fix: place_on_security moved inside as_selecting_player body so binding 'pick' is in scope for the callback (outer-tail binding propagation gap). select_hand optional:true so trash_top_security in outer tail fires even when opponent has hand cards. G-SELECT-EMPTY-OUTER-TAIL: when empty hand skips install_select_hand (no valid_action_ids), outer tail is lost (1 test #[ignore]). Opponent-security-count gate (<=5) dropped \u00e2\u20ac\u201d DSL has no opponent_security_count_lte predicate (G-OPP-SECURITY-COUNT-LTE, 1 test #[ignore]). WhenDigivolving dispatch blocked by G-OPT-TRIGGERED (1 test #[ignore]). Clause 2 Inherited [Your Turn] +4000 DP aura ships (2 tests #[ignore] G-INHERITED-DISPATCH). 11 active pass, 5 ignored."
     },
     "ST1-07": {
       "card_name": "Greymon",
@@ -720,7 +720,7 @@
     "BT21-026": {
       "status": "IMPLEMENTED",
       "date": "2026-04-28",
-      "notes": "11/11 runnable tests pass. 5 ignored: G-DECLARATIVE-KEYWORD (Rush/Blocker not installed at runtime x2), G-EVENT-TARGET-OWNER (deletion arm omitted — no event_target_owner predicate x3). Cost reduction (-2 per opp battle area permanent) fully working. Keywords Rush/Raid/Blocker declared as grant_keyword. Unsuspend on opp deletion blocked until G-EVENT-TARGET-OWNER closes."
+      "notes": "11/11 runnable tests pass. 5 ignored: G-DECLARATIVE-KEYWORD (Rush/Blocker not installed at runtime x2), G-EVENT-TARGET-OWNER (deletion arm omitted \u2014 no event_target_owner predicate x3). Cost reduction (-2 per opp battle area permanent) fully working. Keywords Rush/Raid/Blocker declared as grant_keyword. Unsuspend on opp deletion blocked until G-EVENT-TARGET-OWNER closes."
     },
     "BT9-112": {
       "card_name": "DeathXmon",
@@ -739,7 +739,7 @@
         "C1",
         "raw_rust"
       ],
-      "notes": "Lv7 Black/Purple Cost 20. Three clauses: (A) BeforePayCost cost_reduction -3 per opp battle-area permanent; (B) [On Play][When Digivolving] for_each de_digivolve(1, stop_at_level:3) then for_each delete ≤Lv4 (snapshot semantics); (C) [End of Opponent's Turn][OPT] delete lowest-play-cost opp Digimon via raw_rust bt9_112_delete_lowest_cost_digimon. 12/13 tests runnable; 1 ignored (G-OPT-TRIGGERED — triggered OPT lockout not wired). Gaps: G-PLAY-COST-LTE (no play_cost_lte aggregate predicate in DSL, worked around with raw_rust), G-OPT-TRIGGERED (once_per_turn on triggered clause not enforced at runtime)."
+      "notes": "Lv7 Black/Purple Cost 20. Three clauses: (A) BeforePayCost cost_reduction -3 per opp battle-area permanent; (B) [On Play][When Digivolving] for_each de_digivolve(1, stop_at_level:3) then for_each delete \u2264Lv4 (snapshot semantics); (C) [End of Opponent's Turn][OPT] delete lowest-play-cost opp Digimon via raw_rust bt9_112_delete_lowest_cost_digimon. 12/13 tests runnable; 1 ignored (G-OPT-TRIGGERED \u2014 triggered OPT lockout not wired). Gaps: G-PLAY-COST-LTE (no play_cost_lte aggregate predicate in DSL, worked around with raw_rust), G-OPT-TRIGGERED (once_per_turn on triggered clause not enforced at runtime)."
     },
     "BT23-014": {
       "card_name": "Gallantmon",
@@ -779,7 +779,7 @@
         "E5-TRASH-TOP-SECURITY",
         "raw_rust"
       ],
-      "notes": "Lv7 Red Blast Digivolve ACE (Agumon - Bond of Bravery). Three clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete any number of opp Digimon with total DP ≤ 14000 — implemented as raw_rust:lm_021_delete_dp_sum single-pick fallback pending G-MULTI-SELECT-OPP-DP-SUM (engine lacks multi-select of opponent battle-area permanents with running DP-sum cap); (3) [When Attacking][Once Per Turn] if you have a Tamer, trash_top_security — tamer condition gating works, behavioral tests pass. ace_overflow: -5. 13/15 active tests pass; 2 ignored for G-OPT-TRIGGERED (triggered once_per_turn lockout not enforced at runtime). Bug fix during TDD: bt17_018 tests were failing due to summoning sickness (turn_count=0 when using .build() — added r.game.turn_count = 1 to runner_with_p1_security() helper so permanents placed with turn_played_override=Some(0) are not fresh at attack time). Full suite after fix: 412 passed, 0 failed, 146 ignored."
+      "notes": "Lv7 Red Blast Digivolve ACE (Agumon - Bond of Bravery). Three clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete any number of opp Digimon with total DP \u2264 14000 \u2014 implemented as raw_rust:lm_021_delete_dp_sum single-pick fallback pending G-MULTI-SELECT-OPP-DP-SUM (engine lacks multi-select of opponent battle-area permanents with running DP-sum cap); (3) [When Attacking][Once Per Turn] if you have a Tamer, trash_top_security \u2014 tamer condition gating works, behavioral tests pass. ace_overflow: -5. 13/15 active tests pass; 2 ignored for G-OPT-TRIGGERED (triggered once_per_turn lockout not enforced at runtime). Bug fix during TDD: bt17_018 tests were failing due to summoning sickness (turn_count=0 when using .build() \u2014 added r.game.turn_count = 1 to runner_with_p1_security() helper so permanents placed with turn_played_override=Some(0) are not fresh at attack time). Full suite after fix: 412 passed, 0 failed, 146 ignored."
     },
     "BT17-018": {
       "card_name": "Gallantmon: Crimson Mode",
@@ -801,7 +801,7 @@
         "raw_rust",
         "once_per_turn"
       ],
-      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP ≤ 15000 — raw_rust:bt17_018_delete_opp_digimon_dp_budget single-pick fallback, blocked on G-DP-BUDGET-MULTI-SELECT (now tracked also as G-MULTI-SELECT-OPP-DP-SUM); (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security — raw_rust:bt17_018_trash_security_per_ten_trash (floor division loop), DSL gap G-LOSE-COUNT-BOUND. 11/16 tests pass; 3 ignored for G-DP-BUDGET-MULTI-SELECT multi-pick; 2 ignored for G-OPT-TRIGGERED (triggered OPT lockout not enforced). TDD fix required: summoning sickness blocked attack tests (turn_count=0 → is_fresh=true → can_attack()=false); fix: r.game.turn_count = 1 in runner setup."
+      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP \u2264 15000 \u2014 raw_rust:bt17_018_delete_opp_digimon_dp_budget single-pick fallback, blocked on G-DP-BUDGET-MULTI-SELECT (now tracked also as G-MULTI-SELECT-OPP-DP-SUM); (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security \u2014 raw_rust:bt17_018_trash_security_per_ten_trash (floor division loop), DSL gap G-LOSE-COUNT-BOUND. 11/16 tests pass; 3 ignored for G-DP-BUDGET-MULTI-SELECT multi-pick; 2 ignored for G-OPT-TRIGGERED (triggered OPT lockout not enforced). TDD fix required: summoning sickness blocked attack tests (turn_count=0 \u2192 is_fresh=true \u2192 can_attack()=false); fix: r.game.turn_count = 1 in runner setup."
     },
     "ST22-08": {
       "card_name": "Offensive Plug-In V",
@@ -886,7 +886,7 @@
         "A2-remainder-bottom",
         "E2-optional-free-play"
       ],
-      "notes": "Purple Option Cost 3, [LIBERATOR] trait. use_requirement color bypass is active in the hand-play mask when a LIBERATOR Digimon/Tamer is present. [Main] reveal_top_deck(3), LIBERATOR reveal-pick, bottom remainder, optional play LIBERATOR cost≤3 from hand free all pass with play_cost_lte:3 enforced. [Security] mirrors the Main effects. 18 active tests pass, 0 ignored."
+      "notes": "Purple Option Cost 3, [LIBERATOR] trait. use_requirement color bypass is active in the hand-play mask when a LIBERATOR Digimon/Tamer is present. [Main] reveal_top_deck(3), LIBERATOR reveal-pick, bottom remainder, optional play LIBERATOR cost\u22643 from hand free all pass with play_cost_lte:3 enforced. [Security] mirrors the Main effects. 18 active tests pass, 0 ignored."
     },
     "P-206": {
       "card_name": "Digital Gate Open",
@@ -1253,7 +1253,7 @@
         "D4",
         "B3"
       ],
-      "notes": "WhenDigivolving Koromon DP buff (via self_digivolution_contains_name), OnDeletion play-tamer-or-hatch implemented. Delete-DP-≤-self BLOCKED on G-FORMULA-SOURCE-DP (NEW). [All Turns] dynamic-name-alias-from-stack BLOCKED on G-DYNAMIC-NAME-ALIAS-FROM-STACK (NEW)."
+      "notes": "WhenDigivolving Koromon DP buff (via self_digivolution_contains_name), OnDeletion play-tamer-or-hatch implemented. Delete-DP-\u2264-self BLOCKED on G-FORMULA-SOURCE-DP (NEW). [All Turns] dynamic-name-alias-from-stack BLOCKED on G-DYNAMIC-NAME-ALIAS-FROM-STACK (NEW)."
     },
     "BT17-081": {
       "card_name": "Tai Kamiya & Matt Ishida",
@@ -1382,7 +1382,7 @@
         "D4",
         "H4"
       ],
-      "notes": "_examples YAML has YAML BUG: target.of vs target.owner (G-PREDICATE-OF-ALIAS — over-fires on opp Omnimon). ENGINE GAP: aura-granted SecurityAttackPlus not consumed by security loop (G-AURA-GRANTED-SECURITY-KEYWORD)."
+      "notes": "_examples YAML has YAML BUG: target.of vs target.owner (G-PREDICATE-OF-ALIAS \u2014 over-fires on opp Omnimon). ENGINE GAP: aura-granted SecurityAttackPlus not consumed by security loop (G-AURA-GRANTED-SECURITY-KEYWORD)."
     },
     "EX4-061": {
       "card_name": "Matt Ishida & Tai Kamiya",
@@ -1528,7 +1528,7 @@
         "A2",
         "G2"
       ],
-      "notes": "select_reveal_buckets + alt_path_registration. NEW G-DSL-PREDICATE-TEXT-CONTAINS — text_contains approximated as name_contains. 14 pass / 1 ignored."
+      "notes": "select_reveal_buckets + alt_path_registration. NEW G-DSL-PREDICATE-TEXT-CONTAINS \u2014 text_contains approximated as name_contains. 14 pass / 1 ignored."
     },
     "BT22-026": {
       "card_name": "MetalGarurumon",
@@ -1897,6 +1897,672 @@
         "D6"
       ],
       "notes": "Color bypass + security inherited tamer-play implemented. Security-aura + main-shuffle BLOCKED on NEW G-PRED-NO-FACE-UP-SECURITY-NAMED + G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION + G-SECURITY-ZONE-AURA-SOURCE."
+    },
+    "BT14-009": {
+      "card_name": "Gotsumon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-batch-1-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/bt14/BT14-009.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt14/bt14_009.rs",
+      "test_count": 2,
+      "patterns": [
+        "FLOOD-GATE",
+        "PLAYER-SCOPED-PASSIVE"
+      ],
+      "notes": "Promoted from example-only YAML to production DSL. Player-scoped CannotPlayDigimonByEffect flood gate covers both players while in battle area."
+    },
+    "BT18-064": {
+      "card_name": "Mercurymon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-batch-1-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-064.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_064.rs",
+      "test_count": 3,
+      "patterns": [
+        "SOURCE-SCOPED-IMMUNITY",
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "On Play/When Digivolving grants hand/deck return immunity until end of opponent turn. Inherited opponent-turn +2000 DP is represented through source_dp_contribution, matching the existing static inherited aura contract."
+    },
+    "BT20-055": {
+      "card_name": "Invisimon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "FACE-UP-SECURITY",
+        "SECURITY-END-OPPONENT-TURN"
+      ],
+      "notes": "Pass complete: blocked on face-up security lifecycle and security end-of-opponent-turn play timing before faithful YAML."
+    },
+    "BT21-021": {
+      "card_name": "OmniShoutmon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "SAVE",
+        "CONDITIONAL-INHERITED-KEYWORD"
+      ],
+      "notes": "Pass complete: inherited Rush is conditional on host trait and face-up clauses need Save/Xros Heart play routing."
+    },
+    "BT21-055": {
+      "card_name": "Bombermon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-055.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_055.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DELETE-PLAY-COST-LTE"
+      ],
+      "notes": "Inherited source-trash delete implemented; face-up reduction/source clauses remain gap-routed."
+    },
+    "BT23-059": {
+      "card_name": "Justimon: Blitz Arm",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/bt23/BT23-059.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_059.rs",
+      "test_count": 1,
+      "patterns": [
+        "KEYWORD"
+      ],
+      "notes": "Blocker implemented; option-permanent cost, lowest-cost delete, unsuspend, and protection remain gap-routed."
+    },
+    "BT4-072": {
+      "card_name": "Gogmamon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/bt4/BT4-072.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt4/bt4_072.rs",
+      "test_count": 1,
+      "patterns": [
+        "INHERITED-DP-AURA"
+      ],
+      "notes": "Inherited +1000 DP implemented; Digi-Burst main effect remains gap-routed."
+    },
+    "BT8-094": {
+      "card_name": "Digimon Emperor",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/bt8/BT8-094.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_094.rs",
+      "test_count": 1,
+      "patterns": [
+        "SECURITY-PLAY"
+      ],
+      "notes": "Security play implemented; deletion level-filter draw and breeding-move memory remain gap-routed."
+    },
+    "BT9-103": {
+      "card_name": "Kongou",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "TEMP-ATTACK-RESTRICTION",
+        "SECURITY-STACK-LOCK"
+      ],
+      "notes": "Pass complete: needs faithful opponent Digimon attack-player restriction by play cost and security-add lock validation."
+    },
+    "EX10-003": {
+      "card_name": "Tumblemon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "ATTACK-CANCEL",
+        "SOURCE-TRASH-COST"
+      ],
+      "notes": "Pass complete: inherited opponent-turn attack cancellation by trashing three Mineral/Rock sources needs attack-cancel and source-cost selection support."
+    },
+    "EX10-025": {
+      "card_name": "KoDokugumon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-025.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_025.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DELETE-PLAY-COST-LTE"
+      ],
+      "notes": "Inherited source-trash delete implemented; On Play source placement remains gap-routed."
+    },
+    "EX10-028": {
+      "card_name": "Golemon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-028.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_028.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DELETE-PLAY-COST-LTE"
+      ],
+      "notes": "Inherited source-trash delete implemented; face-up source-trash buff remains gap-routed."
+    },
+    "EX10-032": {
+      "card_name": "Proganomon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-032.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_032.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DE-DIGIVOLVE"
+      ],
+      "notes": "Inherited source-trash De-Digivolve implemented; hand-main and face-up buff remain gap-routed."
+    },
+    "EX10-033": {
+      "card_name": "Pyramidimon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-033.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_033.rs",
+      "test_count": 1,
+      "patterns": [
+        "FRAGMENT"
+      ],
+      "notes": "Fragment(3) implemented; source-placement and source-trash play-cost reduction remain gap-routed."
+    },
+    "EX10-034": {
+      "card_name": "Blastmon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-034.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_034.rs",
+      "test_count": 1,
+      "patterns": [
+        "KEYWORD",
+        "FRAGMENT"
+      ],
+      "notes": "Collision, Fragment(3), and Blocker implemented; forced-attack and source-trash buff remain gap-routed."
+    },
+    "EX10-036": {
+      "card_name": "Magneticdramon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-036.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_036.rs",
+      "test_count": 1,
+      "patterns": [
+        "FRAGMENT"
+      ],
+      "notes": "Fragment(3) implemented; source-trash delete/security-trash and trash-to-source unsuspend remain gap-routed."
+    },
+    "EX10-063": {
+      "card_name": "Close",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-063.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_063.rs",
+      "test_count": 1,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "SUSPEND-COST",
+        "GAIN-MEMORY"
+      ],
+      "notes": "All-turns source-trash memory trigger implemented; start-main hand/trash play remains gap-routed."
+    },
+    "EX10-069": {
+      "card_name": "Unique Emblem: Gravel Hearts",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex10/EX10-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_069.rs",
+      "test_count": 1,
+      "patterns": [
+        "HAND-TRASH-PLAY",
+        "SECURITY-MAIN-MIRROR"
+      ],
+      "notes": "Main/security hand-or-trash Sunarizamon/Close play path implemented; option placement and Close-suspend Delay remain gap-routed."
+    },
+    "EX11-038": {
+      "card_name": "Gotsumon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-038.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_038.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DRAW"
+      ],
+      "notes": "Inherited source-trash Draw 1 implemented; face-up hand/source cost clause remains gap-routed."
+    },
+    "EX11-044": {
+      "card_name": "Pyramidimon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex11/EX11-044.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_044.rs",
+      "test_count": 1,
+      "patterns": [
+        "KEYWORD",
+        "FRAGMENT"
+      ],
+      "notes": "Reboot and Fragment(3) implemented; highest-cost delete and source refill remain gap-routed."
+    },
+    "EX11-065": {
+      "card_name": "Close",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "HAND-OR-SOURCE-COST",
+        "SOURCE-PLACEMENT"
+      ],
+      "notes": "Pass complete: both clauses hinge on hand-or-source costs and source placement from hand/trash."
+    },
+    "EX7-049": {
+      "card_name": "Metallicdramon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-049.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_049.rs",
+      "test_count": 2,
+      "patterns": [
+        "DE-DIGIVOLVE"
+      ],
+      "notes": "On Play/When Attacking De-Digivolve 4 implemented; digivolve-prevention and leave-area replacement remain gap-routed."
+    },
+    "EX8-005": {
+      "card_name": "Sakuttomon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-005.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_005.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "GAIN-MEMORY"
+      ],
+      "notes": "Inherited source-trash gain-memory clause implemented and covered."
+    },
+    "EX8-046": {
+      "card_name": "Golemon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-046.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_046.rs",
+      "test_count": 3,
+      "patterns": [
+        "ON-DELETION",
+        "HAND-TRASH-COST",
+        "DRAW",
+        "KEYWORD"
+      ],
+      "notes": "On Deletion hand-trash Draw 2 and inherited Blocker implemented."
+    },
+    "EX8-047": {
+      "card_name": "Sunarizamon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-047.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_047.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DELETE-PLAY-COST-LTE"
+      ],
+      "notes": "Inherited source-trash delete implemented; reveal two-pick search remains gap-routed."
+    },
+    "EX8-048": {
+      "card_name": "Landramon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-048.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_048.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DELETE-PLAY-COST-LTE"
+      ],
+      "notes": "Inherited source-trash delete implemented; hand-play Close clause remains gap-routed."
+    },
+    "EX8-050": {
+      "card_name": "Gogmamon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-050.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_050.rs",
+      "test_count": 1,
+      "patterns": [
+        "KEYWORD"
+      ],
+      "notes": "Face-up Blocker implemented; on-deletion reveal/play and inherited redirect remain gap-routed."
+    },
+    "EX8-051": {
+      "card_name": "Proganomon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-batch-1-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-051.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_051.rs",
+      "test_count": 2,
+      "patterns": [
+        "KEYWORDS",
+        "SOURCE-TRASH-CONTEXT",
+        "DE-DIGIVOLVE"
+      ],
+      "notes": "Collision, Piercing, and Fragment(3) keywords plus inherited exact-source-trash De-Digivolve 1. Added reusable queue support for the trashed source card to fire its own inherited OnDigivolutionCardTrashed effect from trigger context."
+    },
+    "EX8-055": {
+      "card_name": "Pyramidimon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-055.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_055.rs",
+      "test_count": 1,
+      "patterns": [
+        "FRAGMENT"
+      ],
+      "notes": "Fragment(3) implemented; source-trash, unsuspend, Security Attack, and source-placement clauses remain gap-routed."
+    },
+    "EX8-067": {
+      "card_name": "Close",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/ex8/EX8-067.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_067.rs",
+      "test_count": 2,
+      "patterns": [
+        "MEMORY-SETTER",
+        "SECURITY-PLAY"
+      ],
+      "notes": "Start-of-turn memory setter and security play implemented; digivolve-trigger source placement remains gap-routed."
+    },
+    "EX8-070": {
+      "card_name": "Zofr Kabus",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "SOURCE-COST",
+        "TEMP-PROTECTION",
+        "LOWEST-COST-DELETE"
+      ],
+      "notes": "Pass complete: main clause needs source-cost selection plus temporary protection; security needs lowest-play-cost delete primitive."
+    },
+    "LM-031": {
+      "card_name": "Black Scramble",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-031.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_031.rs",
+      "test_count": 1,
+      "patterns": [
+        "EFFECT-DIGIVOLVE"
+      ],
+      "notes": "Main hand digivolve cost reduction implemented; start-turn Delay and security tail remain gap-routed."
+    },
+    "LM-032": {
+      "card_name": "Purple Scramble",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/lm/LM-032.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_032.rs",
+      "test_count": 1,
+      "patterns": [
+        "EFFECT-DIGIVOLVE"
+      ],
+      "notes": "Main hand digivolve cost reduction implemented; start-turn Delay and security tail remain gap-routed."
+    },
+    "P-039": {
+      "card_name": "Black Memory Boost!",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/p/P-039.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_039.rs",
+      "test_count": 1,
+      "patterns": [
+        "REVEAL-SEARCH",
+        "DELAY"
+      ],
+      "notes": "Main reveal/search and Delay gain memory implemented; security option placement remains gap-routed."
+    },
+    "P-107": {
+      "card_name": "Defense Training",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/p/P-107.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_107.rs",
+      "test_count": 1,
+      "patterns": [
+        "REVEAL-SEARCH",
+        "DELAY",
+        "EFFECT-DIGIVOLVE"
+      ],
+      "notes": "Main reveal/search and Delay digivolve body implemented; security option placement remains gap-routed."
+    },
+    "P-130": {
+      "card_name": "Lui Ohwada",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "BLOCKED",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": null,
+      "test_path": null,
+      "test_count": 0,
+      "patterns": [
+        "MOVE-FROM-BREEDING",
+        "ON-MOVE"
+      ],
+      "notes": "Pass complete: On Play move-from-breeding and on-move suspend-memory trigger need move primitives/event timing."
+    },
+    "P-167": {
+      "card_name": "Landramon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/p/P-167.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_167.rs",
+      "test_count": 2,
+      "patterns": [
+        "SOURCE-TRASH-CONTEXT",
+        "DE-DIGIVOLVE"
+      ],
+      "notes": "Inherited source-trash De-Digivolve implemented; reveal search/source placement remains gap-routed."
+    },
+    "P-169": {
+      "card_name": "Close",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/p/P-169.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_169.rs",
+      "test_count": 2,
+      "patterns": [
+        "GAIN-MEMORY",
+        "SECURITY-PLAY"
+      ],
+      "notes": "Start-main memory clause and security play implemented; source-trash trash-to-source clause remains gap-routed."
+    },
+    "P-186": {
+      "card_name": "Gallantmon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/p/P-186.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_186.rs",
+      "test_count": 1,
+      "patterns": [
+        "KEYWORD"
+      ],
+      "notes": "Rush and Blocker implemented; cost reduction and delete-or-recover remain gap-routed."
+    },
+    "P-215": {
+      "card_name": "Gogmamon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "dsl-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/p/P-215.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_215.rs",
+      "test_count": 1,
+      "patterns": [
+        "KEYWORD"
+      ],
+      "notes": "Inherited Blocker implemented; face-up source-placement/protection remain gap-routed."
+    },
+    "ST13-08": {
+      "card_name": "Chikurimon",
+      "validated_date": "2026-05-04",
+      "report": "rocks-batch-1-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/st13/ST13-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st13/st13_08.rs",
+      "test_count": 2,
+      "patterns": [
+        "FLOOD-GATE",
+        "PLAYER-SCOPED-PASSIVE"
+      ],
+      "notes": "Player-scoped CannotReducePlayCost flood gate covers both players while in battle area."
+    },
+    "ST22-11": {
+      "card_name": "Defense Plug-In F",
+      "validated_date": "2026-05-04",
+      "report": "rocks-rust-dsl-pool-pass",
+      "status": "PARTIAL",
+      "gap_kind": "engine-gap",
+      "archetype": "Rocks",
+      "yaml_path": "code/digimon-engine/cards/st22/ST22-11.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st22/st22_11.rs",
+      "test_count": 1,
+      "patterns": [
+        "DE-DIGIVOLVE",
+        "SECURITY"
+      ],
+      "notes": "Security De-Digivolve 2/add-to-hand implemented; color bypass, Link, and Main link grant remain gap-routed."
     },
     "BT22-029": {
       "card_name": "Shoemon",

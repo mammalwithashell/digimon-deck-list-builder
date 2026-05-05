@@ -51,6 +51,7 @@ mod ex9;
 mod lm;
 mod p;
 mod st1;
+mod st13;
 mod st19;
 mod st2;
 mod st20;

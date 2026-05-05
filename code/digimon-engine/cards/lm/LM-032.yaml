@@ -1,0 +1,35 @@
+card: LM-032
+name: "Purple Scramble"
+kind: option
+color: [purple]
+cost: 2
+
+# Printed start-turn Delay and Security play-from-trash/add-self-to-hand clauses
+# are not authored in this pass. Start-turn Delay needs G-DELAY-START-OF-TURN.
+
+effects:
+  - when: main_from_hand
+    optional: true
+    summary: "[Main] 1 purple Digimon may digivolve into a purple Digimon in hand, cost -3"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+          prompt: "Choose 1 of your purple Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: purple
+          prompt: "Choose a purple Digimon card to digivolve into"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 3 }
+          ignore_requirements: false

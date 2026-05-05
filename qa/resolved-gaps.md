@@ -315,6 +315,28 @@ Resolved by Group 3:
 
 ---
 
+## Engine Gap: Effect Re-Firing / Cross-Timing Self-Trigger
+
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Dark Masters (2026-04-18); Puppets/Nyabootmon assessment (2026-04-28).
+- **Scope:** Rust engine effect context and DSL lowering.
+- **Card(s):** EX8-074 MedievalGallantmon; BT22-042 Nyabootmon for the permanent-sourced `[When Digivolving]` self-refire slice.
+- **Status:** Resolved for constrained permanent-sourced `WhenDigivolving` re-firing. `EffectContext::refire_effect_from_permanent(source, "when_digivolving")` enumerates refireable effects, queues the selected effect slot through the normal `QueuedEffect` path, preserves `source_card` / `source_permanent` identity, and reuses existing once-per-turn accounting. DSL authors can use `refire_effect: { source: <binding>, timing: when_digivolving, optional: true|false }`.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- effect_refiring --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- effect_refiring --nocapture`.
+- **Remaining limits:** Foreign-card `[On Play]` re-firing and Puppet deleted-object gating for "your other Digimon are deleted" remain separate open/partial gaps; this entry only archives the reusable permanent-sourced WhenDigivolving refire primitive.
+
+---
+
+## Engine Gap: Exact Trashed-Source Inherited Dispatch  [G-ROCKS-TRASHED-SOURCE-INHERITED-DISPATCH]
+
+- **Discovered in:** Rocks pool implementation pass (2026-05-04).
+- **Scope:** Rust engine effect queue.
+- **Card(s):** EX8-051 Proganomon, EX8-047 Sunarizamon, EX8-005 Tumblemon, EX10-025 Sunarizamon, EX10-028 Landramon, EX10-032 Proganomon, BT21-055 Sunarizamon, EX11-038 Sunarizamon, and other Rocks inherited effects that trigger when the source card itself is trashed from a [Mineral]/[Rock] stack.
+- **Status:** Resolved for source-trash events that already emit `TriggerSource::SourceTrashedFromStack`. The queue now enqueues inherited effects from the exact source card that was just trashed, even though that card is no longer live under its former host, and relies on trigger context predicates such as `host_permanent_trait_has` / `trashed_source_trait_has` for the former host and source-card facts.
+- **Regression coverage:** Rocks behavioral tests including `ex8_051` exercise an inherited effect firing from the exact trashed source card. The source-trash event-context regression remains covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase3d_event_context --nocapture`.
+- **Remaining limits:** This does not make every source-trash producer emit the event. Fragment, Digi-Burst, replacement costs, de-digivolve, and older source movement paths still need their own producer coverage before cards depending on those paths can be marked complete.
+
+---
+
 ## Engine Gap: ~~`IgnoreColorRequirement` Modifier Not Enforced in Rust Option Action Mask~~ — RESOLVED 2026-05-02 [G-IGNORE-COLOR-MASK]
 
 - **Discovered in:** Medusamon Batch 11, ST22-08 Offensive Plug-In V DSL implementation (2026-04-27)

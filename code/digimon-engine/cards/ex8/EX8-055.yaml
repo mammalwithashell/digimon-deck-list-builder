@@ -1,0 +1,22 @@
+card: EX8-055
+name: Pyramidimon
+kind: digimon
+level: 6
+color: [black]
+cost: 12
+dp: 12000
+traits: [Mineral, LIBERATOR]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+
+# Printed [When Digivolving]/[When Attacking] source-trash cost,
+# unsuspend/Security A. +1 grant, and [End of Your Turn] trash-to-source
+# placement clauses are not authored in this pass.
+
+effects:
+  - kind: grant_keyword
+    keyword: Fragment
+    value: 3

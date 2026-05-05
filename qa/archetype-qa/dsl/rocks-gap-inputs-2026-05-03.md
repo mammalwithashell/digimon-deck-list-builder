@@ -19,12 +19,13 @@ The remaining blocker is mostly authored card coverage plus a smaller set of reu
 ## Coverage Snapshot
 
 - Archetype pool: 47 unique card IDs.
-- YAML found under `code/digimon-engine/cards/**`: `BT16-082`, `P-206`, `_examples/BT14-009`, `EX7-074`.
-- Top Rocks shell without production YAML: `EX10-032`, `P-167`, `EX8-047`, `EX8-005`, `EX10-036`, `EX10-069`, `EX8-067`, `BT21-055`, `P-107`, `EX8-048`, `EX10-063`, `EX8-051`, `EX10-028`, `EX10-033`, `EX10-025`, `LM-031`, `P-169`, `P-039`, `EX8-055`.
+- YAML found under `code/digimon-engine/cards/**` after the 2026-05-04 pool pass plus pulled main updates: 40 of 47 pool cards.
+- Rocks pool cards with production YAML/test slices added or audited on 2026-05-04: `BT14-009`, `BT18-064`, `BT21-055`, `BT23-059`, `BT23-096`, `BT4-072`, `BT8-094`, `EX10-025`, `EX10-028`, `EX10-032`, `EX10-033`, `EX10-034`, `EX10-036`, `EX10-063`, `EX10-069`, `EX11-038`, `EX11-044`, `EX7-049`, `EX8-005`, `EX8-046`, `EX8-047`, `EX8-048`, `EX8-050`, `EX8-051`, `EX8-055`, `EX8-067`, `LM-031`, `LM-032`, `P-039`, `P-107`, `P-167`, `P-169`, `P-186`, `P-215`, `ST13-08`, `ST22-11`.
+- Remaining Rocks pool cards without production YAML after one pass: `BT20-055`, `BT21-021`, `BT9-103`, `EX10-003`, `EX11-065`, `EX8-070`, `P-130`.
 - Existing YAML quality notes:
   - `BT16-082` is still a documented no-op placeholder even though `OnMove` support now exists.
   - `P-206` and `EX7-074` still contain raw-Rust/self-disposition workarounds that should be revisited against newer DSL support.
-  - `_examples/BT14-009` is not a production card spec location.
+  - `BT14-009` moved from `_examples` to production YAML on 2026-05-04 and is covered by Rust behavioral tests.
 
 ## Reusable Gaps For Cross-Archetype Spec
 
@@ -88,7 +89,7 @@ The remaining blocker is mostly authored card coverage plus a smaller set of reu
 - **Blocks Rocks cards:** `EX10-032`, `P-167`, `EX8-047`, `EX8-005`, `EX10-036`, `BT21-055`, `EX8-048`, `EX10-028`, `EX10-033`, `EX10-025`, `EX8-055`, `EX11-044`
 - **Cross-archetype reuse:** Digi-Burst, Fragment, source-trash costs, inherited "when this card is trashed from digivolution cards" effects
 - **Printed shape:** a specific source card is trashed from a specific host stack, and only that card's inherited/source-trash effects should observe the event
-- **Current evidence:** direct `select_own_sources` / `trash_selected_sources` and `phase3d_event_context` tests pass. Remaining risk is producer completeness across every source-disposition path, including older return-to-deck, de-digivolve, Fragment, Armor Purge, and keyword-driven source trash routes.
+- **Current evidence:** direct `select_own_sources` / `trash_selected_sources` and `phase3d_event_context` tests pass. `EX8-051` now verifies the trashed source card can fire its own inherited `OnDigivolutionCardTrashed` effect from host/source trigger context. Remaining risk is producer completeness across every source-disposition path, including older return-to-deck, de-digivolve, Fragment, Armor Purge, and keyword-driven source trash routes.
 - **Required capability:** every source-trash producer must emit `OnDigivolutionCardTrashed` with stable host permanent/card, trashed source card, source index, and cause player context
 - **Suggested DSL shape:** no new author-facing syntax if producer coverage is complete; existing predicates should work:
 
@@ -122,10 +123,10 @@ The remaining blocker is mostly authored card coverage plus a smaller set of reu
 ### G-ROCKS-PLAYER-SCOPED-PASSIVE-MODIFIERS
 
 - **Type:** engine / DSL gap
-- **Blocks Rocks cards:** `BT14-009`, `BT9-103`, `ST13-08`
+- **Blocks Rocks cards:** `BT9-103`
 - **Cross-archetype reuse:** floodgates and global player-scoped restrictions
 - **Printed shape:** while this permanent is in play, restrict a player or both players from playing/reducing/attacking under a condition
-- **Current evidence:** `BT14-009` lives in `_examples`; older tracker notes still call out bilateral player-scoped passive modifier shapes
+- **Current evidence:** `BT14-009` and `ST13-08` production YAML now cover bilateral player-scoped flood gates with behavioral tests; `BT9-103` still needs card-level authoring if the printed shape is in scope.
 - **Required capability:** author production YAML for player-scoped passive modifiers with controller/opponent/both-player scope and revalidate masks at every affected action point
 - **Suggested DSL shape:**
 
@@ -137,7 +138,7 @@ The remaining blocker is mostly authored card coverage plus a smaller set of reu
       play_cost_gte: 5
   ```
 
-- **First test:** `BT14-009` in battle area blocks both players from playing cost-5-or-higher Digimon by effects, but does not block normal hand plays or lower-cost effect plays.
+- **First test:** `BT9-103` in battle area blocks the printed player-scoped restriction while preserving unrelated legal actions.
 
 ## Rocks-Local Authoring And Test Gaps
 
@@ -145,14 +146,16 @@ These should not become cross-archetype gap entries unless authoring proves a re
 
 | Card(s) | Status | Next Rust test |
 |---|---|---|
-| `EX10-032` | authoring / test gap | Source-trash selection grants Collision, Piercing, and +3000 DP until opponent turn end; selected source inherited effect fires exactly once |
-| `P-167` | authoring / test gap plus reveal-ordering dependency | Start-main and when-digivolving source-trash reveal flow, including add-to-hand vs place-as-source branch |
-| `EX8-047`, `BT21-055`, `EX8-005` | authoring / test gap | On-play/search and inherited source-trash delete or memory gain only when that exact source card is trashed |
-| `EX10-036` | authoring / test gap | Trash exactly three legal Mineral/Rock sources, delete target, trash top security, place three from trash, and unsuspend once per turn |
-| `EX10-069` | authoring / reusable Delay verification gap | Place itself in battle area, then activate Delay only when Close suspends |
+| `EX10-032` | partial YAML/test slice added | Remaining: source-trash selection grants Collision, Piercing, and +3000 DP until opponent turn end |
+| `P-167` | partial YAML/test slice added plus reveal-ordering dependency | Remaining: start-main and when-digivolving source-trash reveal flow, including add-to-hand vs place-as-source branch |
+| `EX8-047`, `BT21-055`, `EX8-005` | partial/implemented YAML/test slices added | Remaining: `EX8-047`/`BT21-055` face-up search/reduction clauses |
+| `EX10-036` | partial YAML/test slice added | Remaining: trash exactly three legal Mineral/Rock sources, delete target, trash top security, place three from trash, and unsuspend once per turn |
+| `EX10-069` | partial YAML/test slice added / reusable Delay verification gap | Remaining: place itself in battle area, then activate Delay only when Close suspends |
 | `BT16-082` | placeholder replacement / test gap | OnMove reveal-add flow, bottom remainder handling, then optional hatch without triggering on hatch |
 | `P-206`, `EX7-074` | modernization / test gap | Remove raw-Rust self-disposition where standard DSL can express the printed Option flow |
-| `_examples/BT14-009` | production placement / test gap | Move to production card location when ready and cover bilateral player-scoped passive mask behavior |
+| `BT14-009`, `BT18-064`, `EX8-051`, `ST13-08` | implemented 2026-05-04 | Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt14_009 bt18_064 ex8_051 st13_08 --nocapture` |
+| `BT20-055`, `BT21-021`, `BT9-103`, `EX10-003`, `EX11-065`, `EX8-070`, `P-130` | blocked after pass | See `qa/archetype-qa/dsl/rocks.md` and `qa/qa-reports/validated_cards_dsl.json` for per-card gap routing. |
+| `P-123` | covered by pulled main update | Production YAML/tests are present on main after the pull; no longer counted in the Rocks blocked remainder. |
 
 ## Stale Tracker Cleanup Candidates
 
@@ -170,7 +173,7 @@ The following older Rocks gap claims should be reviewed before a new roadmap spe
 2. Promote `G-ROCKS-SOURCE-TRASH-CONTEXT-COMPLETE` as a producer-audit task, not a new syntax task.
 3. Promote `G-ROCKS-DELAY-EVENT-DIGIVOLVE` only for the remaining event-gated Delay + effect-digivolve verification slices not already covered by Puppet work.
 4. Promote `G-ROCKS-OPTION-SELF-DISPOSITION` as a DSL cleanup and raw-Rust retirement task.
-5. Promote `G-ROCKS-PLAYER-SCOPED-PASSIVE-MODIFIERS` if `BT14-009`/`BT9-103`/`ST13-08` production YAML cannot be authored with existing modifier lowering.
+5. Keep `G-ROCKS-PLAYER-SCOPED-PASSIVE-MODIFIERS` local to remaining card authoring unless `BT9-103` proves a new reusable primitive is still missing; `BT14-009` and `ST13-08` are production-authored.
 6. Keep all remaining Rocks cards as TDD authoring work under `code/digimon-engine/tests/` and `code/digimon-engine/cards/**`, not as roadmap gaps.
 
 ## Verification References

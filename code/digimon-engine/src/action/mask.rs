@@ -726,6 +726,9 @@ pub(crate) fn option_has_active_main_effect(
         player_id,
     );
     effects.iter().any(|effect| {
+        if effect.delay_trigger.is_some() {
+            return true;
+        }
         if effect.timing != EffectTiming::OptionMain {
             return false;
         }

@@ -1,0 +1,38 @@
+card: P-039
+name: "Black Memory Boost!"
+kind: option
+color: [black]
+cost: 3
+
+effects:
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 4; add 1 black Digimon to hand; place rest at bottom; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 4
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: black
+          prompt: "Add 1 black Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      # Option self-placement is inferred from the Delay clause. Security
+      # placement remains blocked by G-PLACE-SELF-AS-OPTION-PERMANENT.
+
+  - kind: delay
+    trigger: end_of_your_next_turn
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process: []

@@ -1,0 +1,21 @@
+card: EX10-033
+name: Pyramidimon
+kind: digimon
+level: 6
+color: [black]
+cost: 11
+dp: 11000
+traits: [Mineral, LIBERATOR]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+
+# Printed source-placement and source-trash play-cost reduction clauses are not
+# authored in this pass.
+
+effects:
+  - kind: grant_keyword
+    keyword: Fragment
+    value: 3
