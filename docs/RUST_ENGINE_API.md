@@ -521,22 +521,115 @@ None
 Permanent             # never expires on its own
 EndOfTurn             # cleared at the end of any turn
 EndOfOpponentsTurn    # cleared at the end of the source-player's opponent's turn
+EndOfYourTurn         # cleared at the end of the source player's own turn (mirror of above)
 EndOfAttack           # cleared when the current attack resolves
-EndOfBattle           # same as EndOfAttack for most purposes
-UntilLeaveField       # cleared when the permanent leaves the field
+EndOfBattle           # cleared when the current battle resolution finishes
+UntilLeaveField       # cleared when the source permanent leaves the field
+UntilCondition        # active while a per-entry boolean predicate holds; re-evaluated
+                      # by the continuous controller (controller wire-up is a follow-up
+                      # to the Track C taxonomy publication; the variant is reserved
+                      # for predicate-driven auras such as Zephagamon ZEPH-G004)
+OnceUsed(u32)         # the value is the limit; consume_use(...) advances a per-entry
+                      # counter and the entry expires once the counter reaches the limit.
+                      # Reserved variant — consumption tracking is a follow-up to the
+                      # taxonomy publication.
 ```
 
 ### `ModifierType` (partial — see `enums.rs` for full list)
 
-- DP: `ChangeDp`, `ChangeBaseDp`, `DpFloor`, `DontHaveDp`
-- Cost: `ChangePlayCost`, `ChangeDigivolveCost`, `CannotReduceCost`
-- Protection: `CannotBeDestroyed`, `CannotBeDestroyedByBattle`, `CannotBeDestroyedByEffect`
-- Attack: `CannotAttack`, `CannotAttackPlayer`, `CanAttackUnsuspended`, `CanAttackActivePlayer`
+- DP: `ChangeDp`, `ChangeBaseDp`, `DpFloor`, `DontHaveDp`, `ChangeCardDP`, `ChangeOriginDP`, `ChangeSAttack`
+- Cost: `ChangePlayCost`, `ChangeDigivolveCost`, `CannotReduceCost`, `ChangeLinkCost`, `ChangeLinkMax`
+- Protection: `CannotBeDestroyed`, `CannotBeDestroyedByBattle`, `CannotBeDestroyedByEffect`, `ImmuneFromDPMinus`, `ImmuneFromStackTrashing`
+- Movement: `CannotBeReturnedToDeck`, `CannotBeReturnedToHand`, `CannotBeTrashedByEffect`, `CannotBeDeDigivolved`, `CannotMove`
+- Attack: `CannotAttack`, `CannotAttackPlayer`, `MayAttackPlayerOnly`, `CanAttackUnsuspended`, `CanAttackActivePlayer`, `CannotAttackTarget`, `CanAttackTargetDefendingPermanent`, `CannotSwitchAttackTarget`, `CannotBeRedirectedAsAttackTarget`, `VortexCanAttackPlayer`
 - Suspend: `CannotSuspend`, `CannotUnsuspend`
 - Targeting: `CannotBeSelectedByEffect`, `CannotBeAffected`
-- Granted keywords: `GrantBlocker`, `GrantRush`, `GrantJamming`, `GrantPiercing`, `GrantReboot`, `GrantBlitz`, `GrantAlliance`, `GrantRaid`, `GrantDecoy`
+- Memory / security: `CannotAddMemory`, `CannotAddSecurity`, `ChangeEndTurnMinMemory`, `MemoryBlock`
+- Granted keywords: `GrantBlocker`, `GrantRush`, `GrantJamming`, `GrantPiercing`, `GrantReboot`, `GrantBlitz`, `GrantAlliance`, `GrantRaid`, `GrantDecoy`, `GrantVortex`, `GrantOverclock`
+- Effect-suppression: `DisableEffect` (carries `disable_effect_timing: Option<EffectTiming>` on the entry)
+- Identity: `TreatAsDigimon`, `ChangeBaseCardName`, `ChangeBaseCardColor`, `ChangeTraits`, `ChangePermanentLevel`, `ChangeCardLevelForAssembly`, `ChangeCardNamesForDigiXros`
 - Security: `SecurityAttackChange`
 - Color/level: `ChangeColor`, `AddColor`, `ChangeLevel`
+
+### Modifier consult-site checklist
+
+The taxonomy is the cross-track contract: every variant lists which mutation
+paths read it. When wiring enforcement for a variant in another track,
+the corresponding consult site is the single place that must call
+`game.modifiers.has(...)` (or the helper) before letting the mutation
+commit. Variants whose consumer ships in another track still have their
+storage entry, lifecycle, and DSL string published.
+
+| Variant | Scope | Consult site |
+|---|---|---|
+| `CannotPlayDigimonByEffect` | player | `play_from_hand_with_cost`, `play_from_trash_with_cost` (Digimon-kind plays via `PlaySource::ByEffect`) |
+| `CannotPlayTamerByEffect` | player | same set, Tamer-kind only |
+| `CannotPlayFromTrash` | player | every play helper that names trash as source |
+| `CannotReducePlayCost` | player | `BeforePayCost` cost-reduction enumeration |
+| `CannotReduceDigivolveCost` | player | `BeforePayCost` enumeration for digivolve cost paths |
+| `CannotAddSecurityByEffect` | player | `Game::add_security_by_effect` |
+| `CannotGainMemoryByEffect` | player | `Game::adjust_memory_by_effect` |
+| `MayAttackPlayerOnly` | player | `combat::is_legal_attack_target` (Track D) |
+| `IgnoreColorRequirement` | player | digivolution and play color-requirement gates |
+| `CannotMove` | permanent | breeding-area → battle-area move and effect-driven move helpers |
+| `CannotBeReturnedToHand` | permanent | `WhenWouldBeReturnedToHand` replacement (Phase 7) |
+| `CannotBeReturnedToDeck` | permanent | `WhenWouldBeReturnedToDeck` replacement (Phase 7) |
+| `CannotBeTrashedByEffect` | permanent | `WhenWouldBeTrashed` replacement (Phase 7) |
+| `CannotBeDeDigivolved` | permanent | `WhenWouldBeDeDigivolved` replacement (Phase 7) |
+| `CannotAttack` | permanent | `WhenWouldAttack` replacement (Phase 9) |
+| `CannotAttackTarget` | permanent | `WhenWouldBeAttackTarget` replacement (Phase 9) |
+| `CannotSwitchAttackTarget` | permanent | `combat::redirect_attack_target` (Track D) |
+| `CannotBeRedirectedAsAttackTarget` | permanent | retarget candidate filter in `try_enter_block` and Raid post-block rider (Track D) |
+| `CanAttackTargetDefendingPermanent` | permanent | `combat::is_legal_attack_target` — overrides negative gates (Track D) |
+| `CannotAddMemory` | permanent | `Game::adjust_memory_by_effect` |
+| `CannotAddSecurity` | permanent | `Game::add_security_by_effect` |
+| `ChangeEndTurnMinMemory` | permanent / player | `Game::end_turn` memory-floor logic (Track D / E) |
+| `ImmuneFromDPMinus` | permanent | `Permanent::dp_modifier_apply` for negative DP modifiers |
+| `ImmuneFromStackTrashing` | permanent | source-trash mutation (the inherited stack-peel path) |
+| `CannotBeAffected` | permanent | already wired via `effect_immunity_filter`; honors source-kind + controller filter |
+| `DisableEffect` | permanent | `effect_queue::permanent_activation_blocked_for_timing` reads `entry.disable_effect_timing` and skips dispatch for that timing only |
+| `GrantCollision` (via `Keyword::Collision`) | permanent | `combat::try_enter_block` reads `has_keyword(Collision)` — already wired |
+| `VortexCanAttackPlayer` | permanent | attack target legality check (Track D) |
+| `TreatAsDigimon` | permanent | `Permanent::is_digimon_for_rules` predicate consumed by attack legality and archetype counts |
+| `ChangeDp` / `ChangeBaseDp` / `ChangeCardDP` / `ChangeOriginDP` | permanent / aura | `Permanent::dp()` calculation site |
+| `ChangePlayCost` / `ChangeDigivolveCost` / `ChangeLinkCost` / `ChangeLinkMax` | permanent / aura | the corresponding cost-calc helper |
+| `ChangePermanentLevel` / `ChangeTraits` / `ChangeBaseCardName` / `ChangeBaseCardColor` | permanent / aura | per-attribute getter on `Permanent` |
+
+Source-scoped semantics (modifiers that apply only to opponent-cause
+moves, e.g. Rocks BT18-064) are expressed today via the `cause_filter`
+field on `ModifierEntry` rather than a separate storage layer. Use
+`ModifierEntry::passive_replacement(...)` (which sets a sensible default
+cause filter) or `.opponent_only()` for the explicit "opponent's effects
+only" case. Tests in `tests/replacements/source_scoped_immunity.rs`
+exercise this.
+
+### Cross-track contracts
+
+- **Track A (event payloads):** `Expiry::UntilLeaveField` consumes Track A's
+  leave-field event; modifier `source_card` reuses Track A's provenance
+  tokens. The `ModifierEntry::source_player` and `source_permanent`
+  fields exist today; richer payloads land when Track A ships.
+- **Track B (replacement-effect framework):** the `WhenWouldLeaveBattleArea`
+  super-timing already calls into the modifier registry via
+  `passive_modifier_to_would` in `replacement.rs`. New source-scoped
+  immunity reuses this hook.
+- **Track D (combat machine):** publishes the read API for
+  `CannotAttackPlayer`, `MayAttackPlayerOnly`, `VortexCanAttackPlayer`,
+  `GrantCollision` (via `Keyword::Collision`), and
+  `CannotBeRedirectedAsAttackTarget`. `Keyword::Collision` is already
+  consulted in `combat::try_enter_block`; the others are reserved
+  consult sites the combat track wires.
+- **Track G (keyword emitters):** keywords route through `grant_keyword`
+  and `add_player_modifier` — do not let keywords mutate
+  `ModifierStore` directly.
+- **Track H (aura system):** delivers DP/cost-scaling modifiers
+  (`ChangeDp`, `ChangePlayCost`, etc.) via the future continuous
+  controller. The aura → modifier delivery API is reserved.
+- **Track J (predicate evaluator):** is the input to
+  `Expiry::UntilCondition`. The predicate type lives on
+  `ModifierEntry::replacement_condition` for replacement-shaped
+  predicates today; `UntilCondition` re-uses this surface when the
+  controller wires up.
 
 ### `Keyword`
 

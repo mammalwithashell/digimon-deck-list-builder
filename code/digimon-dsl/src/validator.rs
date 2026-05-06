@@ -1061,9 +1061,11 @@ pub const KNOWN_EXPIRY_KEYS: &[&str] = &[
     "permanent",
     "end_of_turn",
     "end_of_opponents_turn",
+    "end_of_your_turn",
     "end_of_attack",
     "end_of_battle",
     "until_leave_field",
+    "until_condition",
 ];
 
 fn is_known_expiry(name: &str) -> bool {

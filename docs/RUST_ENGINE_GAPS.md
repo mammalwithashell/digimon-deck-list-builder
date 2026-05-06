@@ -434,6 +434,7 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Suggested API shape:** Add `condition: Option<Box<dyn Fn(&EffectReadContext) -> bool>>` to `ModifierEntry`; or passive `Effect::declarative(card).modifier_when(type, value, condition)` builder that the affect-resolution code consults per query.
 - **Workaround:** Permanent grant over-applies when condition is false.
 - **Related:** Parity §4.7x.
+- **Updated 2026-05-06 (Track C taxonomy):** 🟡 PARTIAL — the `Expiry` enum now publishes `Expiry::UntilCondition`, `Expiry::OnceUsed(u32)`, and `Expiry::EndOfYourTurn`, with the corresponding DSL keys (`until_condition`, `end_of_your_turn`) round-tripping in `EXPIRY_TABLE` / `KNOWN_EXPIRY_KEYS`. `EndOfYourTurn` is fully enforced (mirror of `EndOfOpponentsTurn`). `UntilCondition` is reserved data only — entries persist through turn ends and the continuous controller wires up in a follow-up. `OnceUsed` likewise reserves the variant for consumer use. `ModifierEntry` already has a `replacement_condition` closure (Phase 7); `UntilCondition` re-uses that surface when the controller lands. Unit tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --lib modifiers -- end_of_your_turn until_condition_and_once_used --nocapture`.
 
 ### Player-scoped modifier registry (CannotPlayFromTrash, CannotPlayDigimonByEffect, OpponentCannotReduceDigivolveCost, IgnoreColorRequirement, MayAttackPlayerOnly, CannotReducePlayCost-bilateral, CannotAddSecurityByEffect)
 - **Severity:** 🔴 BLOCKING
@@ -448,6 +449,7 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Suggested API shape:** Continue extending `ModifierRegistry` player-scoped entries and query helpers for the remaining variants, with shared `Expiry` handling and condition-aware lookup where printed text requires it. Effect-play helpers and masks should consult the same legality helpers to keep decode and masks synchronized.
 - **Workaround:** None — BLOCKED.
 - **Related:** Parity §4.2b (IgnoreColorRequirement), §4.7x (context-aware modifier queries).
+- **Updated 2026-05-06 (Track C taxonomy):** 🟡 PARTIAL — `ModifierType::MayAttackPlayerOnly` is now published as a player-scoped variant in `enums.rs` and exposed to DSL via `dsl_cards::modifier_map::lookup_modifier_type`. Combat-side enforcement (Track D's `combat::is_legal_attack_target`) is the remaining wire-up. Also published in this taxonomy round: `CannotMove`, `CannotSwitchAttackTarget`, `CannotBeRedirectedAsAttackTarget`, `CanAttackTargetDefendingPermanent`, `CannotAddMemory`, `CannotAddSecurity`, `ChangeEndTurnMinMemory`, `ImmuneFromDPMinus`, `ImmuneFromStackTrashing`, `DisableEffect` (with `disable_effect_timing` parameter on `ModifierEntry`), `TreatAsDigimon`, plus the DP/cost-scaling family (`ChangeCardDP`, `ChangeOriginDP`, `ChangeSAttack`, `ChangeLinkCost`, `ChangeLinkMax`, `ChangePermanentLevel`, `ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor`, `ChangeCardLevelForAssembly`, `ChangeCardNamesForDigiXros`). Per-variant consult sites are documented in `docs/RUST_ENGINE_API.md` § "Modifier consult-site checklist". Bilateral `CannotReducePlayCost`, `CannotPlayFromTrash`, and `OpponentCannotReduceDigivolveCost` remain BLOCKING — the current `CannotReducePlayCost` variant doesn't yet carry a self-only / opponent-only / both selector. Passing command(s): `cargo test --manifest-path code/digimon-engine/Cargo.toml --lib modifiers -- end_of_your_turn_player_scoped --nocapture`.
 
 ### Option card play flow (resolve + trash vs. place-on-field; [Main]/[Security] activation) + Plug-In / Link mechanic + Security-effect return-to-hand / place-on-field
 - **Severity:** 🔴 BLOCKING
@@ -637,6 +639,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 
 **Updated 2026-05-03:** The permanent-scoped timing suppression path is implemented for `BT24-040`'s selected two-target `CannotSuspend` / `CannotActivateEffectsByTiming(WhenDigivolving)` lock. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_040 --nocapture`. Keep the broader gap open for other timings, aura-style suppression, and unvalidated cards such as `BT10-042` and `BT19-093`.
 
+**Updated 2026-05-06 (Track C taxonomy):** 🟡 PARTIAL closure — `ModifierType::DisableEffect` is now published as a generic permanent-scoped timing-suppression variant. The suppressed `EffectTiming` parameter rides on the entry as `ModifierEntry::disable_effect_timing: Option<EffectTiming>` (kept off the variant payload so `ModifierType` stays `Copy + Eq + Hash`). `ModifierRegistry::is_timing_disabled(target, timing)` is the read API; `effect_queue::permanent_activation_blocked_for_timing` consults it before dispatching per-permanent observers. Use `ModifierEntry::disable_effect(timing, expiry, source_player)` to install. Mirrors DCGO `DisableEffectClass.cs`. End-to-end coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test modifier_disable_effect --nocapture`. Cards still needing wire-up at their YAML / Rust scripts (BT10-042 Venusmon, BT19-093 Queen Device) should switch to this generic variant rather than the bespoke `CannotActivateEffectsByTiming(WhenDigivolving)` shape.
+
 ### Grant Security A. ±N modifier to a targeted permanent (parametric `SecurityAttackChange`)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
@@ -721,13 +725,13 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** "Zone-manipulation: security stack operations"; "Zone-manipulation: return-to-hand / return-to-deck / bounce self".
 
 ### Fixed attack target — `CannotBeRedirectedAsAttackTarget` modifier
-- **Severity:** 🔴 BLOCKING
+- **Severity:** 🟡 PARTIAL (taxonomy published 2026-05-06)
 - **Discovered in:** TS Olympos (2026-04-18)
 - **Card(s):** BT24-062 MasterBlimpmon (inherited "[Your Turn] This Digimon's attack target can't change.")
 - **Effect text:** "[Your Turn] This Digimon's attack target can't change."
-- **What's missing:** No `ModifierType` gates Block/Raid/Collision target-redirection per permanent. `try_enter_block` and Raid redirect paths unconditionally rewrite `effective_target`. Distinct from `CannotBeAffected` (suppresses effect-driven mutations, not combat-interrupt paths).
-- **Suggested API shape:** `ModifierType::AttackTargetCannotChange`. In `try_enter_block` / `try_enter_raid` / any `effective_target` mutation site, guard: `if modifiers.has_modifier(declared_target, ModifierType::AttackTargetCannotChange) { skip redirect }`. Expose via `ctx.add_modifier(target, ..., Expiry::EndOfTurn)`.
-- **Workaround:** "None — BLOCKED." No scripting-surface equivalent prevents Block/Raid redirect.
+- **What's missing:** Track C taxonomy now publishes `ModifierType::CannotBeRedirectedAsAttackTarget` (and the sibling `CannotSwitchAttackTarget` for the attacker-side variant) — DSL keys `CannotBeRedirectedAsAttackTarget` / `CannotSwitchAttackTarget` resolve in `modifier_map.rs`. The remaining work is Track D's combat consult site: `try_enter_block` / `try_enter_raid` / the post-block Raid retarget rider must guard their `effective_target` rewrite by reading the modifier on the candidate redirect target. Distinct from `CannotBeAffected` (suppresses effect-driven mutations, not combat-interrupt paths).
+- **Suggested API shape:** In `try_enter_block` / `try_enter_raid` / any `effective_target` mutation site, guard: `if modifiers.has(redirect_candidate, ModifierType::CannotBeRedirectedAsAttackTarget) { skip redirect }`. Expose via `ctx.add_modifier(target, ..., Expiry::EndOfTurn)`.
+- **Workaround:** Use `Effect::declarative(card)` to install the modifier with `EndOfTurn` expiry; the consult site itself is the remaining gap.
 - **Related:** "Raid target-switch interrupt (scripting-surface, not mask-only)"; RUST_PYTHON_PARITY §2.3.
 
 ### In-effect branch-choice selector (`select_effect_choice` / "choose one of N effects")
