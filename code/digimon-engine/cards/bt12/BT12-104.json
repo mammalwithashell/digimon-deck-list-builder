@@ -1,0 +1,26 @@
+{
+  "index": 1358,
+  "norm_id": 0.0679,
+  "card_id": "BT12-104",
+  "card_index": 104,
+  "card_name_eng": "Shining Blast",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_104",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 [Marcus Damon] from your hand without paying the cost. Then, for each yellow and/or red Tamer you have in play, 3 of your opponent's Digimon get -2000 DP for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

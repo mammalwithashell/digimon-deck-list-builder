@@ -1,0 +1,25 @@
+{
+  "index": 783,
+  "norm_id": 0.03915,
+  "card_id": "BT7-089",
+  "card_index": 89,
+  "card_name_eng": "J.P. Shibayama",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_089",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying its memory cost.\r\n[Your Turn] When this Tamer would digivolve into a green Digimon, reduce the memory cost of the digivolution by 1.",
+  "inherited_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

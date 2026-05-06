@@ -1,0 +1,57 @@
+{
+  "index": 1000,
+  "norm_id": 0.05,
+  "card_id": "BT9-082",
+  "card_index": 82,
+  "card_name_eng": "Ordinemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_082",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [
+    "Fallen Angel"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] When DNA digivolving, delete 1 of your opponent's level 6 or higher Digimon and all of their level 5 or lower Digimon. For each Digimon deleted by this effect, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)\r\n[On Deletion] You may trash the top card of your security stack to play this card without paying its memory cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Purple Lv.6 + Yellow Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 6,
+        "card_colors": [
+          "Purple"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 6,
+        "card_colors": [
+          "Yellow"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

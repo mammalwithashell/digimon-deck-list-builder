@@ -1,0 +1,28 @@
+{
+  "index": 3921,
+  "norm_id": 0.19605,
+  "card_id": "ST24-14",
+  "card_index": 14,
+  "card_name_eng": "Yoshino Fujieda & Keenan Crier",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST24_14",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    3,
+    6
+  ],
+  "type_eng": [
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] [On Play] You may place the top card of your deck face down under this Tamer. Then, if your opponent has a Digimon, gain 1 memory.\r\n[All Turns] When effects trash cards from under this Tamer, by suspending this Tamer, suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

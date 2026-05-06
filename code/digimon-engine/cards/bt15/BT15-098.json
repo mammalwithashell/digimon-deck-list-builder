@@ -1,0 +1,25 @@
+{
+  "index": 1678,
+  "norm_id": 0.0839,
+  "card_id": "BT15-098",
+  "card_index": 98,
+  "card_name_eng": "Mist Barrier",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_098",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] By deleting 1 of your Digimon, you may play 1 [Myotismon] from your trash without paying the cost. Then, place this card in the battle area.\r\n[All Turns] When one of your [Myotismon] is deleted, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n• You may play 1 [VenomMyotismon] from your trash without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

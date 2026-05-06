@@ -1,0 +1,36 @@
+{
+  "index": 2242,
+  "norm_id": 0.1121,
+  "card_id": "BT21-050",
+  "card_index": 50,
+  "card_name_eng": "Cherrymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_050",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation",
+    "WG"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] You may suspend 1 Digimon.\r\n[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, if this Digimon is suspended, you may change the attack target to 1 of your Digimon with the [WG] trait.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When any of your [WG] trait Digimon are played, you may Suspend 1 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[WG] trait: Cost 3"
+}

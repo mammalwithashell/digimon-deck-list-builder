@@ -1,0 +1,35 @@
+{
+  "index": 1623,
+  "norm_id": 0.08115,
+  "card_id": "BT15-043",
+  "card_index": 43,
+  "card_name_eng": "Tentomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_043",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] By suspending 1 Digimon, 1 of your Digimon with the [Insectoid] trait gets +3000 DP until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

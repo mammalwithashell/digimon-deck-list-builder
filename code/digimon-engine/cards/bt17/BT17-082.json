@@ -1,0 +1,25 @@
+{
+  "index": 1866,
+  "norm_id": 0.0933,
+  "card_id": "BT17-082",
+  "card_index": 82,
+  "card_name_eng": "Minami Uehara",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_082",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] You may play 1 [Labramon] or [Seasarmon] from your hand or from one of your Digimon's digivolution cards without paying the cost.\r\n[Your Turn] When one of your Digimon is played from digivolution cards, by suspending this Tamer, 1 of your blue Digimon gains ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 3092,
+  "norm_id": 0.1546,
+  "card_id": "EX7-046",
+  "card_index": 46,
+  "card_name_eng": "Jazarichmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_046",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.).\r\n[When Digivolving] If your opponent doesn't have a level 5 or higher Digimon, gain 1 memory.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, you may change the attack target to this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

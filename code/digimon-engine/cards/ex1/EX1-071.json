@@ -1,0 +1,25 @@
+{
+  "index": 2674,
+  "norm_id": 0.1337,
+  "card_id": "EX1-071",
+  "card_index": 71,
+  "card_name_eng": "Win Rate: 60%!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_071",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Tamer, you can ignore this card's color requirements.\r\n[Main] The next time one of your Digimon would digivolve this turn, you may trash 1 Digimon card in your hand of the same color as the digivolving Digimon to reduce the memory cost of the digivolution by 4.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,27 @@
+{
+  "index": 1354,
+  "norm_id": 0.0677,
+  "card_id": "BT12-100",
+  "card_index": 100,
+  "card_name_eng": "Final Xros Blade",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_100",
+  "play_cost": 9,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon. Then, unsuspend 1 of your [Shoutmon X7: Superior Mode] cards, and it may attack a player.",
+  "inherited_effect_description_eng": "Security Effect [Security] delete 1 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 453,
+  "norm_id": 0.02265,
+  "card_id": "BT4-098",
+  "card_index": 98,
+  "card_name_eng": "Atomic Inferno",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_098",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your Digimon with the [Hybrid] trait gets +3000 DP, ＜Security A. +1＞ (This Digimon checks 1 additional security card.) and \"[Your Turn] When this Digimon is blocked, gain +3 memory.\" for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] All of your Digimon gain ＜Security A. +1＞ (This Digimon checks 1 additional security card.) until the end of your next turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

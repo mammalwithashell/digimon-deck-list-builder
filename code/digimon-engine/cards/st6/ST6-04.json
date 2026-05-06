@@ -1,0 +1,37 @@
+{
+  "index": 3682,
+  "norm_id": 0.1841,
+  "card_id": "ST6-04",
+  "card_index": 4,
+  "card_name_eng": "Dracmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST6_04",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Undead"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] You may return 1 purple Option card with a memory cost of 1 or 7 from your trash to your hand.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

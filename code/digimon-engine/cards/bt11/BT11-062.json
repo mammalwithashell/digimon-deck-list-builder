@@ -1,0 +1,36 @@
+{
+  "index": 1204,
+  "norm_id": 0.0602,
+  "card_id": "BT11-062",
+  "card_index": 62,
+  "card_name_eng": "Agumon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_062",
+  "play_cost": 4,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Reptile",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with [Greymon] or [X Antibody] in its name and 1 black Tamer card among them to your hand. Place the rest at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[All Turns] When this Digimon with [Greymon] or [Omnimon] in its name would be deleted or returned to your hand or deck by an effect, by placing 1 [X Antibody] from this Digimon's digivolution cards at the bottom of its owner's deck, prevent this Digimon from leaving play.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Agumon]: Cost 0"
+}

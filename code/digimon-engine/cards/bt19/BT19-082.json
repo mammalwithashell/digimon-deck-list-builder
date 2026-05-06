@@ -1,0 +1,27 @@
+{
+  "index": 2070,
+  "norm_id": 0.1035,
+  "card_id": "BT19-082",
+  "card_index": 82,
+  "card_name_eng": "Yao Qinglan",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_082",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When any of your Digimon with [Aqua] or [Sea Animal] in any of its traits attack, by suspending this Tamer, you may place 1 level 5 or lower Digimon card with [Aqua] or [Sea Animal] in any of its traits from your hand as that Digimon's bottom digivolution card.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

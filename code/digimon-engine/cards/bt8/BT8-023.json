@@ -1,0 +1,38 @@
+{
+  "index": 829,
+  "norm_id": 0.04145,
+  "card_id": "BT8-023",
+  "card_index": 23,
+  "card_name_eng": "Submarimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_023",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1,
+    2
+  ],
+  "type_eng": [
+    "Aquatic"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[When Digivolving] Trash the bottom digivolution card of 1 of your opponent's Digimon. Then, 1 of your opponent's Digimon with no digivolution cards gets -3000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Armadillomon]: Cost 2"
+}

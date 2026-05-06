@@ -1,0 +1,37 @@
+{
+  "index": 1266,
+  "norm_id": 0.0633,
+  "card_id": "BT12-012",
+  "card_index": 12,
+  "card_name_eng": "Agunimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_012",
+  "play_cost": 6,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "You may digivolve this card from your hand onto one of your [Takuya Kanbara]s as if the Tamer is a level 3 red Digimon.\r\n[On Deletion] You may play 1 [Flamemon] suspended from your hand without paying its cost.",
+  "inherited_effect_description_eng": "[On Deletion] You may play 1 [Takuya Kanbara] from your hand without paying its cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] [BurningGreymon]: Cost 1"
+}

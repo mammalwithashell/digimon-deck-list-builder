@@ -1,0 +1,37 @@
+{
+  "index": 2325,
+  "norm_id": 0.11625,
+  "card_id": "BT22-031",
+  "card_index": 31,
+  "card_name_eng": "GoldNumemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_031",
+  "play_cost": 5,
+  "dp": 2000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Mutant",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Security A. -2＞ (This Digimon checks 2 additional security cards.) until their turn ends. Then, if this Digimon's stack has 2 or more same-level cards, this Digimon may digivolve into [PlatinumNumemon] in the hand for a digivolution cost of 4, ignoring digivolution requirements.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon would digivolve into a Digimon card with the [CS] trait, reduce the digivolution cost by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Numemon] in name or Lv.3 w/[CS] trait: Cost 2"
+}

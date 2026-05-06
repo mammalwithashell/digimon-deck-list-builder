@@ -1,0 +1,28 @@
+{
+  "index": 2069,
+  "norm_id": 0.10345,
+  "card_id": "BT19-081",
+  "card_index": 81,
+  "card_name_eng": "Kiriha Aonuma",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_081",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "General",
+    "Blue Flare"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 Digimon card with the [Blue Flare] or [Xros Heart] trait from your hand under any of your Tamers, gain 1 memory.\r\n[All Turns] When any of your [Blue Flare] trait Digimon cards with DigiXros requirements would be played, by suspending this Tamer, you may place cards from under your Tamers as digivolution cards for a DigiXros.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

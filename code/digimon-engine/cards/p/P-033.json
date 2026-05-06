@@ -1,0 +1,37 @@
+{
+  "index": 3363,
+  "norm_id": 0.16815,
+  "card_id": "P-033",
+  "card_index": 33,
+  "card_name_eng": "Sunarizamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_033",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] All of your black Digimon with 13000 DP or more gain ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.).",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon is black and has 13000 DP or more, this Digimon gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

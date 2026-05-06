@@ -1,0 +1,36 @@
+{
+  "index": 2326,
+  "norm_id": 0.1163,
+  "card_id": "BT22-032",
+  "card_index": 32,
+  "card_name_eng": "ShoeShoemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_032",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Puppet",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Deletion] You may play 1 level 3 Digimon card with the [Puppet] trait from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

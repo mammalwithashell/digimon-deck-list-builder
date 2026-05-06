@@ -1,0 +1,37 @@
+{
+  "index": 1551,
+  "norm_id": 0.07755,
+  "card_id": "BT14-073",
+  "card_index": 73,
+  "card_name_eng": "Ogremon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_073",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When one of your effects trashes a card in your hand, gain 1 memory.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When one of your effects trashes a card in your hand, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

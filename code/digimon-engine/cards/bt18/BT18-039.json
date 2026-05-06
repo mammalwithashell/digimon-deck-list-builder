@@ -1,0 +1,36 @@
+{
+  "index": 1925,
+  "norm_id": 0.09625,
+  "card_id": "BT18-039",
+  "card_index": 39,
+  "card_name_eng": "Mistymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_039",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Magic Warrior",
+    "Witchelny"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)\r\n[On Play] [When Digivolving] By trashing the top card of your security stack, change the original DP of 1 Digimon to 6000 until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When a card is removed from your security stack, unsuspend this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

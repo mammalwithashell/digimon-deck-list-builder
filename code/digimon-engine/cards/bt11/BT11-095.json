@@ -1,0 +1,29 @@
+{
+  "index": 1237,
+  "norm_id": 0.06185,
+  "card_id": "BT11-095",
+  "card_index": 95,
+  "card_name_eng": "Taiki, Kiriha, & Nene",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_095",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Xros Heart",
+    "Blue Flare",
+    "General"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand under this Tamer, gain 1 memory and ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Your Turn] When you would play 1 Digimon card with a DigiXros requirement, by suspending this Tamer, you may place cards from under your Tamers as digivolution cards for a DigiXros.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

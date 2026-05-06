@@ -1,0 +1,27 @@
+{
+  "index": 1882,
+  "norm_id": 0.0941,
+  "card_id": "BT17-098",
+  "card_index": 98,
+  "card_name_eng": "Hacker Pride",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_098",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Abadin Electronics"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Add 1 card with [Pulsemon] in its text among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・By placing the top card of 1 of your level 4 or higher Digimon with [Pulsemon] in its text on top of your security stack, gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Reveal the top 3 cards of your deck. Add 1 card with [Pulsemon] in its text among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 1943,
+  "norm_id": 0.09715,
+  "card_id": "BT18-057",
+  "card_index": 57,
+  "card_name_eng": "KoKabuterimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_057",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [
+    "Insectoid"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon or any of your Tamers would digivolve into a multicolored Digimon that is black or yellow, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

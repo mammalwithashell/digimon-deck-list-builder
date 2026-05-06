@@ -1,0 +1,31 @@
+{
+  "index": 2421,
+  "norm_id": 0.12105,
+  "card_id": "BT23-025",
+  "card_index": 25,
+  "card_name_eng": "MarineAngemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_025",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1,
+    2
+  ],
+  "type_eng": [
+    "Fairy",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Hand] [Main] If you have a Digimon or Tamer with the [CS] trait, by paying 5 cost, give 3 of your opponent's Digimon ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) until their turn ends. Then, place this card as the top security card.\r\n[On Play] [When Digivolving] Return 1 of your opponent's Digimon with the lowest level to the hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] At the end of the battle, play this card without paying the cost. At turn end, delete this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] Lv.5 w/[CS] trait: Cost 3"
+}

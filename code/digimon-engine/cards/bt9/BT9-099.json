@@ -1,0 +1,26 @@
+{
+  "index": 1017,
+  "norm_id": 0.05085,
+  "card_id": "BT9-099",
+  "card_index": 99,
+  "card_name_eng": "Sunrise Buster",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_099",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 yellow or red Tamer card from your hand without paying for its memory cost. Then, 1 of your opponent's Digimon gets -3000 DP for the turn for each yellow and/or red Tamers you have in play.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

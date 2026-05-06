@@ -1,0 +1,27 @@
+{
+  "index": 1120,
+  "norm_id": 0.056,
+  "card_id": "BT10-090",
+  "card_index": 90,
+  "card_name_eng": "Zenjiro Tsurugi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_090",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] You may play 1 [Ballistamon] from your hand or from under one of your Tamers without paying its memory cost.\r\n[Your Turn] When you play a Digimon with the [Xros Heart] trait, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

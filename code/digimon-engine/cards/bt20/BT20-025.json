@@ -1,0 +1,36 @@
+{
+  "index": 2115,
+  "norm_id": 0.10575,
+  "card_id": "BT20-025",
+  "card_index": 25,
+  "card_name_eng": "Wingdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_025",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1,
+    0
+  ],
+  "type_eng": [
+    "Sky Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 6000 DP or less.\r\n[All Turns] This Digimon is also treated as Lv.6 [Slayerdramon] for [Examon]'s DNA digivolution.",
+  "inherited_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Coredramon]: Cost 3"
+}

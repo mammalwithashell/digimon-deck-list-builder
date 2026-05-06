@@ -1,0 +1,36 @@
+{
+  "index": 2848,
+  "norm_id": 0.1424,
+  "card_id": "EX4-024",
+  "card_index": 24,
+  "card_name_eng": "Renamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_024",
+  "play_cost": 4,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    1
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Until the end of your opponent's turn, 2 of your opponent's Digimon with 4000 DP or less can't attack.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you use an Option card with a cost of 2 or more, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Viximon]: Cost 0"
+}

@@ -1,0 +1,25 @@
+{
+  "index": 1248,
+  "norm_id": 0.0624,
+  "card_id": "BT11-106",
+  "card_index": 106,
+  "card_name_eng": "Cooties Kick",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_106",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When you would use this card, if you have a black Tamer in play, reduce the cost by 1.\r\n[Main] Until the end of your opponent's turn, 1 of your Digimon with [Numemon], [Sukamon], [Nanimon] or [Etemon] in its name can't be blocked and gains \"[On Deletion] Gain 3 memory.\"",
+  "inherited_effect_description_eng": "Security Effect [Security] Reveal the top 3 cards of your deck. You may play 1 black Digimon card with a play cost of 3 or less among them without paying the cost. Trash the rest.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 1562,
+  "norm_id": 0.0781,
+  "card_id": "BT14-084",
+  "card_index": 84,
+  "card_name_eng": "T.K. Takaishi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_084",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] By returning the top card of your security stack to your hand, you may place 1 yellow card with the [Vaccine] trait from your hand at the bottom of your security stack.\r\n[Your Turn] When a card is added to your security stack, you may suspend this Tamer to gain 1 Memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

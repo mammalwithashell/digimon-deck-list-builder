@@ -1,0 +1,27 @@
+{
+  "index": 1684,
+  "norm_id": 0.0842,
+  "card_id": "BT16-002",
+  "card_index": 2,
+  "card_name_eng": "DemiVeemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_002",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Baby Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [All Turns] While this Digimon has 2 or more colors, it gets +1000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

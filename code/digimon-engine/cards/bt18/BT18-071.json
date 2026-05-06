@@ -1,0 +1,36 @@
+{
+  "index": 1957,
+  "norm_id": 0.09785,
+  "card_id": "BT18-071",
+  "card_index": 71,
+  "card_name_eng": "ShadowSeraphimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_071",
+  "play_cost": 7,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [
+    "Seraph"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 3＞ 1 of your opponent's Digimon. (Trash up to 3 cards from the top. You can't trash past level 3 cards.)\r\n[All Turns] [Once Per Turn] When an attack target is changed, 1 of your opponent's Digimon gets -5000 DP for the turn.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Seraphimon]: Cost 1 \r\n[Digivolve] [Sephirothmon] w/[Mercurymon] in digivolution cards: Cost 4"
+}

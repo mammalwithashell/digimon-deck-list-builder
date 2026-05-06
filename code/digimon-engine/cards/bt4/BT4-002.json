@@ -1,0 +1,29 @@
+{
+  "index": 357,
+  "norm_id": 0.01785,
+  "card_id": "BT4-002",
+  "card_index": 2,
+  "card_name_eng": "Bukamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_002",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Lesser"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [When Attacking] Trash the bottom digivolution card of 1 of your opponent's level 4 or lower Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

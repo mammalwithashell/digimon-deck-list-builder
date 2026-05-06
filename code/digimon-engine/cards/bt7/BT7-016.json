@@ -1,0 +1,37 @@
+{
+  "index": 710,
+  "norm_id": 0.0355,
+  "card_id": "BT7-016",
+  "card_index": 16,
+  "card_name_eng": "EmperorGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_016",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragon Warrior"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[When Digivolving] ＜Blitz＞ (If your opponent has 1 or more memory, this Digimon may attack.)\r\n[Your Turn] [Once Per Turn] When this Digimon is blocked, unsuspend it, and gain 1 memory for each digivolution card this Digimon has with the [Hybrid] trait.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

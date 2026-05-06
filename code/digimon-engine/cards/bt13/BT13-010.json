@@ -1,0 +1,35 @@
+{
+  "index": 1376,
+  "norm_id": 0.0688,
+  "card_id": "BT13-010",
+  "card_index": 10,
+  "card_name_eng": "Biyomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_010",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Bird"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] If played by an effect, by returning 1 of your [Kristy Damon]s to the hand, this Digimon may digivolve into [Garudamon] in the hand, ignoring its digivolution requirements and without paying the cost.",
+  "inherited_effect_description_eng": "[On Deletion] ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

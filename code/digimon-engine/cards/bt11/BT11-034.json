@@ -1,0 +1,36 @@
+{
+  "index": 1176,
+  "norm_id": 0.0588,
+  "card_id": "BT11-034",
+  "card_index": 34,
+  "card_name_eng": "Cutemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_034",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Fairy",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Place 1 Digimon card with the [Xros Heart] trait from your trash under 1 of your Tamers. If you have a Digimon with [Dorulumon] in its name or with [Dorulumon] in its digivolution cards, place up to 2 Digimon cards with the [Xros Heart] trait from your trash under 1 of your Tamers instead.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Xros Heart] trait: Cost 0"
+}

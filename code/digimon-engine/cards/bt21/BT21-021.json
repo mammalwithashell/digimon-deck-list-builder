@@ -1,0 +1,38 @@
+{
+  "index": 2213,
+  "norm_id": 0.11065,
+  "card_id": "BT21-021",
+  "card_index": 21,
+  "card_name_eng": "OmniShoutmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_021",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Dragonkin",
+    "Xros Heart",
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "This card is also treated as [Shoutmon] for DigiXros.\r\n[End of Attack] You may play 1 card with the [Xros Heart], [Blue Flare] or [Hero] trait from your hand with the play cost reduced by 5. If you did, delete this Digimon.\r\n[On Deletion] You may place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under any of your Tamers. Then, ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Rush＞ (This Digimon can attack the turn it comes into play.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Shoutmon]: Cost 4 \r\n[Digivolve] Lv.4 w/[Xros Heart]/[Hero] trait: Cost 3"
+}

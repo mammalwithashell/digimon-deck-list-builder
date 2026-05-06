@@ -1,0 +1,27 @@
+{
+  "index": 583,
+  "norm_id": 0.02915,
+  "card_id": "BT6-001",
+  "card_index": 1,
+  "card_name_eng": "DemiMeramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_001",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Flame"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [When Attacking] When this Digimon attacks a player, it gets +1000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

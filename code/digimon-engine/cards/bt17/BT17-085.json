@@ -1,0 +1,25 @@
+{
+  "index": 1869,
+  "norm_id": 0.09345,
+  "card_id": "BT17-085",
+  "card_index": 85,
+  "card_name_eng": "Rika Nonaka",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_085",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Main] By placing this Tamer and 1 [Kyubimon] and 1 [Taomon] from your trash in any order as the bottom digivolution cards of one of your [Renamon], that Digimon may digivolve into [Sakuyamon] in your hand for a digivolution cost of 4, ignoring its digivolution requirements. If digivolved by this effect, you may return 1 Option card from your trash to the hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

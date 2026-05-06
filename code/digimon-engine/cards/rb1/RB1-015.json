@@ -1,0 +1,37 @@
+{
+  "index": 3577,
+  "norm_id": 0.17885,
+  "card_id": "RB1-015",
+  "card_index": 15,
+  "card_name_eng": "Fumamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "RB1_015",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] Trash the top 3 digivolution cards of 1 of your opponent's Digimon with DP less than or equal to this Digimon's DP. Then, 1 of your opponent's Digimon with no digivolution cards can't attack until the end of their turn.\r\n[All Turns] This Digimon gains all effects of cards with [Gammamon] in their names in this Digimon's digivolution cards.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gains all effects of cards with [Gammamon] in their names in this Digimon's digivolution cards.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Gammamon] in name: Cost 3"
+}

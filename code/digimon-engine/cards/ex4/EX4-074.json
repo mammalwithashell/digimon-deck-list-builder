@@ -1,0 +1,36 @@
+{
+  "index": 2898,
+  "norm_id": 0.1449,
+  "card_id": "EX4-074",
+  "card_index": 74,
+  "card_name_eng": "ShineGreymon: Ruin Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_074",
+  "play_cost": 14,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 4,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [
+    "Light Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] [On Deletion] Until the end of your opponent's next turn, all of your opponent's Digimon get -5000DP.\r\n[End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and ＜Recovery +1 (Deck)＞. Then, if you have a Tamer in play, hatch 1 Digi-Egg card to an empty space in your breeding area.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] [ShineGreymon]: Cost 4"
+}

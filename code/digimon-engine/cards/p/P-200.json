@@ -1,0 +1,27 @@
+{
+  "index": 3530,
+  "norm_id": 0.1765,
+  "card_id": "P-200",
+  "card_index": 200,
+  "card_name_eng": "Kanan Yuki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_200",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have 4 or less memory, suspend 1 of your opponent's Digimon.\r\n[Your Turn] When any of your Digimon would digivolve into a Digimon card with the [TS] trait, by suspending this Tamer, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

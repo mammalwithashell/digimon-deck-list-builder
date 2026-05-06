@@ -1,0 +1,37 @@
+{
+  "index": 2344,
+  "norm_id": 0.1172,
+  "card_id": "BT22-050",
+  "card_index": 50,
+  "card_name_eng": "Roamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_050",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Voice Change (App Name)"
+  ],
+  "form_eng": [
+    "Sup."
+  ],
+  "attribute_eng": [
+    "Tool"
+  ],
+  "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

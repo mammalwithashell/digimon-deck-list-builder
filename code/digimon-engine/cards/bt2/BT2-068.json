@@ -1,0 +1,37 @@
+{
+  "index": 199,
+  "norm_id": 0.00995,
+  "card_id": "BT2-068",
+  "card_index": 68,
+  "card_name_eng": "Impmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_068",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Evil"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Deletion] Trash the top 3 cards of your deck.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

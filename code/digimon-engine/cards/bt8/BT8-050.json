@@ -1,0 +1,35 @@
+{
+  "index": 856,
+  "norm_id": 0.0428,
+  "card_id": "BT8-050",
+  "card_index": 50,
+  "card_name_eng": "Exermon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_050",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] You may suspend 1 of your Digimon to suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +1000 DP for each of your other suspended Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

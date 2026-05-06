@@ -1,0 +1,37 @@
+{
+  "index": 2537,
+  "norm_id": 0.12685,
+  "card_id": "BT24-039",
+  "card_index": 39,
+  "card_name_eng": "Piximon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_039",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Fairy",
+    "Iliad",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+  "inherited_effect_description_eng": "[On Deletion] ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[TS] trait: Cost 3"
+}

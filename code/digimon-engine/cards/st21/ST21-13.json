@@ -1,0 +1,28 @@
+{
+  "index": 3895,
+  "norm_id": 0.19475,
+  "card_id": "ST21-13",
+  "card_index": 13,
+  "card_name_eng": "Matt Ishida & T.K. Takaishi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST21_13",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When any Digimon cards with the [ADVENTURE] trait would be played from your hand, by suspending this Tamer, reduce the play cost by 1.\r\n[Your Turn] All of your level 5 or higher Digimon with the [ADVENTURE] trait gain ＜Rush＞ (This Digimon can attack the turn it comes into play.).",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

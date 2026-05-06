@@ -1,0 +1,35 @@
+{
+  "index": 839,
+  "norm_id": 0.04195,
+  "card_id": "BT8-033",
+  "card_index": 33,
+  "card_name_eng": "Armadillomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_033",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 2-color yellow card among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

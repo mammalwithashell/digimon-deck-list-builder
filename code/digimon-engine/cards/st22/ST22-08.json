@@ -1,0 +1,27 @@
+{
+  "index": 3905,
+  "norm_id": 0.19525,
+  "card_id": "ST22-08",
+  "card_index": 8,
+  "card_name_eng": "Offensive Plug-In V",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST22_08",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Plug-In"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Tamer, you can ignore this card's color requirements.\r\n[Security] Delete 1 of your opponent's Digimon with the lowest DP. Then, add this card to the hand.\r\n[Main] You may link this card to 1 of your Digimon without paying the cost. Then, delete 1 of your opponent's Digimon with as much or less DP as 1 of your Digimon.",
+  "inherited_effect_description_eng": "Link Requirements [Link] Lv.3 or higher: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

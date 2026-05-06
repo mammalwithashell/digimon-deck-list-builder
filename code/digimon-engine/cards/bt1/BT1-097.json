@@ -1,0 +1,25 @@
+{
+  "index": 113,
+  "norm_id": 0.00565,
+  "card_id": "BT1-097",
+  "card_index": 97,
+  "card_name_eng": "Boring Storm",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_097",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "Security Effect [Security] ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

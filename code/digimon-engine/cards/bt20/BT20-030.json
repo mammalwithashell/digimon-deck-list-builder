@@ -1,0 +1,37 @@
+{
+  "index": 2120,
+  "norm_id": 0.106,
+  "card_id": "BT20-030",
+  "card_index": 30,
+  "card_name_eng": "Liollmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_030",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Holy Beast",
+    "ACCEL"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Chaosmon] in its name or the [ACCEL] trait and 1 Option card with the [ACCEL] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Frimon]/Lv.2 w/[ACCEL] trait: Cost 0"
+}

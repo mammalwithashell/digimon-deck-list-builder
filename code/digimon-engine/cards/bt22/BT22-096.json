@@ -1,0 +1,27 @@
+{
+  "index": 2390,
+  "norm_id": 0.1195,
+  "card_id": "BT22-096",
+  "card_index": 96,
+  "card_name_eng": "Unique Emblem: Poseidia Lagoon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_096",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 [Sangomon] or [Yao Qinglan] from your hand or trash without paying the cost. Then, place this card in the battle area.\r\n[Your Turn] When any of your [Yao Qinglan] suspend, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon with [Aqua] or [Sea Animal] in any of its traits may digivolve into an [Aquatic] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

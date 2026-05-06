@@ -1,0 +1,36 @@
+{
+  "index": 3892,
+  "norm_id": 0.1946,
+  "card_id": "ST21-10",
+  "card_index": 10,
+  "card_name_eng": "Gabumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST21_10",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Reptile",
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] While your opponent has a Digimon with 10000 DP or more, or your Tamers have 3 or more total colors, this Digimon can digivolve into [MetalGarurumon] in the hand for a digivolution cost of 4, ignoring digivolution requirements.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] ＜Draw 1＞ (Draw 1 card from your deck.) Then, trash 1 card in your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0"
+}

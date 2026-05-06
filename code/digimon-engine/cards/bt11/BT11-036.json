@@ -1,0 +1,36 @@
+{
+  "index": 1178,
+  "norm_id": 0.0589,
+  "card_id": "BT11-036",
+  "card_index": 36,
+  "card_name_eng": "Chuumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_036",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a card with [Sukamon] in its name, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[On Deletion] If this Digimon has [Sukamon] or [Etemon] in its name, you may play 1 [Chuumon] from your trash suspended without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

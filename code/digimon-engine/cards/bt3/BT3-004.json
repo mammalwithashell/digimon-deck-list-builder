@@ -1,0 +1,29 @@
+{
+  "index": 247,
+  "norm_id": 0.01235,
+  "card_id": "BT3-004",
+  "card_index": 4,
+  "card_name_eng": "Minomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_004",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Larva"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [When Attacking] When you attack one of your opponent's Digimon, this Digimon gets +1000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 737,
+  "norm_id": 0.03685,
+  "card_id": "BT7-043",
+  "card_index": 43,
+  "card_name_eng": "Gotsumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_043",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Rock"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] You may reveal 1 green Digimon card from your hand. If you do, place it on top of your deck.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

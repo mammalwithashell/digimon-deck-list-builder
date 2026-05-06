@@ -1,0 +1,25 @@
+{
+  "index": 217,
+  "norm_id": 0.01085,
+  "card_id": "BT2-086",
+  "card_index": 86,
+  "card_name_eng": "Rina Shinomiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_086",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When one of your blue Digimon attacks, you may suspend this Tamer to give that Digimon +1000 DP for the turn.\r\n[On Play] Reveal 3 cards from the top of your deck. Add 1 Digimon Card with [Vee] in its name among them to your hand. Place the remaining cards on the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 1419,
+  "norm_id": 0.07095,
+  "card_id": "BT13-053",
+  "card_index": 53,
+  "card_name_eng": "Mihiramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_053",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Holy Beast",
+    "Deva"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Suspend 1 of your opponent's Digimon with 7000 DP or less. Then, until the end of your opponent's turn, 1 of your opponent's Digimon doesn't unsuspend.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon would digivolve, reduce the digivolution cost by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

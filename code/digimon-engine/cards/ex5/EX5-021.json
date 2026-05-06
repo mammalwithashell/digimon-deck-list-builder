@@ -1,0 +1,30 @@
+{
+  "index": 2919,
+  "norm_id": 0.14595,
+  "card_id": "EX5-021",
+  "card_index": 21,
+  "card_name_eng": "Majiramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_021",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Holy Dragon",
+    "Deva"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] ＜Draw 1＞ (Draw 1 card from your deck.) Then, you may play 1 [Deva] trait Digimon card without the same name as the cards in your battle area or trash from your hand to an empty space in your breeding area without paying the cost.\r\n[Your Turn] [Once Per Turn] When you use an Option card with a cost of 1 or more, gain 1 memory.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [Four Sovereigns] or [God Beast] trait, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

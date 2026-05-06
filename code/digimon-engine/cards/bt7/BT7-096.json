@@ -1,0 +1,25 @@
+{
+  "index": 790,
+  "norm_id": 0.0395,
+  "card_id": "BT7-096",
+  "card_index": 96,
+  "card_name_eng": "Starlight Velocity",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_096",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 Tamer card or 1 Digimon card with the [Hybrid] trait from one of your Digimon's digivolution cards as a Tamer or another Digimon without paying its memory cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Koji Minamoto] from your hand or trash without paying its memory cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

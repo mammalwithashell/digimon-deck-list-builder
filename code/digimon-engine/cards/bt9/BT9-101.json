@@ -1,0 +1,25 @@
+{
+  "index": 1019,
+  "norm_id": 0.05095,
+  "card_id": "BT9-101",
+  "card_index": 101,
+  "card_name_eng": "Ground Fang",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_101",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Return 1 of your opponent's suspended Digimon and 1 of their suspended Tamers to the bottom of their owners' decks.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

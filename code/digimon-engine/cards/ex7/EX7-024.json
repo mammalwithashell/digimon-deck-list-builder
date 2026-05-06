@@ -1,0 +1,36 @@
+{
+  "index": 3070,
+  "norm_id": 0.1535,
+  "card_id": "EX7-024",
+  "card_index": 24,
+  "card_name_eng": "Shoemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_024",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Puppet",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Puppet] trait, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[Your Turn] All of your opponent's Security Digimon get -3000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

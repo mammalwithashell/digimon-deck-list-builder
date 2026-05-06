@@ -1,0 +1,25 @@
+{
+  "index": 898,
+  "norm_id": 0.0449,
+  "card_id": "BT8-092",
+  "card_index": 92,
+  "card_name_eng": "Yuji Musya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_092",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When one of your Digimon with the [X Antibody] trait is moved from your breeding area to your battle area, gain 1 memory and ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Your Turn] When one of your black Digimon with the [X Antibody] trait attacks, you may suspend this Tamer to place 1 card with the [X Antibody] trait from your hand under that Digimon as its bottom digivolution card.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

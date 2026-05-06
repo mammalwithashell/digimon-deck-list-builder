@@ -1,0 +1,35 @@
+{
+  "index": 1189,
+  "norm_id": 0.05945,
+  "card_id": "BT11-047",
+  "card_index": 47,
+  "card_name_eng": "Palmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_047",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Start of Your Turn] ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

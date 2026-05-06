@@ -1,0 +1,31 @@
+{
+  "index": 3287,
+  "norm_id": 0.16435,
+  "card_id": "LM-019",
+  "card_index": 19,
+  "card_name_eng": "Bokomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "LM_019",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 card with [Gammamon] in its text among them to the hand. Return the rest to the bottom of the deck.\r\n[All Turns] When one of your Digimon with [Gammamon] in its text, other than [Bokomon], would leave the battle area other than by one of your effects, by deleting this Digimon, prevent it from leaving.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

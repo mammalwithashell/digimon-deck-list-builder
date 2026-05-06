@@ -1,0 +1,35 @@
+{
+  "index": 2608,
+  "norm_id": 0.1304,
+  "card_id": "EX1-005",
+  "card_index": 5,
+  "card_name_eng": "Tyrannomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_005",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dinosaur"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] If you don't have a [Taiga] in play, you may play one from your hand without paying its memory cost.\r\n[Your Turn] This Digimon is also treated as green.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Tyrannomon] in its name, it gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 2436,
+  "norm_id": 0.1218,
+  "card_id": "BT23-040",
+  "card_index": 40,
+  "card_name_eng": "Wormmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_040",
+  "play_cost": 4,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Larva",
+    "Hudie",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 of your [Erika Mishima] as this Digimon's bottom digivolution card, this Digimon may digivolve into [Hudiemon] in the hand or trash with the digivolution cost reduced by 2.",
+  "inherited_effect_description_eng": "[All Turns] All of your Digimon with the [Hudie] trait get +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[CS] trait: Cost 0"
+}

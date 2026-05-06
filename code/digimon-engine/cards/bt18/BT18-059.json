@@ -1,0 +1,35 @@
+{
+  "index": 1945,
+  "norm_id": 0.09725,
+  "card_id": "BT18-059",
+  "card_index": 59,
+  "card_name_eng": "Zenimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_059",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[All Turns] Your opponent can't gain memory other than by Tamer effects.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

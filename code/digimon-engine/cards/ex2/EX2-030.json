@@ -1,0 +1,29 @@
+{
+  "index": 2706,
+  "norm_id": 0.1353,
+  "card_id": "EX2-030",
+  "card_index": 30,
+  "card_name_eng": "Monodramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_030",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Mini Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add all black Tamer cards among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

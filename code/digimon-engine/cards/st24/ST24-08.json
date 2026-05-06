@@ -1,0 +1,36 @@
+{
+  "index": 3919,
+  "norm_id": 0.19595,
+  "card_id": "ST24-08",
+  "card_index": 8,
+  "card_name_eng": "Lalamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST24_08",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation",
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [DATA SQUAD] trait, reduce the cost by 1.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[DATA SQUAD] trait: Cost 0"
+}

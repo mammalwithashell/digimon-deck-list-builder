@@ -1,0 +1,38 @@
+{
+  "index": 1962,
+  "norm_id": 0.0981,
+  "card_id": "BT18-076",
+  "card_index": 76,
+  "card_name_eng": "Loweemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_076",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [
+    "Warrior"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[When Digivolving] ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand.\r\n[When Attacking] 1 of your Digimon or Tamers may digivolve into a purple or yellow Digimon card with the [Hybrid] trait in your trash.",
+  "inherited_effect_description_eng": "[All Turns] When this Digimon would leave the battle area other than by your effects, you may play 1 Tamer card with inherited effects from this Digimon's digivolution cards without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Koichi Kimura]: Cost 2 \r\n[Digivolve] [KaiserLeomon]: Cost 0"
+}

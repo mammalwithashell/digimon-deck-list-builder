@@ -1,0 +1,36 @@
+{
+  "index": 3757,
+  "norm_id": 0.18785,
+  "card_id": "ST12-09",
+  "card_index": 9,
+  "card_name_eng": "Volcanomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST12_09",
+  "play_cost": 8,
+  "dp": 9000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "inherited_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

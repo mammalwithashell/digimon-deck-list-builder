@@ -1,0 +1,37 @@
+{
+  "index": 205,
+  "norm_id": 0.01025,
+  "card_id": "BT2-074",
+  "card_index": 74,
+  "card_name_eng": "Devimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_074",
+  "play_cost": 6,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Fallen Angel"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "inherited_effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

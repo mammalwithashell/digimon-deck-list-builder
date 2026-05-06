@@ -1,0 +1,35 @@
+{
+  "index": 752,
+  "norm_id": 0.0376,
+  "card_id": "BT7-058",
+  "card_index": 58,
+  "card_name_eng": "SkullKnightmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_058",
+  "play_cost": 4,
+  "dp": 3000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Undead"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Attacking] By placing 1 of your [DeadlyAxemon] at the bottom of this Digimon's digivolution cards, you may digivolve this Digimon into a [DarkKnightmon] in your hand without paying its memory cost.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Knightmon] or [Bagramon] in its name, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

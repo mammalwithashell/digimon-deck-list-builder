@@ -1,0 +1,37 @@
+{
+  "index": 2951,
+  "norm_id": 0.14755,
+  "card_id": "EX5-053",
+  "card_index": 53,
+  "card_name_eng": "Baihumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_053",
+  "play_cost": 7,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [
+    "Holy Beast",
+    "Four Sovereigns"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[Opponent's Turn] [Once Per Turn] When your security is checked, if that card is a Digimon card with the [Deva] trait, play it without battling and without paying the cost.\r\n[On Deletion] Delete 1 of your opponent's highest play cost Digimon.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Deva] trait: Cost 3"
+}

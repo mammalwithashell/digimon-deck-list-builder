@@ -1,0 +1,25 @@
+{
+  "index": 568,
+  "norm_id": 0.0284,
+  "card_id": "BT5-098",
+  "card_index": 98,
+  "card_name_eng": "Meteor Shower",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_098",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 yellow Digimon card with [Starmon] in its name from your hand without paying its memory cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this cards [Main] effect.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

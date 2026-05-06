@@ -1,0 +1,37 @@
+{
+  "index": 49,
+  "norm_id": 0.00245,
+  "card_id": "BT1-033",
+  "card_index": 33,
+  "card_name_eng": "Dolphmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_033",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Sea Animal"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] While your opponent has a Digimon with no digivolution cards in play, this Digimon gets +1000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 1057,
+  "norm_id": 0.05285,
+  "card_id": "BT10-027",
+  "card_index": 27,
+  "card_name_eng": "Regalecusmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_027",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Aquatic"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] Trash 2 digivolution cards from the bottom of 1 of your opponent's Digimon.\r\n[When Attacking] If your opponent has a Digimon with no digivolution cards in play, you may play 1 level 3 Digimon card and 1 level 4 Digimon card from this Digimon's digivolution cards without paying their memory costs.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

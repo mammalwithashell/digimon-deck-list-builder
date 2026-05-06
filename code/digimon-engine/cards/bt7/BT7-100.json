@@ -1,0 +1,25 @@
+{
+  "index": 794,
+  "norm_id": 0.0397,
+  "card_id": "BT7-100",
+  "card_index": 100,
+  "card_name_eng": "Qualialise Blast",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_100",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When this card would be used from your hand, its memory cost is equal to the number of cards in your security stack.\r\n [Main] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, 1 of your [Rasenmon] gains ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

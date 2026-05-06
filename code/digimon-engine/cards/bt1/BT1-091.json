@@ -1,0 +1,25 @@
+{
+  "index": 107,
+  "norm_id": 0.00535,
+  "card_id": "BT1-091",
+  "card_index": 91,
+  "card_name_eng": "Scrap Claw",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_091",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your Digimon gains ＜Piercing＞ for the turn. (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

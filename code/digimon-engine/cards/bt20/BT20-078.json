@@ -1,0 +1,36 @@
+{
+  "index": 2168,
+  "norm_id": 0.1084,
+  "card_id": "BT20-078",
+  "card_index": 78,
+  "card_name_eng": "Reapermon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_078",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[All Turns] [Once Per Turn] When effects digivolve your opponent's Digimon, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)\r\n[On Deletion] Delete 1 of your opponent's play cost 4 or lower Digimon or Tamers.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

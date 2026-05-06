@@ -1,0 +1,35 @@
+{
+  "index": 1450,
+  "norm_id": 0.0725,
+  "card_id": "BT13-084",
+  "card_index": 84,
+  "card_name_eng": "Astamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_084",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] You may delete 1 of your other purple Digimon to digivolve this Digimon into a Digimon card with [Belphemon] in its name in your hand without paying its digivolution cost.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When a card is trashed from your hand, you may play 1 level 4 or lower purple Digimon card from your trash without paying its cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

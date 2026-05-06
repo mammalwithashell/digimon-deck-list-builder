@@ -1,0 +1,37 @@
+{
+  "index": 3244,
+  "norm_id": 0.1622,
+  "card_id": "EX11-050",
+  "card_index": 50,
+  "card_name_eng": "Loudmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_050",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Cyborg",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Trash 2 cards in your hand. Then, delete 1 of your opponent’s Digimon with as much or less DP as 1 of your [Dark Dragon] or [Evil Dragon] trait Digimon.\r\n[All Turns] While you have 4 or fewer cards in your hand, all of your [Dark Dragon] or [Evil Dragon] trait Digimon gain ＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)",
+  "inherited_effect_description_eng": "[Your Turn] While you have 4 or fewer cards in your hand, all of your Digimon with the [Dark Dragon] or [Evil Dragon] trait gain ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Dark Dragon]/[Evil Dragon] trait: Cost 3"
+}

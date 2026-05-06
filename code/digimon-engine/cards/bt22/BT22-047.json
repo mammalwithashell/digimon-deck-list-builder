@@ -1,0 +1,36 @@
+{
+  "index": 2341,
+  "norm_id": 0.11705,
+  "card_id": "BT22-047",
+  "card_index": 47,
+  "card_name_eng": "Kuwagamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_047",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. Then, if this Digimon's stack has 2 or more same-level cards, 1 of your opponent's Digimon can't unsuspend until their turn ends.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[CS] trait: Cost 2"
+}

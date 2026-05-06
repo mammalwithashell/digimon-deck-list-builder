@@ -1,0 +1,28 @@
+{
+  "index": 3120,
+  "norm_id": 0.156,
+  "card_id": "EX7-074",
+  "card_index": 74,
+  "card_name_eng": "Vortex Resonance",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_074",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 4,
+  "card_colors": [
+    3,
+    2
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have [LIBERATOR] trait Digimon or Tamer, you can ignore this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 card with the [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck. Then, 1 of your Digimon may digivolve into a Digimon card in your hand with the digivolution cost reduced by 4.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 card with the [LIBERATOR] trait with a play cost of 4 or less from your hand or trash without paying the cost. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

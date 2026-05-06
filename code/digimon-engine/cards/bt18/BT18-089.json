@@ -1,0 +1,26 @@
+{
+  "index": 1975,
+  "norm_id": 0.09875,
+  "card_id": "BT18-089",
+  "card_index": 89,
+  "card_name_eng": "Tommy Himi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_089",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1,
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Trash the bottom digivolution card of 1 of your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

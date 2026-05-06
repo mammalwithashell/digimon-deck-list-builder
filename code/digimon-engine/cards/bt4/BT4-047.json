@@ -1,0 +1,37 @@
+{
+  "index": 402,
+  "norm_id": 0.0201,
+  "card_id": "BT4-047",
+  "card_index": 47,
+  "card_name_eng": "Rasielmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_047",
+  "play_cost": 10,
+  "dp": 10000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Throne"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] ＜Recovery +2 (Deck)＞ (Place the top 2 cards of your deck on top of your security stack.)\r\n[End of Opponent's Turn] Trash the top card of your security stack.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

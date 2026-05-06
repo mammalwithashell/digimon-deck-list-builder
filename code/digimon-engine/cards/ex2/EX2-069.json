@@ -1,0 +1,25 @@
+{
+  "index": 2745,
+  "norm_id": 0.13725,
+  "card_id": "EX2-069",
+  "card_index": 69,
+  "card_name_eng": "Fist of the Beast King",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_069",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon with [Beelzemon] in its name, you can ignore this card's color requirements.\r\n[Main] Unsuspend 1 of your Digimon with [Leomon] or [Beelzemon] in its name.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

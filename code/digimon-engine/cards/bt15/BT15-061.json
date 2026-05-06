@@ -1,0 +1,35 @@
+{
+  "index": 1641,
+  "norm_id": 0.08205,
+  "card_id": "BT15-061",
+  "card_index": 61,
+  "card_name_eng": "Guardromon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_061",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] By trashing 1 card with the [Machine] or [Cyborg] trait in your hand, 1 of your Digimon can't be deleted by your opponent's effects until the end of their turn.\r\n[Your Turn] While your opponent has no Digimon, this Digimon can't attack.",
+  "inherited_effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 530,
+  "norm_id": 0.0265,
+  "card_id": "BT5-060",
+  "card_index": 60,
+  "card_name_eng": "Monitamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_060",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "CRT"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Look at the top card of your deck.\r\n[On Deletion] Reveal 3 cards from the top of your deck. You may play 1 [Monitamon] among them without paying its memory cost. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,27 @@
+{
+  "index": 1027,
+  "norm_id": 0.05135,
+  "card_id": "BT9-109",
+  "card_index": 109,
+  "card_name_eng": "X Antibody",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_109",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon, you can ignore this card's color requirements.\r\n[Security] Gain 1 memory, and add this card to its owner's hand.\r\n[Main] Place this card under 1 of your Digimon without [X Antibody] in its digivolution cards as its bottom digivolution card.",
+  "inherited_effect_description_eng": "[All Turns] Effects can't trash [X Antibody] in this Digimon's digivolution cards.\r\n[When Attacking] This Digimon can digivolve into a Digimon card with the [X Antibody] trait in your hand by paying its digivolution cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

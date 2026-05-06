@@ -1,0 +1,25 @@
+{
+  "index": 785,
+  "norm_id": 0.03925,
+  "card_id": "BT7-091",
+  "card_index": 91,
+  "card_name_eng": "Koichi Kimura",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_091",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying its memory cost.\r\n[On Play] ＜Draw 1＞ (Draw 1 card from your deck.) Then, trash 1 card in your hand.",
+  "inherited_effect_description_eng": "[On Deletion] Gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

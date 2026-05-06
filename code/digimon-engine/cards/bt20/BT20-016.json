@@ -1,0 +1,59 @@
+{
+  "index": 2106,
+  "norm_id": 0.1053,
+  "card_id": "BT20-016",
+  "card_index": 16,
+  "card_name_eng": "Paildramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_016",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0,
+    6
+  ],
+  "type_eng": [
+    "Dragonkin"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] For the turn, 1 of your Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and gets +4000 DP. Then, this Digimon may attack.\r\n[All Turns] When any of your [Paildramon] or [Dinobeemon] would be deleted, 2 of your Digimon may DNA digivolve into [Imperialdramon: Dragon Mode] in the hand.",
+  "inherited_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Red Lv.4 + Purple Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 4,
+        "card_colors": [
+          "Red"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 4,
+        "card_colors": [
+          "Purple"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

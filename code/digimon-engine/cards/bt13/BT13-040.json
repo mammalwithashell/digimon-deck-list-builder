@@ -1,0 +1,39 @@
+{
+  "index": 1406,
+  "norm_id": 0.0703,
+  "card_id": "BT13-040",
+  "card_index": 40,
+  "card_name_eng": "Magnamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_040",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    1
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[All Turns] When this Digimon would leave the battle area, ＜Draw 1＞ (Draw 1 card from your deck.) Then, you may play 1 [Veemon] from your hand or from this Digimon's digivolution cards without paying its cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Veemon]: Cost 3"
+}

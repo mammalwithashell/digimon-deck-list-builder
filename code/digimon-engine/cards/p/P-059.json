@@ -1,0 +1,35 @@
+{
+  "index": 3389,
+  "norm_id": 0.16945,
+  "card_id": "P-059",
+  "card_index": 59,
+  "card_name_eng": "Gammamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_059",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Ceratopsian"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] While you have a [Hiro Amanokawa] in play, this Digimon gets +2000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

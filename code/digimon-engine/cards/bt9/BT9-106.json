@@ -1,0 +1,27 @@
+{
+  "index": 1024,
+  "norm_id": 0.0512,
+  "card_id": "BT9-106",
+  "card_index": 106,
+  "card_name_eng": "DeathXDigivolution!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_106",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have an [X Antibody] trait Digimon, you can ignore this card's color requirements..\r\n[Main] Digivolve 1 of your Digimon into a Digimon card with [Dex] or [DeathX] in its name from your trash by paying its memory cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

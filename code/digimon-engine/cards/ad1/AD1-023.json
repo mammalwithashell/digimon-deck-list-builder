@@ -1,0 +1,26 @@
+{
+  "index": 14,
+  "norm_id": 0.0007,
+  "card_id": "AD1-023",
+  "card_index": 23,
+  "card_name_eng": "J.P., Koji, & Koichi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "AD1_023",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] [On Play] You may place up to 2 [Hybrid] trait cards with different colors from your hand or trash under this Tamer. If this effect placed, ＜Draw 1＞ (Draw 1 card from your deck.) Then, if there are 4 or more [Hybrid] trait cards under this Tamer, gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [All Turns] [Once Per Turn] When this Digimon with the [Hybrid] or [Ten Warriors] trait would leave the battle area, by adding your top security card to the hand, it doesn't leave.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,27 @@
+{
+  "index": 3557,
+  "norm_id": 0.17785,
+  "card_id": "P-228",
+  "card_index": 228,
+  "card_name_eng": "Unique Emblem: Frozen Crown",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_228",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Add 1 [Ice-Snow] trait Digimon card and 1 [LIBERATOR] trait card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Your Turn] When any of your [Suzune Kazuki]s are played, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

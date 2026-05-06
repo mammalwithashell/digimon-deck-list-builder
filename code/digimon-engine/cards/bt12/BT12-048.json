@@ -1,0 +1,35 @@
+{
+  "index": 1302,
+  "norm_id": 0.0651,
+  "card_id": "BT12-048",
+  "card_index": 48,
+  "card_name_eng": "Dracmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_048",
+  "play_cost": 4,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Undead"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] By revealing up to 3 Tamer cards in your hand and placing them at the bottom of your deck in any order, ＜Draw 1＞ (Draw 1 card from your deck.) for each card placed at the bottom of your deck.\r\n[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has ＜Save＞ in its text, it gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/＜Save＞ in text: Cost 0"
+}

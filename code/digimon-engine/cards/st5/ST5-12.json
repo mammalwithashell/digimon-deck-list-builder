@@ -1,0 +1,37 @@
+{
+  "index": 3674,
+  "norm_id": 0.1837,
+  "card_id": "ST5-12",
+  "card_index": 12,
+  "card_name_eng": "Machinedramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST5_12",
+  "play_cost": 10,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] Up to 2 of your Digimon gain ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.) until the end of your opponent's next turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 1465,
+  "norm_id": 0.07325,
+  "card_id": "BT13-099",
+  "card_index": 99,
+  "card_name_eng": "Spencer Damon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_099",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[All Turns] [Once Per Turn] When your yellow Digimon is suspended, 1 of your opponent's Digimon gets -1000 DP until the end of your opponent's turn.\r\n[End of Your Turn] [Once Per Turn] If the total cards in both players' security stacks is 6 or less, until the end of your opponent's turn, treat this Tamer as a 3000 DP Digimon that can't digivolve and gains ＜Blocker＞ (This Digimon can block in the blocker timing.).",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

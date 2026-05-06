@@ -1,0 +1,35 @@
+{
+  "index": 595,
+  "norm_id": 0.02975,
+  "card_id": "BT6-013",
+  "card_index": 13,
+  "card_name_eng": "Megadramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_013",
+  "play_cost": 6,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] This Digimon is also treated as black.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

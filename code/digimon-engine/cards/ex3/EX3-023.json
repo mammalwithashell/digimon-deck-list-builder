@@ -1,0 +1,35 @@
+{
+  "index": 2773,
+  "norm_id": 0.13865,
+  "card_id": "EX3-023",
+  "card_index": 23,
+  "card_name_eng": "Plesiomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_023",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Plesiosaur"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] You may play 1 blue level 3 Digimon card or 1 level 4 or lower Digimon card with [Aqua] or [Sea Animal] in any of its traits from one of your blue Digimon's digivolution cards without paying the cost. Then, you may place 1 blue Digimon card from your hand under this Digimon as its bottom digivolution card.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When you play a Digimon from digivolution cards, you may return 1 of your opponent's Digimon of the same level to the bottom of its owner's deck.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 2014,
+  "norm_id": 0.1007,
+  "card_id": "BT19-026",
+  "card_index": 26,
+  "card_name_eng": "ZeigGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_026",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1,
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "Blue Flare"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. (Trash up to 2 cards from the top. You can't trash past level 3 cards.) Then, if your opponent has 2 or more Digimon, return 1 of your opponent's level 4 or lower Digimon to the hand.\r\n[On Deletion] You may play 1 [Blue Flare] or [Xros Heart] trait trait Digimon card with a play cost of 5 or less from under your Tamers without paying the cost. Then, ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

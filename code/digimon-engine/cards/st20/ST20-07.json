@@ -1,0 +1,36 @@
+{
+  "index": 3874,
+  "norm_id": 0.1937,
+  "card_id": "ST20-07",
+  "card_index": 7,
+  "card_name_eng": "Tentomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST20_07",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid",
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Opponent's Turn] Your opponent can't reduce digivolution costs.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0"
+}

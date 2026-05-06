@@ -1,0 +1,61 @@
+{
+  "index": 2056,
+  "norm_id": 0.1028,
+  "card_id": "BT19-068",
+  "card_index": 68,
+  "card_name_eng": "Shademon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_068",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Unidentified",
+    "Twilight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Twilight] or [Composite] trait among them to the hand. Trash the rest.\r\n[On Deletion] You may play 1 [Nene Amano] from your trash without paying the cost. Then, ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "DigiXros Requirements [DigiXros -2] [Nene Amano] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "Nene Amano",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 2,
+      "max_materials": 1,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "hand",
+        "field"
+      ]
+    }
+  ]
+}

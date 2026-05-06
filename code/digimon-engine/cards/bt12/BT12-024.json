@@ -1,0 +1,37 @@
+{
+  "index": 1278,
+  "norm_id": 0.0639,
+  "card_id": "BT12-024",
+  "card_index": 24,
+  "card_name_eng": "Lanamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_024",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Fairy"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "You may digivolve this card from your hand onto one of your blue Tamers as if the Tamer is a level 3 blue Digimon.\r\n[When Digivolving] By placing a blue level 3 Digimon card from your hand under 1 of your blue Digimon as its bottom digivolution card, this Digimon gains ＜Jamming＞ for the turn. (This Digimon can't be deleted in battles against Security Digimon.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] [Calmaramon]: Cost 0"
+}

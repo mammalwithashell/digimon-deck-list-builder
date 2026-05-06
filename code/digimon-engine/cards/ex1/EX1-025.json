@@ -1,0 +1,35 @@
+{
+  "index": 2628,
+  "norm_id": 0.1314,
+  "card_id": "EX1-025",
+  "card_index": 25,
+  "card_name_eng": "Salamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_025",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] If you have 3 or more security cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

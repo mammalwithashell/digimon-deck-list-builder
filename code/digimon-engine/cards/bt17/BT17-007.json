@@ -1,0 +1,35 @@
+{
+  "index": 1791,
+  "norm_id": 0.08955,
+  "card_id": "BT17-007",
+  "card_index": 7,
+  "card_name_eng": "Agumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_007",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a Tamer with [Tai Kamiya] in its name, return 1 card with [Garurumon], [Greymon] or [Omnimon] in its name from your trash to the hand.",
+  "inherited_effect_description_eng": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Koromon]: Cost 0"
+}

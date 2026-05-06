@@ -1,0 +1,36 @@
+{
+  "index": 972,
+  "norm_id": 0.0486,
+  "card_id": "BT9-054",
+  "card_index": 54,
+  "card_name_eng": "Fujinmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_054",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Hand] [Main] If you have a Digimon with [Justimon] or [Raidenmon] in its name in play, you may pay 1 memory to place this card under that Digimon as its bottom digivolution card.\r\n[When Digivolving] You may trash 1 card with the [Machine] or [Cyborg] trait in your hand to suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "[When Attacking] Suspend 1 of your opponent's Digimon with 5000 DP or less. That Digimon does not unsuspend in your opponent's next unsuspend phase.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

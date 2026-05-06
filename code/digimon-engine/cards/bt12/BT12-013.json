@@ -1,0 +1,37 @@
+{
+  "index": 1267,
+  "norm_id": 0.06335,
+  "card_id": "BT12-013",
+  "card_index": 13,
+  "card_name_eng": "BurningGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_013",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dark Dragon"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "You may digivolve this card from your hand onto one of your [Takuya Kanbara]s as if the Tamer is a level 3 red Digimon for a memory cost of 2.\r\n[When Digivolving] This Digimon gets +2000 DP for the turn.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has the [Hybrid] or [Ten Warriors] trait, it gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Agunimon]: Cost 1"
+}

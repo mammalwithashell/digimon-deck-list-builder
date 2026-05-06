@@ -1,0 +1,25 @@
+{
+  "index": 3597,
+  "norm_id": 0.17985,
+  "card_id": "RB1-035",
+  "card_index": 35,
+  "card_name_eng": "Hokuto Amanokawa",
+  "card_name_jpn": "",
+  "card_effect_class_name": "RB1_035",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If your opponent has 3 or more Tamers in play, gain 1 memory.\r\n[All Turns] When an opponent plays a Digimon, by suspending this Tamer, gain 1 memory if that Digimon is level 4 or higher, and ＜Draw 1＞ if it is level 3.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

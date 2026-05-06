@@ -1,0 +1,92 @@
+{
+  "index": 2002,
+  "norm_id": 0.1001,
+  "card_id": "BT19-014",
+  "card_index": 14,
+  "card_name_eng": "Shoutmon EX6",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_014",
+  "play_cost": 11,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Composite",
+    "Xros Heart",
+    "Blue Flare"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n＜Material Save 4＞ (When this Digimon would be deleted, you may place 4 cards in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)\r\n[On Play] For each color in this Digimon's digivolution cards, all of your opponent's Digimon get -1000 DP for the turn. Then, you may play 1 [ShootingStarmon] from under your Tamers without paying the cost.\r\n[When Attacking] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "DigiXros Requirements [DigiXros -2] [OmniShoutmon] x [ZeigGreymon] x [AtlurBallistamon] x [JaegerDorulumon] x [RaptorSparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "OmniShoutmon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "ZeigGreymon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "AtlurBallistamon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "JaegerDorulumon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "RaptorSparrowmon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 2,
+      "max_materials": 5,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "hand",
+        "field"
+      ]
+    }
+  ]
+}

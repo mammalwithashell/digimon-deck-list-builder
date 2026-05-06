@@ -1,0 +1,37 @@
+{
+  "index": 2023,
+  "norm_id": 0.10115,
+  "card_id": "BT19-035",
+  "card_index": 35,
+  "card_name_eng": "ShootingStarmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_035",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    0
+  ],
+  "type_eng": [
+    "Super Major",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "This card is also treated as [Starmons] for a DigiXros.\r\n[All Turns] [Once Per Turn] When any of your [Xros Heart] trait Digimon are played, give 1 of your opponent's Digimon ＜Security A. -1＞ (This Digimon checks 1 additional security card.) and it gets -3000 DP until the end of your opponent's turn.\r\n[On Deletion] You may place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under any of your Tamers.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [Xros Heart] trait, 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Xros Heart] trait: Cost 2"
+}

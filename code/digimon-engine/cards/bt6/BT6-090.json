@@ -1,0 +1,25 @@
+{
+  "index": 672,
+  "norm_id": 0.0336,
+  "card_id": "BT6-090",
+  "card_index": 90,
+  "card_name_eng": "Izzy Izumi & Joe Kido",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_090",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If your opponent has 2 or more Digimon in play, gain 2 memory.\r\n[Opponent's Turn] When one of your black Digimon is deleted, you may suspend this Tamer to ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

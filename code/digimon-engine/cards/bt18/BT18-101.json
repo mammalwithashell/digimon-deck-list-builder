@@ -1,0 +1,35 @@
+{
+  "index": 1987,
+  "norm_id": 0.09935,
+  "card_id": "BT18-101",
+  "card_index": 101,
+  "card_name_eng": "Lucemon: Satan Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_101",
+  "play_cost": 16,
+  "dp": 16000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 4,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon God"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] By playing 1 [Lucemon: Larva] from your trash to your empty breeding area without paying the cost, delete 1 of your opponent's Digimon or Tamers.\r\n[End of All Turns] [Once Per Turn] Trash your opponent's top security card. If this effect didn't trash, delete 1 of your opponent's Digimon and 1 of their Tamers.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[Digivolve] [Lucemon: Chaos Mode]: Cost 6"
+}

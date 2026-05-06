@@ -1,0 +1,36 @@
+{
+  "index": 976,
+  "norm_id": 0.0488,
+  "card_id": "BT9-058",
+  "card_index": 58,
+  "card_name_eng": "Dorumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_058",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Beast",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] You may trash 1 card with the [X Antibody] trait in your hand to ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

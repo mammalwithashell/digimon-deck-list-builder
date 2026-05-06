@@ -1,0 +1,25 @@
+{
+  "index": 2739,
+  "norm_id": 0.13695,
+  "card_id": "EX2-063",
+  "card_index": 63,
+  "card_name_eng": "Kazu Shioda",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_063",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a Digimon with the [Cyborg] or [Machine] trait in play, gain 1 memory.\r\n[All Turns] When one of your Digimon with the [Cyborg] or [Machine] trait becomes suspended, you may suspend this Tamer to ＜Draw 1＞ (Draw 1 card from your deck.) Then, trash 1 card from your hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

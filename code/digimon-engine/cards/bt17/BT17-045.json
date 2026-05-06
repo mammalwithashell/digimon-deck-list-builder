@@ -1,0 +1,36 @@
+{
+  "index": 1829,
+  "norm_id": 0.09145,
+  "card_id": "BT17-045",
+  "card_index": 45,
+  "card_name_eng": "Argomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_045",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    6
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] If you don't have [Rhythm], you may play 1 [Rhythm] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[On Deletion] Gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 [Argomon]: Cost 2"
+}

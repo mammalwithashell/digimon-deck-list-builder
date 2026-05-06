@@ -1,0 +1,27 @@
+{
+  "index": 2582,
+  "norm_id": 0.1291,
+  "card_id": "BT24-084",
+  "card_index": 84,
+  "card_name_eng": "Inori Misono",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_084",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory.\r\n[All Turns] When your security stack is removed from, by suspending this Tamer, 1 of your [Aegiomon] may digivolve into a Digimon card with [Aegiochusmon] in its name in the hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

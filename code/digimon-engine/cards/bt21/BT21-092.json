@@ -1,0 +1,27 @@
+{
+  "index": 2284,
+  "norm_id": 0.1142,
+  "card_id": "BT21-092",
+  "card_index": 92,
+  "card_name_eng": "Can't Turn My Back!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_092",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a [Xros Heart] trait Digimon, you can ignore this card's color requirements.\r\n[Main] Place all Digimon cards in 1 of your [Xros Heart] trait Digimon's digivolution cards under 1 of your Tamers. Then, you may play 1 Digimon card with the [Xros Heart] trait from your hand with the play cost reduced by 1 for each card this effect placed.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Xros Heart] trait card with a play cost of 5 or less from your hand or trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

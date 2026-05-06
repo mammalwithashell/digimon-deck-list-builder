@@ -1,0 +1,25 @@
+{
+  "index": 1252,
+  "norm_id": 0.0626,
+  "card_id": "BT11-110",
+  "card_index": 110,
+  "card_name_eng": "Evil Squall",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_110",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When you would use this card, if you have a purple Tamer in play, reduce the cost by 1.\r\n[Main] Delete 3 of your opponent's unsuspended level 5 or lower Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

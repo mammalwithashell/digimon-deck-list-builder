@@ -1,0 +1,36 @@
+{
+  "index": 1230,
+  "norm_id": 0.0615,
+  "card_id": "BT11-088",
+  "card_index": 88,
+  "card_name_eng": "Bagramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_088",
+  "play_cost": 14,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon Lord",
+    "Bagra Army"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] If your opponent has 1 or fewer Digimon in play, look at your opponent's hand and trash 1 card in it. If your opponent has 2 or more Digimon in play, place 1 of your opponent's Digimon under 1 of your opponent's other Digimon as its bottom digivolution card.\r\n[All Turns] [Once Per Turn] When an opponent's Digimon digivolves or an effect places digivolution cards under an opponent's Digimon, by trashing 1 card in this Digimon's digivolution cards, trash the top card of your opponent's security stack.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": ""
+}

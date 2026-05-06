@@ -1,0 +1,36 @@
+{
+  "index": 2787,
+  "norm_id": 0.13935,
+  "card_id": "EX3-037",
+  "card_index": 37,
+  "card_name_eng": "Dracomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_037",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    1
+  ],
+  "type_eng": [
+    "Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 green or blue card with [Dramon] in its name and 1 card with [Examon] in its name among them to your hand. Place the rest at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When one of your Digimon with [Dramon] or [Examon] in its name becomes suspended, this Digimon gets +1000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Bebydomon]: Cost 0"
+}

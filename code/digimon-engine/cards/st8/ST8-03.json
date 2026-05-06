@@ -1,0 +1,37 @@
+{
+  "index": 3709,
+  "norm_id": 0.18545,
+  "card_id": "ST8-03",
+  "card_index": 3,
+  "card_name_eng": "Dracomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST8_03",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Dragon"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Dramon] in its name among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

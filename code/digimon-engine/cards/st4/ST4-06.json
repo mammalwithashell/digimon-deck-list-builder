@@ -1,0 +1,37 @@
+{
+  "index": 3652,
+  "norm_id": 0.1826,
+  "card_id": "ST4-06",
+  "card_index": 6,
+  "card_name_eng": "Togemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST4_06",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] When this Digimon attacks one of your opponent's Digimon, this Digimon gets +2000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

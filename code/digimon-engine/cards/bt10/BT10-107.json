@@ -1,0 +1,25 @@
+{
+  "index": 1137,
+  "norm_id": 0.05685,
+  "card_id": "BT10-107",
+  "card_index": 107,
+  "card_name_eng": "Buzzing Fist",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_107",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Add up to 1 card with the [Bagra Army] trait among them to your hand. Trash the rest. Then, you may place 1 Digimon card with the [Bagra Army] trait from your trash under one of your Tamers.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Yuu Amano] from your hand or trash without paying its memory cost. Then, add this card to its owner's hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

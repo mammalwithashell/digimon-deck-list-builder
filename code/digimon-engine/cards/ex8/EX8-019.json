@@ -1,0 +1,37 @@
+{
+  "card_id": "EX8-019",
+  "card_index": 19,
+  "card_name_eng": "Penguinmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_019",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1,
+    2
+  ],
+  "type_eng": [
+    "Avian",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Ice-Snow] trait, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[When Attacking] Give 1 of your opponent's Digimon ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) until the end of their turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Hiyarimon]: Cost 0",
+  "index": 3139,
+  "norm_id": 0.15695
+}

@@ -1,0 +1,27 @@
+{
+  "index": 3998,
+  "norm_id": 0.1999,
+  "card_id": "P-235",
+  "card_index": 235,
+  "card_name_eng": "Digital Accident Tactics Squad",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_235",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "DATA SQUAD"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Use Req. ([DATA SQUAD] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Main] Reveal the top 3 cards of your deck. Add 1 card with the [DATA SQUAD] trait among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・ Gain 2 memory.",
+  "inherited_effect_description_eng": "[Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

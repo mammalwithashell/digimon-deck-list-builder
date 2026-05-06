@@ -1,0 +1,27 @@
+{
+  "index": 3262,
+  "norm_id": 0.1631,
+  "card_id": "EX11-068",
+  "card_index": 68,
+  "card_name_eng": "Violet Inboots",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_068",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When one of your [Ghost] trait Digimon attacks, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand. If attacking by ＜Execute＞, it may digivolve into a [Ghost] trait Digimon card in the hand with the digivolution cost reduced by 2.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

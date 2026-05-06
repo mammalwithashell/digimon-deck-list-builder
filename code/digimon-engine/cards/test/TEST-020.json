@@ -1,0 +1,25 @@
+{
+  "index": 4083,
+  "norm_id": 0.20415,
+  "card_id": "TEST-020",
+  "card_index": 4083,
+  "card_name_eng": "ParitySynthDraw2",
+  "card_name_jpn": "",
+  "card_effect_class_name": "TEST_020",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Draw 2 cards.",
+  "evo_costs": [],
+  "xros_req": ""
+}

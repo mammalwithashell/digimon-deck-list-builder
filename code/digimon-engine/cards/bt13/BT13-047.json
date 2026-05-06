@@ -1,0 +1,35 @@
+{
+  "index": 1413,
+  "norm_id": 0.07065,
+  "card_id": "BT13-047",
+  "card_index": 47,
+  "card_name_eng": "Angoramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_047",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "inherited_effect_description_eng": "[All Turns] While your opponent has no unsuspended Digimon in play, this Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

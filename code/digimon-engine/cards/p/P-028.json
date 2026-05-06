@@ -1,0 +1,37 @@
+{
+  "index": 3358,
+  "norm_id": 0.1679,
+  "card_id": "P-028",
+  "card_index": 28,
+  "card_name_eng": "Pulsemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_028",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] If you have 3 or more security cards, ＜Draw 1＞. If you have 3 or fewer security cards, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

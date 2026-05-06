@@ -1,0 +1,25 @@
+{
+  "index": 560,
+  "norm_id": 0.028,
+  "card_id": "BT5-090",
+  "card_index": 90,
+  "card_name_eng": "Arata Sanada",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_090",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If a Digimon card with the [Unidentified] trait is in your trash, gain 1 memory.\r\n[Your Turn] When one of your Digimon digivolves into [Diaboromon], you may suspend this Tamer to play 1 [Diaboromon] Token without paying the cost. (Digimon/Cost 14/Lv.6/White/Mega/Unknown/Unidentified/3000 DP)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

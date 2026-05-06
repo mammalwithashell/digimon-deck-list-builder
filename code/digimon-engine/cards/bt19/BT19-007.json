@@ -1,0 +1,35 @@
+{
+  "index": 1995,
+  "norm_id": 0.09975,
+  "card_id": "BT19-007",
+  "card_index": 7,
+  "card_name_eng": "Guilmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_007",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] If you have [Takato Matsuki] or [Calumon], gain 1 memory.",
+  "inherited_effect_description_eng": "[All Turns] While you have 0 or less memory, add 2000 to this Digimon's DP deletion effects' maximums.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

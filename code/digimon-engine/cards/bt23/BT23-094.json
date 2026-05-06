@@ -1,0 +1,27 @@
+{
+  "index": 2490,
+  "norm_id": 0.1245,
+  "card_id": "BT23-094",
+  "card_index": 94,
+  "card_name_eng": "Nanomachine Break",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_094",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon or Tamer with the [CS] trait on the field, you can ignore this card's color requirements.\r\n[Main] Until your opponent's turn ends, give 1 of their Digimon ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) and it can't activate [When Digivolving] or [When Attacking] effects. Then, place this card in the battle area.\r\n[Your Turn] When one of your [CS] trait Digimon attacks, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Until your opponent's turn ends, give 1 of their Digimon ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) and it can't activate [When Digivolving] or [When Attacking] effects.",
+  "inherited_effect_description_eng": "Security Effect [Security] Until your opponent's turn ends, give 1 of their Digimon ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) and it can't activate [When Digivolving] or [When Attacking] effects. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

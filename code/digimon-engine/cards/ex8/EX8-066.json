@@ -1,0 +1,27 @@
+{
+  "card_id": "EX8-066",
+  "card_index": 66,
+  "card_name_eng": "Suzune Kazuki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_066",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[All Turns] When your Digimon are played or digivolve, if any of them have the [Ice-Snow] trait, by suspending this Tamer, trash any 1 digivolution card from your opponent's Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "",
+  "index": 3186,
+  "norm_id": 0.1593
+}

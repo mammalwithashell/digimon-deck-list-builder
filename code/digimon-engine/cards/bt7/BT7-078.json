@@ -1,0 +1,36 @@
+{
+  "index": 772,
+  "norm_id": 0.0386,
+  "card_id": "BT7-078",
+  "card_index": 78,
+  "card_name_eng": "AncientSphinxmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_078",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Ancient Mythical Beast",
+    "Ten Warriors"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] You may delete 1 of your Digimon with [Ten Warriors] or [Hybrid] trait to delete 1 of your opponent's Digimon whose level is less than or equal to the deleted Digimon's level.\r\n[On Deletion] You may play 1 purple level 4 or lower card with the [Hybrid] trait from your hand without paying its memory cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": ""
+}

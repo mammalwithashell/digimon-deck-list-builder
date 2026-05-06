@@ -1,0 +1,25 @@
+{
+  "index": 3314,
+  "norm_id": 0.1657,
+  "card_id": "LM-046",
+  "card_index": 46,
+  "card_name_eng": "Navy Memory Boost!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "LM_046",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Purple also meets this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 blue or Purple Digimon card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

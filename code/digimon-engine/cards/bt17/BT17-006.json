@@ -1,0 +1,31 @@
+{
+  "index": 1790,
+  "norm_id": 0.0895,
+  "card_id": "BT17-006",
+  "card_index": 6,
+  "card_name_eng": "Bowmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_006",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Lesser",
+    "X Antibody",
+    "SoC"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When an effect places a Tamer card in this Digimon's digivolution cards, this Digimon may digivolve into a Digimon card with the [SoC] trait in your trash.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

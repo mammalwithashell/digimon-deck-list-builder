@@ -1,0 +1,35 @@
+{
+  "index": 853,
+  "norm_id": 0.04265,
+  "card_id": "BT8-047",
+  "card_index": 47,
+  "card_name_eng": "Pulsemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_047",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "Inherited Effect [All Turns] This Digimon gets +1000 DP for each of your other suspended Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

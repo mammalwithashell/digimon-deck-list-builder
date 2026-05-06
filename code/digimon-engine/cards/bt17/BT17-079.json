@@ -1,0 +1,25 @@
+{
+  "index": 1863,
+  "norm_id": 0.09315,
+  "card_id": "BT17-079",
+  "card_index": 79,
+  "card_name_eng": "Takuya Kanbara",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_079",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP. While this Digimon has 10000 DP or more, it gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

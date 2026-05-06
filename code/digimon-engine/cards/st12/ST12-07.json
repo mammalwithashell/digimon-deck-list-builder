@@ -1,0 +1,35 @@
+{
+  "index": 3755,
+  "norm_id": 0.18775,
+  "card_id": "ST12-07",
+  "card_index": 7,
+  "card_name_eng": "SkullMeramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST12_07",
+  "play_cost": 6,
+  "dp": 9000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Flame"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

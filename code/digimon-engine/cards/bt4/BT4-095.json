@@ -1,0 +1,25 @@
+{
+  "index": 450,
+  "norm_id": 0.0225,
+  "card_id": "BT4-095",
+  "card_index": 95,
+  "card_name_eng": "Yoshino Fujieda",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_095",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Return 1 Digi-Egg card from your trash to the bottom of your Digi-Egg deck. \r\n[Your Turn] When digivolving one of your Digimon into a Digimon card in your hand with ＜Digi-Burst＞, you may suspend this Tamer to reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

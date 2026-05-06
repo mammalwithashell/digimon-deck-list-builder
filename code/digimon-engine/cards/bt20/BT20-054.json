@@ -1,0 +1,31 @@
+{
+  "index": 2144,
+  "norm_id": 0.1072,
+  "card_id": "BT20-054",
+  "card_index": 54,
+  "card_name_eng": "Bulbmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_054",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[Opponent's Turn] When this Digimon would leave the battle area, you may play 1 play cost 4 or lower Digimon card from this Digimon's digivolution cards without paying the cost.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, you may change the attack target to this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

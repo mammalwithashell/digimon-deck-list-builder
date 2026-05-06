@@ -1,0 +1,35 @@
+{
+  "index": 643,
+  "norm_id": 0.03215,
+  "card_id": "BT6-061",
+  "card_index": 61,
+  "card_name_eng": "Gigadramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_061",
+  "play_cost": 6,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] This Digimon is also treated as red.",
+  "inherited_effect_description_eng": "[Opponent's Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

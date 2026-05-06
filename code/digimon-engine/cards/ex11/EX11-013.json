@@ -1,0 +1,36 @@
+{
+  "index": 3207,
+  "norm_id": 0.16035,
+  "card_id": "EX11-013",
+  "card_index": 13,
+  "card_name_eng": "Sangomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_013",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mollusk",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Moving] [On Play] If you have 7 or fewer cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] Gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 2365,
+  "norm_id": 0.11825,
+  "card_id": "BT22-071",
+  "card_index": 71,
+  "card_name_eng": "Devimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_071",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Fallen Angel",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Jimmy KEN] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[On Deletion] You may return 1 Digimon card with the [Flame] or [CS] trait from your trash to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Flame]/[CS] trait: Cost 2"
+}

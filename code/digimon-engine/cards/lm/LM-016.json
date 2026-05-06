@@ -1,0 +1,37 @@
+{
+  "index": 3284,
+  "norm_id": 0.1642,
+  "card_id": "LM-016",
+  "card_index": 16,
+  "card_name_eng": "Gammamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "LM_016",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Ceratopsian"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[All Turns] [Once Per Turn] When an effect deletes one of your other Digimon, this Digimon may digivolve into a Digimon card with [Gammamon] in its text in your trash without paying the cost.",
+  "inherited_effect_description_eng": "[On Deletion] You may play 1 [Hiro Amanokawa] from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Gurimon]: Cost 0"
+}

@@ -1,0 +1,27 @@
+{
+  "index": 2491,
+  "norm_id": 0.12455,
+  "card_id": "BT23-095",
+  "card_index": 95,
+  "card_name_eng": "Crescent Leaf",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_095",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon or Tamer with the [CS] trait on the field, you can ignore this card's color requirements.\r\n[Main] Return 1 of your opponent's suspended Digimon to the bottom of the deck. Then, place this card in the battle area.\r\n[Your Turn] When one of your [CS] trait Digimon attacks, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Return 1 of your opponent's suspended Digimon to the bottom of the deck.",
+  "inherited_effect_description_eng": "Security Effect [Security] Return 1 of your opponent's suspended Digimon to the bottom of the deck. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

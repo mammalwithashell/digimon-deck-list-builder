@@ -1,0 +1,37 @@
+{
+  "index": 1503,
+  "norm_id": 0.07515,
+  "card_id": "BT14-025",
+  "card_index": 25,
+  "card_name_eng": "Shellmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_025",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mollusk"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

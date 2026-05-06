@@ -1,0 +1,26 @@
+{
+  "index": 1865,
+  "norm_id": 0.09325,
+  "card_id": "BT17-081",
+  "card_index": 81,
+  "card_name_eng": "Tai Kamiya & Matt Ishida",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_081",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[All Turns] When one of your Digimon is played or digivolves, by suspending this Tamer, if you have a Digimon with [Greymon] in its name, gain 1 memory. If you have a Digimon with [Garurumon] in its name, gain 1 memory.\r\n[End of Your Turn] [Once Per Turn] 1 of your Digimon with [Omnimon] in its name may attack a player.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

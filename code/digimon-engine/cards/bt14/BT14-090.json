@@ -1,0 +1,25 @@
+{
+  "index": 1568,
+  "norm_id": 0.0784,
+  "card_id": "BT14-090",
+  "card_index": 90,
+  "card_name_eng": "Dragon of Courage",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_090",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Tamer with [Tai Kamiya] in its name, you can ignore this card's color requirements.\r\n[Main] By placing 1 [Greymon] and 1 [MetalGreymon] from your trash as the bottom digivolution cards of 1 of your [Agumon], it may digivolve in to a [WarGreymon] from hand ignoring its digivolution requirements and without paying its cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Agumon] from your hand or trash without paying the cost. Then, add this card to your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

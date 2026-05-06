@@ -1,0 +1,27 @@
+{
+  "index": 2385,
+  "norm_id": 0.11925,
+  "card_id": "BT22-091",
+  "card_index": 91,
+  "card_name_eng": "Arata Sanada",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_091",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Opponent's Turn] When one of your opponent's Digimon attacks, by suspending this Tamer, change the attack target to 1 of your Digimon with the [Unidentified] or [CS] trait.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, if this Digimon is [Eater Adam], you may change the attack target to 1 of your [Unidentified] or [CS] trait Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

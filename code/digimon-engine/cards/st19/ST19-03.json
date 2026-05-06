@@ -1,0 +1,36 @@
+{
+  "index": 3855,
+  "norm_id": 0.19275,
+  "card_id": "ST19-03",
+  "card_index": 3,
+  "card_name_eng": "Shoemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST19_03",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Puppet",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Puppet] trait and 1 card with the [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Your Turn] All of your opponent's security Digimon get -3000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

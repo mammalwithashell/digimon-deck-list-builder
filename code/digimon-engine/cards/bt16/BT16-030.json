@@ -1,0 +1,36 @@
+{
+  "index": 1712,
+  "norm_id": 0.0856,
+  "card_id": "BT16-030",
+  "card_index": 30,
+  "card_name_eng": "Salamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_030",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    6
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] [On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Holy Beast] or [Free] trait in the trash with the digivolution cost reduced by 1.",
+  "inherited_effect_description_eng": "[Your Turn] All of your opponent's Security Digimon get -3000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Nyaromon]: Cost 0"
+}

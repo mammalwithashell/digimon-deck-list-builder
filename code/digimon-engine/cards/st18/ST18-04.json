@@ -1,0 +1,36 @@
+{
+  "index": 3841,
+  "norm_id": 0.19205,
+  "card_id": "ST18-04",
+  "card_index": 4,
+  "card_name_eng": "Pteromon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST18_04",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Bird Dragon",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Bird] or [Avian] in any of its traits and 1 card with the [Vortex Warriors] or [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

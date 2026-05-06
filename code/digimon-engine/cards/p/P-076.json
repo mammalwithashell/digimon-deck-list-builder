@@ -1,0 +1,36 @@
+{
+  "index": 3406,
+  "norm_id": 0.1703,
+  "card_id": "P-076",
+  "card_index": 76,
+  "card_name_eng": "Deltamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_076",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5,
+    0
+  ],
+  "type_eng": [
+    "Composite"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a card with 2 colors or [Composite] trait, reduce the digivolution cost by 2.",
+  "inherited_effect_description_eng": "[When Attacking] For each of this Digimon's colors, delete 1 of your opponent's Digimon with 3000 DP or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

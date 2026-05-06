@@ -1,0 +1,27 @@
+{
+  "index": 3256,
+  "norm_id": 0.1628,
+  "card_id": "EX11-062",
+  "card_index": 62,
+  "card_name_eng": "Shoto Kazama",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_062",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When any Digimon suspend, by suspending this Tamer, if effects suspended those Digimon, ＜Draw 1＞ (Draw 1 card from your deck.) After, 1 of your Digimon with [Avian] or [Bird] in any of its traits in any of its traits or the [Vortex Warriors] trait gets +3000 DP until your opponent's turn ends.\r\n[Your Turn] While your opponent has no unsuspended Digimon, your ＜Vortex＞ can also attack players.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,26 @@
+{
+  "index": 1767,
+  "norm_id": 0.08835,
+  "card_id": "BT16-085",
+  "card_index": 85,
+  "card_name_eng": "Davis Motomiya & Ken Ichijoji",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_085",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1,
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] You may play 1 [Veemon] or [Wormmon] from your hand without paying the cost. At the next end of your opponent's turn, return it to the hand.\r\n[Your Turn] When one of your Digimon digivolves into a blue or green Digimon, by suspending this Tamer, gain 1 memory. If DNA digivolving, trash any 3 digivolution cards under your opponent's Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

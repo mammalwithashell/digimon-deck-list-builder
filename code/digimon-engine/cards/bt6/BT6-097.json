@@ -1,0 +1,25 @@
+{
+  "index": 679,
+  "norm_id": 0.03395,
+  "card_id": "BT6-097",
+  "card_index": 97,
+  "card_name_eng": "Howling Memory Boost!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_097",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Trash 2 digivolution cards from the bottom of 1 of your opponent's Digimon. Then, 1 of your opponent's Digimon with no digivolution cards can't attack or block until the end of your opponent's next turn. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

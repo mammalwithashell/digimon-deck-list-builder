@@ -1,0 +1,27 @@
+{
+  "index": 2180,
+  "norm_id": 0.109,
+  "card_id": "BT20-090",
+  "card_index": 90,
+  "card_name_eng": "Yuuki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_090",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[End of Your Turn] If you have 4 or fewer cards in your hand, by suspending this Tamer, 1 of your Digimon with the [Dark Dragon] or [Evil Dragon] trait attacks a player.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

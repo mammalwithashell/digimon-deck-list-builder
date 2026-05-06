@@ -1,0 +1,25 @@
+{
+  "index": 897,
+  "norm_id": 0.04485,
+  "card_id": "BT8-091",
+  "card_index": 91,
+  "card_name_eng": "Willis",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_091",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] You may hatch 1 Digi-Egg card to an empty space in your breeding area.\r\n[Your Turn] When one of your Digimon would digivolve into a Digimon card with [Gargomon] or [Rapidmon] in their name, you may suspend this Tamer to reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

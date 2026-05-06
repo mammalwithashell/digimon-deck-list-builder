@@ -1,0 +1,30 @@
+{
+  "index": 3492,
+  "norm_id": 0.1746,
+  "card_id": "P-162",
+  "card_index": 162,
+  "card_name_eng": "Coelamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_162",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Ancient Fish",
+    "DS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] 1 of your [DS] trait Digimon can't have its DP reduced or be affected by your opponent's ＜De-Digivolve＞ effects until the end of their turn.",
+  "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] Lv.3 w/[DS] trait: Cost 2"
+}

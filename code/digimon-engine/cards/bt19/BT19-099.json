@@ -1,0 +1,27 @@
+{
+  "index": 2087,
+  "norm_id": 0.10435,
+  "card_id": "BT19-099",
+  "card_index": 99,
+  "card_name_eng": "The Wicked God Descends!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_099",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Wicked God"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 [Composite] trait card from your trash with the play cost reduced by 4. Then, place this card in the battle area.\r\n[All Turns] When any of your Digimon with [Millenniummon] in its name would leave the battle area, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・ You may play 1 [Wicked God] trait Digimon card with a play cost 1 higher than that Digimon from your hand or trash without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

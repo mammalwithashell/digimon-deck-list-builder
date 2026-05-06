@@ -1,0 +1,38 @@
+{
+  "index": 1846,
+  "norm_id": 0.0923,
+  "card_id": "BT17-062",
+  "card_index": 62,
+  "card_name_eng": "Dorumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_062",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Beast",
+    "X Antibody",
+    "SoC"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Attacking] If [Kosuke Kisakata] is in this Digimon's digivolution cards and your opponent has a level 6 or higher Digimon, this Digimon may digivolve into [Dorugoramon] in the hand for a digivolution cost of 4, ignoring its digivolution requirements.",
+  "inherited_effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Dorimon]: Cost 0"
+}

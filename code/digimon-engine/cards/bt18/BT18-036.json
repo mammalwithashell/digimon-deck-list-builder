@@ -1,0 +1,36 @@
+{
+  "index": 1922,
+  "norm_id": 0.0961,
+  "card_id": "BT18-036",
+  "card_index": 36,
+  "card_name_eng": "Wizardmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_036",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Wizard",
+    "Witchelny"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] By trashing the top card of your security stack, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this yellow Digimon with the [Data] or [Witchelny] trait would leave the battle area by your opponent's effects, by trashing your top security card, it doesn't leave.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

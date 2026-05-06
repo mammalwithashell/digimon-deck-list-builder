@@ -1,0 +1,27 @@
+{
+  "index": 3867,
+  "norm_id": 0.19335,
+  "card_id": "ST19-15",
+  "card_index": 15,
+  "card_name_eng": "Noble Family Arts",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST19_15",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your opponent's Digimon gets -6000 DP for the turn. If there are 3 or more Digimon, increase the DP reduction of this effect by -6000.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

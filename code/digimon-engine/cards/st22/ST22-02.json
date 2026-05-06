@@ -1,0 +1,35 @@
+{
+  "index": 3899,
+  "norm_id": 0.19495,
+  "card_id": "ST22-02",
+  "card_index": 2,
+  "card_name_eng": "Renamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST22_02",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Moving] [On Play] By trashing 1 card in your hand, you may return 1 card with the [Onmyōjutsu] or [Plug-In] trait from your trash to your hand.",
+  "inherited_effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

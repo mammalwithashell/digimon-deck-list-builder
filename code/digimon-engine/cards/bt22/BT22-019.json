@@ -1,0 +1,36 @@
+{
+  "index": 2313,
+  "norm_id": 0.11565,
+  "card_id": "BT22-019",
+  "card_index": 19,
+  "card_name_eng": "Veemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_019",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mini Dragon",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with [Veedramon] in its name, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon with [Veedramon] in its name would leave the battle area by your opponent's effects, by suspending this Digimon, it doesn't leave.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[CS] trait: Cost 0"
+}

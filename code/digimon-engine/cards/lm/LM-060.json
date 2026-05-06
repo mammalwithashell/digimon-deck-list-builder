@@ -1,0 +1,26 @@
+{
+  "index": 3328,
+  "norm_id": 0.1664,
+  "card_id": "LM-060",
+  "card_index": 60,
+  "card_name_eng": "Shadow Training",
+  "card_name_jpn": "",
+  "card_effect_class_name": "LM_060",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    3,
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have don't have [Shadow Training] in the battle area, you can ignore this card's color requirements.\r\n[Main] Reveal the top 2 cards of your deck. Add 1 green or purple card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon may digivolve into a green or purple Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2.",
+  "inherited_effect_description_eng": "Security Effect [Security] Reveal the top 2 cards of your deck. Add 1 green or purple card among them to the hand. Return the rest to the bottom of deck. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 1841,
+  "norm_id": 0.09205,
+  "card_id": "BT17-057",
+  "card_index": 57,
+  "card_name_eng": "Chaosdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_057",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine",
+    "SoC"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "While you have a black Tamer, cards from your trash may also be placed for this card's DigiXros.\r\n[On Play] [When Digivolving] By placing 1 [Cyborg] or [SoC] trait card from your trash as this Digimon's bottom digivolution card, delete up to 7 play cost's total worth of your opponent's Digimon.\r\n[All Turns] When this Digimon would leave the battle area by an opponent's effect, by trashing 2 [Cyborg], [Machine] or [SoC] trait cards in its digivolution cards, prevent it from leaving.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[SoC] trait: Cost 3"
+}

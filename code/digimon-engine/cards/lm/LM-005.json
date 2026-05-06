@@ -1,0 +1,37 @@
+{
+  "index": 3273,
+  "norm_id": 0.16365,
+  "card_id": "LM-005",
+  "card_index": 5,
+  "card_name_eng": "Amphimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "LM_005",
+  "play_cost": 6,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] You may trash up to 4 blue cards in your hand. For each one, trash any 1 card under your opponent's Digimon or Tamers. Then, return 1 of their Digimon or Tamers without cards under it to the hand.\r\n[When Attacking] By returning 3 cards with [Jellymon] in their texts from your trash to the bottom of the deck, this Digimon gains ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

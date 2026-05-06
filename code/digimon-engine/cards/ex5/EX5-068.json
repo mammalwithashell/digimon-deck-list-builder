@@ -1,0 +1,28 @@
+{
+  "index": 2966,
+  "norm_id": 0.1483,
+  "card_id": "EX5-068",
+  "card_index": 68,
+  "card_name_eng": "Flashy Boss Punch",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_068",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [
+    "Boss"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon with [Leomon] or [Bancho] in its name, you can ignore this card's color requirements.\r\n[Main] Suspend 1 of your opponent's Digimon, and 1 of your opponent's Digimon gets -12000 DP for the turn. Then, 1 of your Digimon with [Leomon] or [Bancho] in its name may attack.",
+  "inherited_effect_description_eng": "Security Effect [Security] Suspend 1 of your opponent's Digimon, and 1 of your opponent's Digimon gets -12000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

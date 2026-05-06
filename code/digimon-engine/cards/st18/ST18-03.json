@@ -1,0 +1,35 @@
+{
+  "index": 3840,
+  "norm_id": 0.192,
+  "card_id": "ST18-03",
+  "card_index": 3,
+  "card_name_eng": "Falcomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST18_03",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Avian"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Attacking] Suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

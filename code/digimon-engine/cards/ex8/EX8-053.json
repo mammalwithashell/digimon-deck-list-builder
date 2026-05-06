@@ -1,0 +1,36 @@
+{
+  "card_id": "EX8-053",
+  "card_index": 53,
+  "card_name_eng": "BanchoGolemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_053",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Mineral",
+    "Boss"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[All Turns] While your opponent has a Digimon with 13000 DP or more, this Digimon gets +5000 DP.\r\n[On Deletion] Reveal the top 3 cards of your deck. You may play 1 [Mineral] or [Rock] trait Digimon card with a play cost of 8 or less among them without paying the cost. Trash the rest.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "",
+  "index": 3173,
+  "norm_id": 0.15865
+}

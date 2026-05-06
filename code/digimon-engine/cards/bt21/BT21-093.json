@@ -1,0 +1,27 @@
+{
+  "index": 2285,
+  "norm_id": 0.11425,
+  "card_id": "BT21-093",
+  "card_index": 93,
+  "card_name_eng": "Raging Serpentine",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_093",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When this card would be used, if your opponent has 3 or fewer security cards, reduce the use cost by 4.\r\n[Main] Delete 1 of your opponent's highest DP Digimon. Then, place this card in the battle area.\r\n[All Turns] When your opponent's security stack is removed from, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Reptile] or [Dragonkin] trait Digimon may digivolve into a [Reptile] or [Dragonkin] trait Digimon card in the hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's Digimon with the highest DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

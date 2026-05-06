@@ -1,0 +1,27 @@
+{
+  "index": 3498,
+  "norm_id": 0.1749,
+  "card_id": "P-168",
+  "card_index": 168,
+  "card_name_eng": "Yao Qinglan",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_168",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Your Turn] When effects add digivolution cards under any of your Digimon with [Aqua] or [Sea Animal] in any of its traits, by suspending this Tamer, one of those Digimon may digivolve into a Digimon card with the [Aqua] or [Sea Animal] in any of its traits in your hand with the digivolution cost reduced by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

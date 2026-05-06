@@ -1,0 +1,36 @@
+{
+  "index": 2331,
+  "norm_id": 0.11655,
+  "card_id": "BT22-037",
+  "card_index": 37,
+  "card_name_eng": "Chirinmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_037",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Holy Beast",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "When effects trash this card from the security stack, 1 of your opponent's Digimon gets -8000 DP for the turn.\r\n[When Digivolving] By trashing your top security card, this Digimon may digivolve into a Digimon card with [Kentaurosmon] or [Mitamamon] in its name or the [CS] trait in the hand with the digivolution cost reduced by 2.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -4000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[CS] trait: Cost 3"
+}

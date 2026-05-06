@@ -1,0 +1,36 @@
+{
+  "index": 1286,
+  "norm_id": 0.0643,
+  "card_id": "BT12-032",
+  "card_index": 32,
+  "card_name_eng": "AncientMermaimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_032",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Ancient Aquabeast",
+    "Ten Warriors"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] You may play 1 blue Digimon card with [Hybrid], [Aqua] or [Sea Animal] in any of its traits, from 1 of your blue Digimon's digivolution cards without paying the cost.\r\n[On Deletion] You may play 1 blue level 4 or lower Digimon card with the [Hybrid] trait from your hand without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": ""
+}

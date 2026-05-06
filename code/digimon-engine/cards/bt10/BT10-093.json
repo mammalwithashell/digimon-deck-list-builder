@@ -1,0 +1,28 @@
+{
+  "index": 1123,
+  "norm_id": 0.05615,
+  "card_id": "BT10-093",
+  "card_index": 93,
+  "card_name_eng": "Yuu Amano",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_093",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "General",
+    "Bagra Army"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[All Turns] [Once Per Turn] When a purple card is placed under this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) and memory +1.\r\n[Your Turn] [Once Per Turn] When you would play 1 level 4 or higher Digimon card with [Bagra Army] trait, by placing up to 3 purple Digimon cards from under your Tamers in the digivolution cards of the Digimon card played, reduce the memory cost of that Digimon by 2 for each card placed.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

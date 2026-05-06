@@ -1,0 +1,36 @@
+{
+  "index": 3545,
+  "norm_id": 0.17725,
+  "card_id": "P-215",
+  "card_index": 215,
+  "card_name_eng": "Icemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_215",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    1,
+    5
+  ],
+  "type_eng": [
+    "Ice-Snow"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Moving] [On Play] [When Digivolving] By placing 1 level 4 or lower [Ice-Snow], [Mineral] or [Rock] trait card from your hand or trash as this Digimon's bottom digivolution card, until your opponent’s turn ends, their effects can't return 1 or your [Ice-Snow], [Mineral] or [Rock] trait Digimon to hands or decks or affect it with ＜De-Digivolve＞ effects.",
+  "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Ice-Snow]/[Mineral]/[Rock]: Cost 2"
+}

@@ -1,0 +1,32 @@
+{
+  "index": 2468,
+  "norm_id": 0.1234,
+  "card_id": "BT23-072",
+  "card_index": 72,
+  "card_name_eng": "King Drasil_7D6",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_072",
+  "play_cost": 6,
+  "dp": 9000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "9000",
+    "CS"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[Hand] [Main] By paying 3 cost and placing this card as the bottom digivolution card of your [King Drasil_7D6] or [Mother Eater] in the breeding area, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[All Turns] When any of your Digimon with the [Royal Knight] or [CS] trait are played, by suspending this Digimon, 1 of the played Digimon gains ＜Rush＞ (This Digimon can attack the turn it comes into play.), ＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.), ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.) and ＜Blocker＞ (This Digimon can block in the blocker timing.) until your opponent's turn ends.",
+  "inherited_effect_description_eng": "[Breeding] [Start of Your Main Phase] If this Digimon has 6 or more digivolution cards, you may play 1 Digimon card with [King Drasil] in its name from its digivolution cards without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

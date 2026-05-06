@@ -1,0 +1,37 @@
+{
+  "index": 2262,
+  "norm_id": 0.1131,
+  "card_id": "BT21-070",
+  "card_index": 70,
+  "card_name_eng": "Gossipmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_070",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Gossip (App Name)"
+  ],
+  "form_eng": [
+    "Sup."
+  ],
+  "attribute_eng": [
+    "Social"
+  ],
+  "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] You may return 1 Digimon card with the [Appmon] trait from your trash to the hand.",
+  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 451,
+  "norm_id": 0.02255,
+  "card_id": "BT4-096",
+  "card_index": 96,
+  "card_name_eng": "Izzy Izumi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_096",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3. \r\n[On Play] Reveal the top 3 cards of your deck. If all of them are black, gain 1 memory. Place the cards at the top of the deck in any order.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,71 @@
+{
+  "index": 1160,
+  "norm_id": 0.058,
+  "card_id": "BT11-018",
+  "card_index": 18,
+  "card_name_eng": "Shoutmon DX",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_018",
+  "play_cost": 13,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    1
+  ],
+  "type_eng": [
+    "Composite",
+    "Xros Heart",
+    "Blue Flare"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Material Save 2＞ (When this Digimon would be deleted, you may place 2 cards in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)\r\n[On Play] Delete 1 of your opponent's Digimon with 8000 DP or less. 1 of your opponent's Digimon can't attack until the end of their turn.\r\n[End of Attack] By deleting this Digimon, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "DigiXros Requirements [DigiXros -3] [OmniShoutmon] x [ZeigGreymon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "OmniShoutmon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "ZeigGreymon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 3,
+      "max_materials": 2,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "hand",
+        "field"
+      ]
+    }
+  ]
+}

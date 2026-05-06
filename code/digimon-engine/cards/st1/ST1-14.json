@@ -1,0 +1,25 @@
+{
+  "index": 3612,
+  "norm_id": 0.1806,
+  "card_id": "ST1-14",
+  "card_index": 14,
+  "card_name_eng": "Starlight Explosion",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST1_14",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] All of your Security Digimon get +7000 DP until the end of your opponent's next turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] All of your Security Digimon get +7000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 2152,
+  "norm_id": 0.1076,
+  "card_id": "BT20-062",
+  "card_index": 62,
+  "card_name_eng": "Candlemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_062",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Flame"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "inherited_effect_description_eng": "[On Deletion] By trashing 1 card in your hand, delete 1 of your opponent's level 4 or lower Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

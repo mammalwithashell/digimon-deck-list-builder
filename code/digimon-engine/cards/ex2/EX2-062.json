@@ -1,0 +1,25 @@
+{
+  "index": 2738,
+  "norm_id": 0.1369,
+  "card_id": "EX2-062",
+  "card_index": 62,
+  "card_name_eng": "Ryo Akiyama",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_062",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 card with [dramon] or [Justimon] in its name among them to your hand. Place the remaining cards at the bottom of your deck in any order.\r\n[Your Turn] When you attack with a black Digimon, you may suspend this Tamer to have that Digimon get +1000 DP until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

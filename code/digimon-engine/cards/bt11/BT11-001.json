@@ -1,0 +1,27 @@
+{
+  "index": 1143,
+  "norm_id": 0.05715,
+  "card_id": "BT11-001",
+  "card_index": 1,
+  "card_name_eng": "Yokomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_001",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Bulb"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [On Deletion] If you have a red Tamer in play, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

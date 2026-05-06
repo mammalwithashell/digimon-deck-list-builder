@@ -1,0 +1,28 @@
+{
+  "index": 2400,
+  "norm_id": 0.12,
+  "card_id": "BT23-004",
+  "card_index": 4,
+  "card_name_eng": "DemiMeramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_004",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Flame",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [On Deletion] 1 of your Digimon with the [Ghost] trait gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.) until your opponent's turn ends.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

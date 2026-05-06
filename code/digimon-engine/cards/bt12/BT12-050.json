@@ -1,0 +1,37 @@
+{
+  "index": 1304,
+  "norm_id": 0.0652,
+  "card_id": "BT12-050",
+  "card_index": 50,
+  "card_name_eng": "Stingmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_050",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would DNA digivolve into a blue Digimon card, gain 1 memory.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

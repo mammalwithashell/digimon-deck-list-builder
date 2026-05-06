@@ -1,0 +1,28 @@
+{
+  "index": 2294,
+  "norm_id": 0.1147,
+  "card_id": "BT21-102",
+  "card_index": 102,
+  "card_name_eng": "Tai Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_102",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 4,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "ADVENTURE",
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When one of your Digimon attacks, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Main] [Once Per Turn] You may play 1 [ADVENTURE] or [Hero] trait card with a play cost of 2 or less from your hand without paying the cost. For each of your Tamers' colors, add 1 to this effect's play cost maximum. Then, return this Tamer to the bottom of the deck.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

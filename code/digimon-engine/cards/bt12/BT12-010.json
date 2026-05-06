@@ -1,0 +1,35 @@
+{
+  "index": 1264,
+  "norm_id": 0.0632,
+  "card_id": "BT12-010",
+  "card_index": 10,
+  "card_name_eng": "Growlmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_010",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dark Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] If you don't have [Takato Matsuki] in play, you may play 1 [Takato Matsuki] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Growlmon] or [Gallantmon] in its name, it gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

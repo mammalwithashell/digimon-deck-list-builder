@@ -1,0 +1,36 @@
+{
+  "index": 3220,
+  "norm_id": 0.161,
+  "card_id": "EX11-026",
+  "card_index": 26,
+  "card_name_eng": "Pteromon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_026",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Bird Dragon",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Moving] [On Play] You may suspend 1 Digimon. If this effect suspended your Digimon, 1 of your Digimon with [Avian] or [Bird] in any of its traits or the [Vortex Warriors] trait gets +3000 DP until your opponent's turn ends.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon wins a battle, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

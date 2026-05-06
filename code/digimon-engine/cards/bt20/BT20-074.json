@@ -1,0 +1,59 @@
+{
+  "index": 2164,
+  "norm_id": 0.1082,
+  "card_id": "BT20-074",
+  "card_index": 74,
+  "card_name_eng": "Dinobeemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_074",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] You may return 1 Digimon card with [Imperialdramon] in its name or the [Free] trait from your trash to the hand.\r\n[All Turns] When any of your [Dinobeemon] or [Paildramon] would be returned to hands or decks, 2 of your Digimon may DNA digivolve into [Imperialdramon: Dragon Mode] in the hand.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon doesn't activate [Security] effects on Option cards it checks.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Purple Lv.4 + Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 4,
+        "card_colors": [
+          "Purple"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 4,
+        "card_colors": [
+          "Red"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

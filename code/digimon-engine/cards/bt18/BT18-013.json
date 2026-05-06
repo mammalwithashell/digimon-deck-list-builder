@@ -1,0 +1,36 @@
+{
+  "index": 1899,
+  "norm_id": 0.09495,
+  "card_id": "BT18-013",
+  "card_index": 13,
+  "card_name_eng": "Deltamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_013",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    6
+  ],
+  "type_eng": [
+    "Composite"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n[On Play] [When Digivolving] By trashing 1 card in your hand, return 1 card with the [Composite] or [Wicked God] trait from your trash to the hand.",
+  "inherited_effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Gazimon]/[Gizamon]: Cost 2"
+}

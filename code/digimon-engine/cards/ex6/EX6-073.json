@@ -1,0 +1,35 @@
+{
+  "index": 3045,
+  "norm_id": 0.15225,
+  "card_id": "EX6-073",
+  "card_index": 73,
+  "card_name_eng": "Ogudomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_073",
+  "play_cost": 16,
+  "dp": 16000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 4,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Avatar"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] [When Attacking] You may place up to 7 cards with different names and the [Seven Great Demon Lords] trait from your trash as this Digimon's bottom digivolution cards. If you placed 4 or more cards with this effect, delete 1 of your opponent's Digimon or Tamers.\r\n[When Attacking] By returning 7 cards with different names and the [Seven Great Demon Lords] trait from this Digimon's digivolution cards to the bottom of the deck, delete 7 of your opponent's Digimon or Tamers. Then, trash the top 7 cards of your opponent's security stack. For each card deleted by this effect, reduce the cards trashed by 1.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 7
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 or higher w/[Seven Great Demon Lords] trait: Cost 6"
+}

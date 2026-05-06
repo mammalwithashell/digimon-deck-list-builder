@@ -1,0 +1,35 @@
+{
+  "index": 879,
+  "norm_id": 0.04395,
+  "card_id": "BT8-073",
+  "card_index": 73,
+  "card_name_eng": "Mushroomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_073",
+  "play_cost": 3,
+  "dp": 4000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 1771,
+  "norm_id": 0.08855,
+  "card_id": "BT16-089",
+  "card_index": 89,
+  "card_name_eng": "Arukenimon & Mummymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_089",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When [Arukenimon] or [Mummymon] would be played from your hand, by deleting this Tamer, reduce the play cost by 3.\r\n[On Deletion] You may play 1 level 5 or lower Digimon card with [Myotismon] in its text from your trash without paying the cost. At the next end of your opponent's turn, delete it.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

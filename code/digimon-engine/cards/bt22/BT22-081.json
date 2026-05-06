@@ -1,0 +1,29 @@
+{
+  "index": 2375,
+  "norm_id": 0.11875,
+  "card_id": "BT22-081",
+  "card_index": 81,
+  "card_name_eng": "Eater Eve",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_081",
+  "play_cost": 6,
+  "dp": 7000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [
+    "Eater"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n[On Play] [When Digivolving] Until your opponent's turn ends, 1 of their Digimon can't suspend. Then, if this Digimon has no digivolution cards, you may place 1 [Yuuko Kamishiro] from your hand or trash as this Digimon's bottom digivolution card.\r\n[All Turns] When this Digimon would leave the battle area, you may play 1 [Yuuko Kamishiro] from its digivolution cards without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] [Yuuko Kamishiro]: Cost 3"
+}

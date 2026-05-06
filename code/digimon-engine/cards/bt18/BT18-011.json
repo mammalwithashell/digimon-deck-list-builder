@@ -1,0 +1,38 @@
+{
+  "index": 1897,
+  "norm_id": 0.09485,
+  "card_id": "BT18-011",
+  "card_index": 11,
+  "card_name_eng": "Agunimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_011",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    6
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[When Digivolving] You may return 1 card with the [Hybrid] or [Ten Warriors] trait or 1 Tamer card with inherited effects from your trash to the hand.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Takuya Kanbara]: Cost 2 \r\n[Digivolve] [BurningGreymon]: Cost 0"
+}

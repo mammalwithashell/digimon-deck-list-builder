@@ -1,0 +1,36 @@
+{
+  "index": 1182,
+  "norm_id": 0.0591,
+  "card_id": "BT11-040",
+  "card_index": 40,
+  "card_name_eng": "Sukamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_040",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Abnormal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Deletion] Reveal the top 3 cards of your deck. Add 1 card with [Chuumon], [Sukamon] or [Etemon] in its name among them to your hand. Trash the rest.",
+  "inherited_effect_description_eng": "[All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

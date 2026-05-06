@@ -1,0 +1,35 @@
+{
+  "index": 2792,
+  "norm_id": 0.1396,
+  "card_id": "EX3-042",
+  "card_index": 42,
+  "card_name_eng": "Toropiamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_042",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] If this Digimon is suspended, suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When an effect suspends one of your Digimon, suspend 1 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,38 @@
+{
+  "index": 2416,
+  "norm_id": 0.1208,
+  "card_id": "BT23-020",
+  "card_index": 20,
+  "card_name_eng": "Seadramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_020",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1,
+    6
+  ],
+  "type_eng": [
+    "Aquatic",
+    "Hudie",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n[All Turns] [Once Per Turn] When this Digimon suspends, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[CS] trait: Cost 2"
+}

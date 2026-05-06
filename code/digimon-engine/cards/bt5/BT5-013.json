@@ -1,0 +1,37 @@
+{
+  "index": 483,
+  "norm_id": 0.02415,
+  "card_id": "BT5-013",
+  "card_index": 13,
+  "card_name_eng": "Triceramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_013",
+  "play_cost": 5,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Ceratopsian"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

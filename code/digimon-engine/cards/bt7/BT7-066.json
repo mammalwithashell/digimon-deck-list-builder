@@ -1,0 +1,36 @@
+{
+  "index": 760,
+  "norm_id": 0.038,
+  "card_id": "BT7-066",
+  "card_index": 66,
+  "card_name_eng": "AncientVolcanomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_066",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Ancient Mineral",
+    "Ten Warriors"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] ＜De-Digivolve 3＞ 1 of your opponent's Digimon. (Trash up to 3 cards from the top. You can't trash past level 3 cards.) \r\n[On Deletion] You may play 1 black level 4 or lower card with the [Hybrid] trait from your hand without paying its memory cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": ""
+}

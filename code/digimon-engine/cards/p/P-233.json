@@ -1,0 +1,28 @@
+{
+  "index": 3996,
+  "norm_id": 0.1998,
+  "card_id": "P-233",
+  "card_index": 233,
+  "card_name_eng": "Eri Karan",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_233",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "App Driver",
+    "Appmon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Game] trait card and 1 [Invincible], [Life] or [Entertainment] trait card among them to the hand. Return the rest to the bottom of the deck.\r\n[Your Turn] When any of your Digimon get linked to a [Game], [Life] or [Entertainment] trait card, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 683,
+  "norm_id": 0.03415,
+  "card_id": "BT6-101",
+  "card_index": 101,
+  "card_name_eng": "Wyvern's Breath",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_101",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your opponent's Digimon gets -15000 DP for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

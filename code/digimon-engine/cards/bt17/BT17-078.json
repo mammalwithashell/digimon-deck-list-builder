@@ -1,0 +1,53 @@
+{
+  "index": 1862,
+  "norm_id": 0.0931,
+  "card_id": "BT17-078",
+  "card_index": 78,
+  "card_name_eng": "Omnimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_078",
+  "play_cost": 9,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast DNA Digivolve ([WarGreymon] + [MetalGarurumon])＞ (1 of your specified Digimon and 1 specified card in hand may DNA digivolve into this card.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] If DNA digivolving, choose 1 of your opponent's Digimon and return all of your opponent's Digimon with the same level as it to the bottom of the deck. Then, delete 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-5＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 6,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Lv.6 w/[Greymon] in name + Lv.6 w/[Garurumon] in name : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 6,
+        "card_colors": [],
+        "name_contains": "Greymon",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 6,
+        "card_colors": [],
+        "name_contains": "Garurumon",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

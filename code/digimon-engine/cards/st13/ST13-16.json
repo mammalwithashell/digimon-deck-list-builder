@@ -1,0 +1,28 @@
+{
+  "index": 3780,
+  "norm_id": 0.189,
+  "card_id": "ST13-16",
+  "card_index": 16,
+  "card_name_eng": "Legend-Arms Alliance",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST13_16",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5,
+    0
+  ],
+  "type_eng": [
+    "Legend-Arms"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 Digimon card with the [Legend-Arms] trait and a play cost of 7 or less in your hand without paying its memory cost. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Reveal the top 4 cards of your deck. Place those cards on the top or bottom of your deck in any order.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 Digimon card with the [Legend-Arms] trait and a play cost of 7 or less in your hand without paying its memory cost. Then, place this card in your battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

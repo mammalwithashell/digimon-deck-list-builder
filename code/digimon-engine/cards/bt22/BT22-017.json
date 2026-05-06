@@ -1,0 +1,36 @@
+{
+  "index": 2311,
+  "norm_id": 0.11555,
+  "card_id": "BT22-017",
+  "card_index": 17,
+  "card_name_eng": "Gabumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_017",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Reptile",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Omnimon] in its text and 1 card with the [CS] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Tsunomon]/Lv.2 w/[CS] trait: Cost 0"
+}

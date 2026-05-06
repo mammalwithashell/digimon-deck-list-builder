@@ -1,0 +1,27 @@
+{
+  "index": 1781,
+  "norm_id": 0.08905,
+  "card_id": "BT16-099",
+  "card_index": 99,
+  "card_name_eng": "The Demon Wolf of the Castle of Nine Wolves",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_099",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "SoC"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Add 1 card with the [SoC] trait among them to the hand. Return the rest to the bottom of the deck. If this effect added to a hand, trash 1 card in your hand. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・You may play 1 card with the [SoC] trait from your trash with the play cost reduced by 2.",
+  "inherited_effect_description_eng": "Security Effect [Security] Reveal the top 3 cards of your deck. Add 1 card with the [SoC] trait among them to the hand. Return the rest to the bottom of the deck. If this effect added to a hand, trash 1 card in your hand. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

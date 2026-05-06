@@ -1,0 +1,36 @@
+{
+  "index": 1722,
+  "norm_id": 0.0861,
+  "card_id": "BT16-040",
+  "card_index": 40,
+  "card_name_eng": "Wormmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_040",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3,
+    6
+  ],
+  "type_eng": [
+    "Larva"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] [On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Insectoid] or [Free] trait in your trash with the digivolution cost reduced by 1.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Minomon]: Cost 0"
+}

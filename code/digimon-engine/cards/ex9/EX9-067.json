@@ -1,0 +1,27 @@
+{
+  "index": 4071,
+  "norm_id": 0.20355,
+  "card_id": "EX9-067",
+  "card_index": 67,
+  "card_name_eng": "Mirai Kinosaki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_067",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Puppet] or [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck.\r\n[Your Turn] When any of your Digimon digivolve into a [Puppet] trait Digimon, by returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] or 1 [Puppet] trait Digimon card from your hand with the play cost reduced by 3.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

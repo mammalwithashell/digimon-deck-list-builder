@@ -1,0 +1,38 @@
+{
+  "index": 2049,
+  "norm_id": 0.10245,
+  "card_id": "BT19-061",
+  "card_index": 61,
+  "card_name_eng": "RaptorSparrowmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_061",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5,
+    6
+  ],
+  "type_eng": [
+    "Cyborg",
+    "Twilight",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "This card is also treated as [Sparrowmon] for a DigiXros.\r\n[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with the [Xros Heart] or [Blue Flare] trait among them to the hand. Trash the rest.\r\n[On Deletion] Place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under your Tamers.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Xros Heart] trait: Cost 2"
+}

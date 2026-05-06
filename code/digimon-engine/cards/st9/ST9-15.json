@@ -1,0 +1,25 @@
+{
+  "index": 3733,
+  "norm_id": 0.18665,
+  "card_id": "ST9-15",
+  "card_index": 15,
+  "card_name_eng": "Hell Masquerade",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST9_15",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your Digimon gets +2000 DP for the turn. Then, if you have a blue Digimon in play, 1 of your Digimon gains ＜Piercing＞ for the turn. (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to its owner's hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

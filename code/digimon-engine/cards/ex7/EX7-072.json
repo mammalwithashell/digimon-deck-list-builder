@@ -1,0 +1,27 @@
+{
+  "index": 3118,
+  "norm_id": 0.1559,
+  "card_id": "EX7-072",
+  "card_index": 72,
+  "card_name_eng": "Seventh Fascination",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_072",
+  "play_cost": 7,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Seven Great Demon Lords"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Trash] [Your Turn] When any of your Digimon digivolve into [Lilithmon (X Antibody)], by returning this card to the bottom of the deck, activate this card's [Main] effects.\r\n[Main] Until the end of opponent's turn, give all of their Digimon \"[End of Your Turn] Delete 1 of your Digimon.\"",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's unsuspended Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

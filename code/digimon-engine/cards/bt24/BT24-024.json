@@ -1,0 +1,40 @@
+{
+  "index": 2522,
+  "norm_id": 0.1261,
+  "card_id": "BT24-024",
+  "card_index": 24,
+  "card_name_eng": "Submarimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_024",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1,
+    2
+  ],
+  "type_eng": [
+    "Aquatic",
+    "Iliad",
+    "TS"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[When Attacking] [Once Per Turn] You may play 1 Tamer card with the [TS] trait from your hand with the play cost reduced by 2.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Armadillomon]/Lv.3 w/[TS] trait: Cost 2"
+}

@@ -1,0 +1,25 @@
+{
+  "index": 114,
+  "norm_id": 0.0057,
+  "card_id": "BT1-098",
+  "card_index": 98,
+  "card_name_eng": "V-Nova Blast",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_098",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your Digimon gains ＜Jamming＞ for the turn. (This Digimon can't be deleted in battles against Security Digimon.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

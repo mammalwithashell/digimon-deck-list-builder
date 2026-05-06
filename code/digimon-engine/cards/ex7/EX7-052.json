@@ -1,0 +1,35 @@
+{
+  "index": 3098,
+  "norm_id": 0.1549,
+  "card_id": "EX7-052",
+  "card_index": 52,
+  "card_name_eng": "Tsukaimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_052",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Among them, add 1 card with [Lilithmon] in its text to the hand and trash 1 purple card. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, by deleting 1 of your other Digimon, end the attack.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

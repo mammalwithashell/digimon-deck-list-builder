@@ -1,0 +1,36 @@
+{
+  "index": 756,
+  "norm_id": 0.0378,
+  "card_id": "BT7-062",
+  "card_index": 62,
+  "card_name_eng": "Dorugamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_062",
+  "play_cost": 6,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Beast Dragon",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Opponent's Turn] While you have another Digimon in play with the [X Antibody] trait, or a card with the [X Antibody] trait is in this Digimon's digivolution cards, this Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.).",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon has the [X Antibody] trait, it gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 2914,
+  "norm_id": 0.1457,
+  "card_id": "EX5-016",
+  "card_index": 16,
+  "card_name_eng": "Lunamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_016",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mammal",
+    "Night Claw"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] By returning 1 of your Digimon to the hand, gain 2 memory.",
+  "inherited_effect_description_eng": "[Main] [Once Per Turn] By placing the top card of this Digimon with the [Night Claw] or [Light Fang] trait as this Digimon's bottom digivolution card, gain 2 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Night Claw]/[Light Fang] trait: Cost 0"
+}

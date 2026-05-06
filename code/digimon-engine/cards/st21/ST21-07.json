@@ -1,0 +1,36 @@
+{
+  "index": 3889,
+  "norm_id": 0.19445,
+  "card_id": "ST21-07",
+  "card_index": 7,
+  "card_name_eng": "Palmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST21_07",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation",
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] By trashing 1 card with the [ADVENTURE] trait in your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[ADVENTURE] trait: Cost 0"
+}

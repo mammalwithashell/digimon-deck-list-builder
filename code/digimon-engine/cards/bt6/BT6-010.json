@@ -1,0 +1,37 @@
+{
+  "index": 592,
+  "norm_id": 0.0296,
+  "card_id": "BT6-010",
+  "card_index": 10,
+  "card_name_eng": "Flamemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_010",
+  "play_cost": 4,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] While this Digimon has the [Hybrid] or [Ten Warriors] trait, it gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.).",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

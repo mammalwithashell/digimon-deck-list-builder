@@ -1,0 +1,25 @@
+{
+  "index": 460,
+  "norm_id": 0.023,
+  "card_id": "BT4-105",
+  "card_index": 105,
+  "card_name_eng": "Tactical Retreat!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_105",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Place 1 of your Digimon on top of your security stack face down.",
+  "inherited_effect_description_eng": "Security Effect [Security] ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

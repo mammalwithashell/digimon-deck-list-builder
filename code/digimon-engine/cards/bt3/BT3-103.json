@@ -1,0 +1,25 @@
+{
+  "index": 346,
+  "norm_id": 0.0173,
+  "card_id": "BT3-103",
+  "card_index": 103,
+  "card_name_eng": "Hidden Potential Discovered!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_103",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] For the turn, when one of your green Digimon would next digivolve, by suspending 1 of your Digimon, reduce the digivolution cost by 5.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

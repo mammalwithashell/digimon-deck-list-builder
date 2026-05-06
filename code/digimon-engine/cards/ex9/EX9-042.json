@@ -1,0 +1,37 @@
+{
+  "index": 4046,
+  "norm_id": 0.2023,
+  "card_id": "EX9-042",
+  "card_index": 42,
+  "card_name_eng": "Toropiamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_042",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    6
+  ],
+  "type_eng": [
+    "Vegetation",
+    "WG"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. Then, 1 of their Digimon can't unsuspend until their turn ends.\r\n[All Turns] [Once Per Turn] When effects suspend any of your [WG] trait Digimon, this Digimon may digivolve into a [WG] trait Digimon card in the hand without paying the cost.",
+  "inherited_effect_description_eng": "[End of Your Turn] [Once Per Turn] 1 of your Digimon with the [WG] trait may unsuspend.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[WG] trait: Cost 3"
+}

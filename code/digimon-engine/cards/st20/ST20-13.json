@@ -1,0 +1,28 @@
+{
+  "index": 3880,
+  "norm_id": 0.194,
+  "card_id": "ST20-13",
+  "card_index": 13,
+  "card_name_eng": "Tai Kamiya & Izzy Izumi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST20_13",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5,
+    3
+  ],
+  "type_eng": [
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When any Digimon cards with the [ADVENTURE] trait would be played from your hand, by suspending this Tamer, reduce the play cost by 1.\r\n[Opponent's Turn] All of your Digimon with the [ADVENTURE] trait gain ＜Blocker＞ (This Digimon can block in the blocker timing.).",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

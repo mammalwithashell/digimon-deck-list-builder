@@ -1,0 +1,28 @@
+{
+  "index": 1341,
+  "norm_id": 0.06705,
+  "card_id": "BT12-087",
+  "card_index": 87,
+  "card_name_eng": "Taiki Kudo",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_087",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Hunter",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 of your Digimon cards with ＜Save＞ in its text from your hand under this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Your Turn] When one of your Digimon would digivolve into a Digimon card with ＜Save＞ in its text, by suspending this Tamer and placing 1 card from under one of your Tamers as the bottom digivolution card of that Digimon, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

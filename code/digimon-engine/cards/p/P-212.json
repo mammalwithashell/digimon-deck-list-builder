@@ -1,0 +1,27 @@
+{
+  "index": 3542,
+  "norm_id": 0.1771,
+  "card_id": "P-212",
+  "card_index": 212,
+  "card_name_eng": "Asuna Shiroki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_212",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[On Play] ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand. If this effect trashed a card with the [Three Musketeers] or [TS] trait, delete 1 of your opponent's level 3 Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

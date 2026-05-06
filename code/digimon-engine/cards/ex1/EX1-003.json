@@ -1,0 +1,35 @@
+{
+  "index": 2606,
+  "norm_id": 0.1303,
+  "card_id": "EX1-003",
+  "card_index": 3,
+  "card_name_eng": "Birdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_003",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Giant Bird"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] When this Digimon attacks a player, delete 1 of your opponent's Digimon with 3000 DP or less.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

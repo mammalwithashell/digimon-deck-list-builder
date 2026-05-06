@@ -1,0 +1,26 @@
+{
+  "index": 3036,
+  "norm_id": 0.1518,
+  "card_id": "EX6-064",
+  "card_index": 64,
+  "card_name_eng": "Shu-Chong Wong",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_064",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Beast], [Beastkin], [Holy Beast] or [Cherub] trait among them to the hand. Return the rest to the bottom of the deck.\r\n[Your Turn] When an effect suspends one of your Digimon, by suspending this Tamer, 1 of your Digimon may digivolve into a Digimon card with the [Beastkin], [Holy Beast] or [Cherub] trait in your hand with the digivolution cost reduced by 2.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

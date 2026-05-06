@@ -1,0 +1,38 @@
+{
+  "index": 2513,
+  "norm_id": 0.12565,
+  "card_id": "BT24-015",
+  "card_index": 15,
+  "card_name_eng": "MetalGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_015",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "Titan",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] If your opponent has a level 6 or higher Digimon, play this card without battling and without paying the cost.\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[All Turns] [Once Per Turn] When attack targets change, delete 1 of your opponent's Digimon with the lowest DP.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with ＜Blocker＞",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Greymon] in name or w/[TS] trait: Cost 3"
+}

@@ -1,0 +1,29 @@
+{
+  "index": 3506,
+  "norm_id": 0.1753,
+  "card_id": "P-176",
+  "card_index": 176,
+  "card_name_eng": "Dorimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_176",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 5,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Lesser",
+    "X Antibody",
+    "Chronicle"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] This Digimon may digivolve into a Digimon card with the [Chronicle] trait in the hand.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

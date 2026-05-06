@@ -1,0 +1,37 @@
+{
+  "index": 2238,
+  "norm_id": 0.1119,
+  "card_id": "BT21-046",
+  "card_index": 46,
+  "card_name_eng": "Dracomon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_046",
+  "play_cost": 4,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3,
+    1
+  ],
+  "type_eng": [
+    "Dragon",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] [When Digivolving] This Digimon may digivolve into [Coredramon] in the hand without paying the cost.",
+  "inherited_effect_description_eng": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Dracomon]: Cost 0"
+}

@@ -1,0 +1,37 @@
+{
+  "index": 4032,
+  "norm_id": 0.2016,
+  "card_id": "EX9-028",
+  "card_index": 28,
+  "card_name_eng": "Nanimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_028",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Invader",
+    "DM",
+    "Ver.4"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[End of Your Turn] [Once Per Turn] By placing 3 Digimon cards with the [Ver.4] trait from your trash face down as this Digimon's bottom digivolution cards, it may digivolve into a Digimon card with the [Ver.4] trait in the hand or trash.",
+  "inherited_effect_description_eng": "[Your Turn] All of your opponent's Security Digimon get -3000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[DM] trait: Cost 2"
+}

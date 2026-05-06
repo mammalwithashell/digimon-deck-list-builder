@@ -1,0 +1,25 @@
+{
+  "index": 1011,
+  "norm_id": 0.05055,
+  "card_id": "BT9-093",
+  "card_index": 93,
+  "card_name_eng": "Flare Rock Soul",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_093",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon with 5000 DP or less. Then, you may digivolve 1 of your Digimon into a Digimon card with [Shoutmon] in its name in your hand for its digivolution cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's Digimon with 5000 DP or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

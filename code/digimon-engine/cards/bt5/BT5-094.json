@@ -1,0 +1,25 @@
+{
+  "index": 564,
+  "norm_id": 0.0282,
+  "card_id": "BT5-094",
+  "card_index": 94,
+  "card_name_eng": "Rowdy Rocker",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_094",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may place 1 red level 4 or lower Digimon card from your hand under 1 of your Digimon as its bottom digivolution card. If you do, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

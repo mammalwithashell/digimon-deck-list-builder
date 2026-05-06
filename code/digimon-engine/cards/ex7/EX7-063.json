@@ -1,0 +1,27 @@
+{
+  "index": 3109,
+  "norm_id": 0.15545,
+  "card_id": "EX7-063",
+  "card_index": 63,
+  "card_name_eng": "Arisa Kinosaki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_063",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[All Turns] When one of your Tokens or Digimon with the [Puppet] trait is deleted, by suspending this Tamer, you may play 1 level 3 Digimon card with the [Puppet] trait from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 2775,
+  "norm_id": 0.13875,
+  "card_id": "EX3-025",
+  "card_index": 25,
+  "card_name_eng": "Azulongmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_025",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Holy Dragon",
+    "Four Great Dragons",
+    "Four Sovereigns"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] ＜Draw 2＞ (Draw 2 cards from your deck.) Then, if this card was played by [Trial of the Four Great Dragons]'s effect, gain 2 memory.\r\n[On Deletion] If you don't have a [Trial of the Four Great Dragons] in play, you may place 1 [Trial of the Four Great Dragons] from your hand in your battle area.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 130,
+  "norm_id": 0.0065,
+  "card_id": "BT1-114",
+  "card_index": 114,
+  "card_name_eng": "MetalGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_114",
+  "play_cost": 8,
+  "dp": 9000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Security A. +2＞ (This Digimon checks 2 additional security cards.)\r\n[When Attacking] Lose 5 memory.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +3000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

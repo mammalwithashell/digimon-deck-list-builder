@@ -1,0 +1,35 @@
+{
+  "index": 618,
+  "norm_id": 0.0309,
+  "card_id": "BT6-036",
+  "card_index": 36,
+  "card_name_eng": "Mimicmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_036",
+  "play_cost": 4,
+  "dp": 3000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] If you have 3 or fewer security cards, gain 2 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

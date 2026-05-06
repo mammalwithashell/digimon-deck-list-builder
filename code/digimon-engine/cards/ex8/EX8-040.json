@@ -1,0 +1,36 @@
+{
+  "card_id": "EX8-040",
+  "card_index": 40,
+  "card_name_eng": "Kabuterimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_040",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid",
+    "NSp"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] You may suspend 1 Digimon.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[NSp] trait: Cost 2",
+  "index": 3160,
+  "norm_id": 0.158
+}

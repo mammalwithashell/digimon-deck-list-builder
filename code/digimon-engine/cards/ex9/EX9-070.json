@@ -1,0 +1,27 @@
+{
+  "index": 4074,
+  "norm_id": 0.2037,
+  "card_id": "EX9-070",
+  "card_index": 70,
+  "card_name_eng": "Meat",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_070",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "DM"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have [DM] trait Digimon or Tamer on the field, you can ignore this card's color requirements.\r\n[Main] ＜Draw 1＞ (Draw 1 card from your deck.) Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・By placing 1 card from your hand face down as any of your [DM] trait Digimon's bottom digivolution card, it may digivolve into a [DM] trait Digimon card in the hand with the digivolution cost reduced by 2.",
+  "inherited_effect_description_eng": "Security Effect [Security] ＜Draw 1＞ (Draw 1 card from your deck.) Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

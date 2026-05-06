@@ -1,0 +1,35 @@
+{
+  "index": 2662,
+  "norm_id": 0.1331,
+  "card_id": "EX1-059",
+  "card_index": 59,
+  "card_name_eng": "Ogremon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_059",
+  "play_cost": 6,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Attacking] You may trash 1 card in your hand to have this Digimon gain ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)",
+  "inherited_effect_description_eng": "[When Attacking] You may trash 1 card in your hand to have this Digimon get +2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

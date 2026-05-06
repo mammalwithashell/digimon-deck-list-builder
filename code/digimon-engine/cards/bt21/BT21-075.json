@@ -1,0 +1,37 @@
+{
+  "index": 2267,
+  "norm_id": 0.11335,
+  "card_id": "BT21-075",
+  "card_index": 75,
+  "card_name_eng": "SkullGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_075",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Undead",
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] 1 of your Digimon gains ＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.) and ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.) until your opponent's turn ends.\r\n[On Deletion] You may play 1 [ADVENTURE] trait card with a play cost of 4 or less from your trash without paying the cost.",
+  "inherited_effect_description_eng": "[On Deletion] You may play 1 [ADVENTURE] trait card with a play cost of 4 or less from your trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3"
+}

@@ -1,0 +1,25 @@
+{
+  "index": 3039,
+  "norm_id": 0.15195,
+  "card_id": "EX6-067",
+  "card_index": 67,
+  "card_name_eng": "Final Excalibur",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_067",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Unsuspend 1 of your Digimon with the [Angel], [Archangel] or [Three Great Angels] trait. If you have [Dominimon], unsuspend all of your Digimon with the [Angel], [Archangel] or [Three Great Angels] trait instead.",
+  "inherited_effect_description_eng": "Security Effect [Security] ＜Recovery +1 (Deck)＞. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

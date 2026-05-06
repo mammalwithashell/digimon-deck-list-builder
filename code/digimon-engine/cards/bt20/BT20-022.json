@@ -1,0 +1,30 @@
+{
+  "index": 2112,
+  "norm_id": 0.1056,
+  "card_id": "BT20-022",
+  "card_index": 22,
+  "card_name_eng": "Crabmon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_022",
+  "play_cost": 4,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Crustacean",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] 1 of your Digimon can't be deleted in battle until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If you have 7 or fewer cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] [Crabmon]: Cost 0"
+}

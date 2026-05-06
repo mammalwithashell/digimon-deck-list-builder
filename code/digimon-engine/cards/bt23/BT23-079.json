@@ -1,0 +1,28 @@
+{
+  "index": 2475,
+  "norm_id": 0.12375,
+  "card_id": "BT23-079",
+  "card_index": 79,
+  "card_name_eng": "Eri Karan",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_079",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "App Driver",
+    "Appmon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Your Turn] When any of your Digimon get linked, by suspending this Tamer, those Digimon get +3000 DP until your opponent's turn ends. Then, 1 of your Digimon may app fuse into a Digimon card in the hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

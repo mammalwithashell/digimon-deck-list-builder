@@ -1,0 +1,36 @@
+{
+  "index": 2250,
+  "norm_id": 0.1125,
+  "card_id": "BT21-058",
+  "card_index": 58,
+  "card_name_eng": "Snatchmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_058",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Unknown",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with [Vemmon] in its text among them to the hand. trash the rest. Then, you may place up to 2 [Vemmon] from your trash as 1 of your Digimon's bottom digivolution cards.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When any [Vemmon] are returned to the bottom of the deck from this Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

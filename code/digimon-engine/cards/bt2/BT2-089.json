@@ -1,0 +1,25 @@
+{
+  "index": 220,
+  "norm_id": 0.011,
+  "card_id": "BT2-089",
+  "card_index": 89,
+  "card_name_eng": "Tai Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_089",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Opponent's Turn] All of your black Digimon get +1000 DP.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

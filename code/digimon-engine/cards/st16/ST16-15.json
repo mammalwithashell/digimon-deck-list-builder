@@ -1,0 +1,25 @@
+{
+  "index": 3823,
+  "norm_id": 0.19115,
+  "card_id": "ST16-15",
+  "card_index": 15,
+  "card_name_eng": "Lament of Friendship",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST16_15",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Tamer with [Matt Ishida] in its name, you can ignore this card's color requirements.\r\n[Main] Return 1 Digimon card from your trash to your hand. Then, 1 of your Digimon with [Garurumon] in its name gains \"[On Deletion] Play this card without paying its cost.\" until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

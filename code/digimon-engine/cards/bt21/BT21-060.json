@@ -1,0 +1,36 @@
+{
+  "index": 2252,
+  "norm_id": 0.1126,
+  "card_id": "BT21-060",
+  "card_index": 60,
+  "card_name_eng": "Destromon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_060",
+  "play_cost": 10,
+  "dp": 10000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Unknown",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[When Digivolving] Until your opponent's turn ends, their effects can't trash this Digimon's stacked cards. Then, to 1 of your opponent's Digimon, ＜De-Digivolve 1＞ for every 2 [Vemmon] in this Digimon's digivolution cards.\r\n[All Turns] When this Digimon would leave the battle area, you may play 1 [Vemmon] from its digivolution cards without paying the cost.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by returning 2 [Vemmon] from this Digimon's digivolution cards to the bottom of the deck, end that attack.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] [Vemmon]: Cost 6"
+}

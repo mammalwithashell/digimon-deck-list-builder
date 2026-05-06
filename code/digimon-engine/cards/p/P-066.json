@@ -1,0 +1,37 @@
+{
+  "index": 3396,
+  "norm_id": 0.1698,
+  "card_id": "P-066",
+  "card_index": 66,
+  "card_name_eng": "Huckmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_066",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Mini Dragon"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Security] At the end of the battle, delete 1 of your opponent's Digimon with 4000 DP or less. If you don't delete an opponent's Digimon with this effect, ＜Draw 1＞ (Draw 1 card from your deck.) Then, add this card to its owner's hand.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

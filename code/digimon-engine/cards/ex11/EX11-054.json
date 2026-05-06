@@ -1,0 +1,27 @@
+{
+  "index": 3248,
+  "norm_id": 0.1624,
+  "card_id": "EX11-054",
+  "card_index": 54,
+  "card_name_eng": "Owen Dreadnought",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_054",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

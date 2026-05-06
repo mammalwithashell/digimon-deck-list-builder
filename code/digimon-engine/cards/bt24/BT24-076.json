@@ -1,0 +1,35 @@
+{
+  "index": 2574,
+  "norm_id": 0.1287,
+  "card_id": "BT24-076",
+  "card_index": 76,
+  "card_name_eng": "WarGrowlmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_076",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Trash] [Main] If you have 4 or fewer cards in your hand, play this card with the play cost reduced by 2.\r\n[On Play] [When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon.",
+  "inherited_effect_description_eng": "[On Deletion] You may play 1 level 4 or lower [Dark Dragon] or [Evil Dragon] Digimon card from your trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

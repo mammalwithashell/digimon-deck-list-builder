@@ -1,0 +1,27 @@
+{
+  "index": 2078,
+  "norm_id": 0.1039,
+  "card_id": "BT19-090",
+  "card_index": 90,
+  "card_name_eng": "Meteor Rock Soul",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_090",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Activate 1 of the following effects:\r\n・You may play 1 Digimon card with the [Xros Heart] trait and 4000 DP or less from under your Tamer without paying the cost.\r\n・By unsuspending 1 of your [Shoutmon EX6] and 1 of your [ShootingStarmon], attack a player with 1 of your Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 Digimon card with the [Xros Heart] trait and 4000 DP or less from under your Tamer without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

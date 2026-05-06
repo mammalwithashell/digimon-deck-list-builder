@@ -1,0 +1,37 @@
+{
+  "index": 3813,
+  "norm_id": 0.19065,
+  "card_id": "ST16-05",
+  "card_index": 5,
+  "card_name_eng": "Gotsumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST16_05",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Rock"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)\r\n[Your Turn] When this Digimon attacks your opponent's Digimon, lose 2 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

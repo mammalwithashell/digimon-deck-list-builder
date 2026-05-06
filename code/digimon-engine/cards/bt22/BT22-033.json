@@ -1,0 +1,38 @@
+{
+  "index": 2327,
+  "norm_id": 0.11635,
+  "card_id": "BT22-033",
+  "card_index": 33,
+  "card_name_eng": "Mediamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_033",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2,
+    1
+  ],
+  "type_eng": [
+    "Media Player (App Name)"
+  ],
+  "form_eng": [
+    "Sup."
+  ],
+  "attribute_eng": [
+    "Entertainment"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -4000 DP for the turn.\r\n[Your Turn] [Once Per Turn] When this Digimon gets linked, you may play 1 level 3 Digimon card with the [Appmon] trait from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[App Fusion] [Musimon] & [Recomon] & [Mcmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+}

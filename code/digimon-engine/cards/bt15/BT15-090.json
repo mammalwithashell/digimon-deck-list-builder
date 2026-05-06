@@ -1,0 +1,25 @@
+{
+  "index": 1670,
+  "norm_id": 0.0835,
+  "card_id": "BT15-090",
+  "card_index": 90,
+  "card_name_eng": "Fox Fire",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_090",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Return 1 of your opponent's level 4 or lower Digimon to the hand. If you have a Digimon with [Gabumon] or [Garurumon] in its name, return 1 of your opponent's Digimon with the lowest level to the hand instead.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

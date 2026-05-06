@@ -1,0 +1,29 @@
+{
+  "index": 474,
+  "norm_id": 0.0237,
+  "card_id": "BT5-004",
+  "card_index": 4,
+  "card_name_eng": "Yokomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_004",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Bulb"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] When this card is trashed due to activating this Digimon's ＜Digi-Burst＞, 1 of your Digimon gets +2000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

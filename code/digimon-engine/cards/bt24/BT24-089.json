@@ -1,0 +1,27 @@
+{
+  "index": 2587,
+  "norm_id": 0.12935,
+  "card_id": "BT24-089",
+  "card_index": 89,
+  "card_name_eng": "Unique Emblem: Blazing Conductor",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_089",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 [Elizamon] or [Owen Dreadnought] from your hand or trash without paying the cost. Then, place this card in the battle area.\r\n[Your Turn] When any of your [Owen Dreadnought]s suspend, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Reptile] or [Dragonkin] Digimon may digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait and the [LIBERATOR] trait in the hand with the digivolution cost reduced by 3.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

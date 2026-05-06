@@ -1,0 +1,36 @@
+{
+  "index": 1615,
+  "norm_id": 0.08075,
+  "card_id": "BT15-035",
+  "card_index": 35,
+  "card_name_eng": "Geremon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_035",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Mollusk"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [On Deletion] By trashing 1 card with [Numemon] or [Sukamon] in its name in your hand, 1 of your opponent's Digimon gains ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until the end of their turn.",
+  "inherited_effect_description_eng": "[When Attacking] 1 of your opponent's Digimon gains ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until the end of their turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

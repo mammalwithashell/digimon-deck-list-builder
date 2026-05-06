@@ -1,0 +1,27 @@
+{
+  "index": 588,
+  "norm_id": 0.0294,
+  "card_id": "BT6-006",
+  "card_index": 6,
+  "card_name_eng": "Tsunomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_006",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Lesser"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When you trash a card in your hand using one of your effects, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

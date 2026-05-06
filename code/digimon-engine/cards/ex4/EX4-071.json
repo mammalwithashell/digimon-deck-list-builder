@@ -1,0 +1,25 @@
+{
+  "index": 2895,
+  "norm_id": 0.14475,
+  "card_id": "EX4-071",
+  "card_index": 71,
+  "card_name_eng": "Ame-no-Ohabari",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_071",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] By deleting 1 of your Digimon, delete 1 of your opponent's Digimon whose level is less than or equal to that Digimon. If one of your Digimon with [Ravemon] in its name was deleted by this effect, at the end of your opponent's turn, play 1 [Ravemon] from your trash without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's Digimon with the lowest level.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

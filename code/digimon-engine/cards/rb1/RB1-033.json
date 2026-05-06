@@ -1,0 +1,25 @@
+{
+  "index": 3595,
+  "norm_id": 0.17975,
+  "card_id": "RB1-033",
+  "card_index": 33,
+  "card_name_eng": "Kiyoshiro Higashimitarai",
+  "card_name_jpn": "",
+  "card_effect_class_name": "RB1_033",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[All Turns] When your Digimon with [Jellymon] in its text or when your opponent's level 5 or higher Digimon attacks, if you have 7 or fewer cards in your hand, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Your Turn] When this Tamer becomes unsuspended, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

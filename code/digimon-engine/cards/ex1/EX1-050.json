@@ -1,0 +1,35 @@
+{
+  "index": 2653,
+  "norm_id": 0.13265,
+  "card_id": "EX1-050",
+  "card_index": 50,
+  "card_name_eng": "MetalMamemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_050",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] You may reveal the top 3 cards of your deck. Add 1 level 6 card with the [Machine] trait among them to your hand. Trash the remaining cards.",
+  "inherited_effect_description_eng": "[When Attacking] While this Digimon has the [Machine] trait, delete 1 of your opponent's Digimon with a Play Cost of 5 or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

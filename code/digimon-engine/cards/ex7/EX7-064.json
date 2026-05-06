@@ -1,0 +1,27 @@
+{
+  "index": 3110,
+  "norm_id": 0.1555,
+  "card_id": "EX7-064",
+  "card_index": 64,
+  "card_name_eng": "Shoto Kazama",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_064",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[End of Your Turn] By suspending this Tamer, 1 of your Digimon gets ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's turn. If that Digimon has the [Vortex Warriors] trait, unsuspend that Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "card_id": "EX8-039",
+  "card_index": 39,
+  "card_name_eng": "Tentomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_039",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid",
+    "NSp"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Insectoid] trait and 1 card with the [NSp] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[NSp] trait: Cost 0",
+  "index": 3159,
+  "norm_id": 0.15795
+}

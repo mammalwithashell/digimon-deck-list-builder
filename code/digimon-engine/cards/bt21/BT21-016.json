@@ -1,0 +1,38 @@
+{
+  "index": 2208,
+  "norm_id": 0.1104,
+  "card_id": "BT21-016",
+  "card_index": 16,
+  "card_name_eng": "Shoutmon (King Version)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_016",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Mini Dragon",
+    "Xros Heart",
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n[On Deletion] You may place 1 Digimon card with the [Xros Heart], [Blue Flare] or [Hero] trait from your hand or trash under any of your Tamers. Then, ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Xros Heart]/[Hero] trait: Cost 2"
+}

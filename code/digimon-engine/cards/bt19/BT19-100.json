@@ -1,0 +1,27 @@
+{
+  "index": 2088,
+  "norm_id": 0.1044,
+  "card_id": "BT19-100",
+  "card_index": 100,
+  "card_name_eng": "D-Reaper Zone",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_100",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [
+    "D-Reaper"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] [Opponent's Turn] When an opponent's Digimon attacks, if all of your Digimon and Tamers have the [D-Reaper] trait, for each of 1 of your [Mother D-Reaper]'s digivolution cards, the attacking Digimon get -1000 DP for the turn.\r\n[Main] If you have no face-up security cards, by trashing your top security card, place this card face up as your top security card.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [D-Reaper] trait card with a play cost equal to or lower than the number of digivolution cards of 1 of your [Mother D-Reaper]'s from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

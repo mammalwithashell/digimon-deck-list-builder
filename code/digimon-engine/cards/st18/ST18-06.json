@@ -1,0 +1,35 @@
+{
+  "index": 3843,
+  "norm_id": 0.19215,
+  "card_id": "ST18-06",
+  "card_index": 6,
+  "card_name_eng": "Kiwimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST18_06",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Ancient Bird"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [On Deletion] Suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

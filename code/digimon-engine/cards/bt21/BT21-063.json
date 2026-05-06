@@ -1,0 +1,37 @@
+{
+  "index": 2255,
+  "norm_id": 0.11275,
+  "card_id": "BT21-063",
+  "card_index": 63,
+  "card_name_eng": "Gumdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_063",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Mini Dragon",
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] By trashing 1 card with ＜Save＞ in its text or the [Hero] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)\r\n[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/＜Save＞ in text or w/[Hero] trait: Cost 0"
+}

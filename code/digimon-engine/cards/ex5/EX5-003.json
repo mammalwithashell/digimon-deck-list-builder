@@ -1,0 +1,27 @@
+{
+  "index": 2901,
+  "norm_id": 0.14505,
+  "card_id": "EX5-003",
+  "card_index": 3,
+  "card_name_eng": "Nyaromon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_003",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Lesser"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [All Turns] While this Digimon is suspended, it gets +1000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

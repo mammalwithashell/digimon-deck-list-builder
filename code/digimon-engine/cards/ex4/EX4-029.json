@@ -1,0 +1,37 @@
+{
+  "index": 2853,
+  "norm_id": 0.14265,
+  "card_id": "EX4-029",
+  "card_index": 29,
+  "card_name_eng": "Antylamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_029",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [
+    "Holy Beast",
+    "Deva"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n[End of Attack] If you have 3 or fewer security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] If you have another suspended Digimon, 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv. 4 2-color w/Green: Cost 3"
+}

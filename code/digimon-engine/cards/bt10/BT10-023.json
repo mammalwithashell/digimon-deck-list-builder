@@ -1,0 +1,35 @@
+{
+  "index": 1053,
+  "norm_id": 0.05265,
+  "card_id": "BT10-023",
+  "card_index": 23,
+  "card_name_eng": "Thetismon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_023",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Aquabeast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] If you have 6 or fewer cards in your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)\r\n[When Attacking] [Once Per Turn] If you have 8 or more cards in your hand, by trashing 2 cards in your hand, unsuspend this Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

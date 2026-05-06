@@ -1,0 +1,25 @@
+{
+  "index": 1231,
+  "norm_id": 0.06155,
+  "card_id": "BT11-089",
+  "card_index": 89,
+  "card_name_eng": "Akiho Rindou",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_089",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 red Digimon card with the [Vaccine] trait among them to your hand. Place the rest at the bottom of your deck in any order.\r\n[Your Turn] When you play a red Digimon with [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal] trait), by an effect, by suspending this Tamer, that Digimon gains ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

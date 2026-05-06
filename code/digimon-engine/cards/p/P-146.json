@@ -1,0 +1,25 @@
+{
+  "index": 3476,
+  "norm_id": 0.1738,
+  "card_id": "P-146",
+  "card_index": 146,
+  "card_name_eng": "Recharge Plug-In Q",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_146",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Tamer, you can ignore this card's color requirements.\r\n[Security] 1 of your opponent's Digimon gains ＜Security A. -1＞ for the turn. (This Digimon checks 1 additional security card.)\r\n[Main] Place this card as 1 of your non-white Digimon's bottom digivolution card.",
+  "inherited_effect_description_eng": "[All Turns] When this Digimon would be deleted by battle, by placing 1 [Recharge Plug-In Q] from this Digimon's digivolution cards at the bottom of your security stack, prevent that deletion.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

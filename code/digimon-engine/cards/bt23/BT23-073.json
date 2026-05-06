@@ -1,0 +1,30 @@
+{
+  "index": 2469,
+  "norm_id": 0.12345,
+  "card_id": "BT23-073",
+  "card_index": 73,
+  "card_name_eng": "Eater Bit",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_073",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Hudie",
+    "CS"
+  ],
+  "form_eng": [
+    "Eater"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Delete 1 of your opponent's level 3 Digimon.\r\n[All Turns] [Once Per Turn] When any of your other Digimon with the [Eater] or [Hudie] trait would leave the battle area, by deleting this Digimon or placing it as the bottom digivolution card of your [Mother Eater] in the breeding area, 1 of those Digimon doesn't leave.",
+  "inherited_effect_description_eng": "[Breeding] [Your Turn] [Once Per Turn] When any of your Digimon cards with the [Eater] trait would be played, you may reduce the play costs by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

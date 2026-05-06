@@ -1,0 +1,25 @@
+{
+  "index": 1342,
+  "norm_id": 0.0671,
+  "card_id": "BT12-088",
+  "card_index": 88,
+  "card_name_eng": "Takuya Kanbara",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_088",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Turn] If you have 2 or less memory, set it to 3.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP. While this Digimon has 10000 DP or more, it gains \"[Your Turn] [Once Per Turn] When this Digimon checks your opponent's security stack, gain 2 memory.\"",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

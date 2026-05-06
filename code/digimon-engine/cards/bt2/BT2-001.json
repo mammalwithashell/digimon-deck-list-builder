@@ -1,0 +1,29 @@
+{
+  "index": 132,
+  "norm_id": 0.0066,
+  "card_id": "BT2-001",
+  "card_index": 1,
+  "card_name_eng": "Gigimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_001",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Lesser"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] While there are 5 or more cards in your opponent's trash, this Digimon gets +1000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

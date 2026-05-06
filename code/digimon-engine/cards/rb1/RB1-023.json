@@ -1,0 +1,37 @@
+{
+  "index": 3585,
+  "norm_id": 0.17925,
+  "card_id": "RB1-023",
+  "card_index": 23,
+  "card_name_eng": "Ghilliedhumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "RB1_023",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Fairy"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] Suspend 1 of your opponent's Digimon with DP less than or equal to this Digimon. Digimon suspended by this effect don't unsuspend until the end of your opponent's next turn.\r\n[All Turns] This Digimon gains all effects of cards with [Gammamon] in their names in this Digimon's digivolution cards.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gains all effects of cards with [Gammamon] in their names in this Digimon's digivolution cards.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Gammamon] in name: Cost 3"
+}

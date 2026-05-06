@@ -1,0 +1,35 @@
+{
+  "index": 2870,
+  "norm_id": 0.1435,
+  "card_id": "EX4-046",
+  "card_index": 46,
+  "card_name_eng": "WereGarurumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_046",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] You may digivolve 1 of your other Digimon into a level 6 or lower Digimon card with [Greymon] in its name in your hand for its digivolution cost. When digivolving with this effect, reduce the digivolution cost by 2.",
+  "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

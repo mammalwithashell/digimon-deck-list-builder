@@ -1,0 +1,37 @@
+{
+  "index": 3395,
+  "norm_id": 0.16975,
+  "card_id": "P-065",
+  "card_index": 65,
+  "card_name_eng": "Gammamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_065",
+  "play_cost": 4,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Ceratopsian"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Delete 1 of your opponent's Digimon with 2000 DP or less.",
+  "inherited_effect_description_eng": "[When Attacking] Delete 1 of your opponent's Digimon with 2000 DP or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

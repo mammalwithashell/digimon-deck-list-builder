@@ -1,0 +1,36 @@
+{
+  "index": 883,
+  "norm_id": 0.04415,
+  "card_id": "BT8-077",
+  "card_index": 77,
+  "card_name_eng": "BlackGatomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_077",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [
+    "Dark Animal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it comes into play.)",
+  "inherited_effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

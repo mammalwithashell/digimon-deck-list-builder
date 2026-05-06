@@ -1,0 +1,25 @@
+{
+  "index": 1361,
+  "norm_id": 0.06805,
+  "card_id": "BT12-107",
+  "card_index": 107,
+  "card_name_eng": "Laplace's Demon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_107",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Until the end of your opponent's turn, 1 of your opponent's Digimon gains \"[Start of Your Main Phase] This Digimon attacks\".",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

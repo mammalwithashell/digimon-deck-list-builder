@@ -1,0 +1,36 @@
+{
+  "index": 1265,
+  "norm_id": 0.06325,
+  "card_id": "BT12-011",
+  "card_index": 11,
+  "card_name_eng": "Shoutmon (King Version)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_011",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Mini Dragon",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] You may play 1 [Taiki Kudo], [Yuu Amano] or [Tagiru Akashi] from your hand without paying its cost.\r\n[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has ＜Save＞ in its text, delete 1 of your opponent's Digimon with 4000 DP or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/＜Save＞ in text: Cost 2"
+}

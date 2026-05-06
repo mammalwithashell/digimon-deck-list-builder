@@ -1,0 +1,37 @@
+{
+  "index": 1527,
+  "norm_id": 0.07635,
+  "card_id": "BT14-049",
+  "card_index": 49,
+  "card_name_eng": "Lillymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_049",
+  "play_cost": 4,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Fairy"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. Then, you may return 1 of your opponent's suspended Digimon with 5000 DP or less to the bottom of the deck.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-3＞ (As this card moves from the field or under a card to an area other than those, lose 3 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

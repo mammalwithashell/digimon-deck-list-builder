@@ -1,0 +1,36 @@
+{
+  "index": 2312,
+  "norm_id": 0.1156,
+  "card_id": "BT22-018",
+  "card_index": 18,
+  "card_name_eng": "Sangomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_018",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mollusk",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] By placing this Digimon as the bottom digivolution card of any of your other Digimon with [Aqua] or [Sea Animal] in any of their traits, until your opponent's turn ends, that Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and can't be deleted in battle.",
+  "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 3392,
+  "norm_id": 0.1696,
+  "card_id": "P-062",
+  "card_index": 62,
+  "card_name_eng": "Hiro Amanokawa",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_062",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When one of your Digimon with [Gammamon] in its digivolution cards attacks, by suspending this Tamer, that Digimon gains ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

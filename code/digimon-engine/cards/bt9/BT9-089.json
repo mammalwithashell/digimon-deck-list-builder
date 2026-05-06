@@ -1,0 +1,25 @@
+{
+  "index": 1007,
+  "norm_id": 0.05035,
+  "card_id": "BT9-089",
+  "card_index": 89,
+  "card_name_eng": "Daigo Nishijima",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_089",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[All Turns] When an opponent's Digimon becomes unsuspended during a main phase, you may suspend this Tamer to gain 1 memory.\r\n[Your Turn] When one of your Digimon digivolves into a black level 6 Digimon, it gains ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

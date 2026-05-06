@@ -1,0 +1,35 @@
+{
+  "index": 1730,
+  "norm_id": 0.0865,
+  "card_id": "BT16-048",
+  "card_index": 48,
+  "card_name_eng": "TyrantKabuterimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_048",
+  "play_cost": 14,
+  "dp": 14000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] You may play 1 Digimon card with the [Insectoid] or [Larva] trait from your hand with the play cost reduced by 8.\r\n[All Turns] While this Digimon is suspended, it isn't affected by the effects of your opponent's Digimon.\r\n[End of Your Turn] [Once Per Turn] By suspending 1 of your other Digimon, return 1 of your opponent's Digimon with as much or less DP as the Digimon this effect suspended to the bottom of the deck.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.6 w/[Insectoid] trait and play cost 13 or less: Cost 2"
+}

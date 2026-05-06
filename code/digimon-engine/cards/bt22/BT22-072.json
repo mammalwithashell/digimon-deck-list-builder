@@ -1,0 +1,38 @@
+{
+  "index": 2366,
+  "norm_id": 0.1183,
+  "card_id": "BT22-072",
+  "card_index": 72,
+  "card_name_eng": "Lekismon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_072",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    1
+  ],
+  "type_eng": [
+    "Beastkin",
+    "Night Claw",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] If this Digimon's stack has 2 or more same-level cards, you may play 1 Tamer card with the [Night Claw] or [Light Fang] trait from your hand without paying the cost. This effect can't play cards with the same name as any of your Tamers.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon with the [Night Claw], [Light Fang] or [Galaxy] trait would be deleted, by trashing 2 same-level cards from its digivolution cards, it isn't deleted.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Night Claw]/[Light Fang]/[CS] trait: Cost 2"
+}

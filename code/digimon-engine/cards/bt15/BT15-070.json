@@ -1,0 +1,35 @@
+{
+  "index": 1650,
+  "norm_id": 0.0825,
+  "card_id": "BT15-070",
+  "card_index": 70,
+  "card_name_eng": "DemiDevimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_070",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Evil"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 card with [Myotismon] in its text among them to the hand. Return the rest to the bottom of the deck. If you added cards, trash 1 card in your hand.",
+  "inherited_effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

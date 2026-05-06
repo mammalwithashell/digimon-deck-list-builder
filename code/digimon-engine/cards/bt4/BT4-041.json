@@ -1,0 +1,37 @@
+{
+  "index": 396,
+  "norm_id": 0.0198,
+  "card_id": "BT4-041",
+  "card_index": 41,
+  "card_name_eng": "Meicoomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_041",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Unknown"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[On Play] If you have 3 or fewer security cards, 1 of your opponent's Digimon gets -4000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,27 @@
+{
+  "index": 2384,
+  "norm_id": 0.1192,
+  "card_id": "BT22-090",
+  "card_index": 90,
+  "card_name_eng": "Rie Kishibe",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_090",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[End of Your Turn] [Once Per Turn] By deleting 1 of your other Digimon or Tamers with [Knightmon] in its text or the [CS] trait, this Tamer may digivolve into [LordKnightmon] in the hand with the digivolution cost reduced by 3.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

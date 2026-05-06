@@ -1,0 +1,30 @@
+{
+  "index": 3985,
+  "norm_id": 0.19925,
+  "card_id": "EX10-064",
+  "card_index": 64,
+  "card_name_eng": "Yuu Amano & Nene Amano",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_064",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "General",
+    "Bagra Army",
+    "Twilight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 [Bagra Army] or [Twilight] trait Digimon card from your hand or trash under this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[All Turns] When any of your [Bagra Army] or [Twilight] trait Digimon cards with DigiXros requirements would be played, by suspending this Tamer, 1 card from under your Tamers and 1 card in your trash can also be placed for their DigiXros.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

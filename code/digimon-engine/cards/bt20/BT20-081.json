@@ -1,0 +1,58 @@
+{
+  "index": 2171,
+  "norm_id": 0.10855,
+  "card_id": "BT20-081",
+  "card_index": 81,
+  "card_name_eng": "Fenriloogamon: Takemikazuchi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_081",
+  "play_cost": 9,
+  "dp": 16000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [
+    "Dark Animal",
+    "X Antibody",
+    "SoC",
+    "SEEKERS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast DNA Digivolve ([Fenriloogamon] + [Kazuchimon])＞ (1 of your specified Digimon and 1 specified card in hand may DNA digivolve into this card.)\r\n[On Play] [When Digivolving] 2 of your opponent's Digimon get -10000 DP for the turn. Then, if a Tamer card is in this Digimon's digivolution cards, delete 1 of your opponent's 10000 DP or lower Digimon.\r\n[When Attacking] By trashing your top security card, activate 1 of this Digimon's [When Digivolving] effects.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-5＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[DNA Digivolve] [Fenriloogamon] + Yellow Lv.6 w/[Pulsemon] in text: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 0,
+        "card_colors": [],
+        "name_contains": "Fenriloogamon",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 6,
+        "card_colors": [
+          "Yellow"
+        ],
+        "name_contains": "",
+        "text_contains": "Pulsemon"
+      },
+      "memory_cost": 0
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "index": 3756,
+  "norm_id": 0.1878,
+  "card_id": "ST12-08",
+  "card_index": 8,
+  "card_name_eng": "SaviorHuckmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST12_08",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragonkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] This Digimon may also attack your opponent's unsuspended Digimon for the turn.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [Royal Knight] trait, you may play 1 Digimon card with [Sistermon] in its name from your hand or trash without paying its memory cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

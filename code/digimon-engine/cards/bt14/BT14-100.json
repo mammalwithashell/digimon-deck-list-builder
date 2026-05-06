@@ -1,0 +1,25 @@
+{
+  "index": 1578,
+  "norm_id": 0.0789,
+  "card_id": "BT14-100",
+  "card_index": 100,
+  "card_name_eng": "Pummel Whack",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_100",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When one of your effects trashes this card in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Main] Delete 1 of your opponent's level 4 or lower Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

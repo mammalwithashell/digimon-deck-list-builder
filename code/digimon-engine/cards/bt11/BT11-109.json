@@ -1,0 +1,25 @@
+{
+  "index": 1251,
+  "norm_id": 0.06255,
+  "card_id": "BT11-109",
+  "card_index": 109,
+  "card_name_eng": "Astral Snatcher",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_109",
+  "play_cost": 7,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may place up to 3 Digimon cards with the [Bagra Army] trait from your trash under 1 of your Digimon as its bottom digivolution cards or under 1 of your Tamers. Then, if you have a Digimon or Tamer with the [Bagra Army] trait in play, place 1 of your opponent's Digimon under 1 of your opponent's other Digimon as its bottom digivolution card.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

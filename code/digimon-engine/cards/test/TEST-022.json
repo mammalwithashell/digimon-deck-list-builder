@@ -1,0 +1,25 @@
+{
+  "index": 4085,
+  "norm_id": 0.20425,
+  "card_id": "TEST-022",
+  "card_index": 4085,
+  "card_name_eng": "ParitySynthGain3",
+  "card_name_jpn": "",
+  "card_effect_class_name": "TEST_022",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "[Security] Gain 3 memory.",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,27 @@
+{
+  "index": 1680,
+  "norm_id": 0.084,
+  "card_id": "BT15-100",
+  "card_index": 100,
+  "card_name_eng": "Seventh Lightning",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_100",
+  "play_cost": 7,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Seven Great Demon Lords"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Trash] [All Turns] When one of your Digimon digivolves into [Leviamon (X Antibody)], by returning this card to the bottom of the deck, delete 1 of your opponent's level 4 and 1 of their level 6 Digimon.\r\n[Main] By trashing 1 card in your hand, delete 1 of your opponent's level 4 and 1 of their level 6 Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

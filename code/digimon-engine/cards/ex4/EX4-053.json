@@ -1,0 +1,35 @@
+{
+  "index": 2877,
+  "norm_id": 0.14385,
+  "card_id": "EX4-053",
+  "card_index": 53,
+  "card_name_eng": "Falcomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_053",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Avian"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 purple Digimon card with [Ravemon] in its name or [Bird] in any of its traits and 1 [Keenan Crier] among them to your hand. Place the rest at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[On Deletion] If not deleted by battle, your opponent trashes 1 card in their hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

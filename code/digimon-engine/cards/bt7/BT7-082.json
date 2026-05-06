@@ -1,0 +1,35 @@
+{
+  "index": 776,
+  "norm_id": 0.0388,
+  "card_id": "BT7-082",
+  "card_index": 82,
+  "card_name_eng": "Sistermon Blanc (Awakened)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_082",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] You may place 1 [Sistermon Blanc] from your hand or trash at the bottom of this Digimon's digivolution cards to ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)\r\n[On Deletion] Return 1 card with [Jesmon], [Huckmon] or [Sistermon] in its name other than [Sistermon Blanc (Awakened)] from your trash to your hand.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 4,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

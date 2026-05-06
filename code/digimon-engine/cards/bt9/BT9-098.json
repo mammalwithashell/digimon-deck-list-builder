@@ -1,0 +1,25 @@
+{
+  "index": 1016,
+  "norm_id": 0.0508,
+  "card_id": "BT9-098",
+  "card_index": 98,
+  "card_name_eng": "Awakening of the Golden Knight",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_098",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have an [Armor Form] trait Digimon, you can ignore this card's color requirements.\r\n[Main] You may digivolve 1 of your Digimon with the [Armor Form] trait into a Digimon card with [Magnamon] in its name in your hand, ignoring its digivolution requirements and without paying its memory cost. The Digimon that digivolved with this effect can't have its DP reduced by your opponent's card effects until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Return 1 card with [Magnamon] in its name from your trash to your hand, and add this card to your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

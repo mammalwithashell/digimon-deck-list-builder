@@ -1,0 +1,27 @@
+{
+  "index": 2970,
+  "norm_id": 0.1485,
+  "card_id": "EX5-072",
+  "card_index": 72,
+  "card_name_eng": "Holy Beasts Great Cardinal Positions",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_072",
+  "play_cost": 12,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Four Sovereigns"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have [Deva] or [Four Sovereigns] trait Digimon, you can ignore this card's color requirements.\r\nWhen this card would be used, reduce the cost by 1 for each [Deva] or [Four Sovereigns] trait card with a different name in your trash.\r\n[Main] You may play 1 Digimon card with [Fanglongmon] in its name from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Return 1 card with [Fanglongmon] in its name from your trash to the hand. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 2905,
+  "norm_id": 0.14525,
+  "card_id": "EX5-007",
+  "card_index": 7,
+  "card_name_eng": "Coronamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_007",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Beast",
+    "Light Fang"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a Tamer with the [Light Fang] or [Night Claw] trait, gain 1 memory.",
+  "inherited_effect_description_eng": "[Main] [Once Per Turn] By placing the top card of this Digimon with the [Light Fang] or [Night Claw] trait as this Digimon's bottom digivolution card, gain 2 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Light Fang]/[Night Claw] trait: Cost 0"
+}

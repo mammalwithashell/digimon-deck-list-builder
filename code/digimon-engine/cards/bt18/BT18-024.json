@@ -1,0 +1,37 @@
+{
+  "index": 1910,
+  "norm_id": 0.0955,
+  "card_id": "BT18-024",
+  "card_index": 24,
+  "card_name_eng": "Calmaramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_024",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Aquatic"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] If a level 3 Digimon card Is in this Digimon's digivolution cards, return 1 of your opponent's level 4 or lower Digimon to the hand. If there isn't, you may place 1 blue level 3 Digimon card from your hand as this Digimon's bottom digivolution card.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may return 1 level 3 Digimon to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Lanamon]: Cost 1"
+}

@@ -1,0 +1,35 @@
+{
+  "index": 2954,
+  "norm_id": 0.1477,
+  "card_id": "EX5-056",
+  "card_index": 56,
+  "card_name_eng": "Syakomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_056",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Crustacean"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] For each of your opponent's Digimon, ＜Draw 1＞ (Draw 1 card from your deck.) Then, trash 1 card in your hand.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When an effect plays an opponent's Digimon, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

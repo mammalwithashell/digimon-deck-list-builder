@@ -1,0 +1,25 @@
+{
+  "index": 573,
+  "norm_id": 0.02865,
+  "card_id": "BT5-103",
+  "card_index": 103,
+  "card_name_eng": "A Blazing Storm of Metal!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_103",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Until the end of your opponent's next turn, all of your Digimon with ＜Reboot＞ get +1000 DP and ＜Blocker＞ (This Digimon can block in the blocker timing.).",
+  "inherited_effect_description_eng": "Security Effect [Security] Your opponent's Digimon can't attack players for the turn. Then, add this card to your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 445,
+  "norm_id": 0.02225,
+  "card_id": "BT4-090",
+  "card_index": 90,
+  "card_name_eng": "Chaosmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_090",
+  "play_cost": 15,
+  "dp": 14000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Unique"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n[When Digivolving] Unsuspend this Digimon. Then, it can attack your opponent's Digimon. This effect allows you to attack unsuspended Digimon as well.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": ""
+}

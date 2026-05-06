@@ -1,0 +1,31 @@
+{
+  "index": 2559,
+  "norm_id": 0.12795,
+  "card_id": "BT24-061",
+  "card_index": 61,
+  "card_name_eng": "Vademon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_061",
+  "play_cost": 0,
+  "dp": null,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Alien",
+    "Iliad",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

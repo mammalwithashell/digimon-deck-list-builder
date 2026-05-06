@@ -1,0 +1,36 @@
+{
+  "index": 1262,
+  "norm_id": 0.0631,
+  "card_id": "BT12-008",
+  "card_index": 8,
+  "card_name_eng": "Shoutmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_008",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Mini Dragon",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has ＜Save＞ in its text, delete 1 of your opponent's Digimon with 4000 DP or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/＜Save＞ in text: Cost 0"
+}

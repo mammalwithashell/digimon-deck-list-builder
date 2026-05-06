@@ -1,0 +1,28 @@
+{
+  "index": 3478,
+  "norm_id": 0.1739,
+  "card_id": "P-148",
+  "card_index": 148,
+  "card_name_eng": "Wanyamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_148",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 5,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Lesser",
+    "NSp"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] If this Digimon has the [NSp] trait, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

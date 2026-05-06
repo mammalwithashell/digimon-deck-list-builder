@@ -1,0 +1,25 @@
+{
+  "index": 221,
+  "norm_id": 0.01105,
+  "card_id": "BT2-090",
+  "card_index": 90,
+  "card_name_eng": "Matt Ishida",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_090",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[On Play] Return 1 purple Digimon card or Option card from your trash to the hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

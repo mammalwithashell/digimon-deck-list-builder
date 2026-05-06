@@ -1,0 +1,27 @@
+{
+  "index": 2597,
+  "norm_id": 0.12985,
+  "card_id": "BT24-099",
+  "card_index": 99,
+  "card_name_eng": "Super Hacking",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_099",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [
+    "Appmon"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have an [Appmon] trait Digimon or Tamer on the field, you can ignore this card's color requirements.\r\n[Main] By trashing 1 [Appmon] card from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place this card in the battle area.\r\n[All Turns] When Digimon are deleted, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・You may link 1 [Appmon] Digimon card from your trash to 1 of your Digimon without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 1401,
+  "norm_id": 0.07005,
+  "card_id": "BT13-035",
+  "card_index": 35,
+  "card_name_eng": "PawnChessmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_035",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Deletion] If it's your turn, you may play 1 level 3 or lower Digimon card with [Chessmon] in its name from your hand without paying its cost. If you have 8 or more Digimon cards with [Chessmon] in its name in their names in your trash, add 2 to the maximum level of the card you can play by this effect.",
+  "inherited_effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

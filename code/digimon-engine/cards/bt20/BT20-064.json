@@ -1,0 +1,39 @@
+{
+  "index": 2154,
+  "norm_id": 0.1077,
+  "card_id": "BT20-064",
+  "card_index": 64,
+  "card_name_eng": "Loogamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_064",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Dark Animal",
+    "X Antibody",
+    "SoC",
+    "SEEKERS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [SoC] or [SEEKERS] trait and 1 [Eiji Nagasumi] among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Bowmon]/Lv.2 w/[SEEKERS] trait: Cost 0"
+}

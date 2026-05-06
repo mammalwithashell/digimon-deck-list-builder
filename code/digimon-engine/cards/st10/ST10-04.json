@@ -1,0 +1,36 @@
+{
+  "index": 3737,
+  "norm_id": 0.18685,
+  "card_id": "ST10-04",
+  "card_index": 4,
+  "card_name_eng": "Gatomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST10_04",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    6
+  ],
+  "type_eng": [
+    "Holy Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 yellow Digimon card and 1 purple Digimon card among them to your hand. Place the remaining cards at the bottom of your deck in any order.\r\n[Your Turn] When this Digimon would digivolve into a card with the [Archangel] or [Fallen Angel] trait, reduce the memory cost of the digivolution by 2.",
+  "inherited_effect_description_eng": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

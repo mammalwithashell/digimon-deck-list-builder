@@ -1,0 +1,25 @@
+{
+  "index": 801,
+  "norm_id": 0.04005,
+  "card_id": "BT7-107",
+  "card_index": 107,
+  "card_name_eng": "Calling From the Darkness",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_107",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Delete 1 of your Digimon. Then, return up to 2 purple Digimon cards from your trash to your hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

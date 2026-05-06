@@ -1,0 +1,27 @@
+{
+  "index": 1351,
+  "norm_id": 0.06755,
+  "card_id": "BT12-097",
+  "card_index": 97,
+  "card_name_eng": "Ryoma Mogami",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_097",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Hunter"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If this Tamer has 2 or fewer cards under it, you may place 1 Digimon card with ＜Save＞ in its text from your trash under this Tamer.\r\n[Your Turn] When one of your Digimon would digivolve into a Digimon card with ＜Save＞ in its text, by suspending this Tamer and placing 1 card from under one of your Tamers as the bottom digivolution card of that Digimon, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 2315,
+  "norm_id": 0.11575,
+  "card_id": "BT22-021",
+  "card_index": 21,
+  "card_name_eng": "Shellmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_021",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mollusk",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Decode (Lv.3 w/[Aqua]/[Sea Animal] in any trait)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 Level 3 Digimon card with [Aqua] or [Sea Animal] in any of its traits from its digivolution cards without paying the cost.)\r\n[On Play] [When Digivolving] You may place 1 level 5 or lower Digimon card with [Aqua] or [Sea Animal] in any of its traits from your hand as any of your Digimon's bottom digivolution card.",
+  "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

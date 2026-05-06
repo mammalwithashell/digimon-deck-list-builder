@@ -1,0 +1,27 @@
+{
+  "index": 2486,
+  "norm_id": 0.1243,
+  "card_id": "BT23-090",
+  "card_index": 90,
+  "card_name_eng": "Keisuke Amasawa",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_090",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Hudie/CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[End of Your Turn] By suspending this Tamer and returning 1 of your Digimon with the [Hudie] trait to the hand, you may play 1 Tamer card with the [CS] trait from your hand without paying the cost.\r\n[All Turns] All of your [Hudie] Digimon get +1000 DP.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

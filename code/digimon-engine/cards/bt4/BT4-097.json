@@ -1,0 +1,25 @@
+{
+  "index": 452,
+  "norm_id": 0.0226,
+  "card_id": "BT4-097",
+  "card_index": 97,
+  "card_name_eng": "Kari Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_097",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[All Turns] When a card is removed from your security stack, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

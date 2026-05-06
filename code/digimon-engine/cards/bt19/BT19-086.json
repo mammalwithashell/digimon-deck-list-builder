@@ -1,0 +1,25 @@
+{
+  "index": 2074,
+  "norm_id": 0.1037,
+  "card_id": "BT19-086",
+  "card_index": 86,
+  "card_name_eng": "Ryo Akiyama",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_086",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 Option card with the [Device] trait from your hand in the battle area, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Main] By suspending this Tamer and trashing 4 of your Option cards with the [Device] trait in the battle area, you may play 1 [Cyberdramon] from your hand or trash without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

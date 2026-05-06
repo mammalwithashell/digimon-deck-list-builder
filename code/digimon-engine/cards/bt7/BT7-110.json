@@ -1,0 +1,25 @@
+{
+  "index": 804,
+  "norm_id": 0.0402,
+  "card_id": "BT7-110",
+  "card_index": 110,
+  "card_name_eng": "Evolution Ancient",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_110",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a [Hybrid] trait Digimon, you can ignore this card's color requirements.\r\n[Main] Your level 4 Digimon can digivolve into 1 Digimon card in your hand with matching colors and [Ten Warriors] trait for its digivolution cost, ignoring its level.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,39 @@
+{
+  "index": 3225,
+  "norm_id": 0.16125,
+  "card_id": "EX11-031",
+  "card_index": 31,
+  "card_name_eng": "Vespamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_031",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "X Antibody",
+    "Royal Base",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] [Opponent's Turn] All of your [Royal Base] trait Digimon gain ＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] For each of your face-up security cards, suspend 1 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When any of your [Royal Base] trait Digimon would leave the battle area other than by your effects, by flipping your top face-up security card face down, 1 of those Digimon doesn't leave.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Royal Base] trait: Cost 3"
+}

@@ -1,0 +1,37 @@
+{
+  "index": 177,
+  "norm_id": 0.00885,
+  "card_id": "BT2-046",
+  "card_index": 46,
+  "card_name_eng": "MetalTyrannomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_046",
+  "play_cost": 7,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] When this Digimon deletes one of your opponent's level 6 or higher Digimon in battle, unsuspend this Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

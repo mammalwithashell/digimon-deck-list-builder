@@ -1,0 +1,25 @@
+{
+  "index": 3426,
+  "norm_id": 0.1713,
+  "card_id": "P-096",
+  "card_index": 96,
+  "card_name_eng": "Prism Garrett",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_096",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a [Hunter] trait Tamer, you can ignore this card's color requirements.\r\n[Main] By placing up to 2 Digimon cards with ＜Save＞ in their texts from under your Tamers or your trash under 1 of your Digimon with ＜Save＞ in its text as its bottom digivolution cards, that Digimon gets +1000 DP for each card placed by this effect.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

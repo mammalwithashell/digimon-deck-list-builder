@@ -1,0 +1,27 @@
+{
+  "index": 3114,
+  "norm_id": 0.1557,
+  "card_id": "EX7-068",
+  "card_index": 68,
+  "card_name_eng": "Wonder Stomp",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_068",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜Draw 1＞ (Draw 1 card from your deck.) Then, you may play 1 level 3 Digimon card with the [Puppet] trait from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

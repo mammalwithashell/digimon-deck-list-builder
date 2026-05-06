@@ -1,0 +1,36 @@
+{
+  "index": 3775,
+  "norm_id": 0.18875,
+  "card_id": "ST13-11",
+  "card_index": 11,
+  "card_name_eng": "TiaLudomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST13_11",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Armor",
+    "Legend-Arms"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] By placing this Digimon under 1 of your other Digimon that's red or has the [Legend-Arms] trait as its bottom digivolution card, 1 of your Digimon gains ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.) until the end of your opponent's next turn.",
+  "inherited_effect_description_eng": "[Opponent's Turn] While you have a Digimon that's red or has the [Legend-Arms] trait in play, this Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 2830,
+  "norm_id": 0.1415,
+  "card_id": "EX4-006",
+  "card_index": 6,
+  "card_name_eng": "Guilmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_006",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    6
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] If the total trashes of both players' add up to 20 or more cards, this Digimon gains ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Gigimon]: Cost 0"
+}

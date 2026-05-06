@@ -1,0 +1,35 @@
+{
+  "index": 2934,
+  "norm_id": 0.1467,
+  "card_id": "EX5-036",
+  "card_index": 36,
+  "card_name_eng": "Aquilamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_036",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Giant Bird"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon is suspended, it gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

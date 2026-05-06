@@ -1,0 +1,37 @@
+{
+  "index": 3275,
+  "norm_id": 0.16375,
+  "card_id": "LM-007",
+  "card_index": 7,
+  "card_name_eng": "Publimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "LM_007",
+  "play_cost": 6,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[End of Attack] Place this Digimon on top of your security stack.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

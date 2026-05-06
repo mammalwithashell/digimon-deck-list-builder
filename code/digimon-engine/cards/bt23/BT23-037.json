@@ -1,0 +1,38 @@
+{
+  "index": 2433,
+  "norm_id": 0.12165,
+  "card_id": "BT23-037",
+  "card_index": 37,
+  "card_name_eng": "Tentomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_037",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3,
+    2
+  ],
+  "type_eng": [
+    "Insectoid",
+    "Hudie",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [CS] trait, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may play 1 play cost 5 or lower Digimon card with the [Hudie] trait from your hand without paying the cost. The Digimon this effect played can't digivolve and is deleted at the end of your opponent's turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[CS] trait: Cost 0"
+}

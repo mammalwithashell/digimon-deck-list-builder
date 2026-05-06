@@ -1,0 +1,36 @@
+{
+  "index": 1218,
+  "norm_id": 0.0609,
+  "card_id": "BT11-076",
+  "card_index": 76,
+  "card_name_eng": "Ignitemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_076",
+  "play_cost": 4,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Reptile Man",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Attacking] By deleting 1 of your other Digimon, delete 1 of your opponent's unsuspended Digimon with a level less than or equal to the deleted Digimon's level.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When you play a Digimon by an effect, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Xros Heart] trait: Cost 0"
+}

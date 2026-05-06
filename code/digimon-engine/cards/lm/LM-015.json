@@ -1,0 +1,32 @@
+{
+  "index": 3283,
+  "norm_id": 0.16415,
+  "card_id": "LM-015",
+  "card_index": 15,
+  "card_name_eng": "Ryudamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "LM_015",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Beast",
+    "X Antibody"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Attacking] If you have a Tamer, this Digimon may digivolve into [Ginryumon] in your hand without paying the cost.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has the [X Antibody] trait, it gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

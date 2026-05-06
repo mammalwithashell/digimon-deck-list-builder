@@ -1,0 +1,29 @@
+{
+  "index": 24,
+  "norm_id": 0.0012,
+  "card_id": "BT1-008",
+  "card_index": 8,
+  "card_name_eng": "Frimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_008",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Lesser"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] While your opponent has 2 or more suspended Digimon in play, this Digimon gets +2000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

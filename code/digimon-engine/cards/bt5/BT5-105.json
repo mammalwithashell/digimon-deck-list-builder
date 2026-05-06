@@ -1,0 +1,25 @@
+{
+  "index": 575,
+  "norm_id": 0.02875,
+  "card_id": "BT5-105",
+  "card_index": 105,
+  "card_name_eng": "Ultimate Flare",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_105",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜De-Digivolve 3＞ 1 of your opponent's Digimon. (Trash up to 3 cards from the top. You can't trash past level 3 cards.) Then, delete all of your opponent's Digimon with play costs of 3 or less.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effect.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

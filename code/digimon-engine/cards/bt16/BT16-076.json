@@ -1,0 +1,38 @@
+{
+  "index": 1758,
+  "norm_id": 0.0879,
+  "card_id": "BT16-076",
+  "card_index": 76,
+  "card_name_eng": "Soloogarmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_076",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Dark Animal",
+    "X Antibody",
+    "SoC"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] By trashing 2 cards in your hand, delete 1 of your opponent's 6000 DP or lower Digimon. If this effect didn't delete, you may play 1 level 4 or lower [SoC] trait Digimon card from your trash without paying the cost.\r\n[All Turns] When one of your other [SoC] trait Digimon is deleted, this Digimon with an [SoC] trait Tamer card in its digivolution cards may digivolve into [Fenriloogamon] in the trash without paying the cost.",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] If your opponent has 1 or more memory, unsuspend this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[SoC] trait: Cost 3"
+}

@@ -1,0 +1,36 @@
+{
+  "index": 942,
+  "norm_id": 0.0471,
+  "card_id": "BT9-024",
+  "card_index": 24,
+  "card_name_eng": "Garurumon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_024",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Beast",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "Inherited Effect [All Turns] When this Digimon has [Garurumon] or [Omnimon] in its name and would be deleted in battle, you may trash 2 cards of the same level in this Digimon's digivolution cards to prevent that deletion.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] [Garurumon]: Cost 0"
+}

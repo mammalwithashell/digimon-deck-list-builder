@@ -1,0 +1,25 @@
+{
+  "index": 222,
+  "norm_id": 0.0111,
+  "card_id": "BT2-091",
+  "card_index": 91,
+  "card_name_eng": "Volcanic Flare",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_091",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon with 4000 DP or less.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

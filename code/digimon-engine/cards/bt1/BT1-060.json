@@ -1,0 +1,37 @@
+{
+  "index": 76,
+  "norm_id": 0.0038,
+  "card_id": "BT1-060",
+  "card_index": 60,
+  "card_name_eng": "MagnaAngemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_060",
+  "play_cost": 7,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Archangel"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "inherited_effect_description_eng": "[Your Turn] For every 3 cards in your security stack, this Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

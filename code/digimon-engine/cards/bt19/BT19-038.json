@@ -1,0 +1,37 @@
+{
+  "index": 2026,
+  "norm_id": 0.1013,
+  "card_id": "BT19-038",
+  "card_index": 38,
+  "card_name_eng": "JaegerDorulumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_038",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [
+    "Beastkin",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "This card is also treated as [Dorulumon] for a DigiXros.\r\n[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. Then, 1 of their Digimon can't activate [When Digivolving] effects or unsuspend until the end of their turn.\r\n[On Deletion] You may place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under any of your Tamers.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Xros Heart] trait: Cost 3"
+}

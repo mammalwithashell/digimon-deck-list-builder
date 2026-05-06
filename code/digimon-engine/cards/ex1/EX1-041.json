@@ -1,0 +1,35 @@
+{
+  "index": 2644,
+  "norm_id": 0.1322,
+  "card_id": "EX1-041",
+  "card_index": 41,
+  "card_name_eng": "Dinobeemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_041",
+  "play_cost": 8,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[When Digivolving] If a Digimon card with the [Free] trait is in this Digimon's digivolution cards, suspend 1 of your opponent's Digimon with 5000 DP or less.",
+  "inherited_effect_description_eng": "[Your Turn] When one of your Digimon with [Imperialdramon] in its name deletes an opponent's Digimon in battle and survives, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

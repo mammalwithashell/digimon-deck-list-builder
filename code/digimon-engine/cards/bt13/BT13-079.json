@@ -1,0 +1,35 @@
+{
+  "index": 1445,
+  "norm_id": 0.07225,
+  "card_id": "BT13-079",
+  "card_index": 79,
+  "card_name_eng": "Falcomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_079",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Avian"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] 1 of your purple Digimon gains ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.) until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "[On Deletion] If not deleted in battle, your opponent trashes 1 card in their hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

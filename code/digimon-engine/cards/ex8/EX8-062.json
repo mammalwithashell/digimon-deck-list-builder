@@ -1,0 +1,37 @@
+{
+  "card_id": "EX8-062",
+  "card_index": 62,
+  "card_name_eng": "Piedmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_062",
+  "play_cost": 7,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [
+    "Wizard",
+    "NSo"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Activate the effect below 4 times:\r\n・1 of your opponent's Digimon gets -2000 DP for the turn.\r\n[All Turns] [Once Per Turn] When other Digimon are deleted, you may play 1 level 4 or lower [NSo] trait Digimon card from your trash without paying the cost.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[NSo] trait: Cost 3",
+  "index": 3182,
+  "norm_id": 0.1591
+}

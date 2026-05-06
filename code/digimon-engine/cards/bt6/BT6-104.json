@@ -1,0 +1,25 @@
+{
+  "index": 686,
+  "norm_id": 0.0343,
+  "card_id": "BT6-104",
+  "card_index": 104,
+  "card_name_eng": "Parabolic Junk",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_104",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your Digimon gains \"[On Deletion] Gain 2 memory\" until the end of your opponent's next turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 1665,
+  "norm_id": 0.08325,
+  "card_id": "BT15-085",
+  "card_index": 85,
+  "card_name_eng": "Izzy Izumi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_085",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Opponent's Turn] When an opponent's Digimon attacks, by suspending this Tamer, switch the target of attack to 1 of your suspended Digimon with the [Insectoid] trait.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

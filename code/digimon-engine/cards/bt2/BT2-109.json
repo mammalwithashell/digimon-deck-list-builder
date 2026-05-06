@@ -1,0 +1,25 @@
+{
+  "index": 240,
+  "norm_id": 0.012,
+  "card_id": "BT2-109",
+  "card_index": 109,
+  "card_name_eng": "Heat Viper",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_109",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may delete 1 of your Digimon to delete up to 2 of your opponent's level 4 or lower Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

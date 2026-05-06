@@ -1,0 +1,35 @@
+{
+  "index": 2955,
+  "norm_id": 0.14775,
+  "card_id": "EX5-057",
+  "card_index": 57,
+  "card_name_eng": "Labramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_057",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] By trashing 1 card in your hand, you may return 1 Digimon card with the [Dark Animal] or [Shaman] trait from your trash to the hand.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When an effect plays one of your Digimon, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

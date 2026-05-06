@@ -1,0 +1,36 @@
+{
+  "index": 2419,
+  "norm_id": 0.12095,
+  "card_id": "BT23-023",
+  "card_index": 23,
+  "card_name_eng": "Whamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_023",
+  "play_cost": 9,
+  "dp": 9000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Sea Animal",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower blue or [CS] trait Digimon card from its digivolution cards without paying the cost.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower blue or [CS] trait Digimon card from its digivolution cards without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[CS] trait: Cost 3"
+}

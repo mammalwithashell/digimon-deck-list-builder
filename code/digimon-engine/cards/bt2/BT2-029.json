@@ -1,0 +1,37 @@
+{
+  "index": 160,
+  "norm_id": 0.008,
+  "card_id": "BT2-029",
+  "card_index": 29,
+  "card_name_eng": "MegaSeadramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_029",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Aquatic"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] This Digimon can't be blocked by your opponent's Digimon with no digivolution cards.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

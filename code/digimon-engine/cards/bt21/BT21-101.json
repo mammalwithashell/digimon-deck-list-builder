@@ -1,0 +1,38 @@
+{
+  "index": 2293,
+  "norm_id": 0.11465,
+  "card_id": "BT21-101",
+  "card_index": 101,
+  "card_name_eng": "Gaiamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_101",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    4,
+    0
+  ],
+  "type_eng": [
+    "Creation (App Name)"
+  ],
+  "form_eng": [
+    "God"
+  ],
+  "attribute_eng": [
+    "God"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Link +1＞ (Add 1 to this Digimon's maximum links.)\r\n[When Digivolving] [When Attacking] You may link 1 Digimon card with the [Appmon] trait from your hand or this Digimon's digivolution cards to 1 of your Digimon without paying the cost.\r\n[Your Turn] [Once Per Turn] When your Digimon get linked, by unsuspending this Digimon, trash your opponent's top security card.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[App Fusion] [Globemon] & [Charismon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+}

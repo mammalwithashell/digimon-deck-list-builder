@@ -1,0 +1,36 @@
+{
+  "index": 2217,
+  "norm_id": 0.11085,
+  "card_id": "BT21-025",
+  "card_index": 25,
+  "card_name_eng": "Lamiamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_025",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragonkin",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Progress＞ (While attacking, your opponent's effects don't affect this Digimon.)\r\n[Your Turn] [Once Per Turn] When any of your [Reptile] or [Dragonkin] trait Digimon's attack targets change, trash your opponent's top security card.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When your opponent's security is removed from, you may play 1 [Reptile] or [Dragonkin] trait Digimon card with 5000 DP or less from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

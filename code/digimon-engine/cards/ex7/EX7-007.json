@@ -1,0 +1,35 @@
+{
+  "index": 3053,
+  "norm_id": 0.15265,
+  "card_id": "EX7-007",
+  "card_index": 7,
+  "card_name_eng": "Vorvomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_007",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Rock Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Rock Dragon], [Earth Dragon], [Machine Dragon] or [Sky Dragon] trait and 1 [Hina Kurihara] among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

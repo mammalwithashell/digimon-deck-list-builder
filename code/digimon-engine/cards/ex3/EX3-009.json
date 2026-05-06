@@ -1,0 +1,35 @@
+{
+  "index": 2759,
+  "norm_id": 0.13795,
+  "card_id": "EX3-009",
+  "card_index": 9,
+  "card_name_eng": "Volcdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_009",
+  "play_cost": 6,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] If this Digimon has [Dragon], [saur] or [Ceratopsian] in any of its traits, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

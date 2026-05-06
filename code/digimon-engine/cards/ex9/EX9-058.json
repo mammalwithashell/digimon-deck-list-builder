@@ -1,0 +1,37 @@
+{
+  "index": 4062,
+  "norm_id": 0.2031,
+  "card_id": "EX9-058",
+  "card_index": 58,
+  "card_name_eng": "Gazimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_058",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Mammal",
+    "DM",
+    "Ver.5"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Among them, add 1 card with the [DM] trait to the hand and place 1 card with the [Ver.5] trait face down as the bottom digivolution card of any of your Digimon with the [DM] trait . Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[DM] trait: Cost 0"
+}

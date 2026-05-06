@@ -1,0 +1,28 @@
+{
+  "index": 2476,
+  "norm_id": 0.1238,
+  "card_id": "BT23-080",
+  "card_index": 80,
+  "card_name_eng": "Yu Nogi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_080",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    1,
+    2
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[All Turns] When any of your Digimon with the [CS] trait would be deleted, by returning this Tamer to the bottom of the deck, place 1 of those Digimon as the top security card.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 118,
+  "norm_id": 0.0059,
+  "card_id": "BT1-102",
+  "card_index": 102,
+  "card_name_eng": "Blade of the True",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_102",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜Draw 1＞ (Draw 1 card from your deck.) for every 2 security cards you have.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

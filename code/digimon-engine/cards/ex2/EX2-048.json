@@ -1,0 +1,29 @@
+{
+  "index": 2724,
+  "norm_id": 0.1362,
+  "card_id": "EX2-048",
+  "card_index": 48,
+  "card_name_eng": "ADR-04 Bubbles",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_048",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Ground Combat Agent"
+  ],
+  "form_eng": [
+    "D-Reaper"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Place 1 of your [ADR-02 Searcher]s from in play or from your hand under 1 of your [Mother D-Reaper]s as its bottom digivolution card.\r\n[On Play] Place 1 of your [ADR-02 Searcher]s from in play or from your hand under 1 of your [Mother D-Reaper]s as its bottom digivolution card.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

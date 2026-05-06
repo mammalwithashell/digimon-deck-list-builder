@@ -1,0 +1,36 @@
+{
+  "index": 3004,
+  "norm_id": 0.1502,
+  "card_id": "EX6-032",
+  "card_index": 32,
+  "card_name_eng": "Lopmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_032",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    2
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] You may suspend 1 Digimon.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Kokomon]: Cost 0"
+}

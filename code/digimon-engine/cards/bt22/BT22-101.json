@@ -1,0 +1,28 @@
+{
+  "index": 2395,
+  "norm_id": 0.11975,
+  "card_id": "BT22-101",
+  "card_index": 101,
+  "card_name_eng": "Kyoko Kuremi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_101",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 4,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When any of your level 4 or higher [CS] trait Digimon are deleted, by suspending this Tamer, return 1 [CS] trait Digimon card from your trash to the hand.\r\n[Your Turn] [Once Per Turn] When this Tamer unsuspends, if you don't have [Alphamon], this Tamer may digivolve into [Alphamon] in the hand with the digivolution cost reduced by 2.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

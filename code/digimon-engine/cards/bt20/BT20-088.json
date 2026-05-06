@@ -1,0 +1,27 @@
+{
+  "index": 2178,
+  "norm_id": 0.1089,
+  "card_id": "BT20-088",
+  "card_index": 88,
+  "card_name_eng": "Violet Inboots",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_088",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Your Turn] When any of your [Ghost] trait Digimon are deleted, by suspending this Tamer, 1 of your Digimon may digivolve into a Digimon card with the [Ghost] trait in the hand with the digivolution cost reduced by 2.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 345,
+  "norm_id": 0.01725,
+  "card_id": "BT3-102",
+  "card_index": 102,
+  "card_name_eng": "Code Cracking",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_102",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Your opponent may trash their top security card. If they don't, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 128,
+  "norm_id": 0.0064,
+  "card_id": "BT1-112",
+  "card_index": 112,
+  "card_name_eng": "Dimension Scissor",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_112",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your Digimon gains the following effect for the turn: \"When this Digimon deletes an opponent's Digimon in battle and survives, unsuspend it.\"",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

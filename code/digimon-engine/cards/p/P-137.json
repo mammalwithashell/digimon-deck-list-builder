@@ -1,0 +1,38 @@
+{
+  "index": 3467,
+  "norm_id": 0.17335,
+  "card_id": "P-137",
+  "card_index": 137,
+  "card_name_eng": "Flamedramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_137",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    0,
+    1
+  ],
+  "type_eng": [
+    "Dragonkin"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n[Your Turn] [Once Per Turn] When this Digimon's attack target is switched, your opponent adds the top card of their security stack to the hand.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Veemon]: Cost 2"
+}

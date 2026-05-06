@@ -1,0 +1,37 @@
+{
+  "index": 3566,
+  "norm_id": 0.1783,
+  "card_id": "RB1-005",
+  "card_index": 5,
+  "card_name_eng": "Gammamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "RB1_005",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Ceratopsian"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Gammamon] in its text and 1 [Hiro Amanokawa] among them to your hand. Place the rest at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Gammamon] in its text, it gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

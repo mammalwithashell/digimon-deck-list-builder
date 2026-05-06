@@ -1,0 +1,37 @@
+{
+  "index": 2913,
+  "norm_id": 0.14565,
+  "card_id": "EX5-015",
+  "card_index": 15,
+  "card_name_eng": "Gabumon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_015",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1,
+    6
+  ],
+  "type_eng": [
+    "Beast",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 4 cards of your deck. Add 2 cards with [Garurumon] or [X Antibody] in their names among them to the hand. Place the rest at the bottom of the deck. If you added cards, trash 1 card in your hand.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon with [Garurumon] or [Omnimon] in its name would be deleted in battle, by returning 2 non-Digi-Egg cards from your trash to the bottom of the deck, prevent that deletion.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Tsunomon]/[Gabumon]: Cost 0"
+}

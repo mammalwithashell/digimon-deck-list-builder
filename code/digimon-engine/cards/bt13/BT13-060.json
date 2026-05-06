@@ -1,0 +1,35 @@
+{
+  "index": 1426,
+  "norm_id": 0.0713,
+  "card_id": "BT13-060",
+  "card_index": 60,
+  "card_name_eng": "Rosemon: Burst Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_060",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Fairy"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] Suspend 1 of your opponent's Digimon and 1 of their Tamers. Until the end of your opponent's turn, all of their Digimon and Tamers don't unsuspend.\r\n [When Attacking] Trash the top card of your opponent's security stack for every 2 of your opponent's suspended Digimon or Tamers.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 6,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Burst Digivolve] [Rosemon]: By returning 1 [Yoshino Fujieda] to hand, cost 0\r\nAt the end of the burst digivolution turn, trash this Digimon's top card."
+}

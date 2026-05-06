@@ -1,0 +1,25 @@
+{
+  "index": 3038,
+  "norm_id": 0.1519,
+  "card_id": "EX6-066",
+  "card_index": 66,
+  "card_name_eng": "Sea of Destruction",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_066",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] By placing 1 Digimon card with [Aqua] or [Sea Animal] in any of its traits from your hand as the bottom digivolution card of 1 of your blue Digimon, return all of your opponent's Digimon with the same level as the placed card to the hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Return all of your opponent's Digimon with the lowest level to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

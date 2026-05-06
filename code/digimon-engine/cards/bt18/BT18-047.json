@@ -1,0 +1,37 @@
+{
+  "index": 1933,
+  "norm_id": 0.09665,
+  "card_id": "BT18-047",
+  "card_index": 47,
+  "card_name_eng": "Arbormon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_047",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] By suspending 1 of your green Digimon, suspend 1 of your opponent's Digimon or Tamers.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] [Petaldramon]: Cost 0"
+}

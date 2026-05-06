@@ -1,0 +1,27 @@
+{
+  "index": 2387,
+  "norm_id": 0.11935,
+  "card_id": "BT22-093",
+  "card_index": 93,
+  "card_name_eng": "Ami Aiba",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_093",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Your Turn] When any of your Digimon digivolve into a Digimon with the [CS] trait, if it has a digivolution card with the same level as the digivolved Digimon, by suspending this Tamer, that Digimon may digivolve into a Digimon card with the [CS] trait in the hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

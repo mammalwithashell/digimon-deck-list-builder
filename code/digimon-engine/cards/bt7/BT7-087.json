@@ -1,0 +1,25 @@
+{
+  "index": 781,
+  "norm_id": 0.03905,
+  "card_id": "BT7-087",
+  "card_index": 87,
+  "card_name_eng": "Koji Minamoto",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_087",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying its memory cost.\r\n[Main] [Once Per Turn] You may place 5 cards with [Hybrid] trait from your hand under this Tamer in any order to digivolve it into a [MagnaGarurumon] in your hand for its digivolution cost as if this Tamer is a level 5 blue Digimon.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When an effect adds a card to your hand, gain 1 memory. Then, this Digimon can't be blocked for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

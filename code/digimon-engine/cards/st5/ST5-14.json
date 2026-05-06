@@ -1,0 +1,25 @@
+{
+  "index": 3676,
+  "norm_id": 0.1838,
+  "card_id": "ST5-14",
+  "card_index": 14,
+  "card_name_eng": "Tai Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST5_14",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Opponent's Turn] When you use ＜Blocker＞ to suspend one of your Digimon, you may suspend this Tamer to unsuspend 1 of your Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

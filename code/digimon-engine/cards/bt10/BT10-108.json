@@ -1,0 +1,25 @@
+{
+  "index": 1138,
+  "norm_id": 0.0569,
+  "card_id": "BT10-108",
+  "card_index": 108,
+  "card_name_eng": "Death the Cannon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_108",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When this card is trashed from your deck, return it to your hand.\r\n[Main] Delete 1 of your opponent's level 6 or lower Digimon. If there are 10 or more cards in your trash, add 1 to the level of the Digimon you can select with this effect.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

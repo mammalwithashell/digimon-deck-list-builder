@@ -1,0 +1,25 @@
+{
+  "index": 2815,
+  "norm_id": 0.14075,
+  "card_id": "EX3-065",
+  "card_index": 65,
+  "card_name_eng": "Hina Kurihara",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_065",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If your opponent has a Digimon in play, gain 1 memory.\r\n[Your Turn] When one of your Digimon digivolves into a Digimon with the [Rock Dragon], [Earth Dragon], [Machine Dragon] or [Sky Dragon] trait, by suspending this Tamer, activate 1 of that Digimon's [On Play] effects.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

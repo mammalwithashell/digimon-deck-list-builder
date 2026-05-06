@@ -1,0 +1,37 @@
+{
+  "index": 999,
+  "norm_id": 0.04995,
+  "card_id": "BT9-081",
+  "card_index": 81,
+  "card_name_eng": "DexDorugoramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_081",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Undead",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] If this Digimon has [Dorugoramon] in its digivolution cards, or is digivolving from the trash, delete all of your opponent's Digimon with the lowest level.\r\n[On Deletion] You may play 1 purple or black level 3 Digimon card from your trash without paying its memory cost. If your have 5 or more cards with [Dex] or [DeathX] in their names in your trash, you may play 1 [DeathXmon] from your trash without paying its memory cost instead.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] [Dorugoramon]: Cost 2"
+}

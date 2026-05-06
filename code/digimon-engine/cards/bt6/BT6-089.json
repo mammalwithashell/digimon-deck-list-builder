@@ -1,0 +1,25 @@
+{
+  "index": 671,
+  "norm_id": 0.03355,
+  "card_id": "BT6-089",
+  "card_index": 89,
+  "card_name_eng": "T.K. Takaishi & Kari Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_089",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have fewer security cards than your opponent, gain 2 memory.\r\n[Your Turn] When one of your yellow Digimon attacks, you may suspend this Tamer to have 1 of your opponent's Digimon get -1000 DP for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

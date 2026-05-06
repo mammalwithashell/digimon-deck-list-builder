@@ -1,0 +1,25 @@
+{
+  "index": 1009,
+  "norm_id": 0.05045,
+  "card_id": "BT9-091",
+  "card_index": 91,
+  "card_name_eng": "Meiko Mochizuki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_091",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] You may reveal the top 3 cards of your deck. Add 1 purple or yellow Digimon card among them to your hand. Trash the rest.\r\n[All Turns] When you play a 2-color purple and yellow Digimon, you may suspend this Tamer to gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

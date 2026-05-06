@@ -1,0 +1,36 @@
+{
+  "index": 1411,
+  "norm_id": 0.07055,
+  "card_id": "BT13-045",
+  "card_index": 45,
+  "card_name_eng": "KingChessmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_045",
+  "play_cost": 13,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "When you would play this card from your hand, if you have 8 or more Digimon cards with [Chessmon] in their names in your trash, reduce the play cost by 8.\r\n [On Play] [When Digivolving] You may Delete 1 of your Digimon to play 1 Digimon card with [Chessmon] in its name (other than [KingChessmon]) from your hand without paying its cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Chessmon] in name: Cost 3"
+}

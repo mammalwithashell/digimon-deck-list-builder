@@ -1,0 +1,35 @@
+{
+  "index": 1066,
+  "norm_id": 0.0533,
+  "card_id": "BT10-036",
+  "card_index": 36,
+  "card_name_eng": "Kyubimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_036",
+  "play_cost": 6,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mysterious Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] You may activate 1 of the effects below.\r\n・Return 1 Option card with [Plug-In] in its name from your trash to your hand.\r\n・By trashing 1 Option card with [Plug-In] in its name in your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

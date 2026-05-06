@@ -1,0 +1,38 @@
+{
+  "index": 1795,
+  "norm_id": 0.08975,
+  "card_id": "BT17-011",
+  "card_index": 11,
+  "card_name_eng": "Agunimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_011",
+  "play_cost": 6,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    6
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "You may digivolve this card from your hand onto one of your red Tamers as if that card is a level 3 red Digimon.\r\n[When Digivolving] If [BurningGreymon] is in this Digimon's digivolution cards or you have a blue or green Digimon or Tamer, this Digimon may digivolve into [AncientGreymon] in the hand for a digivolution cost of 3, ignoring its digivolution requirements. If digivolved by this effect, delete this Digimon at the end of the turn.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Takuya Kanbara]: Cost 2 \r\n[Digivolve] [BurningGreymon]: Cost 1"
+}

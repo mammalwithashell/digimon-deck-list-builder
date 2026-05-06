@@ -1,0 +1,60 @@
+{
+  "index": 2428,
+  "norm_id": 0.1214,
+  "card_id": "BT23-032",
+  "card_index": 32,
+  "card_name_eng": "Shakkoumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_032",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Mutant",
+    "Hudie",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[When Digivolving] Until your opponent's turn ends, give 1 of their Digimon \"[Start of Your Main Phase] This Digimon attacks.\" Then, if DNA digivolving, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)\r\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, black or [CS] trait Digimon card from its digivolution cards without paying the cost.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, you may play 1 level 4 or lower yellow, black or [CS] trait Digimon card from its digivolution cards without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[CS] trait: Cost 3 \r\n[DNA Digivolve] Yellow Lv.4 + Black/Blue Lv. 4: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 4,
+        "card_colors": [
+          "Yellow"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 4,
+        "card_colors": [
+          "Black",
+          "Blue"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

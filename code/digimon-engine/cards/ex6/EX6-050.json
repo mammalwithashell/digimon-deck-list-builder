@@ -1,0 +1,35 @@
+{
+  "index": 3022,
+  "norm_id": 0.1511,
+  "card_id": "EX6-050",
+  "card_index": 50,
+  "card_name_eng": "Feresmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_050",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Fallen Angel"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [On Deletion] If your opponent has 5 or fewer cards in their hand, gain 1 memory. If they have 7 or more cards in their hand, they trash 1 card in their hand.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Your opponent may trash 1 card in their hand. If they don't, you may play 1 level 3 purple Digimon card from your trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

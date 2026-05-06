@@ -1,0 +1,27 @@
+{
+  "index": 697,
+  "norm_id": 0.03485,
+  "card_id": "BT7-003",
+  "card_index": 3,
+  "card_name_eng": "Pusurimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_003",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Lesser"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] When this card is trashed due to activating this Digimon's ＜Digi-Burst＞, 1 of your opponent's Digimon gets -1000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

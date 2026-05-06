@@ -1,0 +1,35 @@
+{
+  "index": 1074,
+  "norm_id": 0.0537,
+  "card_id": "BT10-044",
+  "card_index": 44,
+  "card_name_eng": "Angoramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_044",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When you play a green Tamer, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When an opponent's Digimon becomes suspended, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

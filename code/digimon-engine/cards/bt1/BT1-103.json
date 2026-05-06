@@ -1,0 +1,25 @@
+{
+  "index": 119,
+  "norm_id": 0.00595,
+  "card_id": "BT1-103",
+  "card_index": 103,
+  "card_name_eng": "Testament",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_103",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Until the end of your opponent's next turn, 1 of your Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.).",
+  "inherited_effect_description_eng": "Security Effect [Security] ＜Draw 1＞ (Draw 1 card from your deck.) Then, add this card to your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

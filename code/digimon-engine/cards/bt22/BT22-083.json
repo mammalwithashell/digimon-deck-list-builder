@@ -1,0 +1,28 @@
+{
+  "index": 2377,
+  "norm_id": 0.11885,
+  "card_id": "BT22-083",
+  "card_index": 83,
+  "card_name_eng": "Yuuko Kamishiro",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_083",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[All Turns] When attack targets change, by suspending this Tamer, for the turn, your opponent's Digimon's effects don't affect 1 of your Digimon with [Greymon] in its name or the [CS] trait and it gets +3000 DP.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When attack targets change, if this Digimon is [Eater Eve], 1 of your Digimon gets +3000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

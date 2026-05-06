@@ -1,0 +1,25 @@
+{
+  "index": 1130,
+  "norm_id": 0.0565,
+  "card_id": "BT10-100",
+  "card_index": 100,
+  "card_name_eng": "Impulse Memory Boost!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_100",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 [Pulsemon] from your hand without paying its memory cost. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

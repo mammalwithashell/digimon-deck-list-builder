@@ -1,0 +1,25 @@
+{
+  "index": 2073,
+  "norm_id": 0.10365,
+  "card_id": "BT19-085",
+  "card_index": 85,
+  "card_name_eng": "Henry Wong",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_085",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a Digimon with [Terriermon], [Gargomon] or [Rapidmon] in its name, gain 1 memory.\r\n[All Turns] When any of your Digimon digivolve into a green Digimon, by suspending this Tamer, suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

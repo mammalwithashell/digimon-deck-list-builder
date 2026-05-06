@@ -1,0 +1,37 @@
+{
+  "index": 4028,
+  "norm_id": 0.2014,
+  "card_id": "EX9-024",
+  "card_index": 24,
+  "card_name_eng": "Hanimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_024",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    6
+  ],
+  "type_eng": [
+    "Puppet",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] By trashing 1 card in your hand, you may return 1 Digimon card with the [Puppet] trait from your trash to the hand.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Kyaromon]: Cost 0"
+}

@@ -1,0 +1,29 @@
+{
+  "index": 2084,
+  "norm_id": 0.1042,
+  "card_id": "BT19-096",
+  "card_index": 96,
+  "card_name_eng": "Hornet Eraser",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_096",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "Royal Base",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may place 1 [Royal Base] trait Digimon card from your trash face up as your bottom security card. Then, delete up to 8 play cost's total worth of your opponent's Digimon. For each of your face up security cards, add 2 to the maximum play cost you may choose with this effect.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

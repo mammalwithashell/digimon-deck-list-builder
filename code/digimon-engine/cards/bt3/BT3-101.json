@@ -1,0 +1,25 @@
+{
+  "index": 344,
+  "norm_id": 0.0172,
+  "card_id": "BT3-101",
+  "card_index": 101,
+  "card_name_eng": "Bifrost",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_101",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your opponent's Digimon gets -3000 DP and ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until the end of your opponent's next turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] 1 of your opponent's Digimon gets -3000 DP and ＜Security A. -1＞ for the turn. (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

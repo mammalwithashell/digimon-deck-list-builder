@@ -1,0 +1,37 @@
+{
+  "index": 2121,
+  "norm_id": 0.10605,
+  "card_id": "BT20-031",
+  "card_index": 31,
+  "card_name_eng": "Liamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_031",
+  "play_cost": 4,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Holy Beast",
+    "ACCEL"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn.",
+  "inherited_effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[ACCEL] trait: Cost 2"
+}

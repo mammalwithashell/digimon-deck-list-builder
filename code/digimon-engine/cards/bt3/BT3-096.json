@@ -1,0 +1,25 @@
+{
+  "index": 339,
+  "norm_id": 0.01695,
+  "card_id": "BT3-096",
+  "card_index": 96,
+  "card_name_eng": "Mimi Tachikawa",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_096",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[All Turns] When a player uses an Option card, you may suspend this Tamer to gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

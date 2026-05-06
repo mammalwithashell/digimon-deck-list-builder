@@ -1,0 +1,38 @@
+{
+  "index": 1939,
+  "norm_id": 0.09695,
+  "card_id": "BT18-053",
+  "card_index": 53,
+  "card_name_eng": "JetSilphymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_053",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3,
+    0
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[Hand] [Main] By placing 1 [Kazemon] and [Zephyrmon] from your trash under 1 of your green or red Tamers, that Tamer digivolves into this card for digivolution cost of 3, ignoring its digivolution requirements.\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n[When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. It can't unsuspend until the end of their turn.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Green/Red Lv.4 w/[Hybrid] trait: Cost 3"
+}

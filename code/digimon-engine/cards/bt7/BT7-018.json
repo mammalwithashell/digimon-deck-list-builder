@@ -1,0 +1,35 @@
+{
+  "index": 712,
+  "norm_id": 0.0356,
+  "card_id": "BT7-018",
+  "card_index": 18,
+  "card_name_eng": "Gomamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_018",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Sea Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] When played from digivolution cards, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

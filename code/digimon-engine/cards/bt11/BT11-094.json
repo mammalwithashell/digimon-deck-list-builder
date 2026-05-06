@@ -1,0 +1,26 @@
+{
+  "index": 1236,
+  "norm_id": 0.0618,
+  "card_id": "BT11-094",
+  "card_index": 94,
+  "card_name_eng": "Mirei Mikagura",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_094",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] Gain 1 memory.\r\n[Your Turn] When one of your Digimon digivolves into [Angewomon] or [LadyDevimon], if you have 1 or fewer Digimon in play, by suspending this Tamer, you may play 1 [Angewomon] or [LadyDevimon] with a different name than the Digimon you digivolved into from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

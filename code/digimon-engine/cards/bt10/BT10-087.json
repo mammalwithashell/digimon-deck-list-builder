@@ -1,0 +1,28 @@
+{
+  "index": 1117,
+  "norm_id": 0.05585,
+  "card_id": "BT10-087",
+  "card_index": 87,
+  "card_name_eng": "Taiki Kudo",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_087",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "General",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 card with the [Xros Heart] trait among them to your hand, and place 1 Digimon card with the [Xros Heart] trait under this Tamer. Place the rest at the bottom of your deck in any order.\r\n[Your Turn] When you would play 1 Digimon with DigiXros requirements, by suspending this Tamer, you may place cards from under your Tamers as digivolution cards for a DigiXros.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

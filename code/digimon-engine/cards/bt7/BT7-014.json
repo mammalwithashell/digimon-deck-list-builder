@@ -1,0 +1,37 @@
+{
+  "index": 708,
+  "norm_id": 0.0354,
+  "card_id": "BT7-014",
+  "card_index": 14,
+  "card_name_eng": "Aldamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_014",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "When one of your Digimon with a Tamer card in its digivolution cards would digivolve into this card in your hand, reduce the memory cost of the digivolution by 2.\r\n[When Digivolving] If a card with the [Hybrid] trait is in this Digimon's digivolution cards, this Digimon gets +4000 DP for the turn.\r\n",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has the [Hybrid] or [Ten Warriors] trait, it doesn't activate [Security] effects on Option cards it checks.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}
