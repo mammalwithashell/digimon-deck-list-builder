@@ -1,0 +1,35 @@
+{
+  "index": 3477,
+  "norm_id": 0.17385,
+  "card_id": "P-147",
+  "card_index": 147,
+  "card_name_eng": "Pal",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_147",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Attacking] [Once Per Turn] By placing 1 level 4 card with [Pulsemon] in its text from your hand as this Digimon's bottom digivolution card, activate 1 of the placed card's [When Digivolving] as an effect of this Digimon.\r\n[Your Turn] While you have a Tamer, this Digimon gets +3000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Bibimon]: Cost 0"
+}

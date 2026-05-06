@@ -1,0 +1,37 @@
+{
+  "index": 1936,
+  "norm_id": 0.0968,
+  "card_id": "BT18-050",
+  "card_index": 50,
+  "card_name_eng": "Petaldramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_050",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] You may unsuspend 1 of your level 4 or lower Digimon with [Plant] or [Vegetation] in any of its traits.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Arbormon]: Cost 1"
+}

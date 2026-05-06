@@ -1,0 +1,35 @@
+{
+  "index": 1222,
+  "norm_id": 0.0611,
+  "card_id": "BT11-080",
+  "card_index": 80,
+  "card_name_eng": "Devimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_080",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Fallen Angel"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] While you have a yellow Digimon or yellow Tamer in play, this Digimon gains ＜Rush＞ (This Digimon can attack the turn it comes into play.) and ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

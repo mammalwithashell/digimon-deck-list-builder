@@ -1,0 +1,35 @@
+{
+  "index": 7,
+  "norm_id": 0.00035,
+  "card_id": "AD1-013",
+  "card_index": 13,
+  "card_name_eng": "ZeigGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "AD1_013",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1,
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "Blue Flare"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with the fewest digivolution cards.\r\n[All Turns] When this Digimon would leave the battle area other than by DigiXros, you may play 1 level 5 or lower [Blue Flare] or [Xros Heart] trait Digimon card from its digivolution cards without paying the cost.",
+  "inherited_effect_description_eng": "[All Turns] For each color in this [Blue Flare] or [Xros Heart] trait Digimon's digivolution cards, it gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Blue Flare]/[Xros Heart] trait: Cost 3"
+}

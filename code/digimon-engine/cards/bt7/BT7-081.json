@@ -1,0 +1,31 @@
+{
+  "index": 775,
+  "norm_id": 0.03875,
+  "card_id": "BT7-081",
+  "card_index": 81,
+  "card_name_eng": "Bokomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_081",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 5 cards of your deck. Add 1 card with the [Hybrid] or [Ten Warriors] trait and 1 Tamer card among them to your hand. Place the remaining cards at the bottom of your deck in any order.\r\n[Your Turn] [Once Per Turn] When one of your Tamers digivolves, gain 2 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

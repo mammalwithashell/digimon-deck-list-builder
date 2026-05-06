@@ -1,0 +1,27 @@
+{
+  "card_id": "EX8-072",
+  "card_index": 72,
+  "card_name_eng": "Seventh Jewelrize",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_072",
+  "play_cost": 7,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Seven Great Demon Lords"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Trash] [Your Turn] When any of your Digimon digivolves into [Barbamon (X Antibody)], by returning this card to the bottom of the deck, activate this card's [Main] effects.\r\n[Main] If your opponent has 5 or more cards in their hand, they trash 1 card in their hand. Then, delete 1 of your opponent's level 7 or lower Digimon. For every 3 cards in your opponent's hand, remove 1 from this effect level maximum.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "",
+  "index": 3192,
+  "norm_id": 0.1596
+}

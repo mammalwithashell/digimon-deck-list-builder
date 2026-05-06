@@ -1,0 +1,25 @@
+{
+  "index": 3626,
+  "norm_id": 0.1813,
+  "card_id": "ST2-12",
+  "card_index": 12,
+  "card_name_eng": "Matt Ishida",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST2_12",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If your opponent has a Digimon with no Digivolution cards, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

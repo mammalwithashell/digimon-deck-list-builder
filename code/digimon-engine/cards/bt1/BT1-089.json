@@ -1,0 +1,25 @@
+{
+  "index": 105,
+  "norm_id": 0.00525,
+  "card_id": "BT1-089",
+  "card_index": 89,
+  "card_name_eng": "Mimi Tachikawa",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_089",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Main] If you have a level 5 or higher green Digimon in play, by suspending this Tamer, hatch 1 Digi-Egg card to an empty space in your breeding area, or move 1 level 3 or higher Digimon from your breeding area to your battle area.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

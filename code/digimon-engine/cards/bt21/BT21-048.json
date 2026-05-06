@@ -1,0 +1,36 @@
+{
+  "index": 2240,
+  "norm_id": 0.112,
+  "card_id": "BT21-048",
+  "card_index": 48,
+  "card_name_eng": "Mushroomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_048",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation",
+    "WG"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] You may suspend 1 Digimon.",
+  "inherited_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[WG] trait: Cost 0"
+}

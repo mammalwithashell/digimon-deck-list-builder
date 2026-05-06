@@ -1,0 +1,37 @@
+{
+  "index": 43,
+  "norm_id": 0.00215,
+  "card_id": "BT1-027",
+  "card_index": 27,
+  "card_name_eng": "Armadillomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_027",
+  "play_cost": 2,
+  "dp": 4000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

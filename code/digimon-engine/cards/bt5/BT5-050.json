@@ -1,0 +1,35 @@
+{
+  "index": 520,
+  "norm_id": 0.026,
+  "card_id": "BT5-050",
+  "card_index": 50,
+  "card_name_eng": "Weedmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_050",
+  "play_cost": 4,
+  "dp": 3000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] When activating this Digimon's ＜Digi-Burst＞ trashes this card, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

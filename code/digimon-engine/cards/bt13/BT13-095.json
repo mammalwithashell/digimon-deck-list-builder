@@ -1,0 +1,26 @@
+{
+  "index": 1461,
+  "norm_id": 0.07305,
+  "card_id": "BT13-095",
+  "card_index": 95,
+  "card_name_eng": "Marcus Damon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_095",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[On Play] You may suspend this Tamer.\r\n[All Turns] When this Tamer becomes suspended, 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if one of your Digimon has [Agumon] or [Greymon] in its name, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

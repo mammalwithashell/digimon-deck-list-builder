@@ -1,0 +1,27 @@
+{
+  "index": 3040,
+  "norm_id": 0.152,
+  "card_id": "EX6-068",
+  "card_index": 68,
+  "card_name_eng": "Descent of the Three Great Angels",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_068",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Three Great Angels"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may place 1 Digimon card with the [Angel], [Archangel] or [Three Great Angels] trait from your hand at the bottom of your security stack. Then, place this card in your battle area.\r\n[All Turns] When one of your Digimon with the [Angel] or [Archangel] trait is deleted, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Search your security stack. You may play 1 Digimon card with the [Three Great Angels] trait among it without paying the cost. Shuffle your security stack.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

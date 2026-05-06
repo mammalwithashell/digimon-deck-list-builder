@@ -1,0 +1,30 @@
+{
+  "index": 2908,
+  "norm_id": 0.1454,
+  "card_id": "EX5-010",
+  "card_index": 10,
+  "card_name_eng": "Sandiramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_010",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Holy Beast",
+    "Deva"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] ＜Draw 1＞ (Draw 1 card from your deck.) Then, you may play 1 [Deva] trait Digimon card without the same name as the cards in your battle area or trash from your hand to an empty space in your breeding area without paying the cost.\r\n[On Deletion] Delete 1 of your opponent's Digimon with 5000 DP or less.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has the [Four Sovereigns] or [God Beast] trait, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

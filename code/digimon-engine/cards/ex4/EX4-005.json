@@ -1,0 +1,36 @@
+{
+  "index": 2829,
+  "norm_id": 0.14145,
+  "card_id": "EX4-005",
+  "card_index": 5,
+  "card_name_eng": "Agumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_005",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Dinosaur"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a red or yellow Tamer in play, gain 1 memory.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When one of your red or yellow Tamers becomes suspended, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Koromon]: Cost 0"
+}

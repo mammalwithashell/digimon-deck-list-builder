@@ -1,0 +1,35 @@
+{
+  "index": 840,
+  "norm_id": 0.042,
+  "card_id": "BT8-034",
+  "card_index": 34,
+  "card_name_eng": "Elecmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_034",
+  "play_cost": 3,
+  "dp": 4000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

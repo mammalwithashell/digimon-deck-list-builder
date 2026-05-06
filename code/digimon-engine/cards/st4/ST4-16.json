@@ -1,0 +1,25 @@
+{
+  "index": 3662,
+  "norm_id": 0.1831,
+  "card_id": "ST4-16",
+  "card_index": 16,
+  "card_name_eng": "Electro Shocker",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST4_16",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Return 1 of your opponent's suspended Digimon to its owner's hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

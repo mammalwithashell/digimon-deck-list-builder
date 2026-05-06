@@ -1,0 +1,25 @@
+{
+  "index": 1245,
+  "norm_id": 0.06225,
+  "card_id": "BT11-103",
+  "card_index": 103,
+  "card_name_eng": "Poison Powder",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_103",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When you would use this card, if you have a green Tamer in play, reduce the cost by 1.\r\n[Main] Until the end of your opponent's turn, all of their Digimon gain \"[All Turns] When this Digimon becomes suspended, lose 1 memory.\"",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

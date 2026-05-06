@@ -1,0 +1,28 @@
+{
+  "index": 3261,
+  "norm_id": 0.16305,
+  "card_id": "EX11-067",
+  "card_index": 67,
+  "card_name_eng": "Dokuson Aruba",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_067",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[On Play] 1 of your Digimon with [Lucemon] in its text on the field may digivolve into a Digimon card with [Lucemon] in its name in the hand or trash without paying the cost.\r\n[Your Turn] When any of your Digimon digivolve into a Digimon card with [Lucemon] in its name, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

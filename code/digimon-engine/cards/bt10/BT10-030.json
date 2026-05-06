@@ -1,0 +1,35 @@
+{
+  "index": 1060,
+  "norm_id": 0.053,
+  "card_id": "BT10-030",
+  "card_index": 30,
+  "card_name_eng": "Tinkermon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_030",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Fairy"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] 1 of your opponent's level 5 or lower Digimon gains ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

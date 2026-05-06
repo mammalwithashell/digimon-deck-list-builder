@@ -1,0 +1,36 @@
+{
+  "index": 3927,
+  "norm_id": 0.19635,
+  "card_id": "EX10-006",
+  "card_index": 6,
+  "card_name_eng": "Agumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_006",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] You may return 1 [Virus] trait Digimon card with [Greymon] in its name from your trash to the hand.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Koromon]: Cost 0"
+}

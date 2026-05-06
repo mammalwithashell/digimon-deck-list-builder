@@ -1,0 +1,36 @@
+{
+  "index": 1711,
+  "norm_id": 0.08555,
+  "card_id": "BT16-029",
+  "card_index": 29,
+  "card_name_eng": "Agumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_029",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Dinosaur",
+    "Light Fang"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Light Fang] trait card and 1 [Night Claw] trait or 1 2-color card among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Your Turn] All of your opponent's Security Digimon get -3000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Light Fang]/[Night Claw] trait: Cost 0"
+}

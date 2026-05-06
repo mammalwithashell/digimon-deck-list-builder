@@ -1,0 +1,28 @@
+{
+  "index": 1878,
+  "norm_id": 0.0939,
+  "card_id": "BT17-094",
+  "card_index": 94,
+  "card_name_eng": "Ancient Guardian Deity",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_094",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    1
+  ],
+  "type_eng": [
+    "Ten Warriors"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Tamer or [Hybrid] trait Digimon, you can ignore this card's color requirements.\r\n[Main] You may return 1 Digimon card with the [Hybrid] trait or [Ten Warriors] trait from your trash to the hand. Then, you may play 1 Digimon card with the [Ten Warriors] trait or 1 Tamer card with inherited effects from your hand with the play cost reduced by 4.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 Tamer card with an inherited effect from your hand or trash without paying the cost. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

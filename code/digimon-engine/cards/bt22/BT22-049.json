@@ -1,0 +1,37 @@
+{
+  "index": 2343,
+  "norm_id": 0.11715,
+  "card_id": "BT22-049",
+  "card_index": 49,
+  "card_name_eng": "Vegiemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_049",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Carnivorous Plant",
+    "DM",
+    "Ver.2"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[End of Your Turn] [Once Per Turn] By placing 3 Digimon cards with the [Ver.2] trait from your trash face down as this Digimon's bottom digivolution cards, it may digivolve into a Digimon card with the [Ver.2] trait in the hand or trash.",
+  "inherited_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[DM] trait: Cost 3"
+}

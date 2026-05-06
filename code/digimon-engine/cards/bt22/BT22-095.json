@@ -1,0 +1,27 @@
+{
+  "index": 2389,
+  "norm_id": 0.11945,
+  "card_id": "BT22-095",
+  "card_index": 95,
+  "card_name_eng": "Akemi Suedou",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_095",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Your Turn] When any of your Digimon with the [Eater] trait are played, by suspending this Tamer, gain 1 memory. Then, if you have 7 or fewer cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Main] Place this Tamer as any of your [Mother Eater]s' bottom digivolution card.",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon is [Mother Eater], it gains ＜Rush＞ (This Digimon can attack the turn it comes into play.), ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.) and ＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

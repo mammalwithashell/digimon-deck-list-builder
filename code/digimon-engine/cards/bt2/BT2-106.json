@@ -1,0 +1,25 @@
+{
+  "index": 237,
+  "norm_id": 0.01185,
+  "card_id": "BT2-106",
+  "card_index": 106,
+  "card_name_eng": "Infinity Cannon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_106",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜De-Digivolve 4＞ 1 of your opponent's Digimon. (Trash up to 4 cards from the top. You can't trash past level 3 cards.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

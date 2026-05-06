@@ -1,0 +1,25 @@
+{
+  "index": 449,
+  "norm_id": 0.02245,
+  "card_id": "BT4-094",
+  "card_index": 94,
+  "card_name_eng": "Tai Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_094",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] While you have 3 or fewer security cards, all of your Digimon get +1000 DP. \r\n[Your Turn] When an opponent's Digimon is deleted by dropping to 0 DP, you may suspend this Tamer to gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

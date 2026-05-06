@@ -1,0 +1,25 @@
+{
+  "index": 3438,
+  "norm_id": 0.1719,
+  "card_id": "P-108",
+  "card_index": 108,
+  "card_name_eng": "Wisdom Training",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_108",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal the top 2 cards of your deck. Add 1 purple card among them to your hand. Place the rest at the bottom of your deck in any order. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon may digivolve into a purple Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

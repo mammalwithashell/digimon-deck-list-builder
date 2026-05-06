@@ -1,0 +1,28 @@
+{
+  "index": 3257,
+  "norm_id": 0.16285,
+  "card_id": "EX11-063",
+  "card_index": 63,
+  "card_name_eng": "Winr",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_063",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[On Play] Add your top face-down security card to the hand. Then, you may place 1 [Royal Base] trait Digimon card from your hand face up as the bottom security card.\r\n[End of Your Turn] By suspending this Tamer, 1 of your [Royal Base] trait Digimon gains ＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.) and ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) for the turn, and attacks.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

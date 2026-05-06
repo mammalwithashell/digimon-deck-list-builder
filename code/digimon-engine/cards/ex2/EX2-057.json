@@ -1,0 +1,25 @@
+{
+  "index": 2733,
+  "norm_id": 0.13665,
+  "card_id": "EX2-057",
+  "card_index": 57,
+  "card_name_eng": "Kenta Kitagawa",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_057",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When you would play [MarineAngemon] from your hand, reduce its play cost by 1.\r\n[Your Turn] When you play a blue Digimon, you may suspend this Tamer to trash the bottom digivolution card of 1 of your opponent's Digimon. Then, if the Digimon that played is [MarineAngemon], trash the bottom digivolution card of all of your opponent's Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

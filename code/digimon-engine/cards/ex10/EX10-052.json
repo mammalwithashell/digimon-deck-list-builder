@@ -1,0 +1,37 @@
+{
+  "index": 3973,
+  "norm_id": 0.19865,
+  "card_id": "EX10-052",
+  "card_index": 52,
+  "card_name_eng": "Lucemon: Chaos Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_052",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [
+    "Demon Lord",
+    "Seven Great Demon Lords"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] [When Attacking] By trashing 1 card in your hand, your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)\r\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area, your opponent may delete 1 of their Digimon or Tamers. If this effect didn't delete, it doesn't leave.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 7
+    }
+  ],
+  "xros_req": "[Digivolve] [Lucemon]: Cost 5"
+}

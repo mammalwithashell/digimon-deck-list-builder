@@ -1,0 +1,25 @@
+{
+  "index": 1021,
+  "norm_id": 0.05105,
+  "card_id": "BT9-103",
+  "card_index": 103,
+  "card_name_eng": "Kongou",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_103",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Until the end of your opponent's turn, your opponent's Digimon with play costs of 7 or less can't attack players, and cards can't be added to security stacks by your opponent's effects.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 30,
+  "norm_id": 0.0015,
+  "card_id": "BT1-014",
+  "card_index": 14,
+  "card_name_eng": "Kokatorimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_014",
+  "play_cost": 3,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Giant Bird"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

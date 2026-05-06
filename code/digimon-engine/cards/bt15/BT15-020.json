@@ -1,0 +1,35 @@
+{
+  "index": 1600,
+  "norm_id": 0.08,
+  "card_id": "BT15-020",
+  "card_index": 20,
+  "card_name_eng": "Gabumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_020",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] 1 of your Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's turn. Then, if you have a Tamer with [Matt Ishida] in its name, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Tsunomon]: Cost 0"
+}

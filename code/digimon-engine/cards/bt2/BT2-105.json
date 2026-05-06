@@ -1,0 +1,25 @@
+{
+  "index": 236,
+  "norm_id": 0.0118,
+  "card_id": "BT2-105",
+  "card_index": 105,
+  "card_name_eng": "Spider Shooter",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_105",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

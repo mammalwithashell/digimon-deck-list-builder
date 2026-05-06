@@ -1,0 +1,25 @@
+{
+  "index": 2068,
+  "norm_id": 0.1034,
+  "card_id": "BT19-080",
+  "card_index": 80,
+  "card_name_eng": "Takato Matsuki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_080",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When any of your Digimon digivolve into a Digimon with [Growlmon] or [Gallantmon] in its name, by suspending this Tamer, that Digimon gains ＜Raid＞ for the turn. (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.) Then, that Digimon attacks a player.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

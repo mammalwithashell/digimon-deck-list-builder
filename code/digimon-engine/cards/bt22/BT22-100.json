@@ -1,0 +1,27 @@
+{
+  "index": 2394,
+  "norm_id": 0.1197,
+  "card_id": "BT22-100",
+  "card_index": 100,
+  "card_name_eng": "Cyberspace EDEN",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_100",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have no face-up security cards, you can ignore this card's color requirements.\r\n[Security] [All Turns] All of your Digimon with the [CS] trait get +2000 DP.\r\n[Main] Add your bottom security card to the hand. Then, place this card face up as the bottom security card.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 play cost 5 or lower card with the [CS] trait from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

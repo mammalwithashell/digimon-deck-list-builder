@@ -1,0 +1,36 @@
+{
+  "card_id": "EX8-056",
+  "card_index": 56,
+  "card_name_eng": "Syakomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_056",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Crustacean",
+    "DS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Deletion] ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Delete 1 of your opponent's level 3 Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[DS] trait: Cost 0",
+  "index": 3176,
+  "norm_id": 0.1588
+}

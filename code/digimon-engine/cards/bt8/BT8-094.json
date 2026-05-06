@@ -1,0 +1,25 @@
+{
+  "index": 900,
+  "norm_id": 0.045,
+  "card_id": "BT8-094",
+  "card_index": 94,
+  "card_name_eng": "Digimon Emperor",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_094",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[All Turns] When one of your opponent's level 5 or lower Digimon is deleted, you may suspend this Tamer to ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Opponent's Turn] When one of your opponent's level 3 Digimon is moved from their breeding area to their battle area, gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

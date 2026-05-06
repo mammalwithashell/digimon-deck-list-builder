@@ -1,0 +1,26 @@
+{
+  "index": 1346,
+  "norm_id": 0.0673,
+  "card_id": "BT12-092",
+  "card_index": 92,
+  "card_name_eng": "Marcus Damon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_092",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a Digimon with [Agumon] or [Greymon] in its name in play, by paying 1 memory, for the turn, this Tamer is also treated as a 3000 DP Digimon and can't digivolve.\r\n[Your Turn] When this Tamer becomes suspended, 1 of your Digimon may digivolve into a yellow card with [Greymon] in its name in your hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

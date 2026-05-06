@@ -1,0 +1,70 @@
+{
+  "index": 3424,
+  "norm_id": 0.1712,
+  "card_id": "P-094",
+  "card_index": 94,
+  "card_name_eng": "Destromon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_094",
+  "play_cost": 10,
+  "dp": 10000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Unknown"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Delete your opponent's Digimon and Tamers with a total play cost of 3. For every [Vemmon] in this Digimon's digivolution cards, increase the maximum play cost you can choose by this effect by 1.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, by placing 2 [Vemmon] from 1 of your [Galacticmon]'s digivolution cards at the bottom of their owners' decks, switch the target of attack to this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "DigiXros Requirements [DigiXros -1] [Snatchmon] x 4 [Vemmon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "Snatchmon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "Vemmon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 4,
+          "is_digimon_only": false,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 1,
+      "max_materials": 5,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "hand",
+        "field"
+      ]
+    }
+  ]
+}

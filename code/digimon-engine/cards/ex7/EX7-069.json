@@ -1,0 +1,27 @@
+{
+  "index": 3115,
+  "norm_id": 0.15575,
+  "card_id": "EX7-069",
+  "card_index": 69,
+  "card_name_eng": "Wind Slicer",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_069",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may suspend 1 level 6 or lower Digimon. If this effect suspended your Digimon, unsuspend 1 of your Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

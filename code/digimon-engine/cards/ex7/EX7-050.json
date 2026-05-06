@@ -1,0 +1,37 @@
+{
+  "index": 3096,
+  "norm_id": 0.1548,
+  "card_id": "EX7-050",
+  "card_index": 50,
+  "card_name_eng": "Impmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_050",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Evil",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Dark Dragon] or [Evil Dragon] trait, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Yaamon]: Cost 0"
+}

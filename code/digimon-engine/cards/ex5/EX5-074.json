@@ -1,0 +1,35 @@
+{
+  "index": 2972,
+  "norm_id": 0.1486,
+  "card_id": "EX5-074",
+  "card_index": 74,
+  "card_name_eng": "Fanglongmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_074",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 4,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "God Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "NO DATA"
+  ],
+  "effect_description_eng": "[On Play] [When Attacking] By returning up to 4 cards with the [Deva] or [Four Sovereigns] trait from your trash to the bottom of the deck, for each one, all your opponent's Digimon get -4000 DP for the turn.\r\n[When Attacking] For each of your Digimon with the [Four Sovereigns] trait, trash the top card of your opponent's security stack.\r\n[All Turns] This Digimon isn't affected by the effects of your opponent's Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.6 w/[Four Sovereigns] trait: Cost 4"
+}

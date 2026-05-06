@@ -1,0 +1,25 @@
+{
+  "index": 1233,
+  "norm_id": 0.06165,
+  "card_id": "BT11-091",
+  "card_index": 91,
+  "card_name_eng": "Taiga",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_091",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] All of your Digimon get +1000 DP.\r\n[Your Turn] When one of your green Digimon would digivolve into a level 5 or higher card, by suspending this Tamer, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

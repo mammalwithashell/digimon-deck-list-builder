@@ -1,0 +1,30 @@
+{
+  "index": 1268,
+  "norm_id": 0.0634,
+  "card_id": "BT12-014",
+  "card_index": 14,
+  "card_name_eng": "OmniShoutmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_014",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragonkin",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] Choose any number of your opponent's Digimon whose total DP adds up to 4000 or less and delete them. For every 2 cards in this Digimon's digivolution cards, add 3000 to the maximum you can choose with this effect.\r\n[Your Turn] While this Digimon has 4 or more digivolution cards, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has ＜Save＞ in its text, delete 1 of your opponent's Digimon with 4000 DP or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] Lv.4 w/＜Save＞ in text: Cost 3"
+}

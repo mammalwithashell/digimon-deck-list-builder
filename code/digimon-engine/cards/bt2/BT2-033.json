@@ -1,0 +1,35 @@
+{
+  "index": 164,
+  "norm_id": 0.0082,
+  "card_id": "BT2-033",
+  "card_index": 33,
+  "card_name_eng": "Agumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_033",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Dinosaur"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] If you have 3 or more yellow Tamers in play, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

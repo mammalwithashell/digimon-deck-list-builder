@@ -1,0 +1,37 @@
+{
+  "index": 4018,
+  "norm_id": 0.2009,
+  "card_id": "EX9-014",
+  "card_index": 14,
+  "card_name_eng": "Gabumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_014",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Reptile",
+    "DM",
+    "Ver.2"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Among them, add 1 card with the [DM] trait to the hand and place 1 card with the [Ver.2] trait face down as the bottom digivolution card of any of your Digimon with the [DM] trait . Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[DM] trait: Cost 0"
+}

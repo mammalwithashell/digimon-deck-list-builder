@@ -1,0 +1,37 @@
+{
+  "index": 993,
+  "norm_id": 0.04965,
+  "card_id": "BT9-075",
+  "card_index": 75,
+  "card_name_eng": "DexDorugamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_075",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Undead",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] You may trash 1 card with [Dex] or [DeathX] in its name or with the [X Antibody] trait in your hand to gain 1 memory.\r\n[When Digivolving] If this Digimon has [Dorugamon] in its digivolution cards or is digivolving from the trash, 1 of your Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.) until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Dorugamon]: Cost 0"
+}

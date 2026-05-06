@@ -1,0 +1,35 @@
+{
+  "index": 1063,
+  "norm_id": 0.05315,
+  "card_id": "BT10-033",
+  "card_index": 33,
+  "card_name_eng": "Shortmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_033",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Food"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

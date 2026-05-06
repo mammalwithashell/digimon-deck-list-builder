@@ -1,0 +1,37 @@
+{
+  "index": 3575,
+  "norm_id": 0.17875,
+  "card_id": "RB1-013",
+  "card_index": 13,
+  "card_name_eng": "TeslaJellymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "RB1_013",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mollusk"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] If you don't have [Kiyoshiro Higashimitarai], you may play 1 [Kiyoshiro Higashimitarai] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When one of your effects trashes a card in your hand, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

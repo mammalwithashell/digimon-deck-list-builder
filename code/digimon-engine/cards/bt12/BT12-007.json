@@ -1,0 +1,35 @@
+{
+  "index": 1261,
+  "norm_id": 0.06305,
+  "card_id": "BT12-007",
+  "card_index": 7,
+  "card_name_eng": "Guilmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_007",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add all [Takato Matsuki] among them to your hand. Place the rest at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Growlmon] or [Gallantmon] in its name, it gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

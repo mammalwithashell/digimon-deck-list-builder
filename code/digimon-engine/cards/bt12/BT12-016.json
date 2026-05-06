@@ -1,0 +1,35 @@
+{
+  "index": 1270,
+  "norm_id": 0.0635,
+  "card_id": "BT12-016",
+  "card_index": 16,
+  "card_name_eng": "WarGrowlmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_016",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less. If no opponent's Digimon was deleted by this effect, you may digivolve this Digimon into a level 6 Digimon card with [Gallantmon] in its name in your hand for the digivolution cost. When this Digimon would digivolve with this effect, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] If your opponent has no Digimon in play, and this Digimon has [Growlmon] or [Gallantmon] in its name, gain 2 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

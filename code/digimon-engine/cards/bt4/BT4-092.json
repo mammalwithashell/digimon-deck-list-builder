@@ -1,0 +1,25 @@
+{
+  "index": 447,
+  "norm_id": 0.02235,
+  "card_id": "BT4-092",
+  "card_index": 92,
+  "card_name_eng": "Marcus Damon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_092",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When one of your Digimon with [Greymon] in its name attacks (other than [DoruGreymon], [BurningGreymon] or [DexDoruGreymon]), you may suspend this Tamer to gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

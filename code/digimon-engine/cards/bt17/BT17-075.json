@@ -1,0 +1,29 @@
+{
+  "index": 1859,
+  "norm_id": 0.09295,
+  "card_id": "BT17-075",
+  "card_index": 75,
+  "card_name_eng": "Eosmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_075",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Unknown"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Your opponent may play 1 Tamer card from their hand without paying the cost. If they don't, you may play 1 white Tamer card with a play cost of 4 or less from your hand without paying the cost. Then, ＜De-Digivolve 1＞ (Trash the top card. You can't trash past level 3 cards.) 1 of your opponent's Digimon for every 2 Tamers.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, you may switch the attack target to 1 of your [Eosmon].",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] Lv.4 [Eosmon]: Cost 3"
+}

@@ -1,0 +1,35 @@
+{
+  "index": 2712,
+  "norm_id": 0.1356,
+  "card_id": "EX2-036",
+  "card_index": 36,
+  "card_name_eng": "GroundLocomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_036",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] This Digimon can't attack your opponent's Digimon.\r\n[All Turns] For each card in your trash with the [Cyborg] or [Machine] trait, this Digimon gets +1000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 955,
+  "norm_id": 0.04775,
+  "card_id": "BT9-037",
+  "card_index": 37,
+  "card_name_eng": "Nefertimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_037",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Holy Beast"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[When Attacking] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Gatomon] in name: Cost 0"
+}

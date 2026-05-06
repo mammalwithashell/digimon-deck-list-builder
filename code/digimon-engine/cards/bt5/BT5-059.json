@@ -1,0 +1,37 @@
+{
+  "index": 529,
+  "norm_id": 0.02645,
+  "card_id": "BT5-059",
+  "card_index": 59,
+  "card_name_eng": "Keramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_059",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Unidentified"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[On Play] Reveal 5 cards from the top of your deck. Add 1 Digimon card with the [Unidentified] trait and 1 [Arata Sanada] card among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

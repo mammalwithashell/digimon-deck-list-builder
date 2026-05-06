@@ -1,0 +1,37 @@
+{
+  "index": 885,
+  "norm_id": 0.04425,
+  "card_id": "BT8-079",
+  "card_index": 79,
+  "card_name_eng": "SkullSatamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_079",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Undead"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] Trash the top 2 cards of your deck. Then, return 1 card with the [Demon Lord] trait from your trash to your hand.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When a card is trashed from your deck, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 1997,
+  "norm_id": 0.09985,
+  "card_id": "BT19-009",
+  "card_index": 9,
+  "card_name_eng": "Growlmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_009",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dark Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Takato Matsuki] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[All Turns] While you have 0 or less memory, add 2000 to this Digimon's DP deletion effects' maximums.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

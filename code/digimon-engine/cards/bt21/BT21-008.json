@@ -1,0 +1,36 @@
+{
+  "index": 2200,
+  "norm_id": 0.11,
+  "card_id": "BT21-008",
+  "card_index": 8,
+  "card_name_eng": "Elizamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_008",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Reptile",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Reptile] or [Dragonkin] trait and 1 card with the [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

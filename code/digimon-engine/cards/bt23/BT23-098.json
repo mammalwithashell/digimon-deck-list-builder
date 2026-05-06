@@ -1,0 +1,27 @@
+{
+  "index": 2494,
+  "norm_id": 0.1247,
+  "card_id": "BT23-098",
+  "card_index": 98,
+  "card_name_eng": "Unique Emblem: Soul Banquet",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_098",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 [Ghostmon] or [Violet Inboots] from your hand or trash without paying the cost. Then, place this card in the battle area.\r\n[Your Turn] When any of your [Violet Inboots] suspend, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon with the [Ghost] trait may digivolve into a Digimon card with the [Ghost] trait and [LIBERATOR] in the hand with the digivolution cost reduced by 3.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

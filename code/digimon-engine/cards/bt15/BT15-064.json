@@ -1,0 +1,36 @@
+{
+  "index": 1644,
+  "norm_id": 0.0822,
+  "card_id": "BT15-064",
+  "card_index": 64,
+  "card_name_eng": "Megadramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_064",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "SoC"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Among them, place 1 [Machine], [Cyborg] or [SoC] trait card as this Digimon's bottom digivolution card, and add 1 such card to the hand. Trash the rest.\r\n[When Attacking] If an [SoC] trait Tamer card is in this Digimon's digivolution cards, delete 1 of your opponent's play cost 3 or lower Digimon or Tamers.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[SoC] trait: Cost 3"
+}

@@ -1,0 +1,38 @@
+{
+  "index": 1848,
+  "norm_id": 0.0924,
+  "card_id": "BT17-064",
+  "card_index": 64,
+  "card_name_eng": "Pipismon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_064",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    1
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[When Digivolving] Trash the bottom 2 digivolution cards of 1 of your opponent's Digimon.\r\n[Your Turn] When this Digimon attacks an opponent's Digimon with no digivolution cards, delete that Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Patamon]: Cost 2"
+}

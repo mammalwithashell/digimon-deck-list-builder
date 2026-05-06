@@ -1,0 +1,35 @@
+{
+  "index": 3854,
+  "norm_id": 0.1927,
+  "card_id": "ST19-02",
+  "card_index": 2,
+  "card_name_eng": "Junkmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST19_02",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Decoy ([Puppet] trait)＞ (When your other [Puppet] trait Digimon would be deleted by an opponent's effect, you may delete this Digimon to prevent 1 of those Digimon's deletion.)",
+  "inherited_effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

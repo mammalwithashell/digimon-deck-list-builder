@@ -1,0 +1,27 @@
+{
+  "index": 1666,
+  "norm_id": 0.0833,
+  "card_id": "BT15-086",
+  "card_index": 86,
+  "card_name_eng": "Marvin Jackson",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_086",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "SoC"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] By trashing 1 card with the [Machine], [Cyborg] or [SoC] trait in your hand, gain 1 memory.\r\n[Main] ＜Mind Link＞ to 1 of your Digimon with the [Machine], [Cyborg] or [SoC] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon has the [Machine], [Cyborg] or [SoC] trait, it gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.) and ＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[End of All Turns] You may play 1 [Marvin Jackson] from this Digimon's digivolution cards without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

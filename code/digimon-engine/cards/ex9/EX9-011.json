@@ -1,0 +1,38 @@
+{
+  "index": 4015,
+  "norm_id": 0.20075,
+  "card_id": "EX9-011",
+  "card_index": 11,
+  "card_name_eng": "MetalGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_011",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "DM",
+    "Ver.1"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "When this card would be played, by trashing 1 [Cyborg] or [Ver.1] trait card from your hand, reduce the play cost by 2.\r\n[On Play] [When Digivolving] By placing 1 Digimon card from your trash face down as this Digimon's bottom digivolution card, delete up to 5000 DP total worth of your opponent's Digimon. For each of this Digimon's face-down digivolution cards, add 2000 to this effect's DP maximum.",
+  "inherited_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Greymon] in name or w/[DM] trait: Cost 3"
+}

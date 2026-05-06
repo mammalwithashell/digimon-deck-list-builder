@@ -1,0 +1,69 @@
+{
+  "index": 1223,
+  "norm_id": 0.06115,
+  "card_id": "BT11-081",
+  "card_index": 81,
+  "card_name_eng": "MadLeomon: Armed Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_081",
+  "play_cost": 6,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Undead",
+    "Bagra Army"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Opponent's Turn] [Once Per Turn] When an effect adds cards to your opponent's hand, by trashing 1 of this Digimon's digivolution cards, ＜Draw 2＞ (Draw 2 cards from your deck.)\r\n[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[Opponent's Turn] When an effect trashes this card from digivolution cards, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "DigiXros Requirements [DigiXros -2] [MadLeomon] x 1 Digimon card w/[Bagra Army] trait\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "MadLeomon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "",
+          "trait_match": "Bagra Army",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": true,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 2,
+      "max_materials": 2,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "hand",
+        "field"
+      ]
+    }
+  ]
+}

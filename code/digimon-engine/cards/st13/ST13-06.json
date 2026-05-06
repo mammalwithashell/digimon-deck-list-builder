@@ -1,0 +1,60 @@
+{
+  "index": 3770,
+  "norm_id": 0.1885,
+  "card_id": "ST13-06",
+  "card_index": 6,
+  "card_name_eng": "RagnaLoardmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST13_06",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "Unique",
+    "Legend-Arms"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] ＜Blitz＞ (If your opponent has 1 or more memory, this Digimon may attack.) When DNA digivolving, for every 4 cards in this Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 20 or less and trash the top card of your opponent's security stack.\r\n[All Turns] [Once Per Turn] When a card is removed from a player's security stack, unsuspend this Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Red Lv.6 + Black Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 6,
+        "card_colors": [
+          "Red"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 6,
+        "card_colors": [
+          "Black"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

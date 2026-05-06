@@ -1,0 +1,27 @@
+{
+  "index": 2968,
+  "norm_id": 0.1484,
+  "card_id": "EX5-070",
+  "card_index": 70,
+  "card_name_eng": "X Antibody Proto Form",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_070",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 3,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon, you can ignore this card's color requirements.\r\n[Security] Add this card to the hand.\r\n[Main] 1 of your Digimon without [X Antibody] in its digivolution cards may digivolve into a Digimon card with the [X Antibody] trait in your hand with the digivolution cost reduced by 1. If it did, place this card as its bottom digivolution card.",
+  "inherited_effect_description_eng": "[All Turns] When this Digimon would leave the battle area other than by one of your effects, from this Digimon's digivolution cards, return 1 Digimon card to the hand and place 1 [X Antibody] on top of your security stack.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

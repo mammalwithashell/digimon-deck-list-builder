@@ -1,0 +1,36 @@
+{
+  "index": 1290,
+  "norm_id": 0.0645,
+  "card_id": "BT12-036",
+  "card_index": 36,
+  "card_name_eng": "Mikemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_036",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

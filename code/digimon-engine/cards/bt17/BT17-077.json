@@ -1,0 +1,36 @@
+{
+  "index": 1861,
+  "norm_id": 0.09305,
+  "card_id": "BT17-077",
+  "card_index": 77,
+  "card_name_eng": "Imperialdramon: Paladin Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_077",
+  "play_cost": 9,
+  "dp": 16000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    4,
+    1
+  ],
+  "type_eng": [
+    "Ancient Holy Warrior"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Trash all digivolution cards of all of your opponent's Digimon. Then, return all cards from your or your opponent's trash to the bottom of the deck. If this effect returned a white level 7 card, gain 3 memory.\r\n[When Attacking] By returning 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck, unsuspend this Digimon.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-5＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.6 w/[Imperialdramon] in name: Cost 5"
+}

@@ -1,0 +1,27 @@
+{
+  "index": 2488,
+  "norm_id": 0.1244,
+  "card_id": "BT23-092",
+  "card_index": 92,
+  "card_name_eng": "Ice Archery",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_092",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon or Tamer with the [CS] trait on the field, you can ignore this card's color requirements.\r\n[Main] Until your opponent's turn ends, 1 of their Digimon and 1 of their Tamers can't suspend. Then, place this card in the battle area.\r\n[Your Turn] When one of your [CS] trait Digimon attacks, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Until your opponent's turn ends, 1 of their Digimon and 1 of their Tamers can't suspend.",
+  "inherited_effect_description_eng": "Security Effect [Security] Until your opponent's turn ends, 1 of their Digimon and 1 of their Tamers can't suspend. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

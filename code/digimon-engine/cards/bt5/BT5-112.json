@@ -1,0 +1,37 @@
+{
+  "index": 582,
+  "norm_id": 0.0291,
+  "card_id": "BT5-112",
+  "card_index": 112,
+  "card_name_eng": "Omnimon Zwart Defeat",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_112",
+  "play_cost": 15,
+  "dp": 13000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Holy Warrior"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] Play this card without battling and without paying the cost.\r\n[When Digivolving] Delete 1 of your opponent's Tamers.\r\n[On Deletion] Delete 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 6,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,38 @@
+{
+  "index": 1853,
+  "norm_id": 0.09265,
+  "card_id": "BT17-069",
+  "card_index": 69,
+  "card_name_eng": "Fenriloogamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_069",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Dark Animal",
+    "X Antibody",
+    "SoC"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] If [Eiji Nagasumi] is in this Digimon's digivolution cards, you may play 1 [Fenriloogamon] or [Kazuchimon] from your trash without paying the cost. At the next end of your opponent's turn, return that Digimon to the hand.\r\n[All Turns] [Once Per Turn] When one of your Digimon or Tamers that have the [SoC] trait or [Pulsemon] in its text is played, delete 1 of your opponent's Digimon with 10000 DP or less.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Fenriloogamon] in its name, the turn end condition is the opponent having 3 or more memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[SoC] trait: Cost 3"
+}

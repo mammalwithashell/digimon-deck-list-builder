@@ -1,0 +1,27 @@
+{
+  "index": 2279,
+  "norm_id": 0.11395,
+  "card_id": "BT21-087",
+  "card_index": 87,
+  "card_name_eng": "Zenith",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_087",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[On Play] Reveal the top 3 cards of your deck. Among them, play 1 [Vemmon] without paying the cost or add 1 card with [Vemmon] in its text to the hand. Trash the rest.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

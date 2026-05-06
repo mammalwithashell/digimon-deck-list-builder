@@ -1,0 +1,35 @@
+{
+  "index": 3412,
+  "norm_id": 0.1706,
+  "card_id": "P-082",
+  "card_index": 82,
+  "card_name_eng": "Kunemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_082",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Larva"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] If you have a green Tamer in play, suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

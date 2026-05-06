@@ -1,0 +1,37 @@
+{
+  "index": 3282,
+  "norm_id": 0.1641,
+  "card_id": "LM-014",
+  "card_index": 14,
+  "card_name_eng": "Espimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "LM_014",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with ＜Blocker＞ or 1 Tamer card among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When the attack target is switched, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

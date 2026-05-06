@@ -1,0 +1,37 @@
+{
+  "index": 333,
+  "norm_id": 0.01665,
+  "card_id": "BT3-090",
+  "card_index": 90,
+  "card_name_eng": "Mastemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_090",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Angel"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] Trash 1 card from the top of both players' security stacks. Then, you may play 1 purple or yellow Digimon card with a level of 4 or less from your trash without paying its memory cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

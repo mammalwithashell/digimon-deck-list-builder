@@ -1,0 +1,35 @@
+{
+  "index": 1382,
+  "norm_id": 0.0691,
+  "card_id": "BT13-016",
+  "card_index": 16,
+  "card_name_eng": "SaviorHuckmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_016",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragonkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] When you play a Digimon with [Sistermon] in its name, you may digivolve this Digimon into a Digimon card with [Jesmon] in its name in your hand for its digivolution cost. When this Digimon would digivolve by this effect, reduce the digivolution cost by 2.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [Royal Knight] trait, you may play 1 Digimon card with [Sistermon] in its name from your hand or trash without paying its cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

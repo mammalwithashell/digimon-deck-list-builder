@@ -1,0 +1,35 @@
+{
+  "index": 733,
+  "norm_id": 0.03665,
+  "card_id": "BT7-039",
+  "card_index": 39,
+  "card_name_eng": "Stefilmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_039",
+  "play_cost": 8,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] If this Digimon has 1 digivolution card, you may place up to 2 level 4 or lower yellow Digimon cards from your hand at the bottom of this Digimon's digivolution cards in any order. Then, ＜Draw 1＞ (Draw 1 card from your deck.) for each Digimon card you placed.",
+  "inherited_effect_description_eng": "[Your Turn] When this card is trashed due to activating this Digimon's ＜Digi-Burst＞, 1 of your Digimon gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.) for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

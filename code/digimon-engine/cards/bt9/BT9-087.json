@@ -1,0 +1,26 @@
+{
+  "index": 1005,
+  "norm_id": 0.05025,
+  "card_id": "BT9-087",
+  "card_index": 87,
+  "card_name_eng": "T.K. Takaishi & Izzy Izumi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_087",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a level 5 or higher Digimon in play, gain 1 memory. If your opponent has a level 5 or higher Digimon in play, gain 1 memory.\r\n[Your Turn] When one of your Digimon digivolves into a yellow or green Digimon, you may suspend this Tamer to have 1 of your opponent's Digimon get -1000 DP until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 2245,
+  "norm_id": 0.11225,
+  "card_id": "BT21-053",
+  "card_index": 53,
+  "card_name_eng": "Watchmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_053",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Clock (App Name)"
+  ],
+  "form_eng": [
+    "Stnd."
+  ],
+  "attribute_eng": [
+    "Tool"
+  ],
+  "effect_description_eng": "[On Play] Until your opponent's turn ends, 1 of their Digimon can't attack players.",
+  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+}

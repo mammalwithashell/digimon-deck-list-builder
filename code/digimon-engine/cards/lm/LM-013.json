@@ -1,0 +1,37 @@
+{
+  "index": 3281,
+  "norm_id": 0.16405,
+  "card_id": "LM-013",
+  "card_index": 13,
+  "card_name_eng": "Diarbbitmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "LM_013",
+  "play_cost": 6,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beast Knight"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. Then, if they have no unsuspended Digimon, gain 2 memory.\r\n[When Attacking] You may play 1 Digimon card with [Angoramon] in its text from your hand without paying the cost. At the end of your opponent's turn, return that Digimon to the hand.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 1961,
+  "norm_id": 0.09805,
+  "card_id": "BT18-075",
+  "card_index": 75,
+  "card_name_eng": "Liollmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_075",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [
+    "Holy Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon or any of your Tamers would digivolve into a multicolored Digimon that is purple or yellow, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

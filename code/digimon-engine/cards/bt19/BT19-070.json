@@ -1,0 +1,36 @@
+{
+  "index": 2058,
+  "norm_id": 0.1029,
+  "card_id": "BT19-070",
+  "card_index": 70,
+  "card_name_eng": "Kimeramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_070",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Composite"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's level 3 Digimon, 1 of their level 4 Digimon, and 1 of their level 5 Digimon.\r\n[On Deletion] By deleting 1 of your level 4 or lower purple or red Digimon, you may play 1 [Machinedramon] from your trash without paying the cost.",
+  "inherited_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Composite] trait: Cost 3"
+}

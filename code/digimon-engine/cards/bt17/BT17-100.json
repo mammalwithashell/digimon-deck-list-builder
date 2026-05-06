@@ -1,0 +1,25 @@
+{
+  "index": 1884,
+  "norm_id": 0.0942,
+  "card_id": "BT17-100",
+  "card_index": 100,
+  "card_name_eng": "Doomsday Clock",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_100",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Add this card to the hand.\r\n[Main] Play 1 [Diaboromon] Token without paying the cost. (Digimon/Cost 14/Lv.6/White/Mega/Unknown/Unidentified/3000 DP) Then, place this card as the bottom digivolution card of 1 of your [Diaboromon] without [Doomsday Clock] in its digivolution cards.\r\n[Start of Your Turn] If 4 [Doomsday Clock]s are placed in your battle area, you win the game.",
+  "inherited_effect_description_eng": "[All Turns] When this Digimon would leave the battle area by an opponent's effect, by deleting 1 of your other [Diaboromon], prevent it from leaving.\r\n[End of Opponent's Turn] Place 1 [Doomsday Clock] from this Digimon's digivolution cards in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

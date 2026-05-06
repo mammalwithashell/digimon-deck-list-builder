@@ -1,0 +1,25 @@
+{
+  "index": 350,
+  "norm_id": 0.0175,
+  "card_id": "BT3-107",
+  "card_index": 107,
+  "card_name_eng": "Looking Back on the Good Times",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_107",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, if that Digimon's play cost is 4 or less, delete it.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 3690,
+  "norm_id": 0.1845,
+  "card_id": "ST6-12",
+  "card_index": 12,
+  "card_name_eng": "VenomMyotismon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST6_12",
+  "play_cost": 10,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Dark Animal"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] Up to 2 of your Digimon gain ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.) until the end of your opponent's next turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

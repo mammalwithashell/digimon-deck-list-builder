@@ -1,0 +1,27 @@
+{
+  "index": 2086,
+  "norm_id": 0.1043,
+  "card_id": "BT19-098",
+  "card_index": 98,
+  "card_name_eng": "King Device",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_098",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Device"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you don't have [King Device], you may ignore this card's color requirements.\r\nWhen this card is trashed from the battle area, place 1 [Device] trait Option card with a use cost of 3 or less from your trash in the battle area.\r\n[Main] Place 1 [Device] trait Option card with a use cost of 3 or less from your trash in the battle area. Then, place this card in the battle area.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may place 1 Option card with the [Device] trait from your hand in the battle area. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

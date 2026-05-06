@@ -1,0 +1,37 @@
+{
+  "index": 281,
+  "norm_id": 0.01405,
+  "card_id": "BT3-038",
+  "card_index": 38,
+  "card_name_eng": "Antylamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_038",
+  "play_cost": 7,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Holy Beast"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 3644,
+  "norm_id": 0.1822,
+  "card_id": "ST3-14",
+  "card_index": 14,
+  "card_name_eng": "Heaven's Charm",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST3_14",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

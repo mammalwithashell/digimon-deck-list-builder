@@ -1,0 +1,36 @@
+{
+  "index": 1856,
+  "norm_id": 0.0928,
+  "card_id": "BT17-072",
+  "card_index": 72,
+  "card_name_eng": "Ornismon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_072",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Ancient Bird",
+    "3"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Delete 1 of your opponent's unsuspended Digimon.\r\n[All Turns] While you have another level 6 Digimon, this Digimon gets +2000 DP and gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.).",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": ""
+}

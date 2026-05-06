@@ -1,0 +1,39 @@
+{
+  "index": 2521,
+  "norm_id": 0.12605,
+  "card_id": "BT24-023",
+  "card_index": 23,
+  "card_name_eng": "Calmaramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_023",
+  "play_cost": 6,
+  "dp": 7000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Aquatic",
+    "Titan",
+    "TS"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Decode ([Lanamon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Lanamon] from its digivolution cards without paying the cost.)\r\n[On Play] [When Digivolving] Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck. Then, if played by effects, 1 of their Digimon or Tamers can't suspend until their turn ends.",
+  "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Lanamon]: Cost 1 \r\n[Digivolve] Lv.3 w/[TS] trait: Cost 3"
+}

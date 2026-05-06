@@ -1,0 +1,25 @@
+{
+  "index": 3394,
+  "norm_id": 0.1697,
+  "card_id": "P-064",
+  "card_index": 64,
+  "card_name_eng": "Kiyoshiro Higashimitarai",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_064",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When one of your Digimon with [Jellymon] in its digivolution cards attacks, by suspending this Tamer , that Digimon gains ＜Jamming＞ for the turn. (This Digimon can't be deleted in battles against Security Digimon.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

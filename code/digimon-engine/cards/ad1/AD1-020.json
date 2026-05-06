@@ -1,0 +1,26 @@
+{
+  "index": 12,
+  "norm_id": 0.0006,
+  "card_id": "AD1-020",
+  "card_index": 20,
+  "card_name_eng": "Tommy, Takuya, & Zoe",
+  "card_name_jpn": "",
+  "card_effect_class_name": "AD1_020",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1,
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] [On Play] You may place up to 2 [Hybrid] trait cards with different colors from your hand or trash under this Tamer. If this effect placed, ＜Draw 1＞ (Draw 1 card from your deck.) Then, if there are 4 or more [Hybrid] trait cards under this Tamer, gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [End of Your Turn] [Once Per Turn] By attacking with this Digimon with the [Hybrid] or [Ten Warriors] trait, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.) for the attack.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

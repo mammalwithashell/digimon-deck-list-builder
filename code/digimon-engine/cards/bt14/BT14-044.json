@@ -1,0 +1,37 @@
+{
+  "index": 1522,
+  "norm_id": 0.0761,
+  "card_id": "BT14-044",
+  "card_index": 44,
+  "card_name_eng": "Palmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_044",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] 1 of your opponent's Digimon gains \"[All Turns] When this Digimon becomes suspended, lose 2 memory.\" until the end of their turn.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon would digivolve, if you have a green Tamer, reduce the cost by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,26 @@
+{
+  "index": 1976,
+  "norm_id": 0.0988,
+  "card_id": "BT18-090",
+  "card_index": 90,
+  "card_name_eng": "Zoe Orimoto",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_090",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    3,
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon deletes an opponent's Digimon by battle, you may play 1 Tamer card with inherited effects from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

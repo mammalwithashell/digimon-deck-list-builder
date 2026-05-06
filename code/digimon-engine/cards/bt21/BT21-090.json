@@ -1,0 +1,25 @@
+{
+  "index": 2282,
+  "norm_id": 0.1141,
+  "card_id": "BT21-090",
+  "card_index": 90,
+  "card_name_eng": "The Strongest of Brothers",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_090",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon or Tamer with [Gammamon] in its text on the field, you can ignore this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 card with [Gammamon] in its text among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[All Turns] When effects place digivolution cards under your Digimon, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon may digivolve into a Digimon card with [Gammamon] in its text in the hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 card with [Gammamon] in its text and a play cost of 4 or less from your hand or trash without paying the cost. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,38 @@
+{
+  "index": 2229,
+  "norm_id": 0.11145,
+  "card_id": "BT21-037",
+  "card_index": 37,
+  "card_name_eng": "Lighdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_037",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1,
+    3
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[When Digivolving] Suspend 1 of your opponent's Digimon. Then, this Digimon gets +2000 DP until your opponent's turn ends.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Veemon]: Cost 2"
+}

@@ -1,0 +1,39 @@
+{
+  "index": 2033,
+  "norm_id": 0.10165,
+  "card_id": "BT19-045",
+  "card_index": 45,
+  "card_name_eng": "FunBeemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_045",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "Insectoid",
+    "X Antibody",
+    "Royal Base",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] [All Turns] All of your [Royal Base] trait Digimon get +1000 DP.\r\n[Your Turn] When this Digimon would digivolve into a [Royal Base] trait Digimon card, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Royal Base] trait: Cost 0"
+}

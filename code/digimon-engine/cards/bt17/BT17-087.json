@@ -1,0 +1,26 @@
+{
+  "index": 1871,
+  "norm_id": 0.09355,
+  "card_id": "BT17-087",
+  "card_index": 87,
+  "card_name_eng": "Marcus Damon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_087",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] 1 of your [Marcus Damon] is also treated as a 3000 DP Digimon that can't digivolve and gains ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's turn.\r\n[All Turns] When this Tamer becomes suspended, 1 of your Digimon gets +3000 DP for the turn. If you have a Digimon with [Agumon] or [Greymon] in its name, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 637,
+  "norm_id": 0.03185,
+  "card_id": "BT6-055",
+  "card_index": 55,
+  "card_name_eng": "Junkmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_055",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "Inherited Effect [On Deletion] Gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 2324,
+  "norm_id": 0.1162,
+  "card_id": "BT22-030",
+  "card_index": 30,
+  "card_name_eng": "Musimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_030",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Music (App Name)"
+  ],
+  "form_eng": [
+    "Stnd."
+  ],
+  "attribute_eng": [
+    "Entertainment"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Torajiro Asuka] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+}

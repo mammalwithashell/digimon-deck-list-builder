@@ -1,0 +1,36 @@
+{
+  "index": 1442,
+  "norm_id": 0.0721,
+  "card_id": "BT13-076",
+  "card_index": 76,
+  "card_name_eng": "KingEtemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_076",
+  "play_cost": 13,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[All Turns] [Once Per Turn] When another Digimon with [Etemon] or [Sukamon] in its name is deleted, 1 of your opponent's Digimon gets -3000 DP and ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) until the end of your opponent's turn.\r\n[Opponent's Turn] All of your Digimon with [Etemon] or [Sukamon] in their names gain ＜Blocker＞ (This Digimon can block in the blocker timing.), and can't be returned to the hand or deck.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Etemon]/[Sukamon] in name: Cost 4"
+}

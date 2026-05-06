@@ -1,0 +1,27 @@
+{
+  "index": 3882,
+  "norm_id": 0.1941,
+  "card_id": "ST20-15",
+  "card_index": 15,
+  "card_name_eng": "Island of Adventure",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST20_15",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have no face-up [Island of Adventure] security cards, you can ignore this card's color requirements.\r\n[Security] [All Turns] All of your level 3 or higher Digimon get +2000 DP.\r\n[Main] Add your top security card to the hand. Then, place this card face up as the top security card.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 Tamer card from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

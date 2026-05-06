@@ -1,0 +1,25 @@
+{
+  "index": 1877,
+  "norm_id": 0.09385,
+  "card_id": "BT17-093",
+  "card_index": 93,
+  "card_name_eng": "Tai Kamiya & Kari Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_093",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[All Turns] When you hatch in the breeding area, by suspending this Tamer, gain 1 memory.\r\n[End of Your Turn] By returning this Tamer to the bottom of the deck, ＜Draw 1＞ (Draw 1 card from your deck.) Then, you may play 1 Tamer card with [Tai Kamiya] or [Kari Kamiya] in its name from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,38 @@
+{
+  "index": 1495,
+  "norm_id": 0.07475,
+  "card_id": "BT14-017",
+  "card_index": 17,
+  "card_name_eng": "Dinorexmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_017",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dinosaur",
+    "X Antibody"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] ＜Blitz＞ (If your opponent has 1 or more memory, this Digimon may attack.)\r\n[All Turns] While your opponent has 1 or more memory, they can't play Digimon with 6000 DP or less, and this Digimon gets +4000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

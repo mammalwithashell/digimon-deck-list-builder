@@ -1,0 +1,35 @@
+{
+  "index": 995,
+  "norm_id": 0.04975,
+  "card_id": "BT9-077",
+  "card_index": 77,
+  "card_name_eng": "Matadormon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_077",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Undead"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Attacking] By trash 1 card with the [Undead] or [Dark Animal] trait from your hand, this Digimon gets +3000 DP for the turn.\r\n[Your Turn] When this Digimon would digivolve into a Digimon card in your trash, reduce the memory cost of the digivolution by 1.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

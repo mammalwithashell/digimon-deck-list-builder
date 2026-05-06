@@ -1,0 +1,29 @@
+{
+  "index": 2479,
+  "norm_id": 0.12395,
+  "card_id": "BT23-083",
+  "card_index": 83,
+  "card_name_eng": "Fei",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_083",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "Zaxon",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a Digimon with the [Royal Base] or [CS] trait, gain 1 memory.\r\n[All Turns] When cards are placed face up in your security stack, if any of them have the [Zaxon] or [Royal Base] trait, by suspending this Tamer, gain 1 memory. Then, if you have 7 or fewer cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

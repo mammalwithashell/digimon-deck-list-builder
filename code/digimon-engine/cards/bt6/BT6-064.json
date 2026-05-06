@@ -1,0 +1,35 @@
+{
+  "index": 646,
+  "norm_id": 0.0323,
+  "card_id": "BT6-064",
+  "card_index": 64,
+  "card_name_eng": "Mamemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_064",
+  "play_cost": 7,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Decoy (Black)＞ (When your other Black Digimon would be deleted by an opponent's effect, you may delete this Digimon to prevent 1 of those Digimon's deletion.)\r\n[On Deletion] Delete 1 of your opponent's Digimon with a play cost of 7 or less.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

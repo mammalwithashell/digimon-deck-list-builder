@@ -1,0 +1,29 @@
+{
+  "index": 2396,
+  "norm_id": 0.1198,
+  "card_id": "BT22-102",
+  "card_index": 102,
+  "card_name_eng": "Sayo",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_102",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 4,
+  "card_colors": [
+    6,
+    1
+  ],
+  "type_eng": [
+    "Night Claw",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Your Turn] When one of your Digimon with 2 or more same-level cards in its stack attacks, by suspending this Tamer, digivolve it into a Digimon card with the [Night Claw], [Light Fang], [Galaxy] or [CS] trait in the trash with the digivolution cost reduced by 2.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

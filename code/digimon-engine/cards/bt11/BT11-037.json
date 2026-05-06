@@ -1,0 +1,35 @@
+{
+  "index": 1179,
+  "norm_id": 0.05895,
+  "card_id": "BT11-037",
+  "card_index": 37,
+  "card_name_eng": "Kotemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_037",
+  "play_cost": 4,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[Your Turn] This Digimon can't attack players.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

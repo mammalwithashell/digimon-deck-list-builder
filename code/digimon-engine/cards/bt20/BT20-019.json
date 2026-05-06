@@ -1,0 +1,37 @@
+{
+  "index": 2109,
+  "norm_id": 0.10545,
+  "card_id": "BT20-019",
+  "card_index": 19,
+  "card_name_eng": "Jesmon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_019",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "X Antibody",
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n[When Digivolving] If [Jesmon] or [X Antibody] is in this Digimon's digivolution cards, for the turn, 1 of your Digimon isn't affected by your opponent's effects. Then, 1 of your Digimon may attack.\r\n[Your Turn] All of your Digimon with [Sistermon] in their names or the [Royal Knight] trait gain ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and can also attack unsuspended Digimon.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon is [Jesmon GX], all of your Digimon gain ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and can also attack unsuspended Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Jesmon]: Cost 1"
+}

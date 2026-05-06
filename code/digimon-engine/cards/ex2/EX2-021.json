@@ -1,0 +1,35 @@
+{
+  "index": 2697,
+  "norm_id": 0.13485,
+  "card_id": "EX2-021",
+  "card_index": 21,
+  "card_name_eng": "Kyubimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_021",
+  "play_cost": 6,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mysterious Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] Reveal the top 3 cards of your deck. Add 1 Option card with [Plug-In] in its name among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you use an Option card with a cost of 2 or more, 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

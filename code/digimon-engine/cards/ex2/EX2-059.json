@@ -1,0 +1,25 @@
+{
+  "index": 2735,
+  "norm_id": 0.13675,
+  "card_id": "EX2-059",
+  "card_index": 59,
+  "card_name_eng": "Shu-Chong Wong",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_059",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] You may play 1 [Lopmon] from your hand without paying its memory cost.\r\n[Start of Your Turn] If you have 3 or fewer security cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

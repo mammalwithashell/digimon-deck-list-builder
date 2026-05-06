@@ -1,0 +1,25 @@
+{
+  "index": 788,
+  "norm_id": 0.0394,
+  "card_id": "BT7-094",
+  "card_index": 94,
+  "card_name_eng": "Giga Storm",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_094",
+  "play_cost": 7,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Delete up to 2 of your opponent's Digimon with 8000 DP or less.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effect.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

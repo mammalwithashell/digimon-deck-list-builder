@@ -1,0 +1,38 @@
+{
+  "index": 3431,
+  "norm_id": 0.17155,
+  "card_id": "P-101",
+  "card_index": 101,
+  "card_name_eng": "Raremon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_101",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    5,
+    6
+  ],
+  "type_eng": [
+    "Undead"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] By trashing 1 card from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "[When Attacking] By trashing 1 card from your hand, delete 1 of your opponent's level 3 Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

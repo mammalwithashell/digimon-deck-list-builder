@@ -1,0 +1,29 @@
+{
+  "index": 3983,
+  "norm_id": 0.19915,
+  "card_id": "EX10-062",
+  "card_index": 62,
+  "card_name_eng": "Yujin Ozora",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_062",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "App Driver",
+    "Appmon",
+    "Leviathan"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[All Turns] When effects trash any of your Digimon's link cards, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[End of Your Turn] [Once Per Turn] 1 of your Digimon may app fuse into a Digimon card in the hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

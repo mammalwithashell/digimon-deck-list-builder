@@ -1,0 +1,58 @@
+{
+  "index": 2983,
+  "norm_id": 0.14915,
+  "card_id": "EX6-011",
+  "card_index": 11,
+  "card_name_eng": "RagnaLoardmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_011",
+  "play_cost": 9,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "Unique",
+    "Legend-Arms"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast DNA Digivolve ([Durandamon] + [BryweLudramon])＞ (1 of your specified Digimon and 1 specified card in hand may DNA digivolve into this card.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n[On Play] [When Digivolving] Trash the top card of your opponent's security stack and this Digimon isn't affected by your opponent's effects until the end of their turn. Then, if DNA digivolving, ＜De-Digivolve 1＞ all of your opponent's Digimon and delete 1 of their Digimon.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-5＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 6,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Red Lv.6 + Black Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 6,
+        "card_colors": [
+          "Red"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 6,
+        "card_colors": [
+          "Black"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

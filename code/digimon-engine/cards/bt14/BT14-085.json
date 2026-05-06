@@ -1,0 +1,25 @@
+{
+  "index": 1563,
+  "norm_id": 0.07815,
+  "card_id": "BT14-085",
+  "card_index": 85,
+  "card_name_eng": "Mimi Tachikawa",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_085",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Vegetation], [Plant] or [Fairy] in any of its traits among them to the hand. Return the rest to the bottom of the deck in any order.\r\n[Your Turn] When an effect suspends a Digimon, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

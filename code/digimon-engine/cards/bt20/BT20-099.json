@@ -1,0 +1,27 @@
+{
+  "index": 2189,
+  "norm_id": 0.10945,
+  "card_id": "BT20-099",
+  "card_index": 99,
+  "card_name_eng": "Singularity of Chaos",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_099",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "ACCEL"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon with [Chaosmon] in its name or the [ACCEL] trait, you can ignore this card's color requirements.\r\n[Security] Gain 1 memory and add this card to the hand.\r\n[Main] You may play 1 Digimon card with the [ACCEL] trait from your hand with the play cost reduced by 4. Then, place this card as any of your Digimon's bottom digivolution card.",
+  "inherited_effect_description_eng": "Security Effect [End of Opponent's Turn] If this Digimon has [Chaosmon] in its name, trash your opponent's top security card and this Digimon gets -30000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

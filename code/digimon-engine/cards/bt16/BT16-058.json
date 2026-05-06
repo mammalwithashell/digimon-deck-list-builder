@@ -1,0 +1,38 @@
+{
+  "index": 1740,
+  "norm_id": 0.087,
+  "card_id": "BT16-058",
+  "card_index": 58,
+  "card_name_eng": "Dorugamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_058",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5,
+    6
+  ],
+  "type_eng": [
+    "Beast Dragon",
+    "X Antibody",
+    "SoC"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.)\r\n[On Play] [When Digivolving] By trashing 1 card in your hand, ＜Draw 1＞ (Draw 1 card from your deck.) Then, if a Tamer card with the [SoC] trait is in this Digimon's digivolution cards, until the end of your opponent's turn, 1 of their Digimon gains \"[Start of Your Main Phase] This Digimon attacks.\"",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Dorumon] or Lv.3 w/[SoC] trait: Cost 2"
+}

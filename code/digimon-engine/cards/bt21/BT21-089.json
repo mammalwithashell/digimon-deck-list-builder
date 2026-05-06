@@ -1,0 +1,28 @@
+{
+  "index": 2281,
+  "norm_id": 0.11405,
+  "card_id": "BT21-089",
+  "card_index": 89,
+  "card_name_eng": "Takato Matsuki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_089",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[All Turns] When any of your Digimon are played or digivolve, by suspending this Tamer, until your opponent's turn ends, 1 of your Digimon with [Guilmon], [Growlmon], [Gallantmon] or [Megidramon] in its name or the [Hero] trait gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and, if there are 10 or more total cards in both players' trashes, gets +2000 DP.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

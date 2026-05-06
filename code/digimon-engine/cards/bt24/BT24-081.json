@@ -1,0 +1,71 @@
+{
+  "index": 2579,
+  "norm_id": 0.12895,
+  "card_id": "BT24-081",
+  "card_index": 81,
+  "card_name_eng": "Titamon + SkullBaluchimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_081",
+  "play_cost": 14,
+  "dp": 14000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    3
+  ],
+  "type_eng": [
+    "Shaman",
+    "Olympos XII",
+    "Titan",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it comes into play.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n＜Execute＞ (At the end of your turn, this Digimon may attack. At the end of that attack, delete this Digimon. Your opponent's unsuspended Digimon can also be attacked with this effect.)\r\n[On Play] [When Digivolving] [When Attacking] By trashing 1 card in your hand, delete all of your opponent's Digimon with the lowest level.\r\n[On Deletion] You may play 1 [Titamon] or 1 level 5 or lower Digimon card with the [Titan] trait from your trash without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "Assembly Requirements [Assembly -6] [Titamon] x [SkullBaluchimon] \r\nWhen this would be played, by placing the specified cards from the trash under it, reduce the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "Titamon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "SkullBaluchimon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 6,
+      "max_materials": 2,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "trash"
+      ]
+    }
+  ]
+}

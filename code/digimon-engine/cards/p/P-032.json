@@ -1,0 +1,37 @@
+{
+  "index": 3362,
+  "norm_id": 0.1681,
+  "card_id": "P-032",
+  "card_index": 32,
+  "card_name_eng": "Palmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_032",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] When activating this Digimon's ＜Digi-Burst＞ trashes this card, 1 of your Digimon gains ＜Jamming＞ for the turn. (This Digimon can't be deleted in battles against Security Digimon.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

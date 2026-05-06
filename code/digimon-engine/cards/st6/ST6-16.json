@@ -1,0 +1,25 @@
+{
+  "index": 3694,
+  "norm_id": 0.1847,
+  "card_id": "ST6-16",
+  "card_index": 16,
+  "card_name_eng": "Nail Bone",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST6_16",
+  "play_cost": 7,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 purple level 3 Digimon card and 1 purple level 4 Digimon card from your trash without paying their memory costs. Any [On Play] effects on Digimon played with this effect don't activate.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 purple level 4 or lower Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

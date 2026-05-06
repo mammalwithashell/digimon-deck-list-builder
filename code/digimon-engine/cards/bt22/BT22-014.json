@@ -1,0 +1,38 @@
+{
+  "index": 2308,
+  "norm_id": 0.1154,
+  "card_id": "BT22-014",
+  "card_index": 14,
+  "card_name_eng": "Gaiomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_014",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "Dragonkin",
+    "X Antibody",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n[When Digivolving] You may unsuspend 1 of your opponent's Digimon. Then, this Digimon may attack.\r\n[All Turns] [Once Per Turn] When attack targets change, this Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and +5000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Greymon] in name or w/[CS] trait: Cost 4"
+}

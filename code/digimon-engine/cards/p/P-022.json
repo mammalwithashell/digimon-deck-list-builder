@@ -1,0 +1,25 @@
+{
+  "index": 3352,
+  "norm_id": 0.1676,
+  "card_id": "P-022",
+  "card_index": 22,
+  "card_name_eng": "DNA Digivolution - Hearts United",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_022",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] If you have [Davis Motomiya] and [Ken Ichijoji] in play, you may place 1 [ExVeemon] and 1 [Stingmon] from your hand at the bottom of your deck in any order to play 1 [Paildramon] from your hand without paying its memory cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

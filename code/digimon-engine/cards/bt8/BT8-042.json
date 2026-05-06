@@ -1,0 +1,59 @@
+{
+  "index": 848,
+  "norm_id": 0.0424,
+  "card_id": "BT8-042",
+  "card_index": 42,
+  "card_name_eng": "Shakkoumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_042",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    1
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[When Digivolving] If you have 5 or fewer security cards, ＜Recovery +1 (Deck)＞. Then, when DNA digivolving, return 1 of your opponent's Digimon whose level is less than or equal to the number of cards in your security stack to its owner's hand.",
+  "inherited_effect_description_eng": "[When Attacking] 1 of your opponent's Digimon gets -3000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Yellow Lv.4 + Blue Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 4,
+        "card_colors": [
+          "Yellow"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 4,
+        "card_colors": [
+          "Blue"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

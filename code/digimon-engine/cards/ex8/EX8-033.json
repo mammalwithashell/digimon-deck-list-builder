@@ -1,0 +1,59 @@
+{
+  "card_id": "EX8-033",
+  "card_index": 33,
+  "card_name_eng": "Pumpkinmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_033",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    6
+  ],
+  "type_eng": [
+    "Puppet",
+    "NSo"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Return 1 card with the [NSo] trait from your trash to the hand.\r\n[On Deletion] 1 of your opponent's Digimon gets -4000 DP for the turn.",
+  "inherited_effect_description_eng": "[On Deletion] ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[NSo] trait: Cost 3 \r\n[DNA Digivolve] Yellow Lv.4 + Purple/Red Lv.4: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "index": 3153,
+  "norm_id": 0.15765,
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 4,
+        "card_colors": [
+          "Yellow"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 4,
+        "card_colors": [
+          "Purple",
+          "Red"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

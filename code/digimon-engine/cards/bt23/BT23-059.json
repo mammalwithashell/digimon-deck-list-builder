@@ -1,0 +1,37 @@
+{
+  "index": 2455,
+  "norm_id": 0.12275,
+  "card_id": "BT23-059",
+  "card_index": 59,
+  "card_name_eng": "Justimon: Blitz Arm",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_059",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "Hudie",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] By trashing 1 Option card in the battle area, delete 1 of your opponent's Digimon with the lowest play cost.\r\n[All Turns] [Once Per Turn] When Option cards in the battle area are trashed, this Digimon unsuspends. Then, your opponent's Digimon's effects don't affect this Digimon for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Justimon: Accel Arm]/[Justimon: Critical Arm]: Cost 1 \r\n[Digivolve] Lv.5 w/[CS] trait: Cost 3"
+}

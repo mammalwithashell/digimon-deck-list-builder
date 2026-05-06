@@ -1,0 +1,27 @@
+{
+  "index": 1363,
+  "norm_id": 0.06815,
+  "card_id": "BT12-109",
+  "card_index": 109,
+  "card_name_eng": "Overflowing Power",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_109",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Hunter"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a [Hunter] trait Tamer, you can ignore this card's color requirements.\r\n[Main] Digivolve 1 of your Digimon into a Digimon card with ＜Save＞ in its text placed under one of your Tamers for its digivolution cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

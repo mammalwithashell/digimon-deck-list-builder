@@ -1,0 +1,27 @@
+{
+  "index": 1255,
+  "norm_id": 0.06275,
+  "card_id": "BT12-001",
+  "card_index": 1,
+  "card_name_eng": "Gigimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_001",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Lesser"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] Add 1000 to the maximum DP you can choose with DP-based deletion effects.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

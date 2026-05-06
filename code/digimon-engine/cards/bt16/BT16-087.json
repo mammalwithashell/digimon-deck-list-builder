@@ -1,0 +1,27 @@
+{
+  "index": 1769,
+  "norm_id": 0.08845,
+  "card_id": "BT16-087",
+  "card_index": 87,
+  "card_name_eng": "Kosuke Kisakata",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_087",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "SoC"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Main] ＜Mind Link＞ to 1 of your Digimon with the [X Antibody] or [SoC] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon has the [X Antibody] or [SoC] trait, it gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and ＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[End of All Turns] You may play 1 [Kosuke Kisakata] from this Digimon's digivolution cards without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 1728,
+  "norm_id": 0.0864,
+  "card_id": "BT16-046",
+  "card_index": 46,
+  "card_name_eng": "GranKuwagamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_046",
+  "play_cost": 7,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3,
+    6
+  ],
+  "type_eng": [
+    "Insectoid"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Suspend 2 of your opponent's Digimon or Tamers. Cards this effect suspended can't unsuspend during your opponent's next unsuspend phase. Then, delete 1 of their suspended Tamers.\r\n[Your Turn] [Once Per Turn] When this Digimon becomes suspended, 1 of your Digimon gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.) for the turn.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Dinobeemon] or Lv.5 w/[Insectoid] trait: Cost 3"
+}

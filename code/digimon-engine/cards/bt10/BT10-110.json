@@ -1,0 +1,27 @@
+{
+  "index": 1140,
+  "norm_id": 0.057,
+  "card_id": "BT10-110",
+  "card_index": 110,
+  "card_name_eng": "Seiken Meppa",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_110",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a [Royal Knight] trait Digimon, you can ignore this card's color requirements.\r\n[Main] Unsuspend 1 of your Digimon. Then, if that Digimon is [Jesmon GX], activate 1 of its [When Digivolving] effects.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

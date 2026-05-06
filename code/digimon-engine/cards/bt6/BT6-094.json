@@ -1,0 +1,25 @@
+{
+  "index": 676,
+  "norm_id": 0.0338,
+  "card_id": "BT6-094",
+  "card_index": 94,
+  "card_name_eng": "Red Reamer",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_094",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon with 6000 DP or less. If your opponent has 3 or more Digimon in play, delete 1 of your opponent's Digimon with 13000 DP or less instead.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

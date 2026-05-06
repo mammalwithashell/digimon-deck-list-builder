@@ -1,0 +1,25 @@
+{
+  "index": 231,
+  "norm_id": 0.01155,
+  "card_id": "BT2-100",
+  "card_index": 100,
+  "card_name_eng": "Puppet Pummel",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_100",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Suspend 1 of your opponent's Digimon. Then 1 of your Digimon gets +2000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

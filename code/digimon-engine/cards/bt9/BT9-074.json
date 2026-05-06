@@ -1,0 +1,36 @@
+{
+  "index": 992,
+  "norm_id": 0.0496,
+  "card_id": "BT9-074",
+  "card_index": 74,
+  "card_name_eng": "Meicoomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_074",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [
+    "Unknown"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[Security] At the end of the battle, play this card without paying its memory cost.",
+  "inherited_effect_description_eng": "[On Deletion] When this Digimon had 2 or more colors, gain 2 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

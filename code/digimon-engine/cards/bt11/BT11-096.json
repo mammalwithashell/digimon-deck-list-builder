@@ -1,0 +1,25 @@
+{
+  "index": 1238,
+  "norm_id": 0.0619,
+  "card_id": "BT11-096",
+  "card_index": 96,
+  "card_name_eng": "Magma Bomb",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_096",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When you would use this card, if you have a red Tamer in play, reduce the cost by 1.\r\n[Main] Delete 1 of your opponent's Digimon with the lowest DP.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,28 @@
+{
+  "card_id": "EX8-006",
+  "card_index": 6,
+  "card_name_eng": "DemiMeramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_006",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Flame",
+    "NSo"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] If this Digimon has the [NSo] trait, by trashing 1 card in your hand, delete 1 of your opponent's level 3 Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "",
+  "index": 3126,
+  "norm_id": 0.1563
+}

@@ -1,0 +1,37 @@
+{
+  "index": 2788,
+  "norm_id": 0.1394,
+  "card_id": "EX3-038",
+  "card_index": 38,
+  "card_name_eng": "Pomumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_038",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] When an effect suspends this Digimon, suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

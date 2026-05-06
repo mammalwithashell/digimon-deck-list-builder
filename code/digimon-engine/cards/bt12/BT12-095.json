@@ -1,0 +1,25 @@
+{
+  "index": 1349,
+  "norm_id": 0.06745,
+  "card_id": "BT12-095",
+  "card_index": 95,
+  "card_name_eng": "Tai Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_095",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] [On Play] 1 of your Digimon with [Agumon] or [Greymon] in its name gets +1000 DP and ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's next turn.\r\n[Your Turn] When one of your Digimon digivolves into a Digimon with [Greymon] or [Omnimon] in its name, suspend this Tamer to gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

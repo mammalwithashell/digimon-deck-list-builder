@@ -1,0 +1,35 @@
+{
+  "index": 3826,
+  "norm_id": 0.1913,
+  "card_id": "ST17-02",
+  "card_index": 2,
+  "card_name_eng": "Terriermon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST17_02",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Main] [Once Per Turn] You may play 1 green Tamer card or 1 level 3 Digimon card with [Lopmon] in its name from your hand with the play cost reduced by 2.",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon is suspended, it gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Gummymon]: Cost 0"
+}

@@ -1,0 +1,38 @@
+{
+  "index": 1930,
+  "norm_id": 0.0965,
+  "card_id": "BT18-044",
+  "card_index": 44,
+  "card_name_eng": "FunBeemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_044",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "Insectoid",
+    "X Antibody",
+    "Royal Base"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] [All Turns] All of your [Royal Base] trait Digimon get +1000 DP.\r\n[On Play] By placing 1 Digimon card with the [Royal Base] trait in your hand face up as the bottom security card, add your top security card to the hand.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Royal Base] trait: Cost 0"
+}

@@ -1,0 +1,39 @@
+{
+  "index": 2160,
+  "norm_id": 0.108,
+  "card_id": "BT20-070",
+  "card_index": 70,
+  "card_name_eng": "Loogarmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_070",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Dark Animal",
+    "X Antibody",
+    "SoC",
+    "SEEKERS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] By trashing 1 card in your hand, you may return 1 card with the [SoC] or [SEEKERS] trait from your trash to the hand.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Loogamon]/Lv.3 w/[SEEKERS] trait: Cost 2"
+}

@@ -1,0 +1,25 @@
+{
+  "index": 1139,
+  "norm_id": 0.05695,
+  "card_id": "BT10-109",
+  "card_index": 109,
+  "card_name_eng": "Reinforcement Plug-In O",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_109",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Tamer, you can ignore this card's color requirements.\r\n[Main] 1 of your Digimon gets +3000 DP until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Gain 1 memory and add this card to its owner's hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

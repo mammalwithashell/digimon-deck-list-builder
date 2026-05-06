@@ -1,0 +1,27 @@
+{
+  "index": 3763,
+  "norm_id": 0.18815,
+  "card_id": "ST12-15",
+  "card_index": 15,
+  "card_name_eng": "From Master to Disciple",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST12_15",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] trait among them to your hand. Trash the rest. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・The next time one of your Digimon would digivolve this turn, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] or [Sistermon] in its name or [Royal Knight] trait among them to your hand. Trash the rest. Then, place this card in your battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

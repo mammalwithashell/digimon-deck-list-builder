@@ -1,0 +1,37 @@
+{
+  "index": 3782,
+  "norm_id": 0.1891,
+  "card_id": "ST14-02",
+  "card_index": 2,
+  "card_name_eng": "Impmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST14_02",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Evil"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Attacking] If you have 20 or more cards in your trash, this Digimon may digivolve into [Beelzemon] from your trash for a digivolution cost of 3, ignoring its digivolution requirements.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When a card is trashed from your deck, delete 1 of your opponent's level 3 Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

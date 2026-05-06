@@ -1,0 +1,37 @@
+{
+  "index": 2362,
+  "norm_id": 0.1181,
+  "card_id": "BT22-068",
+  "card_index": 68,
+  "card_name_eng": "Agumon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_068",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    3
+  ],
+  "type_eng": [
+    "Reptile",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] You may return 1 Digimon card with [Tyrannomon] in its name or the [Dinosaur] trait from your trash to the hand.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Koromon]/[Agumon]: Cost 0"
+}

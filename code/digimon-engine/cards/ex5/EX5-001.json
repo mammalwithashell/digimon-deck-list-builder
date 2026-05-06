@@ -1,0 +1,28 @@
+{
+  "index": 2899,
+  "norm_id": 0.14495,
+  "card_id": "EX5-001",
+  "card_index": 1,
+  "card_name_eng": "Sunmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_001",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Lesser",
+    "Light Fang"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When an effect places the top card of this Digimon in its digivolution cards, this Digimon may digivolve into a Digimon card in your hand with the digivolution cost reduced by 1.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

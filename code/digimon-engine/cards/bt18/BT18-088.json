@@ -1,0 +1,26 @@
+{
+  "index": 1974,
+  "norm_id": 0.0987,
+  "card_id": "BT18-088",
+  "card_index": 88,
+  "card_name_eng": "Takuya Kanbara & Koji Minamoto",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_088",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Start of Your Main Phase] You may place up to 1 [Hybrid] trait card with different names from your trash under this Tamer. For each of your other Tamers, add 2 to the maximum number this effect may place.",
+  "inherited_effect_description_eng": "[End of Your Turn] [Once Per Turn] This Digimon with the [Hybrid] or [Ten Warriors] trait may attack a player.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

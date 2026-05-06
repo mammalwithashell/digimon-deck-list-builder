@@ -1,0 +1,29 @@
+{
+  "index": 3679,
+  "norm_id": 0.18395,
+  "card_id": "ST6-01",
+  "card_index": 1,
+  "card_name_eng": "Pagumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST6_01",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Lesser"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [On Deletion] Trash the top 2 cards of your deck.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

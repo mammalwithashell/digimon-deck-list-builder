@@ -1,0 +1,29 @@
+{
+  "index": 22,
+  "norm_id": 0.0011,
+  "card_id": "BT1-006",
+  "card_index": 6,
+  "card_name_eng": "Cupimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_006",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mini Angel"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [When Attacking] If you have 5 or more security cards, ＜Draw 1＞ (Draw 1 card from your deck.).",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 1662,
+  "norm_id": 0.0831,
+  "card_id": "BT15-082",
+  "card_index": 82,
+  "card_name_eng": "Sora Takenouchi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_082",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When a red Digimon card returns from your trash to the hand, by returning this Tamer to the hand, you may play 1 13000 DP or lower red Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) from your hand without paying the cost. For each of your opponent's security cards, remove 2000 from this effect's playable card's DP maximum.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

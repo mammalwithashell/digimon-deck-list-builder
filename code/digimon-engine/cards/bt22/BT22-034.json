@@ -1,0 +1,36 @@
+{
+  "index": 2328,
+  "norm_id": 0.1164,
+  "card_id": "BT22-034",
+  "card_index": 34,
+  "card_name_eng": "Reppamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_034",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Holy Beast",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "When effects trash this card from the security stack, you may play this card without paying the cost.\r\n[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP until their turn ends. By trashing your top security card, instead 1 of your opponent's Digimon gets -6000 DP until their turn ends.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[CS] trait: Cost 2"
+}

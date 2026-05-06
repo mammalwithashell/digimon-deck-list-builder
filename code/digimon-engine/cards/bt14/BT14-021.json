@@ -1,0 +1,37 @@
+{
+  "index": 1499,
+  "norm_id": 0.07495,
+  "card_id": "BT14-021",
+  "card_index": 21,
+  "card_name_eng": "Syakomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_021",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Crustacean"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

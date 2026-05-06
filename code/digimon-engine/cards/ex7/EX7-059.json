@@ -1,0 +1,36 @@
+{
+  "index": 3105,
+  "norm_id": 0.15525,
+  "card_id": "EX7-059",
+  "card_index": 59,
+  "card_name_eng": "BeelStarmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_059",
+  "play_cost": 6,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Wizard",
+    "Three Musketeers"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Return 1 Option card from your trash to the hand. Then, you may use 1 Option card with the [Three Musketeers] trait from your hand without paying the cost.\r\n[When Attacking] [Once Per Turn] By trashing 1 Option card from this Digimon's digivolution cards, you may use 1 Option card with the [Three Musketeers] trait from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Three Musketeers] in text: Cost 3"
+}

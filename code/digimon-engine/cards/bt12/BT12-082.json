@@ -1,0 +1,36 @@
+{
+  "index": 1336,
+  "norm_id": 0.0668,
+  "card_id": "BT12-082",
+  "card_index": 82,
+  "card_name_eng": "Baalmon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_082",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Wizard",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[When Digivolving] Return 1 [X Antibody] from your trash to your hand.\r\n[When Digivolving] Trash the top 3 cards of your deck. If this Digimon has [Baalmon] or [X Antibody] in its digivolution cards, delete 1 of your opponent's level 4 or lower Digimon instead.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has the [Wizard] or [Demon Lord] trait it gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Baalmon]: Cost 0"
+}

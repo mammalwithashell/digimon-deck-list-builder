@@ -1,0 +1,38 @@
+{
+  "index": 1851,
+  "norm_id": 0.09255,
+  "card_id": "BT17-067",
+  "card_index": 67,
+  "card_name_eng": "DexDoruGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_067",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Undead",
+    "X Antibody",
+    "SoC"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Trash] [All Turns] When one of your [DoruGreymon] would be deleted, by digivolving it into this card without paying the cost, prevent that deletion.\r\n[When Digivolving] Trash 1 card in your hand. Then, ＜Draw 1＞. If [DoruGreymon] is in this Digimon's digivolution cards or this digivolved from the trash, delete 1 of your opponent's Digimon with a play cost of 6 or less instead.",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] You may choose 1 of your Digimon. Delete 1 of your chosen Digimon and 1 of your opponent's Digimon with a level equal to or lower than that Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [DoruGreymon]: Cost 1"
+}

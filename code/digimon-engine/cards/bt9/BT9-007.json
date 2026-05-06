@@ -1,0 +1,35 @@
+{
+  "index": 925,
+  "norm_id": 0.04625,
+  "card_id": "BT9-007",
+  "card_index": 7,
+  "card_name_eng": "Minidekachimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_007",
+  "play_cost": 2,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Mini Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

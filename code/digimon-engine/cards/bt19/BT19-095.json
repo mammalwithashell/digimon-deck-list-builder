@@ -1,0 +1,27 @@
+{
+  "index": 2083,
+  "norm_id": 0.10415,
+  "card_id": "BT19-095",
+  "card_index": 95,
+  "card_name_eng": "Knight Device",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_095",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Device"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you don't have [Knight Device] in the battle area, you may ignore this card's color requirements.\r\nWhen effects trash this card from the battle area, 1 of your Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and gets +4000 DP for the turn.\r\n[Main] 1 of your Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and gets +4000 DP for the turn. Then, place this card in the battle area.",
+  "inherited_effect_description_eng": "Security Effect [Security] Suspend 2 of your opponent's Digimon or Tamers. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

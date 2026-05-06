@@ -1,0 +1,32 @@
+{
+  "index": 2219,
+  "norm_id": 0.11095,
+  "card_id": "BT21-027",
+  "card_index": 27,
+  "card_name_eng": "Shoutmon DX",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_027",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Composite",
+    "Xros Heart",
+    "Blue Flare"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "This card is also treated as [Shoutmon] or [ZeigGreymon] for DigiXros.\r\n＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n[On Play] [When Digivolving] Delete 1 of your opponent's lowest DP Digimon.\r\n[All Turns] When this Digimon would leave the battle area, you may place up to 4 [Xros Heart] or [Blue Flare] trait Digimon cards from its digivolution cards under 1 of your Tamers.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] [ZeigGreymon]: Cost 2 \r\n[Digivolve] Lv.5 w/[Xros Heart] trait: Cost 3"
+}

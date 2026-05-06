@@ -1,0 +1,37 @@
+{
+  "index": 3666,
+  "norm_id": 0.1833,
+  "card_id": "ST5-04",
+  "card_index": 4,
+  "card_name_eng": "ToyAgumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST5_04",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "Inherited Effect [End of Opponent's Turn] If your opponent didn't attack with a Digimon this turn, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

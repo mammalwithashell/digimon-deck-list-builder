@@ -1,0 +1,25 @@
+{
+  "index": 580,
+  "norm_id": 0.029,
+  "card_id": "BT5-110",
+  "card_index": 110,
+  "card_name_eng": "All Delete",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_110",
+  "play_cost": 10,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may return 1 of your Digimon with [Omnimon] in its name to its owner's hand to delete all Digimon and Tamers. Trash all of the digivolution cards of the Digimon you returned with this effect.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

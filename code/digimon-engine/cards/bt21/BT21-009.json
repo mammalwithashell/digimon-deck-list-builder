@@ -1,0 +1,38 @@
+{
+  "index": 2201,
+  "norm_id": 0.11005,
+  "card_id": "BT21-009",
+  "card_index": 9,
+  "card_name_eng": "Gatchmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_009",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Search (App Name)",
+    "Hero"
+  ],
+  "form_eng": [
+    "Stnd."
+  ],
+  "attribute_eng": [
+    "Social"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Haru Shinkai] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Appmon]/[Hero] trait: Cost 0"
+}

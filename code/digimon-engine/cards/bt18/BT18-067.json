@@ -1,0 +1,38 @@
+{
+  "index": 1953,
+  "norm_id": 0.09765,
+  "card_id": "BT18-067",
+  "card_index": 67,
+  "card_name_eng": "MetalKabuterimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_067",
+  "play_cost": 6,
+  "dp": 7000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+  "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [J.P. Shibayama]: Cost 3 \r\n[Digivolve] [Beetlemon]: Cost 1"
+}

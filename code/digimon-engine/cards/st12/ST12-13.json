@@ -1,0 +1,31 @@
+{
+  "index": 3761,
+  "norm_id": 0.18805,
+  "card_id": "ST12-13",
+  "card_index": 13,
+  "card_name_eng": "Sistermon Ciel",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST12_13",
+  "play_cost": 4,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] in its name or [Royal Knight] trait among them to your hand. Trash the rest.\r\n[All Turns] All of your Digimon with [Huckmon] in their names or [Royal Knight] trait gain ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.).",
+  "inherited_effect_description_eng": "Card Effect(s) [On Play] Reveal the top 3 cards of your deck. Add 1 card with [Huckmon] in its name or [Royal Knight] trait among them to your hand. Trash the rest.\r\n[All Turns] All of your Digimon with [Huckmon] in their names or [Royal Knight] trait gain ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

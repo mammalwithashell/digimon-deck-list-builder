@@ -1,0 +1,25 @@
+{
+  "index": 2821,
+  "norm_id": 0.14105,
+  "card_id": "EX3-071",
+  "card_index": 71,
+  "card_name_eng": "Laser Cannon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_071",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, delete 1 of your opponent's Digimon with a play cost of 5 or less.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

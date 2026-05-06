@@ -1,0 +1,27 @@
+{
+  "index": 3510,
+  "norm_id": 0.1755,
+  "card_id": "P-180",
+  "card_index": 180,
+  "card_name_eng": "Bind Red Trigger",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_180",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Three Musketeers"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When effects trash this card from digivolution cards, delete 1 of your opponent's 7000 DP or lower Digimon.\r\nWhile you have a [Three Musketeers] trait Digimon, you can ignore this card's color requirements.\r\n[Main] Trash your opponent's top security card. Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] trait Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's Digimon with the highest DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

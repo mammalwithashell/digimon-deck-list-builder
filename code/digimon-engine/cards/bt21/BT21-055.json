@@ -1,0 +1,30 @@
+{
+  "index": 2247,
+  "norm_id": 0.11235,
+  "card_id": "BT21-055",
+  "card_index": 55,
+  "card_name_eng": "Sunarizamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_055",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Reptile",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a card with the [Mineral] or [Rock] trait, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

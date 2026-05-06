@@ -1,0 +1,25 @@
+{
+  "index": 1569,
+  "norm_id": 0.07845,
+  "card_id": "BT14-091",
+  "card_index": 91,
+  "card_name_eng": "Wave of Reliability",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_091",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Trash 2 digivolution cards from your opponent's Digimon. Then, if you have a Tamer with [Joe Kido] in its name, choose 1 of your Digimon. If your opponent has no Digimon with as many or more digivolution cards as that Digimon, unsuspend it.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects. Then, add this card to your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

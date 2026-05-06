@@ -1,0 +1,37 @@
+{
+  "index": 2655,
+  "norm_id": 0.13275,
+  "card_id": "EX1-052",
+  "card_index": 52,
+  "card_name_eng": "Etemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_052",
+  "play_cost": 8,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with [Etemon] in its name in your hand, reduce the memory cost of the digivolution by 1.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Etemon] in its name, it gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

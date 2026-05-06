@@ -1,0 +1,27 @@
+{
+  "index": 2962,
+  "norm_id": 0.1481,
+  "card_id": "EX5-064",
+  "card_index": 64,
+  "card_name_eng": "Koh & Sayo",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_064",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Light Fang"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[On Play] [Main] By suspending this Tamer and placing the top card of one of your [Light Fang] or [Night Claw] trait trait Digimon as that Digimon's bottom digivolution card, 1 of your Digimon may digivolve into a Digimon card in your hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

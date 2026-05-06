@@ -1,0 +1,36 @@
+{
+  "index": 2130,
+  "norm_id": 0.1065,
+  "card_id": "BT20-040",
+  "card_index": 40,
+  "card_name_eng": "Coredramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_040",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    0
+  ],
+  "type_eng": [
+    "Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n[Your Turn] When any of your blue Digimon with [Dracomon] or [Examon] in their texts are played, this Digimon may digivolve into [Groundramon] in the hand with the digivolution cost reduced by 2.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Dracomon] in name: Cost 2"
+}

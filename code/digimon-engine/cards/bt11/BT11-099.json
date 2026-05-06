@@ -1,0 +1,25 @@
+{
+  "index": 1241,
+  "norm_id": 0.06205,
+  "card_id": "BT11-099",
+  "card_index": 99,
+  "card_name_eng": "Ice Statue",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_099",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When you would use this card, if you have a blue Tamer in play, reduce the cost by 1.\r\n[Main] Trash the top 3 digivolution cards of 1 of your opponent's Digimon. Then, return 1 of your opponent's Digimon with no digivolution cards to its owner's hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

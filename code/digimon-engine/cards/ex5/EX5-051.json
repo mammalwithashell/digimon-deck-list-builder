@@ -1,0 +1,30 @@
+{
+  "index": 2949,
+  "norm_id": 0.14745,
+  "card_id": "EX5-051",
+  "card_index": 51,
+  "card_name_eng": "Caturamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_051",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Holy Beast",
+    "Deva"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] ＜Draw 1＞ (Draw 1 card from your deck.) Then, you may play 1 [Deva] trait Digimon card without the same name as the cards in your battle area or trash from your hand to an empty space in your breeding area without paying the cost.",
+  "inherited_effect_description_eng": "[Opponent's Turn] While this Digimon has the [Four Sovereigns] or [God Beast] trait, it gains ＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

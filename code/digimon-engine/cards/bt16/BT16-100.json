@@ -1,0 +1,26 @@
+{
+  "index": 1782,
+  "norm_id": 0.0891,
+  "card_id": "BT16-100",
+  "card_index": 100,
+  "card_name_eng": "Thunderflame Crusher",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_100",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon or Tamer with [Pulsemon] in its text, you can ignore this card's color requirements.\r\nWhen this card would be used, by trashing cards from the top of your security stack, up to having 3 left, reduce the cost by 2 for each card trashed.\r\n[Main] Delete 1 of your opponent's level 5 or lower Digimon. Then, if you have 2 or fewer security cards, place this card at the bottom of your security stack.",
+  "inherited_effect_description_eng": "Security Effect [Security] 1 of your opponent's Digimon gets -15000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

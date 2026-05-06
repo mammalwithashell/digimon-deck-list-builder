@@ -1,0 +1,25 @@
+{
+  "index": 674,
+  "norm_id": 0.0337,
+  "card_id": "BT6-092",
+  "card_index": 92,
+  "card_name_eng": "Menoa Bellucci",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_092",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When you play an [Eosmon], you may suspend this Tamer to reveal the top 3 cards of your deck. Add 1 Tamer card or 1 Digimon card with [Eosmon] in its name among them to your hand. Place the remaining cards at the bottom of your deck in any order.\r\n[Opponent's Turn] While you have an [Eosmon] in play, your opponent's Tamers don't unsuspend during their unsuspend phase.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

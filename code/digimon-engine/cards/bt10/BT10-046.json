@@ -1,0 +1,35 @@
+{
+  "index": 1076,
+  "norm_id": 0.0538,
+  "card_id": "BT10-046",
+  "card_index": 46,
+  "card_name_eng": "Palmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_046",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 card with [Vegetation] or [Plant] in any of its traits, and 1 card with the [Fairy] trait among them to your hand. Place the rest at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

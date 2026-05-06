@@ -1,0 +1,35 @@
+{
+  "index": 1645,
+  "norm_id": 0.08225,
+  "card_id": "BT15-065",
+  "card_index": 65,
+  "card_name_eng": "WaruMonzaemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_065",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] By trashing 1 card with [Numemon] in its name in your hand or this Digimon's digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)\r\n[On Play] By placing 1 card with [Numemon] in its name from your trash as this Digimon's bottom digivolution card, until the end of your opponent's turn, none of their Digimon with play costs of 5 or less can attack players.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Monzaemon] or [Numemon] in its name, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Numemon] in name: Cost 3"
+}

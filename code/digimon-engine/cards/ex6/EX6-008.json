@@ -1,0 +1,36 @@
+{
+  "index": 2980,
+  "norm_id": 0.149,
+  "card_id": "EX6-008",
+  "card_index": 8,
+  "card_name_eng": "ZubaEagermon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_008",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Weapon",
+    "Legend-Arms"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Hand] [Main] By paying 1 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 4 or has the [Legend-Arms] trait, that Digimon gets +4000 DP for the turn.\r\n[Your Turn] [Once Per Turn] When an effect places a digivolution card under this Digimon, this Digimon gains ＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.) and ＜Piercing＞ for the turn. (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Legend-Arms] trait: Cost 2"
+}

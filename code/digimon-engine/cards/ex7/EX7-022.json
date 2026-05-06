@@ -1,0 +1,36 @@
+{
+  "index": 3068,
+  "norm_id": 0.1534,
+  "card_id": "EX7-022",
+  "card_index": 22,
+  "card_name_eng": "ShogunGekomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_022",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Amphibian",
+    "NSp"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] 1 of your opponent's Digimon or Tamers can't suspend until the end of their turn.\r\n[Your Turn] All of your Digimon with the [NSp] trait trait can't have their attack targets switched.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[NSp] trait: Cost 3"
+}

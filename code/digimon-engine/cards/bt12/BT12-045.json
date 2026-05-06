@@ -1,0 +1,35 @@
+{
+  "index": 1299,
+  "norm_id": 0.06495,
+  "card_id": "BT12-045",
+  "card_index": 45,
+  "card_name_eng": "EbiBurgamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_045",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Food"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal 1 card from the top of your deck. Add it to your hand if it's a green Digimon card. Place the rest at the bottom of your deck.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

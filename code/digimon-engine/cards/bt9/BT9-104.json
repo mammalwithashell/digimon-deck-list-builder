@@ -1,0 +1,27 @@
+{
+  "index": 1022,
+  "norm_id": 0.0511,
+  "card_id": "BT9-104",
+  "card_index": 104,
+  "card_name_eng": "X Digivolution!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_104",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have an [X Antibody] trait Digimon, you can ignore this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. You may digivolve 1 of your Digimon into a Digimon card with the [X Antibody] trait without its memory cost. Trash the rest. Then, place 1 card with the [X Antibody] trait from your trash under 1 of your Digimon with the [X Antibody] trait as its bottom digivolution card.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may Reveal the top 3 cards of your deck. You may add 1 card with the [X Antibody] trait among them to your hand. Trash the rest.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

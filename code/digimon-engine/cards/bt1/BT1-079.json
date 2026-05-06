@@ -1,0 +1,37 @@
+{
+  "index": 95,
+  "norm_id": 0.00475,
+  "card_id": "BT1-079",
+  "card_index": 79,
+  "card_name_eng": "Lillymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_079",
+  "play_cost": 7,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Fairy"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] Suspend 1 of your opponent's Digimon without ＜Blocker＞.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

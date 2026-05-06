@@ -1,0 +1,25 @@
+{
+  "index": 115,
+  "norm_id": 0.00575,
+  "card_id": "BT1-099",
+  "card_index": 99,
+  "card_name_eng": "Hearts Attack",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_099",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Trash all digivolution cards under 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

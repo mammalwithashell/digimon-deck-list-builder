@@ -1,0 +1,58 @@
+{
+  "index": 2135,
+  "norm_id": 0.10675,
+  "card_id": "BT20-045",
+  "card_index": 45,
+  "card_name_eng": "Examon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_045",
+  "play_cost": 9,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3,
+    0
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast DNA Digivolve ([Breakdramon] + [Slayerdramon])＞ (1 of your specified Digimon and 1 specified card in hand may DNA digivolve into this card.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)\r\n[When Digivolving] If DNA digivolving, return all of your opponent's Digimon with the highest DP to the bottom of the deck.\r\n[All Turns] [Once Per Turn] When any Digimon suspend, this Digimon may unsuspend.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-5＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 6,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Green Lv.6 + Blue Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 6,
+        "card_colors": [
+          "Green"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 6,
+        "card_colors": [
+          "Blue"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

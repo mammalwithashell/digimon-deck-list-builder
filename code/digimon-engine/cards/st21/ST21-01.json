@@ -1,0 +1,28 @@
+{
+  "index": 3883,
+  "norm_id": 0.19415,
+  "card_id": "ST21-01",
+  "card_index": 1,
+  "card_name_eng": "Tsunomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST21_01",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Lesser",
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [On Deletion] You may return 1 Digimon card with the [ADVENTURE] trait from your trash to the hand.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

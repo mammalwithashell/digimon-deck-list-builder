@@ -1,0 +1,26 @@
+{
+  "index": 2079,
+  "norm_id": 0.10395,
+  "card_id": "BT19-091",
+  "card_index": 91,
+  "card_name_eng": "Trinity Burst!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_091",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a level 5 [WarGrowlmon], [Taomon] or [Rapidmon], you can ignore this card's color requirements.\r\n[Main] Play 1 [WarGrowlmon] Token (Digimon/Red/6000 DP), 1 [Taomon] Token (Digimon/Yellow/6000 DP), and 1 [Rapidmon] Token (Digimon/Green/6000 DP). This effect can't play tokens with the same names as your Digimon. Then, 1 of your level 5 Digimon gains ＜Alliance＞ twice for the turn and attacks.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 5 [WarGrowlmon], [Taomon] or [Rapidmon] from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

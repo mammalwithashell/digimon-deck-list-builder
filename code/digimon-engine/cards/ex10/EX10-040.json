@@ -1,0 +1,35 @@
+{
+  "index": 3961,
+  "norm_id": 0.19805,
+  "card_id": "EX10-040",
+  "card_index": 40,
+  "card_name_eng": "DemiDevimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_040",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Evil"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has 10 or fewer cards in their trash, trash the top 2 cards of both players' decks. Then, if they have 10 or more cards in their trash, gain 1 memory.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Trash the top card of both players' decks.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

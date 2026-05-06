@@ -1,0 +1,36 @@
+{
+  "index": 2462,
+  "norm_id": 0.1231,
+  "card_id": "BT23-066",
+  "card_index": 66,
+  "card_name_eng": "Matadormon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_066",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Undead",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)\r\n[On Play] [When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon. Then, if digivolving from the trash, you may play 1 play cost 3 or lower card with the [Undead] or [CS] trait from your trash without paying the cost.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When any of your other Digimon would leave the battle area, by deleting this Digimon, they don't leave.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[CS] trait: Cost 3"
+}

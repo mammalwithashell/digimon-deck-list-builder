@@ -1,0 +1,35 @@
+{
+  "index": 1917,
+  "norm_id": 0.09585,
+  "card_id": "BT18-031",
+  "card_index": 31,
+  "card_name_eng": "Neemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_031",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Hybrid] or [Ten Warriors] trait and 1 yellow Tamer card with inherited effects among them to the hand. Return the rest to the bottom of the deck.\r\n[Your Turn] [Once Per Turn] When any of your Tamers with inherited effects are played, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 3449,
+  "norm_id": 0.17245,
+  "card_id": "P-119",
+  "card_index": 119,
+  "card_name_eng": "Hawkmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_119",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Avian"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 red or yellow card with 2 or more colors and 1 Tamer card with [Yolei Inoue] in its name among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

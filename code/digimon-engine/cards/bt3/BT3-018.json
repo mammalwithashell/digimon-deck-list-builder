@@ -1,0 +1,37 @@
+{
+  "index": 261,
+  "norm_id": 0.01305,
+  "card_id": "BT3-018",
+  "card_index": 18,
+  "card_name_eng": "BlitzGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_018",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n[When Digivolving] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. (Trash up to 2 cards from the top. You can't trash past level 3 cards.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

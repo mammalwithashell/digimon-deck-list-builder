@@ -1,0 +1,27 @@
+{
+  "card_id": "EX8-069",
+  "card_index": 69,
+  "card_name_eng": "Nature Spirits",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_069",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "NSp"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have no face-up security cards, you can ignore this card's color requirements.\r\n[Security] [All Turns] All of your [NSp] trait Digimon gain ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.).\r\n[Main] Add your bottom security card to the hand. Then, place this card face up as the bottom security card.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 5 or lower Digimon with the [NSp] trait from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "",
+  "index": 3189,
+  "norm_id": 0.15945
+}

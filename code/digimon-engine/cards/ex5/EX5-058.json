@@ -1,0 +1,35 @@
+{
+  "index": 2956,
+  "norm_id": 0.1478,
+  "card_id": "EX5-058",
+  "card_index": 58,
+  "card_name_eng": "Octomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_058",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Mollusk"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] If there are 4 or more total Digimon, play 1 [Fujitsumon] Token suspended to your battle area. (Digimon/Purple/3000 DP/[All Turns] This Digimon doesn't unsuspend. [On Deletion] Trash 1 card in your hand.) If there are 3 or fewer, play it suspended to your opponent's battle area.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When an effect plays an opponent's Digimon, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 2459,
+  "norm_id": 0.12295,
+  "card_id": "BT23-063",
+  "card_index": 63,
+  "card_name_eng": "Sangloupmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_063",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Dark Animal",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Attacking] This Digimon may digivolve into a Digimon card with the [Undead] or [CS] trait in the trash.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your Digimon may digivolve into a Digimon card with the [Undead] or [Dark Animal] trait in the trash.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[CS] trait: Cost 2"
+}

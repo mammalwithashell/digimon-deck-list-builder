@@ -1,0 +1,25 @@
+{
+  "index": 3370,
+  "norm_id": 0.1685,
+  "card_id": "P-040",
+  "card_index": 40,
+  "card_name_eng": "Purple Memory Boost!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_040",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal the top 4 cards of your deck. Add 1 purple Digimon card among them to the hand. Place the remaining cards at the bottom of your deck in any order. Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

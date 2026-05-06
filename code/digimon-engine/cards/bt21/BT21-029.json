@@ -1,0 +1,36 @@
+{
+  "index": 2221,
+  "norm_id": 0.11105,
+  "card_id": "BT21-029",
+  "card_index": 29,
+  "card_name_eng": "Medusamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_029",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragonkin",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n＜Progress＞ (While attacking, your opponent's effects don't affect this Digimon.)\r\n[When Digivolving] [End of Attack] [Once Per Turn] You may delete 1 of your opponent's lowest DP Digimon.\r\n[All Turns] [Once Per Turn] When any of your opponent's Digimon are deleted or their security stack is removed from, they play 1 [Petrification] Token. (Digimon/White/3000 DP/[Your Turn] This Digimon can't suspend. [On Deletion] Trash your top security card.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

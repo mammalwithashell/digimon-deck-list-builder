@@ -1,0 +1,25 @@
+{
+  "index": 466,
+  "norm_id": 0.0233,
+  "card_id": "BT4-111",
+  "card_index": 111,
+  "card_name_eng": "Jack Raid",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_111",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] For every 10 cards in your trash, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Gain 2 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

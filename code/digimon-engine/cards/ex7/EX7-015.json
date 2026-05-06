@@ -1,0 +1,36 @@
+{
+  "index": 3061,
+  "norm_id": 0.15305,
+  "card_id": "EX7-015",
+  "card_index": 15,
+  "card_name_eng": "Otamamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_015",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Amphibian",
+    "NSp"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[All Turns] Players can't reduce play costs.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[NSp] trait: Cost 0"
+}

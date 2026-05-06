@@ -1,0 +1,36 @@
+{
+  "index": 2334,
+  "norm_id": 0.1167,
+  "card_id": "BT22-040",
+  "card_index": 40,
+  "card_name_eng": "Cendrillmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_040",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Puppet",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Overclock ([Puppet] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)\r\n[On Play] [When Digivolving] You may play 1 [Familiar] Token. (Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.)\r\n[All Turns] [Once Per Turn] When any of your other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

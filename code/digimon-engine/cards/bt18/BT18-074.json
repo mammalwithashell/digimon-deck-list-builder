@@ -1,0 +1,69 @@
+{
+  "index": 1960,
+  "norm_id": 0.098,
+  "card_id": "BT18-074",
+  "card_index": 74,
+  "card_name_eng": "AncientWisemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_074",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Ancient Mutant",
+    "Ten Warriors"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] You may reveal the top 3 cards of your deck. Play 1 black card with a play cost of 7 or less among them without paying the cost. Trash the rest.\r\n[All Turns] When this Digimon would leave the battle area, you may return to the hand or play 1 level 4 or lower black Digimon card from this Digimon's digivolution cards without paying the cost .",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "DigiXros Requirements [DigiXros -2] [Mercurymon] x [Sephirothmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "Mercurymon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "Sephirothmon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 2,
+      "max_materials": 2,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "hand",
+        "field"
+      ]
+    }
+  ]
+}

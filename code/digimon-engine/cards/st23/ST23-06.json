@@ -1,0 +1,37 @@
+{
+  "index": 3915,
+  "norm_id": 0.19575,
+  "card_id": "ST23-06",
+  "card_index": 6,
+  "card_name_eng": "Gekkomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST23_06",
+  "play_cost": 0,
+  "dp": null,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Reptile",
+    "Glowing Dawn",
+    "BEATBREAK"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Moving] [On Play] Reveal the top 3 cards of your deck. Among them, add 1 [Glowing Dawn] trait card to the hand and place 1 such card face down under any of your [Glowing Dawn] trait Tamers. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon in battle, it checks security before the attack ends.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Glowing Dawn] trait: Cost 0"
+}

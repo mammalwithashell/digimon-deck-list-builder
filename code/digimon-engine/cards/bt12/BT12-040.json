@@ -1,0 +1,35 @@
+{
+  "index": 1294,
+  "norm_id": 0.0647,
+  "card_id": "BT12-040",
+  "card_index": 40,
+  "card_name_eng": "Sagomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_040",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "When you would play this card from your hand, if your opponent has a Digimon with ＜Security A.＞ in play, reduce its play cost by 3.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Until the end of your opponent's turn, 1 of your opponent's Digimon gains ＜Security A. -1＞ (This Digimon checks 1 fewer security card.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/＜Save＞ in text: Cost 3"
+}

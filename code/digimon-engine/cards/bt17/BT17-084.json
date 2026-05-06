@@ -1,0 +1,26 @@
+{
+  "index": 1868,
+  "norm_id": 0.0934,
+  "card_id": "BT17-084",
+  "card_index": 84,
+  "card_name_eng": "Davis Motomiya & Ken Ichijoji",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_084",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1,
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When one of your level 5 or higher Digimon with the [Free] trait would be deleted in battle, by suspending this Tamer, you may play 1 level 4 or lower Digimon card from that Digimon's digivolution cards without paying the cost.\r\n[End of Your Turn] 1 of your Digimon with the [Free] trait may attack an opponent's Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

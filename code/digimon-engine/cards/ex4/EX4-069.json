@@ -1,0 +1,25 @@
+{
+  "index": 2893,
+  "norm_id": 0.14465,
+  "card_id": "EX4-069",
+  "card_index": 69,
+  "card_name_eng": "Gaia Reactor",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_069",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Choose 1 of each player's Digimon with the highest play cost. Delete all other Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

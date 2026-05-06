@@ -1,0 +1,25 @@
+{
+  "index": 3904,
+  "norm_id": 0.1952,
+  "card_id": "ST22-07",
+  "card_index": 7,
+  "card_name_eng": "Rika Nonaka",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST22_07",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] [On Play] By placing 1 Option card with the [Onmyōjutsu] or [Plug-In] trait from your hand under this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.\r\n[Your Turn] When one of your Digimon with [Renamon], [Kyubimon], [Taomon] or [Sakuyamon] in its name attacks, by suspending this Tamer, you may use 1 [Onmyōjutsu] or [Plug-In] trait Option card with as high or lower a use cost as that Digimon's level from under this Tamer without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

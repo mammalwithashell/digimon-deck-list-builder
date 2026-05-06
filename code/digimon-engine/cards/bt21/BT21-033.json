@@ -1,0 +1,36 @@
+{
+  "index": 2225,
+  "norm_id": 0.11125,
+  "card_id": "BT21-033",
+  "card_index": 33,
+  "card_name_eng": "Floramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_033",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Vegetation",
+    "WG"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Avian] or [Bird] in any of its traits and 1 card with the [WG] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[WG] trait: Cost 0"
+}

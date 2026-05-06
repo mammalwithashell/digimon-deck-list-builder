@@ -1,0 +1,60 @@
+{
+  "index": 3083,
+  "norm_id": 0.15415,
+  "card_id": "EX7-037",
+  "card_index": 37,
+  "card_name_eng": "Tlalocmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_037",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3,
+    2
+  ],
+  "type_eng": [
+    "Mineral",
+    "NSp"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] You may play 1 Digimon card with the [NSp] trait and a play cost of 7 or less from your hand without paying the cost. If DNA digivolving, you may play 2 Digimon cards with different color and the [NSp] trait and a play cost of 7 or less from your hand without paying the cost instead.\r\n[When Digivolving] [When Attacking] [Once Per Turn] For each of your Digimon, 1 of your opponent's Digimon gets -7000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Green/Yellow Lv.6 + Black/Blue Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 6,
+        "card_colors": [
+          "Green",
+          "Yellow"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 6,
+        "card_colors": [
+          "Black",
+          "Blue"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

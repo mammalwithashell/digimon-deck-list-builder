@@ -1,0 +1,37 @@
+{
+  "index": 3816,
+  "norm_id": 0.1908,
+  "card_id": "ST16-08",
+  "card_index": 8,
+  "card_name_eng": "Garurumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST16_08",
+  "play_cost": 6,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Security] You may play 1 [Gabumon] or 1 Tamer card with [Matt Ishida] in its name from your hand or trash without paying the cost.\r\n[When Digivolving] ＜Draw 1＞ (Draw 1 card from your deck.) Then, trash 1 card from your hand.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] ＜Draw 1＞ (Draw 1 card from your deck.) Then, trash 1 card from your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Gabumon] in name: Cost 2"
+}

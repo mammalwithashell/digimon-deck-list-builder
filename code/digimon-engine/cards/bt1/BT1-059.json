@@ -1,0 +1,37 @@
+{
+  "index": 75,
+  "norm_id": 0.00375,
+  "card_id": "BT1-059",
+  "card_index": 59,
+  "card_name_eng": "Piximon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_059",
+  "play_cost": 6,
+  "dp": 9000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Fairy"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

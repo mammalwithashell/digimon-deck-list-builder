@@ -1,0 +1,26 @@
+{
+  "index": 1249,
+  "norm_id": 0.06245,
+  "card_id": "BT11-107",
+  "card_index": 107,
+  "card_name_eng": "Hades Force",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_107",
+  "play_cost": 7,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5,
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When you would use this card, if you have a Digimon with [X Antibody] in its digivolution cards in play, reduce the cost by 2.\r\n[Main] Choose any number of your opponent's Digimon and/or Tamers whose combined play costs are less than or equal to the play cost of 1 of your Digimon with [Greymon] in its name, and delete all of the chosen cards. Then, 1 of your Digimon with [Greymon] in its name may attack a player.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's Digimon with the highest play cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

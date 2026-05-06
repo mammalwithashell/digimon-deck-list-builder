@@ -1,0 +1,27 @@
+{
+  "index": 3555,
+  "norm_id": 0.17775,
+  "card_id": "P-225",
+  "card_index": 225,
+  "card_name_eng": "DigiLab",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_225",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have [CS] trait Digimon or Tamer, you can ignore this card's color requirements.\r\n[Main] ＜Draw 1＞ (Draw 1 card from your deck.) Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・By placing the top stacked card of any of your level 4 or higher [CS] Digimon as its bottom digivolution card, gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

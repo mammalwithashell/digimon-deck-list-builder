@@ -1,0 +1,25 @@
+{
+  "index": 1244,
+  "norm_id": 0.0622,
+  "card_id": "BT11-102",
+  "card_index": 102,
+  "card_name_eng": "High Mega Blaster",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_102",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Choose 1 of your Digimon with [Insect] in any of its traits. Suspend 2 of your opponent's Digimon with DP less than or equal to the DP of the chosen Digimon. Then, 1 of your opponent's suspended Digimon can't unsuspend during your opponent's next unsuspend phase.",
+  "inherited_effect_description_eng": "Security Effect [Security] Suspend 2 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

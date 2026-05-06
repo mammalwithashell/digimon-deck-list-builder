@@ -1,0 +1,31 @@
+{
+  "index": 2721,
+  "norm_id": 0.13605,
+  "card_id": "EX2-045",
+  "card_index": 45,
+  "card_name_eng": "Calumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_045",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Unknown"
+  ],
+  "form_eng": [
+    "Unknown"
+  ],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "When you would play this card from your hand, reduce its play cost by 2 if you have [Guilmon], [Terriermon], [Renamon] or [Impmon] in play.\r\n[Your Turn] This Digimon can't attack.\r\n[Your Turn] When one of your Digimon digivolves, you may suspend this Digimon to gain 1 memory, ＜Draw 1＞ (Draw 1 card from your deck.), and have 1 of your Digimon get +3000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

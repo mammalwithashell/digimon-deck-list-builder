@@ -1,0 +1,25 @@
+{
+  "index": 901,
+  "norm_id": 0.04505,
+  "card_id": "BT8-095",
+  "card_index": 95,
+  "card_name_eng": "Fire Rocket",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_095",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have an [Armor Form] trait Digimon, you can ignore this card's color requirements.\r\n[Main] 1 of your Digimon with 2 or more colors gains ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's Digimon with ＜Blocker＞.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

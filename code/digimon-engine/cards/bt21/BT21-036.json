@@ -1,0 +1,40 @@
+{
+  "index": 2228,
+  "norm_id": 0.1114,
+  "card_id": "BT21-036",
+  "card_index": 36,
+  "card_name_eng": "Magnamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_036",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1,
+    2
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight",
+    "Hero"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[When Digivolving] This Digimon unsuspends. Then, to 1 of your opponent's Digimon give -2000 DP for the turn for each card with the [Armor Form] trait in your trash.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Veemon]/Lv.3 w/[Hero] trait: Cost 3"
+}

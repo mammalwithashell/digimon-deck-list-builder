@@ -1,0 +1,25 @@
+{
+  "index": 2734,
+  "norm_id": 0.1367,
+  "card_id": "EX2-058",
+  "card_index": 58,
+  "card_name_eng": "Jeri Kato",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_058",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] You may play 1 [Leomon] from your hand without paying its memory cost.\r\n[Opponent's Turn] When an opponent's Digimon attacks, you may suspend this Tamer to ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

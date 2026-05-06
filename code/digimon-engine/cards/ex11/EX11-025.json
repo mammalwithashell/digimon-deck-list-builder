@@ -1,0 +1,39 @@
+{
+  "index": 3219,
+  "norm_id": 0.16095,
+  "card_id": "EX11-025",
+  "card_index": 25,
+  "card_name_eng": "FunBeemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_025",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "Insectoid",
+    "X Antibody",
+    "Royal Base",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] [Opponent's Turn] All of your [Royal Base] trait Digimon gain ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n[Start of Your Main Phase] Add your top face-down security card to the hand. Then, you may place 1 [Royal Base] trait Digimon card from your hand face up as the bottom security card.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Royal Base] trait: Cost 0"
+}

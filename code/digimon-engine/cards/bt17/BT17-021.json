@@ -1,0 +1,37 @@
+{
+  "index": 1805,
+  "norm_id": 0.09025,
+  "card_id": "BT17-021",
+  "card_index": 21,
+  "card_name_eng": "Labramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_021",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] By placing 1 [Seasarmon] or 1 level 3 blue Digimon card from your hand as this Digimon's bottom digivolution card, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has ＜Jamming＞, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

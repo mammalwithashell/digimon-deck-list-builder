@@ -1,0 +1,63 @@
+{
+  "index": 2998,
+  "norm_id": 0.1499,
+  "card_id": "EX6-026",
+  "card_index": 26,
+  "card_name_eng": "Cho-Hakkaimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_026",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Attacking] [Once Per Turn] 1 Digimon may gain ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until the end of your opponent's turn. Then, if DigiXrosing, this Digimon gets +3000 DP and ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's turn.\r\n[All Turns] When this Digimon would leave the battle area, return 1 yellow Digimon card from this Digimon's digivolution cards to the hand.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 Digimon may gain ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until the end of your opponent's turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "DigiXros Requirements [DigiXros -2] [Sanzomon] or [Gokuumon] or [Sagomon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "Sanzomon",
+          "trait_match": "",
+          "trait_alternatives": [
+            "Gokuumon",
+            "Sagomon"
+          ],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 2,
+      "max_materials": 1,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "hand",
+        "field"
+      ]
+    }
+  ]
+}

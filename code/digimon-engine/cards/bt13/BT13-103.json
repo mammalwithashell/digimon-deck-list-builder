@@ -1,0 +1,25 @@
+{
+  "index": 1469,
+  "norm_id": 0.07345,
+  "card_id": "BT13-103",
+  "card_index": 103,
+  "card_name_eng": "Akihiro Kurata",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_103",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When you would play a card with [Belphemon] in its name, by deleting 1 of your Digimon with [Gizmon] in its name, reduce the play cost by the play cost of the deleted Digimon.\r\n[End of Opponent's Turn] [Once Per Turn] ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand. Then, by placing this Tamer under 1 of your Digimon with [Belphemon] in its name as its bottom digivolution card, delete 1 of your opponent's level 6 Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

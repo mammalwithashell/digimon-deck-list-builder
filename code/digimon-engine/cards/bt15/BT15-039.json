@@ -1,0 +1,35 @@
+{
+  "index": 1619,
+  "norm_id": 0.08095,
+  "card_id": "BT15-039",
+  "card_index": 39,
+  "card_name_eng": "Bombermon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_039",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Until the end of your opponent's turn, 1 of their Digimon gets -3000 DP and gains \"[On Deletion] Lose 1 memory.\"\r\n[All Turns] This Digimon gains all of the effects of cards with [Gammamon] in their names in this Digimon's digivolution cards.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gains all of the effects of cards with [Gammamon] in their names in this Digimon's digivolution cards.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Gammamon] in name: Cost 3"
+}

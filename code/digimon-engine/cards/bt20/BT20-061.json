@@ -1,0 +1,37 @@
+{
+  "index": 2151,
+  "norm_id": 0.10755,
+  "card_id": "BT20-061",
+  "card_index": 61,
+  "card_name_eng": "Impmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_061",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Evil",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Evil], [Dark Dragon] or [Evil Dragon] trait and 1 [Yuuki] among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Yaamon]: Cost 0"
+}

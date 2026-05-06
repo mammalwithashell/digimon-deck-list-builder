@@ -1,0 +1,29 @@
+{
+  "index": 2280,
+  "norm_id": 0.114,
+  "card_id": "BT21-088",
+  "card_index": 88,
+  "card_name_eng": "Tagiru Akashi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_088",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Hunter",
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 Digimon card with ＜Save＞ in its text or the [Hero] trait from your hand under this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.\r\n[Your Turn] When any of your Digimon would digivolve into a Digimon card with ＜Save＞ in its text or the [Hero] trait, by suspending this Tamer and placing 1 card from under your Tamers as any of their bottom digivolution card, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

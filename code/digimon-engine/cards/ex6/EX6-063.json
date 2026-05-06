@@ -1,0 +1,25 @@
+{
+  "index": 3035,
+  "norm_id": 0.15175,
+  "card_id": "EX6-063",
+  "card_index": 63,
+  "card_name_eng": "T.K. Takaishi & Kari Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_063",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] [On Play] 1 of your yellow Digimon gains ＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.) until the end of your opponent's turn.\r\n[Your Turn] When one of your Digimon is played or digivolves, if it has the [Angel], [Archangel] or [Three Great Angels] trait, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

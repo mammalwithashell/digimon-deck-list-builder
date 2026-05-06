@@ -1,0 +1,35 @@
+{
+  "index": 1207,
+  "norm_id": 0.06035,
+  "card_id": "BT11-065",
+  "card_index": 65,
+  "card_name_eng": "Snatchmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_065",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Unknown"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[When Digivolving] You may place up to 2 [Vemmon] from your trash under this Digimon as its bottom digivolution cards. Then, if there are 4 or more [Vemmon] in this Digimon's digivolution cards, return 1 [Fusionize] from your trash to your hand.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When [Vemmon] is placed from this Digimon's digivolution cards at the bottom of its owner's deck, unsuspend this Digimon, and it gains ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

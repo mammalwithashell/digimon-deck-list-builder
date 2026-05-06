@@ -1,0 +1,25 @@
+{
+  "index": 906,
+  "norm_id": 0.0453,
+  "card_id": "BT8-100",
+  "card_index": 100,
+  "card_name_eng": "Disaster Blaster",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_100",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your opponent's Digimon gets -3000 DP for the turn. If you have a Digimon in play with 2 or more colors, or with 2 or more colors in its digivolution cards, 1 of your opponent's Digimon gets -6000 DP instead.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

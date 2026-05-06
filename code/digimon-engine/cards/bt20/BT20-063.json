@@ -1,0 +1,36 @@
+{
+  "index": 2153,
+  "norm_id": 0.10765,
+  "card_id": "BT20-063",
+  "card_index": 63,
+  "card_name_eng": "Ghostmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_063",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Ghost",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Ghost] trait and 1 card with the [LIBERATOR] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[On Deletion] Gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

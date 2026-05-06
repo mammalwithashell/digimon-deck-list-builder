@@ -1,0 +1,29 @@
+{
+  "index": 2603,
+  "norm_id": 0.13015,
+  "card_id": "BT25-097",
+  "card_index": 97,
+  "card_name_eng": "Guardian Palace",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT25_097",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    2,
+    6
+  ],
+  "type_eng": [
+    "Iliad",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have no face-up security cards, you can ignore this card's color requirements.\r\n[Security] [All Turns] All of your yellow or purple [TS] trait Digimon gain ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.) While you have a Digimon with [Junomon] in its name, they also gain ＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)\r\n[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 yellow or purple [TS] trait Digimon card from your hand with the play cost reduced by 3.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 4 or lower yellow or purple [TS] trait Digimon card from your hand or trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

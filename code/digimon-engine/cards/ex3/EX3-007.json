@@ -1,0 +1,35 @@
+{
+  "index": 2757,
+  "norm_id": 0.13785,
+  "card_id": "EX3-007",
+  "card_index": 7,
+  "card_name_eng": "Lavorvomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_007",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Rock Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 Digimon card with the [Rock Dragon], [Earth Dragon], [Bird Dragon], [Machine Dragon] or [Sky Dragon] trait, and 1 [Hina Kurihara] among them to your hand. Place the rest at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[When Attacking] While this Digimon has an [On Play] effect, delete 1 of your opponent's Digimon with 3000 DP or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,29 @@
+{
+  "index": 3760,
+  "norm_id": 0.188,
+  "card_id": "ST12-12",
+  "card_index": 12,
+  "card_name_eng": "Sistermon Blanc",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST12_12",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] By trashing 1 card in your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)\r\n[All Turns] While you have a Digimon in play with [Huckmon] in its name or [Royal Knight] trait, this Digimon gains ＜Decoy (Red/Black)＞ (When your other Red or Black Digimon would be deleted by an opponent's effect, you may delete this Digimon to prevent 1 of those Digimon's deletion.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 3974,
+  "norm_id": 0.1987,
+  "card_id": "EX10-053",
+  "card_index": 53,
+  "card_name_eng": "Regulusmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_053",
+  "play_cost": 10,
+  "dp": 10000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Evil Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it comes into play.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] You may place up to 5 differently named Digimon cards with [Gammamon] in their names from your trash as this Digimon's bottom digivolution cards. Then, delete 1 of your opponent's Digimon with as much or less DP as this Digimon.\r\n[End of Your Turn] [Once Per Turn] If this Digimon has 5 or more digivolution cards, it may attack without suspending.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your opponent's Digimon are deleted, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Gammamon] in name: Cost 5"
+}

@@ -1,0 +1,37 @@
+{
+  "index": 1996,
+  "norm_id": 0.0998,
+  "card_id": "BT19-008",
+  "card_index": 8,
+  "card_name_eng": "Shoutmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_008",
+  "play_cost": 4,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Mini Dragon",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] This Digimon may digivolve into [OmniShoutmon] under your Tamers without paying the cost.\r\n[On Deletion] Reveal the top 3 cards of your deck. Play 1 Tamer card with the [Xros Heart] trait among them without paying the cost. Return the rest to the bottom of the deck. Then, ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Rush＞ (This Digimon can attack the turn it comes into play.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Xros Heart] trait: Cost 0"
+}

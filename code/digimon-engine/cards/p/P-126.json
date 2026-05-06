@@ -1,0 +1,25 @@
+{
+  "index": 3456,
+  "norm_id": 0.1728,
+  "card_id": "P-126",
+  "card_index": 126,
+  "card_name_eng": "Yolei Inoue",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_126",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a Digimon with the [Free] trait, gain 1 memory.\r\n[On Play] Activate 1 of the following effects:\r\n・You may play 1 [Hawkmon] from your hand without paying the cost.\r\n・1 of your Digimon may digivolve into [Aquilamon] in the hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,29 @@
+{
+  "index": 2471,
+  "norm_id": 0.12355,
+  "card_id": "BT23-075",
+  "card_index": 75,
+  "card_name_eng": "Eater EDEN",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_075",
+  "play_cost": 10,
+  "dp": 12000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [
+    "Eater"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] [When Digivolving] Return 1 of your opponent's play cost 6 or lower Digimon or Tamers to the bottom of the deck. For each of your [Mother Eater]'s digivolution cards in the breeding area, add 1 to this effect's play cost maximum.\r\n[All Turns] When this Digimon would leave the battle area other than by your effects, you may play 1 [Eater] trait Digimon card from your hand without paying the cost.\r\n[End of Opponent's Turn] [Once Per Turn] Delete 1 of your opponent's lowest play cost Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] [Eater Legion]: Cost 3"
+}

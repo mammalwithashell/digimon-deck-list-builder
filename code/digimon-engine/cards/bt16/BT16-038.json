@@ -1,0 +1,36 @@
+{
+  "index": 1720,
+  "norm_id": 0.086,
+  "card_id": "BT16-038",
+  "card_index": 38,
+  "card_name_eng": "Terriermon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_038",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beast",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a card with [Gargomon] or [Rapidmon] in its name, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Gargomon] or [Rapidmon] in its name, it gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Gummymon]/[Terriermon]: Cost 0"
+}

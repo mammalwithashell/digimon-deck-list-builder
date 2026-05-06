@@ -1,0 +1,35 @@
+{
+  "index": 3473,
+  "norm_id": 0.17365,
+  "card_id": "P-143",
+  "card_index": 143,
+  "card_name_eng": "Drimogemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_143",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[End of Your Turn] [Once Per Turn] This Digimon may move to the empty space in your breeding area.",
+  "inherited_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,31 @@
+{
+  "index": 2191,
+  "norm_id": 0.10955,
+  "card_id": "BT20-101",
+  "card_index": 101,
+  "card_name_eng": "Zephagamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_101",
+  "play_cost": 8,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 4,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Magic Knight",
+    "Vortex Warriors",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n＜Vortex＞ (At the end of your turn, this Digimon may attack an opponent's Digimon. With this effect, it can attack the turn it was played.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[All Turns] [Once Per Turn] When any Digimon suspend, this Digimon may unsuspend.\r\n[On Play] [When Digivolving] You may suspend 1 Digimon. Then, for every 2 suspended Digimon, you may return 1 of your opponent's suspended Digimon to the bottom of the deck.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] Play cost 10 or higher Lv.6 w/[Vortex Warriors] trait: Cost 1"
+}

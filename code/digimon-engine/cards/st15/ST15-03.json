@@ -1,0 +1,37 @@
+{
+  "index": 3795,
+  "norm_id": 0.18975,
+  "card_id": "ST15-03",
+  "card_index": 3,
+  "card_name_eng": "ClearAgumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST15_03",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "Inherited Effect ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

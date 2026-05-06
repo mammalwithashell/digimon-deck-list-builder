@@ -1,0 +1,35 @@
+{
+  "index": 2627,
+  "norm_id": 0.13135,
+  "card_id": "EX1-024",
+  "card_index": 24,
+  "card_name_eng": "Patamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_024",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 Digimon card with the [Angel], [Archangel] or [Three Great Angels] trait among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

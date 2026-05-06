@@ -1,0 +1,25 @@
+{
+  "index": 1254,
+  "norm_id": 0.0627,
+  "card_id": "BT11-112",
+  "card_index": 112,
+  "card_name_eng": "Rina Shinomiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_112",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Until the end of your opponent's turn, 1 of your Digimon with [Veemon] or [Veedramon] in its name gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.).\r\n[All Turns] When one of your Digimon with [Veedramon] in its name becomes suspended, by suspending this Tamer, activate 1 of that Digimon's [When Digivolving] effects.\r\n[Your Turn] [Once Per Turn] When one of your blue Digimon becomes unsuspended, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

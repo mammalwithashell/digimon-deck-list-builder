@@ -1,0 +1,35 @@
+{
+  "index": 1763,
+  "norm_id": 0.08815,
+  "card_id": "BT16-081",
+  "card_index": 81,
+  "card_name_eng": "MaloMyotismon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_081",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon Lord"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] [When Attacking] By deleting 1 of your Digimon or Tamers, delete 1 of your opponent's unsuspended Digimon. If this effect didn't delete an opponent's Digimon, delete 1 of their Tamers.\r\n[All Turns] [Once Per Turn] When an effect deletes one of your other Digimon or Tamers, trash the top card of your opponent's security stack.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": ""
+}

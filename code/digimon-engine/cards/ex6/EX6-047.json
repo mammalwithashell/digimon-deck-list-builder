@@ -1,0 +1,35 @@
+{
+  "index": 3019,
+  "norm_id": 0.15095,
+  "card_id": "EX6-047",
+  "card_index": 47,
+  "card_name_eng": "Boogiemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_047",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Fallen Angel] or [Demon Lord] trait and 1 purple Option card among them to the hand. Return the rest to the bottom of the deck. If you added cards, trash 1 card in your hand.",
+  "inherited_effect_description_eng": "[All Turns] While your opponent has 6 or fewer cards in their hand, this Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

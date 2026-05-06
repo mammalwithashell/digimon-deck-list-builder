@@ -1,0 +1,30 @@
+{
+  "index": 2472,
+  "norm_id": 0.1236,
+  "card_id": "BT23-076",
+  "card_index": 76,
+  "card_name_eng": "Sistermon Blanc",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_076",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Puppet",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Add your top security card to the hand. Then, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.).\r\n[Your Turn] When this Digimon suspends, 1 of your other Digimon may digivolve into a Digimon card with [Huckmon] in its name or the [Royal Knight] or [CS] trait in the hand or trash with the digivolution cost reduced by 1.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

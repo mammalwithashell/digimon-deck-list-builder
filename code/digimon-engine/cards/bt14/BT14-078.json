@@ -1,0 +1,39 @@
+{
+  "index": 1556,
+  "norm_id": 0.0778,
+  "card_id": "BT14-078",
+  "card_index": 78,
+  "card_name_eng": "Helloogarmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_078",
+  "play_cost": 7,
+  "dp": 9000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Dark Animal",
+    "X Antibody",
+    "SoC"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[End of Your Turn] Delete this Digimon and ＜Draw 2＞ (Draw 2 cards from your deck.) Then, you may return 1 [Loogamon] from your trash to your hand. [On Deletion] You may trash up to 3 [Dark Animal] or [SoC] trait cards from your hand. Then, delete 1 of your opponent's level 3 or lower Digimon. For each card you trashed with this effect, increase this level by 1.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 120,
+  "norm_id": 0.006,
+  "card_id": "BT1-104",
+  "card_index": 104,
+  "card_name_eng": "Golden Ripper",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_104",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] All of your Digimon gain the following effect for the turn: \"[When Attacking] 1 of your opponent's Digimon gets -2000 DP for the turn.\"",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

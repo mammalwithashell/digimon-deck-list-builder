@@ -1,0 +1,97 @@
+{
+  "index": 1043,
+  "norm_id": 0.05215,
+  "card_id": "BT10-013",
+  "card_index": 13,
+  "card_name_eng": "Shoutmon X5",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_013",
+  "play_cost": 10,
+  "dp": 10000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "Composite",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Material Save 3＞ (When this Digimon would be deleted, you may place 3 cards in this Digimon's DigiXros requirements from this Digimon's digivolution cards under 1 of your Tamers.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "DigiXros Requirements [DigiXros -2] [Shoutmon] x [Ballistamon] x [Dorulumon] x [Starmons] x [Sparrowmon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "Shoutmon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "Ballistamon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "Dorulumon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "Starmons",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "Sparrowmon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 2,
+      "max_materials": 5,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "hand",
+        "field"
+      ]
+    }
+  ]
+}

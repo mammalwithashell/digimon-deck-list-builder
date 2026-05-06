@@ -1,0 +1,27 @@
+{
+  "index": 2182,
+  "norm_id": 0.1091,
+  "card_id": "BT20-092",
+  "card_index": 92,
+  "card_name_eng": "Battle NPC",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_092",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[On Play] By placing 1 level 3 Digimon card from your hand under this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Start of Your Main Phase] If you don't have a Digimon, by playing 1 play cost 3 or lower Digimon card from under this Tamer without paying the cost, delete this Tamer.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

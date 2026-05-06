@@ -1,0 +1,37 @@
+{
+  "index": 1588,
+  "norm_id": 0.0794,
+  "card_id": "BT15-008",
+  "card_index": 8,
+  "card_name_eng": "Muchomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_008",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Avian"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When one of your red Digimon attacks a player, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

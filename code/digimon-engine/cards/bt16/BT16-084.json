@@ -1,0 +1,26 @@
+{
+  "index": 1766,
+  "norm_id": 0.0883,
+  "card_id": "BT16-084",
+  "card_index": 84,
+  "card_name_eng": "Yolei Inoue & Kari Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_084",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] You may play 1 [Hawkmon] or [Salamon] from your hand without paying the cost. At the next end of your opponent's turn, return it to the hand.\r\n[Your Turn] When one of your Digimon digivolves into a red or yellow Digimon, by suspending this Tamer, gain 1 memory. If DNA digivolving, 1 of your opponent's Digimon gets -3000 DP for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

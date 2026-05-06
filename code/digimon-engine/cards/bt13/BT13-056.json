@@ -1,0 +1,36 @@
+{
+  "index": 1422,
+  "norm_id": 0.0711,
+  "card_id": "BT13-056",
+  "card_index": 56,
+  "card_name_eng": "Leopardmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_056",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] [Main] [Once Per Turn] You may play 1 Digimon card with the [Royal Knight] trait or 1 green Digimon card from your hand for its play cost. When played by this effect, reduce the play cost by 4.\r\n[All Turns] When you play another Digimon, all of your Digimon with the [Royal Knight] trait and all your green Digimon gain ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

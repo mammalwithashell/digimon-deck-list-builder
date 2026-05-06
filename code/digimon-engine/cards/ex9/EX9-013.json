@@ -1,0 +1,38 @@
+{
+  "index": 4017,
+  "norm_id": 0.20085,
+  "card_id": "EX9-013",
+  "card_index": 13,
+  "card_name_eng": "BlitzGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_013",
+  "play_cost": 7,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "DM",
+    "Ver.1"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 3＞ 1 of your opponent's Digimon. (Trash up to 3 cards from the top. You can't trash past level 3 cards.)\r\n[End of Your Turn] 2 of your Digimon may DNA digivolve into [Omnimon Alter-S] in the hand. Then, 1 of your Digimon may attack.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Greymon] in name or w/[DM] trait: Cost 3"
+}

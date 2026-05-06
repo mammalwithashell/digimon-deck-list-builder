@@ -1,0 +1,37 @@
+{
+  "index": 3592,
+  "norm_id": 0.1796,
+  "card_id": "RB1-030",
+  "card_index": 30,
+  "card_name_eng": "Regulusmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "RB1_030",
+  "play_cost": 9,
+  "dp": 9000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Evil Dragon"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] [When Attacking] [Once Per Turn] By trashing 1 card with [Gammamon] in its text in your hand, 1 of your Digimon gains ”[On Deletion] Delete 1 of your opponent's Digimon with the lowest level” until the end of your opponent's next turn.\r\n[All Turns] This Digimon gains all effects of cards with [Gammamon] in their names in this Digimon's digivolution cards.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gains all effects of cards with [Gammamon] in their names in this Digimon's digivolution cards.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Gammamon] in name: Cost 3"
+}

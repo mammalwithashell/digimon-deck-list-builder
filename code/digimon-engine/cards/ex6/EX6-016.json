@@ -1,0 +1,35 @@
+{
+  "index": 2988,
+  "norm_id": 0.1494,
+  "card_id": "EX6-016",
+  "card_index": 16,
+  "card_name_eng": "Salamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_016",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a purple Digimon or Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

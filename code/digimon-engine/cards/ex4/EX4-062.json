@@ -1,0 +1,29 @@
+{
+  "index": 2886,
+  "norm_id": 0.1443,
+  "card_id": "EX4-062",
+  "card_index": 62,
+  "card_name_eng": "Kiriha Aonuma & Nene Amano",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_062",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1,
+    5
+  ],
+  "type_eng": [
+    "Blue Flare",
+    "Twilight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If there are 2 or more Digimon in play, gain 1 memory.\r\n[All Turns] When you would play 1 Digimon card with the [Blue Flare] trait or [Twilight] trait with DigiXros requirements, by suspending this Tamer, you may place 1 card from under your Tamers and 1 card from your trash as digivolution cards for a DigiXros.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

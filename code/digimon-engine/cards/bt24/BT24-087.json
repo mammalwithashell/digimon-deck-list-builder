@@ -1,0 +1,28 @@
+{
+  "index": 2585,
+  "norm_id": 0.12925,
+  "card_id": "BT24-087",
+  "card_index": 87,
+  "card_name_eng": "Rei Katsura",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_087",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "App Driver",
+    "Appmon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Your Turn] When any of your Digimon get linked, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand. Then, 1 of your Digimon may app fuse into a Digimon card with the [System], [Life] or [Transmutation (App Name)] trait in the trash.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

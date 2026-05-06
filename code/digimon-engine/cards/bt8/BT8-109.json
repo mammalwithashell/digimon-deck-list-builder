@@ -1,0 +1,26 @@
+{
+  "index": 915,
+  "norm_id": 0.04575,
+  "card_id": "BT8-109",
+  "card_index": 109,
+  "card_name_eng": "Flame Hellscythe",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_109",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, you may play 1 purple or yellow Digimon card with 6000 DP or less from your trash without paying its memory cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effect.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

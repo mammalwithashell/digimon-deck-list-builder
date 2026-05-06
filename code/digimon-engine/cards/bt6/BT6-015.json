@@ -1,0 +1,37 @@
+{
+  "index": 597,
+  "norm_id": 0.02985,
+  "card_id": "BT6-015",
+  "card_index": 15,
+  "card_name_eng": "SaviorHuckmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_015",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragonkin"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] You may play a Digimon card with [Sistermon] in its name from your hand without paying its memory cost.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If you have a Digimon card with [Sistermon] in its name in play, unsuspend this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

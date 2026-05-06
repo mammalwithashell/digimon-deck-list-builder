@@ -1,0 +1,53 @@
+{
+  "index": 2971,
+  "norm_id": 0.14855,
+  "card_id": "EX5-073",
+  "card_index": 73,
+  "card_name_eng": "GraceNovamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_073",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 4,
+  "card_colors": [
+    0,
+    1
+  ],
+  "type_eng": [
+    "Galaxy"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] If DNA digivolving, trash any 8 digivolution cards from your opponent's Digimon. Then, delete 1 of their Digimon with as many or fewer digivolution cards as this Digimon.\r\n[All Turns] When this Digimon would leave the battle area by an opponent's effect, by trashing 2 same-level cards in this Digimon's digivolution cards, prevent it from leaving.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[DNA Digivolve] [Apollomon] + [Dianamon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 0,
+        "card_colors": [],
+        "name_contains": "Apollomon",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 0,
+        "card_colors": [],
+        "name_contains": "Dianamon",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

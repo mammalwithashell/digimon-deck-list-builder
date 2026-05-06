@@ -1,0 +1,36 @@
+{
+  "index": 1832,
+  "norm_id": 0.0916,
+  "card_id": "BT17-048",
+  "card_index": 48,
+  "card_name_eng": "Argomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_048",
+  "play_cost": 8,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    6
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "When digivolving into this card, by suspending up to 5 Tamers, for each Tamer suspended by this effect, reduce the digivolution cost by 1.\r\n[Opponent's Turn] None of your opponent's Tamers can unsuspend.\r\n[On Deletion] If you have 4 or more [Argomon] in your trash, you may play 1 level 6 [Argomon] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] By suspending 1 of your [Rhythm], unsuspend this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 [Argomon]: Cost 4"
+}

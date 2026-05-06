@@ -1,0 +1,27 @@
+{
+  "index": 1476,
+  "norm_id": 0.0738,
+  "card_id": "BT13-110",
+  "card_index": 110,
+  "card_name_eng": "Royal Knights of the Purge",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_110",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜Draw 1＞ (Draw 1 card from your deck.) You may place 1 Digimon card from your hand under 1 of your [King Drasil_7D6] in the breeding area as its bottom digivolution card. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・ Play 1 card with the [Royal Knight] trait from the digivolution cards of your Digimon in the breeding area without paying its cost. Any [On Play] effects on Digimon played with this effect don't activate, and they gain ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "card_id": "EX8-015",
+  "card_index": 15,
+  "card_name_eng": "WarGrowlmon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_015",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    6
+  ],
+  "type_eng": [
+    "Cyborg",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] Until the end of your opponent's turn, this Digimon can't be returned to the hand or deck and it gets +3000 DP. Then, if [WarGrowlmon] or [X Antibody] is in this Digimon's digivolution cards, delete 1 of your opponent's Digimon with 10000 DP or less.",
+  "inherited_effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [WarGrowlmon]: Cost 1",
+  "index": 3135,
+  "norm_id": 0.15675
+}

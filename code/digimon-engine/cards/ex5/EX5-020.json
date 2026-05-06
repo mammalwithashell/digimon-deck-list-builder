@@ -1,0 +1,36 @@
+{
+  "index": 2918,
+  "norm_id": 0.1459,
+  "card_id": "EX5-020",
+  "card_index": 20,
+  "card_name_eng": "Crescemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_020",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Wizard",
+    "Night Claw"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "When this card would be played or digivolved into, if you have a Digimon with 3 or more digivolution cards and the [Night Claw], [Light Fang] or [Galaxy] trait, reduce the play or digivolution cost by 2.\r\n[On Play] [When Digivolving] Until the end of your opponent's turn, 1 of their Digimon can't suspend.",
+  "inherited_effect_description_eng": "[Opponent's Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Night Claw]/[Light Fang] trait: Cost 3"
+}

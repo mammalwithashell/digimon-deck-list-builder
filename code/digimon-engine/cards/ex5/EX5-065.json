@@ -1,0 +1,27 @@
+{
+  "index": 2963,
+  "norm_id": 0.14815,
+  "card_id": "EX5-065",
+  "card_index": 65,
+  "card_name_eng": "Sayo & Koh",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_065",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Night Claw"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When an effect places the top card of one of your Digimon in a Digimon's digivolution cards, by suspending this Tamer, gain 1 memory.\r\n[Start of Opponent's Turn] By playing 1 card with the same level as one of your [Night Claw] or [Light Fang] trait Digimon from that Digimon's digivolution cards without paying the cost, 2 of your Digimon may DNA digivolve into a Digimon card in your hand. At the end of the turn, return the Digimon played by this effect to the hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

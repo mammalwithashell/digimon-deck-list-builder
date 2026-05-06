@@ -1,0 +1,35 @@
+{
+  "index": 2098,
+  "norm_id": 0.1049,
+  "card_id": "BT20-008",
+  "card_index": 8,
+  "card_name_eng": "Huckmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_008",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Mini Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] By trashing 1 card with [Huckmon] or [Sistermon] in its name or the [Royal Knight] trait in your hand, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.",
+  "inherited_effect_description_eng": "[Your Turn] All of your Digimon get +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

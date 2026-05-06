@@ -1,0 +1,35 @@
+{
+  "index": 2659,
+  "norm_id": 0.13295,
+  "card_id": "EX1-056",
+  "card_index": 56,
+  "card_name_eng": "DemiDevimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_056",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Evil"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)\r\n[Your Turn] While you don't have a Digimon with [Myotismon] in its name in play, this Digimon can't attack your opponent's Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

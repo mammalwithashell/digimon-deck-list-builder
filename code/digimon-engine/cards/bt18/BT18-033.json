@@ -1,0 +1,35 @@
+{
+  "index": 1919,
+  "norm_id": 0.09595,
+  "card_id": "BT18-033",
+  "card_index": 33,
+  "card_name_eng": "Patamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_033",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Hand] [Main] If your breeding area is empty, by returning 1 Digimon card with the [Three Great Angels] trait from your trash to the bottom of the deck, play this card in your breeding area without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

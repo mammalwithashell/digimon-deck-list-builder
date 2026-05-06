@@ -1,0 +1,37 @@
+{
+  "index": 3009,
+  "norm_id": 0.15045,
+  "card_id": "EX6-037",
+  "card_index": 37,
+  "card_name_eng": "Spadamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_037",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5,
+    0
+  ],
+  "type_eng": [
+    "Weapon",
+    "Legend-Arms"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[Hand] [Main] By paying 1 cost and placing this card as the bottom digivolution card of 1 of your Digimon that's level 3 or has the [Legend-Arms] trait, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[On Play] By trashing 1 card with the [Legend-Arms] trait in your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with 3000 DP or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Sakuttomon]/[Kakkinmon]: Cost 0"
+}

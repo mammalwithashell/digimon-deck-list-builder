@@ -1,0 +1,35 @@
+{
+  "index": 3752,
+  "norm_id": 0.1876,
+  "card_id": "ST12-04",
+  "card_index": 4,
+  "card_name_eng": "Huckmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST12_04",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Mini Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When you play a Digimon with [Sistermon] in its name, gain 1 memory.",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon has [Huckmon] in its name or [Royal Knight] trait, it gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

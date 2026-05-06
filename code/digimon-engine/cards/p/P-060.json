@@ -1,0 +1,35 @@
+{
+  "index": 3390,
+  "norm_id": 0.1695,
+  "card_id": "P-060",
+  "card_index": 60,
+  "card_name_eng": "Angoramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_060",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] If you have a [Ruli Tsukiyono] in play, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

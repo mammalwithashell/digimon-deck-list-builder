@@ -1,0 +1,35 @@
+{
+  "index": 3017,
+  "norm_id": 0.15085,
+  "card_id": "EX6-045",
+  "card_index": 45,
+  "card_name_eng": "Tsukaimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_045",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Deletion] Delete 1 of your opponent's level 3 Digimon.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, by deleting 1 of your other Digimon, end the attack.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

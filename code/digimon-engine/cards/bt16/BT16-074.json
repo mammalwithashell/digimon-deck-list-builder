@@ -1,0 +1,35 @@
+{
+  "index": 1756,
+  "norm_id": 0.0878,
+  "card_id": "BT16-074",
+  "card_index": 74,
+  "card_name_eng": "Climbmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_074",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Insectoid"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] If you have 3 or more security cards, ＜Draw 2＞ (Draw 2 cards from your deck.) and trash 1 card in your hand. If you have 3 or fewer, you may play 1 Digimon card with [Pulsemon] in its text and 6000 DP or less from your trash without paying the cost. At the next end of your opponent's turn, delete it.",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] If this Digimon has [Pulsemon] in its text, by trashing the top card of your security stack, unsuspend this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Pulsemon] in text: Cost 3"
+}

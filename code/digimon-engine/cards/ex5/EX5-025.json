@@ -1,0 +1,37 @@
+{
+  "index": 2923,
+  "norm_id": 0.14615,
+  "card_id": "EX5-025",
+  "card_index": 25,
+  "card_name_eng": "Dianamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_025",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Shaman",
+    "Olympos XII",
+    "Night Claw"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] For each of this Digimon's digivolution cards, trash any 1 digivolution card from 1 of your opponent's Digimon. Then, until the end of your opponent's turn, all of their Digimon with no digivolution cards can't suspend.\r\n[All Turns] [Once Per Turn] When an opponent's Digimon's digivolution card is trashed, unsuspend this Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Night Claw]/[Light Fang] trait: Cost 4"
+}

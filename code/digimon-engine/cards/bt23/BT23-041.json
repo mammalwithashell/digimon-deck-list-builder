@@ -1,0 +1,38 @@
+{
+  "index": 2437,
+  "norm_id": 0.12185,
+  "card_id": "BT23-041",
+  "card_index": 41,
+  "card_name_eng": "Kabuterimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_041",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3,
+    2
+  ],
+  "type_eng": [
+    "Insectoid",
+    "Hudie",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n[All Turns] [Once Per Turn] When this Digimon suspends, 1 of your Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and +3000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[CS] trait: Cost 2"
+}

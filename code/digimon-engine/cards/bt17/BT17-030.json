@@ -1,0 +1,37 @@
+{
+  "index": 1814,
+  "norm_id": 0.0907,
+  "card_id": "BT17-030",
+  "card_index": 30,
+  "card_name_eng": "Pulsemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_030",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [
+    "Beastkin",
+    "Abadin Electronics"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 [Leon Alexander] from your hand as this Digimon's bottom digivolution card, if you have 3 or more security cards, gain 1 memory. If you have 2 or fewer security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon has [Pulsemon] in its text, it gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Bibimon]: Cost 0"
+}

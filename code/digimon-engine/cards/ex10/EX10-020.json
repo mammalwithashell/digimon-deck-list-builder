@@ -1,0 +1,30 @@
+{
+  "index": 3941,
+  "norm_id": 0.19705,
+  "card_id": "EX10-020",
+  "card_index": 20,
+  "card_name_eng": "Puppetmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_020",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Puppet",
+    "Dark Masters"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Hand] [Main] If you don't have any Digimon other than Digimon with [Dark Masters] in their texts, you may play this card with the play cost reduced by 5. At turn end, delete the Digimon this effect played.\r\n[On Play] [When Attacking] Return 1 of your opponent's suspended Digimon to the bottom of the deck.\r\n[All Turns] This Digimon can only digivolve into [Apocalymon].\r\n[On Deletion] If you have no green face-up security cards, place this Digimon face up as the bottom security card.",
+  "inherited_effect_description_eng": "Security Effect [Security] If this card was face-up, you may play 1 level 5 or lower card with [Dark Masters] in its text from your hand or trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

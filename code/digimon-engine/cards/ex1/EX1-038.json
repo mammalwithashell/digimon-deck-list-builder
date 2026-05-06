@@ -1,0 +1,35 @@
+{
+  "index": 2641,
+  "norm_id": 0.13205,
+  "card_id": "EX1-038",
+  "card_index": 38,
+  "card_name_eng": "Stingmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_038",
+  "play_cost": 6,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Imperialdramon] in its name or [Free] trait, it gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

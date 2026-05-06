@@ -1,0 +1,37 @@
+{
+  "index": 1490,
+  "norm_id": 0.0745,
+  "card_id": "BT14-012",
+  "card_index": 12,
+  "card_name_eng": "Greymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_012",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dinosaur"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Attacking] This Digimon gets +2000 DP for the turn. Then, if you have a Tamer with [Tai Kamiya] in its name, gain 1 memory.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Greymon] or [Omnimon] in its name, it gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Agumon] in name: Cost 2"
+}

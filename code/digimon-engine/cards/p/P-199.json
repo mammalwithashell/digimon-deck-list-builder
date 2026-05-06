@@ -1,0 +1,27 @@
+{
+  "index": 3529,
+  "norm_id": 0.17645,
+  "card_id": "P-199",
+  "card_index": 199,
+  "card_name_eng": "Dan Yuki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_199",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have 4 or less memory, 1 of your Digimon gets +3000 DP for the turn.\r\n[Your Turn] When any of your Digimon cards with the [TS] trait would be played, by suspending this Tamer, reduce their play costs by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

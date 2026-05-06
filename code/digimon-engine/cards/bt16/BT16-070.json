@@ -1,0 +1,38 @@
+{
+  "index": 1752,
+  "norm_id": 0.0876,
+  "card_id": "BT16-070",
+  "card_index": 70,
+  "card_name_eng": "Sethmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_070",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Dark Animal"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[When Digivolving] [When Attacking] You may choose 1 of your Digimon. Delete it and 1 of your opponent's Digimon with as much or less DP as it.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Veemon]: Cost 2"
+}

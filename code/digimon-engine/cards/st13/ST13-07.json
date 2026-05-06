@@ -1,0 +1,31 @@
+{
+  "index": 3771,
+  "norm_id": 0.18855,
+  "card_id": "ST13-07",
+  "card_index": 7,
+  "card_name_eng": "Kotemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST13_07",
+  "play_cost": 2,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

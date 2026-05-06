@@ -1,0 +1,35 @@
+{
+  "index": 3842,
+  "norm_id": 0.1921,
+  "card_id": "ST18-05",
+  "card_index": 5,
+  "card_name_eng": "Muchomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST18_05",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Avian"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon is suspended by an effect, 1 of your Digimon with [Bird] in any of its traits or with the [Vortex Warriors] trait gets +3000 DP until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

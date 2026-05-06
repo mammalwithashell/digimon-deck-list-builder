@@ -1,0 +1,35 @@
+{
+  "index": 633,
+  "norm_id": 0.03165,
+  "card_id": "BT6-051",
+  "card_index": 51,
+  "card_name_eng": "Toropiamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_051",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] Suspend 1 of your opponent's Digimon with 5000 DP or less.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

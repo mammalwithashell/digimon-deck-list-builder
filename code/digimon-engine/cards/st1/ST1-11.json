@@ -1,0 +1,37 @@
+{
+  "index": 3609,
+  "norm_id": 0.18045,
+  "card_id": "ST1-11",
+  "card_index": 11,
+  "card_name_eng": "WarGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST1_11",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragonkin"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] For every 2 digivolution cards this Digimon has, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

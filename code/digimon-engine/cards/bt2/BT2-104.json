@@ -1,0 +1,25 @@
+{
+  "index": 235,
+  "norm_id": 0.01175,
+  "card_id": "BT2-104",
+  "card_index": 104,
+  "card_name_eng": "Atomic Ray",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_104",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Unsuspend 1 of your Digimon with ＜Blocker＞.",
+  "inherited_effect_description_eng": "Security Effect [Security] Unsuspend all of your Digimon with ＜Blocker＞ and they get +5000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

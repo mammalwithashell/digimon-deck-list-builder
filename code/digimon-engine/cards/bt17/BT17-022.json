@@ -1,0 +1,38 @@
+{
+  "index": 1806,
+  "norm_id": 0.0903,
+  "card_id": "BT17-022",
+  "card_index": 22,
+  "card_name_eng": "Lobomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_022",
+  "play_cost": 6,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1,
+    2
+  ],
+  "type_eng": [
+    "Warrior"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "You may digivolve this card from your hand onto one of your yellow Tamers as if that card is a level 3 yellow Digimon.\r\n[When Digivolving] If [KendoGarurumon] is in this Digimon's digivolution cards or you have a black or purple Digimon or Tamer, this Digimon may digivolve into [AncientGarurumon] in the hand for a digivolution cost of 3, ignoring its digivolution requirements. If digivolved by this effect, delete this Digimon at the end of the turn.",
+  "inherited_effect_description_eng": "[When Attacking] If you have 7 or fewer cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Koji Minamoto]: Cost 2 \r\n[Digivolve] [KendoGarurumon]: Cost 1"
+}

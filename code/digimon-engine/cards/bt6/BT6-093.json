@@ -1,0 +1,25 @@
+{
+  "index": 675,
+  "norm_id": 0.03375,
+  "card_id": "BT6-093",
+  "card_index": 93,
+  "card_name_eng": "Judgement of the Blade",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_093",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your Digimon with [Huckmon] in its name or [Royal Knight] trait can attack your opponent's unsuspended Digimon for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 Digimon card with [Sistermon] in its name from your hand or trash without paying its memory cost. Then, add this card to your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

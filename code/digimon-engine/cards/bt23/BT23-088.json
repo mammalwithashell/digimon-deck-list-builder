@@ -1,0 +1,27 @@
+{
+  "index": 2484,
+  "norm_id": 0.1242,
+  "card_id": "BT23-088",
+  "card_index": 88,
+  "card_name_eng": "K",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_088",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By trashing 1 card with the [Undead], [Dark Animal] or [CS] trait from your hand, gain 1 memory.\r\n[End of Your Turn] By deleting this Tamer, 1 of your Digimon may digivolve into a level 5 or lower Digimon card with the [Undead] or [Dark Animal] trait in the trash without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

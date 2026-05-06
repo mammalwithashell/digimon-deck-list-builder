@@ -1,0 +1,37 @@
+{
+  "index": 2556,
+  "norm_id": 0.1278,
+  "card_id": "BT24-058",
+  "card_index": 58,
+  "card_name_eng": "Blimpmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_058",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine",
+    "Iliad",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Among them, add 1 [Machine], [Cyborg] or [TS] Digimon card or Tamer card to the hand or place it as any of your [Machine], [Cyborg] or [TS] trait Digimon's bottom digivolution card. Return the rest to the top or bottom of the deck.",
+  "inherited_effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[TS] trait: Cost 2"
+}

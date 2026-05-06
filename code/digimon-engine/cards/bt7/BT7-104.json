@@ -1,0 +1,25 @@
+{
+  "index": 798,
+  "norm_id": 0.0399,
+  "card_id": "BT7-104",
+  "card_index": 104,
+  "card_name_eng": "Metal Cannon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_104",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Choose 1 of your Digimon with the [X Antibody] trait. Then, ＜Draw 1＞ for each of that Digimon's digivolution cards.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

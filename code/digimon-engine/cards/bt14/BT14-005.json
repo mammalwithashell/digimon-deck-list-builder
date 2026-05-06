@@ -1,0 +1,29 @@
+{
+  "index": 1483,
+  "norm_id": 0.07415,
+  "card_id": "BT14-005",
+  "card_index": 5,
+  "card_name_eng": "Missimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_005",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] By returning 3 cards with the [D-Brigade] or [DigiPolice] trait from your trash to the top of the deck, this Digimon gets +2000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

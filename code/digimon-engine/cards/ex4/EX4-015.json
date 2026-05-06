@@ -1,0 +1,35 @@
+{
+  "index": 2839,
+  "norm_id": 0.14195,
+  "card_id": "EX4-015",
+  "card_index": 15,
+  "card_name_eng": "Gaomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_015",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Both players draw the top card of their decks.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When an effect adds cards to your opponent's hand, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

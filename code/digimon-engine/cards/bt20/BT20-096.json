@@ -1,0 +1,27 @@
+{
+  "index": 2186,
+  "norm_id": 0.1093,
+  "card_id": "BT20-096",
+  "card_index": 96,
+  "card_name_eng": "Black Sabbath",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_096",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Trash] [Main] If you have 4 or fewer cards in your hand, by paying 6 cost, return this card to the bottom of the deck and delete 1 of your opponent's unsuspended Digimon.\r\n[Main] Trash 1 card in your hand. Then, delete 1 of your opponent's level 4 or lower Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's level 6 or lower Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,28 @@
+{
+  "index": 3554,
+  "norm_id": 0.1777,
+  "card_id": "P-224",
+  "card_index": 224,
+  "card_name_eng": "Kotone Amano",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_224",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Xros Heart",
+    "Twilight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] [On Play] By placing 1 [Xros Heart] or [Twilight] trait Digimon card from your hand or trash under this Tamer, if you have 7 or fewer cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Main] By suspending this Tamer, you may play 1 level 5 or higher [Xros Heart] trait Digimon card from under any of your Tamers with the play cost reduced by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,38 @@
+{
+  "index": 2363,
+  "norm_id": 0.11815,
+  "card_id": "BT22-069",
+  "card_index": 69,
+  "card_name_eng": "Lunamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_069",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6,
+    1
+  ],
+  "type_eng": [
+    "Mammal",
+    "Night Claw",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Night Claw] trait and 1 card with the [Light Fang] or [Galaxy] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Main] [Once Per Turn] By placing this [Night Claw] or [Light Fang] trait Digimon's top stacked card as its bottom digivolution card, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Night Claw]/[Light Fang]/[CS] trait: Cost 0"
+}

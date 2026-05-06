@@ -1,0 +1,36 @@
+{
+  "index": 2351,
+  "norm_id": 0.11755,
+  "card_id": "BT22-057",
+  "card_index": 57,
+  "card_name_eng": "Kurisarimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_057",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Unidentified",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Arata Sanada] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon with [Diaboromon] in its text would leave the battle area, by deleting 1 of your other [Diaboromon], it doesn't leave.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[CS] trait: Cost 2"
+}

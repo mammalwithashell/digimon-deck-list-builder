@@ -1,0 +1,25 @@
+{
+  "index": 3678,
+  "norm_id": 0.1839,
+  "card_id": "ST5-16",
+  "card_index": 16,
+  "card_name_eng": "Dark Side Attack",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST5_16",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon with a play cost of 7 or less.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

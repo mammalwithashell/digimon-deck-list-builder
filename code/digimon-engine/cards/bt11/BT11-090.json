@@ -1,0 +1,25 @@
+{
+  "index": 1232,
+  "norm_id": 0.0616,
+  "card_id": "BT11-090",
+  "card_index": 90,
+  "card_name_eng": "Nicolai Petrov",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_090",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] 1 of your Digimon with [Gaomon] or [Gaogamon] in its name gains ＜Jamming＞ for the turn. (This Digimon can't be deleted in battles against Security Digimon.)\r\n[Your Turn] When an effect adds cards to your opponent's hand, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

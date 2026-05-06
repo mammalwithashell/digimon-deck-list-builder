@@ -1,0 +1,36 @@
+{
+  "index": 1048,
+  "norm_id": 0.0524,
+  "card_id": "BT10-018",
+  "card_index": 18,
+  "card_name_eng": "Gaossmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_018",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Reptile",
+    "Blue Flare"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Deletion] You may play 1 level 4 Digimon card with the [Blue Flare] trait from your hand suspended without paying its memory cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 3634,
+  "norm_id": 0.1817,
+  "card_id": "ST3-04",
+  "card_index": 4,
+  "card_name_eng": "Patamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST3_04",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When an opponent's Digimon is deleted by dropping to 0 DP, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

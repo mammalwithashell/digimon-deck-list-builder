@@ -1,0 +1,31 @@
+{
+  "index": 2576,
+  "norm_id": 0.1288,
+  "card_id": "BT24-078",
+  "card_index": 78,
+  "card_name_eng": "Creepymon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_078",
+  "play_cost": 0,
+  "dp": null,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon Lord",
+    "X Antibody",
+    "Seven Great Demon Lords"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

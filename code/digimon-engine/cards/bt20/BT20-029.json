@@ -1,0 +1,38 @@
+{
+  "index": 2119,
+  "norm_id": 0.10595,
+  "card_id": "BT20-029",
+  "card_index": 29,
+  "card_name_eng": "Pulsemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_029",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [
+    "Beastkin",
+    "Abadin Electronics",
+    "SEEKERS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with [Pulsemon] in its name or [SEEKERS] trait, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon deletes your opponent's Digimon in battle. gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Bibimon]/Lv.2 w/[SEEKERS] trait: Cost 0"
+}

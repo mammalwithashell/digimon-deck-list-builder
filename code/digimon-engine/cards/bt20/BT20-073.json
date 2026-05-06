@@ -1,0 +1,39 @@
+{
+  "index": 2163,
+  "norm_id": 0.10815,
+  "card_id": "BT20-073",
+  "card_index": 73,
+  "card_name_eng": "MetalPhantomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_073",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "X Antibody"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's level 5 or lower Digimon.",
+  "inherited_effect_description_eng": "[On Deletion] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

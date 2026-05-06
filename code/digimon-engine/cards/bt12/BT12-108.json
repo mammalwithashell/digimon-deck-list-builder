@@ -1,0 +1,26 @@
+{
+  "index": 1362,
+  "norm_id": 0.0681,
+  "card_id": "BT12-108",
+  "card_index": 108,
+  "card_name_eng": "Super Eradication Attack",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_108",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    5,
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a level 6 [Machine] trait Digimon, you can ignore this card's color requirements.\r\n[Main] Choose 1 of your Digimon with the [Machine] or [Cyborg] trait. Delete that Digimon and 1 of your opponent's Digimon with DP less than or equal to the chosen Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] By trashing 1 of your Digimon with the [Machine] or [Cyborg] trait from your hand, delete 1 of your opponent's Digimon with a play cost less than or equal to the trashed Digimon's play cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

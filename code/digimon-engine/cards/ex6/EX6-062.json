@@ -1,0 +1,58 @@
+{
+  "index": 3034,
+  "norm_id": 0.1517,
+  "card_id": "EX6-062",
+  "card_index": 62,
+  "card_name_eng": "UltimateChaosmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_062",
+  "play_cost": 16,
+  "dp": 16000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Unique"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "＜Partition (Yellow/Black Lv.6 & Green/Purple Lv.6)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)\r\n[When Digivolving] If DNA digivolving, you may place up to 2 level 6 cards from your trash as this Digimon's bottom digivolution cards. Then, for each level 6 card in this Digimon's digivolution cards, return 1 of your opponent's Digimon to the bottom of the deck.\r\n[Your Turn] While this Digimon has 4 or more level 6 cards in its digivolution cards, it gains ＜Security A. +3＞ (This Digimon checks 3 additional security cards.) and ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 6,
+      "memory_cost": 7
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Yellow/Black Lv.6 + Green/Purple Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 6,
+        "card_colors": [
+          "Yellow",
+          "Black"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 6,
+        "card_colors": [
+          "Green",
+          "Purple"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

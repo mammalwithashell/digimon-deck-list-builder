@@ -1,0 +1,60 @@
+{
+  "index": 4025,
+  "norm_id": 0.20125,
+  "card_id": "EX9-021",
+  "card_index": 21,
+  "card_name_eng": "Omnimon Alter-S",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_021",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    1,
+    4
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "DM",
+    "Ver.1",
+    "Ver.2"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] If DNA digivolving, your opponent's effects don't affect this Digimon for the turn. Then, delete all of their Digimon with the highest level.\r\n[End of Attack] You may play 1 card with [Greymon] in its name or the [Ver.1] trait and 1 card with [Garurumon] in its name or the [Ver.2] trait from this Digimon's digivolution cards without paying the costs. If this effect played, place this Digimon as your top security card.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 6,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.6 w/[DM] trait: Cost 5 \r\n[DNA Digivolve] Blue Lv.6 + Red Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 6,
+        "card_colors": [
+          "Blue"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 6,
+        "card_colors": [
+          "Red"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "index": 3235,
+  "norm_id": 0.16175,
+  "card_id": "EX11-041",
+  "card_index": 41,
+  "card_name_eng": "Oblivimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_041",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5,
+    1
+  ],
+  "type_eng": [
+    "Cyborg",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] [End of Opponent's Turn] Play this card without paying the cost.\r\n[On Play] [When Digivolving] Flip your opponent's top face-down security card face up and ＜De-Digivolve 1＞ 1 of their Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, if it's their turn, this Digimon may digivolve into [Invisimon] in the hand without paying the cost.\r\n[Your Turn] When any of your Digimon check face-up security cards, you may place this Digimon's top stacked card face up as the bottom security card.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon's attack target can't change.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Cyborg] trait: Cost 3"
+}

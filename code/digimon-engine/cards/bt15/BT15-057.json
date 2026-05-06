@@ -1,0 +1,36 @@
+{
+  "index": 1637,
+  "norm_id": 0.08185,
+  "card_id": "BT15-057",
+  "card_index": 57,
+  "card_name_eng": "Numemon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_057",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Mollusk",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[All Turns] While [Numemon] or [X Antibody] is in this Digimon's digivolution cards, it gains \"[On Deletion] You may play 1 Digimon card with [Numemon] in its name from your trash without paying the cost.\"",
+  "inherited_effect_description_eng": "[On Deletion] You may play 1 Digimon card with [Numemon] in its name from your trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Numemon] in name w/o [X Antibody] trait: Cost 0"
+}

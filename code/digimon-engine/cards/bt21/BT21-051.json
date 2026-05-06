@@ -1,0 +1,37 @@
+{
+  "index": 2243,
+  "norm_id": 0.11215,
+  "card_id": "BT21-051",
+  "card_index": 51,
+  "card_name_eng": "Puppetmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_051",
+  "play_cost": 7,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "Puppet",
+    "WG"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. (Trash up to 2 cards from the top. You can't trash past level 3 cards.) Then, return 1 of their suspended Digimon to the bottom of the deck.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[WG] trait: Cost 3"
+}

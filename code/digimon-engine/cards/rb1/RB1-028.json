@@ -1,0 +1,37 @@
+{
+  "index": 3590,
+  "norm_id": 0.1795,
+  "card_id": "RB1-028",
+  "card_index": 28,
+  "card_name_eng": "BlackGatomon Uver.",
+  "card_name_jpn": "",
+  "card_effect_class_name": "RB1_028",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Dark Animal"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] By returning 1 Digimon card from your opponent's trash to the bottom of their deck, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

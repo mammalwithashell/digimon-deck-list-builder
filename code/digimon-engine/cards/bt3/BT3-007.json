@@ -1,0 +1,37 @@
+{
+  "index": 250,
+  "norm_id": 0.0125,
+  "card_id": "BT3-007",
+  "card_index": 7,
+  "card_name_eng": "Agumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_007",
+  "play_cost": 2,
+  "dp": 4000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

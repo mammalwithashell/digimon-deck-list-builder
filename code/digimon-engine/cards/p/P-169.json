@@ -1,0 +1,27 @@
+{
+  "index": 3499,
+  "norm_id": 0.17495,
+  "card_id": "P-169",
+  "card_index": 169,
+  "card_name_eng": "Close",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_169",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [
+    "LIBERATOR"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[All Turns] When effects trash digivolution cards of any of your [Mineral] or [Rock] trait Digimon, by suspending this Tamer, place 1 card with the [Mineral] or [Rock] trait from your trash as any of your Digimon's bottom digivolution card.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

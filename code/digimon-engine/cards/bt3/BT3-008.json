@@ -1,0 +1,38 @@
+{
+  "index": 251,
+  "norm_id": 0.01255,
+  "card_id": "BT3-008",
+  "card_index": 8,
+  "card_name_eng": "Zubamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_008",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Weapon",
+    "Legend-Arms"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 5 cards of your deck. Add 1 [RagnaLoardmon] Digimon card and 1 Digimon card with the [Legend-Arms] trait among them to your hand. Place the remaining cards on the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 2043,
+  "norm_id": 0.10215,
+  "card_id": "BT19-055",
+  "card_index": 55,
+  "card_name_eng": "Monitamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_055",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "CRT",
+    "Twilight",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Deletion] Reveal the top 3 cards of your deck. Among them, add 1 card with [Knightmon] in its text or the [Twilight] trait to the hand and place 1 such card under your Tamers. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

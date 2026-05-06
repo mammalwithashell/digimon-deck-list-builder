@@ -1,0 +1,35 @@
+{
+  "index": 2933,
+  "norm_id": 0.14665,
+  "card_id": "EX5-035",
+  "card_index": 35,
+  "card_name_eng": "Hawkmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_035",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Avian"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add all Digimon cards with ＜Fortitude＞ among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon is suspended, it gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

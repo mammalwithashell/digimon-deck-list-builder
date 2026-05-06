@@ -1,0 +1,27 @@
+{
+  "index": 1564,
+  "norm_id": 0.0782,
+  "card_id": "BT14-086",
+  "card_index": 86,
+  "card_name_eng": "Satsuki Tamahime",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_086",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "DigiPolice"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Main] ＜Mind Link＞ to 1 of your Digimon with [Numemon] or [Monzaemon] in its name or the [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon has [Numemon] or [Monzaemon] in its name or the [DigiPolice] trait, this Digimon gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.) and ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n[End of All Turns] You may play 1 [Satsuki Tamahime] from this Digimon's digivolution cards without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

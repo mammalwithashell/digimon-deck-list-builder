@@ -1,0 +1,36 @@
+{
+  "index": 1826,
+  "norm_id": 0.0913,
+  "card_id": "BT17-042",
+  "card_index": 42,
+  "card_name_eng": "Argomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_042",
+  "play_cost": 4,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    6
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Argomon] and 1 [Rhythm] among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[On Deletion] Gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 [Argomon]: Cost 0"
+}

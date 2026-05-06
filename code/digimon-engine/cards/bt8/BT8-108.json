@@ -1,0 +1,25 @@
+{
+  "index": 914,
+  "norm_id": 0.0457,
+  "card_id": "BT8-108",
+  "card_index": 108,
+  "card_name_eng": "Mist Memory Boost!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_108",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Trash the top 2 cards of your deck and ＜Draw 1＞ (Draw 1 card from your deck.) Then, place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

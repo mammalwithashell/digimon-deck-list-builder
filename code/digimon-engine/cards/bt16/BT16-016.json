@@ -1,0 +1,36 @@
+{
+  "index": 1698,
+  "norm_id": 0.0849,
+  "card_id": "BT16-016",
+  "card_index": 16,
+  "card_name_eng": "Patamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_016",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1,
+    2
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] [On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Angel] or [Free] trait in your hand with the digivolution cost reduced by 1.",
+  "inherited_effect_description_eng": "[When Attacking] Trash the top digivolution card of 1 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Tokomon]: Cost 0"
+}

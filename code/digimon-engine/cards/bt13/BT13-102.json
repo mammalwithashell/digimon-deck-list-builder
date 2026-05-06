@@ -1,0 +1,25 @@
+{
+  "index": 1468,
+  "norm_id": 0.0734,
+  "card_id": "BT13-102",
+  "card_index": 102,
+  "card_name_eng": "Keenan Crier",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_102",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Your opponent may trash 1 Tamer card or Option card in their hand. If they don't, gain 1 memory and ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Opponent's Turn] When an effect plays a Digimon, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

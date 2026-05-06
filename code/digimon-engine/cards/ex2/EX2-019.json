@@ -1,0 +1,35 @@
+{
+  "index": 2695,
+  "norm_id": 0.13475,
+  "card_id": "EX2-019",
+  "card_index": 19,
+  "card_name_eng": "Renamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_019",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 card with [Kyubimon], [Taomon] or [Sakuyamon] in its name and 1 [Rika Nonaka] among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you use an Option card with a memory cost of 2 or more, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

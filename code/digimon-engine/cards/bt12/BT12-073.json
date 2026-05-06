@@ -1,0 +1,36 @@
+{
+  "index": 1327,
+  "norm_id": 0.06635,
+  "card_id": "BT12-073",
+  "card_index": 73,
+  "card_name_eng": "Impmon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_073",
+  "play_cost": 4,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Evil",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] By trashing 1 Option card in your hand, you may return 1 Digimon card with the [Evil], [Wizard] or [Demon Lord] trait from your trash to your hand.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Trash the top 2 cards of your deck.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Impmon]: Cost 0"
+}

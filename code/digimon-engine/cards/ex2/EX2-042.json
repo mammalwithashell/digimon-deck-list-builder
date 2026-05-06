@@ -1,0 +1,35 @@
+{
+  "index": 2718,
+  "norm_id": 0.1359,
+  "card_id": "EX2-042",
+  "card_index": 42,
+  "card_name_eng": "Mephistomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_042",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Fallen Angel"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] ＜Draw 2＞ (Draw 2 cards from your deck.) Then, trash 2 cards from your hand.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may trash 1 card from your hand to gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

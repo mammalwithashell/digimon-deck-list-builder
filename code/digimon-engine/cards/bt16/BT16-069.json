@@ -1,0 +1,37 @@
+{
+  "index": 1751,
+  "norm_id": 0.08755,
+  "card_id": "BT16-069",
+  "card_index": 69,
+  "card_name_eng": "Gesomon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_069",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    1
+  ],
+  "type_eng": [
+    "Mollusk",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] If [Gesomon] or [X Antibody] is in this Digimon's digivolution cards, trash any 3 cards under 1 of your opponent's Digimon or Tamers. Then, 1 of your opponent's Digimon or Tamers without cards under it can't suspend until the end of their turn",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Gesomon]: Cost 0"
+}

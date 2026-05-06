@@ -1,0 +1,36 @@
+{
+  "index": 2823,
+  "norm_id": 0.14115,
+  "card_id": "EX3-073",
+  "card_index": 73,
+  "card_name_eng": "Imperialdramon: Fighter Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_073",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Ancient Dragonkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n[When Digivolving] By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's digivolution cards to the bottom of its owner's deck, none of your opponent's [Security] effects can activate for the turn.\r\n[On Deletion] You may play 1 [Wormmon] and 1 [Veemon] from your trash without paying the costs.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] [Dragon Mode] in name: Cost 2"
+}

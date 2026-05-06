@@ -1,0 +1,30 @@
+{
+  "index": 1459,
+  "norm_id": 0.07295,
+  "card_id": "BT13-093",
+  "card_index": 93,
+  "card_name_eng": "Omekamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_093",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Puppet",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[On Deletion] Place 1 Digimon card with the [Royal Knight] trait from your hand under a [King Drasil_7D6] in the breeding area as its bottom digivolution card.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

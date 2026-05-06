@@ -1,0 +1,37 @@
+{
+  "index": 2000,
+  "norm_id": 0.1,
+  "card_id": "BT19-012",
+  "card_index": 12,
+  "card_name_eng": "OmniShoutmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_012",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Dragonkin",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "This card is also treated as [Shoutmon] for a DigiXros.\r\n[On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn. Then, delete 1 of your opponent's Digimon with 3000 DP or less.\r\n[On Deletion] Place 1 Digimon card with the [Xros Heart] or [Blue Flare] trait from your hand or trash under your Tamers.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Rush＞ (This Digimon can attack the turn it comes into play.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Shoutmon]: Cost 4 \r\n[Digivolve] Lv.4 w/[Xros Heart] trait: Cost 3"
+}

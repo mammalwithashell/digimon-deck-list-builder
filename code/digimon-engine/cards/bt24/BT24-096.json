@@ -1,0 +1,27 @@
+{
+  "index": 2594,
+  "norm_id": 0.1297,
+  "card_id": "BT24-096",
+  "card_index": 96,
+  "card_name_eng": "Seventh Graviton",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_096",
+  "play_cost": 7,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Seven Great Demon Lords"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Trash] [Your Turn] When any of your Digimon digivolve into [Creepymon (X Antibody)], by returning this card to the bottom of the deck, activate its [Main] effects.\r\n[Main] Delete 1 of your opponent's level 6 or higher Digimon. If this effect didn't delete, trash the top 3 cards of your opponent's deck.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

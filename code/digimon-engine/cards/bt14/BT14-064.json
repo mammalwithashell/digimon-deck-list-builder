@@ -1,0 +1,39 @@
+{
+  "index": 1542,
+  "norm_id": 0.0771,
+  "card_id": "BT14-064",
+  "card_index": 64,
+  "card_name_eng": "Cargodramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_064",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine",
+    "D-Brigade",
+    "DigiPolice"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. You may play 1 card with the [D-Brigade] or [DigiPolice] trait with a play cost of 4 or less among them without paying the cost. Trash the rest.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When one of your other Digimon are deleted, reveal the top 3 cards of your deck. You may play 1 [Commandramon] without paying its cost. Trash the rest.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

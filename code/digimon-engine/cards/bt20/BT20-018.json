@@ -1,0 +1,40 @@
+{
+  "index": 2108,
+  "norm_id": 0.1054,
+  "card_id": "BT20-018",
+  "card_index": 18,
+  "card_name_eng": "Ouryumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_018",
+  "play_cost": 12,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "Beast Dragon",
+    "X Antibody",
+    "Chronicle"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n[On Play] [When Digivolving] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. (Trash up to 2 cards from the top. You can't trash past level 3 cards.) Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.\r\n[All Turns] [Once Per Turn] When security stacks are removed from, delete 1 of your opponent's Digimon with the lowest DP.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon is [Alphamon: Ouryuken], trash your opponent's top security card.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

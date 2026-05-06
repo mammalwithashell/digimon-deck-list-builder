@@ -1,0 +1,37 @@
+{
+  "index": 3914,
+  "norm_id": 0.1957,
+  "card_id": "ST23-04",
+  "card_index": 4,
+  "card_name_eng": "Murasamemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST23_04",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Beastkin",
+    "Glowing Dawn",
+    "BEATBREAK"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n[On Play] [When Digivolving] 1 of your opponent's Digimon gets -5000 DP for the turn. Then, if it's your turn, by trashing the bottom face-down card from under any of your Tamers, you may play or use 1 [Glowing Dawn] trait card from your hand with the cost reduced by 3.",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] By trashing the bottom face-down card from under any of your Tamers, this [Glowing Dawn] trait Digimon unsuspends.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Glowing Dawn] trait: Cost 3"
+}

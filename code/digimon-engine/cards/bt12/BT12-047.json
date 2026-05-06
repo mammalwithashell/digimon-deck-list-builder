@@ -1,0 +1,35 @@
+{
+  "index": 1301,
+  "norm_id": 0.06505,
+  "card_id": "BT12-047",
+  "card_index": 47,
+  "card_name_eng": "Wormmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_047",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Larva"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Imperialdramon] in its name or [Free] trait and 1 Tamer card with [Ken Ichijoji] in its name among them to your hand. Place the rest at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

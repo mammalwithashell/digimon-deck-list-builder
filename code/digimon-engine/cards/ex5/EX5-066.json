@@ -1,0 +1,27 @@
+{
+  "index": 2964,
+  "norm_id": 0.1482,
+  "card_id": "EX5-066",
+  "card_index": 66,
+  "card_name_eng": "Phoebus Blow",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_066",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Light Fang"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon with the lowest DP. Then, if you have a Tamer, return 1 Digimon card with the [Light Fang], [Night Claw] or [Galaxy] trait from your trash to the hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

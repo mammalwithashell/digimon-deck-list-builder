@@ -1,0 +1,25 @@
+{
+  "index": 1674,
+  "norm_id": 0.0837,
+  "card_id": "BT15-094",
+  "card_index": 94,
+  "card_name_eng": "Super Shocker",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_094",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Suspend 1 level 6 or lower Digimon. 1 of your Digimon with the [Insectoid] trait gets +3000 DP until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

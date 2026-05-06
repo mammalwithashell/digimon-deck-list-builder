@@ -1,0 +1,29 @@
+{
+  "index": 2566,
+  "norm_id": 0.1283,
+  "card_id": "BT24-068",
+  "card_index": 68,
+  "card_name_eng": "DemiDevimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_068",
+  "play_cost": 0,
+  "dp": null,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Evil"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

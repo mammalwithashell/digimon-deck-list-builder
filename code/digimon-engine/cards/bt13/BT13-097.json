@@ -1,0 +1,25 @@
+{
+  "index": 1463,
+  "norm_id": 0.07315,
+  "card_id": "BT13-097",
+  "card_index": 97,
+  "card_name_eng": "Thomas H. Norstein",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_097",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When your Digimon with [Gaomon] or [Gaogamon] in its name attacks, by suspending this Tamer, both players draw 1 card from their decks.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

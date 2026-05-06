@@ -1,0 +1,38 @@
+{
+  "index": 2045,
+  "norm_id": 0.10225,
+  "card_id": "BT19-057",
+  "card_index": 57,
+  "card_name_eng": "Sparrowmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_057",
+  "play_cost": 4,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5,
+    6
+  ],
+  "type_eng": [
+    "Avian",
+    "Twilight",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Attacking] This Digimon may digivolve into [RaptorSparrowmon] under your Tamers without paying the cost.\r\n[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Twilight]/[Xros Heart] trait: Cost 0"
+}

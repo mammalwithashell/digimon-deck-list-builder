@@ -1,0 +1,27 @@
+{
+  "index": 2969,
+  "norm_id": 0.14845,
+  "card_id": "EX5-071",
+  "card_index": 71,
+  "card_name_eng": "Loyalty Deeper than the Sea",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_071",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Deva"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have [Deva] or [Four Sovereigns] trait Digimon, you can ignore this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Place 1 card with the [Deva] or [Four Sovereigns] trait among them as the bottom digivolution card of 1 of your Digimon or add it to the hand. Return the rest to the top or bottom of the deck.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,27 @@
+{
+  "index": 2188,
+  "norm_id": 0.1094,
+  "card_id": "BT20-098",
+  "card_index": 98,
+  "card_name_eng": "Apparition Legion",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_098",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] By returning 9 levels' total worth of Digimon cards from your opponent's trash to the bottom of the deck, you may play 1 [Ghost] trait Digimon card of each returned card's level from your trash without paying the costs. Then, the Digimon this effect played gain ＜Rush＞ (This Digimon can attack the turn it comes into play.) and ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 5 or lower Digimon card with the [Ghost] trait from your trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

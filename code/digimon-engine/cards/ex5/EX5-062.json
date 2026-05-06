@@ -1,0 +1,35 @@
+{
+  "index": 2960,
+  "norm_id": 0.148,
+  "card_id": "EX5-062",
+  "card_index": 62,
+  "card_name_eng": "Anubismon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_062",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Shaman"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] [Main] [Once Per Turn] You may trash up to 3 cards in your hand. Then, play 1 purple Digimon card from your trash with the play cost reduced by 3. For each card trashed by this effect, further reduce it by 1.\r\n[Your Turn] When an effect plays one of your Digimon, delete 1 of your opponent's level 5 or lower Digimon. If this effect didn't delete, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

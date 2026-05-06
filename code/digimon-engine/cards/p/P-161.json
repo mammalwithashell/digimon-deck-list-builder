@@ -1,0 +1,27 @@
+{
+  "index": 3491,
+  "norm_id": 0.17455,
+  "card_id": "P-161",
+  "card_index": 161,
+  "card_name_eng": "Bishop Device",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_161",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Device"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you don't have [Bishop Device], you may ignore this card's color requirements.\r\nWhen this card is trashed from the battle area, until the end of your opponent's turn, 1 of their Digimon or Tamers can't suspend.\r\n[Main] Until the end of your opponent's turn, 1 of their Digimon or Tamers can't suspend. Then, place this card in the battle area.",
+  "inherited_effect_description_eng": "Security Effect [Security] Return 1 of your opponent's level 5 or lower Digimon to the bottom of the deck. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

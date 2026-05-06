@@ -1,0 +1,36 @@
+{
+  "index": 3495,
+  "norm_id": 0.17475,
+  "card_id": "P-165",
+  "card_index": 165,
+  "card_name_eng": "ShoeShoemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_165",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Puppet",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] Play 1 [Familiar] Token. (Digimon/Yellow/3000 DP/[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.) At the end of your opponent's turn, delete that token.",
+  "inherited_effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

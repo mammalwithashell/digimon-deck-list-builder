@@ -1,0 +1,25 @@
+{
+  "index": 3446,
+  "norm_id": 0.1723,
+  "card_id": "P-116",
+  "card_index": 116,
+  "card_name_eng": "DIGIMON CON 2023",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_116",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have [Agumon], [Pulsemon] and [Gammamon], this card costs 0.\r\n[Main] Reveal the top 2 cards of your deck. Add all Tamer cards with a play cost of 3 or less among them to your hand. Return the rest to the top of the deck.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

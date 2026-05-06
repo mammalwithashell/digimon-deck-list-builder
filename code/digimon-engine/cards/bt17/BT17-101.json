@@ -1,0 +1,55 @@
+{
+  "index": 1885,
+  "norm_id": 0.09425,
+  "card_id": "BT17-101",
+  "card_index": 101,
+  "card_name_eng": "Fenriloogamon: Takemikazuchi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_101",
+  "play_cost": 16,
+  "dp": 16000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 4,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [
+    "Dark Animal",
+    "X Antibody",
+    "SoC"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Trash] [Your Turn] When one of your level 6 Digimon with [Pulsemon] in its text is played, 2 of your Digimon may DNA digivolve into this card.\r\n[When Digivolving] 1 of your opponent's Digimon gets -16000 DP for the turn. If DNA digivolving, you may set the memory to 3 on the opponent's side. Then, if this Digimon has a Tamer in its digivolution cards, gain 1 memory and ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)\r\n[When Attacking] By trashing the top card of your security stack, trash the top card of your opponent's security stack.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[DNA Digivolve] [Fenriloogamon] + [Kazuchimon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 0,
+        "card_colors": [],
+        "name_contains": "Fenriloogamon",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 0,
+        "card_colors": [],
+        "name_contains": "Kazuchimon",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

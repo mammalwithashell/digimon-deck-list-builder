@@ -1,0 +1,37 @@
+{
+  "index": 2761,
+  "norm_id": 0.13805,
+  "card_id": "EX3-011",
+  "card_index": 11,
+  "card_name_eng": "Lavogaritamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_011",
+  "play_cost": 8,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Rock Dragon"
+  ],
+  "form_eng": [
+    "Virus"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Delete 1 of your opponent's Digimon with 5000 DP or less. Then, you may play 1 [Hina Kurihara] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When an opponent's Digimon is deleted, if this Digimon has an [On Play] effect, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

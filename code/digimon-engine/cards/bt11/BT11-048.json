@@ -1,0 +1,35 @@
+{
+  "index": 1190,
+  "norm_id": 0.0595,
+  "card_id": "BT11-048",
+  "card_index": 48,
+  "card_name_eng": "ModokiBetamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_048",
+  "play_cost": 3,
+  "dp": 4000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Amphibian"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

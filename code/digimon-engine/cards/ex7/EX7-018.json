@@ -1,0 +1,36 @@
+{
+  "index": 3064,
+  "norm_id": 0.1532,
+  "card_id": "EX7-018",
+  "card_index": 18,
+  "card_name_eng": "Gekomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_018",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Amphibian",
+    "NSp"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[NSp] trait: Cost 2"
+}

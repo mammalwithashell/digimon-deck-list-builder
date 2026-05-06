@@ -1,0 +1,36 @@
+{
+  "index": 3929,
+  "norm_id": 0.19645,
+  "card_id": "EX10-008",
+  "card_index": 8,
+  "card_name_eng": "MetalGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_008",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n[On Play] [When Digivolving] Give 1 of your opponent's Digimon ＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.) and \"[Start of Your Main Phase] This Digimon attacks.\" until their turn ends.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When attack targets change, if this Digimon has [Greymon] in its name, trash your opponent's top security card.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Greymon] in name: Cost 3"
+}

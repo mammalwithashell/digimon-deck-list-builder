@@ -1,0 +1,32 @@
+{
+  "index": 2560,
+  "norm_id": 0.128,
+  "card_id": "BT24-062",
+  "card_index": 62,
+  "card_name_eng": "MasterBlimpmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_062",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5,
+    1
+  ],
+  "type_eng": [
+    "Machine",
+    "Iliad",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[End of Attack] [End of Opponent's Turn] [Once Per Turn] You may play 1 play cost 5 or lower card with the [Machine], [Cyborg] or [TS] trait from this Digimon's digivolution cards without paying the cost.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon's attack target can't change.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] Lv.4 w/[Machine]/[Cyborg]/[TS]: Cost 3"
+}

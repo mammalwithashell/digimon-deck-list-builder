@@ -1,0 +1,27 @@
+{
+  "index": 4001,
+  "norm_id": 0.20005,
+  "card_id": "P-238",
+  "card_index": 238,
+  "card_name_eng": "Destruction Cannon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_238",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Use Req. ([CS] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Main] Delete 1 of your opponent’s level 6 or lower Digimon. Then, place this card in the battle area.",
+  "inherited_effect_description_eng": "[Security] Delete 1 of your opponent’s level 6 or lower Digimon. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

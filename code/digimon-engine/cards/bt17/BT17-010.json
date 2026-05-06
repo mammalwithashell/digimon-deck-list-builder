@@ -1,0 +1,35 @@
+{
+  "index": 1794,
+  "norm_id": 0.0897,
+  "card_id": "BT17-010",
+  "card_index": 10,
+  "card_name_eng": "Growlmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_010",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dark Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less. If this effect didn't delete, this Digimon gets +3000 DP for the turn.",
+  "inherited_effect_description_eng": "[All Turns] While you have 0 or less memory, add 2000 to this Digimon's DP-based deletion effects' maximums.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

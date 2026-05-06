@@ -1,0 +1,37 @@
+{
+  "index": 3430,
+  "norm_id": 0.1715,
+  "card_id": "P-100",
+  "card_index": 100,
+  "card_name_eng": "Kuwagamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_100",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] 1 of your opponent's Digimon or Tamers cannot unsuspend until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

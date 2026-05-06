@@ -1,0 +1,26 @@
+{
+  "index": 1980,
+  "norm_id": 0.099,
+  "card_id": "BT18-094",
+  "card_index": 94,
+  "card_name_eng": "Koichi Kimura",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_094",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6,
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] By trashing 1 card with the [Hybrid] or [Ten Warriors] trait in your hand, gain 1 memory.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may return 1 card with the [Hybrid] or [Ten Warriors] trait from your trash to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

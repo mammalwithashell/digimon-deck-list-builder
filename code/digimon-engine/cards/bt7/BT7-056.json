@@ -1,0 +1,36 @@
+{
+  "index": 750,
+  "norm_id": 0.0375,
+  "card_id": "BT7-056",
+  "card_index": 56,
+  "card_name_eng": "Dorumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_056",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Beast",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [X Antibody] trait and 1 [Kota Domoto] among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When one of your effects places a digivolution card under this Digimon, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

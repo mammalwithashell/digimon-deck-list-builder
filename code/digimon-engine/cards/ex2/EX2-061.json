@@ -1,0 +1,25 @@
+{
+  "index": 2737,
+  "norm_id": 0.13685,
+  "card_id": "EX2-061",
+  "card_index": 61,
+  "card_name_eng": "Henry Wong",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_061",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When you attack with a Digimon with [Gargomon] or [Rapidmon] in its name, you may suspend this Tamer to suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

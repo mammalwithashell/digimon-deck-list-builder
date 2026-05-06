@@ -1,0 +1,38 @@
+{
+  "index": 2507,
+  "norm_id": 0.12535,
+  "card_id": "BT24-009",
+  "card_index": 9,
+  "card_name_eng": "Shamanmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_009",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    6
+  ],
+  "type_eng": [
+    "Demon",
+    "Titan",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] By trashing 1 card with the [Demon], [Shaman] or [Titan] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the digivolution cost reduced by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Tsunomon]/Lv.2 w/[TS] trait: Cost 0"
+}

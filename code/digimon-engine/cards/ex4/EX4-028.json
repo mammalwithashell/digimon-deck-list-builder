@@ -1,0 +1,36 @@
+{
+  "index": 2852,
+  "norm_id": 0.1426,
+  "card_id": "EX4-028",
+  "card_index": 28,
+  "card_name_eng": "Doumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_028",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2,
+    1
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Return 1 of your opponent's Digimon with 6000 DP or less to their hand.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you use an Option card with a cost of 2 or more, 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Kyubimon]: Cost 3"
+}

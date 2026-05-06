@@ -1,0 +1,37 @@
+{
+  "index": 1305,
+  "norm_id": 0.06525,
+  "card_id": "BT12-051",
+  "card_index": 51,
+  "card_name_eng": "Yasyamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_051",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] You may play 1 [Airu Suzaki], [Ren Tobari] or [Ryoma Mogami] from your hand without paying its cost.\r\n[On Deletion] ＜Save＞. Then, place 1 Digimon card with ＜Save＞ in its text from your trash under 1 of your Tamers.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has ＜Save＞ in its text, it gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/＜Save＞ in text: Cost 2"
+}

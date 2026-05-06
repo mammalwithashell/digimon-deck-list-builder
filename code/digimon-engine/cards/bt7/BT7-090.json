@@ -1,0 +1,25 @@
+{
+  "index": 784,
+  "norm_id": 0.0392,
+  "card_id": "BT7-090",
+  "card_index": 90,
+  "card_name_eng": "Kota Domoto",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_090",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3. \r\n[On Play] Reveal the top 4 cards of your deck. Add 1 card with the [X Antibody] trait among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying its memory cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}
