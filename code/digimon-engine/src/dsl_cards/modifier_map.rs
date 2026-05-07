@@ -91,6 +91,7 @@ pub fn lookup_keyword(name: &str, value: Option<i32>) -> Option<Keyword> {
         "BlastDigivolve" => Keyword::BlastDigivolve,
         "Save" => Keyword::Save,
         "MaterialSave" => Keyword::MaterialSave(value.unwrap_or(1) as u8),
+        "DigiBurst" => Keyword::DigiBurst(value.unwrap_or(1) as u8),
         "Fortitude" => Keyword::Fortitude,
         "Overclock" => Keyword::Overclock,
         "Barrier" => Keyword::Barrier,

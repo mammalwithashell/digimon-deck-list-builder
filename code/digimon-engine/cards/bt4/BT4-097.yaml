@@ -1,0 +1,33 @@
+card: BT4-097
+name: Kari Kamiya
+kind: tamer
+color: [yellow]
+cost: 3
+
+# [All Turns] When a card is removed from your security stack, by suspending
+# this Tamer, gain 1 memory.
+#
+# Timing: on_own_security_removed carries the security owner as the affected
+# player and scans that player's battle area.
+#
+# Cost-as-suspend: `target: source` resolves to this Tamer. The condition gates
+# the trigger to an unsuspended Kari so it cannot pay the cost twice.
+
+effects:
+  - when: on_own_security_removed
+    active_when: { all_turns: true }
+    summary: "[All Turns] When own security is removed, suspend this Tamer to gain 1 memory"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        card_number_is: "BT4-097"
+        is_unsuspended: true
+    process:
+      - suspend: { target: source }
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

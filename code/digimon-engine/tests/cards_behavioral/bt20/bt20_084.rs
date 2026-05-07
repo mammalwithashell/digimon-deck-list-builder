@@ -12,11 +12,10 @@
 //! - Printed card identity and [Sistermon Ciel] alternate digivolution path.
 //! - Shared On Play / When Digivolving target choice for opponent Digimon/Tamers
 //!   with `CannotSuspend` expiring at the end of the opponent's turn.
+//! - Trash-resident [All Turns] observer that exposes the optional choice to
+//!   digivolve a field [Sistermon Ciel] into this exact trash card for free.
 //!
 //! Known gaps:
-//! - PUPPETS-G026: trash-resident `on_ally_played` observer plus effect
-//!   digivolve-from-trash choice is blocked because trash-resident global
-//!   observers and source-from-trash effect digivolution are not exposed.
 //! - PUPPETS-G027: end-of-all-turns top-stack-card to security movement needs a
 //!   faithful stack extraction to security-top primitive that does not leave an
 //!   invalid empty permanent when the top card is the only card in the stack.
@@ -25,8 +24,10 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
     CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Expiry, ModifierType};
 use digimon_engine::permanent::PermanentHandle;
@@ -59,12 +60,46 @@ fn bt20_084_has_printed_stats_alt_path_and_supported_shared_lock_clause() {
 
     assert_eq!(
         compiled.effects.len(),
-        1,
-        "only the faithful On Play / When Digivolving lock slice should ship"
+        2,
+        "trash observer and shared lock clauses should both compile"
     );
-    let CompiledClause::Triggered(lock) = &compiled.effects[0] else {
-        panic!("supported slice must be a triggered lock clause");
-    };
+    let trash_clause = compiled
+        .effects
+        .iter()
+        .find_map(|effect| match effect {
+            CompiledClause::Triggered(clause)
+                if clause.when.contains(&CompiledTiming::OnAllyPlayed) =>
+            {
+                Some(clause)
+            }
+            _ => None,
+        })
+        .expect("trash on_ally_played clause");
+    assert!(
+        trash_clause.optional,
+        "printed trash digivolve uses 'may'"
+    );
+    assert!(matches!(
+        trash_clause.process.as_slice(),
+        [
+            CompiledStep::SelectOwnPermanent { bind_as, .. },
+            CompiledStep::EffectInitiatedDigivolve { .. },
+        ] if bind_as.as_deref() == Some("target")
+    ));
+
+    let lock = compiled
+        .effects
+        .iter()
+        .find_map(|effect| match effect {
+            CompiledClause::Triggered(clause)
+                if clause.when.contains(&CompiledTiming::OnPlay)
+                    && clause.when.contains(&CompiledTiming::WhenDigivolving) =>
+            {
+                Some(clause)
+            }
+            _ => None,
+        })
+        .expect("supported shared lock clause");
     assert!(lock.when.contains(&CompiledTiming::OnPlay));
     assert!(lock.when.contains(&CompiledTiming::WhenDigivolving));
     assert!(
@@ -165,9 +200,46 @@ fn bt20_084_on_play_with_no_opponent_digimon_or_tamer_resolves_without_prompt() 
 }
 
 #[test]
-#[ignore = "pending: PUPPETS-G026 — trash-resident on_ally_played observer plus effect digivolve from trash is not supported"]
 fn bt20_084_trash_observer_may_digivolve_sistermon_ciel_for_free_when_your_digimon_is_played() {
-    todo!("put BT20-084 in trash, play one of your Digimon, assert an optional masked choice to digivolve one of your [Sistermon Ciel] permanents into this card from trash for cost 0");
+    let mut runner = bt20_084_runner()
+        .hand(0, &["ALLY-DIGIMON"])
+        .memory(10)
+        .start();
+    let base = runner.place_on_field(0, "SISTERMON-CIEL-BASE", Some(0));
+    let bt20_084 = push_to_trash(&mut runner, 0, "BT20-084");
+
+    runner.play(0, 0).expect("play allied Digimon");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("trash observer optional digivolve target");
+    assert!(view.is_optional, "printed 'may' must be declinable");
+    let mask = build_action_mask(&runner.game, view.selecting_player);
+    assert!(
+        mask[PASS as usize] > 0.5,
+        "printed 'may' must expose a decline action"
+    );
+    assert!(
+        view.valid_action_ids.contains(&encode_permanent(base)),
+        "Sistermon Ciel must be a legal free-digivolve target"
+    );
+
+    choose_permanent(&mut runner, base, "choose Sistermon Ciel");
+    runner.auto_resolve().expect("finish trash digivolve");
+
+    let stack = &runner.game.players[0].battle_area[base.index as usize];
+    assert_eq!(
+        stack.top_card().handle(),
+        bt20_084,
+        "BT20-084 from trash should become the top card"
+    );
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .all(|card| card.handle() != bt20_084),
+        "effect digivolve must consume the exact trash source"
+    );
 }
 
 #[test]
@@ -181,9 +253,24 @@ fn bt20_084_runner() -> DebugRunnerBuilder {
         .dsl_card("BT20-084")
         .expect("BT20-084 YAML must be embedded")
         .add_card(sistermon_ciel_base())
+        .add_card(make_test_card("ALLY-DIGIMON", "Ally Digimon"))
         .add_card(make_test_card("OPP-DIGIMON", "Opponent Digimon"))
         .add_card(make_tamer("OPP-TAMER"))
         .add_card(make_option("OPP-OPTION"))
+}
+
+fn push_to_trash(runner: &mut DebugRunner, player: u8, card_id: &str) -> CardHandle {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == card_id)
+        .expect("card registered");
+    let card_idx = runner.game.next_card_index();
+    let source = CardSource::new(data_idx, player, card_idx);
+    let handle = source.handle();
+    runner.game.players[player as usize].trash.push(source);
+    handle
 }
 
 fn sistermon_ciel_base() -> CardData {

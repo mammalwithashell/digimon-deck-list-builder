@@ -25,6 +25,7 @@ fn select_own_sources_binds_source_refs_for_trashing() {
     let source_card = runner.game.players[0].hand[0].handle();
 
     let steps = vec![CompiledStep::SelectOwnSources {
+        target: None,
         min: 2,
         max: 2,
         bind_as: Some("chosen_sources".to_string()),
@@ -81,6 +82,7 @@ fn empty_select_own_sources_runs_outer_tail_synchronously() {
 
     let steps = vec![
         CompiledStep::SelectOwnSources {
+            target: None,
             min: 1,
             max: 1,
             bind_as: Some("chosen_sources".to_string()),

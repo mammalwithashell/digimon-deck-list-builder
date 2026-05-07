@@ -59,7 +59,7 @@ Format per entry:
 ## Royal Knights full pool pass — residual reusable DSL/engine gaps  [RK-G005]
 - Status: PARTIAL pool pass completed on 2026-05-05. The Royal Knights resolver pool has 72 unique cards and now has 72 Rust DSL YAML entries. Fully unsupported clauses were left as explicit YAML comments plus ignored Rust tests instead of hidden approximations.
 - Newly routed or reaffirmed blocked cards/clauses: `BT13-019`, `BT13-030`, `BT13-075`, `BT13-087`, `BT13-102`, `BT13-111`, `BT13-112`, `BT15-092`, `BT17-077`, `BT19-093`, `BT20-017`, `BT20-021`, `BT20-045`, `BT20-056`, `BT22-025`, `BT22-041`, `BT22-052`, `BT23-013`, `BT23-035`, `BT23-047`, `BT23-057`, `BT23-072`, `EX8-073`, `EX10-068`, and `EX11-053`.
-- Missing DSL/engine areas: union selection across hand/trash/breeding/source zones; play from King Drasil or other source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; Blast Digivolve and Blast DNA action paths; Option battle-area carrier lifecycle for non-Delay options; security-trash self-dispatch; security search/play and self-to-security placement; global security-removed observers; immediate may-attack/action prompts; Partition; and replacement/security-trash costs tied atomically to prevention.
+- Missing DSL/engine areas: union selection across hand/trash/breeding/source zones; play from King Drasil or other source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; Blast Digivolve and Blast DNA action paths; Option battle-area carrier lifecycle for non-Delay options; security-trash self-dispatch; security search/play and self-to-security placement; security-removed card-local follow-up shapes beyond the now-wired battle/effect `OnOpponentSecurityRemoved` / `OnOwnSecurityRemoved` timing payloads; immediate may-attack/action prompts; Partition; and replacement/security-trash costs tied atomically to prevention.
 - Workaround policy: no approximations were used for these blockers. If a printed clause required one of the missing primitives, the YAML either implemented an independent faithful slice such as a keyword/security play/simple trigger, or used a load-only gap stub.
 - Verification: targeted `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- <card_filter> --nocapture` passed for the final 25 filters, with one active load test and one ignored gap test per card.
 - First reported: 2026-05-05 Royal Knights full pool implementation pass.
@@ -186,6 +186,9 @@ Format per entry:
 - Updated 2026-04-29: `Game::return_to_hand` source disposition now carries `event_card` / `event_source_card` for the trashed source and `event_host_card` for the former host top card, so `event_card_trait_has` can match sources trashed by that path. Runtime `event_host_permanent()` only exposes the stored host handle if it still resolves to that same card. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_digivolution_card_trashed_context_carries_host_and_trashed_source source_trash_host_context_does_not_alias_shifted_permanent` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolution_card_trashed_event_card_trait_predicate_matches_trashed_source`. Remaining source-trash gaps include cross-permanent source selection, source-trash paths other than `return_to_hand`, and first-class DSL leaves for trashed-source / host-permanent predicates.
 - Updated 2026-05-02: first-class predicate leaves now compile for `event_target_owner`, `host_permanent_trait_has`, `trashed_source_trait_has`, and `trashed_source_card_id_is`; runtime coverage exercises `TriggerSource::SourceTrashedFromStack` with live host/trashed-source context. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase3d_event_context`. Remaining source-trash producer paths not covered here should stay open until each producer proves it supplies host/source context rather than relying on fallback guessing.
 - Updated 2026-05-03: Task 6 audit found the reusable source-trash payload and DSL predicate leaves already implemented. Added focused regression coverage that an actual `EffectContext::trash_card_source` producer supplies the exact trashed source card and live host into `trashed_source_trait_has`, `trashed_source_card_id_is`, `host_permanent_trait_has`, and `event_target_owner`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- event_context_bindings group6_dynamic_formulas group7_predicate_batch --nocapture`. No new event payload, predicate, formula, action, or tensor primitive was added.
+- Updated 2026-05-07: Return-to-deck source disposition and de-digivolve now emit `TriggerSource::SourceTrashedFromStack` through `Game::fire_digivolution_card_trashed(...)`, including cause and moved-card payload data. `host_permanent_trait_has` now falls back to the event host-card snapshot after the host leaves the battle area. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_digivolution_card_trashed_return_to_deck_carries_host_and_trashed_source on_digivolution_card_trashed_de_digivolve_carries_host_and_trashed_source` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex8_051_inherited_source_trash_dedigivolves_after_host_return_to_deck`. Remaining source-trash DSL work is producer/card-local for additional source-trash cost shapes.
+- Updated 2026-05-07: `select_own_sources` now accepts `target: <binding-ref>`, so inline source costs can be restricted to the activating permanent (`target: source`) rather than all own stacks. BT4-072 proves exact-N Digi-Burst authoring with a target-scoped source selection, `trash_selected_sources`, and the follow-up DP target choice. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt4_072` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- select_sources`.
+- Updated 2026-05-07: `digi_burst` is now a reusable DSL step that lowers to the canonical self-source exact-N selection and inserted trash-cost step before the nested body. BT4-072 now uses this wrapper, and printed keyword parsing carries `Keyword::DigiBurst(N)`. Covered by `cargo test --manifest-path code/digimon-dsl/Cargo.toml --test parse_source_selection_steps` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parser_digi_burst_parametric`.
 - Lowers to engine API: `TriggerContext` / event payload fields containing `{host_permanent, trashed_card, trashed_source_index, cause_player}` plus predicate evaluation against those fields.
 - Suggested DSL syntax:
   ```yaml
@@ -908,29 +911,45 @@ Format per entry:
 
 ---
 
+## EX11-060 — deletion event cause predicate for Overclock branch  [PUPPETS-G022]
+
+- Effect text: "[All Turns] When any of your Tokens or [Puppet] trait Digimon are deleted, by suspending this Tamer, <Draw 1>. If this effect was activated by <Overclock>, you may play 1 level 4 or lower [Puppet] trait Digimon card from your hand without paying the cost."
+- Status 2026-05-06: `PUPPETS-G022` closed. Predicate leaf `event_cause` now compiles and evaluates against `TriggerContext.cause`; `overclock` is available as a first-class observer cause. Overclock sacrifice deletion preserves `ReplacementCause::Cost` for replacement windows while publishing `EventCause::Overclock` to `OnAnyDeletion` observers.
+- Implemented DSL syntax:
+  ```yaml
+  condition: { event_cause: overclock }
+  ```
+- Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_060` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- event_context`.
+
+---
+
 ## BT20-084 — trash-resident effect digivolve and stacked-card-to-security  [PUPPETS-G026/PUPPETS-G027]
 
 - Effect text: "[Trash] [All Turns] When any of your Digimon are played, 1 of your [Sistermon Ciel]s may digivolve into this card without paying the cost." / "[End of All Turns] Place this Digimon's top stacked card as the top security card."
-- Missing DSL verb / step kind / predicate: trash-resident global observer dispatch; effect-initiated digivolve from a trash source card; curated top-stacked-card extraction and security-top placement.
-- Companion engine state: existing effect-digivolve paths are not source-parametric for trash cards, and the reusable stack/security gap currently covers selected digivolution sources, not active top-card extraction with legal permanent cleanup.
-- Suggested DSL syntax:
+- Status 2026-05-06: `PUPPETS-G026` closed. DSL `when: on_ally_played` now lowers to `EffectTiming::OnAllyPlayed`, trash-resident observers fan out from allied play events, and `effect_initiated_digivolve` can consume `source: self` from trash for BT20-084's optional target choice.
+- Still missing DSL verb / step kind / predicate: curated top-stacked-card extraction and security-top placement for `PUPPETS-G027`.
+- Implemented trash-observer DSL syntax:
   ```yaml
-  - scope: trash
-    when: on_ally_played
+  - when: on_ally_played
     optional: true
+    condition: { event_target_kind: digimon }
     process:
       - select_own_permanent:
           bind_as: ciel
           filter: { name_is: "Sistermon Ciel" }
-      - effect_digivolve_from_trash:
+      - effect_initiated_digivolve:
           target: ciel
-          card: self
-          cost: 0
+          source: self
+          cost: free
+          ignore_requirements: true
+  ```
+- Remaining suggested DSL syntax:
+  ```yaml
 
   - place_top_stacked_card_as_security_top: { of: you }
   ```
-- Gap kind: hybrid. The observer/source move needs engine support; DSL needs vocabulary for the new source and stack movement operations.
-- Workaround: None faithful. Hand-based digivolve or raw stack mutation would move the wrong card or bypass action-mask and cleanup contracts.
+- Gap kind: hybrid, partially closed. Trash observer/source move is implemented; stack/security movement remains blocked.
+- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_084`.
 - First reported: 2026-05-04 (Puppets resolver Batch 8, BT20-084)
 
 ---
@@ -1251,6 +1270,7 @@ Format per entry:
 - Lowers to engine API: both sub-gaps are DSL-only additions; engine already stores the data.
   - `select_own_sources` filter: add `filter: Option<CompiledPredicate>` to `CompiledSelectOwnSources`, evaluate against each `card_source` entry.
   - `binding_present` predicate: add leaf that checks `ctx.bindings.get(name).is_some()`.
+- Updated 2026-05-07: `select_own_sources.target` can now restrict the picker to a specific permanent binding, which covers self-stack cost shapes like Digi-Burst. This does **not** close the card-name source filter needed here; BT12-031 still needs `filter:` over source card identity plus `binding_present`.
 - Gap kind: DSL only.
 - Workaround: Steps A (for_each suspend no-digi-card targets) and B (select 1 suspended opp → return to hand) are authored in BT12-031.yaml. Step C is commented out as BLOCKED.
 - Behavioral tests: 2 tests `#[ignore = "pending: G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME from qa/dsl-vocab-gaps.md ..."]` in `code/digimon-engine/tests/cards_behavioral/bt12/bt12_031.rs`.

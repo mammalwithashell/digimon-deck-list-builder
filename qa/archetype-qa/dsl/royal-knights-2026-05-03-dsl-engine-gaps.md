@@ -34,9 +34,9 @@ The current `Royal Knights` deck-library entry has 51 decklists. These cards rec
 | `BT23-054` Magnamon | Core RK body | production YAML partial | Blocker, draw, and selected return protection implemented; Armor Purge blocked by `RK-G003`. |
 | `BT13-112` Omnimon | Core payoff | production YAML gap stub | Plays one each different-name RK from King Drasil sources and suppresses On Play. |
 | `BT20-017` Jesmon | Core body/token pressure | production YAML gap stub | Needs token creation plus immediate may-attack/action flow. |
-| `BT20-060` Alphamon: Ouryuken | Core/near-core ACE | production YAML partial | ACE metadata, routes, and DP reduction implemented; Blast DNA, DNA tail, and security-removed observer blocked. |
+| `BT20-060` Alphamon: Ouryuken | Core/near-core ACE | production YAML partial | ACE metadata, routes, and DP reduction implemented; Blast DNA and DNA tail remain blocked; security-removed timing payload is wired, but this card still needs card-local authoring/tests. |
 | `BT13-110` Royal Knights of the Purge | Core Delay option | production YAML partial | Draw and option placement implemented; King Drasil source placement/play blocked by `RK-G001`. |
-| `BT23-035` Dynasmon | Common RK body | production YAML partial | Barrier and security-trash -6000 DP slice implemented; security-removed observer still blocked. |
+| `BT23-035` Dynasmon | Common RK body | production YAML partial | Barrier and security-trash -6000 DP slice implemented; security-removed timing payload is wired, but the recovery branch still needs card-local authoring/tests. |
 | `BT23-072` King Drasil_7D6 | Common support | production YAML gap stub | Hand main bottom-source placement; grants Rush/Raid/Reboot/Blocker. |
 | `BT19-072` LordKnightmon | Common RK body | production YAML partial | Trash play of level 4 or lower Digimon implemented; attack retarget blocked. |
 
@@ -109,7 +109,7 @@ Implemented / audited in these batches:
 | `BT20-017` Jesmon | `BLOCKED` | Load-only gap stub. | Atho/Rene/Por token registration; other-Digimon-played delete/may-attack observer. |
 | `BT20-021` Jesmon GX | `BLOCKED` | ACE metadata and standard route. | Union hand/trash source cost; source-DP compare; unsuspend; source-count security trash. |
 | `BT20-045` Examon | `PARTIAL` | ACE metadata; Raid, Piercing, Blocker, Evade. | Blast DNA; DNA-gated highest-DP bottom-deck sweep; any-Digimon-suspend observer. |
-| `BT20-056` Alphamon | `PARTIAL` | Barrier; [On Play]/[When Digivolving] Recovery +1. | During-attack breeding digivolve; security-removed observer; inherited replacement. |
+| `BT20-056` Alphamon | `PARTIAL` | Barrier; [On Play]/[When Digivolving] Recovery +1. | During-attack breeding digivolve; inherited replacement; security-removed card-local observer test. |
 | `BT22-025` UlforceVeedramon | `PARTIAL` | ACE metadata; [When Attacking][OPT] unsuspend self. | Blast Digivolve; modal lowest-level bottom-deck or blue Tamer play. |
 | `BT22-041` Kentaurosmon | `PARTIAL` | Blocker, Barrier, optional yellow hand-to-top-security. | Total-security play-cost reduction; self-suspend security-trash unsuspend cost. |
 | `BT22-052` Leopardmon | `PARTIAL` | ACE metadata; optional 5000 DP-or-lower hand play; own level 3+ Blocker grant. | Blast Digivolve; other-Digimon would-leave memory observer. |
@@ -159,6 +159,7 @@ Regression files were added under:
 - **Evidence:** `docs/RUST_ENGINE_GAPS.md` lists global `OnOpponentSecurityRemoved` as a blocking reusable timing gap; `BT20-083` example YAML has inherited `when: on_opponent_security_removed`.
 - **First test:** Place `BT20-083` as a source under King Drasil in breeding, remove the controller's security on the opponent's turn, and assert the optional Omekamon play-from-materials prompt appears.
 - **Implementation hint:** Treat security removal as a first-class event with trigger context fields for affected player, source effect controller, removed count/card if available, and observer fan-out over battle and breeding/inherited sources.
+- **Updated 2026-05-06:** Battle-area and battle/effect security-removal payloads are now wired for both `OnOpponentSecurityRemoved` and `OnOwnSecurityRemoved` and proved by BT24-001 plus BT4-097 fixtures. This RK gap is narrowed to breeding-resident/inherited King Drasil fan-out and card-local follow-up selections.
 
 ### Immediate May-Attack / Attack Without Suspending
 

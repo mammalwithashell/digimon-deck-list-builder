@@ -152,7 +152,7 @@ ctx.lose_memory(amount: i16)
 ctx.set_memory(value: i16)
 ```
 
-Memory is the seesaw — positive favors the active player, negative crosses into the opponent's turn. Use `gain_memory(n)` and `lose_memory(n)`; the engine clamps to `rules.memory_range`.
+Memory is the seesaw — positive favors the active player, negative crosses into the opponent's turn. `ctx.gain_memory(n)` gives memory to the resolving effect's controller; if that controller is not the active player, the raw gauge moves negative from the active player's perspective. `ctx.lose_memory(n)` subtracts from the current raw gauge. The engine clamps gains to `rules.memory_range`.
 
 ### Card flow
 
@@ -2198,6 +2198,109 @@ Each of these primitives is a pure movement or cost-payment operation. *Which* c
 
 ---
 
+## Event Payload Contract
+
+Slice 0 publishes a first-class trigger payload in
+`code/digimon-engine/src/trigger_context.rs`. The payload belongs to the event
+being observed, not to the card carrying the observer. `QueuedEffect` still
+carries the observer source separately through `source_card`,
+`source_permanent`, `source_kind`, `controller`, and `effect_slot`.
+
+### Field semantics
+
+| Field | Meaning |
+|-------|---------|
+| `subject` | Typed event subject: permanent, card in a zone, or player. Use this for "what happened". |
+| `event_permanent` / `event_card` | Compatibility accessors for the primary permanent/card involved in the event. For deletion events these are supplemented by `deleted_object`. |
+| `target_permanent` / `target_card` | Legacy target fields. Prefer `event_*` or typed snapshot fields for new observers. |
+| `source_player` / `affected_player` | Player that caused the event, and player affected by it when those differ. |
+| `cause: EventCause` | Coarse event cause: battle deletion, effect deletion, own/opponent effect, Overclock, return, deck-bottom, security placement/removal, cost, or rule. Emitters set this; observers only read it. |
+| `source_effect: EffectAttribution` | Effect/card/permanent that caused the event. This is distinct from the observer currently resolving. |
+| `selected_results` | Named bindings from the event's just-made selections for follow-up predicates. |
+| `moved_card_sets` | Batches of cards moved together, with optional from/to zones. Bulk-move triggers should append one set per semantic move. |
+| `effect_initiated` | True when the play/digivolve/move originated from an effect rather than a natural action. |
+| `deleted_object` | Pre-removal snapshot for deletion observers: former controller, top card, kind, traits, level, DP, and cause. Valid after the permanent has left the battle area. |
+| `old_attack_target` / `new_attack_target` | Old/new target pair for `OnAttackTargetChange`. |
+| `provenance_token` | Stable token for effect-created plays/digivolutions and later cleanup/suppression. Do not key cleanup on battle-area index. |
+| `was_security_skill` | Compatibility marker for security-originated effects. |
+
+`EffectReadContext::deleted_object_snapshot()` and
+`EffectContext::deleted_object_snapshot()` expose the deletion snapshot to Rust
+card scripts. DSL event-target bindings also prefer `deleted_object.top_card`
+after a deletion, so post-removal predicates can still resolve the deleted
+card's printed data.
+
+`EffectReadContext` / `EffectContext` also expose
+`event_affected_player()`, `event_source_player()`, and `event_cause()` for
+observers that need to distinguish "whose thing changed" from "who caused it".
+Security-removal observers populate these fields with the security owner, the
+attacking/effect source player, and `EventCause::SecurityRemoval`,
+`OwnEffect`, or `OpponentEffect` depending on the emitter.
+
+DSL predicates can read the same observer cause with `event_cause:
+<snake_case_cause>`. Supported values mirror `EventCause`, including
+`battle_deletion`, `own_effect`, `opponent_effect`, `overclock`,
+`security_removal`, `cost`, and `rule`. Use this for post-event branches such
+as EX11-060's "if deleted by <Overclock>" rider; replacement-window predicates
+continue to use `replacement_cause`.
+
+### Fan-out policy
+
+Observer fan-out must keep the event subject distinct from the observer source
+and make each observer reachable through exactly one path. The canonical paths
+are: battle-area top cards, inherited digivolution-stack sources, breeding-area
+top/inherited sources, hand-resident observers, trash-resident observers,
+security-resident observers, linked/field Option observers, and Delay observers.
+Do not scan overlapping zones for the same source/effect slot; use a stable
+observer identity of `(zone path, source_card, source_permanent, effect_slot)`
+when adding new fan-out paths.
+
+Slice 0 wires the contract through `OnAnyDeletion` enough to prove an inherited
+observer can read a deleted-object snapshot from another permanent exactly once.
+BT20-084's slice also wires the trash-resident `OnAllyPlayed` path: a played
+permanent is the event subject, while the trash card remains the observer source
+with `source_permanent = None`.
+EX11-060's slice wires the first Overclock-specific deletion payload: the
+Overclock sacrifice deletion still uses `ReplacementCause::Cost` for
+replacement windows, but the resulting `OnAnyDeletion` trigger carries
+`EventCause::Overclock` so observers can branch without confusing the
+replacement/cost model.
+The source-trash slice routes digivolution-source movement through
+`Game::fire_digivolution_card_trashed(...)`. `OnDigivolutionCardTrashed`
+payloads now carry `event_card` / `event_source_card` for the trashed source,
+`event_host_card` for the former or remaining host top card,
+`event_host_permanent` when a stable host handle is available,
+`affected_player` / `source_player`, `cause`, and a one-card
+`moved_card_sets` entry from `BattleArea` to `Trash`. DSL
+`host_permanent_trait_has` first checks the live host and then falls back to
+the host-card snapshot, so return-to-hand/deck source disposition remains
+observable after the host leaves the battle area.
+For source-cost authoring, DSL `select_own_sources` accepts an optional
+`target: <binding-ref>` field. When omitted, it scans the controller's own
+battle-area source cards as before. When set, it resolves the binding to a
+single permanent and only exposes source action IDs from that permanent; a
+resolution failure produces no candidates. `target: source` is the canonical
+inline shape for exact-N source costs on the activating stack, binding stable
+`SourceSelectionRef` values that `trash_selected_sources` consumes through the
+same source-trash payload path.
+
+`digi_burst` is the reusable DSL wrapper for printed `<Digi-Burst N>` bodies.
+It lowers to `select_own_sources { target: source, min: count, max: count }`
+with `trash_selected_sources` inserted before its nested `then:` steps. The
+card author still writes the printed "effect below" inside `then:`. Card data
+also parses printed `Digi-Burst N` into `Keyword::DigiBurst(N)`, but this
+keyword does not auto-install a body because the keyword token alone does not
+define the effect below it.
+Additional timings should be added one slice at a time with a failing fixture
+first.
+
+Single triggered observers auto-enter their body. If the printed trigger is
+optional, the first actionable body selection must expose PASS through the action
+mask, and no prompt should be installed when the body has no legal result.
+Multi-trigger bundles use `TriggerOrder` for player-chosen ordering/decline.
+
+---
+
 ## Phase 1 — Timing Dispatch
 
 Added in Phase 1 to wire every declared-but-unfired `EffectTiming` variant + 2 new observer variants for Medusamon and Rocks archetypes. Card scripts can now hook into turn phases, combat events, and global observers via dedicated `Effect::*` builders.
@@ -2226,6 +2329,7 @@ Added in Phase 1 to wire every declared-but-unfired `EffectTiming` variant + 2 n
 | Timing | Builder | Fire site |
 |--------|---------|-----------|
 | `OnEnterFieldAnyone` | `Effect::on_enter_field_anyone(card)` | `play_from_hand_with_cost` + `play_from_trash_with_cost` (after OnPlay) |
+| `OnAllyPlayed` | `Effect::on_ally_played(card)` | Play emitters after `OnPlay`; scans the playing player's battle area and trash observers |
 | `OnAnyDeletion` | `Effect::on_any_deletion(card)` | `delete_permanent_with_effects` (single chokepoint for all deletions) |
 | `OnSuspend` | `Effect::on_suspend(card)` | `Game::suspend` (guarded on state change) |
 | `OnUnsuspend` | `Effect::on_unsuspend(card)` | `Game::unsuspend` (bulk unsuspend_all does NOT fire — StartOfYourTurn is the canonical turn-start timing) |
@@ -2236,12 +2340,21 @@ Added in Phase 1 to wire every declared-but-unfired `EffectTiming` variant + 2 n
 
 | Timing | Builder | Fire site | Archetype |
 |--------|---------|-----------|-----------|
-| `OnOpponentSecurityRemoved` | `Effect::on_opponent_security_removed(card)` | `SecurityPhase::Dispose` (attacker's battle area only) | Medusamon core |
-| `OnDigivolutionCardTrashed` | `Effect::on_digivolution_card_trashed(card)` | Per-source in `return_to_hand` / `return_to_deck` (sources-below-top, not linked_cards) | Rocks core |
+| `OnOpponentSecurityRemoved` | `Effect::on_opponent_security_removed(card)` | Security removal disposition for the opponent of the affected player | Medusamon core |
+| `OnOwnSecurityRemoved` | `Effect::on_own_security_removed(card)` | Security removal disposition for the affected player's own battle area | BT4-097 Kari Kamiya |
+| `OnDigivolutionCardTrashed` | `Effect::on_digivolution_card_trashed(card)` | `Game::fire_digivolution_card_trashed(...)` from return-to-hand/deck source disposition, de-digivolve, Armor Purge, Fragment/source-trash helpers, and explicit source-trash DSL steps (digivolution stack only, not linked cards) | Rocks core |
 
 ### Scoping
 
-All observer fire sites use `TriggerSource::PlayerBattleArea(PlayerId)` — effects with the given timing in a player's battle area fire.
+Most observer fire sites use `TriggerSource::PlayerBattleArea(PlayerId)` —
+effects with the given timing in a player's battle area fire. Security-removal
+observers use `TriggerSource::SecurityRemoved`, which carries the affected
+player, observer player, source player, removed security card, and cause. Both
+battle damage and effect-driven security movement use the same payload path.
+`OnAllyPlayed` uses `TriggerSource::EnteredField` but narrows fan-out to the
+playing player's battle-area observers plus top-level trash observers, so the
+same source/effect slot is not reachable through the global `OnEnterFieldAnyone`
+scan.
 
 Per-permanent events (`OnAttack` on the attacker) use `TriggerSource::Permanent(handle)`.
 
@@ -2329,6 +2442,12 @@ filter from the bracketed trait. DSL `grant_keyword` clauses may provide an
 `overclock_cost_filter` predicate; lowering attaches it with
 `EffectBuilder::overclock_with_cost_filter`, and runtime candidate collection
 uses the same predicate path.
+
+If deleting the Overclock cost produces observer selections, the attack is
+paused and resumed after those selections finish. The resumed attack re-finds
+the Overclock source by its stable `CardHandle`, not by the pre-cost
+battle-area index, so lower-slot sacrifices and observer-driven field changes
+do not stale the attacker handle.
 
 ---
 

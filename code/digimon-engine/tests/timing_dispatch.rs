@@ -16,8 +16,10 @@ use digimon_engine::enums::{
 use digimon_engine::events::GameEvent;
 use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::{Permanent, PermanentHandle};
-use digimon_engine::replacement::ReplacementSubject;
+use digimon_engine::replacement::{ReplacementCause, ReplacementSubject};
 use digimon_engine::selection::{AttackTarget, TriggerSource};
+use digimon_engine::trigger_context::EventCause;
+use digimon_engine::PlayerId;
 use std::sync::{Arc, Mutex};
 
 fn dummy() -> CardHandle {
@@ -53,6 +55,9 @@ fn new_effect_timings_are_constructible() {
     let e = Effect::on_enter_field_anyone(card).build();
     assert_eq!(e.timing, EffectTiming::OnEnterFieldAnyone);
 
+    let e = Effect::on_ally_played(card).build();
+    assert_eq!(e.timing, EffectTiming::OnAllyPlayed);
+
     let e = Effect::on_any_deletion(card).build();
     assert_eq!(e.timing, EffectTiming::OnAnyDeletion);
 
@@ -76,6 +81,9 @@ fn new_effect_timings_are_constructible() {
 
     let e = Effect::on_opponent_security_removed(card).build();
     assert_eq!(e.timing, EffectTiming::OnOpponentSecurityRemoved);
+
+    let e = Effect::on_own_security_removed(card).build();
+    assert_eq!(e.timing, EffectTiming::OnOwnSecurityRemoved);
 
     let e = Effect::on_digivolution_card_trashed(card).build();
     assert_eq!(e.timing, EffectTiming::OnDigivolutionCardTrashed);
@@ -168,6 +176,14 @@ fn option_card_with_cost(card_id: &str, name: &str, play_cost: u16, traits: &[&s
 
 fn option_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
     option_card_with_cost(card_id, name, 0, traits)
+}
+
+fn token_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
+    let mut card = plain_digimon(card_id, name, 0);
+    card.card_kind = CardKind::Token;
+    card.level = None;
+    card.traits = traits.iter().map(|t| t.to_string()).collect();
+    card
 }
 
 // ─── TEST-P1-T2 ───────────────────────────────────────────────────────────────
@@ -340,12 +356,12 @@ fn end_of_opponents_turn_fires_for_non_turn_player() {
     r.pass_turn();
     ctrl.pass_turn();
 
-    // gain_memory(1) fires during player 1's (ending) turn, so it shifts the
-    // seesaw in player 1's favour. After the memory flip, player 0's observed
-    // memory is 1 less than in the control game — proving the effect fired.
+    // gain_memory(1) is controller-aware. This observer belongs to player 0,
+    // so after the turn handoff player 0 sees one more memory than the control
+    // game — proving the effect fired.
     assert_eq!(
-        r.memory() + 1,
-        ctrl.memory(),
+        r.memory(),
+        ctrl.memory() + 1,
         "EndOfOpponentsTurn should have fired for player 0's permanent at end of player 1's turn"
     );
 }
@@ -667,6 +683,84 @@ fn on_enter_field_anyone_fires_for_all_players() {
     );
 }
 
+struct TrashResidentAllyPlayedObserver {
+    seen: Arc<Mutex<Vec<(String, Option<PlayerId>, Option<PermanentHandle>, String)>>>,
+}
+
+impl CardEffect for TrashResidentAllyPlayedObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = self.seen.clone();
+        vec![Effect::on_ally_played(card)
+            .name("record allied play from trash")
+            .process(move |ctx| {
+                let event_id = ctx
+                    .event_card()
+                    .and_then(|handle| ctx.game.card_data_for_handle(handle))
+                    .map(|data| data.card_id.clone())
+                    .unwrap_or_else(|| "<missing>".to_string());
+                let observer_id = ctx
+                    .game
+                    .card_data_for_handle(ctx.source_card)
+                    .map(|data| data.card_id.clone())
+                    .unwrap_or_else(|| "<missing>".to_string());
+                seen.lock().unwrap().push((
+                    event_id,
+                    ctx.event_source_player(),
+                    ctx.source_permanent,
+                    observer_id,
+                ));
+            })
+            .build()]
+    }
+}
+
+fn add_registered_card_to_trash(
+    runner: &mut DebugRunner,
+    player: PlayerId,
+    card_id: &str,
+) -> CardHandle {
+    let data_index = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == card_id)
+        .expect("card registered");
+    let card_index = runner.game.next_card_index();
+    let source = CardSource::new(data_index, player, card_index);
+    let handle = source.handle();
+    runner.game.players[player as usize].trash.push(source);
+    handle
+}
+
+#[test]
+fn trash_resident_on_ally_played_observer_sees_played_subject_once() {
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("TRASH-OBS", "Trash Observer", 3))
+        .add_card(plain_digimon("ALLY", "Ally Digimon", 2))
+        .add_card(plain_digimon("OPP", "Opponent Digimon", 2))
+        .hand(0, &["ALLY"])
+        .hand(1, &["OPP"])
+        .memory(10)
+        .start();
+    r.register_effect(
+        "TRASH-OBS",
+        Arc::new(TrashResidentAllyPlayedObserver { seen: seen.clone() }),
+    );
+    let observer = add_registered_card_to_trash(&mut r, 0, "TRASH-OBS");
+
+    let _ = r.play(0, 0);
+    let _ = r.play(1, 0);
+
+    let seen = seen.lock().unwrap();
+    assert_eq!(
+        seen.as_slice(),
+        &[("ALLY".to_string(), Some(0), None, "TRASH-OBS".to_string())],
+        "trash observer {:?} should see only its controller's played Digimon once",
+        observer
+    );
+}
+
 // ─── TEST-P1-T9 ───────────────────────────────────────────────────────────────
 
 /// A CardEffect that grants +1 memory whenever any Digimon is deleted.
@@ -680,6 +774,56 @@ impl CardEffect for DeletionObserverMem {
             })
             .build()]
     }
+}
+
+/// Inherited observer that must read the deleted object snapshot, not the
+/// carrier holding this inherited effect.
+struct InheritedDeletedSnapshotObserver;
+impl CardEffect for InheritedDeletedSnapshotObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::inherited(card)
+            .timing(EffectTiming::OnAnyDeletion)
+            .name("snapshot-gated inherited OnAnyDeletion")
+            .condition(|ctx| {
+                let Some(snapshot) = ctx.deleted_object_snapshot() else {
+                    return false;
+                };
+                snapshot.former_controller == 0
+                    && snapshot.card_kind == CardKind::Token
+                    && snapshot
+                        .traits
+                        .iter()
+                        .any(|trait_name| trait_name == "Puppet")
+                    && snapshot.cause == EventCause::OwnEffect
+            })
+            .process(|ctx| {
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_any_deletion_payload_carries_deleted_snapshot_to_inherited_observer_once() {
+    let mut r = DebugRunner::builder()
+        .add_card(token_card("PUP-TOKEN", "Puppet Token", &["Puppet"]))
+        .add_card(plain_digimon("HOST", "Host Digimon", 3))
+        .add_card(plain_digimon("INH-OBS", "Inherited Observer", 3))
+        .start();
+    r.register_effect("INH-OBS", Arc::new(InheritedDeletedSnapshotObserver));
+
+    let victim = r.place_on_field(0, "PUP-TOKEN", Some(0));
+    let _carrier = r.place_stack(0, &["INH-OBS", "HOST"]);
+    let before = r.memory();
+
+    r.game
+        .delete_permanent_with_cause(victim, ReplacementCause::OwnEffect);
+
+    assert_eq!(
+        r.memory(),
+        before + 1,
+        "inherited observer should fire once from deleted-object snapshot"
+    );
 }
 
 #[test]
@@ -1161,6 +1305,96 @@ fn on_digivolution_card_trashed_context_carries_host_and_trashed_source() {
 }
 
 #[test]
+fn on_digivolution_card_trashed_return_to_deck_carries_host_and_trashed_source() {
+    use digimon_engine::enums::StackPosition;
+
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS-DECK", "Source Trash Observer", 3))
+        .add_card(plain_digimon("TOP-DECK", "Top", 4))
+        .add_card(plain_digimon("UNDER-DECK", "Under", 3))
+        .memory(5)
+        .start();
+    r.register_effect("OBS-DECK", Arc::new(SourceTrashObserver));
+
+    r.place_on_field(0, "OBS-DECK", None);
+    let host = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER-DECK")
+            .unwrap();
+        let top_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TOP-DECK")
+            .unwrap();
+        let under = CardSource::new(under_idx, 0, g.next_card_index());
+        let top = CardSource::new(top_idx, 0, g.next_card_index());
+        let mut permanent = Permanent::new(under, turn);
+        permanent.card_sources.push(top);
+        g.players[0].battle_area.push(permanent);
+        PermanentHandle {
+            player: 0,
+            index: (g.players[0].battle_area.len() - 1) as u8,
+        }
+    };
+
+    let before = r.memory();
+    assert!(
+        r.game_mut().return_to_deck(host, StackPosition::Bottom),
+        "return_to_deck should move TOP-DECK to deck and trash UNDER-DECK"
+    );
+
+    assert_eq!(r.memory(), before + 1);
+}
+
+#[test]
+fn on_digivolution_card_trashed_de_digivolve_carries_host_and_trashed_source() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OBS-DEDE", "Source Trash Observer", 3))
+        .add_card(plain_digimon("TOP-DEDE", "Top", 4))
+        .add_card(plain_digimon("UNDER-DEDE", "Under", 3))
+        .memory(5)
+        .start();
+    r.register_effect("OBS-DEDE", Arc::new(SourceTrashObserver));
+
+    r.place_on_field(0, "OBS-DEDE", None);
+    let host = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let under_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER-DEDE")
+            .unwrap();
+        let top_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TOP-DEDE")
+            .unwrap();
+        let under = CardSource::new(under_idx, 0, g.next_card_index());
+        let top = CardSource::new(top_idx, 0, g.next_card_index());
+        let mut permanent = Permanent::new(under, turn);
+        permanent.card_sources.push(top);
+        g.players[0].battle_area.push(permanent);
+        PermanentHandle {
+            player: 0,
+            index: (g.players[0].battle_area.len() - 1) as u8,
+        }
+    };
+
+    let before = r.memory();
+    assert!(
+        r.game_mut().de_digivolve_from_effect(host, 0, 1),
+        "de_digivolve should trash TOP-DEDE and expose UNDER-DEDE"
+    );
+
+    assert_eq!(r.memory(), before + 1);
+}
+
+#[test]
 fn source_trash_host_context_does_not_alias_shifted_permanent() {
     let mut r = DebugRunner::builder()
         .add_card(plain_digimon("OBS", "Source Trash Observer", 3))
@@ -1588,8 +1822,8 @@ fn declared_attack_fires_ally_and_opponent_observers_with_attack_context() {
 
     assert_eq!(
         r.memory(),
-        before + 3,
-        "ally observer should gain 1 and opponent observer should gain 2 at attack declaration"
+        before - 1,
+        "ally observer should gain 1 and opponent observer should gain 2 for its controller at attack declaration"
     );
     assert_eq!(
         *ally_seen.lock().unwrap(),
@@ -2063,6 +2297,91 @@ fn on_opponent_security_removed_fires_for_attacker() {
         r.security_count(1),
         1,
         "one security card should have been consumed"
+    );
+}
+
+// ─── TEST-P1-T14b ────────────────────────────────────────────────────────────
+
+/// A CardEffect that records own-security-removal payload details.
+struct OwnSecRemovedPayloadObs {
+    seen: Arc<
+        Mutex<
+            Vec<(
+                Option<PlayerId>,
+                Option<PlayerId>,
+                Option<EventCause>,
+                Option<CardHandle>,
+            )>,
+        >,
+    >,
+}
+impl CardEffect for OwnSecRemovedPayloadObs {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = Arc::clone(&self.seen);
+        vec![Effect::on_own_security_removed(card)
+            .name("record own security removal payload")
+            .process(move |ctx| {
+                seen.lock().unwrap().push((
+                    ctx.event_affected_player(),
+                    ctx.event_source_player(),
+                    ctx.event_cause(),
+                    ctx.event_card(),
+                ));
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn on_own_security_removed_fires_for_defender_with_battle_payload() {
+    let mut atk_data = plain_digimon("ATK14B", "Attacker14B", 5);
+    atk_data.level = Some(5);
+    atk_data.dp = Some(9000);
+
+    let filler: Vec<&str> = vec!["F"; 10];
+    let mut r = DebugRunner::builder()
+        .add_card(atk_data)
+        .add_card(plain_digimon("OBS14B", "OwnSecObs", 3))
+        .add_card(plain_digimon("SEC14B", "SecurityCard14B", 3))
+        .add_card(plain_digimon("F", "F", 1))
+        .security(1, &["SEC14B", "SEC14B"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(5)
+        .start();
+
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect(
+        "OBS14B",
+        Arc::new(OwnSecRemovedPayloadObs {
+            seen: Arc::clone(&seen),
+        }),
+    );
+
+    let atk_h = r.place_on_field(0, "ATK14B", Some(0));
+    let _obs_h = r.place_on_field(1, "OBS14B", Some(0));
+
+    let before = r.memory();
+    let _ = r.attack_player(atk_h, 1, true);
+
+    let seen = seen.lock().unwrap();
+    assert_eq!(
+        seen.len(),
+        1,
+        "own-security observer should fire exactly once"
+    );
+    assert_eq!(
+        r.memory(),
+        before - 1,
+        "defender's observer should gain memory for its controller"
+    );
+    assert_eq!(seen[0].0, Some(1), "affected player is the defender");
+    assert_eq!(seen[0].1, Some(0), "source player is the attacker");
+    assert_eq!(seen[0].2, Some(EventCause::SecurityRemoval));
+    assert!(
+        seen[0].3.is_some(),
+        "event_card should carry the removed security card"
     );
 }
 

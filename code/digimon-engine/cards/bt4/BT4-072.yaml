@@ -13,9 +13,24 @@ alt_paths:
     from: { level_eq: 4, color_is: black }
     cost: 3
 
-# Printed [Main] Digi-Burst 1 DP buff is not authored in this pass.
-
 effects:
+  - when: main_on_field
+    summary: "[Main] <Digi-Burst 1> 1 of your Digimon gets +2000 DP until the end of your opponent's next turn"
+    process:
+      - digi_burst:
+          count: 1
+          bind_as: burst_source
+          prompt: "Choose 1 digivolution card under this Digimon to trash for <Digi-Burst 1>"
+          then:
+            - select_own_permanent:
+                bind_as: dp_target
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to get +2000 DP"
+            - add_dp_modifier:
+                target: dp_target
+                value: 2000
+                expiry: end_of_opponents_turn
+
   - scope: inherited
     kind: aura
     active_when: { all_turns: true }

@@ -376,6 +376,11 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnEnterFieldAnyone)
     }
 
+    /// Fires when a permanent is played by the controller of this observer.
+    pub fn on_ally_played(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnAllyPlayed)
+    }
+
     /// Fires when any permanent is deleted, for either player's battle area.
     pub fn on_any_deletion(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnAnyDeletion)
@@ -442,6 +447,11 @@ impl Effect {
     /// Medusamon core archetype observer.
     pub fn on_opponent_security_removed(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnOpponentSecurityRemoved)
+    }
+
+    /// Fires when one of your security cards is removed from your security stack.
+    pub fn on_own_security_removed(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnOwnSecurityRemoved)
     }
 
     /// Fires when a card is trashed from a permanent's digivolution stack.

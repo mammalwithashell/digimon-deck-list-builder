@@ -13,9 +13,7 @@
 //! - G4  Inherited effect on DigiEgg
 //! - E2  OPT + optional decline
 //! - F   Delete opponent Digimon with DP cap (dp_lte: 3000)
-//! - G-INHERITED-DISPATCH  (ignore-tagged tests)
-//! - G-OPT-TRIGGERED       (ignore-tagged OPT lockout test)
-//! - G-PRED-DP-LTE         (ignore-tagged negative-eligibility test)
+//! - G-PRED-DP-LTE         (one ignore-tagged test)
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::card_data::CardData;
@@ -175,13 +173,7 @@ fn bt24_001_inherited_clause_is_opt_and_optional() {
 // ── Section 2: Condition gating ─────────────────────────────────────────────
 
 /// Positive: [Your Turn] gate — on P0's turn the clause can activate.
-/// Because G-INHERITED-DISPATCH prevents the inherited effect from firing at all,
-/// this test is BLOCKED. Kept as documentation of the expected behaviour.
-///
-/// Note: even without dispatch, the structural assertion above validates the
-/// `active_when: your_turn` field is encoded in the compiled clause.
 #[test]
-#[ignore = "BLOCKED: engine lacks digivolution-stack inherited triggered-effect dispatch (G-INHERITED-DISPATCH)"]
 fn bt24_001_condition_positive_fires_on_your_turn_when_opp_security_removed() {
     let mut runner = gigimon_runner();
 
@@ -233,11 +225,6 @@ fn bt24_001_condition_negative_does_not_fire_on_opponents_turn() {
 
     // Gigimon's inherited clause must NOT fire on P1's turn.
     // Verify: no delete-selection was presented (game stayed coherent).
-    // Since G-INHERITED-DISPATCH prevents firing anyway, the direct assertion
-    // is on battle_area_size(0) remaining unchanged by the inherited effect.
-    // (P0 still has carrier on field; if somehow deleted by own-inherited-effect
-    // that would be a bug.)
-    // This test mainly documents the active_when: your_turn constraint.
     assert!(
         !runner.game_over() || runner.battle_area_size(0) <= 1,
         "inherited clause must not produce spurious deletes on opponent turn"
@@ -249,9 +236,7 @@ fn bt24_001_condition_negative_does_not_fire_on_opponents_turn() {
 /// Optional decline: when the inherited clause fires and the player declines,
 /// no Digimon is deleted.
 ///
-/// BLOCKED: requires G-INHERITED-DISPATCH to fire at all.
 #[test]
-#[ignore = "BLOCKED: engine lacks digivolution-stack inherited triggered-effect dispatch (G-INHERITED-DISPATCH)"]
 fn bt24_001_declining_does_not_delete_digimon() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(GIGIMON_YAML)
@@ -295,9 +280,7 @@ fn bt24_001_declining_does_not_delete_digimon() {
 
 /// Accepting the clause deletes the chosen Digimon with ≤3000 DP.
 ///
-/// BLOCKED: requires G-INHERITED-DISPATCH to fire at all.
 #[test]
-#[ignore = "BLOCKED: engine lacks digivolution-stack inherited triggered-effect dispatch (G-INHERITED-DISPATCH)"]
 fn bt24_001_accepting_deletes_low_dp_digimon() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(GIGIMON_YAML)
@@ -319,11 +302,15 @@ fn bt24_001_accepting_deletes_low_dp_digimon() {
 
     runner.attack_player(carrier, 1, false);
 
-    // Expect: selection is installed asking which Digimon to delete.
+    // The inherited effect is optional, so its delete selection admits PASS.
     assert_eq!(
         runner.pending_kind(),
         Some(SelectionKind::OppField),
         "should prompt OppField selection for delete target"
+    );
+    assert!(
+        runner.pending_is_optional(),
+        "delete target selection should be optional (\"you may\")"
     );
 
     // Accept: pick the first (only) eligible target.
@@ -393,11 +380,7 @@ fn bt24_001_high_dp_digimon_not_eligible_for_delete() {
 /// OPT lockout: second security removal in the same turn must NOT re-fire the
 /// inherited clause.
 ///
-/// BLOCKED (G-OPT-TRIGGERED): `max_per_turn` not enforced for triggered effects
-/// in `run_queued_effect_inner`. The clause would over-fire.
-/// Also blocked by G-INHERITED-DISPATCH for the same reasons as above.
 #[test]
-#[ignore = "BLOCKED: OPT not enforced for triggered effects (G-OPT-TRIGGERED); also G-INHERITED-DISPATCH"]
 fn bt24_001_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(GIGIMON_YAML)
@@ -418,12 +401,16 @@ fn bt24_001_opt_blocks_second_trigger_same_turn() {
     runner.place_on_field(1, "LOW-DP-2", Some(0));
     let carrier = place_gigimon_as_source(&mut runner);
 
-    // First attack: OPT fires, should get delete selection.
+    // First attack: OPT fires, should get optional delete selection.
     runner.attack_player(carrier, 1, false);
     assert_eq!(
         runner.pending_kind(),
         Some(SelectionKind::OppField),
         "first trigger must produce delete selection"
+    );
+    assert!(
+        runner.pending_is_optional(),
+        "first delete selection must admit decline"
     );
     {
         let view = runner.pending_selection_view().unwrap();
@@ -453,8 +440,6 @@ fn bt24_001_opt_blocks_second_trigger_same_turn() {
 
 /// OPT resets after end_turn.
 ///
-/// Note: heavily limited by G-INHERITED-DISPATCH (first trigger can't be
-/// confirmed); included for documentation and partial coverage.
 #[test]
 fn bt24_001_opt_resets_after_end_turn_structural() {
     // This test is primarily structural: it just verifies the compiled clause
@@ -475,6 +460,6 @@ fn bt24_001_opt_resets_after_end_turn_structural() {
 
     assert!(
         triggered[0].once_per_turn,
-        "DSL clause must encode once_per_turn: true so OPT can be enforced once G-OPT-TRIGGERED closes"
+        "DSL clause must encode once_per_turn: true; runtime same-turn lockout is covered above"
     );
 }

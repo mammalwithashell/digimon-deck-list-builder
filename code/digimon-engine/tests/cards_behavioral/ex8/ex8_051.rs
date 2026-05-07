@@ -7,7 +7,7 @@
 
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::enums::{Keyword, ModifierType};
+use digimon_engine::enums::{Keyword, ModifierType, StackPosition};
 use digimon_engine::selection::SelectionKind;
 
 fn runner() -> DebugRunner {
@@ -75,5 +75,43 @@ fn ex8_051_inherited_source_trash_dedigivolves_one_opponent_digimon() {
         runner.game.modifiers.sum(opponent, ModifierType::ChangeDp),
         0,
         "source-trash inherited effect should only de-digivolve, not add unrelated modifiers"
+    );
+}
+
+#[test]
+fn ex8_051_inherited_source_trash_dedigivolves_after_host_return_to_deck() {
+    let mut host = make_test_card("ROCK-HOST-RETURN", "Rock Host Return");
+    host.traits.push("Rock".to_string());
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX8-051")
+        .expect("EX8-051 YAML parses and compiles")
+        .dsl_card("BT24-011")
+        .expect("BT24-011 YAML parses and compiles")
+        .dsl_card("BT21-024")
+        .expect("BT21-024 YAML parses and compiles")
+        .add_card(host)
+        .build();
+
+    let host = runner.place_on_field(0, "ROCK-HOST-RETURN", None);
+    runner.push_source(host, "EX8-051");
+    let opponent = runner.place_stack(1, &["BT24-011", "BT21-024"]);
+
+    assert!(
+        runner.game.return_to_deck(host, StackPosition::Bottom),
+        "returning host to deck should trash EX8-051 from its sources"
+    );
+
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
+    runner
+        .auto_resolve()
+        .expect("EX8-051 target selection resolves after return-to-deck source trash");
+
+    assert_eq!(
+        runner.game.player(1).battle_area[opponent.index as usize]
+            .card_sources
+            .len(),
+        1,
+        "EX8-051 inherited effect must see source trash from return-to-deck source disposition"
     );
 }

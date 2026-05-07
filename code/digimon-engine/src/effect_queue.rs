@@ -189,7 +189,12 @@ impl Game {
             }
             TriggerSource::SecurityRevealed { defender, card } => {
                 let trigger_context = self.trigger_context_for_source(&source, None);
-                self.enqueue_from_security_card(timing, defender, card, Some(trigger_context));
+                self.enqueue_from_security_card(
+                    timing,
+                    defender,
+                    card,
+                    Some(trigger_context.clone()),
+                );
                 if timing == EffectTiming::OnLoseSecurity {
                     let count = self.player(defender).battle_area.len();
                     for i in 0..count {
@@ -197,7 +202,7 @@ impl Game {
                             player: defender,
                             index: i as u8,
                         };
-                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context.clone()));
                     }
                 }
             }
@@ -244,9 +249,16 @@ impl Game {
                     }
                 }
             }
-            TriggerSource::EnteredField { .. } => {
-                for player in 0..self.players.len() {
-                    let player = player as PlayerId;
+            TriggerSource::EnteredField { player, .. } => {
+                let scan_all_players = timing != EffectTiming::OnAllyPlayed;
+                let start = if scan_all_players { 0 } else { player as usize };
+                let end = if scan_all_players {
+                    self.players.len()
+                } else {
+                    (player as usize).saturating_add(1).min(self.players.len())
+                };
+                for scan_player in start..end {
+                    let player = scan_player as PlayerId;
                     let count = self.player(player).battle_area.len();
                     for i in 0..count {
                         let handle = PermanentHandle {
@@ -257,6 +269,10 @@ impl Game {
                             self.trigger_context_for_source(&source, Some(handle));
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
+                }
+                if timing == EffectTiming::OnAllyPlayed {
+                    let trigger_context = self.trigger_context_for_source(&source, None);
+                    self.enqueue_from_player_trash(timing, player, Some(trigger_context));
                 }
             }
             TriggerSource::OptionPlaced { .. } => {
@@ -317,6 +333,19 @@ impl Game {
                     }
                 }
             }
+            TriggerSource::SecurityRemoved {
+                observer_player, ..
+            } => {
+                let count = self.player(observer_player).battle_area.len();
+                for i in 0..count {
+                    let handle = PermanentHandle {
+                        player: observer_player,
+                        index: i as u8,
+                    };
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                }
+            }
         }
         if matches!(source, TriggerSource::EventObserved { .. }) {
             let trigger_context = self.trigger_context_for_source(&source, None);
@@ -358,13 +387,69 @@ impl Game {
                 source_kind,
                 controller,
                 timing,
-                trigger_context,
+                trigger_context: trigger_context.clone(),
                 effect_slot: slot as u8,
                 is_optional: effect.optional,
                 is_turn_player,
                 card_id: card_id.clone(),
                 allow_below_top_liveness: false,
             });
+        }
+    }
+
+    /// Collect top-level observer effects from a player's trash. These
+    /// sources are not attached to a live permanent; the trigger payload
+    /// carries the played/deleted/moved subject instead.
+    fn enqueue_from_player_trash(
+        &mut self,
+        timing: EffectTiming,
+        controller: PlayerId,
+        trigger_context: Option<TriggerContext>,
+    ) {
+        let trash_sources: Vec<(String, CardHandle, EffectSourceKind)> = self
+            .players
+            .get(controller as usize)
+            .map(|player| {
+                player
+                    .trash
+                    .iter()
+                    .map(|card| {
+                        (
+                            card.card_id(&self.card_data).to_string(),
+                            card.handle(),
+                            source_kind_for_card_kind(card.card_kind(&self.card_data)),
+                        )
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        let is_turn_player = controller == self.turn_player();
+        for (card_id, source_card, source_kind) in trash_sources {
+            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
+            for (slot, effect) in effects.iter().enumerate() {
+                if effect.inherited || effect.linked {
+                    continue;
+                }
+                if !timing_flag_matches(effect, timing) {
+                    continue;
+                }
+                self.effect_queue.push_back(QueuedEffect {
+                    source_card,
+                    source_permanent: None,
+                    source_kind,
+                    controller,
+                    timing,
+                    trigger_context: trigger_context.clone(),
+                    effect_slot: slot as u8,
+                    is_optional: effect.optional,
+                    is_turn_player,
+                    card_id: card_id.clone(),
+                    allow_below_top_liveness: false,
+                });
+            }
         }
     }
 
@@ -413,8 +498,11 @@ impl Game {
             );
 
             if bundle.len() == 1 {
-                // Single trigger — auto-fire, no prompt.
                 let idx = bundle[0];
+                // Single trigger — auto-fire into its body. Optionality is
+                // exposed by the body's first actionable pending selection;
+                // this avoids prompting for optional effects whose filters
+                // produce no legal follow-up.
                 let qe = self
                     .effect_queue
                     .remove(idx)
@@ -579,14 +667,50 @@ impl Game {
                 host,
                 host_card,
                 card,
+                cause,
             } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::BattleArea,
+                }),
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 event_card: Some(card),
                 event_source_card: Some(card),
                 event_host_card: Some(host_card),
                 event_host_permanent: Some(host),
+                affected_player: Some(player),
                 source_player: Some(player),
+                cause: Some(cause),
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: vec![card],
+                    from: Some(crate::enums::Zone::BattleArea),
+                    to: Some(crate::enums::Zone::Trash),
+                }],
+                ..TriggerContext::default()
+            },
+            TriggerSource::SecurityRemoved {
+                affected_player,
+                source_player,
+                card,
+                cause,
+                ..
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::Security,
+                }),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_card: Some(card),
+                affected_player: Some(affected_player),
+                source_player: Some(source_player),
+                cause: Some(cause),
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: vec![card],
+                    from: Some(crate::enums::Zone::Security),
+                    to: None,
+                }],
                 ..TriggerContext::default()
             },
         }
@@ -634,7 +758,7 @@ impl Game {
         }
 
         for handle in candidates {
-            self.enqueue_delayed_option_for_event(handle, timing, trigger_context);
+            self.enqueue_delayed_option_for_event(handle, timing, trigger_context.clone());
         }
     }
 
@@ -684,7 +808,7 @@ impl Game {
                 Some(handle),
                 source_kind,
                 handle.player,
-                trigger_context,
+                trigger_context.clone(),
             ) {
                 continue;
             }
@@ -694,7 +818,7 @@ impl Game {
                 source_kind,
                 controller: handle.player,
                 timing: EffectTiming::DelayEffect,
-                trigger_context: Some(trigger_context),
+                trigger_context: Some(trigger_context.clone()),
                 effect_slot: slot as u8,
                 is_optional: effect.optional,
                 is_turn_player,
@@ -717,7 +841,7 @@ impl Game {
             return true;
         };
 
-        let prev_trigger_context = self.current_trigger_context;
+        let prev_trigger_context = self.current_trigger_context.clone();
         self.current_trigger_context = Some(trigger_context);
         let ctx = EffectReadContext::new_with_source_kind(
             self,
@@ -779,7 +903,7 @@ impl Game {
                 source_kind,
                 controller: defender,
                 timing,
-                trigger_context,
+                trigger_context: trigger_context.clone(),
                 effect_slot: slot as u8,
                 is_optional: effect.optional,
                 is_turn_player,
@@ -856,7 +980,7 @@ impl Game {
                     source_kind: top_source_kind,
                     controller: handle.player,
                     timing,
-                    trigger_context,
+                    trigger_context: trigger_context.clone(),
                     effect_slot: slot as u8,
                     is_optional: effect.optional,
                     is_turn_player,
@@ -906,7 +1030,7 @@ impl Game {
                     source_kind: linked_source_kind,
                     controller: handle.player,
                     timing,
-                    trigger_context,
+                    trigger_context: trigger_context.clone(),
                     effect_slot: slot as u8,
                     is_optional: effect.optional,
                     is_turn_player,
@@ -991,7 +1115,7 @@ impl Game {
                         source_kind: training_source_kind,
                         controller: handle.player,
                         timing,
-                        trigger_context,
+                        trigger_context: trigger_context.clone(),
                         effect_slot: slot as u8,
                         is_optional: effect.optional,
                         is_turn_player,
@@ -1040,7 +1164,7 @@ impl Game {
                     source_kind: inherited_source_kind,
                     controller: handle.player,
                     timing,
-                    trigger_context,
+                    trigger_context: trigger_context.clone(),
                     effect_slot: slot as u8,
                     is_optional: effect.optional,
                     is_turn_player,
@@ -1084,7 +1208,7 @@ impl Game {
                     source_kind,
                     controller: handle.player,
                     timing,
-                    trigger_context,
+                    trigger_context: trigger_context.clone(),
                     effect_slot: slot as u8,
                     is_optional: effect.optional,
                     is_turn_player,
@@ -1125,7 +1249,7 @@ impl Game {
                     source_kind: inherited_source_kind,
                     controller: handle.player,
                     timing,
-                    trigger_context,
+                    trigger_context: trigger_context.clone(),
                     effect_slot: slot as u8,
                     is_optional: effect.optional,
                     is_turn_player,
@@ -1165,9 +1289,9 @@ impl Game {
         // effect queues another effect that recursively drains before this
         // one returns).
         let prev_effect_source = self.effect_source_player;
-        let prev_trigger_context = self.current_trigger_context;
+        let prev_trigger_context = self.current_trigger_context.clone();
         self.effect_source_player = Some(qe.controller);
-        self.current_trigger_context = qe.trigger_context;
+        self.current_trigger_context = qe.trigger_context.clone();
         let out = self.run_queued_effect_inner(qe);
         self.current_trigger_context = prev_trigger_context;
         self.effect_source_player = prev_effect_source;
@@ -1307,6 +1431,7 @@ impl Game {
         if qe.timing != EffectTiming::DelayEffect
             || !qe
                 .trigger_context
+                .as_ref()
                 .is_some_and(|ctx| ctx.event_card.is_some())
         {
             return None;
@@ -1504,9 +1629,9 @@ impl Game {
 
     fn resume_queued_effect_process_tail(&mut self, qe: QueuedEffect) {
         let prev_effect_source = self.effect_source_player;
-        let prev_trigger_context = self.current_trigger_context;
+        let prev_trigger_context = self.current_trigger_context.clone();
         self.effect_source_player = Some(qe.controller);
-        self.current_trigger_context = qe.trigger_context;
+        self.current_trigger_context = qe.trigger_context.clone();
         let event_delay_source = self.event_gated_delay_source(&qe);
         self.run_queued_effect_process_tail(&qe);
         self.trash_event_gated_delay_after_activation(event_delay_source);
@@ -1533,6 +1658,10 @@ impl Game {
         pending: PendingEffectSecurityRemoval,
     ) {
         let mut completed_digivolve: Option<PermanentHandle> = None;
+        let removed_card = self
+            .pending_security
+            .as_ref()
+            .map(|security| security.card.handle());
         if let Some(security) = self.pending_security.take() {
             if !security.played {
                 match pending.destination {
@@ -1631,10 +1760,28 @@ impl Game {
             self.drain_effect_queue();
         }
 
+        self.enqueue_triggered(
+            EffectTiming::OnOwnSecurityRemoved,
+            TriggerSource::SecurityRemoved {
+                affected_player: pending.defender,
+                observer_player: pending.defender,
+                source_player: pending.source_player,
+                card: removed_card.unwrap_or(crate::card_source::CardHandle(0)),
+                cause: pending.cause,
+            },
+        );
+        self.drain_effect_queue();
+
         if pending.defender != pending.observer_player {
             self.enqueue_triggered(
                 EffectTiming::OnOpponentSecurityRemoved,
-                TriggerSource::PlayerBattleArea(pending.observer_player),
+                TriggerSource::SecurityRemoved {
+                    affected_player: pending.defender,
+                    observer_player: pending.observer_player,
+                    source_player: pending.source_player,
+                    card: removed_card.unwrap_or(crate::card_source::CardHandle(0)),
+                    cause: pending.cause,
+                },
             );
             self.drain_effect_queue();
         }
@@ -1653,6 +1800,8 @@ impl Game {
         &mut self,
         defender: PlayerId,
         observer_player: PlayerId,
+        source_player: PlayerId,
+        cause: crate::trigger_context::EventCause,
         card: crate::card_source::CardSource,
         destination: SecurityRemovalDestination,
     ) {
@@ -1675,6 +1824,8 @@ impl Game {
         let pending = PendingEffectSecurityRemoval {
             defender,
             observer_player,
+            source_player,
+            cause,
             destination,
             previous_pending_security: previous_pending,
         };
@@ -1701,8 +1852,8 @@ impl Game {
         allow_decline_all: bool,
     ) {
         debug_assert!(
-            bundle.len() >= 2,
-            "install_trigger_order_selection requires a multi-trigger bundle"
+            !bundle.is_empty(),
+            "install_trigger_order_selection requires at least one trigger"
         );
 
         // Map each bundle position to an action ID in the 30-59 range.
@@ -1892,6 +2043,10 @@ impl Game {
         // hook on its eventual resolution.
         if self.pending_selection.is_none() {
             self.resume_pending_deletion();
+        }
+
+        if self.pending_selection.is_none() {
+            self.resume_pending_overclock_attack();
         }
 
         // After any post-callback draining, re-enter the security state

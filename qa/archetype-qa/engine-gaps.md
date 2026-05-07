@@ -2,7 +2,7 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-05-04
+Last updated: 2026-05-07
 
 ## Open / Partial Gaps
 
@@ -13,7 +13,7 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Card(s):** BT10-112 Jesmon GX, BT10-110 Seiken Meppa, BT22-042 Nyabootmon
 - **Effect text:** BT10-112 / BT10-110: "Activate 1 of that card's [When Digivolving] effects as an effect of this Digimon." BT22-042: "[All Turns] [Once Per Turn] When any of your other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects."
 - **Status update:** The reusable Rust/DSL refire primitive now exists as `EffectContext::refire_effect_from_permanent(source, "when_digivolving", optional)` and YAML `refire_effect: { source: <binding>, timing: when_digivolving, optional: true }`. It enumerates refireable effects, preserves source identity, and exposes visible choices when needed.
-- **Remaining missing for Puppets:** BT22-040 / BT22-042 still cannot faithfully author the self-refire observer because `OnAnyDeletion` deleted-object context is not available for "your other Digimon" gating. Without that payload, `event_target_*` predicates can over-trigger on nonmatching deletions.
+- **Remaining missing for Puppets:** Partially narrowed 2026-05-06: `OnAnyDeletion` now carries a pre-removal deleted-object snapshot to Rust observers, including inherited-stack observers, and DSL event-target bindings prefer the deleted card after removal. EX11-060 also proves Overclock-specific deletion payloads and DSL `event_cause: overclock`, covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_060`. BT22-040 / BT22-042 still need card-shaped DSL fixtures for "your other Digimon" refire, plus any remaining source predicates where printed text requires them.
 - **Workaround:** Omit Puppet self-refire slices until deleted-permanent event context is available; do not approximate by firing on broad deletion observers.
 
 ### Event-Gated Delay Activation Windows [G-DELAY-EVENT-GATED]
@@ -23,7 +23,7 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Effect text:** BT22-098: "[Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> ... 1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3." P-229: "[Your Turn] When any of your [Mirai Kinosaki]s are played, <Delay> ... 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3."
 - **Status:** Partially resolved 2026-05-02 for the BT22-098/Arisa suspend timing slice. Delayed Option permanents now store `DelayTrigger::OnEvent(EffectTiming::OnSuspend)` plus placement turn, observed suspend events carry event-card context, and Delay activation is gated until after the placement turn before trashing itself through the replacement-aware cost path. DSL `kind: delay` can lower `trigger: on_suspend` plus `active_when: { event_card_name_contains: "Arisa Kinosaki" }`.
 - **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- event_gated_delay_only_fires_after_placement_turn_and_matching_event`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay_event_trigger_lowers_to_on_event_delay`.
-- **Remaining related work:** P-229's Mirai-played trigger still needs the appropriate event timing/lowering if `on_ally_played` remains virtual. The BT22-098/P-229 process body still depends on faithful effect-initiated digivolution selection, hand-zone candidate filtering, Puppet/LIBERATOR trait filters, and reduced-cost digivolution plumbing.
+- **Remaining related work:** `on_ally_played` now lowers to `EffectTiming::OnAllyPlayed` and has battle-area/trash fan-out, proven by BT20-084's trash-resident observer fixture. P-229's Mirai-played Delay body still needs its card-shaped implementation and reduced-cost hand digivolution plumbing.
 
 ### Deletion Observer Optionality Not Exposed to Agent
 - **Discovered in:** Chaos Control (2026-04-10)
@@ -194,7 +194,7 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Discovered in:** BT16-085 Davis Motomiya & Ken Ichijoji implementation (2026-05-04)
 - **Card(s):** BT16-085 — "[Your Turn] … If DNA digivolving, trash any 3 digivolution cards under your opponent's Digimon."
 - **Effect text:** "trash any 3 digivolution cards under your opponent's Digimon" — selects up to 3 source cards from a specific opponent permanent's card_sources stack.
-- **What's missing:** DSL has `select_own_sources` (selects from a bound own permanent's digivolution stack) and `trash_selected_sources`, but has no `select_opponent_sources` verb for targeting a specific OPPONENT permanent's card_sources. The opponent permanent itself must also first be selected (requires a field selection step). Both verbs are missing.
+- **What's missing:** DSL has `select_own_sources` / `trash_selected_sources`, and as of 2026-05-07 `select_own_sources.target` can restrict the own-source picker to a specific own permanent binding. There is still no `select_opponent_sources` verb for targeting a specific OPPONENT permanent's card_sources. The opponent permanent itself must also first be selected (requires a field selection step). Both opponent-side pieces are missing.
 - **Suggested change:** Add `select_opponent_sources: { target: <binding>, count: N, bind_as: <name> }` DSL verb, mirroring `select_own_sources`. `target` resolves to an opponent `PermanentHandle` binding. `count` specifies how many sources to select (up to the permanent's stack depth). Implement in `step.rs`, lower in `compile.rs`, and execute in a new `CompiledStep::SelectOpponentSources` handler analogous to `execute_select_own_sources`.
 - **Workaround:** DNA trash sub-clause of BT16-085 Clause 1 is entirely omitted from the YAML (doubly blocked by this gap and `G-DSL-IS-DNA-DIGIVOLVING`). Test `bt16_085_dna_digivolve_trashes_3_opp_digi_cards` is `#[ignore = "BLOCKED: G-DSL-IS-DNA-DIGIVOLVING AND G-SELECT-OPPONENT-SOURCES"]`.
 

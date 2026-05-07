@@ -2,8 +2,8 @@
 
 use digimon_dsl::compiled::{
     CompiledAggregateSelector, CompiledBindingCompare, CompiledCardKind, CompiledColor,
-    CompiledCountAggregate, CompiledDpConstraint, CompiledExistential, CompiledPlayerRef,
-    CompiledPredicate, CompiledReplacementCause, CompiledZone,
+    CompiledCountAggregate, CompiledDpConstraint, CompiledEventCause, CompiledExistential,
+    CompiledPlayerRef, CompiledPredicate, CompiledReplacementCause, CompiledZone,
 };
 
 use crate::card_source::{CardHandle, CardSource};
@@ -614,6 +614,7 @@ fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> 
         let Some(card) = rctx
             .game
             .current_trigger_context
+            .as_ref()
             .and_then(|trigger| trigger.event_card)
         else {
             return false;
@@ -634,14 +635,35 @@ fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> 
             return false;
         }
     }
+    if let Some(want) = pred.event_cause {
+        let Some(actual) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.cause)
+        else {
+            return false;
+        };
+        if !event_cause_matches(want, actual) {
+            return false;
+        }
+    }
     if let Some(ref trait_name) = pred.host_permanent_trait_has {
-        let Some(host) = rctx.event_host_permanent() else {
-            return false;
-        };
-        let Some(perm) = permanent_for_handle(rctx, host) else {
-            return false;
-        };
-        if !perm.has_trait(trait_name, rctx.card_data()) {
+        let live_host_matches = rctx
+            .event_host_permanent()
+            .and_then(|host| permanent_for_handle(rctx, host))
+            .map(|perm| perm.has_trait(trait_name, rctx.card_data()))
+            .unwrap_or(false);
+        let host_snapshot_matches = rctx
+            .event_host_card()
+            .and_then(|card| rctx.game.card_data_for_handle(card))
+            .map(|data| {
+                data.traits
+                    .iter()
+                    .any(|t| t.eq_ignore_ascii_case(trait_name))
+            })
+            .unwrap_or(false);
+        if !live_host_matches && !host_snapshot_matches {
             return false;
         }
     }
@@ -674,6 +696,27 @@ fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> 
     true
 }
 
+fn event_cause_matches(
+    want: CompiledEventCause,
+    actual: crate::trigger_context::EventCause,
+) -> bool {
+    use crate::trigger_context::EventCause as A;
+    matches!(
+        (want, actual),
+        (CompiledEventCause::BattleDeletion, A::BattleDeletion)
+            | (CompiledEventCause::EffectDeletion, A::EffectDeletion)
+            | (CompiledEventCause::OwnEffect, A::OwnEffect)
+            | (CompiledEventCause::OpponentEffect, A::OpponentEffect)
+            | (CompiledEventCause::Overclock, A::Overclock)
+            | (CompiledEventCause::Return, A::Return)
+            | (CompiledEventCause::DeckBottom, A::DeckBottom)
+            | (CompiledEventCause::SecurityPlacement, A::SecurityPlacement)
+            | (CompiledEventCause::SecurityRemoval, A::SecurityRemoval)
+            | (CompiledEventCause::Cost, A::Cost)
+            | (CompiledEventCause::Rule, A::Rule)
+    )
+}
+
 fn subject_or_source_permanent<'a>(
     subject: PredicateSubject,
     rctx: &'a EffectReadContext<'_>,
@@ -703,7 +746,10 @@ fn permanent_for_handle<'a>(
 }
 
 fn event_target_owner(rctx: &EffectReadContext<'_>) -> Option<PlayerId> {
-    let trigger = rctx.game.current_trigger_context?;
+    let trigger = rctx.game.current_trigger_context.as_ref()?;
+    if let Some(snapshot) = trigger.deleted_object.as_ref() {
+        return Some(snapshot.former_controller);
+    }
     if let Some(handle) = trigger.event_permanent {
         return Some(handle.player);
     }
@@ -738,7 +784,10 @@ fn player_ref_matches(
 }
 
 fn event_target_card(rctx: &EffectReadContext<'_>) -> Option<CardHandle> {
-    let trigger = rctx.game.current_trigger_context?;
+    let trigger = rctx.game.current_trigger_context.as_ref()?;
+    if let Some(snapshot) = trigger.deleted_object.as_ref() {
+        return Some(snapshot.top_card);
+    }
     if let Some(handle) = trigger.event_permanent {
         if let Some(card) = live_event_permanent_card(rctx, handle, trigger.event_card) {
             return Some(card);

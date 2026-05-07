@@ -140,7 +140,11 @@ effects:
     );
     runner.game.drain_effect_queue();
 
-    assert_eq!(runner.memory(), 3);
+    assert_eq!(
+        runner.memory(),
+        -3,
+        "observer belongs to player 1, so gain_memory moves the gauge toward that controller"
+    );
 }
 
 #[test]
@@ -186,7 +190,11 @@ effects:
     );
     runner.game.drain_effect_queue();
 
-    assert_eq!(runner.memory(), 3);
+    assert_eq!(
+        runner.memory(),
+        -3,
+        "observer belongs to player 1, so gain_memory moves the gauge toward that controller"
+    );
 }
 
 #[test]
@@ -776,6 +784,7 @@ effects:
             host,
             host_card,
             card: trashed_card,
+            cause: digimon_engine::trigger_context::EventCause::EffectDeletion,
         },
     );
     runner.game.drain_effect_queue();
@@ -860,6 +869,7 @@ effects:
             host,
             host_card,
             card: trashed_card,
+            cause: digimon_engine::trigger_context::EventCause::EffectDeletion,
         },
     );
     runner.game.drain_effect_queue();

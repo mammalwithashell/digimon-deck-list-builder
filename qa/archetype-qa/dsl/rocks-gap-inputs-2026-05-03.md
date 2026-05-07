@@ -89,8 +89,8 @@ The remaining blocker is mostly authored card coverage plus a smaller set of reu
 - **Blocks Rocks cards:** `EX10-032`, `P-167`, `EX8-047`, `EX8-005`, `EX10-036`, `BT21-055`, `EX8-048`, `EX10-028`, `EX10-033`, `EX10-025`, `EX8-055`, `EX11-044`
 - **Cross-archetype reuse:** Digi-Burst, Fragment, source-trash costs, inherited "when this card is trashed from digivolution cards" effects
 - **Printed shape:** a specific source card is trashed from a specific host stack, and only that card's inherited/source-trash effects should observe the event
-- **Current evidence:** direct `select_own_sources` / `trash_selected_sources` and `phase3d_event_context` tests pass. `EX8-051` now verifies the trashed source card can fire its own inherited `OnDigivolutionCardTrashed` effect from host/source trigger context. Remaining risk is producer completeness across every source-disposition path, including older return-to-deck, de-digivolve, Fragment, Armor Purge, and keyword-driven source trash routes.
-- **Required capability:** every source-trash producer must emit `OnDigivolutionCardTrashed` with stable host permanent/card, trashed source card, source index, and cause player context
+- **Current evidence:** direct `select_own_sources` / `trash_selected_sources` and `phase3d_event_context` tests pass. `EX8-051` now verifies the trashed source card can fire its own inherited `OnDigivolutionCardTrashed` effect from host/source trigger context, including return-to-deck source disposition after the host leaves the battle area. The 2026-05-07 Track A slices also prove return-to-deck and de-digivolve payload fixtures, route Fragment/source-trash helpers plus Armor Purge through the same source-trash emitter, and prove BT4-072's exact-N Digi-Burst producer through reusable `digi_burst`.
+- **Required capability:** remaining source-trash producers and broader card-local cost shapes must emit `OnDigivolutionCardTrashed` with stable host permanent/card, trashed source card, source index, and cause player context.
 - **Suggested DSL shape:** no new author-facing syntax if producer coverage is complete; existing predicates should work:
 
   ```yaml

@@ -4,7 +4,7 @@ use rand::SeedableRng;
 use std::collections::HashMap;
 
 use crate::card_data::CardData;
-use crate::card_source::CardSource;
+use crate::card_source::{CardHandle, CardSource};
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
 use crate::enums::{GamePhase, PlayerId};
@@ -294,6 +294,19 @@ pub struct Game {
     /// `None` outside an OnDeletion observer body. Phase B §B5.
     #[doc(hidden)]
     pub(crate) current_deletion_cause: Option<crate::replacement::ReplacementCause>,
+
+    /// Observer-facing cause override for the deletion currently being
+    /// finalized. Replacement windows still read `current_deletion_cause`;
+    /// this slot only refines the `TriggerContext` payload for timings such
+    /// as `OnAnyDeletion` that distinguish a keyword route like Overclock.
+    #[doc(hidden)]
+    pub(crate) current_deletion_event_cause_override: Option<crate::trigger_context::EventCause>,
+
+    /// Paused Overclock attack after the sacrifice deletion installed one or
+    /// more observer selections. Once those selections finish, the source card
+    /// is re-resolved by handle/token instead of trusting the old slot.
+    #[doc(hidden)]
+    pub(crate) pending_overclock_attack: Option<(PlayerId, CardHandle, PlayerId)>,
 
     /// True while effects are being evaluated from a DNA digivolution event.
     /// Consumed by the DSL `dna_origin` predicate for clauses like
@@ -603,6 +616,8 @@ impl Game {
             effect_source_player: None,
             current_trigger_context: None,
             current_deletion_cause: None,
+            current_deletion_event_cause_override: None,
+            pending_overclock_attack: None,
             current_dna_origin: None,
             parked_replacement: None,
             dsl_replacement_outcome: None,
@@ -885,6 +900,14 @@ impl Game {
                 card: entered_card,
             },
         );
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnAllyPlayed,
+            crate::selection::TriggerSource::EnteredField {
+                player: player_id,
+                permanent: entered,
+                card: entered_card,
+            },
+        );
         self.drain_effect_queue();
         Some(entered)
     }
@@ -981,6 +1004,14 @@ impl Game {
         for (player_id, _, permanent, card) in entered {
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnEnterFieldAnyone,
+                crate::selection::TriggerSource::EnteredField {
+                    player: player_id,
+                    permanent,
+                    card,
+                },
+            );
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnAllyPlayed,
                 crate::selection::TriggerSource::EnteredField {
                     player: player_id,
                     permanent,
@@ -1290,11 +1321,23 @@ impl Game {
 
     /// Gain memory for the active player.
     pub fn gain_memory(&mut self, amount: i16) {
+        self.gain_memory_for_player(self.turn_player(), amount);
+    }
+
+    /// Gain memory for a specific player. The memory counter is stored from
+    /// the current turn player's perspective, so non-turn-player gains move
+    /// the counter toward the opponent's side.
+    pub fn gain_memory_for_player(&mut self, player: PlayerId, amount: i16) {
         let before = self.memory;
-        self.memory = (self.memory + amount).min(self.rules.memory_range.1);
+        let signed_amount = if player == self.turn_player() {
+            amount
+        } else {
+            -amount
+        };
+        self.memory = (self.memory + signed_amount)
+            .clamp(self.rules.memory_range.0, self.rules.memory_range.1);
         let delta = self.memory - before;
         let seq = self.next_event_seq();
-        let player = self.turn_player();
         self.events.push(crate::events::GameEvent::MemoryChange {
             seq,
             player,

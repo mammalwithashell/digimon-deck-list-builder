@@ -103,6 +103,7 @@ pub enum Timing {
     #[serde(rename = "on_digixros")]
     OnDigixros,
     OnOpponentSecurityRemoved,
+    OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
     OnSecurityCheck,
     OnLoseSecurity,

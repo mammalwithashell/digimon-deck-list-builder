@@ -534,6 +534,14 @@ impl Game {
                 card: entered_card,
             },
         );
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnAllyPlayed,
+            crate::selection::TriggerSource::EnteredField {
+                player: player_id,
+                permanent: entered,
+                card: entered_card,
+            },
+        );
         self.drain_effect_queue();
 
         PlayFromHandCostResult::Played(field_index)
@@ -2227,16 +2235,13 @@ impl Game {
         for card in sources {
             let source_card = card.handle();
             self.player_mut(handle.player).trash.push(card);
-            self.enqueue_triggered(
-                crate::enums::EffectTiming::OnDigivolutionCardTrashed,
-                crate::selection::TriggerSource::SourceTrashedFromStack {
-                    player: handle.player,
-                    host: handle,
-                    host_card: top_handle,
-                    card: source_card,
-                },
+            self.fire_digivolution_card_trashed(
+                handle.player,
+                handle,
+                top_handle,
+                source_card,
+                crate::trigger_context::EventCause::Return,
             );
-            self.drain_effect_queue();
         }
         let had_linked = !perm.linked_cards.is_empty();
         for card in perm.linked_cards {
@@ -2315,6 +2320,27 @@ impl Game {
         let moved = self.return_to_deck(handle, crate::enums::StackPosition::Bottom);
         self.effect_source_player = previous;
         moved
+    }
+
+    pub(crate) fn fire_digivolution_card_trashed(
+        &mut self,
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: crate::card_source::CardHandle,
+        card: crate::card_source::CardHandle,
+        cause: crate::trigger_context::EventCause,
+    ) {
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnDigivolutionCardTrashed,
+            crate::selection::TriggerSource::SourceTrashedFromStack {
+                player,
+                host,
+                host_card,
+                card,
+                cause,
+            },
+        );
+        self.drain_effect_queue();
     }
 
     /// Low-level source-attribution helper for tests and engine internals.
@@ -2442,20 +2468,27 @@ impl Game {
             perm.card_sources.push(top);
             self.insert_stack_into_owners_decks(perm.card_sources, position);
         } else {
+            let host_card = top.handle();
             self.insert_card_into_deck(player_id, top, position);
 
             // Sources below the top go to trash and fire OnDigivolutionCardTrashed
             // (digivolution stack sources only — not linked_cards which are Tamer
             // equipment and separate semantic category).
             for card in perm.card_sources {
+                let source_card = card.handle();
                 self.player_mut(player_id).trash.push(card);
-                for pid in 0..self.players.len() {
-                    self.enqueue_triggered(
-                        crate::enums::EffectTiming::OnDigivolutionCardTrashed,
-                        crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-                    );
-                }
-                self.drain_effect_queue();
+                self.fire_digivolution_card_trashed(
+                    player_id,
+                    handle,
+                    host_card,
+                    source_card,
+                    match position {
+                        crate::enums::StackPosition::Bottom => {
+                            crate::trigger_context::EventCause::DeckBottom
+                        }
+                        _ => crate::trigger_context::EventCause::Return,
+                    },
+                );
             }
         }
 
@@ -2950,9 +2983,12 @@ impl Game {
             }
             let card = player.security.remove(index);
             player.face_up_security.remove(&card.card_index);
+            let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(defender));
             self.fire_effect_security_removal(
                 defender,
                 observer_player,
+                observer_player,
+                cause,
                 card,
                 crate::selection::SecurityRemovalDestination::BottomSource(target),
             );
@@ -3850,9 +3886,14 @@ impl Game {
                         }
                         let card = player.security.remove(index);
                         player.face_up_security.remove(&card.card_index);
+                        let cause = crate::trigger_context::EventCause::from(
+                            self.infer_effect_cause(defender),
+                        );
                         self.fire_effect_security_removal(
                             defender,
                             observer_player,
+                            observer_player,
+                            cause,
                             card,
                             crate::selection::SecurityRemovalDestination::Trash,
                         );
@@ -3910,9 +3951,12 @@ impl Game {
             }
             let card = player.security.remove(index);
             player.face_up_security.remove(&card.card_index);
+            let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(defender));
             self.fire_effect_security_removal(
                 defender,
                 observer_player,
+                observer_player,
+                cause,
                 card,
                 crate::selection::SecurityRemovalDestination::Security {
                     player: player_id,
@@ -4044,21 +4088,25 @@ impl Game {
         };
 
         let evo_costs = &self.card_data[evo_card_data_index].evo_costs;
-        let matching_cost = evo_costs.iter().find(|ec| {
-            ec.level == base_level
-                && (ignore_color
-                    || crate::action::mask::evo_color(ec.card_color)
-                        .map(|c| base_colors.contains(&c))
-                        .unwrap_or(false))
-        });
-        let Some(matching) = matching_cost else {
+        let matching_memory_cost = evo_costs
+            .iter()
+            .find(|ec| {
+                ec.level == base_level
+                    && (ignore_color
+                        || crate::action::mask::evo_color(ec.card_color)
+                            .map(|c| base_colors.contains(&c))
+                            .unwrap_or(false))
+            })
+            .map(|ec| ec.memory_cost)
+            .or_else(|| ignore_color.then_some(0));
+        let Some(matching_memory_cost) = matching_memory_cost else {
             self.logger.log(&format!(
                 "[Rejected] effect_initiated_digivolve: no matching evo cost (base_level={}, ignore_color={})",
                 base_level, ignore_color
             ));
             return false;
         };
-        let base_cost = cost_delta.resolve(matching.memory_cost);
+        let base_cost = cost_delta.resolve(matching_memory_cost);
         let total_reduction =
             self.scan_before_pay_cost_reduction(player_id, CostReductionKind::Digivolve);
         let effective_cost = (base_cost as i32 - total_reduction).max(0) as u16;
@@ -4082,9 +4130,12 @@ impl Game {
             }
             let card = player.security.remove(index);
             player.face_up_security.remove(&card.card_index);
+            let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(defender));
             self.fire_effect_security_removal(
                 defender,
                 player_id,
+                player_id,
+                cause,
                 card,
                 crate::selection::SecurityRemovalDestination::Digivolve {
                     player: player_id,

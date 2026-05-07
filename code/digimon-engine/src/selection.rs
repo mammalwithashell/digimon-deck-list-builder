@@ -387,6 +387,18 @@ pub enum TriggerSource {
         host: PermanentHandle,
         host_card: CardHandle,
         card: CardHandle,
+        cause: crate::trigger_context::EventCause,
+    },
+    /// Observer timing fired after a card is removed from a player's security
+    /// stack. `affected_player` owns the security stack; `observer_player`
+    /// is the zone being scanned for either own-side or opponent-side
+    /// observers; `source_player` is the attacker/effect controller.
+    SecurityRemoved {
+        affected_player: PlayerId,
+        observer_player: PlayerId,
+        source_player: PlayerId,
+        card: CardHandle,
+        cause: crate::trigger_context::EventCause,
     },
 }
 
@@ -425,6 +437,8 @@ pub enum SecurityRemovalDestination {
 pub struct PendingEffectSecurityRemoval {
     pub defender: PlayerId,
     pub observer_player: PlayerId,
+    pub source_player: PlayerId,
+    pub cause: crate::trigger_context::EventCause,
     pub destination: SecurityRemovalDestination,
     pub previous_pending_security: Option<PendingSecurity>,
 }

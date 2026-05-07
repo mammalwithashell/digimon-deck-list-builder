@@ -140,6 +140,8 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_name_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_cause: Option<EventCauseSpec>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub host_permanent_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub trashed_source_trait_has: Option<String>,
@@ -234,6 +236,22 @@ pub enum ReplacementCauseSpec {
     OpponentEffect,
     SecurityCheck,
     Cost,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum EventCauseSpec {
+    BattleDeletion,
+    EffectDeletion,
+    OwnEffect,
+    OpponentEffect,
+    Overclock,
+    Return,
+    DeckBottom,
+    SecurityPlacement,
+    SecurityRemoval,
+    Cost,
+    Rule,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
