@@ -186,7 +186,7 @@ See §5 for `ModifierType` and `Expiry` values.
 Inside an `OnDeletion` (or `OnAnyDeletion`) observer body, the cause of the deletion currently being drained is exposed on the context. Outside such a body all three accessors return `None` / `false`. Phase B §B5.
 
 ```rust
-ctx.deletion_cause() -> Option<ReplacementCause>   // raw cause: Battle / OwnEffect / OpponentEffect / SecurityCheck / Cost
+ctx.deletion_cause() -> Option<ReplacementCause>   // raw cause: Battle / OwnEffect / OpponentEffect / SecurityCheck / Cost / Overclock
 ctx.was_deleted_by_effect() -> bool                 // matches OwnEffect | OpponentEffect
 ctx.was_deleted_by_opponent() -> bool               // matches OpponentEffect
 ```
@@ -1022,13 +1022,13 @@ if ctx.game.modifiers.player_has(target, ModifierType::CannotGainMemoryExceptFro
 
 ## Phase 7 — Would-Replacement Timings
 
-Phase 7 adds a first-class **replacement-effect layer** to the engine. Replacement effects intercept an impending state change (deletion, return-to-hand, return-to-deck, trash-by-effect, de-digivolve, draw, security-placement, security-loss) **before** it commits and either cancel it, redirect it, substitute the affected subject, or fully handle it in-process.
+Phase 7 adds a first-class **replacement-effect layer** to the engine. Replacement effects intercept an impending state change (deletion, return-to-hand, return-to-deck, trash-by-effect, de-digivolve, draw, security-placement, security-loss, play, digivolve, or link) **before** it commits and either cancel it, redirect it, substitute the affected subject, or fully handle it in-process.
 
 Unlike observer timings (`OnDeletion`, `OnReturn`, …) which fire *after* the event, `Would*` timings fire *before* and can mutate the outcome. This makes printed keywords like `<Barrier>`, `<Evade>`, and `<Decode>` faithful to their printed rules — Barrier is not an auto-selection that trashes the top of deck; it's an *optional* replacement that surfaces as a `PendingSelection::Replacement` with both accept and decline in the mask, so the RL action space can learn the decision (working rule 17).
 
 ### `EffectTiming::Would*` variants
 
-Nine variants dispatch today:
+Replacement timings dispatch today:
 
 | Variant | Fires at | Default destination | Notes |
 |---------|----------|--------------------|-------|
@@ -1041,6 +1041,9 @@ Nine variants dispatch today:
 | `WhenWouldDraw` | `EffectContext::draw` | — | `CannotDrawByEffect` interaction orthogonal (Phase 6 flood gate). |
 | `WhenWouldPlaceInSecurity` | Effect-driven `place_on_security` | `Zone::Security` | Redirect-to-trash or reorder. |
 | `WhenWouldLoseSecurity` | Security-pop during attack | — | Fires before `SecuritySkill` drains. |
+| `WhenPermanentWouldDigivolve` | `digivolve_from_hand` after legality/cost calculation, before memory payment and stack mutation | `Zone::BattleArea` | Subject is the permanent that would become the new stack. |
+| `WhenPermanentWouldPlay` | `play_from_hand_with_cost` after legality/cost calculation, before memory payment and hand removal | `Zone::BattleArea` | Subject is `ReplacementSubject::Card(card, Zone::Hand)`. |
+| `WhenWouldLink` | Link host-selection resolution, before the pending Option enters `host.linked_cards` | `Zone::BattleArea` | Subject is the linker card, represented as `ReplacementSubject::Card(card, Zone::Reveal)` while parked in `pending_option`. |
 
 Two variants are reserved for Phase 9 (combat-interrupt completion) and do not dispatch yet: `WhenWouldAttack`, `WhenWouldBeAttackTarget`.
 
@@ -1071,7 +1074,7 @@ Read-only context fields are always available through `rctx.effect.*` (the under
 
 ### `ReplacementCause`
 
-Five variants, **derived at the fire-site** (not threaded through card scripts):
+Six variants, **derived at the fire-site** (not threaded through card scripts):
 
 ```rust
 pub enum ReplacementCause {
@@ -1080,6 +1083,7 @@ pub enum ReplacementCause {
     OpponentEffect,   // The other player's effect caused it
     SecurityCheck,    // Security-reveal or SecuritySkill-driven
     Cost,             // Cost-payment trash/suspend (rare)
+    Overclock,        // <Overclock> sacrifice deletion
 }
 ```
 
@@ -1194,7 +1198,7 @@ impl CardEffect for MyBarrier {
 ### Phase 7 v1 constraints
 
 1. **Partition / ArmorPurge / Fragment(N)** — resolved in Phase D (2026-04-25); all seven alpha-tier selection-bearing keywords now auto-install. See the "Selection-bearing keyword authoring pattern" section for the template.
-2. **Optional replacements for `Card` / `Player` subjects** silently no-op on the commit path — the `commit_deferred_outcome` helper is Permanent-only in v1, guarded by `debug_assert!`. This is unreachable today; documented to flag it if a future fire-site ships a Card/Player optional replacement.
+2. **Optional replacements for `Card` / `Player` subjects** still need fire-site-specific resume support unless the subject is handled by an existing parked flow. The generic `commit_deferred_outcome` helper is Permanent-only in v1, guarded by `debug_assert!`. The named pre-play and pre-link windows currently have mandatory-cancel coverage; optional accept/decline semantics for those `Card` subjects require a follow-up resume slot before real optional card text should target them.
 3. **Multi-replacement `TriggerOrder` prompts** are not emitted when both sides have >1 candidates. v1 runs candidates in collection order (own-first, opp-second) and the last non-None outcome wins.
 4. **`ACTION_SPACE_SIZE` unchanged at 2168.** `REPLACEMENT_ACCEPT` reuses the existing `EffectChoice` action range (specifically the HAND_EFFECT slot 59) and `PASS` (62) serves as decline, so no tensor/mask regression.
 5. **Spec §7.5 once-per-event guard** (Task 7): a `(timing, subject)` pair that already fired in the current call chain is skipped on re-entry. During a callback-commit continuation (`in_replacement_commit`) the guard strengthens to "any prior fire for this subject blocks" — preventing a redirect route from re-prompting for a different Would* timing on the same subject (e.g. Decode's deck→hand redirect must not cascade into a second hand-timing prompt).

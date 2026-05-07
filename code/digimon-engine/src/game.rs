@@ -87,6 +87,43 @@ pub(crate) struct DelayedOptionLifecycleResume {
     pub(crate) skip_key: Option<(PlayerId, u16)>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PendingWouldPlayResume {
+    pub(crate) player: PlayerId,
+    pub(crate) card: crate::card_source::CardHandle,
+    pub(crate) effective_cost: u16,
+    pub(crate) origin: PendingWouldPlayOrigin,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PendingWouldPlayOrigin {
+    Hand,
+    Trash {
+        index: usize,
+    },
+    SecurityTop {
+        was_face_up: bool,
+    },
+    Source {
+        permanent: PermanentHandle,
+        source_index: usize,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PendingWouldLinkResume {
+    pub(crate) host: PermanentHandle,
+    pub(crate) card: crate::card_source::CardHandle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PendingWouldDigivolveResume {
+    pub(crate) player: PlayerId,
+    pub(crate) permanent: PermanentHandle,
+    pub(crate) card: crate::card_source::CardHandle,
+    pub(crate) effective_cost: u16,
+}
+
 /// The core game state. Drives the turn state machine.
 ///
 /// `impl Game` blocks for this struct are spread across three files for
@@ -237,6 +274,18 @@ pub struct Game {
     /// on decline. See `replacement::try_replace_impl`.
     #[doc(hidden)]
     pub replacement_pending_outcome: Option<crate::replacement::ReplacementOutcome>,
+    /// Fire-site continuation for optional `WhenPermanentWouldPlay`
+    /// replacements whose subject is a card in hand.
+    #[doc(hidden)]
+    pub(crate) pending_would_play_resume: Option<PendingWouldPlayResume>,
+    /// Fire-site continuation for optional `WhenWouldLink` replacements whose
+    /// subject is the pending Link Option card.
+    #[doc(hidden)]
+    pub(crate) pending_would_link_resume: Option<PendingWouldLinkResume>,
+    /// Fire-site continuation for optional `WhenPermanentWouldDigivolve`
+    /// replacements whose subject is the permanent about to digivolve.
+    #[doc(hidden)]
+    pub(crate) pending_would_digivolve_resume: Option<PendingWouldDigivolveResume>,
 
     /// Spec §7.5 once-per-event guard. Records `(timing, subject)` pairs that
     /// have already fired within the current `try_replace` call chain so a
@@ -598,6 +647,9 @@ impl Game {
             event_seq: 0,
             replacement_depth: 0,
             replacement_pending_outcome: None,
+            pending_would_play_resume: None,
+            pending_would_link_resume: None,
+            pending_would_digivolve_resume: None,
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
             effect_source_player: None,

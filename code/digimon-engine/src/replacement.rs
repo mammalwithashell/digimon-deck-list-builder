@@ -27,6 +27,7 @@ pub enum ReplacementCause {
     OpponentEffect,
     SecurityCheck,
     Cost,
+    Overclock,
 }
 
 /// What's about to happen — a permanent leaving the field, a card being
@@ -1103,6 +1104,58 @@ fn commit_deferred_outcome(
         }
         game.replacement_pending_outcome = None;
         return;
+    }
+
+    if original_destination == Some(Zone::BattleArea) {
+        match subject {
+            ReplacementSubject::Card(card, Zone::Hand)
+                if game
+                    .pending_would_play_resume
+                    .as_ref()
+                    .is_some_and(|resume| resume.card == card) =>
+            {
+                game.commit_pending_would_play(outcome);
+                game.replacement_pending_outcome = None;
+                return;
+            }
+            ReplacementSubject::Card(card, Zone::Reveal)
+                if game
+                    .pending_would_link_resume
+                    .as_ref()
+                    .is_some_and(|resume| resume.card == card) =>
+            {
+                game.commit_pending_would_link(outcome);
+                game.replacement_pending_outcome = None;
+                return;
+            }
+            ReplacementSubject::Permanent(perm)
+                if game
+                    .pending_would_digivolve_resume
+                    .as_ref()
+                    .is_some_and(|resume| resume.permanent == perm) =>
+            {
+                game.commit_pending_would_digivolve(outcome);
+                game.replacement_pending_outcome = None;
+                return;
+            }
+            _ => {}
+        }
+    }
+
+    if original_destination == Some(Zone::Trash) {
+        if let ReplacementSubject::Card(card, Zone::Security) = subject {
+            if game.security_resolution.as_ref().is_some_and(|state| {
+                state.revealed_card == card
+                    && game
+                        .pending_security
+                        .as_ref()
+                        .is_some_and(|pending| pending.card.handle() == card)
+            }) {
+                game.commit_pending_security_loss_replacement(outcome);
+                game.replacement_pending_outcome = None;
+                return;
+            }
+        }
     }
 
     let perm = match subject {

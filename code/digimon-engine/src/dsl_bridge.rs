@@ -143,6 +143,10 @@ fn compiled_dna_cost(path: &CompiledAltPath) -> Option<DnaCost> {
     if !matches!(path.kind, CompiledAltPathKind::DnaDigivolve) {
         return None;
     }
+    compiled_alt_path_dna_cost(path)
+}
+
+pub(crate) fn compiled_alt_path_dna_cost(path: &CompiledAltPath) -> Option<DnaCost> {
     if path.materials.len() != 2 {
         return None;
     }

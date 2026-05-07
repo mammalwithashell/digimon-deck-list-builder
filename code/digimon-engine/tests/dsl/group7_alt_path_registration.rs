@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use digimon_dsl::compiled::CompiledAltPathKind;
 use digimon_engine::action::{build_action_mask, DNA_DIGIVOLVE_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
@@ -63,6 +64,24 @@ effects:
     )
 }
 
+fn blast_dna_yaml() -> &'static str {
+    r#"
+card: T-G7-BLAST-DNA
+name: Blast DNA
+kind: digimon
+level: 7
+color: [red, black]
+cost: 9
+dp: 15000
+alt_paths:
+  - kind: blast_dna_digivolve
+    materials:
+      - { name_is: Durandamon }
+      - { name_is: BryweLudramon }
+    cost: 0
+"#
+}
+
 #[test]
 fn inherited_end_of_turn_alt_path_registration_compiles() {
     let compiled = compile_yaml(&registration_yaml(0));
@@ -95,6 +114,26 @@ fn inherited_alt_path_registration_lowers_to_runtime_effect() {
                 && effect.inherited
         }),
         "inherited alt_path_registration must lower into an end-of-turn runtime effect"
+    );
+}
+
+#[test]
+fn blast_dna_alt_path_lowers_to_counter_blast_marker_effect() {
+    let compiled = compile_yaml(blast_dna_yaml());
+    assert!(compiled.alt_paths.iter().any(|path| {
+        path.kind == CompiledAltPathKind::BlastDnaDigivolve
+            && path.materials.len() == 2
+            && path.materials[0].filter.name_is.as_deref() == Some("Durandamon")
+            && path.materials[1].filter.name_is.as_deref() == Some("BryweLudramon")
+    }));
+
+    let dsl = DslCardEffect::new(Arc::new(compiled));
+    let effects = dsl.effects(CardHandle(0));
+    assert!(
+        effects
+            .iter()
+            .any(|effect| effect.timing == EffectTiming::Declarative && effect.blast_digivolve),
+        "blast_dna_digivolve must lower into a declarative CounterTiming blast marker effect"
     );
 }
 

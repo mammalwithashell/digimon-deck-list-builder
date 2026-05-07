@@ -268,6 +268,9 @@ fn replacement_cause_matches(
         ) | (
             CompiledReplacementCause::Cost,
             crate::replacement::ReplacementCause::Cost
+        ) | (
+            CompiledReplacementCause::Overclock,
+            crate::replacement::ReplacementCause::Overclock
         )
     )
 }

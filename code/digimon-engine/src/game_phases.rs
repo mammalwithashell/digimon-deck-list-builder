@@ -573,8 +573,12 @@ impl Game {
                     index: sacrifice_index,
                 };
 
-                // Delete the sacrifice (firing OnDeletion triggers).
-                game.delete_permanent_with_effects(sacrifice_handle);
+                // Delete the sacrifice (firing OnDeletion triggers) with a
+                // distinct cause so observers can branch on <Overclock>.
+                game.delete_permanent_with_cause(
+                    sacrifice_handle,
+                    crate::replacement::ReplacementCause::Overclock,
+                );
 
                 // OnDeletion may have removed the Overclock Digimon, shifted
                 // indices, or killed the game. Re-find the captured top card

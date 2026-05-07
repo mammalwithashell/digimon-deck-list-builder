@@ -128,6 +128,7 @@ pub struct CompiledAltPath {
 pub enum CompiledAltPathKind {
     Digivolve,
     DnaDigivolve,
+    BlastDnaDigivolve,
     DigiXros,
     BurstDigivolve,
     AppFusion,
@@ -254,6 +255,7 @@ pub enum CompiledReplacementCause {
     OpponentEffect,
     SecurityCheck,
     Cost,
+    Overclock,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

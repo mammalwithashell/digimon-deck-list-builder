@@ -82,6 +82,15 @@ fn new_effect_timings_are_constructible() {
 
     let e = Effect::on_option_placed(card).build();
     assert_eq!(e.timing, EffectTiming::OnOptionPlaced);
+
+    let e = Effect::when_permanent_would_digivolve(card).build();
+    assert_eq!(e.timing, EffectTiming::WhenPermanentWouldDigivolve);
+
+    let e = Effect::when_permanent_would_play(card).build();
+    assert_eq!(e.timing, EffectTiming::WhenPermanentWouldPlay);
+
+    let e = Effect::when_would_link(card).build();
+    assert_eq!(e.timing, EffectTiming::WhenWouldLink);
 }
 
 #[test]

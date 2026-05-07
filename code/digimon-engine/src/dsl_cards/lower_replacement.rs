@@ -23,7 +23,7 @@ use crate::replacement::ReplacementSubject;
 use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind};
 
 /// Build the base `EffectBuilder` for a "Would*" replacement timing.
-/// Returns `None` only if `timing` is not one of the nine `WhenWould*`
+/// Returns `None` only if `timing` is not one of the known replacement
 /// variants (guard against future callers passing the wrong timing).
 fn new_when_would_builder(card: CardHandle, timing: EffectTiming) -> Option<EffectBuilder> {
     match timing {
@@ -35,7 +35,10 @@ fn new_when_would_builder(card: CardHandle, timing: EffectTiming) -> Option<Effe
         | EffectTiming::WhenWouldBeDeDigivolved
         | EffectTiming::WhenWouldLoseSecurity
         | EffectTiming::WhenWouldDraw
-        | EffectTiming::WhenWouldPlaceInSecurity => Some(EffectBuilder::new(card, timing)),
+        | EffectTiming::WhenWouldPlaceInSecurity
+        | EffectTiming::WhenPermanentWouldDigivolve
+        | EffectTiming::WhenPermanentWouldPlay
+        | EffectTiming::WhenWouldLink => Some(EffectBuilder::new(card, timing)),
         _ => None,
     }
 }

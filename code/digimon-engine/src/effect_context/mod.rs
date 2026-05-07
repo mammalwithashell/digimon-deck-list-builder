@@ -33,6 +33,7 @@ use crate::enums::{
     ModifierType, PlaySource, PlayerId, StackPosition,
 };
 use crate::game::Game;
+use crate::game::PendingWouldPlayOrigin;
 use crate::game_actions::PlayFromHandCostResult;
 use crate::modifiers::{
     EffectControllerFilter, EffectImmunityFilter, ModifierEntry, PlayerModifierEntry,
@@ -1997,7 +1998,8 @@ impl<'a> EffectContext<'a> {
         // `face_up_security` is keyed by card_index — clear it whether or
         // not the card was face-up; remove() is a no-op when absent.
         let card_index = card.card_index;
-        self.game
+        let was_face_up = self
+            .game
             .player_mut(player)
             .face_up_security
             .remove(&card_index);
@@ -2007,12 +2009,13 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(card);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.game.play_from_hand_with_cost_result(
+        match self.game.play_from_hand_with_cost_result_from_origin(
             player,
             hand_index,
             crate::enums::CostDelta::Free,
             PlaySource::ByEffect,
             false,
+            PendingWouldPlayOrigin::SecurityTop { was_face_up },
         ) {
             PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
                 player,
@@ -2103,12 +2106,16 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(source);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.game.play_from_hand_with_cost_result(
+        match self.game.play_from_hand_with_cost_result_from_origin(
             player,
             hand_index,
             cost_delta,
             PlaySource::ByEffect,
             false,
+            PendingWouldPlayOrigin::Source {
+                permanent: target,
+                source_index,
+            },
         ) {
             PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
                 player,

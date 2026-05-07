@@ -62,7 +62,8 @@ The local `DNA Omnimon` decklists most heavily use:
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` under Counter hand-play / Blast DNA residuals and selection DNA-pair residuals
 - **Blocks:** `BT17-078`, `BT17-095`, `AD1-009`, `AD1-012`
 - **Cross-archetype value:** Any future Blast DNA, effect DNA using a material from hand, defender-side reactive DNA, or named-material fusion route.
-- **Missing capability:** Counter timing can perform ordinary Blast Digivolve, and effect-initiated DNA can consume two battle-area materials, but DNA Omnimon needs pair selection where one material may be a field Digimon and another may be a card in hand, with the evolution card also in hand.
+- **Status:** narrowed 2026-05-06. CounterTiming now supports DCGO-shaped Blast DNA from hand: field material selection, hand-material pending selection, zero-cost DNA into the hand card, and DNA-origin context. DSL has `alt_paths.kind: blast_dna_digivolve`, proven by EX6-011. Remaining DNA Omnimon work is card-specific: wire `BT17-078` to the new route and implement the selected-level mass bottom-deck branch.
+- **Missing capability:** Generic effect-body helper APIs and the BT17-078 card fixture remain. The reusable CounterTiming mixed field+hand material flow itself is no longer the blocker.
 - **First regression:** Set up opponent attack into a Digimon target while `BT17-078` is in defender hand, `WarGreymon` is on field, and `MetalGarurumon` is in hand. The Counter mask must expose the Blast DNA action, then a pending selection must choose the hand material, perform DNA, fire When Digivolving, and resume the attack state correctly.
 - **Implementation hint:** `code/digimon-engine/src/combat.rs`, `code/digimon-engine/src/game_actions.rs`, `code/digimon-engine/src/effect_context/`, `code/digimon-engine/src/action/`, plus DSL lowering for a mixed-material DNA verb.
 

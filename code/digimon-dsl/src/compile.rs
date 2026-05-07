@@ -616,6 +616,7 @@ fn compile_replacement_cause(
             CompiledReplacementCause::SecurityCheck
         }
         crate::predicate::ReplacementCauseSpec::Cost => CompiledReplacementCause::Cost,
+        crate::predicate::ReplacementCauseSpec::Overclock => CompiledReplacementCause::Overclock,
     }
 }
 
@@ -723,6 +724,7 @@ fn compile_alt_path_kind(k: crate::alt_path::AltPathKind) -> CompiledAltPathKind
     match k {
         S::Digivolve => CompiledAltPathKind::Digivolve,
         S::DnaDigivolve => CompiledAltPathKind::DnaDigivolve,
+        S::BlastDnaDigivolve => CompiledAltPathKind::BlastDnaDigivolve,
         S::DigiXros => CompiledAltPathKind::DigiXros,
         S::BurstDigivolve => CompiledAltPathKind::BurstDigivolve,
         S::AppFusion => CompiledAltPathKind::AppFusion,
@@ -966,6 +968,9 @@ fn is_known_replacement_timing(value: &str) -> bool {
             | "when_would_lose_security"
             | "when_would_draw"
             | "when_would_place_in_security"
+            | "when_would_digivolve"
+            | "when_would_play"
+            | "when_would_link"
     )
 }
 

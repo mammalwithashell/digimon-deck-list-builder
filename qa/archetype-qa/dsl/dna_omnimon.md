@@ -39,7 +39,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT17-015 | WarGreymon | AE | AUDITED-DRIFT (dsl) | 13/16 | NEW G-DSL-SOURCE-NAME-CONTAINS + G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET |
 | BT17-019 | Gabumon | I | IMPLEMENTED | 12/12 | Sister to BT17-007 |
 | BT17-027 | MetalGarurumon | I | PARTIAL (dsl) | 11/13 | Branch-1 digivolve BLOCKED on G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET |
-| BT17-078 | Omnimon | I | PARTIAL (dsl) | 7/15 | NEW G-BLAST-DNA-DIGIVOLVE; G-BIND-SELECTED-PROPERTY-FOR-EACH |
+| BT17-078 | Omnimon | I | PARTIAL (dsl) | 7/15 | G-BLAST-DNA-DIGIVOLVE narrowed by CounterTiming/`blast_dna_digivolve` support; still needs card YAML fixture + G-BIND-SELECTED-PROPERTY-FOR-EACH |
 | BT17-081 | Tai/Matt Tamer | I | IMPLEMENTED | 19/20 | All-Turns observer + EOT may-attack |
 | BT17-093 | Tai/Kari Tamer | I | IMPLEMENTED | 11/11 | on_hatch + EOT return-to-deck draw |
 | BT17-095 | Miraculous Mega Knight | I | PARTIAL (dsl) | 12/16 | NEW G-DSL-UNION-PLAY-FREE + G-DSL-DNA-FROM-HAND-PARTNER |
@@ -121,7 +121,7 @@ Pipeline: batch-implement-cards-rust-dsl
 - G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA (P-182) — broader scope than tamer-only variant
 - G-DYNAMIC-NAME-ALIAS-FROM-STACK (BT17-102) — declaratives derive name set from current materials
 - G-BIND-SELECTED-PROPERTY-FOR-EACH (BT17-078) — bind selected property + for-each-matching pattern
-- G-BLAST-DNA-DIGIVOLVE (BT17-078) — Blast DNA Digivolve alt-path variant
+- G-BLAST-DNA-DIGIVOLVE (BT17-078) — narrowed: reusable `blast_dna_digivolve` alt-path and CounterTiming mixed field+hand material flow landed via EX6-011; BT17-078 still needs card YAML/test wiring and same-level mass bottom-deck branch
 - G-DSL-UNION-PLAY-FREE (BT17-095) — `select_union_zone` binding doesn't feed `play_from_*_free`
 - G-DSL-DNA-FROM-HAND-PARTNER (BT17-095) — DNA digivolve where 2nd material lives in hand
 - G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH (EX5-015) — inherited replacement with trash-cost-then-cancel

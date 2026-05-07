@@ -118,7 +118,7 @@ Resolver-backed corrected batches on 2026-05-03:
 | `BT6-084` | implemented | Huckmon/Royal Knight own-Digimon +2000 DP aura; On Play gain 1 memory | none identified in covered text |
 | `BT9-033` | implemented | yellow Lv2 digivolve path; all-player Digimon-by-effect play floodgate | none identified in covered text |
 | `EX4-074` | partial | purple/yellow metadata; purple Lv6 and ShineGreymon digivolve paths | opponent-next-turn DP reduction needs next-turn expiry support; End of Attack chain needs `PUPPETS-G031` |
-| `EX6-011` | partial | metadata; Ace Overflow; red Lv6 and red+black Lv6 DNA paths; Raid/Reboot; On Play/When Digivolving security trash, opponent-effect immunity, and DNA-origin De-Digivolve/delete tail | Hand Counter Blast DNA Digivolve needs `PUPPETS-G032` |
+| `EX6-011` | implemented | metadata; Ace Overflow; red Lv6 and red+black Lv6 DNA paths; Hand Counter Blast DNA Digivolve using Durandamon + BryweLudramon; Raid/Reboot; On Play/When Digivolving security trash, opponent-effect immunity, and DNA-origin De-Digivolve/delete tail | none identified in covered text |
 | `EX8-030` | implemented | yellow Lv2 and NSo Lv2 digivolve paths; opponent memory-gain floodgate with Tamer-source exemption | none identified in covered text |
 | `P-136` | partial | metadata; optional On Play exact Shoemon hand free-play; Security play self | Puppet-digivolve observer with source-bound suspend-this-Tamer cost needs `PUPPETS-G023` |
 | `P-156` | partial | Tamer-based option color bypass; Main chosen-Tamer binding into hand/trash Digimon free-play filtered by bound Tamer color and play cost <=3; mandatory Security add-this-option-to-hand tail | Security optional Tamer play before mandatory add-to-hand tail needs `PUPPETS-G017` |
@@ -160,7 +160,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 | `PUPPETS-G029` | dsl-gap | open | `BT23-077`, self-scoped OnSuspend observer predicate | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G030` | engine-gap / dsl-gap | open | `BT5-106`, Security play from trash while suppressing played Digimon On Play effects | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G031` | engine-gap / dsl-gap | open | `EX4-074`, End of Attack self-delete/opponent-delete/Recovery/conditional-hatch chain | `docs/RUST_ENGINE_GAPS.md` |
-| `PUPPETS-G032` | engine-gap | open | `EX6-011`, Counter Blast DNA Digivolve activation from hand | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G032` | engine-gap | closed | `EX6-011`, Counter Blast DNA Digivolve activation from hand | `docs/RUST_ENGINE_GAPS.md` |
 
 ## Detailed Gaps
 
@@ -507,13 +507,12 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G032: Counter Blast DNA Digivolve From Hand
 
 - **Type:** `engine-gap`
-- **Status:** open
+- **Status:** closed
 - **Blocks:** `EX6-011` RagnaLoardmon.
 - **Effect text:** "[Hand] [Counter] <Blast DNA Digivolve ([Durandamon] + [BryweLudramon])>."
 - **Why it matters:** This is a defender-side Counter-window activation that selects a specific field Digimon plus a specific hand material, then DNA digivolves into the hand card without paying cost. It must be exposed through the Counter action mask and pending-selection flow, not approximated as normal main-phase DNA.
-- **Evidence:** Batch 10 implements the normal red+black Lv6 DNA route and DNA-origin resolution tail, but leaves the Counter activation ignored under this gap. `docs/RUST_ENGINE_GAPS.md` now anchors the reusable `G-COUNTER-BLAST-DNA-ACTIVATION` tracker.
-- **First test:** During the opponent's attack, hold `EX6-011` with eligible `Durandamon`/`BryweLudramon` materials, assert the Counter action mask exposes Blast DNA, choose materials, and assert the card DNA digivolves with DNA-origin context.
-- **Implementation hint:** Implement the Counter window and `prompt_blast_dna_digivolve` action surface from the existing `Counter window + <Blast Digivolve>` gap.
+- **Evidence:** Closed by the CounterTiming Blast DNA slice. `EX6-011.yaml` declares `alt_paths.kind: blast_dna_digivolve` with named Durandamon + BryweLudramon materials. Runtime test `ex6_011_counter_blast_dna_uses_durandamon_and_bryweludramon` asserts the Counter action exposes the field material, the hand-material pending selection follows, the resulting stack is `Durandamon/BryweLudramon/EX6-011`, and the DNA-origin delete choice is surfaced.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex6_011_counter_blast_dna_uses_durandamon_and_bryweludramon ex6_011_has_standard_red_lv6_and_dna_red_black_lv6_routes ex6_011_dna_origin_tail_dedigivolves_all_then_surfaces_delete_choice`.
 
 ## Cross-Archetype Spec Tags
 

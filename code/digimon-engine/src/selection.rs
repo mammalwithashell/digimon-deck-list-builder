@@ -507,6 +507,9 @@ pub enum SecurityPhase {
     /// Enqueue + drain `OnSecurityCheck` observer effects over the defender's
     /// battle area.
     OnSecurityCheckDrain,
+    /// Offer `WhenWouldLoseSecurity` replacements before the revealed card is
+    /// finally removed from the security stack.
+    WhenWouldLoseSecurity,
     /// Enqueue + drain `OnLoseSecurity` on the revealed card (observer timing).
     OnLoseSecurityDrain,
     /// Trash the card (unless `pending_security.played` is set), then fire

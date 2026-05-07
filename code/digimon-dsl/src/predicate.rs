@@ -87,7 +87,7 @@ pub struct PredicateSpec {
     // Leaf — zone / owner
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub zone: Vec<Zone>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "of")]
     pub owner: Option<PlayerRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub other: Option<bool>,
@@ -234,6 +234,7 @@ pub enum ReplacementCauseSpec {
     OpponentEffect,
     SecurityCheck,
     Cost,
+    Overclock,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
