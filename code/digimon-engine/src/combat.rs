@@ -1539,6 +1539,19 @@ impl Game {
         if !self.has_keyword(attacker, Keyword::Raid) {
             return RaidRetargetOutcome::Proceed;
         }
+        // Track C: `CannotSwitchAttackTarget` on the attacker suppresses
+        // Raid retarget. The attack proceeds with its (now-invalid)
+        // effective_target — `resolve_pending_battle` treats a deleted
+        // defender as a clean attacker-wins, matching the no-Raid path.
+        // Without this gate the engine would still install the mandatory
+        // retarget selection, then `apply_attack_target_substitution`
+        // would silently no-op when the user picks — confusing UX.
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CannotSwitchAttackTarget)
+        {
+            return RaidRetargetOutcome::Proceed;
+        }
 
         let candidates = self.raid_retarget_candidates(attacker);
         if candidates.is_empty() {
@@ -1562,6 +1575,10 @@ impl Game {
     /// - Must be in `OptionState::Standard` (excludes Delayed/Training/
     ///   Linked option permanents).
     /// - Must NOT carry `ModifierType::CannotAttackTarget` (Phase 6).
+    /// - Must NOT carry `ModifierType::CannotBeRedirectedAsAttackTarget`
+    ///   (Track C / 2026-05-07): a candidate protected from being
+    ///   chosen as the redirected target is filtered out before the
+    ///   selection installs, mirroring the Block candidate filter.
     ///
     /// Returns permanent indices on the opposing side (same ordering
     /// as battle_area).
@@ -1590,6 +1607,12 @@ impl Game {
             if self
                 .modifiers
                 .has(t_handle, ModifierType::CannotAttackTarget)
+            {
+                continue;
+            }
+            if self
+                .modifiers
+                .has(t_handle, ModifierType::CannotBeRedirectedAsAttackTarget)
             {
                 continue;
             }
@@ -1628,6 +1651,12 @@ impl Game {
             if self
                 .modifiers
                 .has(t_handle, ModifierType::CannotAttackTarget)
+            {
+                continue;
+            }
+            if self
+                .modifiers
+                .has(t_handle, ModifierType::CannotBeRedirectedAsAttackTarget)
             {
                 continue;
             }

@@ -726,16 +726,22 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** "Zone-manipulation: security stack operations"; "Zone-manipulation: return-to-hand / return-to-deck / bounce self".
 
 ### Fixed attack target — `CannotBeRedirectedAsAttackTarget` / `CannotSwitchAttackTarget` modifiers
-- **Severity:** ✅ RESOLVED for the Block redirect path and the unified `apply_attack_target_substitution` API (2026-05-07)
+- **Severity:** ✅ RESOLVED across Block, Raid, and the unified substitution API (2026-05-07)
 - **Discovered in:** TS Olympos (2026-04-18)
 - **Card(s):** BT24-062 MasterBlimpmon (inherited "[Your Turn] This Digimon's attack target can't change.")
 - **Effect text:** "[Your Turn] This Digimon's attack target can't change."
 - **Status:** Track C taxonomy publishes both modifiers (2026-05-06) and Track D wires the consult sites (2026-05-07):
-  - `CannotSwitchAttackTarget` on the attacker → `try_enter_block` early-returns (no Block window installs) AND `apply_attack_target_substitution` is a no-op. Covers the `WhenWouldBeAttackTarget` replacement path and the script-facing `EffectContext::redirect_attack` helper.
-  - `CannotBeRedirectedAsAttackTarget` on a candidate → filtered out of the Block candidate list AND rejected by `apply_attack_target_substitution` when it would become the new effective target.
-- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat track_c_modifiers --nocapture` (5 tests).
-- **Remaining scope:** Raid post-block retarget rider (`try_enter_raid`) and Counter retarget paths read `effective_target` directly without routing through `apply_attack_target_substitution`. Cards exercising those paths under these modifiers will need a follow-up pass through the same gates.
-- **Workaround:** No longer needed for the Block redirect path or the unified substitution API.
+  - `CannotSwitchAttackTarget` on the attacker:
+    - `try_enter_block` early-returns (no Block window installs).
+    - `try_enter_raid_retarget` early-returns `Proceed` (Raid retarget selection is suppressed; the attack runs through to Battle against the now-invalid target, matching the no-Raid path).
+    - `apply_attack_target_substitution` is a no-op — covers the `WhenWouldBeAttackTarget` replacement path, Counter `redirect_attack`, and the script-facing helper.
+  - `CannotBeRedirectedAsAttackTarget` on a candidate:
+    - Filtered out of the Block candidate list.
+    - Filtered out of `raid_retarget_candidates` (both unsuspended and fallback passes), so a single-protected-candidate Raid fizzles cleanly.
+    - Rejected by `apply_attack_target_substitution` when it would become the new effective target.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat track_c_modifiers --nocapture` (8 tests covering Block + Raid + player-target paths).
+- **Remaining scope:** None for combat retarget paths. The script-facing `EffectContext::redirect_attack` helper inherits the gate via `apply_attack_target_substitution`. Future retarget mechanics introduced by new card text would need to read the same modifiers at their commit sites.
+- **Workaround:** No longer needed.
 - **Related:** "Raid target-switch interrupt (scripting-surface, not mask-only)"; RUST_PYTHON_PARITY §2.3.
 
 ### In-effect branch-choice selector (`select_effect_choice` / "choose one of N effects")

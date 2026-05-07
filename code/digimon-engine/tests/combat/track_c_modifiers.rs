@@ -11,11 +11,16 @@
 //!   side) — filters a Digimon out of the Block redirect candidate
 //!   list and rejects redirect substitutions targeting it.
 
+use std::sync::Arc;
+
 use digimon_engine::action::space::{encode_attack, PASS};
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword, ModifierType};
 use digimon_engine::modifiers::{ModifierEntry, PlayerModifierEntry};
+use digimon_engine::permanent::PermanentHandle;
 
 fn digimon(card_id: &str, dp: i32) -> digimon_engine::card_data::CardData {
     digimon_engine::card_data::CardData {
@@ -191,6 +196,156 @@ fn cannot_be_redirected_filters_block_candidate() {
         "no eligible redirect candidate => no BlockTiming"
     );
     assert_ne!(r.current_phase(), GamePhase::BlockTiming);
+}
+
+// ── Raid retarget gating ───────────────────────────────────────────────
+
+/// `OnAttack` closure that deletes a captured target — used to set up a
+/// PostBlock state where the original Raid target is gone.
+struct DeleteOnAttack(PermanentHandle);
+impl CardEffect for DeleteOnAttack {
+    fn effects(&self, c: CardHandle) -> Vec<Effect> {
+        let victim = self.0;
+        vec![Effect::on_attack(c)
+            .name("Delete victim OnAttack")
+            .process(move |ctx| {
+                ctx.delete_permanent(victim);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn cannot_switch_attack_target_suppresses_raid_retarget() {
+    // Raid would normally install a mandatory retarget selection when
+    // the original target leaves and a legal candidate exists. With
+    // `CannotSwitchAttackTarget` on the attacker, the retarget is
+    // suppressed and the attack runs through to Battle against the
+    // (now-invalid) target — `resolve_pending_battle` treats a deleted
+    // defender as a clean attacker-wins.
+    let mut r = DebugRunner::builder()
+        .add_card(digimon("ATK", 5000))
+        .add_card(digimon("DEF", 5000))
+        .add_card(digimon("VICTIM", 5000))
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let _def = r.place_on_field(1, "DEF", Some(0));
+    let victim = r.place_on_field(1, "VICTIM", Some(0));
+
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Raid, Expiry::Permanent, 0);
+    r.game.modifiers.add(
+        atk,
+        ModifierEntry::simple(
+            ModifierType::CannotSwitchAttackTarget,
+            0,
+            Expiry::Permanent,
+            0,
+        ),
+    );
+    r.register_effect("ATK", Arc::new(DeleteOnAttack(victim)));
+
+    let result = r.attack_digimon(atk, victim, false);
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "CannotSwitchAttackTarget must suppress the Raid retarget selection"
+    );
+    assert!(r.game.pending_attack.is_none(), "attack cleaned up");
+    assert_ne!(
+        result,
+        AttackResult::InProgress,
+        "attack must terminate this tick"
+    );
+}
+
+#[test]
+fn cannot_be_redirected_filters_raid_retarget_candidate() {
+    // Two Raid candidates: one protected, one unprotected. The
+    // protected one is filtered out of `raid_retarget_candidates` so
+    // the selection only offers the unprotected one.
+    let mut r = DebugRunner::builder()
+        .add_card(digimon("ATK", 5000))
+        .add_card(digimon("DEF_OK", 5000))
+        .add_card(digimon("DEF_LOCK", 5000))
+        .add_card(digimon("VICTIM", 5000))
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def_ok = r.place_on_field(1, "DEF_OK", Some(0));
+    let def_lock = r.place_on_field(1, "DEF_LOCK", Some(0));
+    let victim = r.place_on_field(1, "VICTIM", Some(0));
+
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Raid, Expiry::Permanent, 0);
+    r.game.modifiers.add(
+        def_lock,
+        ModifierEntry::simple(
+            ModifierType::CannotBeRedirectedAsAttackTarget,
+            0,
+            Expiry::Permanent,
+            1,
+        ),
+    );
+    r.register_effect("ATK", Arc::new(DeleteOnAttack(victim)));
+
+    let result = r.attack_digimon(atk, victim, false);
+    assert_eq!(result, AttackResult::InProgress);
+
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Raid retarget installs a selection");
+    let action_ok = encode_attack(0, def_ok.index as u16);
+    let action_lock = encode_attack(0, def_lock.index as u16);
+    assert!(
+        sel.valid_action_ids.contains(&action_ok),
+        "unprotected DEF_OK must remain a legal Raid retarget"
+    );
+    assert!(
+        !sel.valid_action_ids.contains(&action_lock),
+        "protected DEF_LOCK must be filtered from the Raid candidate list"
+    );
+}
+
+#[test]
+fn cannot_be_redirected_fizzles_raid_when_only_candidate_is_protected() {
+    // If the only legal Raid retarget candidate is protected, the
+    // candidate list comes back empty and `try_enter_raid_retarget`
+    // routes through Fizzled — the attack cleans up with no selection.
+    let mut r = DebugRunner::builder()
+        .add_card(digimon("ATK", 5000))
+        .add_card(digimon("DEF_LOCK", 5000))
+        .add_card(digimon("VICTIM", 5000))
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def_lock = r.place_on_field(1, "DEF_LOCK", Some(0));
+    let victim = r.place_on_field(1, "VICTIM", Some(0));
+
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Raid, Expiry::Permanent, 0);
+    r.game.modifiers.add(
+        def_lock,
+        ModifierEntry::simple(
+            ModifierType::CannotBeRedirectedAsAttackTarget,
+            0,
+            Expiry::Permanent,
+            1,
+        ),
+    );
+    r.register_effect("ATK", Arc::new(DeleteOnAttack(victim)));
+
+    let result = r.attack_digimon(atk, victim, false);
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no Raid retarget selection — only candidate was filtered"
+    );
+    assert!(r.game.pending_attack.is_none(), "attack cleaned up");
+    assert_ne!(result, AttackResult::InProgress);
 }
 
 #[test]
