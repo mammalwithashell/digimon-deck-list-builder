@@ -1,0 +1,50 @@
+card: BT24-062
+name: MasterBlimpmon
+kind: digimon
+level: 5
+color: [black, blue]
+cost: 7
+dp: 7000
+traits: [Machine, Iliad, TS]
+
+# Printed:
+#   <Blocker>
+#   <Armor Purge>
+#   [End of Attack][End of Opponent's Turn][Once Per Turn] You may play 1 play
+#     cost 5 or lower card with the [Machine], [Cyborg], or [TS] trait from
+#     this Digimon's digivolution cards without paying the cost.
+# Inherited:
+#   [Your Turn] This Digimon's attack target can't change.
+
+effects:
+  # ─── Inherited: target lock on the controller's turn ─────────────────────
+  #
+  # Track C / D close-out (2026-05-07). The inherited text installs
+  # `ModifierType::CannotSwitchAttackTarget` on the host permanent (active top
+  # card of the digivolution stack containing this card source) every
+  # declarative tick when the host's controller is the turn player. Track D
+  # consult sites read the modifier in `try_enter_block` (early-return,
+  # suppressing the Block window), `try_enter_raid_retarget` (early-return,
+  # suppressing Raid retarget), and `apply_attack_target_substitution`
+  # (no-op for replacement-driven and `redirect_attack` retargets).
+  #
+  # Implemented as a raw_rust declarative because the YAML `kind: flood_gate`
+  # target predicate has no native "is source permanent" filter — the closest
+  # alternative would scan all permanents and use an aux predicate for
+  # self-identity. The raw_rust path reads `ctx.source_permanent` directly,
+  # which is the host whether BT24-062 is the active top or a digivolution
+  # source (inherited scope).
+  - kind: raw_rust
+    fn: bt24_062_attack_target_lock
+
+  # ─── Omitted clauses ──────────────────────────────────────────────────────
+  #
+  # `<Blocker>` and `<Armor Purge>` parse from printed text via the keyword
+  # parser (see `card_data::parse_printed_keywords`); no DSL clause needed.
+  #
+  # [End of Attack][End of Opponent's Turn][Once Per Turn] play card from
+  # stack — not implemented in this fixture. The behavioral fixture targets
+  # the inherited target-lock clause specifically, since that exercises the
+  # Track C taxonomy + Track D combat consult sites landed on 2026-05-06 /
+  # 2026-05-07. Full implementation requires an additional select-from-
+  # digivolution-stack flow which is orthogonal to the modifier surface.

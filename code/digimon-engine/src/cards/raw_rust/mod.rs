@@ -884,6 +884,59 @@ fn bt21_093_delete_highest_dp_opponent(_ctx: &mut EffectContext<'_>, _bindings: 
     // a raw_rust-driven selection installer.
 }
 
+/// BT24-062 MasterBlimpmon — inherited [Your Turn] target-lock declarative.
+///
+/// Printed inherited text: "[Your Turn] This Digimon's attack target can't change."
+///
+/// Refreshes `ModifierType::CannotSwitchAttackTarget` on the host permanent
+/// (the active top card of the digivolution stack containing this card source)
+/// every declarative tick when the host's controller is the turn player. The
+/// modifier is auto-cleared between ticks because `add_declarative_modifier`
+/// sets `materialized_declarative: true`, and Track D's combat consult sites
+/// (Block window early-return, Raid retarget early-return, and the unified
+/// `apply_attack_target_substitution` no-op) read the modifier directly.
+///
+/// Two declaratives are emitted to cover both scopes the Rust engine's tick
+/// model exposes — `face_up` (BT24-062 is the active top card) and
+/// `inherited` (BT24-062 is a digivolution source under another Digimon).
+/// In both cases `source_permanent` resolves to the host, so the body is
+/// identical; only the `.inherited()` flag differs. Without the face-up
+/// emission the modifier would not install when BT24-062 IS the host —
+/// the tick walks the top card with `inherited_source = false` and skips
+/// effects whose `inherited` flag is set.
+fn bt24_062_attack_target_lock(card: crate::card_source::CardHandle) -> Vec<Effect> {
+    use crate::enums::{Expiry, ModifierType};
+
+    fn install(ctx: &mut EffectContext<'_>) {
+        let Some(host) = ctx.source_permanent else {
+            return;
+        };
+        if ctx.game.turn_player() != host.player {
+            return;
+        }
+        ctx.add_declarative_modifier(
+            host,
+            ModifierType::CannotSwitchAttackTarget,
+            0,
+            Expiry::Permanent,
+        );
+    }
+
+    vec![
+        Effect::declarative(card)
+            .name("[Your Turn] target lock — face up")
+            .materializes_declarative_state()
+            .process(install)
+            .build(),
+        Effect::declarative(card)
+            .name("[Your Turn] target lock — inherited source")
+            .inherited()
+            .materializes_declarative_state()
+            .process(install)
+            .build(),
+    ]
+}
+
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
     r.register_step(
@@ -936,6 +989,7 @@ pub fn build_registry() -> EngineRawRustRegistry {
         "bt21_093_delete_highest_dp_opponent",
         bt21_093_delete_highest_dp_opponent,
     );
+    r.register_declarative("bt24_062_attack_target_lock", bt24_062_attack_target_lock);
     r
 }
 
