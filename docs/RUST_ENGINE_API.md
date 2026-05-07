@@ -531,7 +531,7 @@ UntilLeaveField       # cleared when the permanent leaves the field
 - DP: `ChangeDp`, `ChangeBaseDp`, `DpFloor`, `DontHaveDp`
 - Cost: `ChangePlayCost`, `ChangeDigivolveCost`, `CannotReduceCost`
 - Protection: `CannotBeDestroyed`, `CannotBeDestroyedByBattle`, `CannotBeDestroyedByEffect`
-- Attack: `CannotAttack`, `CannotAttackPlayer`, `CanAttackUnsuspended`, `CanAttackActivePlayer`
+- Attack: `CannotAttack`, `CannotAttackPlayer`, `CanAttackUnsuspended`, `CanAttackActivePlayer`, `CannotAttackTarget`, `CannotBeRedirectedAsAttackTarget`, `CanNotSwitchAttackTarget`
 - Suspend: `CannotSuspend`, `CannotUnsuspend`
 - Targeting: `CannotBeSelectedByEffect`, `CannotBeAffected`
 - Granted keywords: `GrantBlocker`, `GrantRush`, `GrantJamming`, `GrantPiercing`, `GrantReboot`, `GrantBlitz`, `GrantAlliance`, `GrantRaid`, `GrantDecoy`
@@ -1469,6 +1469,45 @@ Every interrupt window now exposes its decision node through `pending_selection`
 
 ### Updated attack state machine
 
+All attack initiators route through `Game::begin_attack_open(AttackOpen)`.
+Natural main-phase attacks, Vortex attacks, Overclock attacks, and effect-created
+attacks differ only in the `AttackOpen` metadata and suspend/target flags; they
+share the same `PendingAttack` state machine and interrupt windows.
+
+```rust
+pub enum AttackInitiator {
+    NaturalMainPhase,
+    Effect { source: Option<CardHandle>, optional: bool },
+    Overclock,
+    Vortex,
+}
+
+pub enum TargetConstraint {
+    PlayerOnly,
+    DigimonOnly,
+    Any,
+    Forced(AttackTarget),
+}
+
+pub struct AttackOpen {
+    pub attacker: PermanentHandle,
+    pub initiator: AttackInitiator,
+    pub suspend_attacker: bool,
+    pub target_constraint: TargetConstraint,
+    pub allow_cancel: bool,
+}
+
+impl Game {
+    pub fn begin_attack_open(&mut self, open: AttackOpen) -> AttackResult;
+}
+```
+
+Current call sites pass `TargetConstraint::Forced(target)` because the action
+decoder or effect-target selection has already surfaced the target choice
+through `pending_selection`. The non-forced target constraints are reserved for
+the next consolidation step, where attack target locking itself will be owned by
+the central entry point.
+
 ```
 Declared
   → [WhenWouldAttack]              (replacement: cancel / let attack proceed)
@@ -1486,7 +1525,7 @@ Declared
 
 ### New replacement timings (Phase 7 variants, dispatched in Phase 9)
 
-Both variants were parsed and built in Phase 7 but never fired. Phase 9 wires the fire-sites at the top of `begin_attack_impl` (attack declaration).
+Both variants were parsed and built in Phase 7 but never fired. Phase 9 wires the fire-sites at the top of `begin_attack_open` (attack declaration).
 
 | Timing | Subject | Outcome semantics |
 |--------|---------|-------------------|
@@ -1520,6 +1559,27 @@ Three candidate shapes feed into the Counter window:
 ### New `EffectContext` helpers
 
 ```rust
+/// Install an optional effect-created attack target prompt. PASS declines the
+/// attack without paying suspend cost or opening PendingAttack.
+pub fn may_attack_now(
+    &mut self,
+    attacker: PermanentHandle,
+    targets: AttackTargetRestriction,
+    without_suspending: bool,
+    prompt: &str,
+) -> Result<(), AttackError>;
+
+/// Install a mandatory effect-created attack prompt for `attacker` and make
+/// that attacker's controller choose the target. Used for effects that force
+/// an opponent's Digimon to attack.
+pub fn force_opponent_attack(
+    &mut self,
+    attacker: PermanentHandle,
+    targets: AttackTargetRestriction,
+    without_suspending: bool,
+    prompt: &str,
+) -> Result<(), AttackError>;
+
 /// Redirect the current attack's effective target.
 ///
 /// Only callable during an active attack (otherwise `AttackError::NoActiveAttack`).

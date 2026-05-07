@@ -170,9 +170,9 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Scope:** Rust engine.
 - **Card(s):** AD1-012 CresGarurumon — `[Inherited][Your Turn] This Digimon's attack target can't change.`
 - **Effect text:** any clause that prevents the carrier permanent's attack from being retargeted (Blocker auto-redirect, attacker-side Raid switch, opponent-effect SwitchDefender).
-- **What's missing:** `code/digimon-engine/src/enums.rs:463-575` `ModifierType` enum has `CannotAttackTarget` (prevents attacking certain targets) but no `CannotChangeAttackTarget` (prevents the in-flight attacker's target from being switched). DCGO uses `CanNotSwitchAttackTargetClass` with `PermanentCondition` restricting to the source carrier (not all own Digimon).
-- **Suggested change:** Add `ModifierType::CannotChangeAttackTarget` variant to `enums.rs`. Wire enforcement in `EffectContext::redirect_attack` (`mod.rs:3099`) — reject the redirect when the in-flight attacker carries this modifier. Optionally route through Blocker/Raid retarget paths so reactive redirects are also gated. Active-when expiry: `EndOfTurn` plus DSL `active_when: { your_turn: true }`.
-- **Workaround:** None faithful — AD1-012's inherited clause is documented as commented stub in YAML and the behavioral test is `#[ignore = "pending: G-MOD-CANNOT-CHANGE-ATTACK-TARGET"]`.
+- **Status (2026-05-06):** Partially closed for script-facing redirects. `ModifierType::CanNotSwitchAttackTarget` and `ModifierType::CannotBeRedirectedAsAttackTarget` now exist, lower through the DSL modifier map, and are enforced by `EffectContext::redirect_attack` via `Game::validate_attack_redirect_target`. Rejected redirects do not fire `OnAttackTargetChange`. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- redirect_and_cancel::ctx_redirect_attack_honors`.
+- **Remaining:** Blocker and Raid retarget paths still call the internal target-substitution helper directly; those reactive redirects need to route through the same redirect validator before this gap is fully closed for every combat retarget source. Active-when expiry for AD1-012's exact inherited-your-turn shape remains card/DSL work.
+- **Workaround:** Use the new modifiers for effect-driven redirects; do not claim full AD1-012 readiness until Blocker/Raid validation and the card fixture are covered.
 
 ### `play_from_hand_free` Missing `bind_as` PermanentHandle Output  [G-PLAY-FROM-HAND-FREE-BIND-AS]
 - **Discovered in:** BT16-085 Davis Motomiya & Ken Ichijoji implementation (2026-05-04)

@@ -25,6 +25,8 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CanAttackUnsuspended" => ModifierType::CanAttackUnsuspended,
         "CanAttackActivePlayer" => ModifierType::CanAttackActivePlayer,
         "CannotAttackTarget" => ModifierType::CannotAttackTarget,
+        "CannotBeRedirectedAsAttackTarget" => ModifierType::CannotBeRedirectedAsAttackTarget,
+        "CanNotSwitchAttackTarget" => ModifierType::CanNotSwitchAttackTarget,
         "CannotSuspend" => ModifierType::CannotSuspend,
         "CannotUnsuspend" => ModifierType::CannotUnsuspend,
         "CannotBeSelectedByEffect" => ModifierType::CannotBeSelectedByEffect,

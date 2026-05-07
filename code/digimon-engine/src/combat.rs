@@ -26,6 +26,7 @@
 //! Vortex short-circuits directly from `Declared` to `Battle` after OnAttack
 //! — Vortex attacks are uninterruptible per Digimon TCG rules.
 
+use crate::card_source::CardHandle;
 use crate::enums::{CardKind, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
@@ -67,6 +68,41 @@ pub(crate) enum CounterCandidate {
 /// itself triggers another attack does not open a fresh Counter window
 /// for the secondary attack. Spec §5.4.
 const MAX_COUNTER_DEPTH: u8 = 1;
+
+/// Describes why an attack flow was opened. The combat state machine uses a
+/// single entry point for natural attacks, effect-created attacks, and
+/// keyword/special-rule attacks; the initiator keeps provenance visible for
+/// future predicates without changing action IDs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttackInitiator {
+    NaturalMainPhase,
+    Effect {
+        source: Option<CardHandle>,
+        optional: bool,
+    },
+    Overclock,
+    Vortex,
+}
+
+/// Constraint applied while locking the attack target.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TargetConstraint {
+    PlayerOnly,
+    DigimonOnly,
+    Any,
+    Forced(AttackTarget),
+}
+
+/// Central attack-flow open request. All attack entry helpers should build one
+/// of these and call [`Game::begin_attack_open`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AttackOpen {
+    pub attacker: PermanentHandle,
+    pub initiator: AttackInitiator,
+    pub suspend_attacker: bool,
+    pub target_constraint: TargetConstraint,
+    pub allow_cancel: bool,
+}
 
 /// Phase 9 Task 4 — result of the PostBlock Raid retarget rider.
 /// Crate-private; the state machine arm routes on this.
@@ -307,7 +343,17 @@ impl Game {
         target: AttackTarget,
         vortex: bool,
     ) -> AttackResult {
-        self.begin_attack_impl(attacker, target, vortex, /* is_overclock = */ false)
+        self.begin_attack_open(AttackOpen {
+            attacker,
+            initiator: if vortex {
+                AttackInitiator::Vortex
+            } else {
+                AttackInitiator::NaturalMainPhase
+            },
+            suspend_attacker: true,
+            target_constraint: TargetConstraint::Forced(target),
+            allow_cancel: false,
+        })
     }
 
     /// Declare an `<Overclock>` attack. The sacrifice must already have been
@@ -323,34 +369,30 @@ impl Game {
         attacker: PermanentHandle,
         target: AttackTarget,
     ) -> AttackResult {
-        self.begin_attack_impl(
-            attacker, target, /* vortex = */ false, /* is_overclock = */ true,
-        )
+        self.begin_attack_open(AttackOpen {
+            attacker,
+            initiator: AttackInitiator::Overclock,
+            suspend_attacker: false,
+            target_constraint: TargetConstraint::Forced(target),
+            allow_cancel: false,
+        })
     }
 
-    /// Declare an effect-granted attack that does not suspend on declaration.
-    ///
-    /// Uses the same internal no-suspend path as `<Overclock>` but is exposed
-    /// under a neutral name for card text like "this Digimon may attack
-    /// without suspending".
-    pub(crate) fn begin_attack_without_suspending(
-        &mut self,
-        attacker: PermanentHandle,
-        target: AttackTarget,
-    ) -> AttackResult {
-        self.begin_attack_impl(
-            attacker, target, /* vortex = */ false, /* is_overclock = */ true,
-        )
-    }
+    pub fn begin_attack_open(&mut self, open: AttackOpen) -> AttackResult {
+        let AttackOpen {
+            attacker,
+            initiator,
+            suspend_attacker,
+            target_constraint,
+            allow_cancel: _,
+        } = open;
+        let TargetConstraint::Forced(target) = target_constraint else {
+            return AttackResult::Invalid;
+        };
+        let vortex = matches!(initiator, AttackInitiator::Vortex);
+        let skips_suspend_cost = !suspend_attacker;
 
-    fn begin_attack_impl(
-        &mut self,
-        attacker: PermanentHandle,
-        target: AttackTarget,
-        vortex: bool,
-        is_overclock: bool,
-    ) -> AttackResult {
-        let attacker_can_attack = if is_overclock {
+        let attacker_can_attack = if skips_suspend_cost {
             self.can_attack_without_suspending(attacker, vortex)
         } else {
             self.can_attack(attacker, vortex)
@@ -385,7 +427,7 @@ impl Game {
             is_blocked: false,
             blocker: None,
             is_vortex: vortex,
-            is_overclock,
+            is_overclock: skips_suspend_cost,
             declaration_committed: false,
             cancelled: false,
             battle_occurred: false,
@@ -848,6 +890,29 @@ impl Game {
                 Ok(())
             }
         }
+    }
+
+    pub(crate) fn validate_attack_redirect_target(
+        &self,
+        attacker: PermanentHandle,
+        target: AttackTarget,
+    ) -> Result<(), AttackError> {
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CanNotSwitchAttackTarget)
+        {
+            return Err(AttackError::InvalidTarget);
+        }
+        self.validate_attack_target(attacker, target)?;
+        if let AttackTarget::Digimon(target_handle) = target {
+            if self.modifiers.has(
+                target_handle,
+                ModifierType::CannotBeRedirectedAsAttackTarget,
+            ) {
+                return Err(AttackError::InvalidTarget);
+            }
+        }
+        Ok(())
     }
 
     /// Scan the attacker's side for unsuspended allies with the Alliance

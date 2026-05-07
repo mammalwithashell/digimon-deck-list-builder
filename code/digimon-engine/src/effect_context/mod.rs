@@ -24,7 +24,7 @@ use crate::action::mask::effect_attack_target_action_ids;
 use crate::action::space::{decode_attack, SECURITY_TARGET};
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
-use crate::combat::{AttackError, AttackResult};
+use crate::combat::{AttackError, AttackInitiator, AttackOpen, AttackResult, TargetConstraint};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
 use crate::effect::enumerate_refireable_effects;
@@ -3138,7 +3138,8 @@ impl<'a> EffectContext<'a> {
             return Err(AttackError::NoActiveAttack);
         };
         let attacker = pa.attacker;
-        self.game.validate_attack_target(attacker, new_target)?;
+        self.game
+            .validate_attack_redirect_target(attacker, new_target)?;
         self.game.apply_attack_target_substitution(new_target);
         Ok(())
     }
@@ -3185,7 +3186,7 @@ impl<'a> EffectContext<'a> {
         without_suspending: bool,
         prompt: &str,
     ) -> Result<(), AttackError> {
-        self.may_attack_now_optional(attacker, targets, without_suspending, false, prompt)
+        self.may_attack_now_optional(attacker, targets, without_suspending, true, prompt)
     }
 
     pub fn may_attack_now_optional(
@@ -3234,11 +3235,16 @@ impl<'a> EffectContext<'a> {
                         index: decoded_target as u8,
                     })
                 };
-                if without_suspending {
-                    game.begin_attack_without_suspending(attacker, target);
-                } else {
-                    game.begin_attack(attacker, target, false);
-                }
+                game.begin_attack_open(AttackOpen {
+                    attacker,
+                    initiator: AttackInitiator::Effect {
+                        source: Some(source_card),
+                        optional,
+                    },
+                    suspend_attacker: !without_suspending,
+                    target_constraint: TargetConstraint::Forced(target),
+                    allow_cancel: optional,
+                });
             }),
             on_decline: if optional {
                 Some(Box::new(|_game: &mut Game| {}) as DeclineCallback)
@@ -3247,6 +3253,21 @@ impl<'a> EffectContext<'a> {
             },
         });
         Ok(())
+    }
+
+    pub fn force_opponent_attack(
+        &mut self,
+        attacker: PermanentHandle,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        prompt: &str,
+    ) -> Result<(), AttackError> {
+        let previous_override = self.override_selecting_player;
+        self.override_selecting_player = Some(attacker.player);
+        let result =
+            self.may_attack_now_optional(attacker, targets, without_suspending, false, prompt);
+        self.override_selecting_player = previous_override;
+        result
     }
 
     /// Move the top of `player`'s digitama deck into the breeding area.

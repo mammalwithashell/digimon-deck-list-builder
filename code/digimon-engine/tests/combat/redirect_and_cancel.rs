@@ -19,7 +19,8 @@ use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::{AttackError, AttackResult};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect, EffectBuilder};
-use digimon_engine::enums::EffectTiming;
+use digimon_engine::enums::{EffectTiming, Expiry, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::AttackTarget;
 
@@ -309,6 +310,102 @@ fn ctx_redirect_attack_validates_target_legality() {
         Some(Err(AttackError::InvalidTarget)),
         "redirect to Player(attacker's own controller) must be rejected (got {:?})",
         recorded2
+    );
+}
+
+#[test]
+fn ctx_redirect_attack_honors_fixed_target_modifiers() {
+    let slot: Arc<Mutex<Option<Result<(), AttackError>>>> = Arc::new(Mutex::new(None));
+    let witness_log: Arc<Mutex<Vec<AttackTarget>>> = Arc::new(Mutex::new(Vec::new()));
+
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("DEF"))
+        .add_card(card("FIXED"))
+        .add_card(card("WITNESS"))
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    let fixed = r.place_on_field(1, "FIXED", Some(0));
+    r.game.modifiers.add(
+        fixed,
+        ModifierEntry::simple(
+            ModifierType::CannotBeRedirectedAsAttackTarget,
+            0,
+            Expiry::EndOfTurn,
+            0,
+        ),
+    );
+
+    r.register_effect(
+        "ATK",
+        Arc::new(RedirectRecordingErr {
+            target: AttackTarget::Digimon(fixed),
+            slot: slot.clone(),
+        }),
+    );
+    r.register_effect(
+        "WITNESS",
+        Arc::new(WitnessTargetChange(witness_log.clone())),
+    );
+    let _witness = r.place_on_field(0, "WITNESS", Some(0));
+
+    let _result = r.attack_digimon(atk, def, false);
+
+    let recorded = slot.lock().unwrap().take().expect("redirect result");
+    assert_eq!(recorded, Err(AttackError::InvalidTarget));
+    assert!(
+        witness_log.lock().unwrap().is_empty(),
+        "rejected redirect must not fire OnAttackTargetChange"
+    );
+}
+
+#[test]
+fn ctx_redirect_attack_honors_cannot_switch_attacker_modifier() {
+    let slot: Arc<Mutex<Option<Result<(), AttackError>>>> = Arc::new(Mutex::new(None));
+    let witness_log: Arc<Mutex<Vec<AttackTarget>>> = Arc::new(Mutex::new(Vec::new()));
+
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("DEF"))
+        .add_card(card("REDIR"))
+        .add_card(card("WITNESS"))
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    let redir = r.place_on_field(1, "REDIR", Some(0));
+    r.game.modifiers.add(
+        atk,
+        ModifierEntry::simple(
+            ModifierType::CanNotSwitchAttackTarget,
+            0,
+            Expiry::EndOfTurn,
+            0,
+        ),
+    );
+
+    r.register_effect(
+        "ATK",
+        Arc::new(RedirectRecordingErr {
+            target: AttackTarget::Digimon(redir),
+            slot: slot.clone(),
+        }),
+    );
+    r.register_effect(
+        "WITNESS",
+        Arc::new(WitnessTargetChange(witness_log.clone())),
+    );
+    let _witness = r.place_on_field(0, "WITNESS", Some(0));
+
+    let _result = r.attack_digimon(atk, def, false);
+
+    let recorded = slot.lock().unwrap().take().expect("redirect result");
+    assert_eq!(recorded, Err(AttackError::InvalidTarget));
+    assert!(
+        witness_log.lock().unwrap().is_empty(),
+        "rejected redirect must not fire OnAttackTargetChange"
     );
 }
 
