@@ -450,6 +450,7 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Workaround:** None — BLOCKED.
 - **Related:** Parity §4.2b (IgnoreColorRequirement), §4.7x (context-aware modifier queries).
 - **Updated 2026-05-06 (Track C taxonomy):** 🟡 PARTIAL — `ModifierType::MayAttackPlayerOnly` is now published as a player-scoped variant in `enums.rs` and exposed to DSL via `dsl_cards::modifier_map::lookup_modifier_type`. Combat-side enforcement (Track D's `combat::is_legal_attack_target`) is the remaining wire-up. Also published in this taxonomy round: `CannotMove`, `CannotSwitchAttackTarget`, `CannotBeRedirectedAsAttackTarget`, `CanAttackTargetDefendingPermanent`, `CannotAddMemory`, `CannotAddSecurity`, `ChangeEndTurnMinMemory`, `ImmuneFromDPMinus`, `ImmuneFromStackTrashing`, `DisableEffect` (with `disable_effect_timing` parameter on `ModifierEntry`), `TreatAsDigimon`, plus the DP/cost-scaling family (`ChangeCardDP`, `ChangeOriginDP`, `ChangeSAttack`, `ChangeLinkCost`, `ChangeLinkMax`, `ChangePermanentLevel`, `ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor`, `ChangeCardLevelForAssembly`, `ChangeCardNamesForDigiXros`). Per-variant consult sites are documented in `docs/RUST_ENGINE_API.md` § "Modifier consult-site checklist". Bilateral `CannotReducePlayCost`, `CannotPlayFromTrash`, and `OpponentCannotReduceDigivolveCost` remain BLOCKING — the current `CannotReducePlayCost` variant doesn't yet carry a self-only / opponent-only / both selector. Passing command(s): `cargo test --manifest-path code/digimon-engine/Cargo.toml --lib modifiers -- end_of_your_turn_player_scoped --nocapture`.
+- **Updated 2026-05-07 (Track D consult sites):** ✅ `MayAttackPlayerOnly` is enforced in `combat::begin_attack_impl` — Digimon-target attacks return `Invalid` while player-target attacks remain legal. `CannotSwitchAttackTarget` (attacker-side) and `CannotBeRedirectedAsAttackTarget` (candidate-side) are wired into both `try_enter_block` and the unified `apply_attack_target_substitution` API. Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat track_c_modifiers --nocapture` (5 tests).
 
 ### Option card play flow (resolve + trash vs. place-on-field; [Main]/[Security] activation) + Plug-In / Link mechanic + Security-effect return-to-hand / place-on-field
 - **Severity:** 🔴 BLOCKING
@@ -724,14 +725,17 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Workaround:** "None — BLOCKED." Raw `battle_area[i].card_sources.pop()` skips any `OnLeaveField` / inherited-stack recomputation and breaks the curated-API contract.
 - **Related:** "Zone-manipulation: security stack operations"; "Zone-manipulation: return-to-hand / return-to-deck / bounce self".
 
-### Fixed attack target — `CannotBeRedirectedAsAttackTarget` modifier
-- **Severity:** 🟡 PARTIAL (taxonomy published 2026-05-06)
+### Fixed attack target — `CannotBeRedirectedAsAttackTarget` / `CannotSwitchAttackTarget` modifiers
+- **Severity:** ✅ RESOLVED for the Block redirect path and the unified `apply_attack_target_substitution` API (2026-05-07)
 - **Discovered in:** TS Olympos (2026-04-18)
 - **Card(s):** BT24-062 MasterBlimpmon (inherited "[Your Turn] This Digimon's attack target can't change.")
 - **Effect text:** "[Your Turn] This Digimon's attack target can't change."
-- **What's missing:** Track C taxonomy now publishes `ModifierType::CannotBeRedirectedAsAttackTarget` (and the sibling `CannotSwitchAttackTarget` for the attacker-side variant) — DSL keys `CannotBeRedirectedAsAttackTarget` / `CannotSwitchAttackTarget` resolve in `modifier_map.rs`. The remaining work is Track D's combat consult site: `try_enter_block` / `try_enter_raid` / the post-block Raid retarget rider must guard their `effective_target` rewrite by reading the modifier on the candidate redirect target. Distinct from `CannotBeAffected` (suppresses effect-driven mutations, not combat-interrupt paths).
-- **Suggested API shape:** In `try_enter_block` / `try_enter_raid` / any `effective_target` mutation site, guard: `if modifiers.has(redirect_candidate, ModifierType::CannotBeRedirectedAsAttackTarget) { skip redirect }`. Expose via `ctx.add_modifier(target, ..., Expiry::EndOfTurn)`.
-- **Workaround:** Use `Effect::declarative(card)` to install the modifier with `EndOfTurn` expiry; the consult site itself is the remaining gap.
+- **Status:** Track C taxonomy publishes both modifiers (2026-05-06) and Track D wires the consult sites (2026-05-07):
+  - `CannotSwitchAttackTarget` on the attacker → `try_enter_block` early-returns (no Block window installs) AND `apply_attack_target_substitution` is a no-op. Covers the `WhenWouldBeAttackTarget` replacement path and the script-facing `EffectContext::redirect_attack` helper.
+  - `CannotBeRedirectedAsAttackTarget` on a candidate → filtered out of the Block candidate list AND rejected by `apply_attack_target_substitution` when it would become the new effective target.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat track_c_modifiers --nocapture` (5 tests).
+- **Remaining scope:** Raid post-block retarget rider (`try_enter_raid`) and Counter retarget paths read `effective_target` directly without routing through `apply_attack_target_substitution`. Cards exercising those paths under these modifiers will need a follow-up pass through the same gates.
+- **Workaround:** No longer needed for the Block redirect path or the unified substitution API.
 - **Related:** "Raid target-switch interrupt (scripting-surface, not mask-only)"; RUST_PYTHON_PARITY §2.3.
 
 ### In-effect branch-choice selector (`select_effect_choice` / "choose one of N effects")

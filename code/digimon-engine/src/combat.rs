@@ -359,10 +359,22 @@ impl Game {
             return AttackResult::Invalid;
         }
         // Target validation (Digimon must be a Digimon on field; Player target
-        // is legal unless the attacker is under a CannotAttackPlayer gate).
+        // is legal unless the attacker is under a CannotAttackPlayer gate;
+        // Digimon target is illegal when the attacker's controller is under a
+        // player-scoped MayAttackPlayerOnly gate).
         match target {
             AttackTarget::Digimon(d) => {
                 if !self.handle_valid(d) {
+                    return AttackResult::Invalid;
+                }
+                // Track C: `MayAttackPlayerOnly` (player-scoped) restricts the
+                // attacker's controller to attacking the opposing player only.
+                // Companion to permanent-scoped `CannotAttackPlayer`; reject
+                // Digimon targets when the modifier is active.
+                if self
+                    .modifiers
+                    .player_has(attacker.player, ModifierType::MayAttackPlayerOnly)
+                {
                     return AttackResult::Invalid;
                 }
             }
@@ -782,6 +794,30 @@ impl Game {
             return;
         }
         let attacker = pa.attacker;
+
+        // Track C: `CannotSwitchAttackTarget` on the attacker locks the
+        // target — silently drop the substitution. Covers both the
+        // dispatcher path (replacement-driven `Substituted` outcome) and
+        // the script-facing `EffectContext::redirect_attack` helper.
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CannotSwitchAttackTarget)
+        {
+            return;
+        }
+        // Track C: `CannotBeRedirectedAsAttackTarget` on the candidate new
+        // target prevents being chosen as the redirected target via this
+        // unified path. Player targets bypass — the modifier is permanent-
+        // scoped and only applies to Digimon-as-target.
+        if let AttackTarget::Digimon(h) = new_target {
+            if self
+                .modifiers
+                .has(h, ModifierType::CannotBeRedirectedAsAttackTarget)
+            {
+                return;
+            }
+        }
+
         pa.effective_target = new_target;
 
         self.fire_attack_target_change_observers(attacker);
@@ -1297,6 +1333,17 @@ impl Game {
         };
         let attacker = pa.attacker;
 
+        // Track C: `CannotSwitchAttackTarget` on the attacker locks the
+        // declared target — Block (and any redirect path that routes
+        // through here) is suppressed. Mirrors BT24-062 MasterBlimpmon's
+        // "[Your Turn] This Digimon's attack target can't change."
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CannotSwitchAttackTarget)
+        {
+            return false;
+        }
+
         // Self-block is not allowed — attacker cannot block their own
         // attack. Also rules out the edge case where attacker and blocker
         // would be the same permanent.
@@ -1333,6 +1380,18 @@ impl Game {
             // every opponent Digimon to "has Blocker" but does NOT
             // override a printed/modifier `CannotBlock` gate.
             if self.modifiers.has(h, ModifierType::CannotBlock) {
+                continue;
+            }
+            // Track C: `CannotBeRedirectedAsAttackTarget` on a candidate
+            // blocker prevents it from becoming the new attack target via
+            // the Block redirect path. Distinct from `CannotBlock`
+            // (which forbids declaring a block at all) — this modifier
+            // only protects the candidate from being chosen AS the new
+            // target, leaving its blocker semantics untouched.
+            if self
+                .modifiers
+                .has(h, ModifierType::CannotBeRedirectedAsAttackTarget)
+            {
                 continue;
             }
             // Blocker required UNLESS the attacker has Collision, which
