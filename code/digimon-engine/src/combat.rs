@@ -1604,9 +1604,18 @@ impl Game {
                 player: opp_id,
                 index: j as u8,
             };
+            // Track C / D consult site (2026-05-08):
+            // `CanAttackTargetDefendingPermanent` is the affirmative
+            // override of `CannotAttackTarget` — when both are present
+            // on a candidate, the affirmative wins ("this Digimon CAN
+            // attack the otherwise-illegal target"). Read at every
+            // `CannotAttackTarget` consult site.
             if self
                 .modifiers
                 .has(t_handle, ModifierType::CannotAttackTarget)
+                && !self
+                    .modifiers
+                    .has(t_handle, ModifierType::CanAttackTargetDefendingPermanent)
             {
                 continue;
             }
@@ -1648,9 +1657,15 @@ impl Game {
                 player: opp_id,
                 index: j as u8,
             };
+            // Track C / D consult site (2026-05-08):
+            // `CanAttackTargetDefendingPermanent` overrides
+            // `CannotAttackTarget` in the Raid fallback pass too.
             if self
                 .modifiers
                 .has(t_handle, ModifierType::CannotAttackTarget)
+                && !self
+                    .modifiers
+                    .has(t_handle, ModifierType::CanAttackTargetDefendingPermanent)
             {
                 continue;
             }
