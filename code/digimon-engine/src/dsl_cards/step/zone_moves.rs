@@ -2,7 +2,7 @@
 //! `AddToHandFromDeck`, `AddToHandFromTrash`, and the reveal-pool / security-mark
 //! family added in Task 5.
 
-use digimon_dsl::compiled::CompiledStep;
+use digimon_dsl::compiled::{CompiledStep, CompiledZone};
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
@@ -202,11 +202,14 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         CompiledStep::RevealTopDeck {
             of,
             count,
-            zone: _,
+            zone,
             bind_as,
         } => {
             let p = resolve_player(ctx, *of);
-            let handles = ctx.reveal_top_deck(p, *count);
+            let handles = match zone {
+                Some(CompiledZone::DigiEggDeck) => ctx.reveal_top_digitama(p, *count),
+                _ => ctx.reveal_top_deck(p, *count),
+            };
             // Single-card reveal with a bind_as name: expose the card to
             // downstream steps via a named binding.
             if *count == 1 {
@@ -218,9 +221,8 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             } else if let Some(name) = bind_as {
                 bindings.insert_card_list(name, handles);
             }
-            // The `zone` field selects which zone is revealed; the engine's
-            // `reveal_top_deck` always reveals from the deck — full zone routing
-            // is Phase 2c scope.
+            // Other reveal zones still use the normal deck path until they
+            // have card-shaped fixtures.
             true
         }
 

@@ -50,8 +50,16 @@ fn st12_12_on_play_trashes_one_card_and_draws_two() {
     runner.play(0, 0);
     runner.auto_resolve();
 
-    assert_eq!(runner.game.players[0].trash.len(), 1, "one card should be trashed");
-    assert_eq!(runner.game.players[0].hand.len(), 2, "Draw 2 should replace the discarded card");
+    assert_eq!(
+        runner.game.players[0].trash.len(),
+        1,
+        "one card should be trashed"
+    );
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        2,
+        "Draw 2 should replace the discarded card"
+    );
 }
 
 #[ignore = "pending: G-CONDITIONAL-DECOY-AURA — conditional Decoy grant while Huckmon/Royal Knight is present needs keyword aura lowering with color-filtered Decoy"]

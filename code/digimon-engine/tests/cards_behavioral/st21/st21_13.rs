@@ -165,7 +165,9 @@ fn st21_13_compiles_as_tamer_cost_3_with_adventure_trait() {
     assert_eq!(card.kind, CompiledCardKind::Tamer);
     assert_eq!(card.cost, Some(3), "ST21-13 prints Cost 3");
     assert!(
-        card.traits.iter().any(|t| t.eq_ignore_ascii_case("ADVENTURE")),
+        card.traits
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case("ADVENTURE")),
         "ST21-13 must carry the ADVENTURE trait (printed type_eng = ADVENTURE)"
     );
 }
@@ -254,7 +256,11 @@ fn st21_13_clause1_cost_reduction_optional_your_turn_amount_1() {
 
     let (scope, active_when, optional, once_per_turn, amount, when_any_ally, pay_cost) = cr;
 
-    assert_eq!(scope, CompiledScope::FaceUp, "cost_reduction is FaceUp scope");
+    assert_eq!(
+        scope,
+        CompiledScope::FaceUp,
+        "cost_reduction is FaceUp scope"
+    );
     assert!(
         optional,
         "cost_reduction must be optional — DCGO isOptional:true; printed \
@@ -300,7 +306,12 @@ fn st21_13_clause2_aura_grants_rush_to_own_lv5_adventure_digimon() {
                 target,
                 grant_keyword,
                 ..
-            }) => Some((*scope, active_when.clone(), target.clone(), grant_keyword.clone())),
+            }) => Some((
+                *scope,
+                active_when.clone(),
+                target.clone(),
+                grant_keyword.clone(),
+            )),
             _ => None,
         })
         .expect("ST21-13 must have an aura clause");
@@ -417,7 +428,10 @@ fn st21_13_cost_reduction_fires_on_ally_adventure_digimon_play() {
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID);
-    assert!(matt_present_before, "ST21-13 must be on P0's field before the play");
+    assert!(
+        matt_present_before,
+        "ST21-13 must be on P0's field before the play"
+    );
     assert!(
         !runner.game.players[0].battle_area[matt_handle.index as usize].is_suspended,
         "ST21-13 must start unsuspended"
@@ -465,7 +479,10 @@ fn st21_13_cost_reduction_fires_on_ally_adventure_digimon_play() {
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "ADV-DIGI");
-    assert!(ally_on_field, "ADV-DIGI must be on field after the reduced-cost play");
+    assert!(
+        ally_on_field,
+        "ADV-DIGI must be on field after the reduced-cost play"
+    );
 }
 
 /// Negative: ally Digimon WITHOUT ADVENTURE trait → cost reduction must
@@ -475,7 +492,12 @@ fn st21_13_cost_reduction_does_not_fire_on_non_adventure_digimon() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST21-13 in embedded DSL pack")
-        .add_card(make_non_adventure_digimon("NON-ADV", "NonAdv Digimon", 4, 5))
+        .add_card(make_non_adventure_digimon(
+            "NON-ADV",
+            "NonAdv Digimon",
+            4,
+            5,
+        ))
         .add_card(make_filler("FILLER"))
         .deck(0, &["FILLER", "FILLER", "FILLER"])
         .deck(1, &["FILLER"])
@@ -564,7 +586,12 @@ fn st21_13_cost_reduction_does_not_fire_on_opponents_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST21-13 in embedded DSL pack")
-        .add_card(make_adventure_digimon("OPP-ADV-DIGI", "Opp Adv Digimon", 4, 5))
+        .add_card(make_adventure_digimon(
+            "OPP-ADV-DIGI",
+            "Opp Adv Digimon",
+            4,
+            5,
+        ))
         .add_card(make_filler("FILLER"))
         .deck(0, &["FILLER"])
         .deck(1, &["FILLER", "FILLER", "FILLER"])
@@ -770,7 +797,12 @@ fn st21_13_aura_does_not_grant_rush_to_own_non_adventure_lv6_digimon() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST21-13 in embedded DSL pack")
-        .add_card(make_non_adventure_digimon("NON-ADV-LV6", "NonAdv Lv6", 6, 8))
+        .add_card(make_non_adventure_digimon(
+            "NON-ADV-LV6",
+            "NonAdv Lv6",
+            6,
+            8,
+        ))
         .add_card(make_filler("FILLER"))
         .deck(0, &["FILLER"])
         .deck(1, &["FILLER"])

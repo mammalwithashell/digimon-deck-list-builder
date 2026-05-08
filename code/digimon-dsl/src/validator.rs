@@ -1049,6 +1049,7 @@ fn is_known_keyword(name: &str) -> bool {
             | "Progress"
             | "Evade"
             | "MaterialSave"
+            | "DigiBurst"
             | "Delay"
     )
 }

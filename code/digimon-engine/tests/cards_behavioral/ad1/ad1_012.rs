@@ -107,7 +107,8 @@ fn ad1_012_grants_alliance_and_evade() {
         .iter()
         .filter_map(|c| match c {
             CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-                keyword, ..
+                keyword,
+                ..
             }) => Some(keyword.clone()),
             _ => None,
         })
@@ -143,7 +144,10 @@ fn ad1_012_shared_clause_covers_op_wd_wa() {
         })
         .expect("AD1-012 must have a single multi-timing OP/WD/WA triggered clause");
 
-    assert!(shared.optional, "shared clause must be optional ('You may')");
+    assert!(
+        shared.optional,
+        "shared clause must be optional ('You may')"
+    );
     assert!(
         shared.once_per_turn,
         "shared clause must be once_per_turn (printed [Once Per Turn])"

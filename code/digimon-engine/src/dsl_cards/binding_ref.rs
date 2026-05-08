@@ -34,22 +34,34 @@ pub fn resolve_binding_ref(
         | CompiledBindingRef::Binding(name)
         | CompiledBindingRef::Permanent(name)
         | CompiledBindingRef::OfPermanent(name) => resolve_named(name, bindings),
-        CompiledBindingRef::EventTarget => ctx.game.current_trigger_context.and_then(|t| {
-            if let Some(handle) = t.event_permanent {
-                if live_event_permanent(ctx, handle, t.event_card).is_some() {
-                    return Some(ResolvedBinding::Permanent(handle));
+        CompiledBindingRef::EventTarget => {
+            ctx.game.current_trigger_context.as_ref().and_then(|t| {
+                if let Some(snapshot) = t.deleted_object.as_ref() {
+                    return Some(ResolvedBinding::Card(snapshot.top_card));
                 }
-                return t.event_card.map(ResolvedBinding::Card);
-            }
+                if let Some(handle) = t.event_permanent {
+                    if live_event_permanent(ctx, handle, t.event_card).is_some() {
+                        return Some(ResolvedBinding::Permanent(handle));
+                    }
+                    return t.event_card.map(ResolvedBinding::Card);
+                }
 
-            t.target_permanent
-                .map(ResolvedBinding::Permanent)
-                .or_else(|| t.target_card.or(t.event_card).map(ResolvedBinding::Card))
-        }),
+                t.target_permanent
+                    .map(ResolvedBinding::Permanent)
+                    .or_else(|| t.target_card.or(t.event_card).map(ResolvedBinding::Card))
+            })
+        }
         CompiledBindingRef::EventCard => ctx
             .game
             .current_trigger_context
-            .and_then(|t| t.event_card.or(t.target_card))
+            .as_ref()
+            .and_then(|t| {
+                t.deleted_object
+                    .as_ref()
+                    .map(|snapshot| snapshot.top_card)
+                    .or(t.event_card)
+                    .or(t.target_card)
+            })
             .map(ResolvedBinding::Card),
     }
 }

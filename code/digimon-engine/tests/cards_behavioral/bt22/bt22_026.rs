@@ -82,8 +82,7 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming,
-    CompiledTriggeredClause,
+    CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -98,10 +97,9 @@ const YAML: &str = include_str!("../../../cards/bt22/BT22-026.yaml");
 
 /// Compile BT22-026 from the production YAML and return the CompiledCard.
 fn compiled_bt22_026() -> digimon_dsl::compiled::CompiledCard {
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(YAML).expect("BT22-026.yaml parses");
-    let registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
-        .expect("BT22-026.yaml compiles");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("BT22-026.yaml parses");
+    let registry =
+        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("BT22-026.yaml compiles");
     registry
         .lookup("BT22-026")
         .expect("BT22-026 in registry")
@@ -441,8 +439,7 @@ fn bt22_026_when_digivolving_branch_0_digivolves_agumon_into_wargreymon_free() {
 
     // If the chain runs to completion, WarGreymon ends up as the top card
     // of the (former) Agumon stack.
-    let agu_perm =
-        &runner.game.players[0].battle_area[agu_handle.index as usize];
+    let agu_perm = &runner.game.players[0].battle_area[agu_handle.index as usize];
     let top = agu_perm.top_card();
     assert_eq!(
         top.card_id(&runner.game.card_data),
@@ -473,10 +470,7 @@ fn bt22_026_when_digivolving_no_targets_does_not_panic() {
 
 /// Stack BT22-026 under an Omnimon-named top card so the printed name gate
 /// "[Omnimon] in name" matches the actual top card.
-fn place_omnimon_over_bt22_026(
-    runner: &mut DebugRunner,
-    player: PlayerId,
-) -> PermanentHandle {
+fn place_omnimon_over_bt22_026(runner: &mut DebugRunner, player: PlayerId) -> PermanentHandle {
     runner.place_stack(player, &["BT22-026", "OMNI-TOP"])
 }
 
@@ -506,8 +500,7 @@ fn bt22_026_inherited_when_attacking_omnimon_top_unsuspends_self() {
     // After the attack resolution, the attacker (which would normally be
     // suspended after attacking) should be unsuspended by the inherited
     // [When Attacking] clause.
-    let attacker_perm =
-        &runner.game.players[0].battle_area[attacker.index as usize];
+    let attacker_perm = &runner.game.players[0].battle_area[attacker.index as usize];
     assert!(
         !attacker_perm.is_suspended,
         "Omnimon-named attacker must be unsuspended via inherited [When Attacking]"
@@ -542,8 +535,7 @@ fn bt22_026_inherited_when_attacking_metalgarurumon_top_does_not_unsuspend() {
 
     // Without the Omnimon-name gate honored, the attacker should remain
     // suspended after attacking (since the inherited clause should NOT fire).
-    let attacker_perm =
-        &runner.game.players[0].battle_area[attacker.index as usize];
+    let attacker_perm = &runner.game.players[0].battle_area[attacker.index as usize];
     assert!(
         attacker_perm.is_suspended,
         "MetalGarurumon-only top card must NOT trigger the [Omnimon]-name inherited \
@@ -593,8 +585,7 @@ fn bt22_026_inherited_when_attacking_opt_blocks_second_activation() {
     // After second attack the OPT lockout means the inherited does NOT fire,
     // so the attacker should be suspended (suspended by the act of attacking,
     // not unsuspended afterward).
-    let attacker_perm =
-        &runner.game.players[0].battle_area[attacker.index as usize];
+    let attacker_perm = &runner.game.players[0].battle_area[attacker.index as usize];
     assert!(
         attacker_perm.is_suspended,
         "OPT must prevent the inherited from firing twice in one turn \

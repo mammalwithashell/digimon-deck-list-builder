@@ -205,7 +205,10 @@ fn bt17_015_compiles_with_two_triggered_and_one_cost_reduction_declarative() {
         })
         .count();
 
-    assert_eq!(triggered, 2, "expected 2 triggered clauses (OnPlay/WhenDigi + inherited WhenAttacking)");
+    assert_eq!(
+        triggered, 2,
+        "expected 2 triggered clauses (OnPlay/WhenDigi + inherited WhenAttacking)"
+    );
     assert_eq!(cost_reduction, 1, "expected 1 cost_reduction declarative");
     assert_eq!(
         compiled.effects.len(),
@@ -238,8 +241,14 @@ fn bt17_015_has_on_play_when_digivolving_clause_face_up_mandatory() {
         .expect("must have [On Play][When Digivolving] clause");
 
     assert_eq!(clause.scope, CompiledScope::FaceUp);
-    assert!(!clause.optional, "branch-choice itself is mandatory once triggered");
-    assert!(!clause.once_per_turn, "no [Once Per Turn] on the branch-choice clause");
+    assert!(
+        !clause.optional,
+        "branch-choice itself is mandatory once triggered"
+    );
+    assert!(
+        !clause.once_per_turn,
+        "no [Once Per Turn] on the branch-choice clause"
+    );
 }
 
 #[test]
@@ -265,7 +274,10 @@ fn bt17_015_has_inherited_when_attacking_opt_clause() {
         })
         .expect("must have inherited [When Attacking] clause");
 
-    assert!(clause.once_per_turn, "[When Attacking] inherited must be once_per_turn");
+    assert!(
+        clause.once_per_turn,
+        "[When Attacking] inherited must be once_per_turn"
+    );
     assert_eq!(clause.scope, CompiledScope::Inherited);
 }
 
@@ -285,7 +297,10 @@ fn bt17_015_has_lv5_cost3_digivolve_alt_path() {
                 Some(digimon_dsl::compiled::CompiledCost::Literal(3))
             )
     });
-    assert!(standard.is_some(), "must have Lv.5 / cost 3 digivolve alt-path");
+    assert!(
+        standard.is_some(),
+        "must have Lv.5 / cost 3 digivolve alt-path"
+    );
 }
 
 // ─── Section 2 — Cost-reduction condition gating (split positive + negative) ─
@@ -401,10 +416,7 @@ fn bt17_015_cost_reduction_does_not_leak_to_other_plays() {
 
 // ─── Section 3 — [On Play][When Digivolving] branch-choice behavioral ───────
 
-fn play_and_install_branch_choice(
-    runner: &mut DebugRunner,
-    hand_idx: usize,
-) -> SelectionKind {
+fn play_and_install_branch_choice(runner: &mut DebugRunner, hand_idx: usize) -> SelectionKind {
     runner.play(0, hand_idx).expect("BT17-015 plays");
     runner
         .pending_kind()
@@ -427,7 +439,11 @@ fn bt17_015_on_play_branch_0_deletes_opp_digimon_dp_lte_8000() {
     let opp_before = runner.battle_area_size(1);
 
     let kind = play_and_install_branch_choice(&mut runner, 0);
-    assert_eq!(kind, SelectionKind::EffectChoice, "must be 2-way EffectChoice");
+    assert_eq!(
+        kind,
+        SelectionKind::EffectChoice,
+        "must be 2-way EffectChoice"
+    );
 
     runner.execute_branch(0).expect("pick Delete branch");
     runner.auto_resolve().expect("auto-resolve target pick");
@@ -678,7 +694,13 @@ fn bt17_015_inherited_when_attacking_opt_resets_after_end_turn() {
         .add_card(make_test_card("SEC-FILLER", "SecFiller"))
         .security(
             1,
-            &["SEC-FILLER", "SEC-FILLER", "SEC-FILLER", "SEC-FILLER", "SEC-FILLER"],
+            &[
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+                "SEC-FILLER",
+            ],
         )
         .memory(10)
         .start();

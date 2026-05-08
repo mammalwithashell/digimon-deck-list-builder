@@ -51,9 +51,7 @@ fn paildramon() -> DebugRunner {
 #[test]
 fn bt12_028_has_dna_digivolve_alt_path() {
     let runner = paildramon();
-    let compiled = runner
-        .compiled_card("BT12-028")
-        .expect("BT12-028 compiled");
+    let compiled = runner.compiled_card("BT12-028").expect("BT12-028 compiled");
 
     let dna = compiled
         .alt_paths
@@ -77,9 +75,7 @@ fn bt12_028_has_no_effects_due_to_all_clauses_blocked() {
     // All three clauses are blocked on DSL gaps; the YAML authors no effect
     // entries. The compiled card should have zero triggered/declarative clauses.
     let runner = paildramon();
-    let compiled = runner
-        .compiled_card("BT12-028")
-        .expect("BT12-028 compiled");
+    let compiled = runner.compiled_card("BT12-028").expect("BT12-028 compiled");
 
     assert_eq!(
         compiled.effects.len(),
@@ -192,9 +188,7 @@ fn bt12_028_inherited_clause_is_end_of_attack_non_optional() {
     use digimon_dsl::compiled::CompiledClause;
 
     let runner = paildramon();
-    let compiled = runner
-        .compiled_card("BT12-028")
-        .expect("BT12-028 compiled");
+    let compiled = runner.compiled_card("BT12-028").expect("BT12-028 compiled");
 
     let inherited: Vec<_> = compiled
         .effects
@@ -205,12 +199,22 @@ fn bt12_028_inherited_clause_is_end_of_attack_non_optional() {
         })
         .collect();
 
-    assert_eq!(inherited.len(), 1, "BT12-028 has exactly one inherited clause");
+    assert_eq!(
+        inherited.len(),
+        1,
+        "BT12-028 has exactly one inherited clause"
+    );
     let clause = &inherited[0];
     assert!(
         clause.when.contains(&CompiledTiming::EndOfAttack),
         "inherited clause fires at EndOfAttack"
     );
-    assert!(!clause.optional, "inherited clause is mandatory (no 'you may')");
-    assert!(!clause.once_per_turn, "inherited clause has no OPT restriction");
+    assert!(
+        !clause.optional,
+        "inherited clause is mandatory (no 'you may')"
+    );
+    assert!(
+        !clause.once_per_turn,
+        "inherited clause has no OPT restriction"
+    );
 }

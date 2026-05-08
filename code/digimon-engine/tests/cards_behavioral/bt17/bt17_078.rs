@@ -65,11 +65,14 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
-use digimon_engine::card_source::CardSource;
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming, Keyword, PlayerId};
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::{CardKind, CostDelta, EffectTiming, Keyword, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
+use std::sync::{Arc, Mutex};
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -78,10 +81,9 @@ const YAML: &str = include_str!("../../../cards/bt17/BT17-078.yaml");
 /// Compile the YAML (without going through the embedded pack lookup, which
 /// requires the orchestrator to have re-built the embedded pack first).
 fn compiled_bt17_078() -> digimon_dsl::compiled::CompiledCard {
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(YAML).expect("BT17-078.yaml parses");
-    let registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
-        .expect("BT17-078.yaml compiles");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("BT17-078.yaml parses");
+    let registry =
+        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("BT17-078.yaml compiles");
     registry
         .lookup("BT17-078")
         .expect("BT17-078 in registry")
@@ -127,6 +129,24 @@ fn pred_any<F: Fn(&CompiledPredicate) -> bool + Copy>(p: &CompiledPredicate, f: 
         }
     }
     false
+}
+
+struct Bt17_078DnaOriginWitness {
+    seen: Arc<Mutex<Vec<Option<bool>>>>,
+}
+
+impl CardEffect for Bt17_078DnaOriginWitness {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = Arc::clone(&self.seen);
+        vec![Effect::when_digivolving(card)
+            .name("BT17-078 DNA-origin witness")
+            .condition(|ctx| ctx.event_dna_origin() == Some(true))
+            .process(move |ctx| {
+                seen.lock().unwrap().push(ctx.event_dna_origin());
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
 }
 
 // ─── SECTION 1 — Structural assertions on CompiledCard ──────────────────────
@@ -207,11 +227,7 @@ fn bt17_078_has_dna_digivolve_alt_path_greymon_garurumon() {
         path.stacks_unsuspended,
         "DNA digivolve typically stacks both materials unsuspended"
     );
-    assert_eq!(
-        path.materials.len(),
-        2,
-        "DNA requires exactly 2 materials"
-    );
+    assert_eq!(path.materials.len(), 2, "DNA requires exactly 2 materials");
 
     let has_greymon = path.materials.iter().any(|m| {
         pred_any(&m.filter, |q| {
@@ -235,6 +251,91 @@ fn bt17_078_has_dna_digivolve_alt_path_greymon_garurumon() {
     );
 }
 
+#[test]
+fn bt17_078_when_digivolving_dna_reads_dna_origin_payload() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-078 YAML loads")
+        .add_card(make_named_digimon("BT17-GREY-LV6", "Greymon source", 6, 11000))
+        .add_card(make_named_digimon(
+            "BT17-GARU-LV6",
+            "Garurumon source",
+            6,
+            11000,
+        ))
+        .hand(0, &["BT17-078"])
+        .memory(5)
+        .start();
+
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    runner.register_effect(
+        "BT17-078",
+        Arc::new(Bt17_078DnaOriginWitness {
+            seen: Arc::clone(&seen),
+        }),
+    );
+
+    let greymon = runner.place_on_field(0, "BT17-GREY-LV6", None);
+    let garurumon = runner.place_on_field(0, "BT17-GARU-LV6", None);
+    let hand_card = runner.game.players[0].hand[0].handle();
+    let before = runner.game.memory;
+
+    let result = {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card, None, 0);
+        ctx.effect_initiated_dna_digivolve(greymon, garurumon, hand_card, 0, true)
+    };
+
+    assert!(result.is_some(), "fixture DNA digivolve should succeed");
+    assert_eq!(
+        seen.lock().unwrap().as_slice(),
+        &[Some(true)],
+        "BT17-078's DNA-gated WhenDigivolving body must see dna_origin=true"
+    );
+    assert_eq!(
+        runner.game.memory,
+        before + 1,
+        "witness gains memory only when the DNA-origin predicate passes"
+    );
+}
+
+#[test]
+fn bt17_078_when_digivolving_standard_does_not_read_dna_origin() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-078 YAML loads")
+        .add_card(make_named_digimon("BT17-BASE-LV6", "Red level 6 base", 6, 11000))
+        .hand(0, &["BT17-078"])
+        .memory(5)
+        .start();
+
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    runner.register_effect(
+        "BT17-078",
+        Arc::new(Bt17_078DnaOriginWitness {
+            seen: Arc::clone(&seen),
+        }),
+    );
+
+    let base = runner.place_on_field(0, "BT17-BASE-LV6", None);
+    let hand_card = runner.game.players[0].hand[0].handle();
+    let before = runner.game.memory;
+
+    let succeeded = {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card, None, 0);
+        ctx.effect_initiated_digivolve(0, 0, base, CostDelta::Free, true)
+    };
+
+    assert!(succeeded, "fixture standard digivolve should succeed");
+    assert!(
+        seen.lock().unwrap().is_empty(),
+        "standard digivolve must not satisfy BT17-078's dna_origin gate"
+    );
+    assert_eq!(
+        runner.game.memory, before,
+        "no witness memory gain should occur for a non-DNA digivolve"
+    );
+}
+
 /// BLOCKED structural assertion — when G-BLAST-DNA-DIGIVOLVE closes, the
 /// Blast DNA alt-path becomes a third entry. Materials would be specifically
 /// WarGreymon + MetalGarurumon (distinct from the regular DNA path's broader
@@ -255,9 +356,9 @@ fn bt17_078_has_blast_dna_digivolve_alt_path_wargreymon_metalgarurumon() {
         // above which uses name_contains "Greymon" / "Garurumon".
         p.kind == CompiledAltPathKind::DnaDigivolve
             && matches!(p.cost, Some(CompiledCost::Literal(0)))
-            && p.materials.iter().any(|m| {
-                pred_any(&m.filter, |q| q.name_is.as_deref() == Some("WarGreymon"))
-            })
+            && p.materials
+                .iter()
+                .any(|m| pred_any(&m.filter, |q| q.name_is.as_deref() == Some("WarGreymon")))
             && p.materials.iter().any(|m| {
                 pred_any(&m.filter, |q| {
                     q.name_is.as_deref() == Some("MetalGarurumon")
@@ -348,10 +449,7 @@ fn bt17_078_has_on_play_when_digivolving_dna_gated_clause() {
         !t.optional,
         "Clause 3 has no \"you may\" — mandatory when condition holds"
     );
-    assert!(
-        !t.once_per_turn,
-        "Clause 3 has no [Once Per Turn] marker"
-    );
+    assert!(!t.once_per_turn, "Clause 3 has no [Once Per Turn] marker");
     assert!(
         t.active_when
             .as_ref()
@@ -367,10 +465,10 @@ fn bt17_078_has_on_play_when_digivolving_dna_gated_clause() {
 // Clauses 1 (Raid) and 2 (Blocker) are unconditional declarative grants — no
 // condition gating to test.
 //
-// Clause 3's only condition is `dna_origin: true`, which is gap-blocked at the
-// YAML level (the entire clause is currently a commented stub). The two
-// condition-gating tests below are the planned positive/negative pair —
-// `#[ignore]`'d with the gap tag until the YAML clause is uncommented.
+// Clause 3's `dna_origin: true` condition is now a reusable Track A payload
+// predicate. The full printed body remains blocked on binding one selected
+// Digimon's level and applying a for-each move to all matching opponent
+// Digimon, so the original full-body condition-gating tests stay ignored.
 
 #[test]
 #[ignore = "pending: G-BIND-SELECTED-PROPERTY-FOR-EACH -- Clause 3 body absent from YAML"]
@@ -401,9 +499,10 @@ fn bt17_078_on_play_dna_gate_passes_when_dna_digivolving_with_opp_digimon() {
     // Synthesize a DNA-origin trigger by enqueueing WhenDigivolving with a
     // DNA hashtable. Until G-BIND-SELECTED-PROPERTY-FOR-EACH closes, this
     // path is gap-blocked.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(omni));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(omni),
+    );
     runner.game.drain_effect_queue();
     assert!(
         runner.pending_selection().is_some(),
@@ -445,9 +544,10 @@ fn bt17_078_on_play_dna_returns_all_opponent_digimon_of_chosen_level_to_deck_bot
     assert_eq!(opp_battle_before, 3);
 
     let omni = runner.place_on_field(0, "BT17-078", None);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(omni));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(omni),
+    );
     runner.game.drain_effect_queue();
     runner.auto_resolve().expect("auto-resolve after pick");
 
@@ -482,12 +582,15 @@ fn bt17_078_on_play_dna_then_delete_installs_after_bottom_deck() {
     let _opp_6 = runner.place_on_field(1, "OPP-LV6", Some(0));
 
     let omni = runner.place_on_field(0, "BT17-078", None);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(omni));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(omni),
+    );
     runner.game.drain_effect_queue();
     // Resolve the bottom-deck pick (auto-pick Lv.5).
-    runner.auto_resolve().expect("auto-resolve bottom-deck pick");
+    runner
+        .auto_resolve()
+        .expect("auto-resolve bottom-deck pick");
 
     let pending = runner
         .pending_selection()
@@ -519,9 +622,10 @@ fn bt17_078_when_digivolving_fires_same_body_as_on_play() {
 
     let omni = runner.place_on_field(0, "BT17-078", None);
     let opp_battle_before = runner.battle_area_size(1);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(omni));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(omni),
+    );
     runner.game.drain_effect_queue();
     runner.auto_resolve().expect("auto-resolve");
 
@@ -561,9 +665,10 @@ fn bt17_078_on_play_dna_delete_arm_emits_delete_event() {
     let omni = runner.place_on_field(0, "BT17-078", None);
 
     let cp = runner.event_checkpoint();
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(omni));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(omni),
+    );
     runner.game.drain_effect_queue();
     runner.auto_resolve().expect("auto-resolve");
 
@@ -572,9 +677,7 @@ fn bt17_078_on_play_dna_delete_arm_emits_delete_event() {
     // observable event for a delete is `Trash` (the deleted permanent's top
     // card lands in trash). Once GameEvent::Delete is wired, replace this
     // matcher.
-    let has_trash = events
-        .iter()
-        .any(|e| matches!(e, GameEvent::Trash { .. }));
+    let has_trash = events.iter().any(|e| matches!(e, GameEvent::Trash { .. }));
     assert!(
         has_trash,
         "delete arm must emit at least one Trash event for the surviving opp Digimon \

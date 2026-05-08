@@ -320,7 +320,7 @@ fn timing_bucket(timing: EffectTiming) -> usize {
         OnPlay => 0,
         WhenDigivolving | OnDigivolve | OnDnaDigivolve => 1,
         OnAttack | WhenAttacking => 2,
-        SecuritySkill | OnSecurityCheck | OnLoseSecurity => 3,
+        SecuritySkill | OnSecurityCheck | OnLoseSecurity | OnDiscardSecurity => 3,
         EndOfYourTurn | EndOfOpponentsTurn => 4,
         StartOfYourTurn | StartOfOpponentsTurn | StartOfYourMainPhase => 5,
         OnDeletion | OnAnyDeletion => 6,

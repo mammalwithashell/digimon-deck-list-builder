@@ -35,6 +35,19 @@ effects:
                 controller: you
                 token_name: familiar
 
-  # The printed [All Turns][Once Per Turn] re-fire effect is omitted rather
-  # than approximated. `refire_effect` exists, but OnAnyDeletion still needs
-  # deleted-permanent event context to faithfully enforce "your other Digimon".
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "When any of your other Digimon are deleted, you may activate this Digimon's When Digivolving effect"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: token
+        - event_permanent_is_source: false
+    process:
+      - refire_effect:
+          source: source
+          timing: when_digivolving
+          optional: true

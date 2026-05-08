@@ -170,9 +170,7 @@ fn ex4_061_compiles() {
 #[test]
 fn ex4_061_card_metadata_matches_print() {
     let runner = matttai_runner();
-    let card = runner
-        .compiled_card("EX4-061")
-        .expect("EX4-061 compiles");
+    let card = runner.compiled_card("EX4-061").expect("EX4-061 compiles");
     assert_eq!(card.cost, Some(4), "Matt & Tai costs 4");
     assert_eq!(card.level, None, "Tamer card has no level");
     assert_eq!(card.dp, None, "Tamer card has no DP");
@@ -401,8 +399,7 @@ fn ex4_061_clause1_does_not_fire_on_tamer_play() {
     push_to_hand(&mut runner, 0, "OWN-TAMER");
 
     let mt = runner.place_on_field(0, "EX4-061", Some(0));
-    let mt_suspended_before =
-        runner.game.players[0].battle_area[mt.index as usize].is_suspended;
+    let mt_suspended_before = runner.game.players[0].battle_area[mt.index as usize].is_suspended;
 
     let hand_idx = runner
         .game
@@ -414,8 +411,7 @@ fn ex4_061_clause1_does_not_fire_on_tamer_play() {
     runner.play(0, hand_idx).expect("tamer plays from hand");
 
     assert_eq!(
-        runner.game.players[0].battle_area[mt.index as usize].is_suspended,
-        mt_suspended_before,
+        runner.game.players[0].battle_area[mt.index as usize].is_suspended, mt_suspended_before,
         "Matt & Tai must NOT suspend itself when an own Tamer (not Digimon) named Gabumon enters"
     );
     assert!(
@@ -435,8 +431,7 @@ fn ex4_061_clause1_does_not_fire_on_opponent_gabumon_play() {
     push_to_hand(&mut runner, 1, "OPP-GABU");
 
     let mt = runner.place_on_field(0, "EX4-061", Some(0));
-    let mt_suspended_before =
-        runner.game.players[0].battle_area[mt.index as usize].is_suspended;
+    let mt_suspended_before = runner.game.players[0].battle_area[mt.index as usize].is_suspended;
 
     runner.end_turn();
     assert_eq!(runner.turn_player(), 1, "player 1 must be active to play");
@@ -451,8 +446,7 @@ fn ex4_061_clause1_does_not_fire_on_opponent_gabumon_play() {
     runner.play(1, hand_idx).expect("opponent Gabumon plays");
 
     assert_eq!(
-        runner.game.players[0].battle_area[mt.index as usize].is_suspended,
-        mt_suspended_before,
+        runner.game.players[0].battle_area[mt.index as usize].is_suspended, mt_suspended_before,
         "Matt & Tai must NOT suspend on an opponent Gabumon play (event_target_owner: you gate)"
     );
     assert!(
@@ -472,8 +466,7 @@ fn ex4_061_clause1_does_not_fire_on_own_unrelated_digimon() {
     push_to_hand(&mut runner, 0, "OWN-PLAIN");
 
     let mt = runner.place_on_field(0, "EX4-061", Some(0));
-    let mt_suspended_before =
-        runner.game.players[0].battle_area[mt.index as usize].is_suspended;
+    let mt_suspended_before = runner.game.players[0].battle_area[mt.index as usize].is_suspended;
     let memory_before = runner.memory();
 
     let hand_idx = runner
@@ -486,8 +479,7 @@ fn ex4_061_clause1_does_not_fire_on_own_unrelated_digimon() {
     runner.play(0, hand_idx).expect("plain Digimon plays");
 
     assert_eq!(
-        runner.game.players[0].battle_area[mt.index as usize].is_suspended,
-        mt_suspended_before,
+        runner.game.players[0].battle_area[mt.index as usize].is_suspended, mt_suspended_before,
         "Matt & Tai must NOT suspend on a non-Gabumon/Agumon Digimon play (name filter)"
     );
     assert_eq!(
@@ -608,10 +600,9 @@ fn ex4_061_clause2_blocked_when_more_than_one_digimon() {
     runner.place_on_field(0, "GREY", Some(0));
     runner.place_on_field(0, "EXTRA", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnDigivolve,
-        TriggerSource::Permanent(mt),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
     runner.game.drain_effect_queue();
 
     assert!(
@@ -632,10 +623,9 @@ fn ex4_061_clause2_blocked_when_lone_digimon_unrelated_name() {
     let mt = runner.place_on_field(0, "EX4-061", Some(0));
     runner.place_on_field(0, "PATAMON", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnDigivolve,
-        TriggerSource::Permanent(mt),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
     runner.game.drain_effect_queue();
 
     assert!(
@@ -659,10 +649,9 @@ fn ex4_061_clause2_installs_prompt_with_lone_greymon() {
     runner.place_on_field(0, "GREY", Some(0));
     push_to_hand(&mut runner, 0, "GABU-HAND");
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnDigivolve,
-        TriggerSource::Permanent(mt),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
     runner.game.drain_effect_queue();
 
     assert!(
@@ -686,10 +675,9 @@ fn ex4_061_clause2_installs_prompt_with_lone_garurumon() {
     runner.place_on_field(0, "GARU", Some(0));
     push_to_hand(&mut runner, 0, "AGU-HAND");
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnDigivolve,
-        TriggerSource::Permanent(mt),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
     runner.game.drain_effect_queue();
 
     assert!(
@@ -713,16 +701,18 @@ fn ex4_061_clause2_no_panic_when_no_eligible_in_hand_or_trash() {
     runner.place_on_field(0, "GREY", Some(0));
     // Hand empty, trash empty for player 0 — no eligible Gabumon anywhere.
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnDigivolve,
-        TriggerSource::Permanent(mt),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
     runner.game.drain_effect_queue();
 
     // Drain whatever installs without panicking.
     drain_accepting_all(&mut runner);
     // Just verify the runner is still in a sane state.
-    assert!(runner.game.players[0].hand.iter().all(|c| c.card_id(&runner.game.card_data) != "GABU-HAND"));
+    assert!(runner.game.players[0]
+        .hand
+        .iter()
+        .all(|c| c.card_id(&runner.game.card_data) != "GABU-HAND"));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -750,10 +740,9 @@ fn ex4_061_clause2_greymon_plays_gabumon_from_hand_free() {
     let hand_count_before = runner.game.players[0].hand.len();
     let memory_before = runner.memory();
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnDigivolve,
-        TriggerSource::Permanent(mt),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
     runner.game.drain_effect_queue();
 
     let accepted = drain_accepting_all(&mut runner);
@@ -811,10 +800,9 @@ fn ex4_061_clause2_garurumon_plays_agumon_from_trash_free() {
     let trash_count_before = runner.game.players[0].trash.len();
     let memory_before = runner.memory();
 
-    runner.game.enqueue_triggered(
-        EffectTiming::OnDigivolve,
-        TriggerSource::Permanent(mt),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
     runner.game.drain_effect_queue();
 
     if runner.game.pending_selection.is_none() {
@@ -848,10 +836,7 @@ fn ex4_061_clause2_garurumon_plays_agumon_from_trash_free() {
         "Agumon must be on field after free-play from trash; trash_before={trash_count_before}, after={}",
         runner.game.players[0].trash.len()
     );
-    assert!(
-        !agu_in_trash,
-        "Agumon must have left trash"
-    );
+    assert!(!agu_in_trash, "Agumon must have left trash");
     assert!(
         runner.memory() >= memory_before - 1,
         "play_from_trash_free must not deduct Agumon's printed cost (7); memory_before={memory_before}, after={}",

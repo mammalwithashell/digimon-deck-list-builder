@@ -184,6 +184,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnDeletion => CompiledTiming::OnDeletion,
         S::OnAnyDeletion => CompiledTiming::OnAnyDeletion,
         S::OnEnterFieldAnyone => CompiledTiming::OnEnterFieldAnyone,
+        S::OnAnyDigimonPlayed => CompiledTiming::OnAnyDigimonPlayed,
         S::OnAllyPlayed => CompiledTiming::OnAllyPlayed,
         S::OnLeaveField => CompiledTiming::OnLeaveField,
         S::OnSuspend => CompiledTiming::OnSuspend,
@@ -194,11 +195,15 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnDnaDigivolve => CompiledTiming::OnDnaDigivolve,
         S::OnDigixros => CompiledTiming::OnDigixros,
         S::OnOpponentSecurityRemoved => CompiledTiming::OnOpponentSecurityRemoved,
+        S::OnOwnSecurityRemoved => CompiledTiming::OnOwnSecurityRemoved,
         S::OnDigivolutionCardTrashed => CompiledTiming::OnDigivolutionCardTrashed,
         S::OnSecurityCheck => CompiledTiming::OnSecurityCheck,
         S::OnLoseSecurity => CompiledTiming::OnLoseSecurity,
+        S::OnDiscardSecurity => CompiledTiming::OnDiscardSecurity,
         S::OnSecurity => CompiledTiming::OnSecurity,
         S::OnOptionPlaced => CompiledTiming::OnOptionPlaced,
+        S::OnPlaceSecurity => CompiledTiming::OnPlaceSecurity,
+        S::OnAddedToSecurity => CompiledTiming::OnAddedToSecurity,
         S::Main => CompiledTiming::Main,
         S::StartOfYourTurn => CompiledTiming::StartOfYourTurn,
         S::StartOfOpponentsTurn => CompiledTiming::StartOfOpponentsTurn,
@@ -489,8 +494,11 @@ fn compile_predicate(
         event_target_kind: p.event_target_kind.map(compile_card_kind),
         event_target_trait_has: p.event_target_trait_has.clone(),
         event_target_owner: p.event_target_owner.map(compile_player_ref),
+        event_permanent_is_source: p.event_permanent_is_source,
+        event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
+        event_cause: p.event_cause.map(compile_event_cause),
         host_permanent_trait_has: p.host_permanent_trait_has.clone(),
         trashed_source_trait_has: p.trashed_source_trait_has.clone(),
         trashed_source_card_id_is: p.trashed_source_card_id_is.clone(),
@@ -616,6 +624,24 @@ fn compile_replacement_cause(
             CompiledReplacementCause::SecurityCheck
         }
         crate::predicate::ReplacementCauseSpec::Cost => CompiledReplacementCause::Cost,
+    }
+}
+
+fn compile_event_cause(cause: crate::predicate::EventCauseSpec) -> CompiledEventCause {
+    match cause {
+        crate::predicate::EventCauseSpec::BattleDeletion => CompiledEventCause::BattleDeletion,
+        crate::predicate::EventCauseSpec::EffectDeletion => CompiledEventCause::EffectDeletion,
+        crate::predicate::EventCauseSpec::OwnEffect => CompiledEventCause::OwnEffect,
+        crate::predicate::EventCauseSpec::OpponentEffect => CompiledEventCause::OpponentEffect,
+        crate::predicate::EventCauseSpec::Overclock => CompiledEventCause::Overclock,
+        crate::predicate::EventCauseSpec::Return => CompiledEventCause::Return,
+        crate::predicate::EventCauseSpec::DeckBottom => CompiledEventCause::DeckBottom,
+        crate::predicate::EventCauseSpec::SecurityPlacement => {
+            CompiledEventCause::SecurityPlacement
+        }
+        crate::predicate::EventCauseSpec::SecurityRemoval => CompiledEventCause::SecurityRemoval,
+        crate::predicate::EventCauseSpec::Cost => CompiledEventCause::Cost,
+        crate::predicate::EventCauseSpec::Rule => CompiledEventCause::Rule,
     }
 }
 
@@ -1618,6 +1644,7 @@ fn compile_step(
             optional: a.optional,
         },
         S::SelectOwnSources(a) => CompiledStep::SelectOwnSources {
+            target: a.target.as_ref().map(compile_binding_ref),
             min: a.min,
             max: a.max,
             bind_as: a.bind_as.clone(),
@@ -1629,6 +1656,30 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
                 .collect(),
         },
+        S::DigiBurst(a) => {
+            let bind_as = a
+                .bind_as
+                .clone()
+                .unwrap_or_else(|| "__digi_burst_sources".to_string());
+            let mut then = Vec::with_capacity(a.then.len() + 1);
+            then.push(CompiledStep::TrashSelectedSources {
+                source_refs: bind_as.clone(),
+            });
+            then.extend(
+                a.then
+                    .iter()
+                    .enumerate()
+                    .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors)),
+            );
+            CompiledStep::SelectOwnSources {
+                target: Some(CompiledBindingRef::Source),
+                min: a.count,
+                max: a.count,
+                bind_as: Some(bind_as),
+                prompt: a.prompt.clone(),
+                then,
+            }
+        }
         S::SelectOpponentDpBudget(a) => CompiledStep::SelectOpponentDpBudget {
             dp_budget: a.dp_budget,
             min_picks: a.min_picks,

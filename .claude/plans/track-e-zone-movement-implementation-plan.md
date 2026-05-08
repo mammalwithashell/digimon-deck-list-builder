@@ -62,7 +62,7 @@ The engine already implements much of the prompt's helper list. Below is the aud
 ## Genuine gaps — work targeted by this plan
 
 ### Tier 1 — Foundational
-1. **`EffectMoveToken` provenance scaffold** — opaque token returned by `play_card_by_effect` and effect-digivolve helpers, carrying `{ permanent_handle, source_effect, originating_zone, optional_cleanup_hook }`. Stored on `Permanent` so end-of-turn deletion riders, scheduled-return scripts, and scoped On-Play suppression key off the token, not an index. **Currently no such token exists.**
+1. ~~**`EffectMoveToken` provenance scaffold**~~ — **SUPERSEDED by Track A (PR #451, 2026-05-08).** Track A shipped the equivalent `ProvenanceToken` system with `ctx.play_from_hand_free_with_provenance`, `Game::provenance_token_for_card`, `Game::resolve_provenance_token` returning `Option<EventSubject>`. More general than my proposed `EffectMoveToken` (subject is `EventSubject`, not just `PermanentHandle`). No further engine work needed for this task.
 2. **Owner-vs-controller split audit** — confirm `Permanent` carries owner separately from controller (it does — `Permanent::owner()` returns `top_card().owner`). Audit return-to-deck/return-to-hand paths to confirm they consult owner, not controller, for routing. **Likely already correct; needs a targeted fixture test.**
 
 ### Tier 2 — Helpers

@@ -20,11 +20,11 @@ form: In-Training
 # Delete target: opponent's Digimon with DP ≤ 3000.
 # Pattern: BT21-015 select_opponent_permanent + dp_lte + delete_permanent.
 #
-# Known gaps in effect:
-#   G-INHERITED-DISPATCH — the engine does not fire inherited triggered effects
-#     from the digivolution stack yet. All behavioral tests relying on the clause
-#     actually firing are #[ignore]'d pending this fix.
-#   G-OPT-TRIGGERED — max_per_turn not enforced for triggered effects.
+# Proven end-to-end:
+#   Inherited fan-out from the carrier stack fires once, presents the optional
+#   delete selection, and enforces same-turn OPT lockout.
+#
+# Remaining gap in effect:
 #   G-PRED-DP-LTE — dp_lte filter compiled but not evaluated; negative-eligibility
 #     tests are #[ignore]'d pending this fix.
 
@@ -38,6 +38,7 @@ effects:
     process:
       - select_opponent_permanent:
           bind_as: tgt
+          optional: true
           filter:
             all_of:
               - kind: digimon

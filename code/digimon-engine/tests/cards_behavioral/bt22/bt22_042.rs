@@ -8,9 +8,6 @@
 //! Gap-routed slices:
 //! - Conditional [Arisa Kinosaki] + [Chaperomon] digivolve for cost 6 needs
 //!   `condition:` on `AltPathSpec` so the route is not always available.
-//! - The [All Turns][OPT] other-deletion refire can use `refire_effect`, but
-//!   still needs OnAnyDeletion event context that identifies the deleted
-//!   permanent so "your other Digimon" can be enforced.
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
@@ -119,7 +116,6 @@ fn bt22_042_grants_overclock_with_puppet_cost_filter() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-OPTIONAL-SUBSTEP-CONTINUE — declining optional select_hand must continue into the mandatory 'Then' DP step"]
 fn bt22_042_when_digivolving_only_offers_level4_or_lower_puppet_digimon_from_hand() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
@@ -169,7 +165,6 @@ fn bt22_042_when_digivolving_only_offers_level4_or_lower_puppet_digimon_from_han
 }
 
 #[test]
-#[ignore = "BLOCKED: G-OPTIONAL-SUBSTEP-CONTINUE — compound 'may play, then mandatory DP' must preserve ordering and decline semantics"]
 fn bt22_042_when_digivolving_plays_puppet_then_debuffs_by_own_digimon_count() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
@@ -177,9 +172,12 @@ fn bt22_042_when_digivolving_plays_puppet_then_debuffs_by_own_digimon_count() {
         .dsl_card("EX11-019")
         .expect("EX11-019 YAML loads")
         .add_card(make_digimon("BASE", 6, 11000, CardColor::Yellow, &[]))
+        .add_card(make_digimon("FILLER", 3, 1000, CardColor::Yellow, &[]))
         .add_card(make_tamer("ARISA", "Arisa Kinosaki"))
         .add_card(make_digimon("OPPONENT", 5, 14000, CardColor::Red, &[]))
         .hand(0, &["EX11-019"])
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
         .start();
     let nyabootmon = runner.place_stack(0, &["BASE", "BT22-042"]);
     runner.place_on_field(0, "ARISA", Some(0));
@@ -203,20 +201,31 @@ fn bt22_042_when_digivolving_plays_puppet_then_debuffs_by_own_digimon_count() {
         Some(8000),
         "Nyabootmon + played Puppet are 2 own Digimon, so the target gets -6000; Arisa is not counted"
     );
+    let entries: Vec<_> = runner
+        .modifiers()
+        .permanent_modifiers_iter(target)
+        .collect();
+    assert_eq!(entries.len(), 1, "DP reduction installs one modifier");
+    assert_eq!(
+        entries[0].source_player, 0,
+        "expiry must be keyed to Nyabootmon's controller, not the targeted opponent"
+    );
 
-    runner.end_turn();
+    runner.pass_turn();
     if runner.game.current_phase == digimon_engine::enums::GamePhase::EndOfTurnAction {
         runner.game.pass_end_of_turn_action();
     }
+    assert_eq!(runner.turn_player(), 1, "first turn rotation reaches the opponent");
     assert_eq!(
         runner.dp_of(target),
         Some(8000),
         "debuff persists through the opponent's turn"
     );
-    runner.end_turn();
+    runner.pass_turn();
     if runner.game.current_phase == digimon_engine::enums::GamePhase::EndOfTurnAction {
         runner.game.pass_end_of_turn_action();
     }
+    assert_eq!(runner.turn_player(), 0, "second turn rotation returns to Nyabootmon's controller");
     assert_eq!(
         runner.dp_of(target),
         Some(14000),
@@ -225,7 +234,6 @@ fn bt22_042_when_digivolving_plays_puppet_then_debuffs_by_own_digimon_count() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-OPTIONAL-SUBSTEP-CONTINUE — PASS on optional hand play currently ends the effect before mandatory DP"]
 fn bt22_042_declining_free_play_still_applies_scaled_dp_reduction() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
@@ -325,7 +333,6 @@ fn bt22_042_chaperomon_alt_digivolve_costs_6_while_arisa_is_present() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-ON-ANY-DELETION-EVENT-CONTEXT — refire_effect exists, but 'your other Digimon deleted' needs deleted-permanent event context"]
 fn bt22_042_other_own_digimon_deletion_may_refire_when_digivolving_effect() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
@@ -358,8 +365,14 @@ fn bt22_042_other_own_digimon_deletion_may_refire_when_digivolving_effect() {
     pick_first_pending(&mut runner, "choose to refire");
     assert_eq!(
         runner.pending_selection_view().map(|view| view.kind),
+        Some(SelectionKind::EffectChoice),
+        "after accepting the refire, the When Digivolving optional play choice appears"
+    );
+    runner.execute_branch(0).expect("choose to play a Puppet");
+    assert_eq!(
+        runner.pending_selection_view().map(|view| view.kind),
         Some(SelectionKind::Hand),
-        "after accepting the refire, the When Digivolving hand-play prompt appears"
+        "choosing the play branch exposes the hand-play prompt"
     );
 }
 

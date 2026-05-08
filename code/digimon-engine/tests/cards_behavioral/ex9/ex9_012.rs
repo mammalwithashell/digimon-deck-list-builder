@@ -51,7 +51,7 @@ use digimon_dsl::compiled::{
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming, Keyword, PlayerId, PlaySource};
+use digimon_engine::enums::{CardKind, EffectTiming, Keyword, PlaySource, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
@@ -138,8 +138,7 @@ fn runner_with_ex9_012_as_source() -> (DebugRunner, PermanentHandle) {
     let next_idx = runner.game.next_card_index();
     let carrier_source = CardSource::new(carrier_data_idx, 0, next_idx);
     let turn = runner.game.turn_count;
-    runner.game.players[0].battle_area[ex9_handle.index as usize]
-        .digivolve(carrier_source, turn);
+    runner.game.players[0].battle_area[ex9_handle.index as usize].digivolve(carrier_source, turn);
 
     (runner, ex9_handle)
 }
@@ -219,8 +218,7 @@ fn ex9_012_standard_digivolve_alt_path_present() {
         .alt_paths
         .iter()
         .find(|p| {
-            p.kind == CompiledAltPathKind::Digivolve
-                && p.cost == Some(CompiledCost::Literal(4))
+            p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(4))
         })
         .expect("EX9-012 must declare a Lv.4 digivolve path with cost 4");
 
@@ -368,7 +366,10 @@ fn ex9_012_has_inherited_your_turn_dp_aura() {
 #[test]
 fn ex9_012_on_play_no_eligible_target_no_prompt() {
     let mut runner = metalgrey_runner();
-    runner.game.card_data.push(make_digimon("BIG", "BigBoy", 6, 12000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("BIG", "BigBoy", 6, 12000));
     push_to_hand(&mut runner, 0, "EX9-012");
     // Place an opp Digimon that's TOO LARGE to be deleted.
     runner.place_on_field(1, "BIG", None);
@@ -388,7 +389,10 @@ fn ex9_012_on_play_no_eligible_target_no_prompt() {
 #[test]
 fn ex9_012_on_play_with_eligible_target_installs_mandatory_prompt() {
     let mut runner = metalgrey_runner();
-    runner.game.card_data.push(make_digimon("VICTIM", "Victim", 4, 5000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("VICTIM", "Victim", 4, 5000));
     push_to_hand(&mut runner, 0, "EX9-012");
     runner.place_on_field(1, "VICTIM", None);
 
@@ -410,7 +414,10 @@ fn ex9_012_on_play_with_eligible_target_installs_mandatory_prompt() {
 #[test]
 fn ex9_012_on_play_resolves_to_delete() {
     let mut runner = metalgrey_runner();
-    runner.game.card_data.push(make_digimon("VICTIM", "Victim", 4, 5000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("VICTIM", "Victim", 4, 5000));
     push_to_hand(&mut runner, 0, "EX9-012");
     runner.place_on_field(1, "VICTIM", None);
 
@@ -432,7 +439,10 @@ fn ex9_012_on_play_resolves_to_delete() {
 #[test]
 fn ex9_012_on_play_includes_dp_exactly_8000() {
     let mut runner = metalgrey_runner();
-    runner.game.card_data.push(make_digimon("EQ8K", "Eq8k", 5, 8000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("EQ8K", "Eq8k", 5, 8000));
     push_to_hand(&mut runner, 0, "EX9-012");
     runner.place_on_field(1, "EQ8K", None);
 
@@ -450,7 +460,10 @@ fn ex9_012_on_play_includes_dp_exactly_8000() {
 #[test]
 fn ex9_012_on_play_excludes_dp_above_8000() {
     let mut runner = metalgrey_runner();
-    runner.game.card_data.push(make_digimon("OVER", "Over", 5, 9000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OVER", "Over", 5, 9000));
     push_to_hand(&mut runner, 0, "EX9-012");
     runner.place_on_field(1, "OVER", None);
 
@@ -485,7 +498,9 @@ fn ex9_012_observer_does_not_fire_on_opponent_garurumon_play() {
     assert_eq!(runner.turn_player(), 1, "precondition: now P1's turn");
 
     let hand_idx = find_hand_index(&runner, 1, "OPP-GARU").expect("OPP-GARU in hand");
-    runner.play(1, hand_idx).expect("opponent's Garurumon plays");
+    runner
+        .play(1, hand_idx)
+        .expect("opponent's Garurumon plays");
     runner.game.drain_effect_queue();
 
     assert!(
@@ -515,7 +530,10 @@ fn ex9_012_observer_suppressed_on_opponents_turn() {
 
     // Direct-place an own Garurumon (bypasses memory cost and still fires
     // the OnEnterFieldAnyone trigger).
-    runner.game.card_data.push(make_digimon("GARU", "Garurumon", 4, 4000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("GARU", "Garurumon", 4, 4000));
     let _g = runner.place_on_field(0, "GARU", Some(0));
     runner.game.drain_effect_queue();
 
@@ -532,7 +550,10 @@ fn ex9_012_observer_suppressed_on_opponents_turn() {
 fn ex9_012_observer_fires_on_own_garurumon_play() {
     let mut runner = metalgrey_runner();
     runner.game.card_data.push(make_grey_lv5("GREY-LV5"));
-    runner.game.card_data.push(make_digimon("GARU", "Garurumon", 4, 4000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("GARU", "Garurumon", 4, 4000));
     push_to_hand(&mut runner, 0, "GREY-LV5");
     push_to_hand(&mut runner, 0, "GARU");
     let _ex9 = runner.place_on_field(0, "EX9-012", Some(0));
@@ -604,12 +625,10 @@ fn ex9_012_observer_fires_on_own_garurumon_digivolve() {
     drain_pending(&mut runner);
 
     let hand_idx = find_hand_index(&runner, 0, "GARU4").expect("GARU4 in hand");
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        base.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
     assert!(ok, "digivolve_from_hand must succeed");
     runner.game.drain_effect_queue();
 
@@ -640,12 +659,10 @@ fn ex9_012_observer_does_not_fire_on_unrelated_digivolve() {
     drain_pending(&mut runner);
 
     let hand_idx = find_hand_index(&runner, 0, "UNRELLV4").expect("UNRELLV4 in hand");
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        base.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
     assert!(ok, "digivolve_from_hand must succeed");
     runner.game.drain_effect_queue();
 
@@ -664,7 +681,10 @@ fn ex9_012_observer_does_not_fire_on_unrelated_digivolve() {
 fn ex9_012_observer_accept_free_digivolves_self_into_greymon() {
     let mut runner = metalgrey_runner();
     runner.game.card_data.push(make_grey_lv5("GREY-LV5"));
-    runner.game.card_data.push(make_digimon("GARU", "Garurumon", 4, 4000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("GARU", "Garurumon", 4, 4000));
     push_to_hand(&mut runner, 0, "GREY-LV5");
     push_to_hand(&mut runner, 0, "GARU");
     let ex9 = runner.place_on_field(0, "EX9-012", Some(0));
@@ -719,7 +739,10 @@ fn ex9_012_observer_accept_free_digivolves_self_into_greymon() {
 fn ex9_012_observer_decline_leaves_self_untouched() {
     let mut runner = metalgrey_runner();
     runner.game.card_data.push(make_grey_lv5("GREY-LV5"));
-    runner.game.card_data.push(make_digimon("GARU", "Garurumon", 4, 4000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("GARU", "Garurumon", 4, 4000));
     push_to_hand(&mut runner, 0, "GREY-LV5");
     push_to_hand(&mut runner, 0, "GARU");
     let ex9 = runner.place_on_field(0, "EX9-012", Some(0));

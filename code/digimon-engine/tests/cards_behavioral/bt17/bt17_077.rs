@@ -65,10 +65,9 @@ const YAML: &str = include_str!("../../../cards/bt17/BT17-077.yaml");
 
 /// Compile the YAML directly (bypassing the embedded pack lookup).
 fn compiled_bt17_077() -> digimon_dsl::compiled::CompiledCard {
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(YAML).expect("BT17-077.yaml parses");
-    let registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
-        .expect("BT17-077.yaml compiles");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("BT17-077.yaml parses");
+    let registry =
+        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("BT17-077.yaml compiles");
     registry
         .lookup("BT17-077")
         .expect("BT17-077 in registry")
@@ -96,16 +95,44 @@ fn make_digimon(id: &str, name: &str, level: u8, dp: i32) -> CardData {
 /// Recursively walk a CompiledPredicate tree looking for `f`.
 /// Also descends into existential predicates (any_permanent, no_permanent, etc.).
 fn pred_any<F: Fn(&CompiledPredicate) -> bool + Copy>(p: &CompiledPredicate, f: F) -> bool {
-    if f(p) { return true; }
-    if p.all_of.iter().any(|q| pred_any(q, f)) { return true; }
-    if p.any_of.iter().any(|q| pred_any(q, f)) { return true; }
-    if p.none_of.iter().any(|q| pred_any(q, f)) { return true; }
-    if let Some(ref n) = p.not { if pred_any(n, f) { return true; } }
+    if f(p) {
+        return true;
+    }
+    if p.all_of.iter().any(|q| pred_any(q, f)) {
+        return true;
+    }
+    if p.any_of.iter().any(|q| pred_any(q, f)) {
+        return true;
+    }
+    if p.none_of.iter().any(|q| pred_any(q, f)) {
+        return true;
+    }
+    if let Some(ref n) = p.not {
+        if pred_any(n, f) {
+            return true;
+        }
+    }
     // Walk into existential predicate bodies.
-    if let Some(ref e) = p.any_permanent { if pred_any(&e.predicate, f) { return true; } }
-    if let Some(ref e) = p.no_permanent { if pred_any(&e.predicate, f) { return true; } }
-    if let Some(ref e) = p.any_field_permanent { if pred_any(&e.predicate, f) { return true; } }
-    if let Some(ref e) = p.all_permanents { if pred_any(&e.predicate, f) { return true; } }
+    if let Some(ref e) = p.any_permanent {
+        if pred_any(&e.predicate, f) {
+            return true;
+        }
+    }
+    if let Some(ref e) = p.no_permanent {
+        if pred_any(&e.predicate, f) {
+            return true;
+        }
+    }
+    if let Some(ref e) = p.any_field_permanent {
+        if pred_any(&e.predicate, f) {
+            return true;
+        }
+    }
+    if let Some(ref e) = p.all_permanents {
+        if pred_any(&e.predicate, f) {
+            return true;
+        }
+    }
     false
 }
 
@@ -163,7 +190,9 @@ fn bt17_077_has_standard_digivolve_alt_path_lv6_blue_cost_6() {
         p.kind == CompiledAltPathKind::Digivolve
             && !p.ignore_requirements
             && matches!(p.cost, Some(CompiledCost::Literal(6)))
-            && p.from.as_ref().map_or(false, |f| pred_any(f, |q| q.level_eq == Some(6)))
+            && p.from
+                .as_ref()
+                .map_or(false, |f| pred_any(f, |q| q.level_eq == Some(6)))
     });
     assert!(
         has_std,
@@ -183,9 +212,7 @@ fn bt17_077_has_named_ancestor_digivolve_alt_path_imperialdramon_lv6_cost_5() {
             && matches!(p.cost, Some(CompiledCost::Literal(5)))
             && p.from.as_ref().map_or(false, |f| {
                 pred_any(f, |q| q.level_eq == Some(6))
-                    && pred_any(f, |q| {
-                        q.name_contains.as_deref() == Some("Imperialdramon")
-                    })
+                    && pred_any(f, |q| q.name_contains.as_deref() == Some("Imperialdramon"))
             })
     });
     assert!(
@@ -237,11 +264,14 @@ fn bt17_077_has_face_up_blast_digivolve_grant_keyword() {
 #[test]
 fn bt17_077_has_when_attacking_triggered_clause() {
     let c = compiled_bt17_077();
-    let has_wa = c.effects.iter().filter_map(|cl| match cl {
-        CompiledClause::Triggered(t) => Some(t),
-        _ => None,
-    })
-    .any(|t| t.when.contains(&CompiledTiming::WhenAttacking));
+    let has_wa = c
+        .effects
+        .iter()
+        .filter_map(|cl| match cl {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .any(|t| t.when.contains(&CompiledTiming::WhenAttacking));
     assert!(
         has_wa,
         "BT17-077 must have a WhenAttacking triggered clause for the \
@@ -253,12 +283,15 @@ fn bt17_077_has_when_attacking_triggered_clause() {
 #[test]
 fn bt17_077_when_attacking_clause_is_optional() {
     let c = compiled_bt17_077();
-    let wa = c.effects.iter().filter_map(|cl| match cl {
-        CompiledClause::Triggered(t) => Some(t),
-        _ => None,
-    })
-    .find(|t| t.when.contains(&CompiledTiming::WhenAttacking))
-    .expect("WhenAttacking clause must exist");
+    let wa = c
+        .effects
+        .iter()
+        .filter_map(|cl| match cl {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .find(|t| t.when.contains(&CompiledTiming::WhenAttacking))
+        .expect("WhenAttacking clause must exist");
     assert!(
         wa.optional,
         "WhenAttacking clause must be optional: true \
@@ -271,12 +304,15 @@ fn bt17_077_when_attacking_clause_is_optional() {
 #[test]
 fn bt17_077_when_attacking_clause_condition_gates_on_opp_digimon_no_digi_cards() {
     let c = compiled_bt17_077();
-    let wa = c.effects.iter().filter_map(|cl| match cl {
-        CompiledClause::Triggered(t) => Some(t),
-        _ => None,
-    })
-    .find(|t| t.when.contains(&CompiledTiming::WhenAttacking))
-    .expect("WhenAttacking clause must exist");
+    let wa = c
+        .effects
+        .iter()
+        .filter_map(|cl| match cl {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .find(|t| t.when.contains(&CompiledTiming::WhenAttacking))
+        .expect("WhenAttacking clause must exist");
 
     let condition = wa
         .condition
@@ -300,14 +336,17 @@ fn bt17_077_when_attacking_clause_condition_gates_on_opp_digimon_no_digi_cards()
             Also cross-refs G-DSL-TRASH-TOP-N-DIGI-CARDS (qa/dsl-vocab-gaps.md)."]
 fn bt17_077_has_on_play_when_digivolving_clause() {
     let c = compiled_bt17_077();
-    let has_clause = c.effects.iter().filter_map(|cl| match cl {
-        CompiledClause::Triggered(t) => Some(t),
-        _ => None,
-    })
-    .any(|t| {
-        t.when.contains(&CompiledTiming::OnPlay)
-            && t.when.contains(&CompiledTiming::WhenDigivolving)
-    });
+    let has_clause = c
+        .effects
+        .iter()
+        .filter_map(|cl| match cl {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .any(|t| {
+            t.when.contains(&CompiledTiming::OnPlay)
+                && t.when.contains(&CompiledTiming::WhenDigivolving)
+        });
     assert!(
         has_clause,
         "Clause 1 must fire on both OnPlay and WhenDigivolving"
@@ -333,7 +372,10 @@ fn bt17_077_when_attacking_returns_opp_digimon_and_unsuspends_self() {
     let mut runner = paladin_runner();
 
     // Spawn an opponent Digimon with no digivolution cards (stack_size == 1).
-    runner.game.card_data.push(make_digimon("OPP-NO-SRC", "OppNoSrc", 5, 5000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OPP-NO-SRC", "OppNoSrc", 5, 5000));
     let opp_no_src = runner.place_on_field(1, "OPP-NO-SRC", None);
 
     // Spawn Imperialdramon: Paladin Mode on player 0's side.
@@ -356,7 +398,9 @@ fn bt17_077_when_attacking_returns_opp_digimon_and_unsuspends_self() {
     // Resolve by taking the first valid action (picks the opp Digimon).
     let action_id = view.valid_action_ids[0];
     let sel_player = view.selecting_player;
-    runner.execute_action(sel_player, action_id).expect("selection resolves");
+    runner
+        .execute_action(sel_player, action_id)
+        .expect("selection resolves");
 
     // Drain any remaining effects.
     runner.game.drain_effect_queue();
@@ -387,8 +431,14 @@ fn bt17_077_when_attacking_skips_when_all_opp_digimon_have_digi_cards() {
     let mut runner = paladin_runner();
 
     // Spawn an opponent Digimon and push a source under it (stack_size == 2).
-    runner.game.card_data.push(make_digimon("OPP-SRC", "OppWithSrc", 5, 5000));
-    runner.game.card_data.push(make_digimon("OPP-UNDER", "OppUnder", 4, 3000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OPP-SRC", "OppWithSrc", 5, 5000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OPP-UNDER", "OppUnder", 4, 3000));
     let opp = runner.place_on_field(1, "OPP-SRC", None);
     runner.push_source(opp, "OPP-UNDER");
 
@@ -436,10 +486,22 @@ fn bt17_077_on_play_trashes_all_opp_digimon_sources() {
     let mut runner = paladin_runner();
 
     // Opponent has 2 Digimon, each with digivolution sources.
-    runner.game.card_data.push(make_digimon("OPP-A", "OppA", 5, 5000));
-    runner.game.card_data.push(make_digimon("OPP-A-SRC", "OppASrc", 4, 3000));
-    runner.game.card_data.push(make_digimon("OPP-B", "OppB", 6, 8000));
-    runner.game.card_data.push(make_digimon("OPP-B-SRC", "OppBSrc", 5, 4000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OPP-A", "OppA", 5, 5000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OPP-A-SRC", "OppASrc", 4, 3000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OPP-B", "OppB", 6, 8000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OPP-B-SRC", "OppBSrc", 5, 4000));
 
     let opp_a = runner.place_on_field(1, "OPP-A", None);
     runner.push_source(opp_a, "OPP-A-SRC");

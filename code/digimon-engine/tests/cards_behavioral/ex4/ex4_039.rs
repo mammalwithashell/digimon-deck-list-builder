@@ -104,10 +104,7 @@ fn pick_revealed_by_id(runner: &mut DebugRunner, id: &str, label: &str) {
 }
 
 fn zone_ids(cards: &[CardSource], data: &[CardData]) -> Vec<String> {
-    cards
-        .iter()
-        .map(|c| c.card_id(data).to_string())
-        .collect()
+    cards.iter().map(|c| c.card_id(data).to_string()).collect()
 }
 
 /// Standard fixture for EX4-039 without a deck preloaded; tests that need
@@ -129,8 +126,7 @@ fn gabu_runner_empty() -> DebugRunner {
 
 #[test]
 fn ex4_039_yaml_compiles() {
-    let spec: CardSpec =
-        serde_yml::from_str(YAML).expect("EX4-039 YAML parses");
+    let spec: CardSpec = serde_yml::from_str(YAML).expect("EX4-039 YAML parses");
     let _compiled = compile(&spec).expect("EX4-039 YAML compiles");
 }
 
@@ -170,8 +166,7 @@ fn ex4_039_has_on_play_and_inherited_on_digivolve_clauses() {
             _ => None,
         })
         .find(|t| {
-            t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::OnDigivolve)
+            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnDigivolve)
         })
         .expect("EX4-039 must have an inherited on_digivolve clause");
     assert!(
@@ -205,7 +200,10 @@ fn ex4_039_on_play_uses_select_reveal_buckets_and_top_remainder() {
         .process
         .iter()
         .any(|s| matches!(s, CompiledStep::SelectRevealBuckets { .. }));
-    assert!(has_buckets, "on_play clause must call select_reveal_buckets");
+    assert!(
+        has_buckets,
+        "on_play clause must call select_reveal_buckets"
+    );
     let remainder_top = on_play.process.iter().any(|s| match s {
         CompiledStep::PlaceRemainderOnDeck { position, .. } => {
             matches!(position, digimon_dsl::compiled::CompiledStackPosition::Top)
@@ -230,8 +228,7 @@ fn ex4_039_inherited_clause_body_gains_memory_one() {
             _ => None,
         })
         .find(|t| {
-            t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::OnDigivolve)
+            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnDigivolve)
         })
         .expect("inherited on_digivolve clause");
     let gain = inherited
@@ -276,7 +273,9 @@ fn ex4_039_on_play_reveals_three_picks_one_garurumon_and_one_agu_grey_omni() {
     pick_revealed_by_id(&mut runner, "GARU", "pick GARU");
 
     // Second bucket: Agumon/Greymon/Omnimon — both GREY and OMNI are eligible.
-    let view2 = runner.pending_selection_view().expect("Greymon/Omnimon prompt");
+    let view2 = runner
+        .pending_selection_view()
+        .expect("Greymon/Omnimon prompt");
     let grey_action = revealed_action_for_id(&runner, "GREY");
     let omni_action = revealed_action_for_id(&runner, "OMNI");
     assert!(view2.valid_action_ids.contains(&grey_action));
@@ -288,9 +287,18 @@ fn ex4_039_on_play_reveals_three_picks_one_garurumon_and_one_agu_grey_omni() {
     drain_accepting_all(&mut runner);
 
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
-    assert!(hand_ids.contains(&"GARU".to_string()), "GARU must be in hand");
-    assert!(hand_ids.contains(&"GREY".to_string()), "GREY must be in hand");
-    assert!(!hand_ids.contains(&"OMNI".to_string()), "OMNI must remain on deck");
+    assert!(
+        hand_ids.contains(&"GARU".to_string()),
+        "GARU must be in hand"
+    );
+    assert!(
+        hand_ids.contains(&"GREY".to_string()),
+        "GREY must be in hand"
+    );
+    assert!(
+        !hand_ids.contains(&"OMNI".to_string()),
+        "OMNI must remain on deck"
+    );
 
     // Remainder must end up on top of deck (printed: "Place the rest on top").
     let deck_top = runner.game.players[0]
@@ -332,8 +340,14 @@ fn ex4_039_on_play_second_bucket_auto_skips_when_no_candidate() {
 
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
     assert!(hand_ids.contains(&"GARU".to_string()), "GARU goes to hand");
-    assert!(!hand_ids.contains(&"PATA".to_string()), "PATA stays on deck");
-    assert!(!hand_ids.contains(&"BIYO".to_string()), "BIYO stays on deck");
+    assert!(
+        !hand_ids.contains(&"PATA".to_string()),
+        "PATA stays on deck"
+    );
+    assert!(
+        !hand_ids.contains(&"BIYO".to_string()),
+        "BIYO stays on deck"
+    );
 }
 
 /// Negative shape: when neither bucket has a candidate, both buckets
@@ -414,6 +428,8 @@ fn ex4_039_inherited_gains_memory_when_other_friendly_digivolves() {
             player: 0,
             permanent: other_handle,
             card: event_card,
+            effect_initiated: false,
+            dna_origin: false,
         },
     );
     runner.game.drain_effect_queue();
@@ -468,6 +484,8 @@ fn ex4_039_inherited_does_not_fire_on_opponent_digivolve() {
             player: 1,
             permanent: opp_handle,
             card: event_card,
+            effect_initiated: false,
+            dna_origin: false,
         },
     );
     runner.game.drain_effect_queue();
@@ -522,6 +540,8 @@ fn ex4_039_inherited_fires_when_top_and_other_friendly_digivolves() {
             player: 0,
             permanent: other_handle,
             card: event_card,
+            effect_initiated: false,
+            dna_origin: false,
         },
     );
     runner.game.drain_effect_queue();
@@ -583,6 +603,8 @@ fn ex4_039_inherited_does_not_fire_when_carrier_itself_digivolves() {
             player: 0,
             permanent: carrier,
             card: event_card,
+            effect_initiated: false,
+            dna_origin: false,
         },
     );
     runner.game.drain_effect_queue();

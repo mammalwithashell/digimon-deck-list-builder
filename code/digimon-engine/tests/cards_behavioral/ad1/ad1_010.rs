@@ -357,12 +357,10 @@ fn ad1_010_when_digivolving_draws_one_card() {
     let deck_before = runner.game.players[0].deck.len();
 
     let hand_idx = find_hand_index(&runner, 0, "AD1-010").expect("AD1-010 in hand");
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        base.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
     assert!(ok, "digivolve_from_hand must succeed");
     runner.game.drain_effect_queue();
     drain_pending(&mut runner);
@@ -478,12 +476,10 @@ fn ad1_010_all_turns_observer_fires_on_greymon_digivolve() {
     drain_pending(&mut runner);
 
     let hand_idx = find_hand_index(&runner, 0, "GREY4").expect("GREY4 in hand");
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        base.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
     assert!(ok, "digivolve_from_hand must succeed");
     runner.game.drain_effect_queue();
 
@@ -515,12 +511,10 @@ fn ad1_010_all_turns_observer_does_not_fire_on_unrelated_digivolve() {
     drain_pending(&mut runner);
 
     let hand_idx = find_hand_index(&runner, 0, "UNRELLV4").expect("UNRELLV4 in hand");
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        base.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
     assert!(ok, "digivolve_from_hand must succeed");
     runner.game.drain_effect_queue();
 
@@ -583,12 +577,10 @@ fn ad1_010_when_digivolving_emits_digivolve_event() {
     let cp = runner.event_checkpoint();
 
     let hand_idx = find_hand_index(&runner, 0, "AD1-010").expect("AD1-010 in hand");
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        base.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
     assert!(ok, "digivolve_from_hand must succeed");
     runner.game.drain_effect_queue();
     drain_pending(&mut runner);
