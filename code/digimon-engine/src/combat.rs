@@ -146,14 +146,33 @@ pub enum AttackResult {
 
 impl Game {
     /// Compute a permanent's effective DP (base + modifier sum).
+    ///
+    /// Track C / D consult site (2026-05-08): if the target carries any
+    /// `ModifierType::ImmuneFromDPMinus` entry, negative `ChangeDp`
+    /// modifiers are filtered out before summing — the protection
+    /// narrows to DP-minus only, leaving positive `ChangeDp` and the
+    /// dynamic aura bonus untouched. `effect_immunity_filter` on the
+    /// `ImmuneFromDPMinus` entry is reserved for a future refinement
+    /// (opponent-only / source-kind filtering of the protected delta);
+    /// the unfiltered path is what the published variant currently
+    /// promises.
     pub fn effective_dp(&self, handle: PermanentHandle) -> Option<i32> {
         let perm = self
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)?;
         let base = perm.base_dp(&self.card_data)?;
-        let bonus =
-            self.modifiers.sum(handle, ModifierType::ChangeDp) + self.dynamic_dp_aura_bonus(handle);
+        let immune_to_dp_minus = self
+            .modifiers
+            .has(handle, ModifierType::ImmuneFromDPMinus);
+        let change_dp_sum: i32 = self
+            .modifiers
+            .get(handle, ModifierType::ChangeDp)
+            .iter()
+            .filter(|entry| !(immune_to_dp_minus && entry.value < 0))
+            .map(|entry| entry.value)
+            .sum();
+        let bonus = change_dp_sum + self.dynamic_dp_aura_bonus(handle);
         Some(base + bonus)
     }
 
