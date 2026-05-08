@@ -167,6 +167,22 @@ impl Game {
                 return false;
             }
         }
+        // Track C / D consult site: `CannotMove` on the breeding-area permanent
+        // blocks the breeding → battle move (player-action AND effect-driven —
+        // `move_from_breeding_by_effect` delegates here). Distinct from
+        // `CannotSuspend` which only blocks orientation flips. The canonical
+        // breeding handle is `{ player, index: BREEDING_TARGET }`; modifier
+        // installers should target that handle to gate the move.
+        let breeding_handle = crate::permanent::PermanentHandle {
+            player: player_id,
+            index: crate::action::space::BREEDING_TARGET as u8,
+        };
+        if self
+            .modifiers
+            .has(breeding_handle, crate::enums::ModifierType::CannotMove)
+        {
+            return false;
+        }
 
         let player = self.player_mut(player_id);
         if let Some(perm) = player.breeding_area.take() {
