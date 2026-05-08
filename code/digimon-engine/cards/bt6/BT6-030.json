@@ -1,0 +1,35 @@
+{
+  "index": 612,
+  "norm_id": 0.0306,
+  "card_id": "BT6-030",
+  "card_index": 30,
+  "card_name_eng": "Gabumon - Bond of Friendship",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_030",
+  "play_cost": 14,
+  "dp": 14000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Unknown"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[When Attacking] [Once Per Turn] If you have a Tamer in play, you may unsuspend this Digimon.\r\n[When Attacking] Return 1 of your opponent's level 5 or lower Digimon to the bottom of its owner's deck.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 6,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

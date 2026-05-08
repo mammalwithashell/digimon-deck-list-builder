@@ -1,0 +1,26 @@
+{
+  "index": 1467,
+  "norm_id": 0.07335,
+  "card_id": "BT13-101",
+  "card_index": 101,
+  "card_name_eng": "Miki Kurosaki & Megumi Shirakawa",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_101",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] You may play 1 Digimon card with [PawnChessmon] in its name from your hand without paying its cost.\r\n[All Turns] When you play a 2-color black and yellow Digimon, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

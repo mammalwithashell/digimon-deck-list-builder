@@ -1,0 +1,27 @@
+{
+  "index": 2751,
+  "norm_id": 0.13755,
+  "card_id": "EX3-001",
+  "card_index": 1,
+  "card_name_eng": "Bebydomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_001",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Baby Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [All Turns] [Once Per Turn] When this Digimon with [Dramon] or [Examon] in its name becomes unsuspended, this Digimon gets +1000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 2818,
+  "norm_id": 0.1409,
+  "card_id": "EX3-068",
+  "card_index": 68,
+  "card_name_eng": "God Flame",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_068",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, you may return 1 card with the [Four Great Dragons] trait from your trash to your hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

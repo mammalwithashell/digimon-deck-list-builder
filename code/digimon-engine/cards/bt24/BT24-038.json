@@ -1,0 +1,38 @@
+{
+  "index": 2536,
+  "norm_id": 0.1268,
+  "card_id": "BT24-038",
+  "card_index": 38,
+  "card_name_eng": "Biomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_038",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [
+    "Life (App Name)"
+  ],
+  "form_eng": [
+    "Ult."
+  ],
+  "attribute_eng": [
+    "Life"
+  ],
+  "effect_description_eng": "＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)\r\n[On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost.\r\n[All Turns] [Once Per Turn] When this Digimon gets linked, 1 of your opponent's Digimon gets -7000 DP for the turn.",
+  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 3 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[App Fusion] [Docmon] & [Medicmon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+}

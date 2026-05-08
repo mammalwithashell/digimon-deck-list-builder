@@ -1,0 +1,37 @@
+{
+  "index": 2224,
+  "norm_id": 0.1112,
+  "card_id": "BT21-032",
+  "card_index": 32,
+  "card_name_eng": "Veemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_032",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1,
+    0
+  ],
+  "type_eng": [
+    "Mini Dragon",
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Armor Form] or [Hero] trait, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [DemiVeemon]/Lv.2 w/[Hero] trait: Cost 0"
+}

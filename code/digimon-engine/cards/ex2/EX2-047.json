@@ -1,0 +1,29 @@
+{
+  "index": 2723,
+  "norm_id": 0.13615,
+  "card_id": "EX2-047",
+  "card_index": 47,
+  "card_name_eng": "ADR-03 Pendulum Feet",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_047",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "AA Defense Agent"
+  ],
+  "form_eng": [
+    "D-Reaper"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [D-Reaper] trait and 1 [ADR-02 Searcher] among them to your hand. Place the remaining cards on the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

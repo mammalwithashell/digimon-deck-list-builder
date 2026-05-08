@@ -1,0 +1,36 @@
+{
+  "index": 1721,
+  "norm_id": 0.08605,
+  "card_id": "BT16-039",
+  "card_index": 39,
+  "card_name_eng": "Pulsemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_039",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beastkin",
+    "Abadin Electronics"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 card with [Pulsemon] in its text and 1 card with the [Abadin Electronics] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon has [Pulsemon] in its text, it gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Bibimon]: Cost 0"
+}

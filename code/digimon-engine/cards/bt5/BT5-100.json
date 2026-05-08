@@ -1,0 +1,25 @@
+{
+  "index": 570,
+  "norm_id": 0.0285,
+  "card_id": "BT5-100",
+  "card_index": 100,
+  "card_name_eng": "Royal Nuts",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_100",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal 5 cards from the top of your deck. Add 1 Digimon card with ＜Digisorption＞ among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

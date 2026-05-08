@@ -1,0 +1,28 @@
+{
+  "index": 2082,
+  "norm_id": 0.1041,
+  "card_id": "BT19-094",
+  "card_index": 94,
+  "card_name_eng": "Seventh Divine Cruz",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_094",
+  "play_cost": 7,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    6
+  ],
+  "type_eng": [
+    "Seven Great Demon Lords"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Trash] [Your Turn] When any of your Digimon digivolve into [Lucemon (X Antibody)], by returning this card to the bottom of the deck, your opponent may trash their top security card. If this effect didn't trash, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)\r\n[Main] Delete your opponent's Digimon until they have as many as the number of your security cards. If this effect deleted, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Lucemon] from your trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

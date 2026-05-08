@@ -1,0 +1,36 @@
+{
+  "index": 1809,
+  "norm_id": 0.09045,
+  "card_id": "BT17-025",
+  "card_index": 25,
+  "card_name_eng": "Cerberusmon: Werewolf Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_025",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1,
+    6
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] You may play 1 level 3 blue or purple Digimon card from your trash or from one of your Digimon's digivolution cards without paying the cost. At the next end of your opponent's turn, return it to the hand.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When an effect plays one of your Digimon, return 1 of your opponent's level 3 Digimon to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Cerberusmon]: Cost 1"
+}

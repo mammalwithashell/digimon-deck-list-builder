@@ -1,0 +1,36 @@
+{
+  "index": 3960,
+  "norm_id": 0.198,
+  "card_id": "EX10-039",
+  "card_index": 39,
+  "card_name_eng": "ChuuChuumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_039",
+  "play_cost": 4,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Beast",
+    "Bagra Army"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] You may place 1 Digimon card with the [Bagra Army] trait from your hand or trash as any of your [Bagra Army] trait Digimon's bottom digivolution cards or under any of your [Bagra Army] trait Tamers.\r\n[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "When effects trash this card from a [Bagra Army] trait Digimon's digivolution cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

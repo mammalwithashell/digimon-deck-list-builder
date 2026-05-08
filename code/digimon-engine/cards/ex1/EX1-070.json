@@ -1,0 +1,25 @@
+{
+  "index": 2673,
+  "norm_id": 0.13365,
+  "card_id": "EX1-070",
+  "card_index": 70,
+  "card_name_eng": "Fight for Your Pride!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_070",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Play 1 purple level 4 or lower Digimon card from your trash without paying its memory cost. Then, if you have a Digimon with [Myotismon] in its name in play, 1 of your Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's next turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play 1 purple level 4 or lower Digimon card from your trash without paying its memory cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,27 @@
+{
+  "index": 3260,
+  "norm_id": 0.163,
+  "card_id": "EX11-066",
+  "card_index": 66,
+  "card_name_eng": "Xeno",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_066",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] [On Play] By trashing 1 card with [Vemmon] in its text from your hand, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.\r\n[All Turns] When your Digimon are played or digivolve, if any of them have [Vemmon] in their texts, by suspending this Tamer, reveal the top 2 cards of your deck. Place all [Vemmon] among them as any of those Digimon's bottom digivolution cards. Trash the rest.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,31 @@
+{
+  "index": 1373,
+  "norm_id": 0.06865,
+  "card_id": "BT13-007",
+  "card_index": 7,
+  "card_name_eng": "King Drasil_7D6",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_007",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 3,
+  "rarity": 3,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "9000"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[Breeding] [Your Turn] All of your Digimon can't digivolve.\r\n[Breeding] [Your Turn] [Once Per Turn] When a [Royal Knight] trait Digimon card would be played, you may reduce the play cost by 4. Further reduce it by 1 for each of this Digimon's digivolution cards.\r\n[Breeding] [Start of Your Main Phase] Reveal the top card of your Digi-Egg deck, then place that card and all of your [Royal Knight] trait Digimon as this Digimon's bottom digivolution cards.",
+  "inherited_effect_description_eng": "[Breeding] [Your Turn] [Once Per Turn] When an Option card with the [Royal Knight] trait is placed in the battle area, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

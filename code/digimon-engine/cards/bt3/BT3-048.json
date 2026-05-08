@@ -1,0 +1,37 @@
+{
+  "index": 291,
+  "norm_id": 0.01455,
+  "card_id": "BT3-048",
+  "card_index": 48,
+  "card_name_eng": "Gargomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_048",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] This card gets +1000 DP for each of your opponent's suspended Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

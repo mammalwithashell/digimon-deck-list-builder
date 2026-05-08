@@ -1,0 +1,25 @@
+{
+  "index": 3693,
+  "norm_id": 0.18465,
+  "card_id": "ST6-15",
+  "card_index": 15,
+  "card_name_eng": "Death Claw",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST6_15",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may delete 1 of your Digimon to delete 1 of your opponent's level 4 or lower Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's level 4 or lower Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

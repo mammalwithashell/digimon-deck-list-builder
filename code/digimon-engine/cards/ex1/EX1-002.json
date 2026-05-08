@@ -1,0 +1,35 @@
+{
+  "index": 2605,
+  "norm_id": 0.13025,
+  "card_id": "EX1-002",
+  "card_index": 2,
+  "card_name_eng": "Biyomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_002",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Bird"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] When this Digimon attacks a player, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

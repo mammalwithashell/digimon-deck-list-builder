@@ -1,0 +1,25 @@
+{
+  "index": 2675,
+  "norm_id": 0.13375,
+  "card_id": "EX1-072",
+  "card_index": 72,
+  "card_name_eng": "Emergency Program Shutdown!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_072",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Your opponent can't use Option cards until the end of their next turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Your opponent can't use Option cards this turn. Then, add this card to its owner's hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

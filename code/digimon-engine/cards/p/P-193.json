@@ -1,0 +1,27 @@
+{
+  "index": 3523,
+  "norm_id": 0.17615,
+  "card_id": "P-193",
+  "card_index": 193,
+  "card_name_eng": "The Wicked God Emerges!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_193",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Wicked God"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] By trashing 1 card with the [Composite] or [Wicked God] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place this card in the battle area.\r\n[End of All Turns] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・By deleting 1 of your [Millenniummon], you may play 1 [Wicked God] trait Digimon card from your hand or trash without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

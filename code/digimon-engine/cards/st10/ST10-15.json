@@ -1,0 +1,25 @@
+{
+  "index": 3748,
+  "norm_id": 0.1874,
+  "card_id": "ST10-15",
+  "card_index": 15,
+  "card_name_eng": "Darkness Wave",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST10_15",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Trash the top 3 cards of your deck. Then, if you have a yellow Digimon in play, return 1 yellow or purple Digimon card from your trash to your hand",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

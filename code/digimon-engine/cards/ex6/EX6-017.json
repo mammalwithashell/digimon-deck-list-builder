@@ -1,0 +1,35 @@
+{
+  "index": 2989,
+  "norm_id": 0.14945,
+  "card_id": "EX6-017",
+  "card_index": 17,
+  "card_name_eng": "Luxmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_017",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Angel"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with the [Angel] or [Archangel] trait and 1 card with the [Three Great Angels] trait among them to your hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has the [Angel], [Archangel] or [Three Great Angels] trait, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

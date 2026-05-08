@@ -11,10 +11,16 @@ fn ad1_004_has_keywords_and_end_turn_attack_clause() {
         .start();
     let card = runner.compiled_card("AD1-004").expect("compiled card");
 
-    let keyword_count = card.effects.iter().filter(|clause| matches!(
-        clause,
-        CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { .. })
-    )).count();
+    let keyword_count = card
+        .effects
+        .iter()
+        .filter(|clause| {
+            matches!(
+                clause,
+                CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { .. })
+            )
+        })
+        .count();
     assert_eq!(keyword_count, 2);
     assert!(card.effects.iter().any(|clause| matches!(
         clause,

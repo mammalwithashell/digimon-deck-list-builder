@@ -1,0 +1,25 @@
+{
+  "index": 896,
+  "norm_id": 0.0448,
+  "card_id": "BT8-090",
+  "card_index": 90,
+  "card_name_eng": "Kari Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_090",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When a card is added to your security stack, you may suspend this Tamer to gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

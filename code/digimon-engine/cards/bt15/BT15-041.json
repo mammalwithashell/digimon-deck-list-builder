@@ -1,0 +1,36 @@
+{
+  "index": 1621,
+  "norm_id": 0.08105,
+  "card_id": "BT15-041",
+  "card_index": 41,
+  "card_name_eng": "Babamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_041",
+  "play_cost": 10,
+  "dp": 10000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [
+    "Ancient"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] [On Deletion] 1 of your opponent's Digimon gets -6000 DP until the end of their turn.\r\n[End of Opponent's Turn] By deleting this Digimon, you may play 1 [Rosemon] or [Jijimon] from your hand without paying the cost. Then, activate the [When Digivolving] effects of the Digimon this effect played.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

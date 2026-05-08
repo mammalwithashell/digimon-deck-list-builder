@@ -1,0 +1,36 @@
+{
+  "index": 2940,
+  "norm_id": 0.147,
+  "card_id": "EX5-042",
+  "card_index": 42,
+  "card_name_eng": "Merukimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_042",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Shaman",
+    "Olympos XII"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)\r\n[On Play] [When Digivolving] Reveal the top card of your deck. If that card is a level 5 or lower Digimon card with ＜Fortitude＞, play it without paying the cost. Add the rest to the hand.\r\n[Your Turn] All your Digimon with ＜Fortitude＞ and no digivolution cards gain ＜Rush＞ (This Digimon can attack the turn it comes into play.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

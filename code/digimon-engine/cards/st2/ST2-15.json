@@ -1,0 +1,25 @@
+{
+  "index": 3629,
+  "norm_id": 0.18145,
+  "card_id": "ST2-15",
+  "card_index": 15,
+  "card_name_eng": "Kaiser Nail",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST2_15",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Choose 1 Digimon digivolution card placed under 1 of your Digimon and play it without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,31 @@
+{
+  "index": 2065,
+  "norm_id": 0.10325,
+  "card_id": "BT19-077",
+  "card_index": 77,
+  "card_name_eng": "Calumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_077",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Unknown"
+  ],
+  "form_eng": [
+    "Unknown"
+  ],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[Security] You may play 1 Digimon card with 2000 DP or less from your hand without paying the cost.\r\n[Main] By suspending this Digimon, 1 of your Digimon may digivolve into a Digimon card in the hand with the digivolution cost reduced by 2.\r\n[All Turns] This Digimon can't attack or block.\r\n[On Deletion] Place this card on top of your security stack.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

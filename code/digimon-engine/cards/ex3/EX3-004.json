@@ -1,0 +1,35 @@
+{
+  "index": 2754,
+  "norm_id": 0.1377,
+  "card_id": "EX3-004",
+  "card_index": 4,
+  "card_name_eng": "Veemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_004",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Mini Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[On Play] By trashing 1 card with [Imperialdramon] in its name or [Free] trait in your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "[Your Turn] While you have a purple Digimon in play, this Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

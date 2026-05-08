@@ -1,0 +1,36 @@
+{
+  "index": 3832,
+  "norm_id": 0.1916,
+  "card_id": "ST17-08",
+  "card_index": 8,
+  "card_name_eng": "MegaGargomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST17_08",
+  "play_cost": 7,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "Machine"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n[When Digivolving] Suspend 2 of your opponent's Digimon or Tamers. Then, 2 of their Digimon or Tamers can't unsuspend or digivolve until the end of their turn.\r\n[When Digivolving] [End of Attack] [Once Per Turn] You may unsuspend this Digimon.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Rapidmon] in name: Cost 5"
+}

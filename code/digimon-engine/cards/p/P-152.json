@@ -1,0 +1,37 @@
+{
+  "index": 3482,
+  "norm_id": 0.1741,
+  "card_id": "P-152",
+  "card_index": 152,
+  "card_name_eng": "Shoutmon + Dorulu Cannon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_152",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Enhancement",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Attacking] 1 of your opponent's Digimon gets -2000 DP for the turn. Then, by placing 1 Digimon card with the [Xros Heart] trait in this Digimon's digivolution cards under 1 of your Tamers, delete 1 of their Digimon with 3000 DP or less.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Play cost 4 or lower [Shoutmon] or [Dorulumon]: Cost 0"
+}

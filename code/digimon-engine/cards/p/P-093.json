@@ -1,0 +1,37 @@
+{
+  "index": 3423,
+  "norm_id": 0.17115,
+  "card_id": "P-093",
+  "card_index": 93,
+  "card_name_eng": "Bastemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_093",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[All Turns] When this Digimon becomes suspended, suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon would digivolve, reduce the digivolution cost by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,27 @@
+{
+  "index": 2976,
+  "norm_id": 0.1488,
+  "card_id": "EX6-004",
+  "card_index": 4,
+  "card_name_eng": "Kokomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_004",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Lesser"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When an effect suspends one of your Digimon, 1 of your Digimon gets +2000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

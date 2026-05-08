@@ -1,0 +1,35 @@
+{
+  "index": 1444,
+  "norm_id": 0.0722,
+  "card_id": "BT13-078",
+  "card_index": 78,
+  "card_name_eng": "Phascomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_078",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Dark Animal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Deletion] ＜Draw 1＞ (Draw 1 card from your deck.) Then, trash 1 card from your hand.",
+  "inherited_effect_description_eng": "[End of Opponent's Turn] [Once Per Turn] ＜Draw 1＞ (Draw 1 card from your deck.) Then, trash 1 card from your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 2654,
+  "norm_id": 0.1327,
+  "card_id": "EX1-051",
+  "card_index": 51,
+  "card_name_eng": "Infermon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_051",
+  "play_cost": 8,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Unidentified"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[Opponent's Turn] [Once Per Turn] When an opponent's Digimon digivolves into a level 5 or higher Digimon, gain 1 memory.",
+  "inherited_effect_description_eng": "[All Turns] All of your other Digimon with the same name as this Digimon get +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

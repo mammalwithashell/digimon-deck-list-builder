@@ -1,0 +1,25 @@
+{
+  "index": 463,
+  "norm_id": 0.02315,
+  "card_id": "BT4-108",
+  "card_index": 108,
+  "card_name_eng": "Cyclonic Kick",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_108",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Unsuspend 1 of your Digimon and suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

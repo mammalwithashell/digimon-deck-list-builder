@@ -1,0 +1,35 @@
+{
+  "index": 2006,
+  "norm_id": 0.1003,
+  "card_id": "BT19-018",
+  "card_index": 18,
+  "card_name_eng": "Swimmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_018",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Tropical Fish"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)",
+  "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

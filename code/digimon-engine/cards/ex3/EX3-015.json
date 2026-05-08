@@ -1,0 +1,35 @@
+{
+  "index": 2765,
+  "norm_id": 0.13825,
+  "card_id": "EX3-015",
+  "card_index": 15,
+  "card_name_eng": "Crabmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_015",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Crustacean"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] 1 of your blue Digimon gains ＜Jamming＞ for the turn. (This Digimon can't be deleted in battles against Security Digimon.) When played from digivolution cards, you may place 1 blue level 5 or lower Digimon card from your hand under that Digimon as its bottom digivolution card.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

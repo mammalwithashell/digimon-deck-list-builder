@@ -1,0 +1,35 @@
+{
+  "index": 3865,
+  "norm_id": 0.19325,
+  "card_id": "ST19-13",
+  "card_index": 13,
+  "card_name_eng": "ShinMonzaemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST19_13",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[On Play] [When Digivolving] By placing 1 level 5 or lower card with [Puppet] trait or with [Numemon] in its name from your trash as this Digimon's bottom digivolution card, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Monzaemon]/[Numemon] in name: Cost 3"
+}

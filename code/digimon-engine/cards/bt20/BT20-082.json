@@ -1,0 +1,37 @@
+{
+  "index": 2172,
+  "norm_id": 0.1086,
+  "card_id": "BT20-082",
+  "card_index": 82,
+  "card_name_eng": "DeathXmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_082",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Unanalyzable",
+    "X Program"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[All Turns] When this Digimon would leave the battle area by effects, by returning 3 cards with [Dex] or [DeathX] in their names from your trash to the bottom of the deck, it doesn't leave. \r\n[End of All Turns] [Once Per Turn] Delete all Digimon with the lowest level.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": ""
+}

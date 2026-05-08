@@ -1,0 +1,35 @@
+{
+  "index": 2017,
+  "norm_id": 0.10085,
+  "card_id": "BT19-029",
+  "card_index": 29,
+  "card_name_eng": "Tapirmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_029",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Holy Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] By trashing your top security card, gain 1 memory.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this yellow Digimon with the [Data] or [Witchelny] trait would leave the battle area by your opponent's effects, by trashing your top security card, it doesn't leave.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

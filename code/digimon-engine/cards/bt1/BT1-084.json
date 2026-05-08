@@ -1,0 +1,36 @@
+{
+  "index": 100,
+  "norm_id": 0.005,
+  "card_id": "BT1-084",
+  "card_index": 84,
+  "card_name_eng": "Omnimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_084",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] Choose 1 of your opponent's Digimon. Delete all of your opponent's Digimon that share a name with it.\r\n[When Attacking] You can unsuspend this Digimon by returning 1 of this Digimon's level 6 digivolution cards to your hand.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 1263,
+  "norm_id": 0.06315,
+  "card_id": "BT12-009",
+  "card_index": 9,
+  "card_name_eng": "Flamemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_009",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[On Play] By trashing 1 Digimon card with [Hybrid] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Hybrid] or [Ten Warriors] trait, it gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 2410,
+  "norm_id": 0.1205,
+  "card_id": "BT23-014",
+  "card_index": 14,
+  "card_name_eng": "Gallantmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_014",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Until your opponent's turn ends, their effects can't play Digimon or Tamers from the trash.\r\n[On Play] [When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 8000 DP or less. For each of their Digimon and Tamers, add 2000 to this DP deletion effect's maximum.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[CS] trait: Cost 3"
+}

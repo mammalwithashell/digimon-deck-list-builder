@@ -1,0 +1,25 @@
+{
+  "index": 2740,
+  "norm_id": 0.137,
+  "card_id": "EX2-064",
+  "card_index": 64,
+  "card_name_eng": "Alice McCoy",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_064",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When one of your Digimon would digivolve from level 5 to level 6, you may delete 1 of your Digimon to reduce the digivolution cost by 3.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

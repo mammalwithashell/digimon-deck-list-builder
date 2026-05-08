@@ -1,0 +1,35 @@
+{
+  "index": 2207,
+  "norm_id": 0.11035,
+  "card_id": "BT21-015",
+  "card_index": 15,
+  "card_name_eng": "Cyclonemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_015",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragonkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n [On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 600,
+  "norm_id": 0.03,
+  "card_id": "BT6-018",
+  "card_index": 18,
+  "card_name_eng": "Agumon - Bond of Bravery",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_018",
+  "play_cost": 14,
+  "dp": 14000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Unknown"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[When Attacking] If you have a Tamer in play, delete 1 of your opponent's Digimon with 13000 DP or less.\r\n[Your Turn] [Once Per Turn] When an opponent's Digimon is deleted, trash the top card of their security stack.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 6,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

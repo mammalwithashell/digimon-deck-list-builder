@@ -1,0 +1,36 @@
+{
+  "index": 3245,
+  "norm_id": 0.16225,
+  "card_id": "EX11-051",
+  "card_index": 51,
+  "card_name_eng": "Necromon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_051",
+  "play_cost": 11,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Ghost",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n＜Execute＞ (At the end of your turn, this Digimon may attack. At the end of that attack, delete this Digimon. Your opponent's unsuspended Digimon can also be attacked with this effect.)\r\n[On Play] [When Digivolving] [On Deletion] delete 1 of your opponent's Digimon with the lowest level. Then, you may play 1 level 4 or lower [Ghost] trait Digimon card from your trash without paying the cost.\r\n[On Deletion] 1 of your [Ghost] trait Digimon may digivolve into a [Ghost] trait Digimon card in the hand without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

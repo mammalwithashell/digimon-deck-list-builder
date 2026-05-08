@@ -1,0 +1,36 @@
+{
+  "card_id": "EX8-018",
+  "card_index": 18,
+  "card_name_eng": "Gomamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_018",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Sea Beast",
+    "DS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [DS] trait and 1 card with the [Sea Beast] or [Plesiosaur] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If you have 7 or fewer cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[DS] trait: Cost 0",
+  "index": 3138,
+  "norm_id": 0.1569
+}

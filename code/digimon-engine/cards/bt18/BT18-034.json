@@ -1,0 +1,29 @@
+{
+  "index": 1920,
+  "norm_id": 0.096,
+  "card_id": "BT18-034",
+  "card_index": 34,
+  "card_name_eng": "Lucemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_034",
+  "play_cost": 10,
+  "dp": 10000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Angel"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] [On Play] By trashing 1 card in your hand, your opponent may trash their top security card. If this effect didn't trash, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)\r\n[End of Your Turn] [Once Per Turn] By placing 1 of your level 6 Digimon on top of your security stack, this Digimon may digivolve into [Lucemon: Chaos Mode] in your trash without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] [Cupimon]: Cost 5"
+}

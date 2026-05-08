@@ -1,0 +1,25 @@
+{
+  "index": 3596,
+  "norm_id": 0.1798,
+  "card_id": "RB1-034",
+  "card_index": 34,
+  "card_name_eng": "Ruli Tsukiyono",
+  "card_name_jpn": "",
+  "card_effect_class_name": "RB1_034",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When one of your Digimon would digivolve into a green card with the [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]), by suspending this Tamer, reduce the digivolution cost by 1.\r\n[End of Your Turn] [Once Per Turn] You may unsuspend 1 of your Digimon with [Angoramon] in its text.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

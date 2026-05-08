@@ -1,0 +1,25 @@
+{
+  "index": 1243,
+  "norm_id": 0.06215,
+  "card_id": "BT11-101",
+  "card_index": 101,
+  "card_name_eng": "Holy Sunshine",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_101",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When you would use this card, if you have a yellow Tamer in play, reduce the cost by 1.\r\n[Main] Until the end of your opponent's turn, 3 of your opponent's Digimon get -5000 DP and gain ＜Security A. -1＞ (This Digimon checks 1 additional security card.).",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,70 @@
+{
+  "index": 1365,
+  "norm_id": 0.06825,
+  "card_id": "BT12-111",
+  "card_index": 111,
+  "card_name_eng": "DarknessBagramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_111",
+  "play_cost": 16,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 4,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Composite",
+    "Bagra Army"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Delete 1 of your opponent's Digimon. Then, you may place up to 5 Digimon cards with the [Bagra Army] trait from your trash as digivolution cards of this Digimon.\r\n[Opponent's Turn] When an opponent's Digimon digivolves or attacks, by trashing 5 cards in this Digimon's digivolution cards, return all Tamers to their owners' hands.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "DigiXros Requirements [DigiXros -3] [DarkKnightmon] x [Bagramon] \r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "DarkKnightmon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        },
+        {
+          "name_contains": "Bagramon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": false,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 3,
+      "max_materials": 2,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "hand",
+        "field"
+      ]
+    }
+  ]
+}

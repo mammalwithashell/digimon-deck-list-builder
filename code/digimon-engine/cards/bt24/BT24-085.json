@@ -1,0 +1,29 @@
+{
+  "index": 2583,
+  "norm_id": 0.12915,
+  "card_id": "BT24-085",
+  "card_index": 85,
+  "card_name_eng": "Dan Yuki & Kanan Yuki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_085",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    3,
+    0
+  ],
+  "type_eng": [
+    "ADAMAS",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory.\r\n[End of Your Turn] By suspending this Tamer, you may use 1 [TS] trait Option card with as high or lower a use cost as your opponent's memory from your hand without paying the cost. Then, 1 of your Digimon with the [TS] trait may attack.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

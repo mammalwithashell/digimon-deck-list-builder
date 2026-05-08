@@ -1,0 +1,25 @@
+{
+  "index": 1028,
+  "norm_id": 0.0514,
+  "card_id": "BT9-110",
+  "card_index": 110,
+  "card_name_eng": "X Program",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_110",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon with [Dex] or [DeathX] in its name, you can ignore this card's color requirements.\r\n[Main] Delete 1 Digimon without [X Antibody] trait. If there are 3 or more Digimon in play, delete all Digimon without [X Antibody] trait instead.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's Digimon without [X Antibody] trait.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

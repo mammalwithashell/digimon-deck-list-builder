@@ -1,0 +1,28 @@
+{
+  "index": 2278,
+  "norm_id": 0.1139,
+  "card_id": "BT21-086",
+  "card_index": 86,
+  "card_name_eng": "Marcus Damon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_086",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    2,
+    0
+  ],
+  "type_eng": [
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[On Play] 1 of your [Marcus Damon]s may suspend.\r\n[All Turns] [Once Per Turn] When this Tamer suspends, 1 of your Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and +3000 DP for the turn. Then, 1 of your opponent's Digimon gets -3000 DP for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

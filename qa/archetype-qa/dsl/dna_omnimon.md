@@ -114,7 +114,7 @@ Pipeline: batch-implement-cards-rust-dsl
 - G-PLACE-SELF-AT-SECURITY-BOTTOM (EX4-060) — face-down self-disposition
 - G-PLACE-SELF-AT-SECURITY-TOP (EX9-021) — face-up self-disposition
 - G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION (ST20-15) — Option-card variant
-- G-DSL-IS-DNA-DIGIVOLVING (EX9-021) — predicate to gate on DNA-vs-normal digivolution
+- G-DSL-IS-DNA-DIGIVOLVING (EX9-021) — RESOLVED 2026-05-08 as `dna_origin: true`; remaining EX9-021 blockers are card-local body/disposition gaps
 - G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (BT22-015) — Decode keyword variant
 - G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET (BT22-015) — repeat-N target-selection from formula
 - G-FORMULA-SOURCE-DP (BT17-102, P-182) — formula reading source permanent's DP

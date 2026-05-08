@@ -1,0 +1,25 @@
+{
+  "index": 787,
+  "norm_id": 0.03935,
+  "card_id": "BT7-093",
+  "card_index": 93,
+  "card_name_eng": "Firedrake Strike",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_093",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Choose 1 of your Digimon with the [Hybrid] trait. Delete 1 of your opponent's Digimon with DP less than or equal to the chosen Digimon's DP.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Takuya Kanbara] from your hand or trash without paying its memory cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -85,8 +85,7 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming,
-    CompiledTriggeredClause,
+    CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -101,10 +100,9 @@ const YAML: &str = include_str!("../../../cards/bt22/BT22-013.yaml");
 
 /// Compile BT22-013 from the production YAML and return the CompiledCard.
 fn compiled_bt22_013() -> digimon_dsl::compiled::CompiledCard {
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(YAML).expect("BT22-013.yaml parses");
-    let registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
-        .expect("BT22-013.yaml compiles");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("BT22-013.yaml parses");
+    let registry =
+        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("BT22-013.yaml compiles");
     registry
         .lookup("BT22-013")
         .expect("BT22-013 in registry")
@@ -441,8 +439,7 @@ fn bt22_013_when_digivolving_branch_0_digivolves_gabumon_into_metalgarurumon_fre
 
     // If the chain runs to completion, MetalGarurumon ends up as the top card
     // of the (former) Gabumon stack.
-    let gabu_perm =
-        &runner.game.players[0].battle_area[gabu_handle.index as usize];
+    let gabu_perm = &runner.game.players[0].battle_area[gabu_handle.index as usize];
     let top = gabu_perm.top_card();
     assert_eq!(
         top.card_id(&runner.game.card_data),
@@ -473,10 +470,7 @@ fn bt22_013_when_digivolving_no_targets_does_not_panic() {
 
 /// Stack BT22-013 under an Omnimon-named top card so the printed name gate
 /// "[Omnimon] in name" matches the actual top card.
-fn place_omnimon_over_bt22_013(
-    runner: &mut DebugRunner,
-    player: PlayerId,
-) -> PermanentHandle {
+fn place_omnimon_over_bt22_013(runner: &mut DebugRunner, player: PlayerId) -> PermanentHandle {
     runner.place_stack(player, &["BT22-013", "OMNI-TOP"])
 }
 

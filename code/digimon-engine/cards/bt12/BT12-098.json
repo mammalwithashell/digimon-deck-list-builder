@@ -1,0 +1,25 @@
+{
+  "index": 1352,
+  "norm_id": 0.0676,
+  "card_id": "BT12-098",
+  "card_index": 98,
+  "card_name_eng": "Watchmaker",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_098",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with ＜Save＞ in its text and 1 card with the [Hunter] trait among them to your hand. Place the rest at the bottom of your deck in any order.\r\n[Main] If you have 4 or more Tamers in play, by suspending this Tamer, 1 of your Digimon with ＜Save＞ in its text gains ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

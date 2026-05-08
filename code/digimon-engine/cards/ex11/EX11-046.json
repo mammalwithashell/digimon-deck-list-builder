@@ -1,0 +1,36 @@
+{
+  "index": 3240,
+  "norm_id": 0.162,
+  "card_id": "EX11-046",
+  "card_index": 46,
+  "card_name_eng": "Galacticmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_046",
+  "play_cost": 14,
+  "dp": 14000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Unknown",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Choose 1 of your opponent's highest play cost Digimon and delete all of their other Digimon. Then, if this Digimon has 4 or more [Vemmon] in its digivolution cards, until your opponent's turn ends, it gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and isn't affected by their effects.\r\n[End of Opponent's Turn] This Digimon may digivolve into [Galacticmon] in the hand or trash, ignoring digivolution requirements and without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[Digivolve] [Snatchmon]: Cost 9 \r\n[Digivolve] [Galacticmon]: Cost 5"
+}

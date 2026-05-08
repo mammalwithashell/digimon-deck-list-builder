@@ -1,0 +1,27 @@
+{
+  "index": 3463,
+  "norm_id": 0.17315,
+  "card_id": "P-133",
+  "card_index": 133,
+  "card_name_eng": "Shoto Kazama",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_133",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] You may play 1 [Pteromon] from your hand without paying the cost.\r\n[Your Turn] [Once Per Turn] When one of your Digimon digivolves into a Digimon with the [Avian] or [Bird] in any of its traits, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

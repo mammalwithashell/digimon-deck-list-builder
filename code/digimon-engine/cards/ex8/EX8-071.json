@@ -1,0 +1,27 @@
+{
+  "card_id": "EX8-071",
+  "card_index": 71,
+  "card_name_eng": "Nightmare Soldiers",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_071",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "NSo"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have no face-up security cards, you can ignore this card's color requirements.\r\n[Security] [All Turns] All of your level 4 or highter Digimon with the [NSo] trait gain ＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)\r\n[Main] Add your bottom security card to the hand. Then, place this card face up as the bottom security card.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 5 or lower Digimon with the [NSo] trait from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "",
+  "index": 3191,
+  "norm_id": 0.15955
+}

@@ -1,0 +1,31 @@
+{
+  "index": 470,
+  "norm_id": 0.0235,
+  "card_id": "BT4-115",
+  "card_index": 115,
+  "card_name_eng": "Lucemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_115",
+  "play_cost": 13,
+  "dp": 10000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Angel"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "When you would play this card from your hand, if you have 10 or more cards in your trash, reduce the play cost by 8.\r\n[On Play] ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)\r\n[All Turns] This Digimon can only digivolve into Digimon cards with [Lucemon] in their name.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -81,10 +81,7 @@ fn make_named_tamer(id: &str, name: &str) -> CardData {
 }
 
 fn zone_ids(cards: &[digimon_engine::card_source::CardSource], data: &[CardData]) -> Vec<String> {
-    cards
-        .iter()
-        .map(|c| c.card_id(data).to_string())
-        .collect()
+    cards.iter().map(|c| c.card_id(data).to_string()).collect()
 }
 
 fn deck_ids(runner: &DebugRunner) -> Vec<String> {
@@ -106,8 +103,7 @@ fn revealed_action_for_id(runner: &DebugRunner, id: &str) -> Option<u16> {
         .iter()
         .enumerate()
         .find_map(|(idx, card)| {
-            (card.card_id(&runner.game.card_data) == id)
-                .then_some(SEL_REVEAL_START + idx as u16)
+            (card.card_id(&runner.game.card_data) == id).then_some(SEL_REVEAL_START + idx as u16)
         })
 }
 
@@ -185,9 +181,7 @@ fn bt12_047_has_one_on_play_triggered_and_one_inherited_dna_registration() {
         .filter(|c| {
             matches!(
                 c,
-                CompiledClause::Declarative(CompiledDeclarativeClause::AltPathRegistration {
-                    ..
-                })
+                CompiledClause::Declarative(CompiledDeclarativeClause::AltPathRegistration { .. })
             )
         })
         .count();
@@ -493,8 +487,7 @@ fn bt12_047_no_duplicate_cards_across_buckets() {
     // Single-card deck: one Imperialdramon Digimon with Free trait. Reveals
     // exactly 1 card (deck size = 1). Digimon bucket takes it; Tamer bucket
     // has no candidates. Net result: Imperialdramon in hand, deck empty.
-    let imperialdramon_free =
-        make_named_digimon_with_trait("IMP-FREE", "Imperialdramon", "Free");
+    let imperialdramon_free = make_named_digimon_with_trait("IMP-FREE", "Imperialdramon", "Free");
 
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -511,7 +504,9 @@ fn bt12_047_no_duplicate_cards_across_buckets() {
         let imp_action = revealed_action_for_id(&runner, "IMP-FREE");
         if let Some(action) = imp_action {
             if view.valid_action_ids.contains(&action) {
-                runner.execute_action(0, action).expect("pick Imperialdramon");
+                runner
+                    .execute_action(0, action)
+                    .expect("pick Imperialdramon");
                 continue;
             }
         }
@@ -526,5 +521,8 @@ fn bt12_047_no_duplicate_cards_across_buckets() {
     );
     // Exactly one copy — it must not have been added twice.
     let count = hand.iter().filter(|id| id.as_str() == "IMP-FREE").count();
-    assert_eq!(count, 1, "card must appear exactly once in hand; hand={hand:?}");
+    assert_eq!(
+        count, 1,
+        "card must appear exactly once in hand; hand={hand:?}"
+    );
 }

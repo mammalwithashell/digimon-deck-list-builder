@@ -1,0 +1,35 @@
+{
+  "index": 615,
+  "norm_id": 0.03075,
+  "card_id": "BT6-033",
+  "card_index": 33,
+  "card_name_eng": "Pulsemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_033",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] You may trash cards from the top of your security stack until there are 3 left; gain 1 memory for each security card trashed.",
+  "inherited_effect_description_eng": "[Your Turn] While you have 3 security cards, this Digimon gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

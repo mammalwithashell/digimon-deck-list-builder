@@ -1,0 +1,35 @@
+{
+  "index": 1802,
+  "norm_id": 0.0901,
+  "card_id": "BT17-018",
+  "card_index": 18,
+  "card_name_eng": "Gallantmon: Crimson Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_018",
+  "play_cost": 8,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Holy Warrior"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Choose any number of your opponent's Digimon whose total DP adds up to 15000 or less and delete them.\r\n[When Attacking] [Once Per Turn] For every 10 cards in both player's trash, trash 1 card from the top of your opponent's security stack.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-5＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 6,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.6 w/[Gallantmon] in name: Cost 4"
+}

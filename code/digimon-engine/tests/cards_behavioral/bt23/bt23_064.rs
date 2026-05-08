@@ -90,5 +90,9 @@ fn bt23_064_inherited_on_deletion_gains_memory() {
     runner.game.delete_permanent_with_effects(handle);
     runner.auto_resolve();
 
-    assert_eq!(runner.memory(), 1, "inherited OnDeletion should gain 1 memory");
+    assert_eq!(
+        runner.memory(),
+        1,
+        "inherited OnDeletion should gain 1 memory"
+    );
 }

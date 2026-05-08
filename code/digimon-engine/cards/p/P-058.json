@@ -1,0 +1,35 @@
+{
+  "index": 3388,
+  "norm_id": 0.1694,
+  "card_id": "P-058",
+  "card_index": 58,
+  "card_name_eng": "Gammamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_058",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Ceratopsian"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] While you have a red Tamer in play, this Digimon can attack your opponent's unsuspended Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

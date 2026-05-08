@@ -1,0 +1,38 @@
+{
+  "index": 242,
+  "norm_id": 0.0121,
+  "card_id": "BT2-111",
+  "card_index": 111,
+  "card_name_eng": "Beelzemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_111",
+  "play_cost": 12,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon Lord",
+    "Seven Great Demon Lords"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "While you have 10 or more cards in your trash, your [Impmon] can digivolve into this card in your hand for a memory cost of 4, ignoring this card's digivolution requirements.\r\n[When Digivolving] Delete 1 of your opponent's level 4 or lower Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

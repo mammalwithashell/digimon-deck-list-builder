@@ -1,0 +1,35 @@
+{
+  "index": 1845,
+  "norm_id": 0.09225,
+  "card_id": "BT17-061",
+  "card_index": 61,
+  "card_name_eng": "Goblimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_061",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] By deleting 1 of your other Digimon, delete 1 of your opponent's level 4 or lower Digimon.",
+  "inherited_effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

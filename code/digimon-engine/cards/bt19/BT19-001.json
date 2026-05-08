@@ -1,0 +1,29 @@
+{
+  "index": 1989,
+  "norm_id": 0.09945,
+  "card_id": "BT19-001",
+  "card_index": 1,
+  "card_name_eng": "Pickmons",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_001",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Minor"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] By placing 1 Digimon card with the [Xros Heart] or [Blue Flare] trait rom your hand under any of your Tamers, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

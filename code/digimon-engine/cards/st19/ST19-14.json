@@ -1,0 +1,27 @@
+{
+  "index": 3866,
+  "norm_id": 0.1933,
+  "card_id": "ST19-14",
+  "card_index": 14,
+  "card_name_eng": "Arisa Kinosaki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST19_14",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When effects play one of your Tokens or a Digimon with the [Puppet] trait, by suspending this Tamer, 1 of those Digimon gains ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

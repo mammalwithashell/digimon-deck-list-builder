@@ -1,0 +1,25 @@
+{
+  "index": 1023,
+  "norm_id": 0.05115,
+  "card_id": "BT9-105",
+  "card_index": 105,
+  "card_name_eng": "Soul Digitalization",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_105",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Choose 1 Digimon card with the [X Antibody] trait among them, and delete 1 of your opponent's Digimon whose play cost is less than or equal to the chosen card's play cost. Trash the revealed cards. Then, place 1 card with the [X Antibody] trait from your trash under 1 of your Digimon with the [X Antibody] trait as its bottom digivolution card.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

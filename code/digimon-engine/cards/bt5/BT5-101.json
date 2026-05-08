@@ -1,0 +1,25 @@
+{
+  "index": 571,
+  "norm_id": 0.02855,
+  "card_id": "BT5-101",
+  "card_index": 101,
+  "card_name_eng": "You Can't Actually Fly?",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_101",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Suspend 1 of your opponent's Digimon. Then, if your opponent has a level 7 Digimon in play, trash the top card of their security stack.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -326,6 +326,12 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnLoseSecurity)
     }
 
+    /// Builder constructor for an effect that fires on this card when it is
+    /// trashed from the security stack by an effect.
+    pub fn on_discard_security(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnDiscardSecurity)
+    }
+
     /// Builder constructor for a declarative (always-on) effect.
     pub fn declarative(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::Declarative).declarative_flag()
@@ -374,6 +380,17 @@ impl Effect {
     /// Fires when any Digimon enters any player's battle area (global observer).
     pub fn on_enter_field_anyone(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnEnterFieldAnyone)
+    }
+
+    /// Printed "when any Digimon is played" observer alias. Uses the same
+    /// single fan-out path and payload as `OnEnterFieldAnyone`.
+    pub fn on_any_digimon_played(card: CardHandle) -> EffectBuilder {
+        Self::on_enter_field_anyone(card)
+    }
+
+    /// Fires when a permanent is played by the controller of this observer.
+    pub fn on_ally_played(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnAllyPlayed)
     }
 
     /// Fires when any permanent is deleted, for either player's battle area.
@@ -444,6 +461,11 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnOpponentSecurityRemoved)
     }
 
+    /// Fires when one of your security cards is removed from your security stack.
+    pub fn on_own_security_removed(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnOwnSecurityRemoved)
+    }
+
     /// Fires when a card is trashed from a permanent's digivolution stack.
     /// Rocks core archetype observer.
     pub fn on_digivolution_card_trashed(card: CardHandle) -> EffectBuilder {
@@ -453,6 +475,17 @@ impl Effect {
     /// Fires after a persistent Option card is placed in the battle area.
     pub fn on_option_placed(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnOptionPlaced)
+    }
+
+    /// Fires after a card is placed into a player's security stack.
+    pub fn on_place_security(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnPlaceSecurity)
+    }
+
+    /// Printed "added to security" alias. Shares the same single fan-out path
+    /// and payload as `OnPlaceSecurity`.
+    pub fn on_added_to_security(card: CardHandle) -> EffectBuilder {
+        Self::on_place_security(card)
     }
 
     /// Builder constructor for a BeforePayCost effect — fires during cost

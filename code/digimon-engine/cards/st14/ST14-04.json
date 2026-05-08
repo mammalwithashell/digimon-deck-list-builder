@@ -1,0 +1,35 @@
+{
+  "index": 3784,
+  "norm_id": 0.1892,
+  "card_id": "ST14-04",
+  "card_index": 4,
+  "card_name_eng": "Phascomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST14_04",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Dark Animal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[Your Turn] This Digimon can't attack players.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

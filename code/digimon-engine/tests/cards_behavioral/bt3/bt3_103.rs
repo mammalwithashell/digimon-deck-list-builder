@@ -70,9 +70,7 @@
 
 #![allow(dead_code, unused_imports)]
 
-use digimon_dsl::compiled::{
-    CompiledClause, CompiledScope, CompiledStep, CompiledTiming,
-};
+use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -134,7 +132,11 @@ fn bt3_103_compiles_as_option_card() {
         .expect("BT3-103 must be in compiled_cards");
 
     use digimon_dsl::compiled::CompiledCardKind;
-    assert_eq!(card.kind, CompiledCardKind::Option, "must be an Option card");
+    assert_eq!(
+        card.kind,
+        CompiledCardKind::Option,
+        "must be an Option card"
+    );
     assert_eq!(card.cost, Some(4), "play cost must be 4");
 
     // Color is not stored in CompiledCard but we can verify via the raw
@@ -237,10 +239,7 @@ fn bt3_103_security_clause_uses_add_this_option_to_hand() {
         "security clause must have exactly 1 process step"
     );
 
-    let is_add_to_hand = matches!(
-        &clause.process[0],
-        CompiledStep::AddThisOptionToHand
-    );
+    let is_add_to_hand = matches!(&clause.process[0], CompiledStep::AddThisOptionToHand);
     assert!(
         is_add_to_hand,
         "security clause process step must be AddThisOptionToHand, got: {:?}",

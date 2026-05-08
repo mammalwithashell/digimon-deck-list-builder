@@ -1,0 +1,38 @@
+{
+  "index": 2431,
+  "norm_id": 0.12155,
+  "card_id": "BT23-035",
+  "card_index": 35,
+  "card_name_eng": "Dynasmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_035",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    0
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)\r\n[On Play] [When Digivolving] By trashing your top security card, all of your opponent's Digimon get -6000 DP for the turn.\r\n[All Turns] [Once Per Turn] When your security stack is removed from, this Digimon gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.) until your turn ends. Then, if you have 3 or fewer security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Witchelny]/[CS] trait: Cost 3"
+}

@@ -1,0 +1,27 @@
+{
+  "index": 2080,
+  "norm_id": 0.104,
+  "card_id": "BT19-092",
+  "card_index": 92,
+  "card_name_eng": "Wadatsumi Purification",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_092",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Return 1 of your opponent's level 4 or lower Digimon to the bottom of the deck. By returning 1 of your blue Digimon to the bottom of the deck, return 1 of their level 6 or lower Digimon to the bottom of the deck instead.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

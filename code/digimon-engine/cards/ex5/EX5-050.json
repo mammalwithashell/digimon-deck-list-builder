@@ -1,0 +1,30 @@
+{
+  "index": 2948,
+  "norm_id": 0.1474,
+  "card_id": "EX5-050",
+  "card_index": 50,
+  "card_name_eng": "Sinduramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_050",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Holy Bird",
+    "Deva"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Decoy ([Deva] or [Four Sovereigns] trait)＞ (When your other [Deva] or [Four Sovereigns] trait Digimon would be deleted by an opponent's effect, you may delete this Digimon to prevent 1 of those Digimon's deletion.)\r\n[On Play] ＜Draw 1＞ (Draw 1 card from your deck.) Then, you may play 1 [Deva] trait Digimon card without the same name as the cards in your battle area or trash from your hand to an empty space in your breeding area without paying the cost.",
+  "inherited_effect_description_eng": "[Opponent's Turn] While this Digimon has the [Four Sovereigns] or [God Beast] trait, it gains ＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

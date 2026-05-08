@@ -1,0 +1,25 @@
+{
+  "index": 2888,
+  "norm_id": 0.1444,
+  "card_id": "EX4-064",
+  "card_index": 64,
+  "card_name_eng": "Keenan Crier",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_064",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When one of your purple Digimon with [Ravemon] in its name or [Bird] in any of its traits is deleted, by suspending this Tamer, ＜Draw 1＞. If that Digimon was deleted by an effect, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 1157,
+  "norm_id": 0.05785,
+  "card_id": "BT11-015",
+  "card_index": 15,
+  "card_name_eng": "OmniShoutmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_015",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragonkin",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "When you would DigiXros, this card/Digimon is also treated as [Shoutmon].\r\n[When Digivolving] Delete 1 of your opponent's Digimon with 4000 DP or less. If [Shoutmon] is in this Digimon's digivolution cards, delete 2 of your opponent's Digimon with 4000 DP or less instead.\r\n[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has [Shoutmon] in its name it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Shoutmon]: Cost 4"
+}

@@ -1,0 +1,25 @@
+{
+  "index": 351,
+  "norm_id": 0.01755,
+  "card_id": "BT3-108",
+  "card_index": 108,
+  "card_name_eng": "Dark Despair",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_108",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your Digimon gains ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.) until the end of your opponent's next turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

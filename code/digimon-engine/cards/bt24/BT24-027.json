@@ -1,0 +1,39 @@
+{
+  "index": 2525,
+  "norm_id": 0.12625,
+  "card_id": "BT24-027",
+  "card_index": 27,
+  "card_name_eng": "Lanamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_027",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Fairy",
+    "Titan",
+    "TS"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "＜Decode ([Calmaramon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Calmaramon] from its digivolution cards without paying the cost.)\r\n[On Play] [When Digivolving] By placing 1 level 4 or lower blue [TS] trait Digimon card from your hand as this Digimon's bottom digivolution card, 1 of your blue [TS] trait Digimon can't be deleted in battle until your opponent's turn ends.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If you have 7 or fewer cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] [Calmaramon]: Cost 0 \r\n[Digivolve] Lv.3 w/[TS] trait: Cost 2"
+}

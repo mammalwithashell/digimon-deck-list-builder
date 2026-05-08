@@ -1,0 +1,36 @@
+{
+  "index": 3544,
+  "norm_id": 0.1772,
+  "card_id": "P-214",
+  "card_index": 214,
+  "card_name_eng": "Betamon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_214",
+  "play_cost": 4,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Aquatic",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Decode ([Betamon])/([ModokiBetamon])＞ (When this Digimon would leave the battle area other than in battle, you may play 1 [Betamon] or [ModokiBetamon] from its digivolution cards without paying the cost.)\r\n[On Play] [When Digivolving] By placing this Digimon as the bottom digivolution card of any of your other Digimon with [Seadramon] in its text, return 1 of your opponent's Digimon with as high or lower a level as 1 of your Digimon with [Seadramon] in its text to the bottom of the deck.",
+  "inherited_effect_description_eng": "[All Turns] When this Digimon with [Seadramon] in its text would leave the battle area by your opponent's effects, by trashing 2 same-level cards in its digivolution cards, it doesn't leave.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Betamon]/[ModokiBetamon]: Cost 2"
+}

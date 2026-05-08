@@ -1,0 +1,35 @@
+{
+  "index": 1274,
+  "norm_id": 0.0637,
+  "card_id": "BT12-020",
+  "card_index": 20,
+  "card_name_eng": "Swimmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_020",
+  "play_cost": 3,
+  "dp": 4000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Tropical Fish"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

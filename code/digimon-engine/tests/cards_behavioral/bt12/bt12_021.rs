@@ -94,14 +94,8 @@ fn veemon_runner() -> DebugRunner {
         .dsl_card("BT12-021")
         .expect("BT12-021 in embedded DSL pack")
         .add_card(make_filler("PAD"))
-        .deck(
-            0,
-            &["PAD", "PAD", "PAD", "PAD", "PAD", "PAD", "PAD", "PAD"],
-        )
-        .deck(
-            1,
-            &["PAD", "PAD", "PAD", "PAD", "PAD"],
-        )
+        .deck(0, &["PAD", "PAD", "PAD", "PAD", "PAD", "PAD", "PAD", "PAD"])
+        .deck(1, &["PAD", "PAD", "PAD", "PAD", "PAD"])
         .memory(10)
         .start()
 }
@@ -154,7 +148,9 @@ fn bt12_021_yaml_compiles_and_metadata_matches_printed() {
     assert_eq!(card.cost, Some(3), "Cost 3");
     assert_eq!(card.dp, Some(1000), "DP 1000");
     assert!(
-        card.traits.iter().any(|t| t.eq_ignore_ascii_case("Mini Dragon")),
+        card.traits
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case("Mini Dragon")),
         "BT12-021 must carry Mini Dragon trait; got {:?}",
         card.traits
     );
@@ -286,8 +282,14 @@ fn bt12_021_on_play_both_buckets_hit_hand_gains_two() {
         .iter()
         .map(|c| c.card_id(&runner.game.card_data).to_string())
         .collect();
-    assert!(hand.contains(&"IMP-DIGI".to_string()), "Imperialdramon Digimon must be in hand");
-    assert!(hand.contains(&"DAVIS".to_string()), "Davis Motomiya Tamer must be in hand");
+    assert!(
+        hand.contains(&"IMP-DIGI".to_string()),
+        "Imperialdramon Digimon must be in hand"
+    );
+    assert!(
+        hand.contains(&"DAVIS".to_string()),
+        "Davis Motomiya Tamer must be in hand"
+    );
 
     // FILLER must be at deck bottom (Veemon was removed from hand to play; deck = [FILLER])
     let deck: Vec<_> = runner.game.players[0]
@@ -314,7 +316,10 @@ fn bt12_021_on_play_only_imperialdramon_found_skips_tamer_bucket() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT12-021")
         .expect("BT12-021 loads")
-        .add_card(make_named_digimon("IMP-DIGI", "Imperialdramon Fighter Mode"))
+        .add_card(make_named_digimon(
+            "IMP-DIGI",
+            "Imperialdramon Fighter Mode",
+        ))
         .add_card(make_filler("FILLER1"))
         .add_card(make_filler("FILLER2"))
         .deck(0, &["IMP-DIGI", "FILLER1", "FILLER2"])
@@ -326,7 +331,9 @@ fn bt12_021_on_play_only_imperialdramon_found_skips_tamer_bucket() {
     runner.play(0, 0).expect("play Veemon");
 
     pick_revealed_by_id(&mut runner, "IMP-DIGI", "pick Imperialdramon");
-    runner.auto_resolve().expect("resolve through empty tamer bucket + bottom placement");
+    runner
+        .auto_resolve()
+        .expect("resolve through empty tamer bucket + bottom placement");
 
     let hand_after = runner.hand_size(0);
     // Hand had 1 before (Veemon), played Veemon (-1), then gained IMP-DIGI (+1) → net 0
@@ -457,8 +464,15 @@ fn bt12_021_on_play_free_trait_digimon_satisfies_imperialdramon_bucket() {
     runner.play(0, 0).expect("play Veemon");
 
     // Bucket 1 (Imperialdramon-or-Free) should offer FREE-DIGI
-    assert_mandatory_pick(&runner, "bucket 1 must have a candidate (Free-trait Digimon)");
-    pick_revealed_by_id(&mut runner, "FREE-DIGI", "pick Free-trait Digimon for bucket 1");
+    assert_mandatory_pick(
+        &runner,
+        "bucket 1 must have a candidate (Free-trait Digimon)",
+    );
+    pick_revealed_by_id(
+        &mut runner,
+        "FREE-DIGI",
+        "pick Free-trait Digimon for bucket 1",
+    );
 
     // Bucket 2: Davis Motomiya
     assert_mandatory_pick(&runner, "bucket 2 must have a candidate (Davis Tamer)");

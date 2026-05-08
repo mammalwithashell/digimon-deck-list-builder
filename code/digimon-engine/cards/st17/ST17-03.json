@@ -1,0 +1,35 @@
+{
+  "index": 3827,
+  "norm_id": 0.19135,
+  "card_id": "ST17-03",
+  "card_index": 3,
+  "card_name_eng": "Lopmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST17_03",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Main] [Once Per Turn] 1 of your Digimon gains ＜Alliance＞ for the turn. (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon is suspended, it gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Kokomon]: Cost 0"
+}

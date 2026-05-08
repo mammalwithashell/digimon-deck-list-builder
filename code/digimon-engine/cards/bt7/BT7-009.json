@@ -1,0 +1,35 @@
+{
+  "index": 703,
+  "norm_id": 0.03515,
+  "card_id": "BT7-009",
+  "card_index": 9,
+  "card_name_eng": "Huckmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_009",
+  "play_cost": 4,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Mini Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] Reveal the top 5 cards of your deck. Add all cards with [Sistermon] in their name among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

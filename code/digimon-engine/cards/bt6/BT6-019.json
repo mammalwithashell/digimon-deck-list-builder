@@ -1,0 +1,35 @@
+{
+  "index": 601,
+  "norm_id": 0.03005,
+  "card_id": "BT6-019",
+  "card_index": 19,
+  "card_name_eng": "Gabumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_019",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[All Turns] [Once Per Turn] When you play a Tamer with [Matt Ishida] in its name, gain 1 memory.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon is [Gabumon - Bond of Friendship], you may unsuspend it.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

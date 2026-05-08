@@ -1,0 +1,38 @@
+{
+  "index": 2360,
+  "norm_id": 0.118,
+  "card_id": "BT22-066",
+  "card_index": 66,
+  "card_name_eng": "Raidenmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_066",
+  "play_cost": 7,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5,
+    3
+  ],
+  "type_eng": [
+    "Machine",
+    "DM",
+    "Ver.5"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] You may unsuspend 1 Digimon. Then, you may suspend 1 Digimon.\r\n[All Turns] [Once Per Turn] When any of your [Ver.5] trait Digimon suspend, ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[DM] trait: Cost 3"
+}

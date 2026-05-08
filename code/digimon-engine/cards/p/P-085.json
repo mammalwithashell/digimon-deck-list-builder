@@ -1,0 +1,35 @@
+{
+  "index": 3415,
+  "norm_id": 0.17075,
+  "card_id": "P-085",
+  "card_index": 85,
+  "card_name_eng": "Dracmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_085",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Undead"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] If you have a purple Tamer in play, if its your turn, you may digivolve this Digimon into a Digimon card with the [Undead] or [Dark Animal] trait from your trash by paying its digivolution cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

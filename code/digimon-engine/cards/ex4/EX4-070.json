@@ -1,0 +1,25 @@
+{
+  "index": 2894,
+  "norm_id": 0.1447,
+  "card_id": "EX4-070",
+  "card_index": 70,
+  "card_name_eng": "Tarnished Hero",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_070",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a green Digimon or Tamer, you can ignore this card's color requirements.\r\n[Main] Delete 1 of your opponent's level 3 Digimon. Then place this card in your battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・[Main] Your opponent may trash 1 Option card in their hand. If they do not trash a card, gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

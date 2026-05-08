@@ -1,0 +1,36 @@
+{
+  "index": 1734,
+  "norm_id": 0.0867,
+  "card_id": "BT16-052",
+  "card_index": 52,
+  "card_name_eng": "Hagurumon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_052",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] You may play 1 [KoHagurumon] Token. (Digimon/Black/1000 DP/＜Blocker＞ ＜Decoy (Black)＞ [Your Turn] This Digimon can't attack.)",
+  "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Hagurumon]: Cost 0"
+}

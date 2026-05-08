@@ -1,0 +1,27 @@
+{
+  "index": 2584,
+  "norm_id": 0.1292,
+  "card_id": "BT24-086",
+  "card_index": 86,
+  "card_name_eng": "The Crossroad Witch",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_086",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "SEEKERS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[All Turns] When any of your Digimon are played or digivolve, you may ＜Mind Link＞ to 1 of your Digimon with [X Antibody], [DigiPolice] or [SEEKERS] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)",
+  "inherited_effect_description_eng": "Security Effect [All Turns] This [X Antibody], [DigiPolice] or [SEEKERS] trait Digimon gains ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.) and ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.).\r\n[End of All Turns] You may play 1 [Shuu Yulin] from this Digimon's digivolution cards without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

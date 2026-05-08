@@ -1,0 +1,25 @@
+{
+  "index": 3642,
+  "norm_id": 0.1821,
+  "card_id": "ST3-12",
+  "card_index": 12,
+  "card_name_eng": "T.K. Takaishi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST3_12",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Opponent's Turn] All of your Security Digimon get +2000 DP.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

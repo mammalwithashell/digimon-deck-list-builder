@@ -1,0 +1,38 @@
+{
+  "index": 2203,
+  "norm_id": 0.11015,
+  "card_id": "BT21-011",
+  "card_index": 11,
+  "card_name_eng": "Shoutmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_011",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Mini Dragon",
+    "Xros Heart",
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Xros Heart] or [Hero] trait, reduce the digivolution cost by 1.\r\n[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Rush＞ (This Digimon can attack the turn it comes into play.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Xros Heart]/[Hero] trait: Cost 0"
+}

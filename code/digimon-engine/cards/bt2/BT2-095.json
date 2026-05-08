@@ -1,0 +1,25 @@
+{
+  "index": 226,
+  "norm_id": 0.0113,
+  "card_id": "BT2-095",
+  "card_index": 95,
+  "card_name_eng": "River of Power",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_095",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Return up to 3 of your opponent's level 3 Digimon to their hand.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

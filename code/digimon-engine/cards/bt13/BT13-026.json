@@ -1,0 +1,35 @@
+{
+  "index": 1392,
+  "norm_id": 0.0696,
+  "card_id": "BT13-026",
+  "card_index": 26,
+  "card_name_eng": "TeslaJellymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_026",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mollusk"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Attacking] ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "[When Attacking] Trash the bottom digivolution card of 1 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

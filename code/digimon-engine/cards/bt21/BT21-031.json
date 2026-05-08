@@ -1,0 +1,36 @@
+{
+  "index": 2223,
+  "norm_id": 0.11115,
+  "card_id": "BT21-031",
+  "card_index": 31,
+  "card_name_eng": "Sangomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_031",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mollusk",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Mollusk] or [Aquatic] trait trait, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] Gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

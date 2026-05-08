@@ -1,0 +1,36 @@
+{
+  "index": 1386,
+  "norm_id": 0.0693,
+  "card_id": "BT13-020",
+  "card_index": 20,
+  "card_name_eng": "ShineGreymon: Burst Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_020",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Light Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] You may play 1 [Marcus Damon] from your hand without paying its cost. For the turn, treat the Tamer played with this effect as a 12000 DP Digimon with ＜Rush＞ (This Digimon can attack the turn it comes into play.), and it cannot digivolve.\r\n[Your Turn] [Once Per Turn] When one of your Tamers becomes suspended, Trash 1 card from the top of your opponent's security stack.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 6,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Burst Digivolve] [ShineGreymon]: By returning 1 [Marcus Damon] to hand, cost 0\r\nAt the end of the burst digivolution turn, trash this Digimon's top card."
+}

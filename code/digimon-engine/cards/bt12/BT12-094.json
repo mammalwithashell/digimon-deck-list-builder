@@ -1,0 +1,28 @@
+{
+  "index": 1348,
+  "norm_id": 0.0674,
+  "card_id": "BT12-094",
+  "card_index": 94,
+  "card_name_eng": "Yuu Amano",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_094",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Hunter",
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 Digimon card with ＜Save＞ in its text from your hand under this Tamer, gain 1 memory.\r\n[Your Turn] When one of your Digimon would digivolve into a Digimon card with ＜Save＞ in its text, by suspending this Tamer and placing 1 card from under one of your Tamers as the bottom digivolution card of that Digimon, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

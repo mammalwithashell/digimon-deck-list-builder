@@ -1,0 +1,39 @@
+{
+  "index": 2539,
+  "norm_id": 0.12695,
+  "card_id": "BT24-041",
+  "card_index": 41,
+  "card_name_eng": "Minervamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_041",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Shaman",
+    "Olympos XII",
+    "Iliad",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "When this card would be played, if you have an [Iliad] trait Digimon or Tamer, reduce the play cost by 5.\r\n[On Play] [When Digivolving] [On Deletion] You may play 1 play cost 5 or lower [Iliad] trait card from your hand without paying the cost. Then, to 1 of your opponent's Digimon, ＜De-Digivolve 1＞ (Trash the top card. You can't trash past level 3 cards.) for each of your Digimon.\r\n[Opponent's Turn] All of your [Iliad] trait Digimon gain ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.) and ＜Blocker＞ (This Digimon can block in the blocker timing.).",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Beastkin]/[Dark Dragon]/[TS]: Cost 3"
+}

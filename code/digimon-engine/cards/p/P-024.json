@@ -1,0 +1,25 @@
+{
+  "index": 3354,
+  "norm_id": 0.1677,
+  "card_id": "P-024",
+  "card_index": 24,
+  "card_name_eng": "Tai's Growing Up!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_024",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] If you have [Tai Kamiya] in play, place 1 of your [Agumon] at the bottom of its owner's deck to ＜Draw 3＞ (Draw 3 cards from your deck.) Trash that Digimon's digivolution cards.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

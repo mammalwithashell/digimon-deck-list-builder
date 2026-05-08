@@ -1,0 +1,25 @@
+{
+  "index": 3987,
+  "norm_id": 0.19935,
+  "card_id": "EX10-066",
+  "card_index": 66,
+  "card_name_eng": "Akihiro Kurata",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_066",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[End of Your Turn] If you have 6 or fewer cards in your hand, by placing this Tamer as the bottom digivolution card of any of your Digimon with [Belphemon] in their names, that Digimon may digivolve into a Digimon card with [Belphemon] in its name in the trash without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

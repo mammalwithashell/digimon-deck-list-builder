@@ -1,0 +1,36 @@
+{
+  "index": 1731,
+  "norm_id": 0.08655,
+  "card_id": "BT16-049",
+  "card_index": 49,
+  "card_name_eng": "Armadillomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_049",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When one of your other Digimon is played or digivolves, if it has the [Free] trait or is yellow, gain 1 memory.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Upamon]: Cost 0"
+}

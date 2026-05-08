@@ -1,0 +1,25 @@
+{
+  "index": 789,
+  "norm_id": 0.03945,
+  "card_id": "BT7-095",
+  "card_index": 95,
+  "card_name_eng": "Blue Hawaii Death",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_095",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] For the turn, 1 of your Digimon gets +3000 DP and can also attack your opponent's unsuspended Digimon with no digivolution cards.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

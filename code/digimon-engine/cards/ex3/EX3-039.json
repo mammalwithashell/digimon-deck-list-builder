@@ -1,0 +1,35 @@
+{
+  "index": 2789,
+  "norm_id": 0.13945,
+  "card_id": "EX3-039",
+  "card_index": 39,
+  "card_name_eng": "Coredramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_039",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon has [Dramon] or [Examon] in its name, it gains ＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Dracomon] in name: Cost 2"
+}

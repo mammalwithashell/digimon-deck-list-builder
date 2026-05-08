@@ -1,0 +1,28 @@
+{
+  "index": 3879,
+  "norm_id": 0.19395,
+  "card_id": "ST20-12",
+  "card_index": 12,
+  "card_name_eng": "Sora Takenouchi & Kari Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST20_12",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a Digimon with the [ADVENTURE] trait, gain 1 memory.\r\n[Your Turn] When any Digimon cards with the [ADVENTURE] trait would be played from your hand, by suspending this Tamer, reduce the play cost by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

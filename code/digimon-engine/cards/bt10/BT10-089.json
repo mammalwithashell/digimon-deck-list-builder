@@ -1,0 +1,27 @@
+{
+  "index": 1119,
+  "norm_id": 0.05595,
+  "card_id": "BT10-089",
+  "card_index": 89,
+  "card_name_eng": "Akari Hinomoto",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_089",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Xros Heart"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] You may play 1 [Dorulumon] from your hand or from under one of your Tamers without paying its memory cost.\r\n[Your Turn] When you play a Digimon with the [Xros Heart] trait, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

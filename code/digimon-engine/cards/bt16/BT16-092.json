@@ -1,0 +1,26 @@
+{
+  "index": 1774,
+  "norm_id": 0.0887,
+  "card_id": "BT16-092",
+  "card_index": 92,
+  "card_name_eng": "Invincible Dragon-Insect Fusion",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_092",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    1,
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 [ExVeemon] or [Stingmon] from your hand without paying the cost. Then, 2 of your Digimon may DNA digivolve into a Digimon card in your hand. Until the end of your opponent's turn, the Digimon this effect DNA digivolved can't be deleted in battle and gains ＜Blocker＞ (This Digimon can block in the blocker timing.).",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Veemon] or [Wormmon] from your hand or trash without paying the cost. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

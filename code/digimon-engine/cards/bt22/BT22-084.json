@@ -1,0 +1,28 @@
+{
+  "index": 2378,
+  "norm_id": 0.1189,
+  "card_id": "BT22-084",
+  "card_index": 84,
+  "card_name_eng": "Nokia Shiramine",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_084",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    0,
+    1
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Start of Your Main Phase] [On Play] If you have 1 or fewer Digimon, you may play 1 [Agumon] or [Gabumon] from your hand without paying the cost.\r\n[All Turns] All your Digimon with [Greymon], [Garurumon] or [Omnimon] in their names get +1000 DP.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

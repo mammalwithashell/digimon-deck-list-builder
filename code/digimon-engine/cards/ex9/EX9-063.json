@@ -1,0 +1,37 @@
+{
+  "index": 4067,
+  "norm_id": 0.20335,
+  "card_id": "EX9-063",
+  "card_index": 63,
+  "card_name_eng": "Digitamamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_063",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Perfect",
+    "DM",
+    "Ver.4"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "When any of your [Ver.4] trait Digimon would digivolve into this card, for each of their face-down digivolution cards, reduce the digivolution cost by 1.\r\n＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] By trashing this Digimon's bottom face-down digivolution card, you may play 1 play cost 4 or lower [DM] trait Digimon card from your trash without paying the cost.",
+  "inherited_effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Nanimon]: Cost 3 \r\n[Digivolve] Lv.4 w/[DM] trait: Cost 4"
+}

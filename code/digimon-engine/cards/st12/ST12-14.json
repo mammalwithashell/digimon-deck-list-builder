@@ -1,0 +1,25 @@
+{
+  "index": 3762,
+  "norm_id": 0.1881,
+  "card_id": "ST12-14",
+  "card_index": 14,
+  "card_name_eng": "Aus Generics",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST12_14",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your Digimon gets +2000 DP for the turn. Then, if you have a Digimon with [Huckmon] in its name or [Royal Knight] trait in play, gain 1 memory , and 1 of your Digimon gains ＜Piercing＞ for the turn. (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Gain 1 memory, and add this card to its owner's hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

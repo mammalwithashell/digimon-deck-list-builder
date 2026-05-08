@@ -1,0 +1,35 @@
+{
+  "index": 1608,
+  "norm_id": 0.0804,
+  "card_id": "BT15-028",
+  "card_index": 28,
+  "card_name_eng": "Divermon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_028",
+  "play_cost": 6,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Aquabeast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Trash the bottom 3 digivolution cards of 1 of your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, you may play 1 blue Tamer card from your hand without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

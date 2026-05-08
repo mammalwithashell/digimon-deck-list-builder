@@ -1,0 +1,28 @@
+{
+  "index": 3534,
+  "norm_id": 0.1767,
+  "card_id": "P-204",
+  "card_index": 204,
+  "card_name_eng": "Release of the Sealed Knight!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_204",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "X Antibody",
+    "Chronicle"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] By trashing 1 card with the [X Antibody] or [Chronicle] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place this card in the battle area.\r\n[All Turns] When Digimon attack players, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [Grademon] or Digimon with the [Chronicle] trait may digivolve into [Alphamon] or a level 6 or lower Digimon card with the [Chronicle] trait in the hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

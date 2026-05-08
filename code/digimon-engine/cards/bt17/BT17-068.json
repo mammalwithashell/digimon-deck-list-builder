@@ -1,0 +1,35 @@
+{
+  "index": 1852,
+  "norm_id": 0.0926,
+  "card_id": "BT17-068",
+  "card_index": 68,
+  "card_name_eng": "Mephistomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_068",
+  "play_cost": 8,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Fallen Angel"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "While this card is revealed from your deck, this card is also treated as level 6.\r\nWhen this card would be played from the hand, by returning 1 [Apocalymon] from your trash to the bottom of the deck, reduce the play cost by 3.\r\n[On Deletion] If deleted by an effect, you may play 1 [Gulfmon] or 1 level 6 Digimon with the [Dark Masters] trait from your hand or trash without paying the cost.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] By placing 1 level 5 or lower card with [Dark Masters] in its text from your trash as this Digimon's bottom digivolution card, this Digimon gets +2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

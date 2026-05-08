@@ -1,0 +1,37 @@
+{
+  "index": 1793,
+  "norm_id": 0.08965,
+  "card_id": "BT17-009",
+  "card_index": 9,
+  "card_name_eng": "Flamemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_009",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Hybrid] or [Ten Warriors] trait and 1 Tamer card with an inherited effect among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[On Deletion] You may play 1 Tamer card with inherited effects from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

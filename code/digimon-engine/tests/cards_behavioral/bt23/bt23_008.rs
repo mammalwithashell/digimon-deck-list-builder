@@ -107,9 +107,7 @@ fn bt23_008_compiles_in_embedded_pack() {
 #[test]
 fn bt23_008_card_metadata_matches_print() {
     let runner = greymon_runner();
-    let card = runner
-        .compiled_card("BT23-008")
-        .expect("BT23-008 compiles");
+    let card = runner.compiled_card("BT23-008").expect("BT23-008 compiles");
 
     assert_eq!(card.level, Some(4), "Greymon is Lv.4");
     assert_eq!(card.dp, Some(5000), "Greymon is DP 5000");
@@ -120,9 +118,7 @@ fn bt23_008_card_metadata_matches_print() {
 #[test]
 fn bt23_008_standard_digivolve_alt_path_present() {
     let runner = greymon_runner();
-    let card = runner
-        .compiled_card("BT23-008")
-        .expect("BT23-008 compiles");
+    let card = runner.compiled_card("BT23-008").expect("BT23-008 compiles");
 
     let std_path = card
         .alt_paths
@@ -150,9 +146,7 @@ fn bt23_008_standard_digivolve_alt_path_present() {
 #[test]
 fn bt23_008_alt_digivolve_agumon_or_cs_cost_2_ignores_requirements() {
     let runner = greymon_runner();
-    let card = runner
-        .compiled_card("BT23-008")
-        .expect("BT23-008 compiles");
+    let card = runner.compiled_card("BT23-008").expect("BT23-008 compiles");
 
     let alt = card
         .alt_paths
@@ -162,9 +156,7 @@ fn bt23_008_alt_digivolve_agumon_or_cs_cost_2_ignores_requirements() {
                 && p.cost == Some(CompiledCost::Literal(2))
                 && p.ignore_requirements
         })
-        .expect(
-            "BT23-008 must declare an alt-digivolve path with cost 2 and ignore_requirements",
-        );
+        .expect("BT23-008 must declare an alt-digivolve path with cost 2 and ignore_requirements");
 
     let from = alt
         .from
@@ -220,9 +212,7 @@ fn bt23_008_alt_digivolve_agumon_or_cs_cost_2_ignores_requirements() {
 #[test]
 fn bt23_008_has_face_up_raid_grant_keyword() {
     let runner = greymon_runner();
-    let card = runner
-        .compiled_card("BT23-008")
-        .expect("BT23-008 compiles");
+    let card = runner.compiled_card("BT23-008").expect("BT23-008 compiles");
 
     let face_up_raid = card.effects.iter().any(|c| {
         matches!(
@@ -245,9 +235,7 @@ fn bt23_008_has_face_up_raid_grant_keyword() {
 #[test]
 fn bt23_008_has_inherited_your_turn_dp_aura() {
     let runner = greymon_runner();
-    let card = runner
-        .compiled_card("BT23-008")
-        .expect("BT23-008 compiles");
+    let card = runner.compiled_card("BT23-008").expect("BT23-008 compiles");
 
     let aura = card.effects.iter().find_map(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
@@ -278,9 +266,7 @@ fn bt23_008_has_inherited_your_turn_dp_aura() {
 #[test]
 fn bt23_008_no_main_on_field_triggered_clause() {
     let runner = greymon_runner();
-    let card = runner
-        .compiled_card("BT23-008")
-        .expect("BT23-008 compiles");
+    let card = runner.compiled_card("BT23-008").expect("BT23-008 compiles");
 
     let main_clauses = card
         .effects

@@ -1,0 +1,38 @@
+{
+  "index": 2244,
+  "norm_id": 0.1122,
+  "card_id": "BT21-052",
+  "card_index": 52,
+  "card_name_eng": "Examon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_052",
+  "play_cost": 16,
+  "dp": 16000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3,
+    0
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "X Antibody",
+    "Royal Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)\r\n[When Digivolving] Suspend all of your opponent's Digimon and Tamers. Then, delete 1 of their suspended Digimon or Tamers.\r\n[All Turns] [Once Per Turn] When this Digimon suspends, it unsuspends. Then, if [Examon] or [X Antibody] is in this Digimon's digivolution cards, trash your opponent's top security card.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[Digivolve] [Examon]: Cost 2"
+}

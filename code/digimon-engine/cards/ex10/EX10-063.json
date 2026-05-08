@@ -1,0 +1,27 @@
+{
+  "index": 3984,
+  "norm_id": 0.1992,
+  "card_id": "EX10-063",
+  "card_index": 63,
+  "card_name_eng": "Close",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_063",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Close] from your hand without paying the cost. Then, if you don't have a Digimon, you may play 1 [Sunarizamon] from your trash without paying the cost.\r\n[All Turns] When effects trash any of your [Mineral] or [Rock] trait Digimon's digivolution cards, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

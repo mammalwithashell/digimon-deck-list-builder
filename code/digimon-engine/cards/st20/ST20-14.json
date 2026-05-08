@@ -1,0 +1,27 @@
+{
+  "index": 3881,
+  "norm_id": 0.19405,
+  "card_id": "ST20-14",
+  "card_index": 14,
+  "card_name_eng": "Our Courage United",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST20_14",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have an [ADVENTURE] trait Digimon or Tamer on the field, you can ignore this card's color requirements.\r\n[Main] ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place this card in the battle area.\r\n[All Turns] When any of your level 5 or higher Digimon would leave the battle area, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・You may play 1 level 5 or lower Digimon card with the [ADVENTURE] trait from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

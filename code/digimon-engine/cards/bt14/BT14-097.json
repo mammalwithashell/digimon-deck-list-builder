@@ -1,0 +1,26 @@
+{
+  "index": 1575,
+  "norm_id": 0.07875,
+  "card_id": "BT14-097",
+  "card_index": 97,
+  "card_name_eng": "Suka's Curse",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_097",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your non-white Digimon may digivolve into a Digimon card with [Sukamon] in its name in your hand without paying the cost, ignoring its digivolution requirements.",
+  "inherited_effect_description_eng": "Security Effect [Security] Until the end of your turn, change 1 of your opponent's Digimon into being white and having 3000 DP and an original name of [Sukamon]",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 989,
+  "norm_id": 0.04945,
+  "card_id": "BT9-071",
+  "card_index": 71,
+  "card_name_eng": "Dracmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_071",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Undead"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Among them, add 1 card with [Undead] or [Dark Animal] in any of its traits to the hand and trash 1 such card among them. Place the rest at the bottom of your.",
+  "inherited_effect_description_eng": "[When Attacking] This Digimon may digivolve into a Digimon card with the [Undead] or [Dark Animal] trait from your trash for its digivolution cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

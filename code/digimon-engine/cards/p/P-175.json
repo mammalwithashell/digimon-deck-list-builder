@@ -1,0 +1,25 @@
+{
+  "index": 3505,
+  "norm_id": 0.17525,
+  "card_id": "P-175",
+  "card_index": 175,
+  "card_name_eng": "Hina Kurihara",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_175",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When any of your Digimon with the [Rock Dragon] or [Machine Dragon] trait are played, by suspending this Tamer, 1 of your level 4 or higher Digimon may digivolve into a Digimon card with the [Rock Dragon], [Earth Dragon], [Machine Dragon] or [Sky Dragon] trait in the hand with the digivolution cost reduced by 2.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

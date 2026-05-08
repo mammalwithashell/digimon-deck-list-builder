@@ -1,0 +1,39 @@
+{
+  "index": 1549,
+  "norm_id": 0.07745,
+  "card_id": "BT14-071",
+  "card_index": 71,
+  "card_name_eng": "Loogamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_071",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Dark Animal",
+    "X Antibody",
+    "SoC"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] By placing 1 [Eiji Nagasumi] from your hand or trash as this Digimon's bottom digivolution card, gain 1 memory.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you play a card with the [Dark Animal] or [SoC] trait, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

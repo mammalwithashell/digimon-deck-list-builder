@@ -1,0 +1,35 @@
+{
+  "index": 886,
+  "norm_id": 0.0443,
+  "card_id": "BT8-080",
+  "card_index": 80,
+  "card_name_eng": "Myotismon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_080",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Undead"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] Trash the top 2 cards of your deck. Then, you may play 1 [Yukio Oikawa] from your trash without paying its memory cost.",
+  "inherited_effect_description_eng": "[On Deletion] If this Digimon has [Myotismon] in its name, you may play 1 [Yukio Oikawa] from your hand or trash suspended without paying its memory cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

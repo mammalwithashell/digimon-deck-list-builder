@@ -1,0 +1,31 @@
+{
+  "index": 2197,
+  "norm_id": 0.10985,
+  "card_id": "BT21-005",
+  "card_index": 5,
+  "card_name_eng": "Swipemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_005",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Swipe (App Name)"
+  ],
+  "form_eng": [
+    "Appmon"
+  ],
+  "attribute_eng": [
+    "Social"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When this Digimon gets linked, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

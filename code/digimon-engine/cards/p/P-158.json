@@ -1,0 +1,27 @@
+{
+  "index": 3488,
+  "norm_id": 0.1744,
+  "card_id": "P-158",
+  "card_index": 158,
+  "card_name_eng": "Jeri (Fake)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_158",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [
+    "D-Reaper"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 card with the [D-Reaper] trait among them to the hand. Return the rest to the bottom of the deck.\r\n[Main] By returning this Tamer to the bottom of the deck. You may play 1 Digimon card with the [D-Reaper] trait and play cost of 3 or less from your hand without paying the cost. For each digivolution card under 1 of your [Mother D-Reaper], add 1 to the maximum play cost you may play with this effect.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

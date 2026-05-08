@@ -1,0 +1,37 @@
+{
+  "index": 2235,
+  "norm_id": 0.11175,
+  "card_id": "BT21-043",
+  "card_index": 43,
+  "card_name_eng": "Sociamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_043",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "SNS (App Name)"
+  ],
+  "form_eng": [
+    "Sup."
+  ],
+  "attribute_eng": [
+    "Social"
+  ],
+  "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] 1 of your opponent's Digimon gets -2000 DP until their turn ends.",
+  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

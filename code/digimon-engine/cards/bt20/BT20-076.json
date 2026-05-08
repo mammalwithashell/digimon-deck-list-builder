@@ -1,0 +1,57 @@
+{
+  "index": 2166,
+  "norm_id": 0.1083,
+  "card_id": "BT20-076",
+  "card_index": 76,
+  "card_name_eng": "Imperialdramon: Dragon Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_076",
+  "play_cost": 7,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Ancient Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast DNA Digivolve ([DinoBeemon] + [Paildramon])＞ (1 of your specified Digimon and 1 specified card in hand may DNA digivolve into this card.)\r\n[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with 11000 DP or less. Then, if DNA digivolving, this Digimon may digivolve into [Imperialdramon: Fighter Mode] in the hand or trash without paying the cost.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Purple Lv.5 + Red Lv.5 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 5,
+        "card_colors": [
+          "Purple"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 5,
+        "card_colors": [
+          "Red"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

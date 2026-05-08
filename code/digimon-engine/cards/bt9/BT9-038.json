@@ -1,0 +1,38 @@
+{
+  "index": 956,
+  "norm_id": 0.0478,
+  "card_id": "BT9-038",
+  "card_index": 38,
+  "card_name_eng": "Pegasusmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_038",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    1
+  ],
+  "type_eng": [
+    "Holy Beast"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[When Digivolving] 1 of your opponent's Digimon gains ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Patamon]: Cost 2"
+}

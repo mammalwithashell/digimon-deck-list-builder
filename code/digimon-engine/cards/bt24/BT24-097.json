@@ -1,0 +1,27 @@
+{
+  "index": 2595,
+  "norm_id": 0.12975,
+  "card_id": "BT24-097",
+  "card_index": 97,
+  "card_name_eng": "Soul Fear",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_097",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have an [TS] trait Digimon or Tamer on the field, you can ignore this card's color requirements.\r\n[Security] Activate this card's [Main] effects.\r\n[Main] Delete 1 of your opponent's level 6 or higher Digimon. Then, you may link this card to 1 of your Digimon on the field without paying the cost.",
+  "inherited_effect_description_eng": "Link Requirements [Link] [TS] trait: Cost 3 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

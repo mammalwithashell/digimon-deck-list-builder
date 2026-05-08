@@ -1,0 +1,36 @@
+{
+  "index": 1907,
+  "norm_id": 0.09535,
+  "card_id": "BT18-021",
+  "card_index": 21,
+  "card_name_eng": "Penguinmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_021",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1,
+    0
+  ],
+  "type_eng": [
+    "Avian"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon or any of your Tamers would digivolve into multicolor Blue or Red Digimon cards, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

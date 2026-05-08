@@ -1,0 +1,27 @@
+{
+  "index": 3259,
+  "norm_id": 0.16295,
+  "card_id": "EX11-065",
+  "card_index": 65,
+  "card_name_eng": "Close",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_065",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By trashing 1 [Mineral] or [Rock] trait card from your hand or your Digimon's digivolution cards, gain 1 memory.\r\n[All Turns] When your Digimon are played or digivolve, if any of them have the [Mineral] or [Rock] trait, by suspending this Tamer, you may place 1 [Mineral] or [Rock] trait card from your hand or trash as any of those Digimon's bottom digivolution card.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

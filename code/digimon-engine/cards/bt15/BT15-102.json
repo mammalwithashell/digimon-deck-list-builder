@@ -1,0 +1,35 @@
+{
+  "index": 1682,
+  "norm_id": 0.0841,
+  "card_id": "BT15-102",
+  "card_index": 102,
+  "card_name_eng": "Apocalymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_102",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 4,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Unidentified"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "When this card would be played, by placing up to 3 [Dark Masters] trait cards with different names from your battle area or trash under it, reduce the play cost by 4 for each one.\r\n[End of Your Turn] [Once Per Turn] By placing 1 level 6 or lower card from your trash as this Digimon's bottom digivolution card, activate 1 [On Play] effect on that card as an effect of this Digimon. Then, trash the top 2 cards of your opponent's deck for each of this Digimon's level 6 digivolution cards.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": ""
+}

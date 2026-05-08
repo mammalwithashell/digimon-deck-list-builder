@@ -1,0 +1,30 @@
+{
+  "index": 2470,
+  "norm_id": 0.1235,
+  "card_id": "BT23-074",
+  "card_index": 74,
+  "card_name_eng": "Eater Legion",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_074",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Hudie",
+    "CS"
+  ],
+  "form_eng": [
+    "Eater"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n[On Play] [When Digivolving] If you have [Mother Eater] in the breeding area, you may play up to 6 play cost's total worth of Digimon cards with the [Eater] trait from your hand without paying the costs.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] [Erika Mishima]: Cost 3"
+}

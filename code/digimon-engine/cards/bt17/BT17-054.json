@@ -1,0 +1,35 @@
+{
+  "index": 1838,
+  "norm_id": 0.0919,
+  "card_id": "BT17-054",
+  "card_index": 54,
+  "card_name_eng": "Trailmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_054",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Tamer card or 1 Digimon card with the [Machine] trait among them to the hand. Trash the rest.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has the [Machine] trait, it gains ＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 761,
+  "norm_id": 0.03805,
+  "card_id": "BT7-067",
+  "card_index": 67,
+  "card_name_eng": "Ghostmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_067",
+  "play_cost": 3,
+  "dp": 5000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Ghost"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

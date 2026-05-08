@@ -1,0 +1,36 @@
+{
+  "index": 2257,
+  "norm_id": 0.11285,
+  "card_id": "BT21-065",
+  "card_index": 65,
+  "card_name_eng": "Ghostmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_065",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Ghost",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a card with the [Ghost] trait, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[On Deletion] Gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

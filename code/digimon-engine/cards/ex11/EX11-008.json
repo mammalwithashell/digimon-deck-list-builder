@@ -1,0 +1,36 @@
+{
+  "index": 3202,
+  "norm_id": 0.1601,
+  "card_id": "EX11-008",
+  "card_index": 8,
+  "card_name_eng": "Elizamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_008",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Reptile",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Moving] [On Play] 1 of your Digimon with the [Reptile] or [Dragonkin] trait gains ＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.) and +3000 DP for the turn.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

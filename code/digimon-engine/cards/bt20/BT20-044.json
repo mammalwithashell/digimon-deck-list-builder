@@ -1,0 +1,36 @@
+{
+  "index": 2134,
+  "norm_id": 0.1067,
+  "card_id": "BT20-044",
+  "card_index": 44,
+  "card_name_eng": "Breakdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_044",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3,
+    0
+  ],
+  "type_eng": [
+    "Machine Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] Suspend 2 of your opponent's Digimon or Tamers. Then, 1 of your Digimon may attack.\r\n[All Turns] [Once Per Turn] When any of your Digimon with [Dracomon] or [Examon] in their texts delete 1 of your opponent's Digimon in battle, delete 1 of their suspended Digimon or Tamers.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When any of your Digimon with [Dracomon] or [Examon] in their texts delete your opponent's Digimon in battle, delete 1 of their suspended Digimon or Tamers.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Groundramon]/[Wingdramon]: Cost 3"
+}

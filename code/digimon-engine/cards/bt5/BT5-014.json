@@ -1,0 +1,37 @@
+{
+  "index": 484,
+  "norm_id": 0.0242,
+  "card_id": "BT5-014",
+  "card_index": 14,
+  "card_name_eng": "OmniShoutmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_014",
+  "play_cost": 8,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragonkin"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "Your [Shoutmon] can digivolve into this card in your hand for a memory cost of 4, ignoring this card's digivolution requirements.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has ＜Blitz＞, it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

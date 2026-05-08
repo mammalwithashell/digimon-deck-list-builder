@@ -1,0 +1,37 @@
+{
+  "index": 3387,
+  "norm_id": 0.16935,
+  "card_id": "P-057",
+  "card_index": 57,
+  "card_name_eng": "Tyrannomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_057",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Dinosaur"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] This Digimon gets +3000 DP.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon is level 6 or higher, it gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

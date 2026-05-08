@@ -1,0 +1,25 @@
+{
+  "index": 1247,
+  "norm_id": 0.06235,
+  "card_id": "BT11-105",
+  "card_index": 105,
+  "card_name_eng": "Fusionize",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_105",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When you would use this card, if you have a [Snatchmon] in play, reduce the cost by 1.\r\n[Main] By placing 1 [Vemmon] or [Destromon] from your trash under 1 of your Digimon as its bottom digivolution card, you may digivolve 1 of your Digimon into 1 [Destromon] or [Galacticmon] from your trash for its digivolution cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may reveal the top 3 cards of your deck. play 1 [Vemmon] among them without paying the cost. Trash the rest.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

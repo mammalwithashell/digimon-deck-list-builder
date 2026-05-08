@@ -1,0 +1,35 @@
+{
+  "index": 2567,
+  "norm_id": 0.12835,
+  "card_id": "BT24-069",
+  "card_index": 69,
+  "card_name_eng": "Vilemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_069",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Evil"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Moving] [When Digivolving] Trash 1 card in your hand. Then, your opponent may trash 1 card in their hand. If your opponent didn't trash with this effect, trash the top 2 cards of your opponent's deck.\r\n[All Turns] While your opponent has 10 or more cards in their trash, this Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and +2000 DP.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Trash the top card of both players' decks.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

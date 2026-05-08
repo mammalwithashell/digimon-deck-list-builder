@@ -1,0 +1,37 @@
+{
+  "index": 391,
+  "norm_id": 0.01955,
+  "card_id": "BT4-036",
+  "card_index": 36,
+  "card_name_eng": "Falcomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_036",
+  "play_cost": 2,
+  "dp": 5000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Avian"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

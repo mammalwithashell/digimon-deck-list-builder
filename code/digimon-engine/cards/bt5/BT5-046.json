@@ -1,0 +1,37 @@
+{
+  "index": 516,
+  "norm_id": 0.0258,
+  "card_id": "BT5-046",
+  "card_index": 46,
+  "card_name_eng": "Terriermon Assistant",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_046",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Main] ＜Digi-Burst 1＞ (You may trash 1 of this Digimon's digivolution cards to activate the effect below.)\r\n・Reveal the top card of your deck. Add it to your hand if it's a green Digimon card. Otherwise, place it at the bottom of your deck.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,29 @@
+{
+  "index": 1586,
+  "norm_id": 0.0793,
+  "card_id": "BT15-006",
+  "card_index": 6,
+  "card_name_eng": "DemiMeramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_006",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Flame"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [On Deletion] By trashing 1 level 5 or higher Digimon card in your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

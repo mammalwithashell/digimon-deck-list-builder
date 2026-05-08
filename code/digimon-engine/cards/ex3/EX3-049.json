@@ -1,0 +1,36 @@
+{
+  "index": 2799,
+  "norm_id": 0.13995,
+  "card_id": "EX3-049",
+  "card_index": 49,
+  "card_name_eng": "Sealsdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_049",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "D-Brigade"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you play another Digimon with the [D-Brigade] trait, they gain ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

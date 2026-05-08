@@ -1,0 +1,28 @@
+{
+  "index": 3249,
+  "norm_id": 0.16245,
+  "card_id": "EX11-055",
+  "card_index": 55,
+  "card_name_eng": "Chitose Horaiji",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_055",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    0,
+    6
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] [Start of Your Main Phase] By trashing 1 [Composite] or [Wicked God] trait card from your hand, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.\r\n[All Turns] When any of your [Composite] or [Wicked God] trait Digimon are deleted, by suspending this Tamer, you may play 1 [Gazimon] or [Gizamon] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

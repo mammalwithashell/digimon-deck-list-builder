@@ -1,0 +1,35 @@
+{
+  "index": 2867,
+  "norm_id": 0.14335,
+  "card_id": "EX4-043",
+  "card_index": 43,
+  "card_name_eng": "Garurumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_043",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] You may digivolve 1 of your other Digimon into a level 6 or lower Digimon card with [Greymon] in its name in your hand for its digivolution cost. When digivolving with this effect, reduce the digivolution cost by 2.",
+  "inherited_effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

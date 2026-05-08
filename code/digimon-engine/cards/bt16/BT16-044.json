@@ -1,0 +1,35 @@
+{
+  "index": 1726,
+  "norm_id": 0.0863,
+  "card_id": "BT16-044",
+  "card_index": 44,
+  "card_name_eng": "Pistmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_044",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] If you have 3 or more security cards, suspend 1 of your opponent's Digimon. It can't unsuspend during your opponent's next unsuspend phase. If you have 3 or fewer security cards, gain 2 memory.",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] If this Digimon has [Pulsemon] in its text, by trashing the top card of your security stack, unsuspend this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Pulsemon] in text: Cost 3"
+}

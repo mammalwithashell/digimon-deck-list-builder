@@ -1,0 +1,26 @@
+{
+  "index": 1873,
+  "norm_id": 0.09365,
+  "card_id": "BT17-089",
+  "card_index": 89,
+  "card_name_eng": "Rhythm",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_089",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    3,
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When an effect suspends one of your Digimon, you may suspend this Tamer.\r\n[Your Turn] When this Tamer becomes suspended, gain 1 memory. Then, if you have [Argomon] or a yellow Digimon with [Agumon] or [Greymon], ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

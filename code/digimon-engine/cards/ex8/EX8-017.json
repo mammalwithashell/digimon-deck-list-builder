@@ -1,0 +1,36 @@
+{
+  "card_id": "EX8-017",
+  "card_index": 17,
+  "card_name_eng": "Crabmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_017",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Crustacean",
+    "DS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] 1 of your Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[DS] trait: Cost 0",
+  "index": 3137,
+  "norm_id": 0.15685
+}

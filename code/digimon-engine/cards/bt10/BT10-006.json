@@ -1,0 +1,27 @@
+{
+  "index": 1036,
+  "norm_id": 0.0518,
+  "card_id": "BT10-006",
+  "card_index": 6,
+  "card_name_eng": "Tokomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_006",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Lesser"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Opponent's Turn] When this card is trashed from digivolution cards by an effect, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

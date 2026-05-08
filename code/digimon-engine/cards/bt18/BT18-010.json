@@ -1,0 +1,35 @@
+{
+  "index": 1896,
+  "norm_id": 0.0948,
+  "card_id": "BT18-010",
+  "card_index": 10,
+  "card_name_eng": "Bokomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_010",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Hybrid] or [Ten Warriors] trait and 1 red Tamer card with inherited effects among them to the hand. Return the rest to the bottom of the deck.\r\n[Your Turn] [Once Per Turn] When any of your Digimon or Tamers digivolve into Digimon with the [Hybrid] or [Ten Warriors] trait, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

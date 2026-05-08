@@ -1,0 +1,25 @@
+{
+  "index": 903,
+  "norm_id": 0.04515,
+  "card_id": "BT8-097",
+  "card_index": 97,
+  "card_name_eng": "Crimson Blaze",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_097",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Reduce the memory cost of this card in your hand by 1 for each Digimon your opponent has in play.\r\n[Main] Your opponent can't play Digimon by effects until the end of their turn. Delete all of your opponent's Digimon with 6000 DP or less.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -17,17 +17,20 @@
 //!
 //! # Legacy reference
 //!
-//! DCGO reference unavailable in this checkout.
+//! DCGO `OnSuspend.cs` models "when this permanent suspends" as a predicate
+//! over the suspended permanent containing the effect's card source. The Rust
+//! DSL equivalent is `event_permanent_is_source: true`.
 //!
 //! # Coverage
 //!
 //! - Metadata and static <Blocker>.
 //! - Faithful [On Play] mandatory opponent Digimon selection filtered by play cost <= 4.
-//! - Omitted self-suspend <De-Digivolve 1> slice is gap-routed because the DSL
-//!   cannot currently prove "event subject is this source permanent".
+//! - Self-scoped [All Turns] OnSuspend <De-Digivolve 1>, gated so ally suspend
+//!   events do not over-fire.
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledPredicate, CompiledScope,
+    CompiledTiming,
 };
 use digimon_engine::action::space::encode_attack;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -82,7 +85,28 @@ fn bt23_077_metadata_blocker_and_supported_clause_shape_match_printed_text() {
             )
         })
         .count();
-    assert_eq!(on_play_count, 1, "only the On Play delete slice is active");
+    assert_eq!(on_play_count, 1, "the On Play delete slice is active");
+
+    let on_suspend = compiled
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(triggered)
+                if triggered.scope == CompiledScope::FaceUp
+                    && triggered.when == vec![CompiledTiming::OnSuspend] =>
+            {
+                Some(triggered)
+            }
+            _ => None,
+        })
+        .expect("printed self-suspend De-Digivolve clause should be authored");
+    assert!(
+        on_suspend
+            .condition
+            .as_ref()
+            .is_some_and(predicate_has_event_permanent_is_source),
+        "BT23-077 OnSuspend must be gated to the suspending event permanent being this source"
+    );
 
     assert!(
         !compiled.effects.iter().any(|clause| matches!(
@@ -91,14 +115,6 @@ fn bt23_077_metadata_blocker_and_supported_clause_shape_match_printed_text() {
                 if triggered.scope == CompiledScope::Inherited
         )),
         "do not turn the duplicated ingestion text into inherited effects"
-    );
-    assert!(
-        !compiled.effects.iter().any(|clause| matches!(
-            clause,
-            CompiledClause::Triggered(triggered)
-                if triggered.when.contains(&CompiledTiming::OnSuspend)
-        )),
-        "omit the self-suspend De-Digivolve slice until self-scoped event predicates are expressible"
     );
 }
 
@@ -194,7 +210,6 @@ fn bt23_077_on_play_with_only_cost_5_opponent_digimon_installs_no_prompt() {
 }
 
 #[test]
-#[ignore = "BLOCKED: PUPPETS-G029 — self-scoped on_suspend event predicate; current EventObserved fan-out cannot distinguish this permanent suspending from another permanent suspending"]
 fn bt23_077_self_suspend_de_digivolves_one_opponent_digimon_but_other_suspend_does_not_trigger() {
     let mut runner = sistermon_runner()
         .add_card(make_digimon("ALLY", 3))
@@ -252,4 +267,24 @@ fn stack_size(runner: &DebugRunner, handle: PermanentHandle) -> usize {
     runner.game.players[handle.player as usize].battle_area[handle.index as usize]
         .card_sources
         .len()
+}
+
+fn predicate_has_event_permanent_is_source(predicate: &CompiledPredicate) -> bool {
+    predicate.event_permanent_is_source == Some(true)
+        || predicate
+            .all_of
+            .iter()
+            .any(predicate_has_event_permanent_is_source)
+        || predicate
+            .any_of
+            .iter()
+            .any(predicate_has_event_permanent_is_source)
+        || predicate
+            .none_of
+            .iter()
+            .any(predicate_has_event_permanent_is_source)
+        || predicate
+            .not
+            .as_ref()
+            .is_some_and(|p| predicate_has_event_permanent_is_source(p))
 }

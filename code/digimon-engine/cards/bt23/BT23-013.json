@@ -1,0 +1,37 @@
+{
+  "index": 2409,
+  "norm_id": 0.12045,
+  "card_id": "BT23-013",
+  "card_index": 13,
+  "card_name_eng": "Jesmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_013",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it comes into play.)\r\n＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n[When Digivolving] [When Attacking] You may play 1 [Atho, René & Por] Token (Digimon/White/6000 DP/＜Reboot＞ ＜Blocker＞ ＜Decoy (Red/Black)＞) or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.\r\n[Your Turn] [Once Per Turn] When any of your other Digimon are played, this Digimon may attack.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [SaviorHuckmon]/Lv.5 w/[CS] trait: Cost 3 \r\n[Digivolve] While opponent has a 10000 DP or higher Digimon, [Huckmon]: Cost 5"
+}

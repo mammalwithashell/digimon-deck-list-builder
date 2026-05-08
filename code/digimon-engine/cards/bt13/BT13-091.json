@@ -1,0 +1,36 @@
+{
+  "index": 1457,
+  "norm_id": 0.07285,
+  "card_id": "BT13-091",
+  "card_index": 91,
+  "card_name_eng": "Belphemon: Rage Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_091",
+  "play_cost": 14,
+  "dp": 14000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon Lord",
+    "Seven Great Demon Lords"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] Delete all of your opponent's level 5 or lower Digimon. Then, if you have 6 or less cards in hand, this Digimon gets +3000 DP and ＜Security A. +1＞ for the turn. (This Digimon checks 1 additional security card.)\r\n[End of Attack] [Once Per Turn] By deleting 1 of your other Digimon, unsuspend this Digimon.",
+  "inherited_effect_description_eng": "[End of Opponent's Turn] If this Digimon is [Belphemon: Sleep Mode], trash the top card of this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": ""
+}

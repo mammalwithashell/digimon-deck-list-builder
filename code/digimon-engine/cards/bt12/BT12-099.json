@@ -1,0 +1,25 @@
+{
+  "index": 1353,
+  "norm_id": 0.06765,
+  "card_id": "BT12-099",
+  "card_index": 99,
+  "card_name_eng": "Pyro Dragons",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_099",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon with 6000 DP or less. Then, 1 of your Digimon with the [Hybrid] trait gets +3000 DP for the turn and it may attack a player.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's Digimon with 6000 DP or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

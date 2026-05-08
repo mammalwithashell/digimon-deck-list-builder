@@ -1,0 +1,25 @@
+{
+  "index": 3417,
+  "norm_id": 0.17085,
+  "card_id": "P-087",
+  "card_index": 87,
+  "card_name_eng": "Ritsu Kodo",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_087",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When you would play [Pulsemon], by suspending this Tamer, if you have 3 or more security cards, ＜Draw 1＞. If you have 3 or less security cards, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

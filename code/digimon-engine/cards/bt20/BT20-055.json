@@ -1,0 +1,37 @@
+{
+  "index": 2145,
+  "norm_id": 0.10725,
+  "card_id": "BT20-055",
+  "card_index": 55,
+  "card_name_eng": "Invisimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_055",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    5,
+    1
+  ],
+  "type_eng": [
+    "Cyborg",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] [End of Opponent's Turn] Play this card without paying the cost.\r\n[On Play] [When Digivolving] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. (Trash up to 2 cards from the top. You can't trash past level 3 cards.) and flip your opponent's top face-down security card face up. Then, delete 1 of your opponent's Digimon with 1 or fewer digivolution cards.\r\n[Your Turn] When your Digimon checks a face-up security card, you may place the top card of this Digimon face-up at the bottom of your security stack.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

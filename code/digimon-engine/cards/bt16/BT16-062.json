@@ -1,0 +1,35 @@
+{
+  "index": 1744,
+  "norm_id": 0.0872,
+  "card_id": "BT16-062",
+  "card_index": 62,
+  "card_name_eng": "Zanmetsumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_062",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Beast Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) with as much or less DP as this Digimon. Then, delete 1 Digimon with a play cost of 3 or less.\r\n[All Turns] This Digimon gains all of the effects on cards with [Gammamon] in its name in this Digimon's digivolution cards.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gains all of the effects on cards with [Gammamon] in its name in this Digimon's digivolution cards.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Gammamon] in text: Cost 3"
+}

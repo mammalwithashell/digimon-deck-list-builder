@@ -1,0 +1,25 @@
+{
+  "index": 3986,
+  "norm_id": 0.1993,
+  "card_id": "EX10-065",
+  "card_index": 65,
+  "card_name_eng": "Yukio Oikawa",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_065",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When any of your Digimon with [Myotismon] in their names are played, by deleting this Tamer, 1 of those Digimon gains ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.) Then, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

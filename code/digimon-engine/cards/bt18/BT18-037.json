@@ -1,0 +1,38 @@
+{
+  "index": 1923,
+  "norm_id": 0.09615,
+  "card_id": "BT18-037",
+  "card_index": 37,
+  "card_name_eng": "Lobomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_037",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2,
+    1
+  ],
+  "type_eng": [
+    "Warrior"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[When Digivolving] Search your security stack. You may add 1 card with the [Hybrid] or [Ten Warriors] trait among them to your hand. If you added, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.) Then, shuffle your security stack.",
+  "inherited_effect_description_eng": "[When Attacking] If you have 7 or fewer cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Koji Minamoto]: Cost 2 \r\n[Digivolve] [KendoGarurumon]: Cost 0"
+}

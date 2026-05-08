@@ -1,0 +1,35 @@
+{
+  "index": 1329,
+  "norm_id": 0.06645,
+  "card_id": "BT12-075",
+  "card_index": 75,
+  "card_name_eng": "Psychemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_075",
+  "play_cost": 4,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] You may return 1 Digimon card with ＜Save＞ in its text from under one of your Tamers to your hand.\r\n[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has ＜Save＞ in its text, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/＜Save＞ in text: Cost 0"
+}

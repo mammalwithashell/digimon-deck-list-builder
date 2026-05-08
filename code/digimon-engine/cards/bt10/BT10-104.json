@@ -1,0 +1,28 @@
+{
+  "index": 1134,
+  "norm_id": 0.0567,
+  "card_id": "BT10-104",
+  "card_index": 104,
+  "card_name_eng": "Immortal Ruler",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_104",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5,
+    6
+  ],
+  "type_eng": [
+    "Twilight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have [Nene Amano], you can ignore this card's color requirements.\r\n[Main] Trash 3 cards from the top of your deck. Then, you may play 1 [DarkKnightmon] from your trash for its memory cost. If you play a Digimon card with DigiXros requirements by this effect, you may DigiXros by placing any of the specified Digimon from your trash at the bottom of this card as digivolution cards.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

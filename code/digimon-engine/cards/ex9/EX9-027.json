@@ -1,0 +1,37 @@
+{
+  "index": 4031,
+  "norm_id": 0.20155,
+  "card_id": "EX9-027",
+  "card_index": 27,
+  "card_name_eng": "Kokeshimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_027",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    6
+  ],
+  "type_eng": [
+    "Puppet",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] [On Deletion] By trashing 1 card in your hand, 1 of your opponent's Digimon gets -4000 DP for the turn.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by deleting 1 of your other Digimon, end that attack.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Puppet] trait: Cost 2"
+}

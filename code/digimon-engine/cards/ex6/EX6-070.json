@@ -1,0 +1,25 @@
+{
+  "index": 3042,
+  "norm_id": 0.1521,
+  "card_id": "EX6-070",
+  "card_index": 70,
+  "card_name_eng": "Phantom Pain",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_070",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Until the end of your opponent's turn, 1 of their Digimon gains \"[End of Your Turn] Delete this Digimon.\" Then, place this card in the battle area.\r\n[End of Opponent's Turn] If you have a Digimon with [Lilithmon] in its name, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Delete 1 of your opponent's unsuspended Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's unsuspended Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

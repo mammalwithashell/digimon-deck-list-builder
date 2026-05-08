@@ -1,0 +1,37 @@
+{
+  "index": 702,
+  "norm_id": 0.0351,
+  "card_id": "BT7-008",
+  "card_index": 8,
+  "card_name_eng": "Flamemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_008",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 card with the [Hybrid] trait, or [Susanoomon] or [Takuya Kanbara] among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[On Deletion] You may play 1 [Takuya Kanbara] from your hand without paying its memory cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

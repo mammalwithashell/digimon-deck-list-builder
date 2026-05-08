@@ -1,0 +1,37 @@
+{
+  "index": 2529,
+  "norm_id": 0.12645,
+  "card_id": "BT24-031",
+  "card_index": 31,
+  "card_name_eng": "Elecmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_031",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mammal",
+    "Iliad",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Iliad] trait and 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may add your top security card to the hand. Then, if you have 0 security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[TS] trait: Cost 0"
+}

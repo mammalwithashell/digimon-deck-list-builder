@@ -1,0 +1,29 @@
+{
+  "index": 3934,
+  "norm_id": 0.1967,
+  "card_id": "EX10-013",
+  "card_index": 13,
+  "card_name_eng": "Lucemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_013",
+  "play_cost": 10,
+  "dp": 10000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Angel"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[Breeding] [When Digivolving] This Digimon may move.\r\n[End of Your Turn] By returning 5 cards with [Lucemon] in their texts from your trash to the bottom of the deck, this Digimon may digivolve into [Lucemon: Chaos Mode] in the trash without paying the cost.",
+  "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] [Cupimon]: Cost 5"
+}

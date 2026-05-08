@@ -66,9 +66,7 @@ fn fighter_mode_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
 #[test]
 fn bt16_027_metadata_level_cost_dp_color() {
     let runner = fighter_mode_runner().start();
-    let compiled = runner
-        .compiled_card("BT16-027")
-        .expect("BT16-027 compiles");
+    let compiled = runner.compiled_card("BT16-027").expect("BT16-027 compiles");
 
     assert_eq!(compiled.name, "Imperialdramon: Fighter Mode");
     assert_eq!(compiled.level, Some(6));
@@ -90,13 +88,9 @@ fn bt16_027_metadata_level_cost_dp_color() {
 #[test]
 fn bt16_027_ace_overflow_is_minus_4() {
     let runner = fighter_mode_runner().start();
-    let compiled = runner
-        .compiled_card("BT16-027")
-        .expect("BT16-027 compiles");
+    let compiled = runner.compiled_card("BT16-027").expect("BT16-027 compiles");
 
-    let ace = compiled
-        .ace_overflow
-        .expect("ace_overflow must be present");
+    let ace = compiled.ace_overflow.expect("ace_overflow must be present");
     assert_eq!(ace, -4, "Ace Overflow must be -4 per printed text");
 }
 
@@ -104,9 +98,7 @@ fn bt16_027_ace_overflow_is_minus_4() {
 #[test]
 fn bt16_027_has_standard_lv5_blue_digivolve_path() {
     let runner = fighter_mode_runner().start();
-    let compiled = runner
-        .compiled_card("BT16-027")
-        .expect("BT16-027 compiles");
+    let compiled = runner.compiled_card("BT16-027").expect("BT16-027 compiles");
 
     let has_standard = compiled.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::Digivolve
@@ -126,9 +118,7 @@ fn bt16_027_has_standard_lv5_blue_digivolve_path() {
 #[test]
 fn bt16_027_has_activated_digivolve_from_dragon_mode() {
     let runner = fighter_mode_runner().start();
-    let compiled = runner
-        .compiled_card("BT16-027")
-        .expect("BT16-027 compiles");
+    let compiled = runner.compiled_card("BT16-027").expect("BT16-027 compiles");
 
     let has_activated = compiled.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::ActivatedDigivolve
@@ -145,14 +135,11 @@ fn bt16_027_has_activated_digivolve_from_dragon_mode() {
 #[test]
 fn bt16_027_has_burst_digivolve_alt_path() {
     let runner = fighter_mode_runner().start();
-    let compiled = runner
-        .compiled_card("BT16-027")
-        .expect("BT16-027 compiles");
+    let compiled = runner.compiled_card("BT16-027").expect("BT16-027 compiles");
 
-    let has_burst = compiled
-        .alt_paths
-        .iter()
-        .any(|p| p.kind == CompiledAltPathKind::BurstDigivolve && p.cost == Some(CompiledCost::Literal(0)));
+    let has_burst = compiled.alt_paths.iter().any(|p| {
+        p.kind == CompiledAltPathKind::BurstDigivolve && p.cost == Some(CompiledCost::Literal(0))
+    });
     assert!(
         has_burst,
         "must have BurstDigivolve path with cost 0; alt_paths={:?}",
@@ -164,9 +151,7 @@ fn bt16_027_has_burst_digivolve_alt_path() {
 #[test]
 fn bt16_027_blast_digivolve_keyword_grant_is_declared() {
     let runner = fighter_mode_runner().start();
-    let compiled = runner
-        .compiled_card("BT16-027")
-        .expect("BT16-027 compiles");
+    let compiled = runner.compiled_card("BT16-027").expect("BT16-027 compiles");
 
     let has_blast_keyword = compiled.effects.iter().any(|clause| {
         matches!(
@@ -187,9 +172,7 @@ fn bt16_027_blast_digivolve_keyword_grant_is_declared() {
 #[test]
 fn bt16_027_on_play_clause_is_absent_while_stack_size_predicate_gap_is_open() {
     let runner = fighter_mode_runner().start();
-    let compiled = runner
-        .compiled_card("BT16-027")
-        .expect("BT16-027 compiles");
+    let compiled = runner.compiled_card("BT16-027").expect("BT16-027 compiles");
 
     let on_play_triggered = compiled.effects.iter().any(|clause| match clause {
         CompiledClause::Triggered(t) => {
@@ -211,9 +194,7 @@ fn bt16_027_on_play_clause_is_absent_while_stack_size_predicate_gap_is_open() {
 #[test]
 fn bt16_027_end_of_attack_clause_is_absent_while_digi_stack_name_gap_is_open() {
     let runner = fighter_mode_runner().start();
-    let compiled = runner
-        .compiled_card("BT16-027")
-        .expect("BT16-027 compiles");
+    let compiled = runner.compiled_card("BT16-027").expect("BT16-027 compiles");
 
     let has_end_of_attack = compiled.effects.iter().any(|clause| match clause {
         CompiledClause::Triggered(t) => {

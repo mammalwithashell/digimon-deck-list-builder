@@ -1,0 +1,37 @@
+{
+  "index": 4065,
+  "norm_id": 0.20325,
+  "card_id": "EX9-061",
+  "card_index": 61,
+  "card_name_eng": "Devimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_061",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Fallen Angel",
+    "DM",
+    "Ver.1"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Training＞ (In the main phase, by suspending this Digimon, place your deck's top card face down as this Digimon's bottom digivolution card. This effect can also activate in the breeding area.)\r\n[When Attacking] [Once Per Turn] By placing your deck's top card face down as this Digimon's bottom digivolution card, delete 1 of your opponent's level 3 or lower Digimon. For every 2 of this Digimon's face-down digivolution cards, add 1 to this effect's level maximum.",
+  "inherited_effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[DM] trait: Cost 2"
+}

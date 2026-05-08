@@ -1,0 +1,25 @@
+{
+  "index": 1464,
+  "norm_id": 0.0732,
+  "card_id": "BT13-098",
+  "card_index": 98,
+  "card_name_eng": "Richard Sampson",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_098",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When an effect trashes this card from the security stack, you may play this card without paying the cost.\r\n[Start of Your Main Phase] If there're 6 or fewer total cards in both players' security stacks, gain 1 memory.\r\n[Main] If there're 6 or fewer total cards in both players' security stacks, by suspending this Tamer, 1 of your [Kudamon] may digivolve into [Kentaurosmon] in the hand for the digivolution cost, ignoring its level.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

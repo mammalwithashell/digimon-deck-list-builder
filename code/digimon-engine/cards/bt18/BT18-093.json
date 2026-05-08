@@ -1,0 +1,27 @@
+{
+  "index": 1979,
+  "norm_id": 0.09895,
+  "card_id": "BT18-093",
+  "card_index": 93,
+  "card_name_eng": "Violet Inboots",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_093",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Start of Your Main Phase] By trashing 1 Option card or 1 card with the [Ghost] or [Three Musketeers] trait in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

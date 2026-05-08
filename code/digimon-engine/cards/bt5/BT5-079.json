@@ -1,0 +1,37 @@
+{
+  "index": 549,
+  "norm_id": 0.02745,
+  "card_id": "BT5-079",
+  "card_index": 79,
+  "card_name_eng": "BlackWarGrowlmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_079",
+  "play_cost": 8,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Main] ＜Digi-Burst 3＞ (You may trash 3 of this Digimon's digivolution cards to activate the effect below.)\r\n・ You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may delete 1 of your other Digimon to unsuspend this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

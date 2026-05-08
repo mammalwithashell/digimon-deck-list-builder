@@ -1,0 +1,26 @@
+{
+  "index": 1879,
+  "norm_id": 0.09395,
+  "card_id": "BT17-095",
+  "card_index": 95,
+  "card_name_eng": "Miraculous Mega Knight",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_095",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    0,
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may play 1 [Agumon] or [Gabumon] from your hand or trash without paying the cost. Then, place this card in the battle area.\r\n[All Turns] When one of your level 6 Digimon with [Greymon] or [Garurumon] in its name would leave the battle area outside of a battle, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・That Digimon and a card in the hand may DNA digivolve into a Digimon card with [Omnimon] in its name in the hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 card with [Tai Kamiya] or [Matt Ishida] in its name from your hand or trash without paying the cost. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 178,
+  "norm_id": 0.0089,
+  "card_id": "BT2-047",
+  "card_index": 47,
+  "card_name_eng": "Argomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_047",
+  "play_cost": 8,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Digisorption -3＞ (When one of your Digimon would digivolve into this card from your hand, you may suspend 1 of your Digimon to reduce the memory cost of the digivolution by 3.)",
+  "inherited_effect_description_eng": "[When Attacking] You may play 1 green level 3 Digimon card from your hand suspended without paying its memory cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

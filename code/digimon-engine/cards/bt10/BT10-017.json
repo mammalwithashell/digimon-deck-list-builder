@@ -1,0 +1,35 @@
+{
+  "index": 1047,
+  "norm_id": 0.05235,
+  "card_id": "BT10-017",
+  "card_index": 17,
+  "card_name_eng": "Bulucomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_017",
+  "play_cost": 2,
+  "dp": 5000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mini Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

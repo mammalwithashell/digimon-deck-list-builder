@@ -1,0 +1,35 @@
+{
+  "index": 2755,
+  "norm_id": 0.13775,
+  "card_id": "EX3-005",
+  "card_index": 5,
+  "card_name_eng": "Vorvomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_005",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Rock Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When you play [Hina Kurihara], delete 1 of your opponent's Digimon with 3000 DP or less.",
+  "inherited_effect_description_eng": "[When Attacking] If this Digimon has an [On Play] effect, delete 1 of your opponent's Digimon with 3000 DP or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

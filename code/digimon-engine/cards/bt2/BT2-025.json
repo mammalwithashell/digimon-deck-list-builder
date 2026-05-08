@@ -1,0 +1,37 @@
+{
+  "index": 156,
+  "norm_id": 0.0078,
+  "card_id": "BT2-025",
+  "card_index": 25,
+  "card_name_eng": "Ikkakumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_025",
+  "play_cost": 5,
+  "dp": 3000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Sea Beast"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] Trash the top digivolution card of 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

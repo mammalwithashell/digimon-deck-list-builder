@@ -1,0 +1,29 @@
+{
+  "index": 2715,
+  "norm_id": 0.13575,
+  "card_id": "EX2-039",
+  "card_index": 39,
+  "card_name_eng": "Impmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_039",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Evil"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "When this card is trashed from your deck, if it wasn't trashed by [EX2-039 Impmon]'s effect, you may trash up to 3 cards from the top of your deck.\r\n[On Play] Reveal the top 4 cards of your deck. Add 1 Digimon card with [Beelzemon] in its name and 1 [Ai & Mako] among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[Your Turn] If this Digimon has [Beelzemon] in its name, it gets +3000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 228,
+  "norm_id": 0.0114,
+  "card_id": "BT2-097",
+  "card_index": 97,
+  "card_name_eng": "Lightning Paw",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_097",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 3 of your opponent's level 3 Digimon get -4000 DP for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

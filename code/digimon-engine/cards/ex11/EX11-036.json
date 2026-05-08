@@ -1,0 +1,36 @@
+{
+  "index": 3230,
+  "norm_id": 0.1615,
+  "card_id": "EX11-036",
+  "card_index": 36,
+  "card_name_eng": "Dalphomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_036",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beast",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Vortex＞ (At the end of your turn, this Digimon may attack an opponent's Digimon. With this effect, it can attack the turn it was played.)\r\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] Suspend 2 of your opponent's Digimon or Tamers. Then, 1 of their Digimon or Tamers can't unsuspend until their turn ends.\r\n[End of Your Turn] [Once Per Turn] 1 of your other Digimon may digivolve into a black Digimon card with [Maquinamon] in its text in the hand without paying the cost.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, suspend 1 of your opponent's Digimon. Then, this Digimon may attack.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Maquinamon] in text: Cost 3"
+}

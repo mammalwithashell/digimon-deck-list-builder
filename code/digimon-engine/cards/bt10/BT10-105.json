@@ -1,0 +1,25 @@
+{
+  "index": 1135,
+  "norm_id": 0.05675,
+  "card_id": "BT10-105",
+  "card_index": 105,
+  "card_name_eng": "Defense Plug-In C",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_105",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Tamer, you can ignore this card's color requirements.\r\n[Main] Until the end of your opponent's turn, 1 of your Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.), ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.), and can't be deleted by your opponent's effects.",
+  "inherited_effect_description_eng": "Security Effect [Security] Reveal the top 3 cards of your deck. You may play 1 Digimon card with a play cost of 4 or less among them without paying its memory cost. Place the rest at the bottom of your deck in any order. Then, add this card to its owner's hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

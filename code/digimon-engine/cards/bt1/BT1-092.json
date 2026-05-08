@@ -1,0 +1,25 @@
+{
+  "index": 108,
+  "norm_id": 0.0054,
+  "card_id": "BT1-092",
+  "card_index": 92,
+  "card_name_eng": "Nuclear Laser",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_092",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜Draw 2＞ (Draw 2 cards from your deck.) Then 1 of your Digimon gets +2000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

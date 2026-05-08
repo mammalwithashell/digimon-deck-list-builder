@@ -1,0 +1,25 @@
+{
+  "index": 1872,
+  "norm_id": 0.0936,
+  "card_id": "BT17-088",
+  "card_index": 88,
+  "card_name_eng": "Willis",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_088",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] [Start of Your Main Phase] 1 of your green Digimon gets +2000 DP until the end of your opponent's turn.\r\n[Your Turn] When one of your Digimon with [Terriermon] or [Lopmon] in its name is played, by suspending this Tamer, 1 of your Digimon with [Terriermon] or [Lopmon] in its name may digivolve into a Digimon card in the hand with the digivolution cost reduced by 2.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

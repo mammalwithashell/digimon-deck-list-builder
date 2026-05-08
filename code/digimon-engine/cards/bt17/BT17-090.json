@@ -1,0 +1,27 @@
+{
+  "index": 1874,
+  "norm_id": 0.0937,
+  "card_id": "BT17-090",
+  "card_index": 90,
+  "card_name_eng": "Tomonori Ryusenji",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_090",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Abadin Electronics"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When an effect places a Tamer card in one of your Digimon's digivolution cards, by suspending this Tamer, gain 1 memory.\r\n[End of Opponent's Turn] [Once Per Turn] If this Tamer is suspended, 1 of your Digimon with a Tamer card in its digivolution cards may digivolve into a Digimon card with [Dex] or [DeathX] in its name in the trash without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

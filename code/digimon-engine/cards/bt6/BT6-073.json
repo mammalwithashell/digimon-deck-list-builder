@@ -1,0 +1,35 @@
+{
+  "index": 655,
+  "norm_id": 0.03275,
+  "card_id": "BT6-073",
+  "card_index": 73,
+  "card_name_eng": "Ginkakumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_073",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When you trash a card in your hand using one of your effects, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

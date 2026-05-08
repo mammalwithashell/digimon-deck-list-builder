@@ -1,0 +1,60 @@
+{
+  "index": 3936,
+  "norm_id": 0.1968,
+  "card_id": "EX10-015",
+  "card_index": 15,
+  "card_name_eng": "Psychemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_015",
+  "play_cost": 4,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3,
+    6
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] By trashing 1 card with ＜Save＞ in its text from your hand, ＜Draw 1＞ (Draw 1 card from your deck.) and suspend 1 of your opponent's Digimon.\r\n[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "DigiXros Requirements [DigiXros -2] 1 Digimon card with ＜Save＞ in text\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 1,
+          "is_digimon_only": true,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 2,
+      "max_materials": 1,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "Save",
+      "source_zones": [
+        "hand",
+        "field"
+      ]
+    }
+  ]
+}

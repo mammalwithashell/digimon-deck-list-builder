@@ -1,0 +1,27 @@
+{
+  "index": 1667,
+  "norm_id": 0.08335,
+  "card_id": "BT15-087",
+  "card_index": 87,
+  "card_name_eng": "Shuu Yulin",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_087",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "DigiPolice"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Main] ＜Mind Link＞ to 1 of your Digimon with the [X Antibody] or [DigiPolice] trait. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon has the [X Antibody] or [DigiPolice] trait, it gains ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.) and ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n[End of All Turns] You may play 1 [Shuu Yulin] from this Digimon's digivolution cards without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 129,
+  "norm_id": 0.00645,
+  "card_id": "BT1-113",
+  "card_index": 113,
+  "card_name_eng": "Forbidden Temptation",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_113",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Until the end of your opponent's next turn, 1 of your opponent's Digimon can't attack or block.",
+  "inherited_effect_description_eng": "Security Effect [Security] Your opponent's Digimon don't unsuspend during their next unsuspend phase.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 685,
+  "norm_id": 0.03425,
+  "card_id": "BT6-103",
+  "card_index": 103,
+  "card_name_eng": "Blasted Disaster",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_103",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Suspend all of your opponent's Digimon. Then, gain 1 memory for each of your opponent's suspended Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Suspend 1 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

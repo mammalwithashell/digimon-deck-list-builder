@@ -1,0 +1,35 @@
+{
+  "index": 3067,
+  "norm_id": 0.15335,
+  "card_id": "EX7-021",
+  "card_index": 21,
+  "card_name_eng": "CrysPaledramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_021",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Dragonkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Iceclad＞ (Other than against Security Digimon, compare the number of digivolution cards instead of DP in this Digimon's battles.)\r\n[When Digivolving] Trash any 2 digivolution cards of your opponent's Digimon. Then, if your opponent has no Digimon with digivolution cards, unsuspend this Digimon.",
+  "inherited_effect_description_eng": "[Your Turn] While your opponent has no Digimon with digivolution cards, this Digimon with the [Ice-Snow] trait gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

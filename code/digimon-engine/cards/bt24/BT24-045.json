@@ -1,0 +1,38 @@
+{
+  "index": 2543,
+  "norm_id": 0.12715,
+  "card_id": "BT24-045",
+  "card_index": 45,
+  "card_name_eng": "Ogremon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_045",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3,
+    6
+  ],
+  "type_eng": [
+    "Demon",
+    "Titan",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "When this card is trashed from the hand, if you have 5 or fewer cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[On Play] [When Attacking] [Once Per Turn] By trashing 1 card in your hand, suspend 1 of your opponent's Digimon. It can't unsuspend in their next unsuspend phase.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the digivolution cost reduced by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Demon]/[TS] trait: Cost 2"
+}

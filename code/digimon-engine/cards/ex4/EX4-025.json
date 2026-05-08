@@ -1,0 +1,36 @@
+{
+  "index": 2849,
+  "norm_id": 0.14245,
+  "card_id": "EX4-025",
+  "card_index": 25,
+  "card_name_eng": "Turuiemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_025",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] If you have another suspended Digimon, 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Lopmon]/[Terriermon] in name: Cost 2"
+}

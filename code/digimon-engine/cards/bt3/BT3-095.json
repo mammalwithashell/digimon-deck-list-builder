@@ -1,0 +1,25 @@
+{
+  "index": 338,
+  "norm_id": 0.0169,
+  "card_id": "BT3-095",
+  "card_index": 95,
+  "card_name_eng": "Joe Kido",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_095",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have a Digimon with ＜Blocker＞ in play, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

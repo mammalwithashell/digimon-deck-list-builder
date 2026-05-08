@@ -1,0 +1,37 @@
+{
+  "index": 508,
+  "norm_id": 0.0254,
+  "card_id": "BT5-038",
+  "card_index": 38,
+  "card_name_eng": "Kyubimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_038",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mysterious Beast"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] All of your opponent's Security Digimon get -1000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 2415,
+  "norm_id": 0.12075,
+  "card_id": "BT23-019",
+  "card_index": 19,
+  "card_name_eng": "Gekomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_019",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Amphibian",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Trash any 2 digivolution cards from your opponent's Digimon.",
+  "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[CS] trait: Cost 2"
+}

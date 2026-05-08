@@ -1,0 +1,38 @@
+{
+  "index": 2577,
+  "norm_id": 0.12885,
+  "card_id": "BT24-079",
+  "card_index": 79,
+  "card_name_eng": "Hadesmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_079",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    4
+  ],
+  "type_eng": [
+    "Transmutation (App Name)"
+  ],
+  "form_eng": [
+    "God"
+  ],
+  "attribute_eng": [
+    "God"
+  ],
+  "effect_description_eng": "＜Overclock ([Appmon] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Appmon] trait Digimon, this Digimon attacks a player without suspending.)\r\n＜Link +1＞ (Add 1 to this Digimon's maximum links.)\r\n[When Digivolving] You may play 1 level 4 or lower [System] or [Life] trait Digimon card from your trash without paying the cost. Then, you may link 1 [Appmon] trait Digimon card from your hand or this Digimon's digivolution cards to 1 of your Digimon without paying the cost.\r\n[All Turns] [Once Per Turn] When other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[App Fusion] [Revivemon] & [Biomon]: Cost 0\r\nIf 2 such cards are linked together, stack the link card on top and digivolve."
+}

@@ -1,0 +1,25 @@
+{
+  "index": 2085,
+  "norm_id": 0.10425,
+  "card_id": "BT19-097",
+  "card_index": 97,
+  "card_name_eng": "Bonds of True Love",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_097",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When this card is trashed from the deck, you may place this card in the battle area.\r\n[Main] Trash the top 2 cards of your deck. Then, place this card in the battle area.\r\n[Start of Your Turn] If you don't have a Digimon, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・ You may play 1 [Impmon] from your trash without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

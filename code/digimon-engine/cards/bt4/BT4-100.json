@@ -1,0 +1,25 @@
+{
+  "index": 455,
+  "norm_id": 0.02275,
+  "card_id": "BT4-100",
+  "card_index": 100,
+  "card_name_eng": "Trident Revolver",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_100",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon with 6000 DP or less. Then, you may play 1 Tamer card with a play cost of 4 or less from your hand without paying its memory cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

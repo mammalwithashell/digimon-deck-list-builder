@@ -1,0 +1,25 @@
+{
+  "index": 3836,
+  "norm_id": 0.1918,
+  "card_id": "ST17-12",
+  "card_index": 12,
+  "card_name_eng": "Giant Missile",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST17_12",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Suspend 1 of your opponent's Digimon. Then, return 1 of their suspended Digimon to the bottom of the deck. 1 of their Digimon can't unsuspend until the end of their turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

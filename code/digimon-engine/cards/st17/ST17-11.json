@@ -1,0 +1,25 @@
+{
+  "index": 3835,
+  "norm_id": 0.19175,
+  "card_id": "ST17-11",
+  "card_index": 11,
+  "card_name_eng": "Double Typhoon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST17_11",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Add 1 green Digimon card and 1 such Tamer card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・You may play 1 [Terriermon] or [Lopmon] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Suspend 2 of your opponent's Digimon. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

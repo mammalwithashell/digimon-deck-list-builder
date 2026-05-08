@@ -111,7 +111,9 @@ fn bt13_012_metadata_matches_printed() {
     );
 
     assert!(
-        card.traits.iter().any(|t| t.eq_ignore_ascii_case("Dinosaur")),
+        card.traits
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case("Dinosaur")),
         "GeoGreymon must have the Dinosaur trait; got {:?}",
         card.traits
     );
@@ -127,8 +129,8 @@ fn bt13_012_alt_path_agumon_dinosaur_lv3_cost2() {
         .alt_paths
         .iter()
         .find(|alt| matches!(alt.kind, CompiledAltPathKind::Digivolve));
-    let alt =
-        agumon_alt.expect("BT13-012 must declare a Digivolve alt-path for the Agumon/Dinosaur Lv.3");
+    let alt = agumon_alt
+        .expect("BT13-012 must declare a Digivolve alt-path for the Agumon/Dinosaur Lv.3");
     // Cost of 2 per the printed alt-path text. Lowered cost is encoded as a
     // CompiledCostSpec literal — this is the canonical shape used by
     // BT17-018, BT20-102, etc.
@@ -188,10 +190,7 @@ fn bt13_012_inherited_on_suspend_clause_shape() {
         triggered.optional,
         "card text 'you may delete' makes the prompt optional"
     );
-    assert!(
-        triggered.once_per_turn,
-        "[Once Per Turn] flag must be set"
-    );
+    assert!(triggered.once_per_turn, "[Once Per Turn] flag must be set");
 }
 
 /// Negative structural test: there must NOT be a `WhenDigivolving` clause in
@@ -331,12 +330,10 @@ fn bt13_012_on_own_red_tamer_suspend_installs_delete_prompt() {
     runner.game.suspend(red_tamer);
 
     // Optional delete prompt must install.
-    let pending = runner
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("BT13-012 inherited clause must install a pending selection \
-                 when an own Tamer suspends on the controller's turn");
+    let pending = runner.game.pending_selection.as_ref().expect(
+        "BT13-012 inherited clause must install a pending selection \
+                 when an own Tamer suspends on the controller's turn",
+    );
     assert!(
         pending.is_optional,
         "delete prompt is printed as 'you may delete', so optional"
@@ -594,7 +591,9 @@ fn bt13_012_opt_lockout_blocks_second_activation_in_same_turn() {
         .as_ref()
         .unwrap()
         .selecting_player;
-    runner.execute_action(player, PASS).expect("decline resolves");
+    runner
+        .execute_action(player, PASS)
+        .expect("decline resolves");
 
     // Second suspend same turn → prompt must NOT install (OPT lockout).
     runner.game.suspend(yel);

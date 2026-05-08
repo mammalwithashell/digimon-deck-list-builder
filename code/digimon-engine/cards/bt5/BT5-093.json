@@ -1,0 +1,25 @@
+{
+  "index": 563,
+  "norm_id": 0.02815,
+  "card_id": "BT5-093",
+  "card_index": 93,
+  "card_name_eng": "Tai Kamiya & Matt Ishida",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_093",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If your opponent has a level 6 or higher Digimon in play, gain 2 memory.\r\n[Your Turn] All of your Digimon with [Omnimon] in their name gain ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

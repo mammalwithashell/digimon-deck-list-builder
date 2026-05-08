@@ -1,0 +1,25 @@
+{
+  "index": 1235,
+  "norm_id": 0.06175,
+  "card_id": "BT11-093",
+  "card_index": 93,
+  "card_name_eng": "Yuuya Kuga",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_093",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When one of your Digimon digivolves into a Digimon with [Greymon] in its name, by suspending this Tamer, that Digimon gets +2000 DP until the end of your opponent's turn. If it digivolved into a Digimon with the same level, that Digimon isn't affected by your opponent's Option cards until the end of your opponent's turn.\"",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 576,
+  "norm_id": 0.0288,
+  "card_id": "BT5-106",
+  "card_index": 106,
+  "card_name_eng": "Demonic Disaster",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_106",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] You may delete 1 of your Digimon to unsuspend 1 of your purple Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 4064,
+  "norm_id": 0.2032,
+  "card_id": "EX9-060",
+  "card_index": 60,
+  "card_name_eng": "Devidramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_060",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Evil Dragon",
+    "DM",
+    "Ver.5"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Training＞ (In the main phase, by suspending this Digimon, place your deck's top card face down as this Digimon's bottom digivolution card. This effect can also activate in the breeding area.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] By placing 1 card in your hand face down as this Digimon's bottom digivolution card, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "[On Deletion] Delete 1 of your opponent's level 4 or lower Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[DM] trait: Cost 2"
+}

@@ -1,0 +1,29 @@
+{
+  "index": 472,
+  "norm_id": 0.0236,
+  "card_id": "BT5-002",
+  "card_index": 2,
+  "card_name_eng": "Tsunomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_002",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Lesser"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] While this Digimon has [Omnimon] or [Garurumon] in its name (other than [KendoGarurumon]), this Digimon gets +1000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,39 @@
+{
+  "index": 1557,
+  "norm_id": 0.07785,
+  "card_id": "BT14-079",
+  "card_index": 79,
+  "card_name_eng": "Soloogarmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_079",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Dark Animal",
+    "X Antibody",
+    "SoC"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] You may play 1 level 3 or lower card with the [Dark Animal] or [SoC] trait from your trash without paying its cost. If [Eiji Nagasumi] is in this Digimon's digivolution cards, increase the level by 1.\r\n[When Attacking] By trashing 1 card in your hand, gain 1 memory.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you play a card with the [Dark Animal] or [SoC] trait, you may unsuspend this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

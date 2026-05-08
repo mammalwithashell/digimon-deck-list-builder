@@ -1,0 +1,25 @@
+{
+  "index": 3791,
+  "norm_id": 0.18955,
+  "card_id": "ST14-11",
+  "card_index": 11,
+  "card_name_eng": "Ai & Mako",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST14_11",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 Digimon card with the [Evil], [Wizard] or [Demon Lord] trait among them to your hand. Place the rest at the bottom of your deck in any order.\r\n[Your Turn] When one of your Digimon digivolves into a purple Digimon, by suspending this Tamer, return 1 card from your hand to the top of your deck and gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

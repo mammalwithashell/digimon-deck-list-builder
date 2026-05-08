@@ -1,0 +1,38 @@
+{
+  "index": 4082,
+  "norm_id": 0.2041,
+  "card_id": "AD1-014",
+  "card_index": 14,
+  "card_name_eng": "MetalGarurumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "AD1_014",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    1,
+    6
+  ],
+  "type_eng": [
+    "Cyborg",
+    "ADVENTURE",
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Evade＞ (When this Digimon would be deleted, you may suspend it to prevent that deletion.)\r\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] Delete 1 of your opponent's level 5 or lower Digimon. Then, for every 2 of your Tamers' colors, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.\r\n[All Turns] [Once Per Turn] When any of your Digimon suspend, this Digimon may unsuspend.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has [Garurumon] or [Omnimon] in its name, 1 of your opponent's Digimon or Tamers can't suspend until their turn ends.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Garurumon] in name: Cost 3 \r\n[Digivolve] Lv.5 w/[ADVENTURE]/[Hero] trait: Cost 3"
+}

@@ -1,0 +1,36 @@
+{
+  "index": 967,
+  "norm_id": 0.04835,
+  "card_id": "BT9-049",
+  "card_index": 49,
+  "card_name_eng": "Kuwagamon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_049",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] While this Digimon has the [Insectoid] trait, it gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.).",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] [Kuwagamon]: Cost 0"
+}

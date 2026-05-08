@@ -1,0 +1,37 @@
+{
+  "index": 2212,
+  "norm_id": 0.1106,
+  "card_id": "BT21-020",
+  "card_index": 20,
+  "card_name_eng": "Aldamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_020",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "When any of your Digimon with [Agunimon] or [BurningGreymon] in their digivolution cards would digivolve into this card in the hand, reduce the digivolution cost by 1.\r\n＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n[On Deletion] You may play 1 red Tamer card with inherited effects from your hand or trash without paying the cost.",
+  "inherited_effect_description_eng": "[On Deletion] You may play 1 red Tamer card with inherited effects from your hand or trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "card_id": "EX8-009",
+  "card_index": 9,
+  "card_name_eng": "Guilmon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_009",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    6
+  ],
+  "type_eng": [
+    "Dark Dragon",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1 card with [Growlmon] or [Gallantmon] in its name and 1 [X Antibody] among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your opponent's Digimon is deleted, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Gigimon]/[Guilmon]: Cost 0",
+  "index": 3129,
+  "norm_id": 0.15645
+}

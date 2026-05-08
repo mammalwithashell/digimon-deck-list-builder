@@ -1,0 +1,25 @@
+{
+  "index": 3692,
+  "norm_id": 0.1846,
+  "card_id": "ST6-14",
+  "card_index": 14,
+  "card_name_eng": "Matt Ishida",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST6_14",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When one of your Digimon is deleted, you may suspend this Tamer to gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

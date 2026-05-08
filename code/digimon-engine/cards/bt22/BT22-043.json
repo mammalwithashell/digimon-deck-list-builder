@@ -1,0 +1,37 @@
+{
+  "index": 2337,
+  "norm_id": 0.11685,
+  "card_id": "BT22-043",
+  "card_index": 43,
+  "card_name_eng": "Terriermon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_043",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3,
+    2
+  ],
+  "type_eng": [
+    "Beast",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When effects place Digimon cards with the [CS] trait in this Digimon's digivolution cards, if you have 1 or fewer Tamers, you may play 1 Tamer card with the [CS] trait from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[Main] [Once Per Turn] By placing this [CS] trait Digimon's top stacked card as its bottom digivolution card, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[CS] trait: Cost 0"
+}

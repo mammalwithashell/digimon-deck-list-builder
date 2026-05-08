@@ -1,0 +1,37 @@
+{
+  "index": 3359,
+  "norm_id": 0.16795,
+  "card_id": "P-029",
+  "card_index": 29,
+  "card_name_eng": "Agunimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_029",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[When Attacking] This Digimon can digivolve into an [AncientGreymon] in your hand for a memory cost of 2, ignoring its digivolution requirements. If it does, delete this Digimon at the end of the turn.",
+  "inherited_effect_description_eng": "[Your Turn] When you would digivolve this Digimon into an [AncientGreymon] in your hand, reduce its digivolution cost by 2.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

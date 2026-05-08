@@ -1,0 +1,25 @@
+{
+  "index": 669,
+  "norm_id": 0.03345,
+  "card_id": "BT6-087",
+  "card_index": 87,
+  "card_name_eng": "Tai Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_087",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When one of your Digimon with [Agumon] or [Greymon] in its name (other than [DoruGreymon], [BurningGreymon] or [DexDoruGreymon]) moves from the breeding area to the battle area, gain 1 memory and ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Main] [Once Per Turn] You can digivolve your [Agumon] into 1 [Agumon - Bond of Bravery] in your hand for its digivolution cost, ignoring its level. If you do, trash the top 2 cards of your security stack. Then, if you have 1 or more security cards, delete that Digimon at the end of the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

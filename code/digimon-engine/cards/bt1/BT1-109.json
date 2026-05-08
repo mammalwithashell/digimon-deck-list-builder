@@ -1,0 +1,25 @@
+{
+  "index": 125,
+  "norm_id": 0.00625,
+  "card_id": "BT1-109",
+  "card_index": 109,
+  "card_name_eng": "Smashed Potatoes",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_109",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] For the turn, the next time you would digivolve one of your green Digimon from level 5 to level 6, decrease the digivolution cost by 4.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

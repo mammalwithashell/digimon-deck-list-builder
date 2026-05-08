@@ -1,0 +1,35 @@
+{
+  "index": 2769,
+  "norm_id": 0.13845,
+  "card_id": "EX3-019",
+  "card_index": 19,
+  "card_name_eng": "Paledramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_019",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] Trash any 1 digivolution card under 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "[Opponent's Turn] When an opponent's Digimon with no digivolution cards would digivolve, increase the digivolution cost by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,27 @@
+{
+  "index": 2382,
+  "norm_id": 0.1191,
+  "card_id": "BT22-088",
+  "card_index": 88,
+  "card_name_eng": "Arisa Kinosaki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_088",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] from your hand without paying the cost. Then, if you don't have a Digimon, you may play 1 [Shoemon] from your trash without paying the cost.\r\n[All Turns] When any of your Tokens or [Puppet] trait Digimon are played, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 1343,
+  "norm_id": 0.06715,
+  "card_id": "BT12-089",
+  "card_index": 89,
+  "card_name_eng": "Takato Matsuki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_089",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Main] [Once Per Turn] By placing this Tamer and 1 [Growlmon] and 1 [WarGrowlmon] from your Trash in any order as the bottom digivolution cards of one of your [Guilmon], that Digimon may digivolve into [Gallantmon] in your hand for its digivolution cost, ignoring its level. The Digimon digivolved by this effect gets +2000 DP for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

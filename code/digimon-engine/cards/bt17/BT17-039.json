@@ -1,0 +1,35 @@
+{
+  "index": 1823,
+  "norm_id": 0.09115,
+  "card_id": "BT17-039",
+  "card_index": 39,
+  "card_name_eng": "ShineGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_039",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Light Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] You may play 1 [Marcus Damon] from your hand without paying the cost.\r\n[All Turns] [Once Per Turn] When this Digimon would leave the battle area by an opponent's effect, by returning 1 of your yellow Tamers to the hand, prevent it from leaving.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

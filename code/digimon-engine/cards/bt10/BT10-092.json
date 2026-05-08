@@ -1,0 +1,28 @@
+{
+  "index": 1122,
+  "norm_id": 0.0561,
+  "card_id": "BT10-092",
+  "card_index": 92,
+  "card_name_eng": "Nene Amano",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_092",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "General",
+    "Twilight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 card with [Knightmon] or [DeadlyAxemon] in its name or [Twilight] trait among them to your hand. Place the rest at the bottom of your deck in any order.\r\n[Opponent's Turn] All of your Digimon with [DarkKnightmon] in their names or [Twilight] trait gain ＜Blocker＞ (This Digimon can block in the blocker timing.).\r\n[On Deletion] Gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

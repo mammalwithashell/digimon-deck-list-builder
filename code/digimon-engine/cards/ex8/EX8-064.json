@@ -1,0 +1,75 @@
+{
+  "card_id": "EX8-064",
+  "card_index": 64,
+  "card_name_eng": "Boltboutamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_064",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Wizard",
+    "NSo"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] ＜De-Digivolve 3＞ 1 of your opponent's Digimon and, for the turn, all of their Digimon get -6000 DP. Then, if DNA digivolving, you may play up to 10 play cost's total worth of [NSo] trait Digimon cards from your trash without paying the cost.\r\n[All Turns] [Once Per Turn] When other Digimon are deleted, trash your opponent's top security card.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 6,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Purple/Black Lv.6 + Yellow/Green Lv.6 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended. \r\n[DNA Digivolve] [Piedmon] + [Myotismon] : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "index": 3184,
+  "norm_id": 0.1592,
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 6,
+        "card_colors": [
+          "Purple",
+          "Black"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 6,
+        "card_colors": [
+          "Yellow",
+          "Green"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    },
+    {
+      "requirement1": {
+        "level": 0,
+        "card_colors": [],
+        "name_contains": "Piedmon",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 0,
+        "card_colors": [],
+        "name_contains": "Myotismon",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

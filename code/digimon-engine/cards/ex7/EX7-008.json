@@ -1,0 +1,35 @@
+{
+  "index": 3054,
+  "norm_id": 0.1527,
+  "card_id": "EX7-008",
+  "card_index": 8,
+  "card_name_eng": "ToyAgumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_008",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Three Musketeers] in its text and 1 Option card with a cost of 6 among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Three Musketeers] in text: Cost 0"
+}

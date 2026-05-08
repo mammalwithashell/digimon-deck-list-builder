@@ -1,0 +1,36 @@
+{
+  "index": 2837,
+  "norm_id": 0.14185,
+  "card_id": "EX4-013",
+  "card_index": 13,
+  "card_name_eng": "MedievalGallantmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_013",
+  "play_cost": 13,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0,
+    3
+  ],
+  "type_eng": [
+    "Warrior"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Security] Play this card without battling and without paying the cost. Return this Digimon to your hand at the end of the turn.\r\n[On Play] [When Attacking] Delete 1 of your opponent's Digimon with 6000 DP or less. If no Digimon was deleted by this effect, suspend 1 of your opponent's Digimon, and that Digimon doesn't unsuspend during their next unsuspend phase.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 3490,
+  "norm_id": 0.1745,
+  "card_id": "P-160",
+  "card_index": 160,
+  "card_name_eng": "Tyrannomon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_160",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    0,
+    3
+  ],
+  "type_eng": [
+    "Dinosaur",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n[When Attacking] If a card with [Tyrannomon] in its name or [X Antibody] is in this Digimon's digivolution cards, this Digimon may digivolve into a Digimon card with [Tyrannomon] in its name or [Dinosaur] trait in the hand with the digivolution cost reduced by 1.",
+  "inherited_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Tyrannomon] in name w/o [X Antibody] trait: Cost 0"
+}

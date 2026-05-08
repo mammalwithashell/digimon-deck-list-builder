@@ -1,0 +1,25 @@
+{
+  "index": 2071,
+  "norm_id": 0.10355,
+  "card_id": "BT19-083",
+  "card_index": 83,
+  "card_name_eng": "Rika Nonaka",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_083",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Renamon], [Kyubimon], [Taomon] or [Sakuyamon] in its name and 1 Option card with [Plug-In] in its name among them to the hand. Return the rest to the bottom of the deck.\r\n[Your Turn] When you use an Option card with a cost of 2 or more, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

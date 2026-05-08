@@ -1,0 +1,57 @@
+{
+  "index": 1694,
+  "norm_id": 0.0847,
+  "card_id": "BT16-012",
+  "card_index": 12,
+  "card_name_eng": "Silphymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_012",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Partition (Red Lv.4 & Yellow Lv.4)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)\r\n[When Digivolving] If DNA digivolving, 1 of your opponent's Digimon gets -7000 DP until the end of their turn.\r\n[When Digivolving] [When Attacking] Delete 1 of your opponent's Digimon with 4000 DP or less.",
+  "inherited_effect_description_eng": "＜Partition (Red Lv.4 & Yellow Lv.4)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Red Lv.4 + Yellow Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 4,
+        "card_colors": [
+          "Red"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 4,
+        "card_colors": [
+          "Yellow"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

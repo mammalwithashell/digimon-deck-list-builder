@@ -1,0 +1,37 @@
+{
+  "index": 3935,
+  "norm_id": 0.19675,
+  "card_id": "EX10-014",
+  "card_index": 14,
+  "card_name_eng": "Weatherdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_014",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Weather (App Name)"
+  ],
+  "form_eng": [
+    "Sup."
+  ],
+  "attribute_eng": [
+    "Navi"
+  ],
+  "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[On Play] [When Digivolving] Give 2 of your opponent's Digimon ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) until their turn ends.",
+  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

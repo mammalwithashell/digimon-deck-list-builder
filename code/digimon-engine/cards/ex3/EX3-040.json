@@ -1,0 +1,35 @@
+{
+  "index": 2790,
+  "norm_id": 0.1395,
+  "card_id": "EX3-040",
+  "card_index": 40,
+  "card_name_eng": "Parasaurmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_040",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Dinosaur"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] When you would play a green Digimon card, by suspending this Digimon, reduce the cost by 1.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When an effect suspends one of your Digimon, suspend 1 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

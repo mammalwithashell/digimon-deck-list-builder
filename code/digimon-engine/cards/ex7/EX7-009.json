@@ -1,0 +1,35 @@
+{
+  "index": 3055,
+  "norm_id": 0.15275,
+  "card_id": "EX7-009",
+  "card_index": 9,
+  "card_name_eng": "Lavorvomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_009",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Rock Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Return 1 card with the [Machine Dragon] or [Sky Dragon] trait or 1 [Hina Kurihara] from your trash to your hand.\r\n[When Digivolving] If you have 1 or less Tamers, you may play 1 [Hina Kurihara] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

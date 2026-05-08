@@ -1,0 +1,36 @@
+{
+  "index": 1632,
+  "norm_id": 0.0816,
+  "card_id": "BT15-052",
+  "card_index": 52,
+  "card_name_eng": "Puppetmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_052",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Puppet",
+    "Dark Masters"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Attacking] Return 1 of your opponent's suspended Digimon to the bottom of the deck.\r\n[Your Turn] This Digimon can only digivolve into white Digimon.\r\n[End of Opponent's Turn] Delete this Digimon. Then, you may play 1 Digimon card with the [Dark Masters] trait, other than [Puppetmon], from your hand without paying the cost.",
+  "inherited_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

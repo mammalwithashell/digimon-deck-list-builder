@@ -1,0 +1,36 @@
+{
+  "card_id": "EX8-008",
+  "card_index": 8,
+  "card_name_eng": "Candlemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_008",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Flame",
+    "NSo"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Deletion] Gain 1 memory.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[NSo] trait: Cost 0",
+  "index": 3128,
+  "norm_id": 0.1564
+}

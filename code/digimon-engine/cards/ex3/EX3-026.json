@@ -1,0 +1,35 @@
+{
+  "index": 2776,
+  "norm_id": 0.1388,
+  "card_id": "EX3-026",
+  "card_index": 26,
+  "card_name_eng": "Aegisdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_026",
+  "play_cost": 14,
+  "dp": 14000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] You may play 1 blue level 3 Digimon card or 1 Digimon card with [Seadramon] in its name or [Aqua] or [Sea Animal] in any of its traits from 1 of your blue Digimon's digivolution cards without paying the cost.\r\n[Opponent's Turn] [Once Per Turn] When your opponent plays a Digimon card, you may activate 1 of this Digimon's [When Digivolving] effects.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 6,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

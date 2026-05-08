@@ -1,0 +1,25 @@
+{
+  "index": 2670,
+  "norm_id": 0.1335,
+  "card_id": "EX1-067",
+  "card_index": 67,
+  "card_name_eng": "Baptism by Fire!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX1_067",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Delete 1 of your opponent's Digimon with 6000 DP or less and ＜Blocker＞.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

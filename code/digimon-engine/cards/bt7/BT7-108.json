@@ -1,0 +1,25 @@
+{
+  "index": 802,
+  "norm_id": 0.0401,
+  "card_id": "BT7-108",
+  "card_index": 108,
+  "card_name_eng": "Schwarz Lehrsatz",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_108",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] For each Digimon with the [Hybrid] trait and each Tamer you have in play, delete 1 of your opponents Level 5 or lower Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

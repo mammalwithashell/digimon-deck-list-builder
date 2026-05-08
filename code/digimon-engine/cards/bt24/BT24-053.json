@@ -1,0 +1,37 @@
+{
+  "index": 2551,
+  "norm_id": 0.12755,
+  "card_id": "BT24-053",
+  "card_index": 53,
+  "card_name_eng": "Protecmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_053",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Security (App Name)"
+  ],
+  "form_eng": [
+    "Stnd."
+  ],
+  "attribute_eng": [
+    "System"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+}

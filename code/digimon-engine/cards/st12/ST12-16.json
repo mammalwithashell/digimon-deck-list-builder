@@ -1,0 +1,25 @@
+{
+  "index": 3764,
+  "norm_id": 0.1882,
+  "card_id": "ST12-16",
+  "card_index": 16,
+  "card_name_eng": "Quake! Blast! Fire! Father!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST12_16",
+  "play_cost": 7,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon with [Huckmon] or [Sistermon] in its name or the [Royal Knight] trait, you can ignore this card's color requirements.\r\n[Main] Delete 1 of your opponent's Digimon with a play cost of 13 or less.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

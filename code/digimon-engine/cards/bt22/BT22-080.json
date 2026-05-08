@@ -1,0 +1,29 @@
+{
+  "index": 2374,
+  "norm_id": 0.1187,
+  "card_id": "BT22-080",
+  "card_index": 80,
+  "card_name_eng": "Eater (Human Form)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_080",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [
+    "Eater"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "[When Digivolving] You may place 1 [Eater (Species Form)] from this Digimon's digivolution cards as the bottom digivolution card of your [Mother Eater] in the breeding area.\r\n[Your Turn] [Once Per Turn] When this Digimon checks your opponent's security stack, you may play 1 Tamer card with the [CS] trait from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[Breeding] [Your Turn] [Once Per Turn] When any of your Digimon cards with the [Eater] trait would be played, you may reduce the play costs by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] [Eater (Species Form)]: Cost 2"
+}

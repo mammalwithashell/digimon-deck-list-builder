@@ -194,7 +194,10 @@ fn ex9_019_has_on_play_when_digivolving_mandatory_clause() {
         !clause.optional,
         "CannotSuspend lock is mandatory (no 'may' on outer trigger)"
     );
-    assert!(!clause.once_per_turn, "no [Once Per Turn] on the lock clause");
+    assert!(
+        !clause.once_per_turn,
+        "no [Once Per Turn] on the lock clause"
+    );
 }
 
 #[test]
@@ -461,7 +464,10 @@ fn ex9_019_has_on_digivolve_observer_clause() {
         "must have on_digivolve observer for the Greymon-name digivolve trigger"
     );
     let c = on_digi.unwrap();
-    assert!(c.optional, "digivolve observer is optional ('may digivolve')");
+    assert!(
+        c.optional,
+        "digivolve observer is optional ('may digivolve')"
+    );
 }
 
 // ─── Section 5: Inherited [When Attacking][OPT] <De-Digivolve 1> ────────────

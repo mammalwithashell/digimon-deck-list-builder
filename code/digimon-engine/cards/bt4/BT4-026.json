@@ -1,0 +1,37 @@
+{
+  "index": 381,
+  "norm_id": 0.01905,
+  "card_id": "BT4-026",
+  "card_index": 26,
+  "card_name_eng": "Gaogamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_026",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Main] ＜Digi-Burst 2＞ (You may trash 2 of this Digimon's digivolution cards to activate the effect below.)\r\n・＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

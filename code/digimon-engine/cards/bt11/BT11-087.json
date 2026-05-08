@@ -1,0 +1,36 @@
+{
+  "index": 1229,
+  "norm_id": 0.06145,
+  "card_id": "BT11-087",
+  "card_index": 87,
+  "card_name_eng": "Lilithmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_087",
+  "play_cost": 11,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon Lord",
+    "Bagra Army"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Trash the top 4 cards of your deck. Then, add up to 2 cards with [Bagra Army] in one of their traits from your trash to your hand, and place up to 2 Digimon cards with the [Bagra Army] trait from your trash under 1 of your Tamers.\r\n[Opponent's Turn] When your opponent moves a Digimon from their breeding area, by trashing 1 of this Digimon's digivolution cards, that Digimon gains \"[When Attacking] Lose 3 memory\" for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

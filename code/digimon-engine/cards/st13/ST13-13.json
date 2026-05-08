@@ -1,0 +1,36 @@
+{
+  "index": 3777,
+  "norm_id": 0.18885,
+  "card_id": "ST13-13",
+  "card_index": 13,
+  "card_name_eng": "RaijiLudomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST13_13",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Armor",
+    "Legend-Arms"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Opponent's Turn] This Digimon can't be deleted by your opponent's effects.",
+  "inherited_effect_description_eng": "[End of Your Turn] This Digimon and any of your other Digimon may DNA digivolve into a Digimon card in the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

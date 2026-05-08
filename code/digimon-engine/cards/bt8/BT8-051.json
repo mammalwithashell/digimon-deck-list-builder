@@ -1,0 +1,38 @@
+{
+  "index": 857,
+  "norm_id": 0.04285,
+  "card_id": "BT8-051",
+  "card_index": 51,
+  "card_name_eng": "Digmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_051",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    2
+  ],
+  "type_eng": [
+    "Insectoid"
+  ],
+  "form_eng": [
+    "Armor Form"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[When Attacking] 1 of your opponent's suspended Digimon gets -3000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Armadillomon]: Cost 2"
+}

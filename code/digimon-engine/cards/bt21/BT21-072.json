@@ -1,0 +1,37 @@
+{
+  "index": 2264,
+  "norm_id": 0.1132,
+  "card_id": "BT21-072",
+  "card_index": 72,
+  "card_name_eng": "Arresterdramon: Superior Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_072",
+  "play_cost": 9,
+  "dp": 10000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Dragon",
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n[When Digivolving] This Digimon may attack without suspending.\r\n[All Turns] This Digimon gets +1000 DP for each of its digivolution cards.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/＜Save＞ in text or w/[Hero] trait: Cost 3"
+}

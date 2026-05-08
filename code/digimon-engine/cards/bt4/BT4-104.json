@@ -1,0 +1,25 @@
+{
+  "index": 459,
+  "norm_id": 0.02295,
+  "card_id": "BT4-104",
+  "card_index": 104,
+  "card_name_eng": "Blinding Ray",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_104",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Trash the top card of your security stack. Then, gain 2 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

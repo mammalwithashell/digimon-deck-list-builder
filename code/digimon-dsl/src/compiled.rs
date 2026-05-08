@@ -218,6 +218,9 @@ pub struct CompiledPredicate {
     pub event_target_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
     pub event_card_name_contains: Option<String>,
+    pub event_permanent_is_source: Option<bool>,
+    pub event_is_effect_initiated: Option<bool>,
+    pub event_cause: Option<CompiledEventCause>,
     pub replacement_cause: Option<CompiledReplacementCause>,
     pub replacement_source_is_opponent: Option<bool>,
     pub replacement_subject_is_mine: Option<bool>,
@@ -256,6 +259,21 @@ pub enum CompiledReplacementCause {
     SecurityCheck,
     Cost,
     Overclock,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledEventCause {
+    BattleDeletion,
+    EffectDeletion,
+    OwnEffect,
+    OpponentEffect,
+    Overclock,
+    Return,
+    DeckBottom,
+    SecurityPlacement,
+    SecurityRemoval,
+    Cost,
+    Rule,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -501,6 +519,7 @@ pub enum CompiledTiming {
     OnDeletion,
     OnAnyDeletion,
     OnEnterFieldAnyone,
+    OnAnyDigimonPlayed,
     OnAllyPlayed,
     OnLeaveField,
     OnSuspend,
@@ -511,11 +530,15 @@ pub enum CompiledTiming {
     OnDnaDigivolve,
     OnDigixros,
     OnOpponentSecurityRemoved,
+    OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
     OnSecurityCheck,
     OnLoseSecurity,
+    OnDiscardSecurity,
     OnSecurity,
     OnOptionPlaced,
+    OnPlaceSecurity,
+    OnAddedToSecurity,
     Main,
     StartOfYourTurn,
     StartOfOpponentsTurn,
@@ -820,6 +843,7 @@ pub enum CompiledStep {
         optional: bool,
     },
     SelectOwnSources {
+        target: Option<CompiledBindingRef>,
         min: u8,
         max: u8,
         bind_as: Option<String>,

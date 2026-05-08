@@ -295,12 +295,14 @@ impl<'a> EffectReadContext<'a> {
     pub fn event_permanent(&self) -> Option<PermanentHandle> {
         self.game
             .current_trigger_context
+            .as_ref()
             .and_then(|trigger| trigger.event_permanent)
     }
 
     pub fn event_card(&self) -> Option<CardHandle> {
         self.game
             .current_trigger_context
+            .as_ref()
             .and_then(|trigger| trigger.event_card)
     }
 
@@ -319,20 +321,82 @@ impl<'a> EffectReadContext<'a> {
     pub fn event_source_card(&self) -> Option<CardHandle> {
         self.game
             .current_trigger_context
+            .as_ref()
             .and_then(|trigger| trigger.event_source_card)
     }
 
     pub fn event_host_card(&self) -> Option<CardHandle> {
         self.game
             .current_trigger_context
+            .as_ref()
             .and_then(|trigger| trigger.event_host_card)
     }
 
     pub fn event_host_permanent(&self) -> Option<PermanentHandle> {
-        self.game.current_trigger_context.and_then(|trigger| {
-            let handle = trigger.event_host_permanent?;
-            live_event_permanent(self.game, handle, trigger.event_host_card)
-        })
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| {
+                let handle = trigger.event_host_permanent?;
+                live_event_permanent(self.game, handle, trigger.event_host_card)
+            })
+    }
+
+    pub fn deleted_object_snapshot(
+        &self,
+    ) -> Option<&crate::trigger_context::DeletedObjectSnapshot> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+    }
+
+    pub fn event_affected_player(&self) -> Option<PlayerId> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.affected_player)
+    }
+
+    pub fn event_source_player(&self) -> Option<PlayerId> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.source_player)
+    }
+
+    pub fn event_cause(&self) -> Option<crate::trigger_context::EventCause> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.cause)
+    }
+
+    pub fn event_source_effect(&self) -> Option<crate::trigger_context::EffectAttribution> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.source_effect)
+    }
+
+    pub fn event_selected_results(&self) -> &[crate::trigger_context::ResultBinding] {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.selected_results.as_slice())
+            .unwrap_or(&[])
+    }
+
+    pub fn event_moved_card_sets(&self) -> &[crate::trigger_context::MovedCardSet] {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.moved_card_sets.as_slice())
+            .unwrap_or(&[])
+    }
+
+    pub fn event_dna_origin(&self) -> Option<bool> {
+        event_dna_origin(self.game)
     }
 
     pub fn source_kind(&self) -> EffectSourceKind {
@@ -478,6 +542,22 @@ fn live_event_permanent(
         Some(expected_card) if card != expected_card => None,
         _ => Some(handle),
     }
+}
+
+fn event_dna_origin(game: &Game) -> Option<bool> {
+    let has_trigger_context = game.current_trigger_context.is_some();
+    let has_dna_scope = game.current_dna_origin.is_some();
+    if !has_trigger_context && !has_dna_scope {
+        return None;
+    }
+
+    let trigger_origin = game
+        .current_trigger_context
+        .as_ref()
+        .map(|trigger| trigger.dna_origin)
+        .unwrap_or(false);
+    let scoped_origin = game.current_dna_origin.unwrap_or(false);
+    Some(trigger_origin || scoped_origin)
 }
 
 /// The context passed to every effect's `process` closure.
@@ -901,12 +981,14 @@ impl<'a> EffectContext<'a> {
     pub fn event_permanent(&self) -> Option<PermanentHandle> {
         self.game
             .current_trigger_context
+            .as_ref()
             .and_then(|trigger| trigger.event_permanent)
     }
 
     pub fn event_card(&self) -> Option<CardHandle> {
         self.game
             .current_trigger_context
+            .as_ref()
             .and_then(|trigger| trigger.event_card)
     }
 
@@ -917,20 +999,70 @@ impl<'a> EffectContext<'a> {
     pub fn event_source_card(&self) -> Option<CardHandle> {
         self.game
             .current_trigger_context
+            .as_ref()
             .and_then(|trigger| trigger.event_source_card)
     }
 
     pub fn event_host_card(&self) -> Option<CardHandle> {
         self.game
             .current_trigger_context
+            .as_ref()
             .and_then(|trigger| trigger.event_host_card)
     }
 
     pub fn event_host_permanent(&self) -> Option<PermanentHandle> {
-        self.game.current_trigger_context.and_then(|trigger| {
-            let handle = trigger.event_host_permanent?;
-            live_event_permanent(self.game, handle, trigger.event_host_card)
-        })
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| {
+                let handle = trigger.event_host_permanent?;
+                live_event_permanent(self.game, handle, trigger.event_host_card)
+            })
+    }
+
+    pub fn deleted_object_snapshot(
+        &self,
+    ) -> Option<&crate::trigger_context::DeletedObjectSnapshot> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+    }
+
+    pub fn event_affected_player(&self) -> Option<PlayerId> {
+        self.as_read().event_affected_player()
+    }
+
+    pub fn event_source_player(&self) -> Option<PlayerId> {
+        self.as_read().event_source_player()
+    }
+
+    pub fn event_cause(&self) -> Option<crate::trigger_context::EventCause> {
+        self.as_read().event_cause()
+    }
+
+    pub fn event_source_effect(&self) -> Option<crate::trigger_context::EffectAttribution> {
+        self.as_read().event_source_effect()
+    }
+
+    pub fn event_selected_results(&self) -> &[crate::trigger_context::ResultBinding] {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.selected_results.as_slice())
+            .unwrap_or(&[])
+    }
+
+    pub fn event_moved_card_sets(&self) -> &[crate::trigger_context::MovedCardSet] {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.moved_card_sets.as_slice())
+            .unwrap_or(&[])
+    }
+
+    pub fn event_dna_origin(&self) -> Option<bool> {
+        self.as_read().event_dna_origin()
     }
 
     pub fn source_kind(&self) -> EffectSourceKind {
@@ -1313,7 +1445,7 @@ impl<'a> EffectContext<'a> {
         {
             return;
         }
-        self.game.gain_memory(amount);
+        self.game.gain_memory_for_player(target, amount);
     }
 
     pub fn lose_memory(&mut self, amount: i16) {
@@ -1445,8 +1577,16 @@ impl<'a> EffectContext<'a> {
         destination: crate::selection::SecurityRemovalDestination,
     ) {
         let observer_player = self.game.next_clockwise(defender);
-        self.game
-            .fire_effect_security_removal(defender, observer_player, card, destination);
+        let cause =
+            crate::trigger_context::EventCause::from(self.game.infer_effect_cause(defender));
+        self.game.fire_effect_security_removal(
+            defender,
+            observer_player,
+            self.player,
+            cause,
+            card,
+            destination,
+        );
     }
 
     // ─── Field mutations ──────────────────────────────────────────────
@@ -1564,11 +1704,26 @@ impl<'a> EffectContext<'a> {
             }
 
             let owner = target.player;
-            let p = self.game.player_mut(owner);
-            let stack = &mut p.battle_area[target.index as usize].card_sources;
-            debug_assert!(stack.len() >= 2, "stack_size-guard failed");
-            let popped_card = stack.pop().expect("stack_size-guarded pop");
-            p.trash.push(popped_card);
+            let (popped_card, host_card) = {
+                let p = self.game.player_mut(owner);
+                let stack = &mut p.battle_area[target.index as usize].card_sources;
+                debug_assert!(stack.len() >= 2, "stack_size-guard failed");
+                let popped_card = stack.pop().expect("stack_size-guarded pop");
+                let host_card = stack
+                    .last()
+                    .map(|source| source.handle())
+                    .unwrap_or_else(|| popped_card.handle());
+                (popped_card, host_card)
+            };
+            let source_card = popped_card.handle();
+            self.game.player_mut(owner).trash.push(popped_card);
+            self.game.fire_digivolution_card_trashed(
+                owner,
+                target,
+                host_card,
+                source_card,
+                crate::trigger_context::EventCause::from(self.game.infer_effect_cause(owner)),
+            );
             popped += 1;
         }
 
@@ -1712,6 +1867,14 @@ impl<'a> EffectContext<'a> {
         n: u8,
     ) -> Vec<crate::card_source::CardHandle> {
         self.game.reveal_top_deck(player, n)
+    }
+
+    pub fn reveal_top_digitama(
+        &mut self,
+        player: PlayerId,
+        n: u8,
+    ) -> Vec<crate::card_source::CardHandle> {
+        self.game.reveal_top_digitama(player, n)
     }
 
     /// Snapshot of the current reveal pool. Scripts inspect this to decide
@@ -1947,6 +2110,17 @@ impl<'a> EffectContext<'a> {
         hand_index: usize,
     ) -> Option<PermanentHandle> {
         self.play_from_hand_with_cost(player, hand_index, crate::enums::CostDelta::Free)
+    }
+
+    pub fn play_from_hand_free_with_provenance(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+    ) -> Option<(PermanentHandle, crate::trigger_context::ProvenanceToken)> {
+        let card = self.game.player(player).hand.get(hand_index)?.handle();
+        let token = self.game.provenance_token_for_card(card);
+        let permanent = self.play_from_hand_free(player, hand_index)?;
+        Some((permanent, token))
     }
 
     /// Play the top card of `player`'s security stack **without paying
@@ -2254,6 +2428,14 @@ impl<'a> EffectContext<'a> {
             .place_as_bottom_source_observed(source, target, self.player)
     }
 
+    pub fn place_permanent_as_bottom_sources(
+        &mut self,
+        source: PermanentHandle,
+        target: PermanentHandle,
+    ) -> bool {
+        self.game.place_permanent_as_bottom_sources(source, target)
+    }
+
     /// Move `player`'s real breeding permanent into the battle area by effect.
     pub fn move_from_breeding_by_effect(&mut self, player: PlayerId) -> bool {
         self.game.move_from_breeding_by_effect(player)
@@ -2402,14 +2584,15 @@ impl<'a> EffectContext<'a> {
         // `OnDigivolutionCardTrashed` per source, per player, draining
         // between each so observers see them one at a time.
         for source in tamer_perm.card_sources.drain(..) {
+            let source_card = source.handle();
             self.game.player_mut(controller).trash.push(source);
-            for pid in 0..self.game.players.len() {
-                self.game.enqueue_triggered(
-                    crate::enums::EffectTiming::OnDigivolutionCardTrashed,
-                    crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-                );
-            }
-            self.game.drain_effect_queue();
+            self.game.fire_digivolution_card_trashed(
+                controller,
+                tamer,
+                top.handle(),
+                source_card,
+                crate::trigger_context::EventCause::Return,
+            );
         }
         // Mirror `Game::finalize_permanent_deletion` (combat.rs:2429-2437):
         // route all linked cards to trash, then fire a single
@@ -2500,6 +2683,7 @@ impl<'a> EffectContext<'a> {
             .card_sources
             .pop()
             .expect("len >= 2 invariant asserted above");
+        let top_handle = top.handle();
         // The new top is now `permanent.card_sources.last()` automatically —
         // no extra work needed (previous next-highest is now visible).
         let controller = perm.player;
@@ -2513,15 +2697,19 @@ impl<'a> EffectContext<'a> {
         // `Game::return_to_deck` (game_actions.rs:1345-1357 / 1481-1493) for
         // sources-below-top, and matches DCGO `ArmorPurge.cs:65-78` which
         // re-stacks `EffectTiming.WhenTopCardTrashed` after the trash. We
-        // enqueue once per player so observers on either side of the field
         // pick it up.
-        for pid in 0..self.game.players.len() {
-            self.game.enqueue_triggered(
-                crate::enums::EffectTiming::OnDigivolutionCardTrashed,
-                crate::selection::TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
-            );
-        }
-        self.game.drain_effect_queue();
+        self.game.fire_digivolution_card_trashed(
+            controller,
+            perm,
+            self.game
+                .player(perm.player)
+                .battle_area
+                .get(perm.index as usize)
+                .map(|permanent| permanent.top_card().handle())
+                .unwrap_or(top_handle),
+            top_handle,
+            crate::trigger_context::EventCause::Cost,
+        );
     }
 
     /// `<Training>` (Phase F §F4 / RULES_CONTEXT 16-40 / DCGO `Training.cs:30`)
@@ -2614,16 +2802,13 @@ impl<'a> EffectContext<'a> {
         let source_card = removed.handle();
         let owner = removed.owner;
         self.game.player_mut(owner).trash.push(removed);
-        self.game.enqueue_triggered(
-            crate::enums::EffectTiming::OnDigivolutionCardTrashed,
-            crate::selection::TriggerSource::SourceTrashedFromStack {
-                player: perm.player,
-                host: perm,
-                host_card,
-                card: source_card,
-            },
+        self.game.fire_digivolution_card_trashed(
+            perm.player,
+            perm,
+            host_card,
+            source_card,
+            crate::trigger_context::EventCause::from(self.game.infer_effect_cause(perm.player)),
         );
-        self.game.drain_effect_queue();
     }
 
     /// Trash every digivolution source below `target`'s top card, preserving
@@ -2715,16 +2900,13 @@ impl<'a> EffectContext<'a> {
         // sources-below-top dispatch in `Game::return_to_hand` /
         // `Game::return_to_deck`. Enqueue once per player so observers on
         // either side of the field pick it up.
-        self.game.enqueue_triggered(
-            crate::enums::EffectTiming::OnDigivolutionCardTrashed,
-            crate::selection::TriggerSource::SourceTrashedFromStack {
-                player: target.player,
-                host: target,
-                host_card,
-                card: source_card,
-            },
+        self.game.fire_digivolution_card_trashed(
+            target.player,
+            target,
+            host_card,
+            source_card,
+            crate::trigger_context::EventCause::from(self.game.infer_effect_cause(target.player)),
         );
-        self.game.drain_effect_queue();
         true
     }
 
@@ -2793,6 +2975,23 @@ impl<'a> EffectContext<'a> {
             ignore_color,
             PlaySource::ByEffect,
         )
+    }
+
+    pub fn effect_initiated_digivolve_with_provenance(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+        ignore_color: bool,
+    ) -> Option<(PermanentHandle, crate::trigger_context::ProvenanceToken)> {
+        let card = self.game.player(player).hand.get(hand_index)?.handle();
+        let token = self.game.provenance_token_for_card(card);
+        if self.effect_initiated_digivolve(player, hand_index, target, cost_delta, ignore_color) {
+            Some((target, token))
+        } else {
+            None
+        }
     }
 
     /// Digivolve a card from any supported source zone onto `target` by
@@ -2901,7 +3100,7 @@ impl<'a> EffectContext<'a> {
             self.game.pay_memory_unchecked(effective_cost);
             // Pass cost=0 to the inner so it doesn't double-pay.
             self.game
-                .dna_digivolve_inner(target_a, target_b, hand_owner, hand_index, 0, false)
+                .dna_digivolve_inner(target_a, target_b, hand_owner, hand_index, 0, false, true)
         } else {
             self.game.dna_digivolve_inner(
                 target_a,
@@ -2910,8 +3109,35 @@ impl<'a> EffectContext<'a> {
                 hand_index,
                 effective_cost,
                 false,
+                true,
             )
         }
+    }
+
+    pub fn effect_initiated_dna_digivolve_with_provenance(
+        &mut self,
+        target_a: PermanentHandle,
+        target_b: PermanentHandle,
+        from_hand: CardHandle,
+        cost: i32,
+        ignore_requirements: bool,
+    ) -> Option<(PermanentHandle, crate::trigger_context::ProvenanceToken)> {
+        let token = self.game.provenance_token_for_card(from_hand);
+        let permanent = self.effect_initiated_dna_digivolve(
+            target_a,
+            target_b,
+            from_hand,
+            cost,
+            ignore_requirements,
+        )?;
+        Some((permanent, token))
+    }
+
+    pub fn resolve_provenance_token(
+        &self,
+        token: crate::trigger_context::ProvenanceToken,
+    ) -> Option<crate::trigger_context::EventSubject> {
+        self.game.resolve_provenance_token(token)
     }
 
     // ─── Modifier registration ────────────────────────────────────────
@@ -3297,7 +3523,8 @@ mod tests {
         let db = min_db();
         let deck = vec!["BT1-001".to_string(); 10];
         let mut game = Game::new(&[deck.clone(), deck], &db, Rules::standard(), Some(1)).unwrap();
-        let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, 0);
+        let controller = game.turn_player();
+        let mut ctx = EffectContext::new(&mut game, CardHandle(0), None, controller);
         ctx.set_memory(0);
         ctx.gain_memory(3);
         assert_eq!(ctx.memory(), 3);

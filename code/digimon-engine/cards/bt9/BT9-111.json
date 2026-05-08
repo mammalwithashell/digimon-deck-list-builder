@@ -1,0 +1,37 @@
+{
+  "index": 1029,
+  "norm_id": 0.05145,
+  "card_id": "BT9-111",
+  "card_index": 111,
+  "card_name_eng": "Alphamon: Ouryuken",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_111",
+  "play_cost": 15,
+  "dp": 16000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "NO DATA",
+    "Royal Knight",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] Delete all of your opponent's Digimon with the highest play cost.\r\n[End of Your Turn] [Once Per Turn] You may return up to 7 non-Digi-Egg cards with the [X Antibody] trait from this Digimon's digivolution cards to the bottom of your deck in any order, if you do, gain 1 memory for each card returned.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 6,
+      "memory_cost": 7
+    }
+  ],
+  "xros_req": "[Digivolve] [Alphamon] w/[Ouryumon] digivolution card: Cost 3"
+}

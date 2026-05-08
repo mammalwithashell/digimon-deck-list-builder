@@ -1,0 +1,54 @@
+{
+  "index": 1951,
+  "norm_id": 0.09755,
+  "card_id": "BT18-065",
+  "card_index": 65,
+  "card_name_eng": "Snatchmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_065",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Unknown",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "While you have no Digimon other than [Vemmon], cards from your trash may also be placed for this card's DigiXros.\r\n[When Digivolving] You may place up to 2 [Vemmon] from your trash as this Digimon's bottom digivolution cards.\r\n[End of Your Turn] If this Digimon has 4 or more digivolution cards, this Digimon may digivolve into a Digimon card with [Vemmon] in its text in your hand.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When [Vemmon] returns to the bottom of the deck from this Digimon's digivolution cards, unsuspend this Digimon and it gains ＜Blocker＞ (This Digimon can block in the blocker timing.) until the end of your opponent's turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "DigiXros Requirements [DigiXros -1] 4 [Vemmon]\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "Vemmon",
+          "trait_match": "",
+          "trait_alternatives": [],
+          "level_max": null,
+          "count": 4,
+          "is_digimon_only": false,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 1,
+      "max_materials": 4,
+      "different_card_numbers": false,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "hand",
+        "field"
+      ]
+    }
+  ]
+}

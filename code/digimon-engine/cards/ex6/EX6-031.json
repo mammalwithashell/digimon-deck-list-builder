@@ -1,0 +1,35 @@
+{
+  "index": 3003,
+  "norm_id": 0.15015,
+  "card_id": "EX6-031",
+  "card_index": 31,
+  "card_name_eng": "Shakamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_031",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Tathāgata"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] All Digimon gain ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until the end of your opponent's turn.\r\n[All Turns] When this Digimon would be deleted or returned to the hand or deck, you may play 1 [Sanzomon] and 1 [Gokuumon], [Sagomon] or [Cho-Hakkaimon] from its digivolution cards without paying the cost.\r\n[Your Turn] Change ＜Security A. -＞ to ＜Security A. +＞ on all of your Digimon.\r\n[End of Opponent's Turn] [Once Per Turn] You may place 1 Digimon with ＜Security A.＞ on top of its owner's security stack.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 6,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Sanzomon]/[Gokuumon]/[Sagomon]/[Cho-Hakkaimon]: Cost 6"
+}

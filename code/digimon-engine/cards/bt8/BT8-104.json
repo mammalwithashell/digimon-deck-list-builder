@@ -1,0 +1,25 @@
+{
+  "index": 910,
+  "norm_id": 0.0455,
+  "card_id": "BT8-104",
+  "card_index": 104,
+  "card_name_eng": "Eiseiryūoujin",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_104",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, you may place 1 card with the [X Antibody] trait from your hand as the bottom digivolution card of 1 of your black Digimon with the [X Antibody] trait to delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+  "inherited_effect_description_eng": "Security Effect [Security] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, delete 1 of your opponent's Digimon with a play cost of 4 or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,27 @@
+{
+  "index": 1870,
+  "norm_id": 0.0935,
+  "card_id": "BT17-086",
+  "card_index": 86,
+  "card_name_eng": "Leon Alexander",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_086",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Abadin Electronics"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] If you have a Digimon with [Pulsemon] in its text, gain 1 memory.\r\n[Main] ＜Mind Link＞ to 1 of your Digimon with [Pulsemon] in its text. (Place this Tamer as that Digimon's bottom digivolution card if there are no Tamer cards in its digivolution cards.)",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon has [Pulsemon] in its text, it gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)\r\n[End of All Turns] You may play 1 [Leon Alexander] from this Digimon's digivolution cards without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

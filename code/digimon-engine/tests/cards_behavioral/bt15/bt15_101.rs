@@ -293,7 +293,9 @@ fn bt15_101_when_digivolving_locks_up_to_three_distinct_opponents() {
         runner.pending_selection().is_some(),
         "first lock pick selection must install"
     );
-    runner.auto_resolve().expect("auto-resolve all 3 lock picks");
+    runner
+        .auto_resolve()
+        .expect("auto-resolve all 3 lock picks");
 
     assert!(
         runner.pending_selection().is_none(),

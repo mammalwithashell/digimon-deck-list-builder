@@ -1,0 +1,25 @@
+{
+  "index": 681,
+  "norm_id": 0.03405,
+  "card_id": "BT6-099",
+  "card_index": 99,
+  "card_name_eng": "Acid Injection",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_099",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Trash the top card of your security stack. Then, 1 of your opponent's Digimon gets -5000 DP for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 1516,
+  "norm_id": 0.0758,
+  "card_id": "BT14-038",
+  "card_index": 38,
+  "card_name_eng": "Etemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_038",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] If you have 3 or more cards with [Sukamon] in their names in your trash, you may play 1 level 6 Digimon card with [Etemon] in its name from your hand without paying its cost.\r\n[On Deletion] Place this card at the bottom of your security stack.",
+  "inherited_effect_description_eng": "[On Deletion] Place 1 [Etemon] from your trash at the bottom of your security stack.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Sukamon] in name: Cost 3"
+}

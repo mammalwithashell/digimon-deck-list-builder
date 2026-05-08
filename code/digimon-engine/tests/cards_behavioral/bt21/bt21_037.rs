@@ -337,8 +337,7 @@ fn bt21_037_dp_buff_expires_at_end_of_opponents_turn() {
         .effective_dp(lighdramon)
         .expect("Lighdramon persists after P1 turn ends");
     assert_eq!(
-        after_opp_turn_dp,
-        base_dp,
+        after_opp_turn_dp, base_dp,
         "+2000 DP must expire at end of opponent's turn"
     );
 }
@@ -373,7 +372,9 @@ fn bt21_037_when_digivolving_no_opp_digimon_no_selection_but_dp_fires() {
     if sel.is_some() {
         // The select is optional: player may pass. No targets means it should auto-skip or
         // expose an optional empty selection; either way, the DP buff must still fire.
-        runner.auto_resolve().expect("auto_resolve with no valid targets");
+        runner
+            .auto_resolve()
+            .expect("auto_resolve with no valid targets");
     }
 
     let after_dp = runner

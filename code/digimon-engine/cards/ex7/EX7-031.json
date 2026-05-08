@@ -1,0 +1,36 @@
+{
+  "index": 3077,
+  "norm_id": 0.15385,
+  "card_id": "EX7-031",
+  "card_index": 31,
+  "card_name_eng": "Pteromon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_031",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Bird Dragon",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with [Bird] or [Avian] in any of its traits, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon deletes an opponent's Digimon in battle, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

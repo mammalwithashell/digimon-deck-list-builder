@@ -1,0 +1,37 @@
+{
+  "index": 1837,
+  "norm_id": 0.09185,
+  "card_id": "BT17-053",
+  "card_index": 53,
+  "card_name_eng": "Keramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_053",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Unidentified"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[Opponent's Turn] When an opponent's Digimon is played or digivolves, if that Digimon is level 5 or higher, you may digivolve this Digimon into a [Infermon] from your hand without paying the cost, ignoring digivolution requirements.",
+  "inherited_effect_description_eng": "[On Deletion] If this Digimon had [Unidentified] trait, you may play 1 [Diaboromon] Token without paying the cost. (Digimon/Cost 14/Lv.6/White/Mega/Unknown/Unidentified/3000 DP)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

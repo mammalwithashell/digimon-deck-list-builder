@@ -1,0 +1,29 @@
+{
+  "index": 1890,
+  "norm_id": 0.0945,
+  "card_id": "BT18-004",
+  "card_index": 4,
+  "card_name_eng": "Puroromon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_004",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Larva",
+    "X Antibody",
+    "Royal Base"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Start of Your Main Phase] By placing 1 Digimon card with the [Royal Base] trait from your hand face up as the bottom security card, add your top security card to the hand.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

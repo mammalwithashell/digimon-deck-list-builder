@@ -1,0 +1,36 @@
+{
+  "index": 2336,
+  "norm_id": 0.1168,
+  "card_id": "BT22-042",
+  "card_index": 42,
+  "card_name_eng": "Nyabootmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_042",
+  "play_cost": 14,
+  "dp": 14000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Puppet",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Overclock ([Puppet] Trait)＞ (At the end of your turn, by deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player without suspending.)\r\n[When Digivolving] You may play 1 level 4 or lower [Puppet] trait Digimon card from your hand without paying the cost. Then, to 1 of your opponent's Digimon, give -3000 DP until their turn ends for each of your Digimon.\r\n[All Turns] [Once Per Turn] When any of your other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 6,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] While you have [Arisa Kinosaki], [Chaperomon]: Cost 6"
+}

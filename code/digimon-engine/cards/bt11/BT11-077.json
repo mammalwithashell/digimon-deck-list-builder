@@ -1,0 +1,36 @@
+{
+  "index": 1219,
+  "norm_id": 0.06095,
+  "card_id": "BT11-077",
+  "card_index": 77,
+  "card_name_eng": "Chikurimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_077",
+  "play_cost": 4,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Mine",
+    "Bagra Army"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] By deleting this Digimon, reveal the top 5 cards of your deck. Add 1 card with the [Bagra Army] trait among them to your hand. Place the rest at the bottom of your deck in any order.\r\n[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[Opponent's Turn] When an effect trashes this card from digivolution cards, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

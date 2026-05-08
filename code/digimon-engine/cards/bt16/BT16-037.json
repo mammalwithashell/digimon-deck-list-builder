@@ -1,0 +1,35 @@
+{
+  "index": 1719,
+  "norm_id": 0.08595,
+  "card_id": "BT16-037",
+  "card_index": 37,
+  "card_name_eng": "KoKabuterimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_037",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 card with the [Insectoid] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon is suspended, it gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

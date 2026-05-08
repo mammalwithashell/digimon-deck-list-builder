@@ -1,0 +1,35 @@
+{
+  "index": 589,
+  "norm_id": 0.02945,
+  "card_id": "BT6-007",
+  "card_index": 7,
+  "card_name_eng": "Agumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_007",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[All Turns] [Once Per Turn] When you play a Tamer with [Tai Kamiya] in its name, gain 1 memory.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon is [Agumon - Bond of Bravery], it gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

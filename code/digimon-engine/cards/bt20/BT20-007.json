@@ -1,0 +1,37 @@
+{
+  "index": 2097,
+  "norm_id": 0.10485,
+  "card_id": "BT20-007",
+  "card_index": 7,
+  "card_name_eng": "Dracomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_007",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragon"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] By trashing 1 card with [Dracomon] or [Examon] in its text in your hand, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Bebydomon]: Cost 0"
+}

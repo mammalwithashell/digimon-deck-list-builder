@@ -1,0 +1,29 @@
+{
+  "index": 2500,
+  "norm_id": 0.125,
+  "card_id": "BT24-002",
+  "card_index": 2,
+  "card_name_eng": "Bukamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_002",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Lesser",
+    "Iliad",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [End of Your Turn] [Once Per Turn] By paying 1 cost, this blue Digimon with the [TS] trait unsuspends.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

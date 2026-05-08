@@ -1,0 +1,38 @@
+{
+  "index": 3465,
+  "norm_id": 0.17325,
+  "card_id": "P-135",
+  "card_index": 135,
+  "card_name_eng": "ShoeShoemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_135",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Puppet",
+    "LIBERATOR"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] Until the end of your opponent's turn, 1 of their Digimon can't attack Digimon and gains ＜Security A. -1＞ (This Digimon checks 1 additional security card.).\r\n[Your Turn] While you have [Arisa Kinosaki], this Digimon gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.).",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

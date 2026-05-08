@@ -1,0 +1,37 @@
+{
+  "index": 1510,
+  "norm_id": 0.0755,
+  "card_id": "BT14-032",
+  "card_index": 32,
+  "card_name_eng": "Chuumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_032",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Add the top card of your security stack to the hand. Then, you may place 1 card with [Sukamon] in its name from your hand on top of your security stack.",
+  "inherited_effect_description_eng": "[On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

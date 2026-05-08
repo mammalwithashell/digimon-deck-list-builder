@@ -1,0 +1,35 @@
+{
+  "index": 1840,
+  "norm_id": 0.092,
+  "card_id": "BT17-056",
+  "card_index": 56,
+  "card_name_eng": "Locomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_056",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[All Turns] [Once Per Turn] When an attack target is switched, reveal the top 3 cards of your deck. Place 1 [Parasitemon] or 1 level 5 or lower black Digimon card among them as this Digimon's bottom digivolution card. Trash the rest.\r\n[All Turns] When one of your Digimon's effects adds to this Digimon's digivolution cards, this Digimon may digivolve into [GroundLocomon] in the hand without paying the cost.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has the [Machine] trait, it gains ＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

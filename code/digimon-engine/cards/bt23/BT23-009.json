@@ -1,0 +1,38 @@
+{
+  "index": 2405,
+  "norm_id": 0.12025,
+  "card_id": "BT23-009",
+  "card_index": 9,
+  "card_name_eng": "Coachmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_009",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Training (App Name)",
+    "Leviathan"
+  ],
+  "form_eng": [
+    "Sup."
+  ],
+  "attribute_eng": [
+    "Game"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, 1 of your Digimon gets +4000 DP for the turn.",
+  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 2 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

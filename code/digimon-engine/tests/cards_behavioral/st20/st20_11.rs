@@ -170,10 +170,7 @@ fn st20_11_declares_three_alt_paths_including_blast_digivolve() {
     assert!(
         burst.is_some(),
         "expected a BurstDigivolve alt-path (＜Blast Digivolve＞ marker) — got {:?}",
-        card.alt_paths
-            .iter()
-            .map(|p| p.kind)
-            .collect::<Vec<_>>()
+        card.alt_paths.iter().map(|p| p.kind).collect::<Vec<_>>()
     );
     assert_eq!(
         burst.unwrap().cost,
@@ -253,13 +250,13 @@ fn st20_11_has_op_wd_tamer_color_immunity_clause() {
         .collect();
 
     assert!(
-        triggered.iter().any(|t| matches!(t.scope, CompiledScope::FaceUp)
-            && t.when
-                .iter()
-                .any(|w| matches!(w, CompiledTiming::OnPlay))
-            && t.when
-                .iter()
-                .any(|w| matches!(w, CompiledTiming::WhenDigivolving))),
+        triggered
+            .iter()
+            .any(|t| matches!(t.scope, CompiledScope::FaceUp)
+                && t.when.iter().any(|w| matches!(w, CompiledTiming::OnPlay))
+                && t.when
+                    .iter()
+                    .any(|w| matches!(w, CompiledTiming::WhenDigivolving))),
         "expected [On Play][When Digivolving] immunity clause once gaps close"
     );
 }
@@ -325,10 +322,9 @@ fn st20_11_when_attacking_offers_same_delete_selection() {
     let perm = runner.place_on_field(0, "ST20-11", Some(0));
     runner.place_on_field(1, "OPP-A", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(perm),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(perm));
     runner.game.drain_effect_queue();
 
     assert!(
@@ -508,9 +504,7 @@ fn st20_11_on_play_with_two_tamer_colors_grants_one_immunity_selection() {
     let _ = runner.auto_resolve();
 
     assert!(
-        runner
-            .modifiers()
-            .has(ally, ModifierType::CannotBeAffected),
+        runner.modifiers().has(ally, ModifierType::CannotBeAffected),
         "selected ally must receive effect immunity"
     );
 }

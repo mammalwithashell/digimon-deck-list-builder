@@ -1,0 +1,35 @@
+{
+  "index": 2791,
+  "norm_id": 0.13955,
+  "card_id": "EX3-041",
+  "card_index": 41,
+  "card_name_eng": "Groundramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_041",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Earth Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[Your Turn] [Examon] in your hand can treat this Digimon as level 6 for DNA digivolution.\r\n[End of Your Turn] This Digimon and another of your Digimon with [Dramon] in its name may DNA digivolve into a Digimon card in the hand.",
+  "inherited_effect_description_eng": "[All Turns] While this Digimon has [Dramon] or [Examon] in its name in its name, it gains ＜Blocker＞ (This Digimon can block in the blocker timing.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Coredramon]: Cost 3"
+}

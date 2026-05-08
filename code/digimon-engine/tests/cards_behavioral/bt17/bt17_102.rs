@@ -123,11 +123,7 @@ fn skip_trigger_order_prompts(runner: &mut DebugRunner) {
         let view = runner
             .pending_selection_view()
             .expect("trigger-order prompt installed");
-        let first_action = view
-            .valid_action_ids
-            .first()
-            .copied()
-            .unwrap_or(PASS);
+        let first_action = view.valid_action_ids.first().copied().unwrap_or(PASS);
         runner
             .execute_action(0, first_action)
             .expect("submit trigger-order pick");

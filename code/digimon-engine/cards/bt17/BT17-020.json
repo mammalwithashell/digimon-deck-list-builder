@@ -1,0 +1,37 @@
+{
+  "index": 1804,
+  "norm_id": 0.0902,
+  "card_id": "BT17-020",
+  "card_index": 20,
+  "card_name_eng": "Strabimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_020",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Hybrid] or [Ten Warriors] trait and 1 Tamer card with an inherited effect among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] You may play 1 Tamer card with an inherited effect from your hand with the play cost reduced by 2.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 121,
+  "norm_id": 0.00605,
+  "card_id": "BT1-105",
+  "card_index": 105,
+  "card_name_eng": "Blast Fire",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_105",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Change the original DP of 1 of your opponent's Digimon to 3000 until the end of your opponent's next turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

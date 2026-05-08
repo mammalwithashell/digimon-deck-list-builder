@@ -1,0 +1,29 @@
+{
+  "index": 2373,
+  "norm_id": 0.11865,
+  "card_id": "BT22-079",
+  "card_index": 79,
+  "card_name_eng": "Eater (Species Form)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_079",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [
+    "Eater"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "[Breeding] [Your Turn] [Once Per Turn] When any of your Digimon cards with the [Eater] trait would be played, you may reduce the play costs by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

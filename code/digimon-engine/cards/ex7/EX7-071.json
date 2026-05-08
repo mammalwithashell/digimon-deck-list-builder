@@ -1,0 +1,27 @@
+{
+  "index": 3117,
+  "norm_id": 0.15585,
+  "card_id": "EX7-071",
+  "card_index": 71,
+  "card_name_eng": "Hurricane Screw Shot",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_071",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Three Musketeers"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When an effect trashes this card from your Digimon's digivolution cards, gain 1 memory.\r\nWhile you have [Three Musketeers] trait Digimon, you can ignore this card's color requirements.\r\n[Main] Delete 1 of your opponent's level 3, 1 of their level 4, and 1 of their level 5 Digimon. Then, place this card as the bottom digivolution card of 1 of your Digimon with the [Three Musketeers] trait.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's level 3 Digimon, level 4 Digimon, and level 5 Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

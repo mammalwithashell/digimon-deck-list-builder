@@ -1,0 +1,27 @@
+{
+  "index": 2581,
+  "norm_id": 0.12905,
+  "card_id": "BT24-083",
+  "card_index": 83,
+  "card_name_eng": "Hiroko Sagisaka",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_083",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 4 or less memory, by returning this Tamer to the bottom of the deck, you may play 1 [Hiroko Sagisaka] or 1 [TS] trait Digimon card with 5000 DP or less from your hand without paying the cost.\r\n[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [TS] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

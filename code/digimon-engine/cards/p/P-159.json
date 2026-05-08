@@ -1,0 +1,27 @@
+{
+  "index": 3489,
+  "norm_id": 0.17445,
+  "card_id": "P-159",
+  "card_index": 159,
+  "card_name_eng": "Rook Device",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_159",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Device"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you don't have [Rook Device] in the battle area, you may ignore this card's color requirements.\r\nWhen effects trash this card from the battle area, until the end of your opponent's turn, 1 of your Digimon gains ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.), ＜Blocker＞ (This Digimon can block in the blocker timing.) and gets +2000 DP.\r\n[Main] Until the end of your opponent's turn, 1 of your Digimon gains ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.), ＜Blocker＞ (This Digimon can block in the blocker timing.) and gets +2000 DP. Then, place this card in the battle area.",
+  "inherited_effect_description_eng": "Security Effect [Security] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. (Trash up to 2 cards from the top. You can't trash past level 3 cards.) Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

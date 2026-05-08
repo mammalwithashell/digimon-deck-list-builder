@@ -1,0 +1,35 @@
+{
+  "index": 2700,
+  "norm_id": 0.135,
+  "card_id": "EX2-024",
+  "card_index": 24,
+  "card_name_eng": "Sakuyamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_024",
+  "play_cost": 12,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Shaman"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] Unsuspend 1 of your Digimon, and for each Tamer you have in play, return 1 Option card with [Plug-In] in its name from your trash to your hand.\r\n[Your Turn] When you use an Option card with a cost of 2 or more, 1 of your opponent's Digimon gets -3000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

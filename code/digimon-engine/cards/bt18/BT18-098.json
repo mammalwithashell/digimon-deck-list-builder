@@ -1,0 +1,26 @@
+{
+  "index": 1984,
+  "norm_id": 0.0992,
+  "card_id": "BT18-098",
+  "card_index": 98,
+  "card_name_eng": "Dragon's Roar",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_098",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When this card is trashed from the security stack, activate its [Security] effects.\r\nWhile you have a yellow [Data] or [Witchelny] trait Digimon, you can ignore this card's color requirements.\r\n[Main] By trashing your top security card, 1 of your opponent's Digimon gets -6000 DP until the end of their turn. Then, if you have 2 or fewer security cards, place this card as your bottom security card.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's Digimon with 6000 DP or less. Then, if you have 0 security cards, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

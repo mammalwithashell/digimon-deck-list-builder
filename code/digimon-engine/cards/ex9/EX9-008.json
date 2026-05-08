@@ -1,0 +1,37 @@
+{
+  "index": 4012,
+  "norm_id": 0.2006,
+  "card_id": "EX9-008",
+  "card_index": 8,
+  "card_name_eng": "Biyomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_008",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Bird",
+    "DM",
+    "Ver.4"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Training＞ (In the main phase, by suspending this Digimon, place your deck's top card face down as this Digimon's bottom digivolution card. This effect can also activate in the breeding area.)",
+  "inherited_effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[DM] trait: Cost 0"
+}

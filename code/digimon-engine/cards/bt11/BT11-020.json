@@ -1,0 +1,35 @@
+{
+  "index": 1162,
+  "norm_id": 0.0581,
+  "card_id": "BT11-020",
+  "card_index": 20,
+  "card_name_eng": "Gaomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_020",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Gaogamon] in its name and 1 blue Tamer card among them to your hand. Trash the rest.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If you have a Tamer in play, return 1 of your opponent's level 3 Digimon to its owner's hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 3085,
+  "norm_id": 0.15425,
+  "card_id": "EX7-039",
+  "card_index": 39,
+  "card_name_eng": "Jazamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_039",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Bird Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] By trashing 1 card with the [Rock Dragon] or [Earth Dragon] trait from your hand, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.",
+  "inherited_effect_description_eng": "[Opponent's Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

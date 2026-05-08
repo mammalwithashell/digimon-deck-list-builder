@@ -1,0 +1,36 @@
+{
+  "index": 988,
+  "norm_id": 0.0494,
+  "card_id": "BT9-070",
+  "card_index": 70,
+  "card_name_eng": "Gazimon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_070",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Mammal",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] Trash the top 3 cards of your deck.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Gazimon]: Cost 0"
+}

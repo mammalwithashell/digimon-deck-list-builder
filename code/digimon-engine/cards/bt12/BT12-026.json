@@ -1,0 +1,35 @@
+{
+  "index": 1280,
+  "norm_id": 0.064,
+  "card_id": "BT12-026",
+  "card_index": 26,
+  "card_name_eng": "ShogunGekomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_026",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Amphibian"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] By placing 1 blue level 5 or lower Digimon card from your hand under this Digimon as its bottom digivolution card, trash the bottom 2 digivolution cards of 2 of your opponent's Digimon.\r\n[All Turns] [Once Per Turn] When a digivolution card of an opponent's Digimon is trashed, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 1415,
+  "norm_id": 0.07075,
+  "card_id": "BT13-049",
+  "card_index": 49,
+  "card_name_eng": "Lalamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_049",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Vegetation], [Plant] or [Fairy] in any of its traits and 1 [Yoshino Fujieda] among them to your hand. Place the rest at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon would digivolve, if you have a green Tamer in play, reduce the digivolution cost by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

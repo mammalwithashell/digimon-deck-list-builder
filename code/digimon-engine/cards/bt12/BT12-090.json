@@ -1,0 +1,25 @@
+{
+  "index": 1344,
+  "norm_id": 0.0672,
+  "card_id": "BT12-090",
+  "card_index": 90,
+  "card_name_eng": "Davis Motomiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_090",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a Digimon with the [Free] trait or a Tamer with [Ken Ichijoji] in its name in play, gain 1 memory.\r\n[Your Turn] When one of your 2-color blue and green Digimon attacks, by suspending this Tamer, digivolve that Digimon into a Digimon card with [Imperialdramon] in its name in your hand for its digivolution cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

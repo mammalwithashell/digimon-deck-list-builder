@@ -1,0 +1,36 @@
+{
+  "index": 872,
+  "norm_id": 0.0436,
+  "card_id": "BT8-066",
+  "card_index": 66,
+  "card_name_eng": "Hisyaryumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_066",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Beast Dragon",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] When one of your effects places a digivolution card under this Digimon, you may digivolve this Digimon into a Digimon card in your hand with the [X Antibody] trait by paying its digivolution cost. When digivolving with this effect, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[Opponent's Turn] While this Digimon has the [X Antibody] trait, it gains ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

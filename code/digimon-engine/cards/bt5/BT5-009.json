@@ -1,0 +1,37 @@
+{
+  "index": 479,
+  "norm_id": 0.02395,
+  "card_id": "BT5-009",
+  "card_index": 9,
+  "card_name_eng": "Shoutmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_009",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Mini Dragon"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal 5 cards from the top of your deck. Add 1 Digimon card with [Shoutmon] in its name and 1 Digimon card with ＜Blitz＞ among them to your hand. Place the remaining cards at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has ＜Blitz＞, it gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

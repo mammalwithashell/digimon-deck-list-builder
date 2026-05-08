@@ -1,0 +1,37 @@
+{
+  "index": 1486,
+  "norm_id": 0.0743,
+  "card_id": "BT14-008",
+  "card_index": 8,
+  "card_name_eng": "Gizamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_008",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Sea Animal"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "Inherited Effect [When Attacking] [Once Per Turn] Delete 1 of your opponent's Digimon with 3000 DP or less.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,39 @@
+{
+  "index": 1534,
+  "norm_id": 0.0767,
+  "card_id": "BT14-056",
+  "card_index": 56,
+  "card_name_eng": "Commandramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_056",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "D-Brigade",
+    "DigiPolice"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 5 cards of your deck. Add 1 card with the [D-Brigade] or [DigiPolice] trait among them to your hand. Place the rest at either the top or bottom of your deck.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effect, by deleting 1 of your other Digimon with the [D-Brigade] trait, prevent it from leaving play.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

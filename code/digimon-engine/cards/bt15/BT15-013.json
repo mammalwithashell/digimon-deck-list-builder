@@ -1,0 +1,35 @@
+{
+  "index": 1593,
+  "norm_id": 0.07965,
+  "card_id": "BT15-013",
+  "card_index": 13,
+  "card_name_eng": "Birdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_013",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Giant Bird"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] Return 1 red Digimon card with [Avian], [Bird], [Beast], [Animal] or [Sovereign] in any of its traits (other than [Sea Animal]) from your trash to the hand.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When a card is removed from your opponent's security stack, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 1132,
+  "norm_id": 0.0566,
+  "card_id": "BT10-102",
+  "card_index": 102,
+  "card_name_eng": "Pyon Dump",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_102",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your Digimon gains ＜Piercing＞ for the turn. (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) Then, if you have a Digimon in play with [Angoramon] in its name or with [Angoramon] in its digivolution cards, suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Suspend 1 of your opponent's Digimon. Then, add this card to your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

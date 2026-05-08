@@ -1,0 +1,36 @@
+{
+  "index": 3789,
+  "norm_id": 0.18945,
+  "card_id": "ST14-09",
+  "card_index": 9,
+  "card_name_eng": "BeelStarmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST14_09",
+  "play_cost": 13,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Wizard",
+    "Three Musketeers"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "When you would play this card from your hand, reduce the play cost by 4 for every 10 cards in your trash.\r\n[All Turns] [Once Per Turn] When a card is trashed from your deck, you may play 1 [Impmon] from your trash without paying the cost. The Digimon played by this effect gains ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)\r\n[Opponent's Turn] When an opponent's Digimon attacks, trash the top card of your deck.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

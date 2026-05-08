@@ -1,0 +1,30 @@
+{
+  "index": 6,
+  "norm_id": 0.0003,
+  "card_id": "AD1-010",
+  "card_index": 10,
+  "card_name_eng": "Garurumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "AD1_010",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Beast",
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[All Turns] When your Digimon or Tamers are played or digivolve, if any of them have [Greymon] or [Matt Ishida] in their names, this Digimon may digivolve into a Digimon card with [Garurumon] in its name in the hand without paying the cost.",
+  "inherited_effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] Lv.3 w/[Omnimon] in text or w/[ADVENTURE] trait: Cost 2"
+}

@@ -1,0 +1,27 @@
+{
+  "index": 2386,
+  "norm_id": 0.1193,
+  "card_id": "BT22-092",
+  "card_index": 92,
+  "card_name_eng": "Jimmy KEN",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_092",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When your Digimon are played or digivolve, if any of them have the [Flame] or [CS] trait, by suspending this Tamer, activate 1 of those Digimon's [Main] effects. If this activated any effect, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

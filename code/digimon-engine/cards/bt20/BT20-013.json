@@ -1,0 +1,35 @@
+{
+  "index": 2103,
+  "norm_id": 0.10515,
+  "card_id": "BT20-013",
+  "card_index": 13,
+  "card_name_eng": "BaoHuckmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_013",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dinosaur"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Main] [Once Per Turn] You may play 1 Digimon with [Sistermon] or [Gankoomon] in its name from your hand with the play cost reduced by 2.",
+  "inherited_effect_description_eng": "[Your Turn] All of your Diigmon get +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 952,
+  "norm_id": 0.0476,
+  "card_id": "BT9-034",
+  "card_index": 34,
+  "card_name_eng": "Salamon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_034",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mammal",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] Look at the top card of your security stack, and you may add it to you hand. If you do, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Salamon]: Cost 0"
+}

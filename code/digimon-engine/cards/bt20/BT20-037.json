@@ -1,0 +1,58 @@
+{
+  "index": 2127,
+  "norm_id": 0.10635,
+  "card_id": "BT20-037",
+  "card_index": 37,
+  "card_name_eng": "Chaosmon: Valdur Arm",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_037",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [
+    "Unique"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n＜Partition (Yellow Lv.6 & Green/Black Lv.6)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)\r\n[When Digivolving] For each of this Digimon's level 6 digivolution cards, suspend 1 of your opponent's Digimon or Tamers and gain 1 memory. Then none of their Digimon or Tamers can activate [On Play] effects or unsuspend until the end of their turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 6,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Yellow Lv.6 + Green/Black Lv.6: Cost 0 \r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 6,
+        "card_colors": [
+          "Yellow"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 6,
+        "card_colors": [
+          "Green",
+          "Black"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

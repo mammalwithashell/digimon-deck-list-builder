@@ -1,0 +1,38 @@
+{
+  "index": 873,
+  "norm_id": 0.04365,
+  "card_id": "BT8-067",
+  "card_index": 67,
+  "card_name_eng": "MetalGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT8_067",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5,
+    0
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] ＜De-Digivolve 1＞ 1 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.) Then, delete 1 of your opponent's Digimon with 3000 DP or less.",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has the [Dragonkin] or [Machine] trait, it can also attack your opponent's unsuspended Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

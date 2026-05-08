@@ -1,0 +1,35 @@
+{
+  "index": 1311,
+  "norm_id": 0.06555,
+  "card_id": "BT12-057",
+  "card_index": 57,
+  "card_name_eng": "Quartzmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_057",
+  "play_cost": 16,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Unidentified"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[When Digivolving] Suspend all other Digimon and all Tamers. Then, for every 2 suspended Digimon and/or Tamers, gain 1 memory.\r\n[All Turns] All other Digimon and Tamers don't unsuspend.\r\n[When Attacking] Suspend 1 of your opponent's Digimon or Tamers. Then, trash the top card of your opponent's security stack for every 5 suspended Digimon and Tamers.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/＜Save＞ in text: Cost 9"
+}

@@ -1,0 +1,28 @@
+{
+  "index": 2600,
+  "norm_id": 0.13,
+  "card_id": "BT24-102",
+  "card_index": 102,
+  "card_name_eng": "Homeros",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_102",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 4,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Iliad",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] Gain 1 memory. Then, if you have 5 or more memory, suspend this Tamer and ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[All Turns] All of your [TS] trait Digimon get +1000 DP.\r\n[End of Your Turn] By suspending this Tamer, you may activate 1 [On Play] or [When Digivolving] effect of 1 of your [Olympos XII] trait Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

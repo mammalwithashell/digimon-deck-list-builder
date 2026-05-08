@@ -1,0 +1,37 @@
+{
+  "index": 3277,
+  "norm_id": 0.16385,
+  "card_id": "LM-009",
+  "card_index": 9,
+  "card_name_eng": "Airdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "LM_009",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Mythical Beast"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] When a card with [Angoramon] in its text would be played or one of your Digimon would digivolve into such a card, by suspending this Digimon, reduce the play or digivolution cost by 2.\r\n[Your Turn] When this Digimon becomes suspended, 1 of your Digimon with [Angoramon] in its text gains ＜Rush＞ for the turn. (This Digimon can attack the turn it comes into play.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

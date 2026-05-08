@@ -1,0 +1,40 @@
+{
+  "index": 4068,
+  "norm_id": 0.2034,
+  "card_id": "EX9-064",
+  "card_index": 64,
+  "card_name_eng": "Megadramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_064",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Cyborg",
+    "DM",
+    "Ver.4"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "When this card would be played, by trashing 1 [Cyborg] or [Ver.4] trait card from your hand, reduce the play cost by 2.\r\n[On Play] [When Digivolving] By placing 1 Digimon card from your trash face down as this Digimon's bottom digivolution card, delete 2 of your opponent's play cost 4 or lower Digimon. For each of this Digimon's face-down digivolution cards, add 1 to this effect's play cost maximum.",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] By unsuspending this Digimon, delete 1 of your Digimon with the lowest level.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Cyborg]/[DM] trait: Cost 3"
+}

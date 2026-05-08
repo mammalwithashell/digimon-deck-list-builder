@@ -1,0 +1,28 @@
+{
+  "index": 3991,
+  "norm_id": 0.19955,
+  "card_id": "EX10-070",
+  "card_index": 70,
+  "card_name_eng": "God Grade Unleashed",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_070",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Appmon",
+    "Leviathan"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon or Tamer with the [Appmon] trait on the field, you can ignore this card's color requirements.\r\n[Main] ＜Draw 1＞ (Draw 1 card from your deck.) Then, place this card in the battle area.\r\n[All Turns] When effects trash any of your Digimon's link cards, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・You may link 1 Digimon card with the [Appmon] trait from your trash to 1 of those Digimon without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,39 @@
+{
+  "index": 1046,
+  "norm_id": 0.0523,
+  "card_id": "BT10-016",
+  "card_index": 16,
+  "card_name_eng": "Jesmon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_016",
+  "play_cost": 12,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight",
+    "X Antibody"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)\r\n[When Digivolving] You may play 1 Digimon card with [Sistermon] in its name from your hand or trash without paying its memory cost. Then, if [Jesmon] is in this Digimon's digivolution cards or you have a Digimon with [Sistermon] in its name in play, until the end of your opponent's turn, all of your Digimon can also attack your opponent's unsuspended Digimon and get +2000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Jesmon]: Cost 0"
+}

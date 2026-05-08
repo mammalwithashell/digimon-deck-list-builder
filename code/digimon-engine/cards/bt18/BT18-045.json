@@ -1,0 +1,29 @@
+{
+  "index": 1931,
+  "norm_id": 0.09655,
+  "card_id": "BT18-045",
+  "card_index": 45,
+  "card_name_eng": "Pomumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_045",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[All Turns] While this Digimon is suspended, all of your other Digimon get +1000 DP.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

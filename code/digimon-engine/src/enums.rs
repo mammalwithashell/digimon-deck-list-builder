@@ -197,6 +197,9 @@ pub enum EffectTiming {
     /// after resolution or played from security by an effect. Mirrors
     /// Python's `OnLoseSecurity`.
     OnLoseSecurity,
+    /// Fires on a security card that is trashed from the security stack by
+    /// an effect, distinct from normal attack security checks.
+    OnDiscardSecurity,
     CounterEffect,
 
     // Turn-based
@@ -234,6 +237,10 @@ pub enum EffectTiming {
     // Entry/exit
     OnEnterField,
     OnEnterFieldAnyone,
+    /// Fires when a permanent is played by the observer's controller.
+    /// Carries the played permanent/card as event context and scans only the
+    /// playing player's observer zones.
+    OnAllyPlayed,
     OnLeaveField,
     /// Fires when a Digimon is hatched from the breeding area into the
     /// battle area. Observer timing for the hatching player's permanents.
@@ -338,6 +345,10 @@ pub enum EffectTiming {
     /// Fires when an opponent's security card is removed from the stack
     /// (by security check or by effect). Medusamon core archetype observer.
     OnOpponentSecurityRemoved,
+    /// Fires when one of your security cards is removed from the stack
+    /// (by security check or by effect). Mirrors cards such as BT4-097
+    /// Kari Kamiya that watch their controller's own security.
+    OnOwnSecurityRemoved,
     /// Fires when a card is trashed from a permanent's digivolution stack
     /// (cost payment, source-displacement effects, etc.). Rocks core
     /// archetype observer.
@@ -379,6 +390,10 @@ pub enum Keyword {
     /// Auto-install wires up in Phase D; the variant exists now so parser
     /// and script authors can carry the parameter.
     MaterialSave(u8),
+    /// Printed `<Digi-Burst N>` — an active effect cost marker. The keyword
+    /// parser carries the parameter; card bodies still author the "effect
+    /// below" through DSL `digi_burst` or equivalent scripts.
+    DigiBurst(u8),
     Fortitude,
     Overclock,
     Barrier,

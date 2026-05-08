@@ -1,0 +1,31 @@
+{
+  "index": 3922,
+  "norm_id": 0.1961,
+  "card_id": "EX10-001",
+  "card_index": 1,
+  "card_name_eng": "Flickmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_001",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Flick (App Name)"
+  ],
+  "form_eng": [
+    "Appmon"
+  ],
+  "attribute_eng": [
+    "System"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When effects trash any of this Digimon's link cards, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

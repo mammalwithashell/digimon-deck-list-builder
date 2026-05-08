@@ -1,0 +1,38 @@
+{
+  "index": 2540,
+  "norm_id": 0.127,
+  "card_id": "BT24-042",
+  "card_index": 42,
+  "card_name_eng": "Goblimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_042",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    6
+  ],
+  "type_eng": [
+    "Demon",
+    "Titan",
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Demon] or [Titan] trait, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When your hand is trashed from, this [Demon] or [Titan] trait Digimon may digivolve into [Titamon] or a [Titan] trait Digimon card in the trash with the digivolution cost reduced by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Tsunomon]/Lv.2 w/[TS] trait: Cost 0"
+}

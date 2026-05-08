@@ -1,0 +1,25 @@
+{
+  "index": 1234,
+  "norm_id": 0.0617,
+  "card_id": "BT11-092",
+  "card_index": 92,
+  "card_name_eng": "Analogman",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_092",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] By trashing 1 level 5 card with the [Cyborg] trait in your hand, gain 1 memory and ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Opponent's Turn] When an opponent's Digimon attacks a player, by suspending this Tamer, switch the target of attack to 1 of your level 6 Digimon with the [Machine] trait.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

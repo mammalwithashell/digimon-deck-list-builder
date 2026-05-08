@@ -1,0 +1,26 @@
+{
+  "index": 2816,
+  "norm_id": 0.1408,
+  "card_id": "EX3-066",
+  "card_index": 66,
+  "card_name_eng": "Hyper Infinity Cannon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_066",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a level 6 [Machine] trait Digimon, you can ignore this card's color requirements.\r\n[Main] ＜De-Digivolve 3＞ 1 of your opponent's Digimon. (Trash up to 3 cards from the top. You can't trash past level 3 cards.) Then, by placing 1 card with the [Cyborg] trait from your hand or trash under 1 of your level 6 Digimon with the [Machine] trait as its bottom digivolution card, delete 1 of your opponent's Digimon with 6000 DP or less.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

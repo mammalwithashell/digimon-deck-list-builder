@@ -1,0 +1,36 @@
+{
+  "index": 3079,
+  "norm_id": 0.15395,
+  "card_id": "EX7-033",
+  "card_index": 33,
+  "card_name_eng": "Monochromon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_033",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Ankylosaur",
+    "NSp"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "Inherited Effect ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 3,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[NSp] trait: Cost 1"
+}

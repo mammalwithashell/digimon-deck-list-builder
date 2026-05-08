@@ -1,0 +1,36 @@
+{
+  "index": 1596,
+  "norm_id": 0.0798,
+  "card_id": "BT15-016",
+  "card_index": 16,
+  "card_name_eng": "Brachiomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_016",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0,
+    1
+  ],
+  "type_eng": [
+    "Plesiosaur"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] If your opponent has 4 or less memory, 1 of your opponent's Digimon with 8000 DP or more can't attack until the end of their turn. If they have 4 or more, delete 1 of their Digimon with 6000 DP or less.",
+  "inherited_effect_description_eng": "[On Deletion] Return 1 of your opponent's Digimon with 7000 DP or less to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": ""
+}

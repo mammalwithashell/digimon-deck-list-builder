@@ -1,0 +1,35 @@
+{
+  "index": 3088,
+  "norm_id": 0.1544,
+  "card_id": "EX7-042",
+  "card_index": 42,
+  "card_name_eng": "Jazardmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_042",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] By trashing 1 card with the [Rock Dragon] or [Earth Dragon] trait, ＜Draw 2＞ (Draw 2 cards from your deck.)\r\n[When Digivolving] If you have 1 or less Tamers, you may play 1 [Hina Kurihara] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[Opponent's Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

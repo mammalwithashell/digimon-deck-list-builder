@@ -1,0 +1,36 @@
+{
+  "index": 932,
+  "norm_id": 0.0466,
+  "card_id": "BT9-014",
+  "card_index": 14,
+  "card_name_eng": "WarGrowlmon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_014",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Cyborg",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] Until the end of your opponent's turn, 2 of their Digimon gain \"[On Deletion] Lose 1 memory.\" Then, if [WarGrowlmon] or [X Antibody] is in this Digimon's digivolution cards, you may choose any number of your opponent's Digimon whose total DP adds up to 6000 or less and delete them.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [WarGrowlmon]: Cost 0"
+}

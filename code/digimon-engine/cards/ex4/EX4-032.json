@@ -1,0 +1,35 @@
+{
+  "index": 2856,
+  "norm_id": 0.1428,
+  "card_id": "EX4-032",
+  "card_index": 32,
+  "card_name_eng": "Terriermon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_032",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 4 cards of your deck. Add 1 2-color green card and 1 Tamer card with [Henry Wong] in its name among them to your hand. Place the rest at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[Your Turn] When one of your Digimon is suspended by an ＜Alliance＞ effect, you may digivolve this Digimon into a 2-color green card in your hand for its digivolution cost. When this Digimon would digivolve with this effect, reduce the digivolution cost by 2.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

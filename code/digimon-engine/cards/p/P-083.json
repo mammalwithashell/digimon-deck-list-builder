@@ -1,0 +1,35 @@
+{
+  "index": 3413,
+  "norm_id": 0.17065,
+  "card_id": "P-083",
+  "card_index": 83,
+  "card_name_eng": "Floramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_083",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Vegetation"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] If you have a green Tamer in play, 1 of your opponent's Digimon can't unsuspend until the end of their turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

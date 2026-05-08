@@ -1,0 +1,35 @@
+{
+  "index": 2155,
+  "norm_id": 0.10775,
+  "card_id": "BT20-065",
+  "card_index": 65,
+  "card_name_eng": "Wormmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_065",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Larva"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[On Play] By trashing 1 card in your hand, give 1 of your opponent's Digimon \"[On Deletion] Lose 1 memory.\" until the end of their turn.",
+  "inherited_effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

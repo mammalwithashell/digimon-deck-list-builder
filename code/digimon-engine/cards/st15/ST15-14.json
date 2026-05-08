@@ -1,0 +1,25 @@
+{
+  "index": 3806,
+  "norm_id": 0.1903,
+  "card_id": "ST15-14",
+  "card_index": 14,
+  "card_name_eng": "Tai Kamiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST15_14",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When an attack target is switched, by suspending this Tamer, ＜Draw 1＞ (Draw 1 card from your deck.) and 1 of your Digimon gets +2000 DP for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

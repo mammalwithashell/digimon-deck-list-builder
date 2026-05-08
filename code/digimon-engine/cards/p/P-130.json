@@ -1,0 +1,25 @@
+{
+  "index": 3460,
+  "norm_id": 0.173,
+  "card_id": "P-130",
+  "card_index": 130,
+  "card_name_eng": "Lui Ohwada",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_130",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] You may move 1 of your level 3 or higher Digimon from the breeding area to the battle area.\r\n[Your Turn] When one of your Digimon moves from the breeding area to the battle area, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

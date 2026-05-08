@@ -1,0 +1,38 @@
+{
+  "index": 334,
+  "norm_id": 0.0167,
+  "card_id": "BT3-091",
+  "card_index": 91,
+  "card_name_eng": "Lilithmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_091",
+  "play_cost": 12,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon Lord",
+    "Seven Great Demon Lords"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] If you have 10 or more cards in your trash, you may return up to 2 purple Option cards from your trash to your hand.\r\n[Your Turn] [Once Per Turn] When you use an Option card, gain 2 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

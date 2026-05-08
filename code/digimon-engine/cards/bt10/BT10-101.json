@@ -1,0 +1,25 @@
+{
+  "index": 1131,
+  "norm_id": 0.05655,
+  "card_id": "BT10-101",
+  "card_index": 101,
+  "card_name_eng": "Lónkhē Adistakto",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_101",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have [Pulsemon] or a Digimon with [Pulsemon] in its digivolution cards, you can ignore this card's color requirements.\r\n[Main] If you have 3 or more security cards, 1 of your opponent's Digimon gets -12000 DP for the turn. If you have 3 or fewer security cards, place 1 of your opponent's Digimon face down on top of their security stack.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

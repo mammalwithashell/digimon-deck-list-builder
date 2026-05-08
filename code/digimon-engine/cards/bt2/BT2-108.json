@@ -1,0 +1,25 @@
+{
+  "index": 239,
+  "norm_id": 0.01195,
+  "card_id": "BT2-108",
+  "card_index": 108,
+  "card_name_eng": "Night Raid",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_108",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Play 1 purple level 3 Digimon card from your trash without paying its memory cost. Any [On Play] effects on the Digimon played with this effect don't activate.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

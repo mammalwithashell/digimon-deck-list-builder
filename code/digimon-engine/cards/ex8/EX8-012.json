@@ -1,0 +1,37 @@
+{
+  "card_id": "EX8-012",
+  "card_index": 12,
+  "card_name_eng": "Growlmon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_012",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    6
+  ],
+  "type_eng": [
+    "Dark Dragon",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand. Then, if [Growlmon] or [X Antibody] is in this Digimon's digivolution cards, until the end of your opponent's turn, this Digimon gains \"[On Deletion] You may play 1 card with [Guilmon] in its name from your trash without paying the cost.\"",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When any of your opponent's Digimon is deleted, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Growlmon]: Cost 0",
+  "index": 3132,
+  "norm_id": 0.1566
+}

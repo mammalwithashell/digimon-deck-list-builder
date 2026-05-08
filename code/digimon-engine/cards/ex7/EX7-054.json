@@ -1,0 +1,35 @@
+{
+  "index": 3100,
+  "norm_id": 0.155,
+  "card_id": "EX7-054",
+  "card_index": 54,
+  "card_name_eng": "BlackGatomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_054",
+  "play_cost": 4,
+  "dp": 3000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Dark Animal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] [On Deletion] By trashing 1 card in your hand, 1 of your Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.) until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When an opponent's Digimon attacks, by deleting 1 of your other Digimon, end the attack.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

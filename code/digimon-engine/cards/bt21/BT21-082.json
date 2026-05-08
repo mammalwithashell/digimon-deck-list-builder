@@ -1,0 +1,27 @@
+{
+  "index": 2274,
+  "norm_id": 0.1137,
+  "card_id": "BT21-082",
+  "card_index": 82,
+  "card_name_eng": "Takuya Kanbara",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_082",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Main Phase] 1 of your Digimon or Tamers may digivolve into a Digimon card with the [Hybrid] or [Hero] trait in the hand. For each of your red Tamers with different names, reduce this effect's digivolution cost by 1.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, you may play 1 red Tamer card from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

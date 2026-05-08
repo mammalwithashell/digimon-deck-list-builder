@@ -1,0 +1,25 @@
+{
+  "index": 562,
+  "norm_id": 0.0281,
+  "card_id": "BT5-092",
+  "card_index": 92,
+  "card_name_eng": "Nokia Shiramine",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_092",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] You may play 1 [Agumon] or [Gabumon] from your hand without paying the cost.\r\n[Your Turn] When one of your Digimon would digivolve into a Digimon card in your hand with [Greymon], [Garurumon] or [Omnimon] in its name, by suspending this Tamer, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

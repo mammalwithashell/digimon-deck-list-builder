@@ -1,0 +1,25 @@
+{
+  "index": 2746,
+  "norm_id": 0.1373,
+  "card_id": "EX2-070",
+  "card_index": 70,
+  "card_name_eng": "Digivolution Plug-In S",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_070",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Tamer, you can ignore this card's color requirements.\r\n[Main] ＜Draw 1＞ (Draw 1 card from your deck.) Then, you may digivolve 1 of your Digimon into a Digimon card in your hand that can digivolve for a digivolution cost of 3 or less without paying its digivolution cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Reveal the top 3 cards of your deck. Add 1 Digimon card among them to your hand. Place the remaining cards at the bottom of your deck in any order. Then, add this card to your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

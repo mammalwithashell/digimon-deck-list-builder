@@ -1,0 +1,38 @@
+{
+  "index": 468,
+  "norm_id": 0.0234,
+  "card_id": "BT4-113",
+  "card_index": 113,
+  "card_name_eng": "AncientGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT4_113",
+  "play_cost": 12,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Ancient Dragon",
+    "Ten Warriors"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] For each Digimon card in this Digimon's digivolution cards with [Greymon] in its name (other than [DoruGreymon], [BurningGreymon] or [DexDoruGreymon]) or [Hybrid] trait, this Digimon gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n[On Deletion] You may play 1 red level 4 or below Digimon card with the [Hybrid] trait from your hand without paying its cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": ""
+}

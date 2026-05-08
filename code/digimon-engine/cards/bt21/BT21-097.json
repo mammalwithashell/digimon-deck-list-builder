@@ -1,0 +1,27 @@
+{
+  "index": 2289,
+  "norm_id": 0.11445,
+  "card_id": "BT21-097",
+  "card_index": 97,
+  "card_name_eng": "App Link",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_097",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Appmon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have Digimon or Tamer with the [Appmon] trait on the field, you can ignore this card's color requirements.\r\n[Main] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] or [App Driver] trait among them to the hand. Trash the rest. Then, place this card in the battle area.\r\n[End of Your Turn] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・You may link 1 card from your hand with 1 of your Digimon without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

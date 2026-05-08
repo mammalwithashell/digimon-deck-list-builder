@@ -1,0 +1,25 @@
+{
+  "index": 678,
+  "norm_id": 0.0339,
+  "card_id": "BT6-096",
+  "card_index": 96,
+  "card_name_eng": "Forbidden Trident",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_096",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] 1 of your Digimon gets +2000 DP and \"[When Attacking] Return 1 of your opponent's level 3 Digimon to its owner's hand. Trash all of the digivolution cards of that Digimon.\" for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

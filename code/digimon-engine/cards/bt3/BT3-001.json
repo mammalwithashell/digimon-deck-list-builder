@@ -1,0 +1,29 @@
+{
+  "index": 244,
+  "norm_id": 0.0122,
+  "card_id": "BT3-001",
+  "card_index": 1,
+  "card_name_eng": "Poromon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_001",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Mini Bird"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [When Attacking] Delete 1 of your opponent's Digimon with 1000 DP or less.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

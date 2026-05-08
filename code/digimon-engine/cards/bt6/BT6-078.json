@@ -1,0 +1,35 @@
+{
+  "index": 660,
+  "norm_id": 0.033,
+  "card_id": "BT6-078",
+  "card_index": 78,
+  "card_name_eng": "SkullGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_078",
+  "play_cost": 8,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Undead"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "When you trash this card in your hand using one of your effects, you may place it under 1 of your purple Digimon at the bottom of its digivolution cards.\r\n[When Attacking] You may trash 1 card in your hand to have this Digimon get +3000 DP for the turn.",
+  "inherited_effect_description_eng": "＜Retaliation＞ (When this Digimon is deleted after losing a battle, delete the Digimon it was battling.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

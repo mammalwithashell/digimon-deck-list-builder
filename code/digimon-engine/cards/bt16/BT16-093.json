@@ -1,0 +1,25 @@
+{
+  "index": 1775,
+  "norm_id": 0.08875,
+  "card_id": "BT16-093",
+  "card_index": 93,
+  "card_name_eng": "The Sparkle of Fate!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_093",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a green Digimon, you can ignore this card's color requirements.\r\n[Main] 1 of your Digimon with [Gargomon] or [Rapidmon] in its name may digivolve into a card with [Rapidmon] in its name in your hand ignoring its digivolution requirements and without paying the cost. Until the end of your opponent's turn, their effects can't reduce the DP of the Digimon this effect digivolved.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 3 Digimon card with [Terriermon] in its name from your hand or trash without paying the cost. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

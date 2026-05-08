@@ -1,0 +1,25 @@
+{
+  "index": 215,
+  "norm_id": 0.01075,
+  "card_id": "BT2-084",
+  "card_index": 84,
+  "card_name_eng": "Sora Takenouchi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_084",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Your Turn] When one of your red Digimon attacks a player, you may suspend this Tamer to give that Digimon +2000 DP for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

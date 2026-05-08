@@ -1,0 +1,38 @@
+{
+  "index": 262,
+  "norm_id": 0.0131,
+  "card_id": "BT3-019",
+  "card_index": 19,
+  "card_name_eng": "RagnaLoardmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_019",
+  "play_cost": 14,
+  "dp": 14000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Unique",
+    "Legend-Arms"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n[When Digivolving] You may place 1 [Durandamon] or [BryweLudramon] from your hand on top of this card's digivolution cards to gain 3 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 6,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

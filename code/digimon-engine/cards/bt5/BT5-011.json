@@ -1,0 +1,37 @@
+{
+  "index": 481,
+  "norm_id": 0.02405,
+  "card_id": "BT5-011",
+  "card_index": 11,
+  "card_name_eng": "Meramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_011",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Flame"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] 1 of your other Digimon gets +3000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

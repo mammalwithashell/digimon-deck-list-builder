@@ -69,7 +69,9 @@ fn base_runner() -> DebugRunner {
 
 /// Place DemiVeemon as a bottom digivolution source under CARRIER on P0's field.
 /// Returns the PermanentHandle of the stacked permanent (the carrier).
-fn place_demivoemon_as_source(runner: &mut DebugRunner) -> digimon_engine::permanent::PermanentHandle {
+fn place_demivoemon_as_source(
+    runner: &mut DebugRunner,
+) -> digimon_engine::permanent::PermanentHandle {
     let handle = runner.place_on_field(0, "CARRIER", Some(0));
 
     {
@@ -96,10 +98,10 @@ fn place_demivoemon_as_source(runner: &mut DebugRunner) -> digimon_engine::perma
 
 #[test]
 fn bt12_002_yaml_parses_and_compiles() {
-    let spec: digimon_dsl::spec::CardSpec = serde_yml::from_str(DEMIVOEMON_YAML)
-        .expect("BT12-002 YAML parses as CardSpec");
-    let _compiled = digimon_dsl::compile::compile(&spec)
-        .expect("BT12-002 YAML compiles without errors");
+    let spec: digimon_dsl::spec::CardSpec =
+        serde_yml::from_str(DEMIVOEMON_YAML).expect("BT12-002 YAML parses as CardSpec");
+    let _compiled =
+        digimon_dsl::compile::compile(&spec).expect("BT12-002 YAML compiles without errors");
 }
 
 #[test]

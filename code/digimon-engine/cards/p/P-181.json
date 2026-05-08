@@ -1,0 +1,28 @@
+{
+  "index": 3511,
+  "norm_id": 0.17555,
+  "card_id": "P-181",
+  "card_index": 181,
+  "card_name_eng": "Royal Base",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_181",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "Royal Base"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] [Your Turn] [Once Per Turn] When any of your Digimon would digivolve into a Digimon card with the [Royal Base] trait, reduce the digivolution cost by 1.\r\n[Main] Add your top security card to the hand. Then, place this card face up as your bottom security card.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 5 or lower Digimon card with the [Royal Base] trait from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

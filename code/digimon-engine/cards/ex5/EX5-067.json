@@ -1,0 +1,27 @@
+{
+  "index": 2965,
+  "norm_id": 0.14825,
+  "card_id": "EX5-067",
+  "card_index": 67,
+  "card_name_eng": "Good Night Moon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_067",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Night Claw"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Until the end of your opponent's turn, 1 of your opponent's Digimon and 1 of their Tamers can't suspend. Then, you may play 1 Tamer card with the [Night Claw] or [Light Fang] trait from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

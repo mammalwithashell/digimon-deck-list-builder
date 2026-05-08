@@ -1,0 +1,36 @@
+{
+  "index": 3954,
+  "norm_id": 0.1977,
+  "card_id": "EX10-033",
+  "card_index": 33,
+  "card_name_eng": "Pyramidimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_033",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Mineral",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Fragment (3)＞ (When this Digimon would be deleted, by trashing any 3 of its digivolution cards, it isn't deleted.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may place up to 3 [Mineral] or [Rock] trait cards from your trash as this Digimon's bottom digivolution cards.\r\n[When Digivolving] [When Attacking] By trashing up to 3 [Mineral] or [Rock] trait cards from any of your Digimon's digivolution cards, to 1 of your opponent's Digimon, reduce the play cost by 2 until their turn ends for each card trashed.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

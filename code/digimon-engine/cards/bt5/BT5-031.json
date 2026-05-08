@@ -1,0 +1,37 @@
+{
+  "index": 501,
+  "norm_id": 0.02505,
+  "card_id": "BT5-031",
+  "card_index": 31,
+  "card_name_eng": "MetalGarurumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_031",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] If a Digimon card with [Garurumon] in its name (other than [KendoGarurumon]) is in this Digimon's digivolution cards, return 1 of your opponent's Digimon with an [On Deletion] effect to the bottom of its owner's deck.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] Gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

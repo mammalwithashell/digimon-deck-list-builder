@@ -1,0 +1,25 @@
+{
+  "index": 3425,
+  "norm_id": 0.17125,
+  "card_id": "P-095",
+  "card_index": 95,
+  "card_name_eng": "Pause Plug-In P",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_095",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Tamer, you can ignore this card's color requirements.\r\n[Main] Until the end of your opponent's turn, 1 of your opponent's Digimon gets -6000 DP and that Digimon's [When Digivolving] effects don't activate.",
+  "inherited_effect_description_eng": "Security Effect [Security] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

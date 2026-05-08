@@ -1,0 +1,29 @@
+{
+  "index": 2722,
+  "norm_id": 0.1361,
+  "card_id": "EX2-046",
+  "card_index": 46,
+  "card_name_eng": "ADR-02 Searcher",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_046",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Intel Acquisition Agent"
+  ],
+  "form_eng": [
+    "D-Reaper"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "When you would play this card from your hand, reduce its play cost by 2 if you don't have another [ADR-02 Searcher] in play.\r\n[Your Turn] This Digimon can't attack players.\r\n[On Play] ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "[Your Turn] All of your Digimon with the [D-Reaper] trait get +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

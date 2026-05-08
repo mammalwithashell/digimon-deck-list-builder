@@ -135,10 +135,7 @@ fn make_named_tamer(id: &str, name: &str, traits: &[&str]) -> CardData {
 
 /// Convert a zone of `CardSource`s into a Vec of card_id strings, in order.
 fn zone_ids(cards: &[CardSource], data: &[CardData]) -> Vec<String> {
-    cards
-        .iter()
-        .map(|c| c.card_id(data).to_string())
-        .collect()
+    cards.iter().map(|c| c.card_id(data).to_string()).collect()
 }
 
 /// Resolve a revealed-card action id by candidate card_id. Returns None if
@@ -492,7 +489,11 @@ fn bt22_017_no_duplicate_cards_prevents_double_consumption() {
         .dsl_card("BT22-017")
         .expect("BT22-017 YAML loads")
         // Dual-eligible: Omnimon-named AND CS-trait.
-        .add_card(make_named_digimon("DUAL", "Omnimon", &["Royal Knight", "CS"]))
+        .add_card(make_named_digimon(
+            "DUAL",
+            "Omnimon",
+            &["Royal Knight", "CS"],
+        ))
         // CS-only: not Omnimon-named, has CS trait.
         .add_card(make_named_digimon("CS-ONLY", "Greymon", &["Reptile", "CS"]))
         .add_card(make_test_card("FILLER", "Filler"))
@@ -573,8 +574,8 @@ fn bt22_017_on_play_bucket1_admits_card_with_omnimon_only_in_text() {
     let view = runner
         .pending_selection_view()
         .expect("bucket 1 selection installed");
-    let yamato_action = revealed_action_for_id(&runner, "YAMATO")
-        .expect("YAMATO is in the reveal overlay");
+    let yamato_action =
+        revealed_action_for_id(&runner, "YAMATO").expect("YAMATO is in the reveal overlay");
     assert!(
         view.valid_action_ids.contains(&yamato_action),
         "Faithfulness: bucket 1 must admit YAMATO (effect_text contains [Omnimon]); \

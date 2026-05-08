@@ -1,0 +1,35 @@
+{
+  "index": 1071,
+  "norm_id": 0.05355,
+  "card_id": "BT10-041",
+  "card_index": 41,
+  "card_name_eng": "Sakuyamon: Maid Mode",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_041",
+  "play_cost": 12,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Shaman"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[When Digivolving] You may use 1 Option card with [Plug-In] in its name or that's yellow and has a memory cost of 5 or less from your hand without meeting its color requirements or paying its memory cost. Place the Option card used with this effect on top of your security stack face down instead of placing it in your trash.\r\n[When Attacking] You may digivolve this Digimon into a [Sakuyamon] in your hand for 1 memory, ignoring its digivolution requirements.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,27 @@
+{
+  "index": 1778,
+  "norm_id": 0.0889,
+  "card_id": "BT16-096",
+  "card_index": 96,
+  "card_name_eng": "Metropolitan Police Department, Community Safety Bureau, Cyber Crime Division, Investigation Unit 11",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_096",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "DigiPolice"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Add 1 card with the [D-Brigade] or [DigiPolice] trait among them to the hand. Return the rest to the top of the deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Reveal the top 3 cards of your deck. You may play 1 card with the [D-Brigade] or [DigiPolice] trait and a play cost of 4 or less among them without paying the cost. Trash the rest.",
+  "inherited_effect_description_eng": "Security Effect [Security] Reveal the top 3 cards of your deck. Add 1 card with the [D-Brigade] or [DigiPolice] trait among them to the hand. Return the rest to the top of the deck. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

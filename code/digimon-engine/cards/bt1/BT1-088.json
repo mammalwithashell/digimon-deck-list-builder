@@ -1,0 +1,25 @@
+{
+  "index": 104,
+  "norm_id": 0.0052,
+  "card_id": "BT1-088",
+  "card_index": 88,
+  "card_name_eng": "Izzy Izumi",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_088",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] If you have a level 5 or higher green Digimon in play, you can suspend this Tamer to reveal the top card of your deck. If that card is a Digimon card, add it to your hand. Otherwise place it at the bottom of your deck.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

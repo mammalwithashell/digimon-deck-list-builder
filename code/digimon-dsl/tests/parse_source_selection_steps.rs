@@ -1,7 +1,7 @@
 //! Phase 2g source-selection DSL verbs parse and lower into compiled steps.
 
 use digimon_dsl::compile::compile;
-use digimon_dsl::compiled::{CompiledClause, CompiledStep};
+use digimon_dsl::compiled::{CompiledBindingRef, CompiledClause, CompiledStep};
 use digimon_dsl::spec::CardSpec;
 
 fn compile_first_step(yaml: &str) -> CompiledStep {
@@ -39,12 +39,14 @@ effects:
 
     match compile_first_step(yaml) {
         CompiledStep::SelectOwnSources {
+            target,
             min,
             max,
             bind_as,
             prompt,
             then,
         } => {
+            assert!(target.is_none());
             assert_eq!(min, 1);
             assert_eq!(max, 2);
             assert_eq!(bind_as.as_deref(), Some("picked_sources"));
@@ -57,6 +59,55 @@ effects:
             );
         }
         other => panic!("expected SelectOwnSources, got {other:?}"),
+    }
+}
+
+#[test]
+fn digi_burst_lowers_to_self_source_selection_with_trash_cost_first() {
+    let yaml = r#"
+card: X-BURST
+name: Digi-Burst Helper
+kind: digimon
+level: 5
+color: [black]
+cost: 8
+dp: 7000
+effects:
+  - when: main_on_field
+    process:
+      - digi_burst:
+          count: 1
+          bind_as: burst_sources
+          prompt: "Choose 1 digivolution card under this Digimon"
+          then:
+            - gain_memory: 2
+"#;
+
+    match compile_first_step(yaml) {
+        CompiledStep::SelectOwnSources {
+            target,
+            min,
+            max,
+            bind_as,
+            prompt,
+            then,
+        } => {
+            assert_eq!(target, Some(CompiledBindingRef::Source));
+            assert_eq!(min, 1);
+            assert_eq!(max, 1);
+            assert_eq!(bind_as.as_deref(), Some("burst_sources"));
+            assert_eq!(prompt, "Choose 1 digivolution card under this Digimon");
+            assert_eq!(
+                then,
+                vec![
+                    CompiledStep::TrashSelectedSources {
+                        source_refs: "burst_sources".to_string(),
+                    },
+                    CompiledStep::GainMemory(2),
+                ]
+            );
+        }
+        other => panic!("expected Digi-Burst to lower into SelectOwnSources, got {other:?}"),
     }
 }
 

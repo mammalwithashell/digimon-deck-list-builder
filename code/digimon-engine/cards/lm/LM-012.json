@@ -1,0 +1,37 @@
+{
+  "index": 3280,
+  "norm_id": 0.164,
+  "card_id": "LM-012",
+  "card_index": 12,
+  "card_name_eng": "Lamortmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "LM_012",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Suspend 1 of your opponent's Digimon. Then, if they have no unsuspended Digimon, 1 of their Digimon can't unsuspend until the end of their turn.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When one of your Digimon with [Angoramon] in their texts deletes an opponent's Digimon in battle, trash the top card of their security stack.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

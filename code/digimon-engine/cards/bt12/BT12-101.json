@@ -1,0 +1,25 @@
+{
+  "index": 1355,
+  "norm_id": 0.06775,
+  "card_id": "BT12-101",
+  "card_index": 101,
+  "card_name_eng": "Vee Laser",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_101",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Trash the top 3 digivolution cards of 1 of your opponent's Digimon. Then, if you have a green Digimon in play, you may play 1 level 4 or lower blue Digimon card with the [Free] trait from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

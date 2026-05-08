@@ -1,0 +1,30 @@
+{
+  "index": 1946,
+  "norm_id": 0.0973,
+  "card_id": "BT18-060",
+  "card_index": 60,
+  "card_name_eng": "Vemmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_060",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Unknown",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Vemmon] in its text among them to the hand, and place 1 [Vemmon] among them as the bottom digivolution card of 1 of your Digimon. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon would digivolve into a Digimon card with [Vemmon] in its text, reduce the digivolution cost by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

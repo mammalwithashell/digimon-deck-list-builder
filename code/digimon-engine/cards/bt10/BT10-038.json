@@ -1,0 +1,35 @@
+{
+  "index": 1068,
+  "norm_id": 0.0534,
+  "card_id": "BT10-038",
+  "card_index": 38,
+  "card_name_eng": "Sanzomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT10_038",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Monk"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Digivolving] 1 of your opponent's Digimon gains ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gains ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until the end of your opponent's turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

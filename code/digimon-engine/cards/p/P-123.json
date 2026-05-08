@@ -1,0 +1,37 @@
+{
+  "index": 3453,
+  "norm_id": 0.17265,
+  "card_id": "P-123",
+  "card_index": 123,
+  "card_name_eng": "Ukkomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_123",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Ancient Fairy"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When one of your Digimon moves from the breeding area to the battle area, you may hatch in your breeding area. Then, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

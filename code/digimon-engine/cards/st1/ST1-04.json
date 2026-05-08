@@ -1,0 +1,37 @@
+{
+  "index": 3602,
+  "norm_id": 0.1801,
+  "card_id": "ST1-04",
+  "card_index": 4,
+  "card_name_eng": "Dracomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST1_04",
+  "play_cost": 3,
+  "dp": 4000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragon"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 1013,
+  "norm_id": 0.05065,
+  "card_id": "BT9-095",
+  "card_index": 95,
+  "card_name_eng": "Gaia Force ZERO",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_095",
+  "play_cost": 8,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When you would use this card, if you have a Digimon with [X Antibody] in its digivolution cards in play, reduce the memory cost of this card by 2.\r\n[Main] Delete 1 of your opponent's Digimon with 13000 DP or less. Then, 1 of your Digimon with [Greymon] in its name can attack your opponent.",
+  "inherited_effect_description_eng": "Security Effect [Security] Delete 1 of your opponent's Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

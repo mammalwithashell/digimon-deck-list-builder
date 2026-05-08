@@ -1,0 +1,27 @@
+{
+  "index": 1973,
+  "norm_id": 0.09865,
+  "card_id": "BT18-087",
+  "card_index": 87,
+  "card_name_eng": "Owen Dreadnought",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_087",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[All Turns] When a card is removed from your opponent's security stack, by suspending this Tamer, delete 1 of your opponent's Digimon with 4000 DP or less.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

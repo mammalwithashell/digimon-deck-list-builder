@@ -1,0 +1,55 @@
+{
+  "index": 2309,
+  "norm_id": 0.11545,
+  "card_id": "BT22-015",
+  "card_index": 15,
+  "card_name_eng": "Omnimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT22_015",
+  "play_cost": 15,
+  "dp": 15000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0,
+    4
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "Royal Knight",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Decode (Red/Black Lv.3)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 Red or Black Level 3 Digimon card from its digivolution cards without paying the cost.)\r\n＜Decode (Blue/Yellow Lv.3)＞ (When this Digimon would leave the battle area other than in battle, you may play 1 Blue or Yellow Level 3 Digimon card from its digivolution cards without paying the cost.)\r\n[On Play] [When Attacking] Delete 1 of your opponent's Digimon with the lowest DP.\r\n[When Digivolving] For every 2 same-level cards this Digimon's stack has, return 1 of your opponent's Digimon to the bottom of the deck. Then, this Digimon may attack.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.6 w/[CS] trait: Cost 5 \r\n[DNA Digivolve] Lv.6 w/[Greymon] in name + Lv.6 w/[Garurumon] in name : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 6,
+        "card_colors": [],
+        "name_contains": "Greymon",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 6,
+        "card_colors": [],
+        "name_contains": "Garurumon",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "index": 1340,
+  "norm_id": 0.067,
+  "card_id": "BT12-086",
+  "card_index": 86,
+  "card_name_eng": "Clockmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_086",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Machine"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] Reveal the top 3 cards of your deck. Add up to 2 Digimon cards with different colors and ＜Save＞ in their texts among them to your hand. Place the rest at the bottom of your deck in any order.\r\n[On Deletion] ＜Save＞ (You may place this card under one of your Tamers.)",
+  "inherited_effect_description_eng": "[Your Turn] While this Digimon has ＜Save＞ in its text, it gains ＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

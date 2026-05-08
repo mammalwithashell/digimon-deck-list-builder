@@ -1,0 +1,27 @@
+{
+  "index": 4073,
+  "norm_id": 0.20365,
+  "card_id": "EX9-069",
+  "card_index": 69,
+  "card_name_eng": "Analog Youth",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_069",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "DM"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] You may place 1 card from your hand face down as any of your [DM] trait Digimon's bottom digivolution card.\r\n[Your Turn] When face-down cards are placed as any of your Digimon's digivolution cards, by suspending this Tamer, gain 1 memory. Then, if you have 7 or fewer cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[Opponent's Turn] All of your Digimon with face-down digivolution cards gain ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

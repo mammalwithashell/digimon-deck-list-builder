@@ -1,0 +1,37 @@
+{
+  "card_id": "EX8-011",
+  "card_index": 11,
+  "card_name_eng": "Tyrannomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_011",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    3
+  ],
+  "type_eng": [
+    "Dinosaur",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Security] At the end of the battle, play this card without paying the cost.\r\n[Start of Your Main Phase] [When Digivolving] This Digimon gets +3000 DP until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Reptile] trait: Cost 2",
+  "index": 3131,
+  "norm_id": 0.15655
+}

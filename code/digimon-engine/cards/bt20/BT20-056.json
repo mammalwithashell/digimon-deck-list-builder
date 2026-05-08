@@ -1,0 +1,41 @@
+{
+  "index": 2146,
+  "norm_id": 0.1073,
+  "card_id": "BT20-056",
+  "card_index": 56,
+  "card_name_eng": "Alphamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_056",
+  "play_cost": 0,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [
+    "Holy Warrior",
+    "X Antibody",
+    "Royal Knight",
+    "Chronicle"
+  ],
+  "form_eng": [
+    "Mega"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)\r\n[On Play] [When Digivolving] ＜Recovery +1 (Deck)＞. Then, if during an attack, 1 of your Digimon in the breeding area may digivolve into a level 6 or lower [Chronicle] trait Digimon card in the hand or trash without paying the cost.\r\n[All Turns] [Once Per Turn] When security stacks are removed from, 1 of your opponent's Digimon gets -8000 DP for the turn.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, if this Digimon is [Alphamon: Ouryuken], by trashing your top security card, it doesn't leave.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,35 @@
+{
+  "index": 3376,
+  "norm_id": 0.1688,
+  "card_id": "P-046",
+  "card_index": 46,
+  "card_name_eng": "Wizardmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_046",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When you use an option card, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

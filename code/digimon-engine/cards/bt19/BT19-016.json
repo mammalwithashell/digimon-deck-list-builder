@@ -1,0 +1,30 @@
+{
+  "index": 2004,
+  "norm_id": 0.1002,
+  "card_id": "BT19-016",
+  "card_index": 16,
+  "card_name_eng": "Gaossmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_016",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Reptile",
+    "Blue Flare"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [On Deletion] By placing 1 [Blue Flare] trait Digimon card from your hand under any of your Tamers, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

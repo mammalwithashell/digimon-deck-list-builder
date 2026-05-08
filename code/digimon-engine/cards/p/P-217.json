@@ -1,0 +1,28 @@
+{
+  "index": 3547,
+  "norm_id": 0.17735,
+  "card_id": "P-217",
+  "card_index": 217,
+  "card_name_eng": "Haru Shinkai",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_217",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 5,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "App Driver",
+    "Appmon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Social] trait card and 1 [Creation], [Navi] or [Tool] trait card among them to the hand. Return the rest to the bottom of the deck.\r\n[Your Turn] When any of your Digimon get linked to a [Social], [Creation], [Navi] or [Tool] trait card, by suspending this Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

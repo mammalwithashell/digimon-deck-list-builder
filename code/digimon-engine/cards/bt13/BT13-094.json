@@ -1,0 +1,25 @@
+{
+  "index": 1460,
+  "norm_id": 0.073,
+  "card_id": "BT13-094",
+  "card_index": 94,
+  "card_name_eng": "Kristy Damon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_094",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If you have a Digimon with [Avian] or [Bird] in any of its traits in play, gain 1 memory.\r\n[On Play] 1 of your Digimon gains \"[On Deletion] You may play 1 [Biyomon] from your hand or trash without paying its cost.\" until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

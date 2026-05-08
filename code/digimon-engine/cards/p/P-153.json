@@ -1,0 +1,38 @@
+{
+  "index": 3483,
+  "norm_id": 0.17415,
+  "card_id": "P-153",
+  "card_index": 153,
+  "card_name_eng": "MagnaGarurumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_153",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    2,
+    1
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[When Digivolving] Return 1 of your opponent's level 3, 1 of their level 4 and 1 of their level 5 Digimon to the hand.\r\n[End of Attack] By placing this Digimon's top card as your top security card, unsuspend this Digimon or Tamer.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] 3 color [MagnaGarurumon]: Cost 2"
+}

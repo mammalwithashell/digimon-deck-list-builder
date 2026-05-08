@@ -1,0 +1,25 @@
+{
+  "index": 1867,
+  "norm_id": 0.09335,
+  "card_id": "BT17-083",
+  "card_index": 83,
+  "card_name_eng": "Koji Minamoto",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT17_083",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying the cost.\r\n[Start of Your Turn] If you have 2 or less memory, set it to 3.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When an effect adds cards to your hand, gain 1 memory. Then, this Digimon gains ＜Jamming＞ for the turn. (This Digimon can't be deleted in battles against Security Digimon.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

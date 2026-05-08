@@ -1,0 +1,36 @@
+{
+  "index": 3474,
+  "norm_id": 0.1737,
+  "card_id": "P-144",
+  "card_index": 144,
+  "card_name_eng": "Gotsumon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_144",
+  "play_cost": 4,
+  "dp": 4000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Rock",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[Your Turn] This Digimon without [Gotsumon] or [X Antibody] in its digivolution cards can't attack.\r\n[Opponent's Turn] [Once Per Turn] When an attack target is switched, you may unsuspend 1 of your Digimon with ＜Blocker＞.",
+  "inherited_effect_description_eng": "[All Turns] All of your Digimon with ＜Blocker＞ get +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Gotsumon]: Cost 0"
+}

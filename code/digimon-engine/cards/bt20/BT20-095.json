@@ -1,0 +1,28 @@
+{
+  "index": 2185,
+  "norm_id": 0.10925,
+  "card_id": "BT20-095",
+  "card_index": 95,
+  "card_name_eng": "Fellowship of Hope's Keepers",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT20_095",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "X Antibody",
+    "Chronicle"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal the top 3 cards of your deck. Add 1 [Chronicle] trait card among them to the hand. Return the rest to the top or bottom of the deck. Then, place this card in the battle area.\r\n[All Turns] When any of your [Chronicle] trait Digimon are deleted, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・By moving your level 3 or higher Digimon from the breeding area to the battle area, it may digivolve into a [Chronicle] trait Digimon card in the hand or trash without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Chronicle] trait card with a play cost of 5 or less from your hand or trash without paying the cost. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

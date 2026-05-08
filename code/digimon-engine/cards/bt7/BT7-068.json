@@ -1,0 +1,35 @@
+{
+  "index": 762,
+  "norm_id": 0.0381,
+  "card_id": "BT7-068",
+  "card_index": 68,
+  "card_name_eng": "Lopmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_068",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Beast"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When you play a Tamer, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

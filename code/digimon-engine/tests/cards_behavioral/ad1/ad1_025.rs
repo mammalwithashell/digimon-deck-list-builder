@@ -231,9 +231,9 @@ fn ad1_025_has_partition_with_wargreymon_and_metalgarurumon() {
     let card = runner.compiled_card("AD1-025").expect("AD1-025 compiles");
 
     let partition = card.effects.iter().find_map(|c| match c {
-        CompiledClause::Declarative(CompiledDeclarativeClause::Partition {
-            sources, ..
-        }) => Some(sources),
+        CompiledClause::Declarative(CompiledDeclarativeClause::Partition { sources, .. }) => {
+            Some(sources)
+        }
         _ => None,
     });
     let sources = partition.expect("AD1-025 must declare a Partition clause");
@@ -246,9 +246,9 @@ fn ad1_025_has_partition_with_wargreymon_and_metalgarurumon() {
     let has_wargrey = sources
         .iter()
         .any(|p| pred_any(p, |q| q.name_contains.as_deref() == Some("WarGreymon")));
-    let has_metalgaru = sources.iter().any(|p| {
-        pred_any(p, |q| q.name_contains.as_deref() == Some("MetalGarurumon"))
-    });
+    let has_metalgaru = sources
+        .iter()
+        .any(|p| pred_any(p, |q| q.name_contains.as_deref() == Some("MetalGarurumon")));
     assert!(
         has_wargrey,
         "Partition sources must include name_contains: WarGreymon"
@@ -270,8 +270,7 @@ fn ad1_025_partition_excludes_battle() {
 
     let exclude = card.effects.iter().find_map(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::Partition {
-            exclude_cause,
-            ..
+            exclude_cause, ..
         }) => Some(exclude_cause),
         _ => None,
     });
@@ -560,9 +559,10 @@ fn ad1_025_when_digivolving_fires_same_body_as_on_play() {
 
     let opp_battle_before = runner.battle_area_size(1);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(omni));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(omni),
+    );
     runner.game.drain_effect_queue();
     runner.auto_resolve().expect("auto-resolve");
 
@@ -585,7 +585,10 @@ fn ad1_025_when_digivolving_fires_same_body_as_on_play() {
 #[ignore = "pending YAML drift fix: missing [All Turns][OPT] clause. See DRIFT 2."]
 fn ad1_025_all_turns_observer_trashes_opp_option_and_top_security() {
     let mut runner = omnimon_runner();
-    runner.game.card_data.push(make_named_option("OPP-OPT", "EnemyOption"));
+    runner
+        .game
+        .card_data
+        .push(make_named_option("OPP-OPT", "EnemyOption"));
     let _omni = runner.place_on_field(0, "AD1-025", Some(0));
     let opp_dig = runner.place_on_field(1, "FILL", Some(0));
     let _opp_opt = runner.place_on_field(1, "OPP-OPT", Some(0));

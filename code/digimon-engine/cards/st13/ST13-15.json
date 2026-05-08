@@ -1,0 +1,25 @@
+{
+  "index": 3779,
+  "norm_id": 0.18895,
+  "card_id": "ST13-15",
+  "card_index": 15,
+  "card_name_eng": "Direct Smasher",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST13_15",
+  "play_cost": 7,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have [Legend-Arms] trait Digimon, you can ignore this card's color requirements.\r\n[Main] Delete 1 of your opponent's Digimon with the highest DP.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 1929,
+  "norm_id": 0.09645,
+  "card_id": "BT18-043",
+  "card_index": 43,
+  "card_name_eng": "Tinkermon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_043",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    0
+  ],
+  "type_eng": [
+    "Fairy"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon or any of your Tamers would digivolve into a multicolored Digimon that is green or red, reduce the digivolution cost by 1.",
+  "inherited_effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": ""
+}

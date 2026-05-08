@@ -1,0 +1,25 @@
+{
+  "index": 106,
+  "norm_id": 0.0053,
+  "card_id": "BT1-090",
+  "card_index": 90,
+  "card_name_eng": "Gravity Crush",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_090",
+  "play_cost": 0,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Gain 2 memory. At end of turn, lose 2 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

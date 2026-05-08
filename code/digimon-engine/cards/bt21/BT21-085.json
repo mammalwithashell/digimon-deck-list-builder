@@ -1,0 +1,28 @@
+{
+  "index": 2277,
+  "norm_id": 0.11385,
+  "card_id": "BT21-085",
+  "card_index": 85,
+  "card_name_eng": "Davis Motomiya",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_085",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 3,
+  "card_colors": [
+    1,
+    0
+  ],
+  "type_eng": [
+    "Hero"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Main] By suspending this Tamer and trashing the top stacked card of 1 of your [Armor Form] trait Digimon, ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

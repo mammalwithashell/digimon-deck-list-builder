@@ -1,0 +1,36 @@
+{
+  "index": 1646,
+  "norm_id": 0.0823,
+  "card_id": "BT15-066",
+  "card_index": 66,
+  "card_name_eng": "Machinedramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_066",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine",
+    "Dark Masters"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Attacking] ＜De-Digivolve 2＞ 1 of your opponent's Digimon. (Trash up to 2 cards from the top. You can't trash past level 3 cards.)\r\n[Your Turn] This Digimon can only digivolve into white Digimon.\r\n[End of Opponent's Turn] Delete this Digimon. Then, you may play 1 Digimon card with the [Dark Masters] trait, other than [Machinedramon], from your hand without paying the cost.",
+  "inherited_effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

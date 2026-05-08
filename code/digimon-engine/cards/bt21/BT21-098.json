@@ -1,0 +1,27 @@
+{
+  "index": 2290,
+  "norm_id": 0.1145,
+  "card_id": "BT21-098",
+  "card_index": 98,
+  "card_name_eng": "Ragnarok Cannon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_098",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Delete 1 of your opponent’s Digimon with the lowest play cost. Then, place this card in the battle area.\r\n[Your Turn] When one of your [Galacticmon] attacks, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Delete 1 of your opponent’s Digimon with the lowest play cost. If this effect didn't delete, trash the top cards of your opponent's security stack so that it has 1 card left.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 card with [Vemmon] in its text and a play cost of 6 or less from your hand or trash without paying the cost. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

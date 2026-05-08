@@ -1,0 +1,25 @@
+{
+  "index": 572,
+  "norm_id": 0.0286,
+  "card_id": "BT5-102",
+  "card_index": 102,
+  "card_name_eng": "Wisselen",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_102",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Up to 2 of your opponent's Digimon can't attack or block until the end of your opponent's next turn. Then, if you have a Digimon with ＜Digi-Burst＞ in play, gain 2 memory.",
+  "inherited_effect_description_eng": "Security Effect [Security] Up to 2 of your opponent's Digimon can't attack until the end of the turn. Then, if you have a Digimon with ＜Digi-Burst＞ in play, gain 2 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

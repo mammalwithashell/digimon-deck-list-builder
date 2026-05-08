@@ -1,0 +1,25 @@
+{
+  "index": 3044,
+  "norm_id": 0.1522,
+  "card_id": "EX6-072",
+  "card_index": 72,
+  "card_name_eng": "Mega Digimon Assembly!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_072",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While your opponent has a level 6 or higher Digimon, you may ignore this card's color requirements.\r\n[Main] 1 of your level 6 Digimon and 1 card in the hand may DNA digivolve into a level 7 Digimon card in your hand.",
+  "inherited_effect_description_eng": "Security Effect [Security] Return 1 level 6 or higher Digimon card from your trash to the hand. Then, add this card to the hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,28 @@
+{
+  "index": 4070,
+  "norm_id": 0.2035,
+  "card_id": "EX9-066",
+  "card_index": 66,
+  "card_name_eng": "Tai Kamiya & Matt Ishida",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_066",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    1
+  ],
+  "type_eng": [
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] You may return 1 Digimon card with [Greymon], [Garurumon] or [Omnimon] in its name from your trash to the hand. If this effect didn't return, ＜Draw 1＞ (Draw 1 card from your deck.)\r\n[All Turns] When any of your Digimon are played or digivolve, by suspending this Tamer, gain 1 memory if you have a Digimon with [Greymon] in its name. Then, gain 1 memory if you have a Digimon with [Garurumon] in its name.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

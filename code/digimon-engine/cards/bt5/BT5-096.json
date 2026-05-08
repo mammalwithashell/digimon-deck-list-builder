@@ -1,0 +1,25 @@
+{
+  "index": 566,
+  "norm_id": 0.0283,
+  "card_id": "BT5-096",
+  "card_index": 96,
+  "card_name_eng": "Supreme Cannon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT5_096",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Return all of your opponent's Digimon with 3000 DP or less to their owners' hands. If you have a Digimon in play with [Garurumon] or [Omnimon] in its name (other than [KendoGarurumon]), return all of your opponent's Digimon with 5000 DP or less to their owners' hands instead.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this cards [Main] effect.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

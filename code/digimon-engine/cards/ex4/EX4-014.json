@@ -1,0 +1,30 @@
+{
+  "index": 2838,
+  "norm_id": 0.1419,
+  "card_id": "EX4-014",
+  "card_index": 14,
+  "card_name_eng": "Gaossmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_014",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Reptile",
+    "Blue Flare"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When a card with the [Blue Flare] trait is played, ＜Draw 1＞. When a card with the [Twilight] trait is played, return 1 Digimon card with DigiXros requirements from your trash to your hand.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

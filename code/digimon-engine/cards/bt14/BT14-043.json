@@ -1,0 +1,37 @@
+{
+  "index": 1521,
+  "norm_id": 0.07605,
+  "card_id": "BT14-043",
+  "card_index": 43,
+  "card_name_eng": "KoDokugumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_043",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Insectoid"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] By suspending 1 of your Digimon, suspend 1 of your opponent's Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,29 @@
+{
+  "index": 1972,
+  "norm_id": 0.0986,
+  "card_id": "BT18-086",
+  "card_index": 86,
+  "card_name_eng": "Lucemon: Larva",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_086",
+  "play_cost": 6,
+  "dp": 0,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Demon God"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Security] You may play 1 [Lucemon] from your trash without paying the cost.\r\n[Breeding] [All Turns] When any of your [Lucemon: Satan Mode] would leave the battle area, by moving this Digimon to battle area, it doesn't leave.\r\n[All Turns] While you have a non-white Digimon with [Lucemon] in its name, all of your 0 DP Digimon can't be deleted.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

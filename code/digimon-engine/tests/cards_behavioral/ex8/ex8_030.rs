@@ -151,7 +151,7 @@ fn ex8_030_blocks_opponent_non_tamer_memory_gain_but_allows_tamer_source_gain() 
         ctx.gain_memory(2);
     }
     assert_eq!(
-        runner.game.memory, 2,
+        runner.game.memory, -2,
         "opponent Tamer-sourced memory gain must remain legal under EX8-030"
     );
 
@@ -173,7 +173,7 @@ fn ex8_030_blocks_opponent_non_tamer_memory_gain_but_allows_tamer_source_gain() 
         ctx.gain_memory(2);
     }
     assert_eq!(
-        runner.game.memory, 2,
+        runner.game.memory, -2,
         "Digimon-sourced memory gain must work again once EX8-030 is gone"
     );
 }

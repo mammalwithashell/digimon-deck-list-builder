@@ -1,0 +1,37 @@
+{
+  "index": 322,
+  "norm_id": 0.0161,
+  "card_id": "BT3-079",
+  "card_index": 79,
+  "card_name_eng": "Tsukaimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_079",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "Inherited Effect [On Deletion] Gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

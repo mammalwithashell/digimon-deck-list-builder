@@ -1,0 +1,36 @@
+{
+  "index": 1164,
+  "norm_id": 0.0582,
+  "card_id": "BT11-022",
+  "card_index": 22,
+  "card_name_eng": "Dracomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_022",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Dragon",
+    "Blue Flare"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When you play another Digimon with [Dramon] in its name or [Blue Flare] trait, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When you play another Digimon with [Dramon] in its name or [Blue Flare] trait, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Bebydomon]: Cost 0"
+}

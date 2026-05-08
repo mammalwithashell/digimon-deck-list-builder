@@ -1,0 +1,31 @@
+{
+  "index": 3334,
+  "norm_id": 0.1667,
+  "card_id": "P-004",
+  "card_index": 4,
+  "card_name_eng": "Gomamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_004",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Sea Beast"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When one of your opponent's digivolution cards is trashed, gain 1 memory.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

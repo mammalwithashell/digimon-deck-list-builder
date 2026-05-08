@@ -1,0 +1,36 @@
+{
+  "index": 2449,
+  "norm_id": 0.12245,
+  "card_id": "BT23-053",
+  "card_index": 53,
+  "card_name_eng": "Strikedramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT23_053",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Dragonkin",
+    "CS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] When any of your Option cards are placed in the battle area, this Digimon may digivolve into a Digimon card with [Cyberdramon] in its name or the [CS] in the hand with the digivolution cost reduced by 2.",
+  "inherited_effect_description_eng": "[All Turns] This Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[CS] trait: Cost 2"
+}

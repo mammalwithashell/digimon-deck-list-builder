@@ -1,0 +1,27 @@
+{
+  "index": 4076,
+  "norm_id": 0.2038,
+  "card_id": "EX9-072",
+  "card_index": 72,
+  "card_name_eng": "File Island",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_072",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "DM"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have no face-up security card, you can ignore this card's color requirements.\r\n[Security] [All Turns] All of your [DM] trait Digimon get +1000 DP for each of their face-down digivolution cards.\r\n[Main] Add your bottom security card to the hand. Then, place this card face up as the bottom security card.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 play cost 5 or lower card with the [DM] trait from your hand or trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,36 @@
+{
+  "index": 1405,
+  "norm_id": 0.07025,
+  "card_id": "BT13-039",
+  "card_index": 39,
+  "card_name_eng": "KnightChessmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_039",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    5
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Deletion] If it's your turn, you may play 1 level 4 or lower Digimon card with [Chessmon] in its name from your hand without paying its cost.",
+  "inherited_effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Chessmon] in name: Cost 2"
+}

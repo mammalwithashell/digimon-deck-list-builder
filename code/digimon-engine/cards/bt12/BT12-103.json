@@ -1,0 +1,25 @@
+{
+  "index": 1357,
+  "norm_id": 0.06785,
+  "card_id": "BT12-103",
+  "card_index": 103,
+  "card_name_eng": "Home Run Blast",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT12_103",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a [Hunter] trait Tamer, you can ignore this card's color requirements.\r\n[Main] 1 of your opponent's Digimon gets -4000 DP for the turn. Then, if you have a Digimon with 4 or more digivolution cards in play, 1 of your opponent's Digimon gains ＜Security A. -1＞ for the turn. (This Digimon checks 1 additional security card.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

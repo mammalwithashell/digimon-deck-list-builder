@@ -1,0 +1,36 @@
+{
+  "index": 2944,
+  "norm_id": 0.1472,
+  "card_id": "EX5-046",
+  "card_index": 46,
+  "card_name_eng": "Targetmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX5_046",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [
+    "Puppet"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Deletion] By trashing 1 card with [Etemon] or [Sukamon] in its name in your hand, return this card to the hand.",
+  "inherited_effect_description_eng": "[All Turns] When this Digimon would be deleted, by deleting 1 other Digimon with [Sukamon] in its name, prevent that deletion.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

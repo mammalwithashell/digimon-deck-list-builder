@@ -1,0 +1,36 @@
+{
+  "index": 3084,
+  "norm_id": 0.1542,
+  "card_id": "EX7-038",
+  "card_index": 38,
+  "card_name_eng": "Gotsumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_038",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Rock",
+    "NSp"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "inherited_effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[NSP] trait: Cost 0"
+}

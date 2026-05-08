@@ -1,0 +1,29 @@
+{
+  "index": 133,
+  "norm_id": 0.00665,
+  "card_id": "BT2-002",
+  "card_index": 2,
+  "card_name_eng": "DemiVeemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT2_002",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Baby Dragon"
+  ],
+  "form_eng": [
+    "In-Training"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When this Digimon becomes unsuspended during your main phase, it gets +1000 DP for the turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

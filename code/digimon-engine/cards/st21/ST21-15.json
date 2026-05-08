@@ -1,0 +1,27 @@
+{
+  "index": 3897,
+  "norm_id": 0.19485,
+  "card_id": "ST21-15",
+  "card_index": 15,
+  "card_name_eng": "Gennai's House",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST21_15",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "ADVENTURE"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have no face-up [Gennai's House] security cards, you can ignore this card's color requirements.\r\n[Security] [Your Turn] All of your level 3 or higher Digimon get +3000 DP.\r\n[Main] Add your bottom security card to the hand. Then, place this card face up as the bottom security card.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 3 Digimon card from your trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

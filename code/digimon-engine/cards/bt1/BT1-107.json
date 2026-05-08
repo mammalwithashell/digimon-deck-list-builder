@@ -1,0 +1,25 @@
+{
+  "index": 123,
+  "norm_id": 0.00615,
+  "card_id": "BT1-107",
+  "card_index": 107,
+  "card_name_eng": "Holy Wave",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_107",
+  "play_cost": 6,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

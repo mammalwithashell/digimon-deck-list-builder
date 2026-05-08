@@ -1,0 +1,37 @@
+{
+  "index": 1748,
+  "norm_id": 0.0874,
+  "card_id": "BT16-066",
+  "card_index": 66,
+  "card_name_eng": "Syakomon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_066",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    1
+  ],
+  "type_eng": [
+    "Crustacean",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Start of Your Main Phase] [When Digivolving] Your opponent may trash 1 Digimon card in their hand. If they didn't, gain 1 memory.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Syakomon]: Cost 0"
+}

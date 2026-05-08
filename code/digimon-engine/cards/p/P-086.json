@@ -1,0 +1,35 @@
+{
+  "index": 3416,
+  "norm_id": 0.1708,
+  "card_id": "P-086",
+  "card_index": 86,
+  "card_name_eng": "Syakomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_086",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Crustacean"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] If you have a blue Tamer in play, 1 of your Digimon can't be attacked until the end of your opponent's turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

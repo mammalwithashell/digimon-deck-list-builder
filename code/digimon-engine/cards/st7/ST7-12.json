@@ -1,0 +1,25 @@
+{
+  "index": 3706,
+  "norm_id": 0.1853,
+  "card_id": "ST7-12",
+  "card_index": 12,
+  "card_name_eng": "Atomic Blaster",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST7_12",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Choose any number of your opponent's Digimon whose total DP adds up to 8000 or less and delete them.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

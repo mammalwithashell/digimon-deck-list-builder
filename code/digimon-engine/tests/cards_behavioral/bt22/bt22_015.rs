@@ -72,8 +72,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
-    CompiledStep, CompiledTiming, CompiledTriggeredClause,
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
+    CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -88,10 +88,9 @@ const YAML: &str = include_str!("../../../cards/bt22/BT22-015.yaml");
 
 /// Compile BT22-015 from the production YAML and return the CompiledCard.
 fn compiled_bt22_015() -> digimon_dsl::compiled::CompiledCard {
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(YAML).expect("BT22-015.yaml parses");
-    let registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
-        .expect("BT22-015.yaml compiles");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("BT22-015.yaml parses");
+    let registry =
+        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("BT22-015.yaml compiles");
     registry
         .lookup("BT22-015")
         .expect("BT22-015 in registry")
@@ -293,10 +292,9 @@ fn trigger_when_attacking(runner: &mut DebugRunner, handle: PermanentHandle) {
 }
 
 fn trigger_on_play(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner.game.enqueue_triggered(
-        EffectTiming::OnPlay,
-        TriggerSource::Permanent(handle),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(handle));
     runner.game.drain_effect_queue();
 }
 

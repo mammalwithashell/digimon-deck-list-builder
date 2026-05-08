@@ -1,0 +1,37 @@
+{
+  "index": 705,
+  "norm_id": 0.03525,
+  "card_id": "BT7-011",
+  "card_index": 11,
+  "card_name_eng": "BurningGreymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_011",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dark Dragon"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "You may digivolve this card from your hand onto one of your red Tamers as if the Tamer is a level 3 red Digimon for a memory cost of 2.\r\n[When Digivolving] If a card with the [Hybrid] trait or [Takuya Kanbara] is in this Digimon's digivolution cards, delete 1 of your opponent's Digimon with 4000 DP or less.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

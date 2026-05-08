@@ -1,0 +1,37 @@
+{
+  "index": 2565,
+  "norm_id": 0.12825,
+  "card_id": "BT24-067",
+  "card_index": 67,
+  "card_name_eng": "Hackmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_067",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Hacking (App Name)"
+  ],
+  "form_eng": [
+    "Stnd."
+  ],
+  "attribute_eng": [
+    "System"
+  ],
+  "effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Rei Katsura] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "Link Requirements [Link] [Appmon] trait: Cost 1 \r\n(Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+}

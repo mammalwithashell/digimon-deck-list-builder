@@ -1,0 +1,37 @@
+{
+  "index": 3101,
+  "norm_id": 0.15505,
+  "card_id": "EX7-055",
+  "card_index": 55,
+  "card_name_eng": "Punkmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX7_055",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Dark Dragon",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] If you have 1 or fewer Tamers, you may play 1 [Yuuki] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +2000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Evil] trait: Cost 2"
+}

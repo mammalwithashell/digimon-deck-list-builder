@@ -1,0 +1,35 @@
+{
+  "index": 1648,
+  "norm_id": 0.0824,
+  "card_id": "BT15-068",
+  "card_index": 68,
+  "card_name_eng": "Gizamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_068",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Sea Animal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Until the end of your opponent's turn, 1 of their Digimon gains \"[On Deletion] Lose 1 memory.\"",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When an effect plays an opponent's Digimon, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

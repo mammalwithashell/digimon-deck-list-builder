@@ -1,0 +1,25 @@
+{
+  "index": 3677,
+  "norm_id": 0.18385,
+  "card_id": "ST5-15",
+  "card_index": 15,
+  "card_name_eng": "Laser Eye",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST5_15",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] ＜De-Digivolve 1＞ 2 of your opponent's Digimon. (Trash the top card. You can't trash past level 3 cards.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,57 @@
+{
+  "index": 1759,
+  "norm_id": 0.08795,
+  "card_id": "BT16-077",
+  "card_index": 77,
+  "card_name_eng": "Dinobeemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_077",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Partition (Purple Lv.4 & Red Lv.4)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)\r\n[When Digivolving] If DNA digivolving, you may play 1 level 5 or lower Digimon card with the [Free] trait from your trash without paying the cost. Then, 1 of your Digimon may gain ＜Rush＞ (This Digimon can attack the turn it comes into play.) for the turn and attack a player.",
+  "inherited_effect_description_eng": "＜Partition (Purple Lv.4 & Red Lv.4)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Purple Lv.4 + Red Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 4,
+        "card_colors": [
+          "Purple"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 4,
+        "card_colors": [
+          "Red"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "index": 2292,
+  "norm_id": 0.1146,
+  "card_id": "BT21-100",
+  "card_index": 100,
+  "card_name_eng": "The Digimon I Designed",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_100",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have [Takato Matsuki], you can ignore this card's color requirements.\r\n[Main] ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand. Then, place this card in the battle area.\r\n[Your Turn] When effects delete Digimon, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon with [Guilmon] or [Growlmon] in its name may digivolve into a Digimon card with [Growlmon], [Gallantmon] or [Megidramon] in its name in the trash without paying the cost.",
+  "inherited_effect_description_eng": "Security Effect [Security] Gain 1 memory. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,27 @@
+{
+  "index": 3988,
+  "norm_id": 0.1994,
+  "card_id": "EX10-067",
+  "card_index": 67,
+  "card_name_eng": "Ryoma Mogami",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_067",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Hunter"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When any of your Digimon digivolve into a Digimon with ＜Save＞ in its text, by suspending this Tamer and placing 1 Digimon card with ＜Save＞ in its text from under your Tamers as that Digimon's bottom digivolution card, that Digimon gains ＜Alliance＞ for the turn. (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

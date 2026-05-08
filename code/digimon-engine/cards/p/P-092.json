@@ -1,0 +1,38 @@
+{
+  "index": 3422,
+  "norm_id": 0.1711,
+  "card_id": "P-092",
+  "card_index": 92,
+  "card_name_eng": "Dracomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_092",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    1,
+    3
+  ],
+  "type_eng": [
+    "Dragon"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Your Turn] When you play a [Groundramon], this Digimon may digivolve into a [Wingdramon] from your hand for a cost of 3, ignoring its digivolution requirements.",
+  "inherited_effect_description_eng": "[Your Turn] When you play a [Groundramon], this Digimon may digivolve into a [Wingdramon] from your hand without paying its cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Bebydomon]: Cost 0"
+}

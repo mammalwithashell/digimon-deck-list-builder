@@ -1,0 +1,27 @@
+{
+  "index": 4075,
+  "norm_id": 0.20375,
+  "card_id": "EX9-071",
+  "card_index": 71,
+  "card_name_eng": "Protein",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX9_071",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "DM"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have [DM] trait Digimon or Tamer on the field, you can ignore this card's color requirements.\r\n[Main] ＜Draw 1＞ (Draw 1 card from your deck.) Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・By trashing 1 of your [DM] trait Digimon's bottom 2 face-down digivolution cards, it unsuspends.",
+  "inherited_effect_description_eng": "Security Effect [Security] Gain 1 memory. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

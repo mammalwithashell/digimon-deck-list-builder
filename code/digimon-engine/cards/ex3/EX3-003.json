@@ -1,0 +1,35 @@
+{
+  "index": 2753,
+  "norm_id": 0.13765,
+  "card_id": "EX3-003",
+  "card_index": 3,
+  "card_name_eng": "Sunarizamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_003",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Reptile"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Attacking] Reveal the top 3 cards of your deck. Add 1 Digimon card with [Dragon], [saur] or [Ceratopsian] in any of its traits among them to your hand. Place the rest at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

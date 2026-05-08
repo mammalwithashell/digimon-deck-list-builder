@@ -1,0 +1,26 @@
+{
+  "index": 1985,
+  "norm_id": 0.09925,
+  "card_id": "BT18-099",
+  "card_index": 99,
+  "card_name_eng": "Fist of Athena",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT18_099",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "While you have a Digimon with [Knightmon] in its text, you can ignore this card's color requirements.\r\n[Main] Until the end of opponent's turn, 1 of your their Digimon gains \"[Start of Your Main Phase] This Digimon attacks.\" Then, place this card in the battle area.\r\n[All Turns] When attack target changes, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon gains ＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.) and ＜Security A. +1＞ (This Digimon checks 1 additional security card.) until the end of your turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 level 5 or lower Digimon card with [Knightmon] in its text from your trash without paying the cost. Then, place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

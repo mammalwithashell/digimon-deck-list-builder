@@ -1,0 +1,35 @@
+{
+  "index": 2571,
+  "norm_id": 0.12855,
+  "card_id": "BT24-073",
+  "card_index": 73,
+  "card_name_eng": "SkullSatamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_073",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Undead"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[When Digivolving] [On Deletion] If your opponent has 10 or fewer cards in their trash, trash the top 3 cards of both players' decks. Then, if your opponent has 10 or more cards in their trash, you may play 1 level 4 or lower [Evil] or [Fallen Angel] Digimon card from your trash without paying the cost.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] This Digimon gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.) for the turn. If your opponent has 10 or fewer cards in their trash, instead trash the top 2 cards of both players' decks.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

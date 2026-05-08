@@ -1,0 +1,36 @@
+{
+  "index": 2054,
+  "norm_id": 0.1027,
+  "card_id": "BT19-066",
+  "card_index": 66,
+  "card_name_eng": "Gizamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_066",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Sea Animal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] By trashing 1 card with the [Composite] or [Wicked God] trait in your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Pagumon]: Cost 0"
+}

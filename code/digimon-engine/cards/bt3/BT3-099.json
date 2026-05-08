@@ -1,0 +1,25 @@
+{
+  "index": 342,
+  "norm_id": 0.0171,
+  "card_id": "BT3-099",
+  "card_index": 99,
+  "card_name_eng": "We Have to Stop Fighting!",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT3_099",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Neither player's Digimon can be deleted in battle for the turn.",
+  "inherited_effect_description_eng": "Security Effect [Security] Add this card to your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,37 @@
+{
+  "index": 62,
+  "norm_id": 0.0031,
+  "card_id": "BT1-046",
+  "card_index": 46,
+  "card_name_eng": "Kudamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_046",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Holy Beast"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Attacking] If you have 4 or less cards in your hand, ＜Draw 1＞ (Draw 1 card from your deck.).",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

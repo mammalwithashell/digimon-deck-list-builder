@@ -1,0 +1,35 @@
+{
+  "index": 3741,
+  "norm_id": 0.18705,
+  "card_id": "ST10-08",
+  "card_index": 8,
+  "card_name_eng": "Tsukaimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST10_08",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Mammal"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 [Angel], [Archangel] or [Fallen Angel] trait among them to your hand. Return the remaining cards to the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

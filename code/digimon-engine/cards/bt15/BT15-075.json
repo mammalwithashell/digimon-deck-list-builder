@@ -1,0 +1,38 @@
+{
+  "index": 1655,
+  "norm_id": 0.08275,
+  "card_id": "BT15-075",
+  "card_index": 75,
+  "card_name_eng": "Loogarmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_075",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    0
+  ],
+  "type_eng": [
+    "Dark Animal",
+    "X Antibody",
+    "SoC"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Digivolving] [When Attacking] By trashing 1 card in your hand, this Digimon gets +2000 DP for the turn. If a Tamer card with the [SoC] trait is in this Digimon's digivolution cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] If your opponent has 1 or more memory, gain 1 memory.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[SoC] trait: Cost 2"
+}

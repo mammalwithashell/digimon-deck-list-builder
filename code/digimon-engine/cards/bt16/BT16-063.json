@@ -1,0 +1,57 @@
+{
+  "index": 1745,
+  "norm_id": 0.08725,
+  "card_id": "BT16-063",
+  "card_index": 63,
+  "card_name_eng": "Shakkoumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_063",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    5,
+    2
+  ],
+  "type_eng": [
+    "Mutant"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "＜Partition (Black Lv.4 & Yellow Lv.4)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)\r\n[When Digivolving] Until the end of your opponent's turn, this Digimon isn't affected by the effects of their Digimon. Then, if DNA digivolving, place 1 of your opponent's Digimon with as high or lower a level as the number of cards in your or their security stack at the bottom of their security stack.",
+  "inherited_effect_description_eng": "＜Partition (Black Lv.4 & Yellow Lv.4)＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[DNA Digivolve] Black Lv.4 + Yellow Lv.4 : Cost 0\r\nStack the 2 specified Digimon and digivolve unsuspended.",
+  "dna_costs": [
+    {
+      "requirement1": {
+        "level": 4,
+        "card_colors": [
+          "Black"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "requirement2": {
+        "level": 4,
+        "card_colors": [
+          "Yellow"
+        ],
+        "name_contains": "",
+        "text_contains": ""
+      },
+      "memory_cost": 0
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "index": 3971,
+  "norm_id": 0.19855,
+  "card_id": "EX10-050",
+  "card_index": 50,
+  "card_name_eng": "Baalmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX10_050",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6,
+    5
+  ],
+  "type_eng": [
+    "Wizard",
+    "Bagra Army"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Free"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Trash the top 3 cards of your deck. Then, if you have 5 or more cards in your trash, this Digimon gains ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.) and ＜Blocker＞ (This Digimon can block in the blocker timing.) until your opponent's turn ends.\r\n[On Deletion] If you have 10 or more cards in your trash, you may play 1 [Beelzemon] from your trash without paying the cost.",
+  "inherited_effect_description_eng": "[All Turns] For every 10 cards in your trash, this Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Wizard] trait: Cost 3"
+}

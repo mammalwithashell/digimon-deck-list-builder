@@ -1,0 +1,38 @@
+{
+  "index": 3464,
+  "norm_id": 0.1732,
+  "card_id": "P-134",
+  "card_index": 134,
+  "card_name_eng": "Shoemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_134",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 5,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Puppet",
+    "LIBERATOR"
+  ],
+  "form_eng": [
+    "Rookie"
+  ],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] 1 of your opponent's Digimon gains ＜Security A. -1＞ (This Digimon checks 1 additional security card.) until the end of their turn.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

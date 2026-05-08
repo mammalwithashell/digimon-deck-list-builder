@@ -1,0 +1,37 @@
+{
+  "index": 2,
+  "norm_id": 0.0001,
+  "card_id": "AD1-002",
+  "card_index": 2,
+  "card_name_eng": "Aldamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "AD1_002",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Wizard"
+  ],
+  "form_eng": [
+    "Hybrid"
+  ],
+  "attribute_eng": [
+    "Variable"
+  ],
+  "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it comes into play.)\r\n[When Digivolving] Delete 1 of your opponent's Digimon with as much or less DP as this Digimon.\r\n[End of Attack] [On Deletion] You may trash 1 [Hybrid] or [Ten Warriors] trait card from your hand. If this effect trashed, ＜Draw 2＞ (Draw 2 cards from your deck.) Then, you may play 1 red, blue or green Tamer card with inherited effects from your hand or trash without paying the cost.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +4000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Takuya Kanbara] w/2 or more [Hybrid] trait cards under: Cost 3"
+}

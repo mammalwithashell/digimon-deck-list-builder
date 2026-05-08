@@ -1,0 +1,37 @@
+{
+  "index": 1661,
+  "norm_id": 0.08305,
+  "card_id": "BT15-081",
+  "card_index": 81,
+  "card_name_eng": "Leviamon (X Antibody)",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT15_081",
+  "play_cost": 14,
+  "dp": 14000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Demon Lord",
+    "Seven Great Demon Lords",
+    "X Antibody"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Trash] [All Turns] When an effect plays an opponent's Digimon or Tamer, 1 of your [Leviamon] or Digimon with [X Antibody] in their digivolution cards may digivolve into this card without paying the cost.\r\n＜Security A. +2＞ (This Digimon checks 2 additional security cards.)\r\n[When Digivolving] If your opponent has as many or more total Digimon and Tamers as you, delete 1 of their Tamers. Then, delete 1 of your opponent's level 3, 1 of their level 5 and 1 of their level 7 Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[Digivolve] [Leviamon]: Cost 2"
+}

@@ -4,7 +4,7 @@ use rand::SeedableRng;
 use std::collections::HashMap;
 
 use crate::card_data::CardData;
-use crate::card_source::CardSource;
+use crate::card_source::{CardHandle, CardSource};
 use crate::cards::{build_registry, CardEffectRegistry};
 use crate::dsl_cards::formula_registry::FormulaExtensionRegistry;
 use crate::enums::{GamePhase, PlayerId};
@@ -325,6 +325,10 @@ pub struct Game {
     /// security-check driver between drains).
     #[doc(hidden)]
     pub(crate) effect_source_player: Option<PlayerId>,
+    #[doc(hidden)]
+    pub(crate) effect_source_card: Option<crate::card_source::CardHandle>,
+    #[doc(hidden)]
+    pub(crate) effect_source_permanent: Option<crate::permanent::PermanentHandle>,
 
     /// Runtime metadata for the trigger whose effect is currently resolving.
     /// DSL event predicates and `event_target` / `event_card` bindings read
@@ -343,6 +347,19 @@ pub struct Game {
     /// `None` outside an OnDeletion observer body. Phase B §B5.
     #[doc(hidden)]
     pub(crate) current_deletion_cause: Option<crate::replacement::ReplacementCause>,
+
+    /// Observer-facing cause override for the deletion currently being
+    /// finalized. Replacement windows still read `current_deletion_cause`;
+    /// this slot only refines the `TriggerContext` payload for timings such
+    /// as `OnAnyDeletion` that distinguish a keyword route like Overclock.
+    #[doc(hidden)]
+    pub(crate) current_deletion_event_cause_override: Option<crate::trigger_context::EventCause>,
+
+    /// Paused Overclock attack after the sacrifice deletion installed one or
+    /// more observer selections. Once those selections finish, the source card
+    /// is re-resolved by handle/token instead of trusting the old slot.
+    #[doc(hidden)]
+    pub(crate) pending_overclock_attack: Option<(PlayerId, CardHandle, PlayerId)>,
 
     /// True while effects are being evaluated from a DNA digivolution event.
     /// Consumed by the DSL `dna_origin` predicate for clauses like
@@ -653,8 +670,12 @@ impl Game {
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
             effect_source_player: None,
+            effect_source_card: None,
+            effect_source_permanent: None,
             current_trigger_context: None,
             current_deletion_cause: None,
+            current_deletion_event_cause_override: None,
+            pending_overclock_attack: None,
             current_dna_origin: None,
             parked_replacement: None,
             dsl_replacement_outcome: None,
@@ -935,6 +956,16 @@ impl Game {
                 player: player_id,
                 permanent: entered,
                 card: entered_card,
+                effect_initiated: true,
+            },
+        );
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnAllyPlayed,
+            crate::selection::TriggerSource::EnteredField {
+                player: player_id,
+                permanent: entered,
+                card: entered_card,
+                effect_initiated: true,
             },
         );
         self.drain_effect_queue();
@@ -1037,6 +1068,16 @@ impl Game {
                     player: player_id,
                     permanent,
                     card,
+                    effect_initiated: true,
+                },
+            );
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnAllyPlayed,
+                crate::selection::TriggerSource::EnteredField {
+                    player: player_id,
+                    permanent,
+                    card,
+                    effect_initiated: true,
                 },
             );
         }
@@ -1342,11 +1383,23 @@ impl Game {
 
     /// Gain memory for the active player.
     pub fn gain_memory(&mut self, amount: i16) {
+        self.gain_memory_for_player(self.turn_player(), amount);
+    }
+
+    /// Gain memory for a specific player. The memory counter is stored from
+    /// the current turn player's perspective, so non-turn-player gains move
+    /// the counter toward the opponent's side.
+    pub fn gain_memory_for_player(&mut self, player: PlayerId, amount: i16) {
         let before = self.memory;
-        self.memory = (self.memory + amount).min(self.rules.memory_range.1);
+        let signed_amount = if player == self.turn_player() {
+            amount
+        } else {
+            -amount
+        };
+        self.memory = (self.memory + signed_amount)
+            .clamp(self.rules.memory_range.0, self.rules.memory_range.1);
         let delta = self.memory - before;
         let seq = self.next_event_seq();
-        let player = self.turn_player();
         self.events.push(crate::events::GameEvent::MemoryChange {
             seq,
             player,
@@ -1595,6 +1648,9 @@ impl Game {
     /// merge but before triggers fire. The user-action path passes `true`
     /// (matching `digivolve_from_hand`); the effect-initiated path passes
     /// `false`.
+    ///
+    /// `effect_initiated`: marks the global `OnDigivolve` payload so observers
+    /// can distinguish effect-created DNA digivolutions from player-action DNA.
     pub(crate) fn dna_digivolve_inner(
         &mut self,
         target_a: PermanentHandle,
@@ -1603,6 +1659,7 @@ impl Game {
         hand_index: usize,
         cost: u16,
         grant_digivolve_bonus: bool,
+        effect_initiated: bool,
     ) -> Option<PermanentHandle> {
         use crate::enums::EffectTiming;
         use crate::selection::TriggerSource;
@@ -1659,20 +1716,29 @@ impl Game {
             EffectTiming::WhenDigivolving,
             TriggerSource::Permanent(merged_handle),
         );
-        self.drain_effect_queue();
+        self.drain_effect_queue_with_dna_origin(true);
 
         self.enqueue_triggered(
             EffectTiming::OnDnaDigivolve,
             TriggerSource::Permanent(merged_handle),
         );
-        self.drain_effect_queue();
+        self.drain_effect_queue_with_dna_origin(true);
 
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                EffectTiming::OnDigivolve,
-                TriggerSource::PlayerBattleArea(pid as PlayerId),
-            );
-        }
+        let event_card = self
+            .player(merged_handle.player)
+            .battle_area
+            .get(merged_handle.index as usize)
+            .map(|perm| perm.top_card().handle())?;
+        self.enqueue_triggered(
+            EffectTiming::OnDigivolve,
+            TriggerSource::Digivolved {
+                player: merged_handle.player,
+                permanent: merged_handle,
+                card: event_card,
+                effect_initiated,
+                dna_origin: true,
+            },
+        );
         self.drain_effect_queue();
 
         Some(merged_handle)
@@ -2362,6 +2428,127 @@ impl Game {
         self.revealed_cards
             .iter()
             .find(|c| c.card_index == target_index)
+    }
+
+    pub fn provenance_token_for_card(
+        &self,
+        card: crate::card_source::CardHandle,
+    ) -> crate::trigger_context::ProvenanceToken {
+        crate::trigger_context::ProvenanceToken::from(card)
+    }
+
+    pub fn resolve_provenance_token(
+        &self,
+        token: crate::trigger_context::ProvenanceToken,
+    ) -> Option<crate::trigger_context::EventSubject> {
+        if token.0 > u16::MAX as u64 {
+            return None;
+        }
+        let card = crate::card_source::CardHandle(token.0 as u16);
+        let target_index = card.0;
+
+        for (player_index, player) in self.players.iter().enumerate() {
+            let player_id = player_index as crate::enums::PlayerId;
+            for (index, permanent) in player.battle_area.iter().enumerate() {
+                if permanent
+                    .card_sources
+                    .iter()
+                    .any(|source| source.card_index == target_index)
+                {
+                    return Some(crate::trigger_context::EventSubject::Permanent(
+                        PermanentHandle {
+                            player: player_id,
+                            index: index as u8,
+                        },
+                    ));
+                }
+                if permanent
+                    .linked_cards
+                    .iter()
+                    .any(|source| source.card_index == target_index)
+                {
+                    return Some(crate::trigger_context::EventSubject::Card {
+                        card,
+                        zone: crate::enums::Zone::BattleArea,
+                    });
+                }
+            }
+            if let Some(breeding) = &player.breeding_area {
+                if breeding
+                    .card_sources
+                    .iter()
+                    .any(|source| source.card_index == target_index)
+                {
+                    return Some(crate::trigger_context::EventSubject::Permanent(
+                        PermanentHandle {
+                            player: player_id,
+                            index: crate::action::space::BREEDING_TARGET as u8,
+                        },
+                    ));
+                }
+            }
+            if player
+                .hand
+                .iter()
+                .any(|source| source.card_index == target_index)
+            {
+                return Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::Hand,
+                });
+            }
+            if player
+                .trash
+                .iter()
+                .any(|source| source.card_index == target_index)
+            {
+                return Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::Trash,
+                });
+            }
+            if player
+                .security
+                .iter()
+                .any(|source| source.card_index == target_index)
+            {
+                return Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::Security,
+                });
+            }
+            if player
+                .deck
+                .iter()
+                .any(|source| source.card_index == target_index)
+            {
+                return Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::Deck,
+                });
+            }
+            if player
+                .digitama_deck
+                .iter()
+                .any(|source| source.card_index == target_index)
+            {
+                return Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::DigitamaDeck,
+                });
+            }
+        }
+        if self
+            .revealed_cards
+            .iter()
+            .any(|source| source.card_index == target_index)
+        {
+            return Some(crate::trigger_context::EventSubject::Card {
+                card,
+                zone: crate::enums::Zone::Reveal,
+            });
+        }
+        None
     }
 
     // ─── Tensor support: per-source DP + OPT helpers (§3.1 / §3.2) ───

@@ -1,0 +1,36 @@
+{
+  "index": 2835,
+  "norm_id": 0.14175,
+  "card_id": "EX4-011",
+  "card_index": 11,
+  "card_name_eng": "ChaosGallantmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_011",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    0,
+    6
+  ],
+  "type_eng": [
+    "Dark Knight"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Trash] [End of Your Turn] By Deleting 1 of your Digimon with a digivolution card and [Gallantmon] in its name, you may play this card without paying its cost.\r\n[On Play] Delete 1 of your opponent's Digimon with 7000 DP or less. For every 10 total cards in both player's trashes, add 2000 to the maximum DP you can choose with DP-based deletion effects.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[WarGrowlmon] in name: Cost 3"
+}

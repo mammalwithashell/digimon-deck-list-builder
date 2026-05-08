@@ -1,0 +1,35 @@
+{
+  "index": 1203,
+  "norm_id": 0.06015,
+  "card_id": "BT11-061",
+  "card_index": 61,
+  "card_name_eng": "Vemmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT11_061",
+  "play_cost": 3,
+  "dp": 1000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Unknown"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[Main] By suspending this Digimon, reveal the top 3 cards of your deck. Add up to 1 [Snatchmon], [Destromon], [Galacticmon] or [Fusionize] among them to your hand, and place 1 [Vemmon] among them under this Digimon as its bottom digivolution card. Place the rest at the bottom of your deck in any order.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon would digivolve into [Destromon] or [Galacticmon], reduce the digivolution cost by 1.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": ""
+}

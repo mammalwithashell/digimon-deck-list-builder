@@ -1,0 +1,35 @@
+{
+  "index": 2685,
+  "norm_id": 0.13425,
+  "card_id": "EX2-009",
+  "card_index": 9,
+  "card_name_eng": "Growlmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_009",
+  "play_cost": 6,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dark Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[When Attacking] Delete 1 of your opponent's Digimon with 2000 DP or less. If you have a red Tamer in play, delete 1 of your opponent's Digimon with 4000 DP or less instead.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If this Digimon has [Growlmon] or [Gallantmon] in its name, delete 1 of your opponent's Digimon with 3000 DP or less.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

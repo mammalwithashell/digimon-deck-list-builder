@@ -315,11 +315,7 @@ fn bt22_005_traits_include_unidentified_and_cs() {
         .compiled_card("BT22-005")
         .expect("BT22-005 compiled card present");
 
-    let traits: Vec<String> = compiled
-        .traits
-        .iter()
-        .map(|t| t.to_lowercase())
-        .collect();
+    let traits: Vec<String> = compiled.traits.iter().map(|t| t.to_lowercase()).collect();
 
     assert!(
         traits.iter().any(|t| t == "unidentified"),

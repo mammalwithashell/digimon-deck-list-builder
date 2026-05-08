@@ -1,0 +1,29 @@
+{
+  "index": 2990,
+  "norm_id": 0.1495,
+  "card_id": "EX6-018",
+  "card_index": 18,
+  "card_name_eng": "Lucemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_018",
+  "play_cost": 10,
+  "dp": 10000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Angel"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "When you would play this card, if you don't have a level 5 or lower Digimon, reduce the play cost by 5.\r\n[On Play] [Start of Your Main Phase] Reveal the top 3 cards of your deck. Add 1 card with the [Angel], [Archangel], [Three Great Angels] or [Seven Great Demon Lords] trait among them to your hand. Trash the rest.\r\n[End of Your Turn] [Once Per Turn] By placing one of your level 6 Digimon on top of your security stack, this Digimon may digivolve into [Lucemon: Chaos Mode] in the trash without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "[Digivolve] [Cupimon]: Cost 5"
+}

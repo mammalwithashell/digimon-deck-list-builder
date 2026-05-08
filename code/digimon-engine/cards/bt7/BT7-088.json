@@ -1,0 +1,25 @@
+{
+  "index": 782,
+  "norm_id": 0.0391,
+  "card_id": "BT7-088",
+  "card_index": 88,
+  "card_name_eng": "Zoe Orimoto",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_088",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Security] Play this card without paying its memory cost.\r\n[On Play] You may search your security stack for 1 card with the [Hybrid] or [Ten Warriors] trait, reveal it, and add it to your hand. If you added a card to your hand, ＜Recovery +1 (Deck)＞. Then, shuffle your security stack.",
+  "inherited_effect_description_eng": "[Opponent's Turn] All of your Security Digimon get +3000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

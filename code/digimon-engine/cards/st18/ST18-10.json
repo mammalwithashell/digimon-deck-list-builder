@@ -1,0 +1,37 @@
+{
+  "index": 3847,
+  "norm_id": 0.19235,
+  "card_id": "ST18-10",
+  "card_index": 10,
+  "card_name_eng": "GrandGalemon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST18_10",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Bird Dragon",
+    "Vortex Warriors",
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Suspend 1 Digimon. If this effect suspends your Digimon, you may play 1 Digimon card with the [Bird] or [Avian] in any of its traits with 3000 DP or less from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[Your Turn] [Once Per Turn] When this Digimon attacks your opponent's Digimon, you may unsuspend this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

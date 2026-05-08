@@ -1,0 +1,25 @@
+{
+  "index": 1571,
+  "norm_id": 0.07855,
+  "card_id": "BT14-093",
+  "card_index": 93,
+  "card_name_eng": "Emissary of Hope",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT14_093",
+  "play_cost": 1,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Search your security stack. 1 of your Digimon may digivolve in to 1 yellow level 6 or lower Digimon with the [Vaccine] trait among them without paying its cost. Then, shuffle your security stack. If digivolved by this effect and you have Tamer with [T.K. Takaishi] in its name, ＜Recovery +1 (Deck)＞ (Place the top card of your deck on top of your security stack.)",
+  "inherited_effect_description_eng": "Security Effect [Security] You may play 1 [Patamon] from your hand or trash without paying the cost. Then, add this card to your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

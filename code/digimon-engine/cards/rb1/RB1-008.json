@@ -1,0 +1,37 @@
+{
+  "index": 3569,
+  "norm_id": 0.17845,
+  "card_id": "RB1-008",
+  "card_index": 8,
+  "card_name_eng": "BetelGammamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "RB1_008",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Dragonkin"
+  ],
+  "form_eng": [
+    "Champion"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n[When Digivolving] If you don't have [Hiro Amanokawa] in play, you may play 1 [Hiro Amanokawa] from your hand without paying the cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] [Gammamon]: Cost 2"
+}

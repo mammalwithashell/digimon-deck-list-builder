@@ -1,0 +1,35 @@
+{
+  "index": 2216,
+  "norm_id": 0.1108,
+  "card_id": "BT21-024",
+  "card_index": 24,
+  "card_name_eng": "Cyberdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT21_024",
+  "play_cost": 7,
+  "dp": 7000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "Cyborg"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] If your opponent has 5 or fewer security cards, they place 1 card from their hand as the bottom security card. Then, trash their top security card.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +4000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 1015,
+  "norm_id": 0.05075,
+  "card_id": "BT9-097",
+  "card_index": 97,
+  "card_name_eng": "Metal Storm",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_097",
+  "play_cost": 7,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "When you would use this card, if you have a Digimon with [X Antibody] in its digivolution cards, reduce the memory cost of this card by 2.\r\n[Main] Return 1 of your opponent's level 6 or lower Digimon to its owner's hand. Then, unsuspend 1 of your Digimon with [Garurumon] in its name.",
+  "inherited_effect_description_eng": "Security Effect [Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

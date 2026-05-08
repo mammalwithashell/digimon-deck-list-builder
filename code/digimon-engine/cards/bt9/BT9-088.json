@@ -1,0 +1,26 @@
+{
+  "index": 1006,
+  "norm_id": 0.0503,
+  "card_id": "BT9-088",
+  "card_index": 88,
+  "card_name_eng": "Mimi Tachikawa & Joe Kido",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT9_088",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 0,
+  "card_colors": [
+    3,
+    1
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have a suspended Digimon in play, gain 1 memory. If your opponent has a suspended Digimon in play, gain 1 memory.\r\n [Your Turn] When one of your green or blue Digimon deletes an opponent's Digimon in battle and survives, you may suspend this Tamer to ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

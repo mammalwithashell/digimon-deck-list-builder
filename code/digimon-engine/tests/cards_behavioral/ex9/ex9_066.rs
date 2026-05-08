@@ -820,8 +820,7 @@ fn ex9_066_observer_does_not_fire_on_own_tamer_play() {
     runner.play(0, hand_idx).expect("tamer plays from hand");
 
     assert_eq!(
-        runner.game.players[0].battle_area[owen.index as usize].is_suspended,
-        owen_suspended_before,
+        runner.game.players[0].battle_area[owen.index as usize].is_suspended, owen_suspended_before,
         "Tai & Matt must NOT suspend itself when an own TAMER (not Digimon) enters"
     );
     assert!(
@@ -861,8 +860,7 @@ fn ex9_066_observer_does_not_fire_on_opponent_digimon_play() {
     runner.play(1, hand_idx).expect("opponent Digimon plays");
 
     assert_eq!(
-        runner.game.players[0].battle_area[owen.index as usize].is_suspended,
-        owen_suspended_before,
+        runner.game.players[0].battle_area[owen.index as usize].is_suspended, owen_suspended_before,
         "Tai & Matt must NOT suspend on an opponent Digimon play"
     );
     assert!(

@@ -1,0 +1,35 @@
+{
+  "index": 1716,
+  "norm_id": 0.0858,
+  "card_id": "BT16-034",
+  "card_index": 34,
+  "card_name_eng": "Tempomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT16_034",
+  "play_cost": 6,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Birdkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] If you have 3 or more security cards, 1 of your opponent's Digimon gets -4000 DP until the end of their turn. If you have 3 or fewer, 1 of their Digimon gains ＜Security A. -2＞ (This Digimon checks 2 fewer security cards.) until the end of their turn.",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] If this Digimon has [Pulsemon] in its text, by trashing the top card of your security stack, unsuspend this Digimon.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.4 w/[Pulsemon] in text: Cost 3"
+}

@@ -1,0 +1,35 @@
+{
+  "index": 728,
+  "norm_id": 0.0364,
+  "card_id": "BT7-034",
+  "card_index": 34,
+  "card_name_eng": "Filmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT7_034",
+  "play_cost": 5,
+  "dp": 4000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Main] ＜Digi-Burst 2＞ (You may trash 2 of this Digimon's digivolution cards to activate the effect below.)\r\n・1 of your opponent's Digimon gains ＜Security A. -2＞ (This Digimon checks 2 additional security cards.) until the end of your opponent's next turn.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": ""
+}

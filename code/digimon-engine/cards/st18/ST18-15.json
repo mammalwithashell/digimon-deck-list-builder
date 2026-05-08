@@ -1,0 +1,27 @@
+{
+  "index": 3852,
+  "norm_id": 0.1926,
+  "card_id": "ST18-15",
+  "card_index": 15,
+  "card_name_eng": "Anemoi Embrace",
+  "card_name_jpn": "",
+  "card_effect_class_name": "ST18_15",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Suspend 1 Digimon. If this effect suspended your Digimon, return 1 of your opponent's suspended Digimon to the bottom of the deck. Then, unsuspend 1 Digimon.",
+  "inherited_effect_description_eng": "Security Effect [Security] Return 1 of your opponent's suspended Digimon to the bottom of the deck.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

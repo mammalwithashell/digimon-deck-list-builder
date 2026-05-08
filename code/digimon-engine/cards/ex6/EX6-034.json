@@ -1,0 +1,37 @@
+{
+  "index": 3006,
+  "norm_id": 0.1503,
+  "card_id": "EX6-034",
+  "card_index": 34,
+  "card_name_eng": "Antylamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX6_034",
+  "play_cost": 8,
+  "dp": 8000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    3,
+    2
+  ],
+  "type_eng": [
+    "Holy Beast",
+    "Deva"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other Digimon, add the suspended Digimon's DP to this Digimon and it gains ＜Security A. +1＞ for the attack.)\r\n[When Digivolving] You may play 1 level 3 green or yellow Digimon card from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[End of Attack] [Once Per Turn] By returning 1 of your other suspended Digimon to the hand, you may play 1 level 3 card with the [Beast] trait from your hand without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 4,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Turuiemon]/[Wendigomon]: Cost 3"
+}

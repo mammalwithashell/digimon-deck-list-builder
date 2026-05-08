@@ -1,0 +1,28 @@
+{
+  "index": 3258,
+  "norm_id": 0.1629,
+  "card_id": "EX11-064",
+  "card_index": 64,
+  "card_name_eng": "Altea",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX11_064",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    5,
+    1
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[On Play] Flip your opponent's top face-down security card face up.\r\n[Your Turn] When one of your [Cyborg] or [Machine] trait Digimon attacks, by suspending this Tamer, that Digimon may digivolve into a [Cyborg] or [Machine] trait Digimon card in the hand. For each of your opponent's face-up security cards, reduce this effect's digivolution cost by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

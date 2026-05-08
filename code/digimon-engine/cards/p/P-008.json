@@ -1,0 +1,37 @@
+{
+  "index": 3338,
+  "norm_id": 0.1669,
+  "card_id": "P-008",
+  "card_index": 8,
+  "card_name_eng": "WereGarurumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_008",
+  "play_cost": 7,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Beastkin"
+  ],
+  "form_eng": [
+    "Ultimate"
+  ],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[When Attacking] [Once Per Turn] If [Garurumon] is in this Digimon's digivolution card, unsuspend this Digimon.",
+  "inherited_effect_description_eng": "[Your Turn] While you have 8 or more cards in your hand, this Digimon gains ＜Security A. +1＞ (This Digimon checks 1 additional security card.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "index": 111,
+  "norm_id": 0.00555,
+  "card_id": "BT1-095",
+  "card_index": 95,
+  "card_name_eng": "Brave Shield",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT1_095",
+  "play_cost": 5,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Unsuspend 1 of your Digimon. Until the end of your opponent's next turn, that Digimon gains ＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Unsuspend 1 of your Digimon. That Digimon gains ＜Blocker＞ for the turn. (This Digimon can block in the blocker timing..)",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

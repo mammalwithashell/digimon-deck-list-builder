@@ -1,0 +1,29 @@
+{
+  "index": 2729,
+  "norm_id": 0.13645,
+  "card_id": "EX2-053",
+  "card_index": 53,
+  "card_name_eng": "ADR-08 Optimizer",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX2_053",
+  "play_cost": 10,
+  "dp": 9000,
+  "level": null,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Mothership Agent"
+  ],
+  "form_eng": [
+    "D-Reaper"
+  ],
+  "attribute_eng": [],
+  "effect_description_eng": "[On Play] [When Attacking] [Once Per Turn] If one of your [Mother D-Reaper]s has 5 or more digivolution cards, reveal the top 3 cards of your deck. You may play 1 card with the [D-Reaper] trait and a play cost of 10 or less among them without paying its memory cost. Place the remaining cards at the top of your deck in any order.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

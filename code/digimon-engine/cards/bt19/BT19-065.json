@@ -1,0 +1,62 @@
+{
+  "index": 2053,
+  "norm_id": 0.10265,
+  "card_id": "BT19-065",
+  "card_index": 65,
+  "card_name_eng": "Machinedramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT19_065",
+  "play_cost": 11,
+  "dp": 11000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5,
+    6
+  ],
+  "type_eng": [
+    "Machine"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] [When Digivolving] Delete 1 level 5 or lower Digimon.\r\n[On Deletion] You may play 1 level 5 or lower Digimon card with the [Cyborg] or [Composite] trait from your trash without paying the cost.",
+  "inherited_effect_description_eng": "[Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon attack, you may change the attack target to 1 of your Digimon with the [Composite] or [Wicked God] trait.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "DigiXros Requirements [DigiXros -1] 5 Lv.5 or lower [Cyborg] or [Composite] trait Digimon cards w/different card numbers\r\nWhen this would be played, you may place specified cards from your hand/battle area under it. Each one reduces the play cost.",
+  "digixros_costs": [
+    {
+      "elements": [
+        {
+          "name_contains": "",
+          "trait_match": "Cyborg",
+          "trait_alternatives": [
+            "Composite"
+          ],
+          "level_max": 5,
+          "count": 5,
+          "is_digimon_only": true,
+          "color": null
+        }
+      ],
+      "reduce_cost_per_card": 1,
+      "max_materials": 5,
+      "different_card_numbers": true,
+      "different_names": false,
+      "has_text": "",
+      "source_zones": [
+        "hand",
+        "field"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "index": 2861,
+  "norm_id": 0.14305,
+  "card_id": "EX4-037",
+  "card_index": 37,
+  "card_name_eng": "BlackMegaGargomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX4_037",
+  "play_cost": 13,
+  "dp": 13000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "Machine"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[End of Your Turn] [Once Per Turn] Until the end of your opponent's turn, 2 of your green and/or black Digimon gain ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.).\r\n[All Turns] [Once Per Turn] When another Digimon becomes suspended, you may unsuspend this Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 5
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Rapidmon] in name or Lv.5 2-color w/Green: Cost 4"
+}

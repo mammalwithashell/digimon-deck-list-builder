@@ -1,0 +1,28 @@
+{
+  "index": 3999,
+  "norm_id": 0.19995,
+  "card_id": "P-236",
+  "card_index": 236,
+  "card_name_eng": "Glowing Dawn",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_236",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Glowing Dawn",
+    "BEATBREAK"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Use Req. ([Glowing Dawn] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Main] Reveal the top 3 cards of your deck. Add 1 card with the [Glowing Dawn] trait among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・ Gain 2 memory.",
+  "inherited_effect_description_eng": "[Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

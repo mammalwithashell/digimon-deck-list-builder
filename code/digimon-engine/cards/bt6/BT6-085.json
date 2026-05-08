@@ -1,0 +1,35 @@
+{
+  "index": 667,
+  "norm_id": 0.03335,
+  "card_id": "BT6-085",
+  "card_index": 85,
+  "card_name_eng": "Eosmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT6_085",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 5,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Unknown"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "[When Attacking] You may play 1 level 5 or lower [Eosmon] from your hand without paying its memory cost.",
+  "inherited_effect_description_eng": "[Your Turn] This Digimon gets +1000 DP.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 4,
+      "level": 4,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": ""
+}

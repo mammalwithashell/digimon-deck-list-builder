@@ -1,0 +1,27 @@
+{
+  "card_id": "EX8-065",
+  "card_index": 65,
+  "card_name_eng": "Ryutaro Williams",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX8_065",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    0
+  ],
+  "type_eng": [
+    "LIBERATOR"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.\r\n[Your Turn] When one of your Digimon with [Tyrannomon] in its name attacks, by suspending this Tamer, that Digimon may digivolve into a Digimon card with [Tyrannomon] in its name or the [Dinosaur] trait in the hand with the digivolution cost reduced by 1.",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": "",
+  "index": 3185,
+  "norm_id": 0.15925
+}

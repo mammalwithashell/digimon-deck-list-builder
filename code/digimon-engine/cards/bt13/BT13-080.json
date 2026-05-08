@@ -1,0 +1,29 @@
+{
+  "index": 1446,
+  "norm_id": 0.0723,
+  "card_id": "BT13-080",
+  "card_index": 80,
+  "card_name_eng": "ProtoGizmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT13_080",
+  "play_cost": 3,
+  "dp": 3000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Unknown"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Unknown"
+  ],
+  "effect_description_eng": "When you would play this card from your hand, by deleting 1 of your level 2 Digimon from the breeding area, reduce the play cost by 2.\r\n[On Play] ＜Draw 1＞ (Draw 1 card from your deck.) Then, trash 1 card from your hand.\r\n[All Turns] This Digimon can't digivolve.\r\n[On Deletion] By returning 2 cards with [Gizmon] in their names from your trash to the bottom of your deck in any order, you may play 1 [Gizmon: AT] from your trash without paying its cost.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

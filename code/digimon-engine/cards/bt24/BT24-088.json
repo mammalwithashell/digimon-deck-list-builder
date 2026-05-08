@@ -1,0 +1,27 @@
+{
+  "index": 2586,
+  "norm_id": 0.1293,
+  "card_id": "BT24-088",
+  "card_index": 88,
+  "card_name_eng": "Asuna Shiroki",
+  "card_name_jpn": "",
+  "card_effect_class_name": "BT24_088",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "TS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 4 or less memory, by returning this Tamer to the bottom of the deck, you may play 1 [Asuna Shiroki] or 1 level 4 or lower Digimon card with the [TS] trait or [Three Musketeers] in its text from your trash without paying the cost.\r\n[On Play] By trashing 1 card with [Three Musketeers] in its text or the [TS] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "Security Effect [Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

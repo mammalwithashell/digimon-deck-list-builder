@@ -1,0 +1,25 @@
+{
+  "index": 3436,
+  "norm_id": 0.1718,
+  "card_id": "P-106",
+  "card_index": 106,
+  "card_name_eng": "Agility Training",
+  "card_name_jpn": "",
+  "card_effect_class_name": "P_106",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 5,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Main] Reveal the top 2 cards of your deck. Add 1 green card among them to your hand. Place the rest at the bottom of your deck in any order. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your Digimon may digivolve into a green Digimon card in your hand for its digivolution cost. When it would digivolve by this effect, reduce the cost by 2.",
+  "inherited_effect_description_eng": "Security Effect [Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

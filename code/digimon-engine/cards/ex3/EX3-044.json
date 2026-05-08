@@ -1,0 +1,35 @@
+{
+  "index": 2794,
+  "norm_id": 0.1397,
+  "card_id": "EX3-044",
+  "card_index": 44,
+  "card_name_eng": "Breakdramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX3_044",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "Machine Dragon"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[All Turns] [Once Per Turn] When this Digimon becomes suspended, suspend 1 of your opponent's Digimon.\r\n[All Turns] [Once Per Turn] When one of your Digimon with [Dramon] or [Examon] in its name deletes an opponent's Digimon in battle and survives, trash the top card of your opponent's security stack.",
+  "inherited_effect_description_eng": "[All Turns] [Once Per Turn] When one of your Digimon with [Dramon] or [Examon] in its name deletes an opponent's Digimon in battle and survives, trash the top card of your opponent's security stack.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] [Groundramon]/[Wingdramon]: Cost 3"
+}
