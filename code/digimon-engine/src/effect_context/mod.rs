@@ -1114,6 +1114,169 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Move the resolving effect's source permanent (`self.source_permanent`)
+    /// into its owner's security stack at `position` with the requested
+    /// orientation. Sugar over `Game::place_permanent_on_security_observed`.
+    ///
+    /// Sources below the top card are routed to each source's owner's trash
+    /// (firing `OnDigivolutionCardTrashed` per source). Linked cards likewise
+    /// go to trash with a single `OnLinkedCardTrashed` dispatch. The top card
+    /// becomes a single security slot at the requested end of the stack;
+    /// `face_up=true` adds the slot to `face_up_security`.
+    ///
+    /// Used by printed text "place this Digimon at the bottom of your
+    /// security stack face down" (EX4-060), "place this Digimon as your top
+    /// security card" (EX9-021), and similar self-placement riders. DCGO
+    /// parity: `IPutSecurityPermanent(card.PermanentOfThisCard(), …)`.
+    ///
+    /// Returns `false` if there is no source permanent (e.g. an Option-card
+    /// effect or rule-source effect), if the controller has
+    /// `CannotAddSecurityByEffect`, or if either of the
+    /// `WhenWouldLeaveBattleArea` / `WhenWouldPlaceInSecurity` replacement
+    /// outcomes is non-`None` (cancelled / redirected / etc.).
+    ///
+    /// **Engine divergence:** DCGO bundles the entire permanent (top +
+    /// sources + linked) under a single security slot. The Rust security
+    /// model is flat; sources/linked go to trash. See
+    /// `Game::place_permanent_on_security_observed` for the divergence note.
+    pub fn place_self_at_security(
+        &mut self,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        let Some(handle) = self.source_permanent else {
+            return false;
+        };
+        let owner = handle.player;
+        self.game
+            .place_permanent_on_security_observed(owner, handle, position, face_up, self.player)
+    }
+
+    /// Replacement-aware sibling of `place_self_at_security`. When invoked
+    /// inside a parked replacement (e.g. a "would leave" replacement whose
+    /// subject is the source permanent), runs the move and then cancels the
+    /// parked replacement so the original event does not also fire.
+    ///
+    /// Mirrors the shape of
+    /// `place_sourceless_permanent_bottom_security_and_cancel_current_replacement`.
+    /// Used by EX4-060 (place self at security bottom face-down on
+    /// "would leave battle area other than by your effects" replacement).
+    pub fn place_self_at_security_and_cancel_current_replacement(
+        &mut self,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        if self.place_self_at_security(position, face_up) {
+            if self.game.parked_replacement.is_some() {
+                self.cancel_current_replacement();
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Option-card flavor of `place_self_at_security`. Consumes the
+    /// `Game.pending_option` transient that carries the in-flight Option
+    /// card mid-resolution (between pay-cost and dispose), routing it into
+    /// its owner's security stack at `position` with the requested
+    /// orientation. Used by ST20-15 Island of Adventure's [Main] tail
+    /// "Then, place this card face up as the top security card."
+    ///
+    /// Distinguishing factors vs `place_self_at_security` (Digimon flavor):
+    /// - The Option card has no source permanent during `OptionMain`
+    ///   resolution; `self.source_permanent` is `None`. The card lives in
+    ///   the `Game.pending_option` transient instead.
+    /// - There is no source stack to bundle or trash — Options are single
+    ///   cards.
+    /// - Consuming `pending_option` automatically suppresses the post-
+    ///   `OptionMain` dispose-trash: `advance_pending_option` short-circuits
+    ///   on `pending_option.is_none()`, so the card lands in security
+    ///   instead of routing through the standard Option dispose path.
+    ///
+    /// Routes through `WhenWouldPlaceInSecurity` replacement; bails (and
+    /// restores `pending_option`) on any non-`None` outcome or installed
+    /// pending selection. Gated by `CannotAddSecurityByEffect` (player-
+    /// scoped against the acting player).
+    ///
+    /// DCGO parity: `ReplaceTopSecurityWithFaceUpOptionMainEffect` family
+    /// (ST20-15 and similar Option-card self-placement riders).
+    pub fn place_self_option_at_security(
+        &mut self,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        use crate::enums::Zone;
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // Gate on `CannotAddSecurityByEffect` BEFORE consuming pending_option,
+        // so a gated call leaves the resolution flow intact.
+        if self
+            .game
+            .modifiers
+            .player_has(self.player, ModifierType::CannotAddSecurityByEffect)
+        {
+            return false;
+        }
+
+        // Take pending_option. If absent, this method was invoked outside an
+        // Option-card resolution and is a clean no-op.
+        let Some(pending) = self.game.pending_option.take() else {
+            return false;
+        };
+
+        // Snapshot fields needed across the replacement-call mutable borrow.
+        let owner = pending.owner;
+        let card_handle = pending.card.handle();
+        let face_up_key = pending.card.card_index;
+        let source_zone = pending.source_kind.zone();
+
+        // Route through WhenWouldPlaceInSecurity. If a selection is installed
+        // or the replacement returns a non-None outcome, restore pending and
+        // bail — the original Option flow will then continue normally.
+        let cause = self.game.infer_effect_cause(self.player);
+        let subject = ReplacementSubject::Card(card_handle, source_zone);
+        let outcome = self.game.try_replace(
+            crate::enums::EffectTiming::WhenWouldPlaceInSecurity,
+            subject,
+            cause,
+            Some(Zone::Security),
+        );
+        if self.game.pending_selection.is_some() || !matches!(outcome, ReplacementOutcome::None) {
+            // Restore so the dispose flow can complete normally.
+            self.game.pending_option = Some(pending);
+            return false;
+        }
+
+        // Commit the move. Move pending.card into security at `position`.
+        let card = pending.card;
+        match position {
+            crate::enums::StackPosition::Top => {
+                self.game.player_mut(owner).security.push(card);
+            }
+            crate::enums::StackPosition::Bottom => {
+                self.game.player_mut(owner).security.insert(0, card);
+            }
+            crate::enums::StackPosition::Random => {
+                use rand::Rng;
+                let sec_len = self.game.player(owner).security.len();
+                let idx = if sec_len == 0 {
+                    0
+                } else {
+                    self.game.rng.gen_range(0..=sec_len)
+                };
+                self.game.player_mut(owner).security.insert(idx, card);
+            }
+        }
+        if face_up {
+            self.game
+                .player_mut(owner)
+                .face_up_security
+                .insert(face_up_key);
+        }
+        true
+    }
+
     /// Mark the parked replacement as custom-handled — the process body has
     /// already mutated state and the original event should be skipped.
     /// Distinct from `cancel_leave` only at the doc level; both result in
@@ -2740,6 +2903,21 @@ impl<'a> EffectContext<'a> {
         self.game.return_to_hand(target)
     }
 
+    /// Return the resolving effect's own permanent (`self.source_permanent`)
+    /// to its owner's hand. Sugar over `return_to_hand` for printed text like
+    /// "return this Digimon to your hand". Returns the moved card's handle
+    /// on success, `None` if the effect has no source permanent (e.g. an
+    /// Option-card effect or a rule-source effect) or if the bounce is
+    /// blocked by `CannotBeReturnedToHand` / `CannotBeAffected` modifiers.
+    ///
+    /// Owner-routed: `Game::return_to_hand` reads the moved card's `owner`
+    /// field, so a permanent owned by player A but currently controlled by
+    /// player B (e.g. via a control-transfer effect) returns to A's hand.
+    pub fn bounce_self(&mut self) -> Option<crate::card_source::CardHandle> {
+        let handle = self.source_permanent?;
+        self.return_to_hand(handle)
+    }
+
     /// Return a permanent's top card to its owner's deck. See `Game::return_to_deck`.
     pub fn return_to_deck(
         &mut self,
@@ -3091,6 +3269,271 @@ impl<'a> EffectContext<'a> {
         }
         self.game
             .place_on_security_observed(player, source, position, face_up, self.player)
+    }
+
+    /// Extract a digivolution source identified by its stable `CardHandle`
+    /// from `carrier`'s stack and place it into `target_player`'s security
+    /// stack at `position` with the requested orientation. Track E Tier 2
+    /// Task 6 — sugar over `select_own_sources` -> `place_on_security` for
+    /// printed text like "place 1 of this Digimon's digivolution cards on
+    /// top of your security stack" (Puppets G027 shape).
+    ///
+    /// Looks up the source's current index from its stable `CardHandle` —
+    /// resilient to intervening battle-area shifts that would invalidate a
+    /// raw `usize` index. Routes through `place_on_security_observed`, so
+    /// `WhenWouldPlaceInSecurity` replacements and `CannotAddSecurityByEffect`
+    /// gates apply identically to a hand/trash placement.
+    ///
+    /// Returns `false` if the carrier handle is invalid or the source card
+    /// is not present in the carrier's stack at call time.
+    pub fn security_place_stacked_card(
+        &mut self,
+        carrier: PermanentHandle,
+        source_card: CardHandle,
+        target_player: PlayerId,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        // Resolve the stable CardHandle to its current index in the carrier's
+        // stack. Bail clean if the carrier was deleted or the source was
+        // already moved by an intervening effect.
+        let source_index = {
+            let Some(perm) = self
+                .game
+                .player(carrier.player)
+                .battle_area
+                .get(carrier.index as usize)
+            else {
+                return false;
+            };
+            match perm
+                .card_sources
+                .iter()
+                .position(|c| c.handle() == source_card)
+            {
+                Some(idx) => idx,
+                None => return false,
+            }
+        };
+        self.place_on_security(
+            target_player,
+            crate::enums::CardSourceRef::Material(carrier, source_index),
+            position,
+            face_up,
+        )
+    }
+
+    /// Convenience: extract the **top stacked card** (the source one below
+    /// the visible top, i.e. `card_sources[len - 2]`) and place it in
+    /// `target_player`'s security at `position` / `face_up`. Mirrors
+    /// printed text like Puppets G027 "move the top stacked card to top
+    /// security card." When the carrier has fewer than 2 card_sources
+    /// (no stacked card below the top), returns `false` without mutating
+    /// state.
+    pub fn security_place_top_stacked_card(
+        &mut self,
+        carrier: PermanentHandle,
+        target_player: PlayerId,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        let source_card = {
+            let Some(perm) = self
+                .game
+                .player(carrier.player)
+                .battle_area
+                .get(carrier.index as usize)
+            else {
+                return false;
+            };
+            let len = perm.card_sources.len();
+            if len < 2 {
+                // No stacked card below the top.
+                return false;
+            }
+            perm.card_sources[len - 2].handle()
+        };
+        self.security_place_stacked_card(carrier, source_card, target_player, position, face_up)
+    }
+
+    /// Force `opponent`'s hand size down to `target_count` by surfacing a
+    /// multi-pick selection on their hand. The opponent is the selecting
+    /// player — they choose which cards to trash, per the no-approximations
+    /// policy (mass forced-trash effects with player choice on the affected
+    /// side, e.g. BT19-075 MoonMillenniummon "your opponent trashes cards
+    /// from their hand until they have N").
+    ///
+    /// Returns `true` if a selection was installed, `false` if the
+    /// opponent's hand is already at or below `target_count` (no-op).
+    ///
+    /// **Selection semantics:** uses `select_count_capped_multi` with
+    /// `max = current - target_count` and `is_optional_zero = false`
+    /// (forcing the opponent to pick at least one card). The engine's
+    /// existing count-capped multi-select allows the player to PASS once
+    /// they've picked at least 1, so for cards that strictly require an
+    /// exact count (vs. up-to count), callers should chain a
+    /// `trash_opponent_hand_to_count` call as a continuation until the
+    /// hand size meets the target. Most printed cards are forgiving here —
+    /// "until they have N" cards typically allow the opponent to control
+    /// the cadence as long as the floor is reached.
+    pub fn trash_opponent_hand_to_count(
+        &mut self,
+        opponent: PlayerId,
+        target_count: u8,
+    ) -> bool {
+        let current = self.game.player(opponent).hand.len();
+        let target = target_count as usize;
+        if current <= target {
+            return false;
+        }
+        let to_trash = (current - target).min(u8::MAX as usize) as u8;
+
+        self.as_selecting_player(opponent).select_count_capped_multi(
+            opponent,
+            CountCappedZone::Hand,
+            to_trash,
+            "Choose cards to trash from your hand",
+            /* is_optional_zero */ false,
+            /* distinct_by */ None,
+            /* filter */ |_g, _c| true,
+            move |ctx, picks| {
+                // Trash each chosen card by stable handle. Hand indices
+                // shift after each trash, so re-resolve per pick.
+                for card_handle in picks {
+                    let idx = ctx
+                        .game
+                        .player(opponent)
+                        .hand
+                        .iter()
+                        .position(|c| c.handle() == card_handle);
+                    if let Some(i) = idx {
+                        ctx.trash_from_hand_by_index(opponent, i);
+                    }
+                }
+            },
+        );
+        true
+    }
+
+    /// Trim up to `n` digivolution-source cards (the cards beneath the
+    /// visible top) from every battle-area permanent of `target_player`.
+    /// Track E Tier 2 Task 8 — bulk stack-peel primitive for printed text
+    /// like BT12-028 "trash the top digivolution card of each of your
+    /// opponent's Digimon" and generalisations.
+    ///
+    /// Semantic note: "top digivolution card" in TCG parlance means the
+    /// topmost source **below** the visible top (`card_sources[len-2]`),
+    /// NOT the visible top itself (which is the Digimon, not a digivolution
+    /// card). This helper trims sources from the top of the stack-below-top
+    /// and never deletes the visible Digimon. Permanents with stack size
+    /// less than 2 (no digivolution cards under the top) are skipped.
+    ///
+    /// Per source: routes through `trash_card_source`, which fires
+    /// `OnDigivolutionCardTrashed` with the proper `SourceTrashedFromStack`
+    /// trigger context (host permanent + host_card + extracted source
+    /// card). Owner-routed: `trash_card_source` pushes each card to its
+    /// owner's trash.
+    ///
+    /// Iterates by stable `PermanentHandle` snapshots re-resolved per
+    /// pass so intervening battle-area shifts (caused by observer fan-out)
+    /// don't skip permanents.
+    pub fn trash_top_n_digivolution_cards_of_each(
+        &mut self,
+        target_player: PlayerId,
+        n: u8,
+    ) -> usize {
+        if n == 0 {
+            return 0;
+        }
+        let mut total = 0usize;
+        for _ in 0..n {
+            // For each pass, snapshot per-permanent (handle, source_to_peel)
+            // BEFORE any mutation. Source-to-peel is the topmost
+            // digivolution card — `card_sources[len - 2]` — by stable
+            // CardHandle, so the source-trash dispatch can find it even if
+            // the carrier's index shifted between passes.
+            let mut targets: Vec<(PermanentHandle, CardHandle)> = Vec::new();
+            for (i, perm) in self
+                .game
+                .player(target_player)
+                .battle_area
+                .iter()
+                .enumerate()
+            {
+                let len = perm.card_sources.len();
+                if len < 2 {
+                    continue;
+                }
+                let source_card = perm.card_sources[len - 2].handle();
+                targets.push((
+                    PermanentHandle {
+                        player: target_player,
+                        index: i as u8,
+                    },
+                    source_card,
+                ));
+            }
+            if targets.is_empty() {
+                break;
+            }
+            for (handle, source_card) in targets {
+                // Re-validate the carrier slot AND the source's continued
+                // membership in this stack (an earlier permanent's
+                // observer trigger could have moved this source). Skip
+                // gracefully if state no longer matches.
+                let still_present = self
+                    .game
+                    .player(target_player)
+                    .battle_area
+                    .get(handle.index as usize)
+                    .map(|p| {
+                        p.card_sources
+                            .iter()
+                            .any(|c| c.handle() == source_card)
+                    })
+                    .unwrap_or(false);
+                if !still_present {
+                    continue;
+                }
+                self.trash_card_source(handle, source_card);
+                total += 1;
+            }
+        }
+        total
+    }
+
+    /// Drain `player`'s trash and append each card to its **owner's** deck
+    /// bottom. Returns the handles of moved cards in their original trash
+    /// order. Track E Tier 2 Task 7 — bulk move primitive used by printed
+    /// text like BT17-077 Imperialdramon: Paladin Mode "return all cards
+    /// in your trash to the bottom of the deck."
+    ///
+    /// Owner-routed: each card consults its `CardSource.owner` field, not
+    /// the `player` parameter. In the common case where every card in a
+    /// player's trash was originally owned by that player, this is a pure
+    /// drain into the same player's deck. In the cross-player case (a card
+    /// was effect-moved into the opposing trash by a prior effect), each
+    /// card returns to its original owner's deck — matching the rules-default
+    /// behavior for cards moving between owners' zones.
+    ///
+    /// Does NOT fire `OnReturn` per card — the existing engine doesn't have
+    /// a `Game::return_to_deck` per-card observer dispatch and the printed
+    /// cards consuming this primitive bind the moved set as an ordered set
+    /// for downstream predicates rather than per-card observation. Treated
+    /// as a bulk move; per-card observer fan-out can land as a follow-up.
+    pub fn return_all_trash_to_deck_bottom(&mut self, player: PlayerId) -> Vec<CardHandle> {
+        // Drain trash in order. Each card is appended to the start of its
+        // owner's deck (deck bottom = index 0 by convention; deck top =
+        // Vec end, the position drawn from first).
+        let drained: Vec<crate::card_source::CardSource> =
+            std::mem::take(&mut self.game.player_mut(player).trash);
+        let mut handles = Vec::with_capacity(drained.len());
+        for card in drained {
+            handles.push(card.handle());
+            let owner = card.owner;
+            self.game.player_mut(owner).deck.insert(0, card);
+        }
+        handles
     }
 
     /// Recover up to `count` cards from `player`'s deck to the top of security.

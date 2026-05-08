@@ -4,6 +4,25 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+## Track E (2026-05-08) — engine helpers shipped, DSL verbs pending
+
+Track E shipped 8 zone-movement helpers + the owner-routing fix at the engine layer. The DSL verbs that lower printed text into these helpers are pending — each verb is a small parser/lowering change, but together they're the bottleneck for several BLOCKED card YAMLs. Verbs to add (with their target `EffectContext` method):
+
+| DSL verb | Engine target | Card driver |
+|---|---|---|
+| `place_self_at_security: { position, face }` | `place_self_at_security` / `place_self_at_security_and_cancel_current_replacement` | EX9-021 (top, face-up), EX4-060 (bottom, face-down) |
+| `place_self_option_at_security: { position, face }` | `place_self_option_at_security` | ST20-15 (top, face-up Option flavor) |
+| `bounce_self: {}` | `bounce_self` | BT24-012 Dimetromon |
+| `security_place_top_stacked_card: { target_player, position, face }` | `security_place_top_stacked_card` | Puppets G027 |
+| `security_place_stacked_card: { source: <BindingRef>, target_player, position, face }` | `security_place_stacked_card` (full form, source picked by `select_own_sources`) | follow-up Puppets / Mineral cards |
+| `return_all_trash_to_deck_bottom: { whose }` | `return_all_trash_to_deck_bottom` (with player-choice wrapper) | BT17-077 Imperialdramon: Paladin Mode |
+| `trash_top_n_digivolution_cards: { of, n, filter }` | `trash_top_n_digivolution_cards_of_each` | BT12-028 |
+| `trash_opponent_hand_to_count: { count }` | `trash_opponent_hand_to_count` | BT19-075 MoonMillenniummon |
+| `search_own_security_stack: { filter, prompt }` | `search_own_security_stack` | TS Olympos cards |
+| `scheduled_delayed_return: { subject, destination, position, fire_at }` | `schedule_delayed` (substrate already exists) | BG Imperial G-BG-02 |
+
+Engine helpers covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test zone_manipulation`. Each verb still needs (a) a YAML schema entry in `code/digimon-dsl/src/spec/step.rs`, (b) a `CompiledStep` variant, (c) lowering in `code/digimon-engine/src/dsl_cards/step/`, and (d) a per-verb DSL test in `code/digimon-engine/tests/dsl/`.
+
 Format per entry:
 
 ```
@@ -726,7 +745,7 @@ Format per entry:
 
 ## EX4-060 — Place self at bottom of own security stack face down  [G-PLACE-SELF-AT-SECURITY-BOTTOM]
 - Effect text: EX4-060 Omnimon Alter-S — "[All Turns] When this Digimon would leave the battle area other than by one of your effects, ... Then, place this Digimon at the bottom of your security stack face down."
-- Status: OPEN (filed 2026-05-03 during EX4-060 batch-implement-cards-rust-dsl). Sibling of the engine-side "Zone-manipulation: security stack operations" gap in `docs/RUST_ENGINE_GAPS.md` (line 262) which calls out `place_security_bottom(player, card)` as a missing `EffectContext` helper for ANY card. EX4-060 surfaces the SELF-DISPOSITION specialisation: the leaving permanent is the subject AND the destination card.
+- Status: ENGINE-DONE / DSL-PENDING (Track E 2026-05-08). Engine substrate `EffectContext::place_self_at_security` + `place_self_at_security_and_cancel_current_replacement` shipped — see `docs/RUST_ENGINE_API.md` Placement table. The DSL verb `place_self_at_security: { position: bottom, face: down }` (or `place_self_at_security_bottom: {}` shorthand) still needs to be added so the YAML can author the [All Turns] clause. This card is also blocked on `G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES` for the head arm, so the DSL verb alone won't unblock it; both gaps must close together.
 - Missing DSL verb / step kind / predicate: no `place_self_at_security_bottom: {}` step that, when fired from a `kind: replacement` clause whose `replacement_subject` IS this permanent, reroutes the leaving permanent's destination from trash to the controller's security stack bottom face-down. The closest existing primitives are:
   - `place_self_as_delay_option: {}` — places an Option-card self into the battle area as a Delay permanent. Wrong destination zone (battle area, not security) and wrong subject scope (Option only).
   - `add_this_option_to_hand: {}` — routes an Option from security-resolution staging to hand. Wrong destination zone and wrong subject scope.
@@ -794,6 +813,10 @@ Format per entry:
 - First reported: 2026-05-03 (EX9-021 Omnimon Alter-S, batch-implement-cards-rust-dsl).
 
 ## EX9-021 — Place self at TOP of own security stack face-up  [G-PLACE-SELF-AT-SECURITY-TOP]
+- Status: ENGINE-DONE / DSL-PENDING (Track E 2026-05-08). Engine substrate `EffectContext::place_self_at_security(StackPosition::Top, true)` shipped — see `docs/RUST_ENGINE_API.md` Placement table and `cargo test … --test zone_manipulation -- place_self_at_security`. The DSL verb `place_self_at_security: { position: top, face: up }` is the remaining work. Like EX4-060, this card is also blocked on `G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES` for the head arm.
+
+[ORIGINAL ENTRY BELOW]
+
 - Effect text: EX9-021 Omnimon Alter-S — "[End of Attack] ... If this effect played, place this Digimon as your top security card." DCGO: `IPutSecurityPermanent(card.PermanentOfThisCard(), CardEffectHashtable, toTop: true).PutSecurity()` — places this permanent (top + sources) at the TOP of the controller's security stack (face-up; printed text does not specify face-down).
 - Status: OPEN (filed 2026-05-03 during EX9-021 batch-implement-cards-rust-dsl). Sibling of `G-PLACE-SELF-AT-SECURITY-BOTTOM` (EX4-060) — same engine substrate, different placement target (TOP vs bottom) and different trigger-clause kind (end-of-attack tail vs would-leave replacement).
 - Missing DSL verb / step kind / predicate: no `place_self_at_security_top: {}` step. Closest existing primitives are `place_self_as_delay_option` (places an Option-card self into the battle area as a Delay; wrong destination + Option-only), `add_this_option_to_hand` (routes Option to hand; wrong zone), and `place_permanent_bottom_security_and_cancel_replacement` (targets a binding-selected permanent and cancels the replacement; wrong subject + wrong outcome).
