@@ -1312,6 +1312,22 @@ impl<'a> EffectContext<'a> {
         {
             return;
         }
+        // Track C / D consult site (2026-05-08): permanent-scoped
+        // `CannotAddMemory` — while any permanent in the acting player's
+        // battle area carries this modifier, the controller's effects
+        // can't add memory. Sibling of player-scoped
+        // `CannotGainMemoryByEffect` for printed text anchored to a
+        // specific Digimon.
+        let battle_area_len = self.game.player(target).battle_area.len();
+        for i in 0..battle_area_len {
+            let h = PermanentHandle {
+                player: target,
+                index: i as u8,
+            };
+            if self.game.modifiers.has(h, ModifierType::CannotAddMemory) {
+                return;
+            }
+        }
         self.game.gain_memory(amount);
     }
 
@@ -2676,6 +2692,18 @@ impl<'a> EffectContext<'a> {
     /// Reject-before-mutate discipline: invalid handle and empty stack both
     /// return `false` before any state change.
     pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
+        // Track C / D consult site (2026-05-08): `ImmuneFromStackTrashing`
+        // on the host permanent blocks the inherited stack-peel mutation.
+        // Distinct from `CannotBeDestroyed` (which protects the live top
+        // card from deletion) — this protects the digivolution sources
+        // sitting beneath the top from being peeled off and trashed.
+        if self
+            .game
+            .modifiers
+            .has(target, ModifierType::ImmuneFromStackTrashing)
+        {
+            return false;
+        }
         // Validate target slot.
         let (removed, host_card) = {
             let permanent = match self
@@ -3088,6 +3116,22 @@ impl<'a> EffectContext<'a> {
             .player_has(self.player, ModifierType::CannotAddSecurityByEffect)
         {
             return false;
+        }
+        // Track C / D consult site (2026-05-08): permanent-scoped
+        // `CannotAddSecurity` — sibling of player-scoped
+        // `CannotAddSecurityByEffect`. Anchored to a specific permanent in
+        // the acting player's battle area, mirroring the printed-text
+        // shape "while this Digimon is in play, your effects can't add
+        // security cards."
+        let battle_area_len = self.game.player(self.player).battle_area.len();
+        for i in 0..battle_area_len {
+            let h = PermanentHandle {
+                player: self.player,
+                index: i as u8,
+            };
+            if self.game.modifiers.has(h, ModifierType::CannotAddSecurity) {
+                return false;
+            }
         }
         self.game
             .place_on_security_observed(player, source, position, face_up, self.player)
