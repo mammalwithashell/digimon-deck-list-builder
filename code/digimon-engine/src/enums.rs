@@ -197,6 +197,9 @@ pub enum EffectTiming {
     /// after resolution or played from security by an effect. Mirrors
     /// Python's `OnLoseSecurity`.
     OnLoseSecurity,
+    /// Fires on a security card that is trashed from the security stack by
+    /// an effect, distinct from normal attack security checks.
+    OnDiscardSecurity,
     CounterEffect,
 
     // Turn-based

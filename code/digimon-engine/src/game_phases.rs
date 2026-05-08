@@ -165,6 +165,10 @@ impl Game {
             EffectTiming::StartOfYourMainPhase,
             crate::selection::TriggerSource::PlayerBattleArea(tp),
         );
+        self.enqueue_triggered(
+            EffectTiming::StartOfYourMainPhase,
+            crate::selection::TriggerSource::PlayerBreedingArea(tp),
+        );
         self.drain_effect_queue();
 
         self.current_phase = GamePhase::Main;

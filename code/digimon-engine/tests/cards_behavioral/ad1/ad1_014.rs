@@ -165,9 +165,8 @@ fn ad1_014_has_op_wd_wa_cluster_and_all_turns_on_suspend_clause() {
         "expected OPT cluster clause covering [on_play, when_digivolving, when_attacking]"
     );
     assert!(
-        own.iter().any(|t| t.when == vec![CompiledTiming::OnSuspend]
-            && t.once_per_turn
-            && t.optional),
+        own.iter()
+            .any(|t| t.when == vec![CompiledTiming::OnSuspend] && t.once_per_turn && t.optional),
         "expected [All Turns][OPT] on_suspend optional clause"
     );
 }
@@ -325,10 +324,9 @@ fn ad1_014_when_attacking_offers_same_delete_selection() {
     let perm = runner.place_on_field(0, "AD1-014", Some(0));
     runner.place_on_field(1, "OPP-LV5", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(perm),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(perm));
     runner.game.drain_effect_queue();
 
     assert!(
@@ -401,10 +399,9 @@ fn ad1_014_on_play_then_when_attacking_share_one_opt_lockout_per_turn() {
     let _ = runner.auto_resolve();
 
     // Now WhenAttacking same turn must NOT fire (DCGO shares hash AD1_014_OP_WD_WA).
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(perm),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(perm));
     runner.game.drain_effect_queue();
     assert!(
         runner.pending_selection().is_none(),
@@ -550,7 +547,12 @@ fn ad1_014_inherited_when_attacking_does_not_fire_when_top_card_lacks_garurumon_
     // "Omnimon" in its name, the inherited [When Attacking] clause must NOT
     // install a selection.
     let mut runner = metal_garurumon_runner()
-        .add_card(make_digimon_with_name("TOP-NEUTRAL", "Generic Top", 7, 13000))
+        .add_card(make_digimon_with_name(
+            "TOP-NEUTRAL",
+            "Generic Top",
+            7,
+            13000,
+        ))
         .add_card(make_digimon("OPP-DIGI", 5, 7000))
         .memory(20)
         .start();
@@ -558,10 +560,9 @@ fn ad1_014_inherited_when_attacking_does_not_fire_when_top_card_lacks_garurumon_
     let stack = runner.place_stack(0, &["AD1-014", "TOP-NEUTRAL"]);
     runner.place_on_field(1, "OPP-DIGI", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(stack),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(stack));
     runner.game.drain_effect_queue();
 
     // The own (top-card) clause won't fire (top is not AD1-014). The inherited
@@ -589,10 +590,9 @@ fn ad1_014_inherited_when_attacking_fires_when_top_card_contains_garurumon_in_na
     let stack = runner.place_stack(0, &["AD1-014", "TOP-GARURU"]);
     runner.place_on_field(1, "OPP-DIGI", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(stack),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(stack));
     runner.game.drain_effect_queue();
 
     assert!(

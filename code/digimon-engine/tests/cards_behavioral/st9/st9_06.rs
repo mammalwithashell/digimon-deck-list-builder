@@ -67,7 +67,11 @@ fn st9_06_compiles() {
 #[test]
 fn st9_06_card_metadata_matches_print() {
     let compiled = compiled_st9_06();
-    assert_eq!(compiled.level, Some(6), "Imperialdramon Dragon Mode is Lv.6");
+    assert_eq!(
+        compiled.level,
+        Some(6),
+        "Imperialdramon Dragon Mode is Lv.6"
+    );
     assert_eq!(compiled.dp, Some(12000), "DP is 12000");
     assert_eq!(compiled.cost, Some(13), "play cost is 13");
 }

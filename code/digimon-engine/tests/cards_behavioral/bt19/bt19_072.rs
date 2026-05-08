@@ -47,16 +47,18 @@ fn bt19_072_has_printed_metadata_and_route() {
     assert_eq!(card.level, Some(6));
     assert_eq!(card.cost, Some(11));
     assert_eq!(card.dp, Some(11000));
-    assert_eq!(card.color, vec![CompiledColor::Purple, CompiledColor::White]);
+    assert_eq!(
+        card.color,
+        vec![CompiledColor::Purple, CompiledColor::White]
+    );
     assert!(card.traits.iter().any(|name| name == "Royal Knight"));
     assert_eq!(card.attribute.as_deref(), Some("Virus"));
     assert!(card.alt_paths.iter().any(|path| {
         path.kind == CompiledAltPathKind::Digivolve
             && path.cost == Some(CompiledCost::Literal(3))
-            && path
-                .from
-                .as_ref()
-                .is_some_and(|from| from.level_eq == Some(5) && from.color_is == Some(CompiledColor::Purple))
+            && path.from.as_ref().is_some_and(|from| {
+                from.level_eq == Some(5) && from.color_is == Some(CompiledColor::Purple)
+            })
     }));
 }
 

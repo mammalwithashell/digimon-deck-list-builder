@@ -8,6 +8,12 @@ use crate::permanent::PermanentHandle;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct ProvenanceToken(pub u64);
 
+impl From<CardHandle> for ProvenanceToken {
+    fn from(value: CardHandle) -> Self {
+        Self(value.0 as u64)
+    }
+}
+
 /// Broad cause categories carried by observer payloads.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EventCause {
@@ -102,6 +108,7 @@ pub struct TriggerContext {
     pub selected_results: Vec<ResultBinding>,
     pub moved_card_sets: Vec<MovedCardSet>,
     pub effect_initiated: bool,
+    pub dna_origin: bool,
     pub deleted_object: Option<DeletedObjectSnapshot>,
     pub old_attack_target: Option<crate::selection::AttackTarget>,
     pub new_attack_target: Option<crate::selection::AttackTarget>,

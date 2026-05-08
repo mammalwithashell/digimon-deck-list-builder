@@ -121,6 +121,18 @@ remaining work under this heading is card-local authoring/selection behavior
 and non-battle-zone fan-out such as breeding-resident observers, not the core
 battle/effect security-removal timing contract.
 
+**Updated 2026-05-08 (Track A breeding security fan-out):** Security-removal
+fan-out now also scans the observer player's breeding slot through
+`enqueue_from_breeding_permanent`, using the stable `BREEDING_TARGET` source
+handle and the same `TriggerSource::SecurityRemoved` payload. This covers
+top-card and inherited breeding observers for both `OnOpponentSecurityRemoved`
+and `OnOwnSecurityRemoved` without overlapping the battle-area scan. Coverage:
+`cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_opponent_security_removed_fans_out_to_breeding_inherited_once_with_payload`
+and
+`cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_083_inherited_breeding_security_removed_fans_out_once_with_payload`.
+BT20-083's full printed inherited body remains card-local blocked on
+breeding-carrier suspend/payment and play-from-breeding-materials support.
+
 ### Global `OnAnyDigimonPlayed` / `OnAnyDeletion` observer timings
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
@@ -133,11 +145,19 @@ battle/effect security-removal timing contract.
 
 **Closed by Phase 1 (2026-04-19):** Both fire sites wired in `digimon-engine` — see `fire_on_enter_field_anyone()` in `code/digimon-engine/src/game_actions.rs` (called after OnPlay from `play_from_hand_with_cost` and `play_from_trash_with_cost`) and `fire_on_any_deletion()` in `code/digimon-engine/src/combat.rs` (called from `delete_permanent_with_effects`). Builders: `Effect::on_enter_field_anyone(card)` and `Effect::on_any_deletion(card)` in `code/digimon-engine/src/effect.rs`. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher and observer timing documentation.
 
-**Updated 2026-04-29 (Task 3):** Normal hand-played battle-area permanents now dispatch `OnEnterFieldAnyone` through `TriggerSource::EnteredField { player, permanent, card }`, preserving the global battle-area observer scan while populating `TriggerContext.event_permanent`, `TriggerContext.event_card`, and `source_player` with the entering permanent/card. Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_enter_field_anyone_event_card_trait_predicate_matches_entering_card`. Follow-up paths remain open unless separately tested: effect-created permanents, token play, option placement, play-from-trash context, and breeding-area observer fan-out.
+**Updated 2026-04-29 (Task 3):** Normal hand-played battle-area permanents now dispatch `OnEnterFieldAnyone` through `TriggerSource::EnteredField { player, permanent, card }`, preserving the global battle-area observer scan while populating `TriggerContext.event_permanent`, `TriggerContext.event_card`, and `source_player` with the entering permanent/card. Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_enter_field_anyone_event_card_trait_predicate_matches_entering_card`. Follow-up paths remain open unless separately tested: token play, option placement, and breeding-area observer fan-out.
+
+**Updated 2026-05-08 (Track A effect-origin slice):** Effect-created battle-area permanents now use the same `EnteredField` payload and set `TriggerContext.effect_initiated = true`; normal player-action play sets it false. DSL `event_is_effect_initiated` is proven by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- event_context`, and BT16-028 proves effect-play vs normal-play gating with `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt16_028`.
+
+**Updated 2026-05-08 (Track A provenance-token slice):** Effect-created play and effect-initiated digivolve helpers now have provenance-returning siblings: `play_from_hand_free_with_provenance`, `effect_initiated_digivolve_with_provenance`, and `effect_initiated_dna_digivolve_with_provenance`. `Game::resolve_provenance_token` resolves the token through battle-area index shifts and later zone movement. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- provenance_tokens`.
+
+**Updated 2026-05-08 (Track A printed-timing alias):** `Effect::on_any_digimon_played(card)` and DSL `when: on_any_digimon_played` are now supported as printed-text aliases for the existing `OnEnterFieldAnyone` dispatcher. They share the same `EnteredField` payload and observer fan-out path, so the alias does not create duplicate trigger scans. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- new_effect_timings_are_constructible` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_any_digimon_played_alias_uses_enter_field_payload`.
 
 **Updated 2026-05-04 (Puppets Batch 2):** `BT22-002` surfaces a narrower remaining `OnAnyDeletion` context gap. The observer fan-out exists, but YAML predicates such as `event_target_owner`, `event_target_kind`, and `event_target_trait_has` need the deleted permanent/card snapshot and former controller, not the observing carrier. Required regression: delete an own Token or other Puppet while `BT22-002` is inherited, and prove the event-target predicates read the deleted object while rejecting opponent Puppets, own non-Puppets, and the carrier itself. This is tracked archetype-locally as `PUPPETS-G011`.
 
 **Updated 2026-05-04 (Puppets Batch 6):** `EX11-023` and `EX11-060` add fresh consumers for the same deleted-object payload. `EX11-023` needs "other Digimon are deleted" source exclusion before it can offer the optional level 4 or lower Puppet trash play. `EX11-060` additionally needs deletion cause/source context so the Overclock-only hand-play branch is exposed only for Overclock-caused deletion while ordinary Token/Puppet deletion resolves only the suspend-this-Tamer Draw 1 branch.
+
+**Closed 2026-05-08 (PUPPETS-G011):** `BT22-002` now ships a card-shaped inherited `OnAnyDeletion` DSL fixture. Deleted-object event predicates read the pre-removal snapshot for owner, kind, and trait data, including Token kind/trait data after the token has left the battle area. The fixture proves own Token and own other [Puppet] trait Digimon deletions draw 1, while own non-Puppet, opponent Puppet, and carrier/self deletions do not, and once-per-turn accounting still suppresses the second eligible deletion. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_002`.
 
 ### Phase-granular turn timings (`StartOfYourTurn`, `StartOfYourMainPhase`, `WhenAttacking`, `EndOfAttack`, `EndOfBattle`)
 - **Severity:** 🔴 BLOCKING
@@ -150,6 +170,16 @@ battle/effect security-removal timing contract.
 - **Related:** RUST_ENGINE_API.md §9 ("OnEndBattle / OnEndAttack timings are not yet fired").
 
 **Closed by Phase 1 (2026-04-19):** All five timings wired in `digimon-engine` — see `fire_start_of_your_turn()` in `begin_turn` (before unsuspend), `fire_start_of_your_main_phase()` in `enter_main_phase`, `fire_on_attack()` and `fire_when_attacking()` in `combat::fire_on_attack`, `fire_end_of_attack()` in `cleanup_attack`, and `fire_end_of_battle()` in `resolve_battle` (Digimon-vs-Digimon only). Builders: `Effect::start_of_your_turn/start_of_your_main_phase/when_attacking/end_of_attack/end_of_battle(card)` in `code/digimon-engine/src/effect.rs`. See `docs/RUST_ENGINE_API.md` §Phase 1 for full dispatcher documentation.
+
+**Updated 2026-05-08 (Track A breeding fan-out):** `StartOfYourMainPhase`
+now scans the turn player's battle area and breeding area as distinct fan-out
+paths. `TriggerSource::PlayerBreedingArea` routes through
+`enqueue_from_breeding_permanent` with the stable `BREEDING_TARGET` source
+handle, preserving source-card attribution, inherited-source dispatch, and
+activation counts without making breeding overlap the battle-area scan.
+Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- start_of_your_main_phase_fans_out_to_battle_and_breeding_once_each --nocapture`.
+Remaining breeding observer work is timing-specific event fan-out such as
+security-removal observers from breeding, not the phase timing itself.
 
 ### Observer timings tied to specific events (`OnDigivolve` trait-filter, `OnSuspend`, `OnAttackTargetChange`, `[When Moving]`, `OnHatch`, `OnAllyAttack`/`OnOpponentAttack`)
 - **Severity:** 🔴 BLOCKING
@@ -164,7 +194,13 @@ battle/effect security-removal timing contract.
 
 **Updated 2026-04-29:** `[When Moving]` now has a dedicated `EffectTiming::OnMove`, `Effect::on_move(card)`, and `TriggerSource::MovedFromBreeding { player, permanent, card }`. `Game::move_from_breeding` dispatches it after the moved permanent has a battle-area handle, and DSL `event_target_trait_has` can read the moved permanent/card context through a direct OnMove enqueue. Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_move_fires_after_breeding_permanent_moves_to_battle` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_move_event_target_trait_predicate_matches_moved_permanent`.
 
-**Updated 2026-04-29 (Task 2):** Normal battle-area `Game::digivolve_from_hand` now emits `GameEvent::Digivolve { player, top_card_id, field_index, from_stack_top }` after the new card is on top. Its `OnDigivolve` observer fan-out uses `TriggerSource::Digivolved { player, permanent, card }`, so `TriggerContext.event_permanent`, `TriggerContext.event_card`, and `source_player` identify the just-digivolved permanent and new top card. Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- game_event_digivolve_is_emitted_with_new_top_card_and_field_index`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolve_event_card_trait_predicate_matches_new_top_card`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolve_event_target_binding_resolves_digivolved_permanent`. Follow-up paths remain open unless separately tested: `effect_initiated_digivolve`, `dna_digivolve_inner`, and breeding-area digivolve.
+**Updated 2026-04-29 (Task 2):** Normal battle-area `Game::digivolve_from_hand` now emits `GameEvent::Digivolve { player, top_card_id, field_index, from_stack_top }` after the new card is on top. Its `OnDigivolve` observer fan-out uses `TriggerSource::Digivolved { player, permanent, card }`, so `TriggerContext.event_permanent`, `TriggerContext.event_card`, and `source_player` identify the just-digivolved permanent and new top card. Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- game_event_digivolve_is_emitted_with_new_top_card_and_field_index`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolve_event_card_trait_predicate_matches_new_top_card`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_digivolve_event_target_binding_resolves_digivolved_permanent`. Follow-up paths remain open unless separately tested: breeding-area digivolve.
+
+**Updated 2026-05-08 (Track A DNA-origin slice):** DNA digivolve now sets `TriggerContext.dna_origin = true` for scoped `WhenDigivolving` / `OnDnaDigivolve` drains and the global `OnDigivolve` payload; standard digivolve sets it false. Effect-initiated DNA also sets `TriggerContext.effect_initiated = true` on the global payload. Rust scripts can read `EffectReadContext::event_dna_origin()` / `EffectContext::event_dna_origin()`, and DSL conditions can combine `dna_origin: true` with `event_is_effect_initiated: true`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase3_dna_digivolve_triggers` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078_when_digivolving`.
+
+**Updated 2026-05-08 (Track A effect-origin slice):** `Game::effect_initiated_digivolve_from_source` now dispatches `OnDigivolve` through `TriggerSource::Digivolved { ..., effect_initiated: true }` instead of a plain player battle-area scan, preserving the just-digivolved permanent/card and the effect-origin bit for observers. Security-source effect digivolves use the same payload after the security-removal pending flow completes.
+
+**Updated 2026-05-08 (self-scoped OnSuspend predicate):** DSL `event_permanent_is_source: true` now compares `TriggerContext.event_permanent` with the resolving observer's `source_permanent`, allowing "when this Digimon suspends" clauses to avoid over-firing on allied suspend events. BT23-077 Sistermon Ciel now authors its printed self-suspend `<De-Digivolve 1>` clause with that predicate. Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- event_permanent_is_source` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt23_077`.
 - **Related:** None.
 
 ### `WhenWouldBeDeleted` / leave-field replacement-effect framework
@@ -292,6 +328,10 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 
 **Updated 2026-05-03:** Top-security-to-hand and Recovery deck-step coverage is implemented for the validated TS/Olympos slice. `EffectContext::add_top_security_to_hand` and `recover_from_deck` are covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- security_stack_operations --nocapture`, DSL lowering by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- security_stack_steps --nocapture`, and card behavior by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_031 bt24_101 --nocapture`. Do not treat the entire security-stack gap as closed: face-up security extraction/flip, moving the resolving permanent itself into security, security-stack searches, and other listed card shapes still require card-specific or reusable follow-up proof.
 
+**Updated 2026-05-08 (Track A OnPlaceSecurity slice):** Successful `place_on_security` commits now fire `OnPlaceSecurity` with `event_card`, `affected_player`, `source_player`, `EventCause::SecurityPlacement`, and a moved-card set into `Zone::Security`. The same payload is emitted when a security-removal effect redirects the removed card back into security. DSL `when: on_place_security` lowers to the engine timing and can use event predicates such as `event_card_trait_has`. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_place_security_fires_once_with_security_placement_payload` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_place_security_event_card_trait_predicate_matches_placed_card`. Remaining security-stack sub-items still include face-up security extraction/flip, moving the resolving permanent itself into security, security-stack searches, and card-local production authoring.
+
+**Updated 2026-05-08 (Track A added-to-security alias):** `Effect::on_added_to_security(card)` and DSL `when: on_added_to_security` are printed-text aliases for the same `OnPlaceSecurity` dispatcher; they do not create a second fan-out path. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- new_effect_timings_are_constructible` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_added_to_security_alias_uses_place_security_payload`.
+
 ### Token creation + `CardKind::Token` + Petrification Token definition
 - **Severity:** 🟢 CLOSED
 - **Discovered in:** Medusamon (2026-04-17)
@@ -314,6 +354,17 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** None.
 
 **Closed by Phase 2 (2026-04-19):** Core `place_as_bottom_source` primitive implemented in `digimon-engine` — see `EffectContext::place_as_bottom_source` (code/digimon-engine/src/effect_context/mod.rs) and `Game::place_as_bottom_source` (code/digimon-engine/src/game_actions.rs). The unified `CardSourceRef` form accepts a card from hand, trash, or revealed pool and appends it to the bottom of the target permanent's `card_sources`, triggering inherited-stack recomputation. Open sub-items: `place_as_top_source`, alt-digivolve with override-cost + ignore-requirements flag, stack reorder / `move_source_to_bottom`, face-down placement, and cross-permanent-source (from-permanent) variants.
+
+**Updated 2026-05-08 (Track A BT13-007 slice):** DSL
+`place_as_bottom_source` now consumes `source: { permanent: <binding> }` by
+calling `EffectContext::place_permanent_as_bottom_sources`, removing the
+battle-area permanent and moving its whole stack under the target instead of
+duplicating or ignoring it. DSL `reveal_top_deck` also honors
+`zone: digi_egg_deck` through `EffectContext::reveal_top_digitama`. Together
+with `PlayerBreedingArea` phase fan-out, this proves BT13-007's breeding
+start-main body moves the top Digi-Egg and a Royal Knight permanent under King
+Drasil while leaving no duplicate battle-area copy. Coverage:
+`cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt13_007 --nocapture`.
 
 ### Native printed keyword parsing (Rush, Raid, Piercing, Blocker, Reboot, Jamming, Blitz, Vortex, Alliance, Security A.±N, Fragment, Save, Collision, Retaliation)
 - **Severity:** ✅ RESOLVED
@@ -496,7 +547,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Card(s):** EX8-074 MedievalGallantmon — DNA Omnimon additionally surfaces a *related-but-distinct* "grant triggered ability to another permanent" need; see "Granted triggered ability — attach an `Effect` to another permanent" new entry below — Dark Masters adds: EX8-074 already canonical; reaffirms dependency on the OnAnyDigimonPlayed observer to fire the re-trigger. BT15-102 Apocalymon surfaces a sibling-but-distinct cross-card variant — see "Cross-card effect re-firing — activate a foreign card's [On Play] effect attributed to the source"
 - **Effect text:** "[All Turns] [Once Per Turn] When Digimon are played, you may activate 1 of this Digimon's [When Digivolving] effects."
 - **Status:** Implemented for constrained permanent-sourced `WhenDigivolving` re-firing. `EffectContext::refire_effect_from_permanent(source, "when_digivolving")` enumerates safe refireable effects on the selected permanent, queues the exact effect slot through the normal `QueuedEffect` path, preserves `source_card` / `source_permanent` identity, and reuses existing once-per-turn accounting. DSL authors can use `refire_effect: { source: <binding>, timing: when_digivolving, optional: true|false }`.
-- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- effect_refiring --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- effect_refiring --nocapture`.
+- **Updated 2026-05-08:** `BT22-040` proves the Puppet self-refire shape that combines deleted-object `OnAnyDeletion` payload predicates with the refire primitive: "your other Digimon" deletion offers a visible optional refire, excludes the source permanent and opponent deletions, and respects once-per-turn even when declined. `BT22-042` extends that proof to a non-trivial refired `[When Digivolving]` body with an optional visible play branch followed by a mandatory DP-reduction tail.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- effect_refiring --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- effect_refiring --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_040 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_042 --nocapture`.
 - **Remaining related blocker:** BT15-102-style foreign-card `[On Play]` activation is still tracked separately under "Cross-card effect re-firing — activate a foreign card's [On Play] effect attributed to the source".
 - **Related:** Cross-card effect re-firing — activate a foreign card's [On Play] effect attributed to the source.
 
@@ -663,13 +715,14 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** "Named-target declarative aura (DP / keyword grants filtered by name/trait/level)"; "Native printed keyword parsing".
 
 ### Play / digivolve origin context flag ("if played by effects", "if digivolved by this effect")
-- **Severity:** 🔴 BLOCKING
+- **Severity:** 🟡 PARTIAL
 - **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
 - **Card(s):** BT24-023 Calmaramon ("if played by effects, 1 of their Digimon or Tamers can't suspend"), BT14-033 Patamon ("If digivolved by this effect, you may place 1 yellow Vaccine card from hand to security bottom") — Dark Masters adds: EX10-012 / EX10-020 / EX10-035 / EX10-057 / EX10-061 ("delete the Digimon this effect played" — needs cause attribution to identify the cost-reduction-played permanent), BT13-102 Keenan Crier ("[Opponent's Turn] When an effect plays a Digimon" — needs `was_played_by_effect()` filter on the OnEnterFieldAnyone observer)
 - **Effect text:** "if played by effects, …" / "If digivolved by this effect, …"
-- **What's missing:** `EffectContext` carries no flag distinguishing action-initiated plays from effect-initiated plays, and no per-activation identifier for "digivolved by THIS effect" vs. any other effect-driven digivolve. Sibling to the `ctx.was_dna_digivolve()` need tracked inside the "Zone-manipulation: effect-initiated digivolve" gap.
+- **What's missing:** The generic "by an effect" flag is implemented for `OnEnterFieldAnyone` and standard `OnDigivolve` observer predicates, and DNA/Jogress origin is implemented as `dna_origin` / `event_dna_origin()`. Still missing: per-activation identity for "digivolved by THIS effect" vs. another effect and effect-spawned permanent cleanup tokens.
 - **Suggested API shape:** Add `PlayCause { Action, Effect { source_card: CardHandle } }` threaded through `Game::play_from_hand` / `digivolve_from_hand`. Expose `ctx.was_played_by_effect()`, `ctx.was_digivolved_by_effect(self_source_card) -> bool` sugar. Fold into the same context struct as `was_dna_digivolve`.
-- **Workaround:** "None — BLOCKED." Auto-firing the rider unconditionally violates no-approximations; dropping it silently drops a clause.
+- **Updated 2026-05-08 (Track A):** `TriggerSource::EnteredField` and `TriggerSource::Digivolved` carry `effect_initiated`, copied into `TriggerContext.effect_initiated`; DSL `event_is_effect_initiated: true/false` evaluates that payload field. Normal hand play/digivolve set it false; effect play helpers and `effect_initiated_digivolve` set it true. BT16-028 now authors its `[All Turns] When an effect plays or digivolves...` observer with the gate, proving effect-play offers the free Fighter Mode digivolve while normal player-action play does not. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- event_context` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt16_028`.
+- **Workaround:** No longer needed for generic "by an effect" observer gates. Still none for stricter "by this effect" cleanup/identity semantics.
 - **Related:** "Zone-manipulation: effect-initiated digivolve" (setter site); `ctx.was_dna_digivolve()` item within that entry.
 
 ### Search-own-security-stack primitive (reveal full stack + select by filter)
@@ -693,7 +746,7 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Related:** "Zone-manipulation: effect-initiated digivolve"; "Search-own-security-stack primitive".
 
 ### `OnPlaceSecurity` / `OnAddedToSecurity` observer timing dispatch
-- **Severity:** 🔴 BLOCKING
+- **Severity:** 🟡 PARTIAL
 - **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
 - **Card(s):** BT14-033 Patamon (inherited "[Your Turn] [Once Per Turn] When a card is added to your security stack, gain 1 memory.") — Dark Masters adds: BT8-090 Kari Kamiya ("[Your Turn] When a card is added to your security stack, you may suspend this Tamer to gain 1 memory.")
 - **Effect text:** "When a card is added to your security stack, gain 1 memory."
@@ -702,8 +755,10 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Workaround:** "None — BLOCKED." Pure dispatch wiring; the enum variant already exists.
 - **Related:** "Global `OnOpponentSecurityRemoved` observer timing" (mirror event).
 
+**Updated 2026-05-08 (Track A):** Effect-driven `place_on_security` now emits `OnPlaceSecurity` after commit and fans out to the affected player's battle area plus breeding slot without overlapping scans. Payload carries the placed card, affected/security owner, source/effect controller, `EventCause::SecurityPlacement`, and a moved-card set into security. DSL token `on_place_security` is wired. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_place_security_fires_once_with_security_placement_payload` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_place_security_event_card_trait_predicate_matches_placed_card`. `OnAddedToSecurity` is now a builder/DSL alias to this same dispatcher, covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_added_to_security_alias_uses_place_security_payload`. Remaining scope: setup/recovery-style multi-card additions need card-shaped proof.
+
 ### `OnDiscardSecurity` — effect-driven security-card trash trigger
-- **Severity:** 🔴 BLOCKING
+- **Severity:** 🟢 CLOSED for base dispatch
 - **Discovered in:** TS Olympos (2026-04-18)
 - **Card(s):** BT13-106 Odin's Breath
 - **Effect text:** "When an effect trashes this card from the security stack, activate this card's [Main] effect."
@@ -711,6 +766,8 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Suggested API shape:** `EffectTiming::OnDiscardedFromSecurityByEffect`. Fire from `ctx.trash_top_security(player, n)` iterating each popped card's own effects with this timing; condition = "trash initiated by an effect object, not the attack engine".
 - **Workaround:** "None — BLOCKED." Even with `trash_top_security`, no mechanism fires the trashed card's observer.
 - **Related:** "Zone-manipulation: security stack operations"; "Option card play flow"; RUST_PYTHON_PARITY §2.5b (OnSecurityCheck).
+
+**Closed 2026-05-08 (Track A):** Added `EffectTiming::OnDiscardSecurity`, `Effect::on_discard_security`, DSL `when: on_discard_security`, and `TriggerSource::SecurityDiscarded`. Effect-driven `trash_top_security` now fires the trashed security card's own timing with `event_card`, `affected_player`, `source_player`, `event_cause`, and a security-to-trash moved-card set; normal attack security checks do not fire it. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- discard_security`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_discard_security_event_cause_predicate_matches_effect_trash`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt13_106`.
 
 ### `<Reboot>` keyword enforcement in opponent's unsuspend phase
 - **Severity:** ✅ RESOLVED for core Reboot unsuspend enforcement
@@ -946,7 +1003,7 @@ _Status (2026-04-20): **Partially closed by Phase 4.** Two of the four sub-gaps 
 - **Card(s):** BT3-006 DemiMeramon, BT24-001 Gigimon, BT16-006 Cupimon, BT15-006 DemiMeramon, BT17-001 Gigimon, BT14-001 Koromon
 - **Effect text:** "Inherited Effect [On Deletion] <Draw 1>. Then, trash 1 card in your hand." / "Inherited Effect [Your Turn] [Once Per Turn] When your opponent's security stack is removed from, you may delete 1 of their Digimon with 3000 DP or less." / "Inherited Effect [When Attacking] By paying 1 cost, delete 1 of your opponent's Digimon with 3000 DP or less."
 - **Closed 2026-05-06:** `enqueue_from_permanent` walks the stack with the top-card vs inherited-source discriminator, preserving the under-card `source_card` while the carrier permanent remains the event host. BT24-001 now proves the stack path end-to-end: inherited `OnOpponentSecurityRemoved` fires from the carrier, exposes an optional delete selection, deletes after acceptance, declines cleanly, and enforces same-turn OPT lockout. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_001` (9 passed / 1 ignored; remaining ignore is `G-PRED-DP-LTE`).
-- **Remaining scope:** Other cards that were ignore-tagged only for this gap should be re-audited and unignored card-by-card. Separate timing fire-site gaps still stand where the timing itself is not emitted, such as `OnPlaceSecurity`, some `WhenAttacking`/cost variants, and digivolution-card-trash fan-out.
+- **Remaining scope:** Other cards that were ignore-tagged only for this gap should be re-audited and unignored card-by-card. Separate timing/body gaps still stand where card-local costs or full keyword behaviors are not emitted, such as some `WhenAttacking` cost variants and remaining keyword-driven digivolution-card-trash producers.
 - **Related:** "Global `OnOpponentSecurityRemoved` observer timing"; "Global `OnAnyDigimonPlayed` / `OnAnyDeletion` observer timings"; `OnPlaceSecurity` observer gap.
 
 ### `CannotAttackPlayer` modifier enforcement (mask + combat)
@@ -1136,6 +1193,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Suggested API shape:** For YAML, use `digi_burst: { count: N, bind_as: optional_name, then: [...] }`. For future hand-written Rust effects, consider `.pay_cost_trash_n_own_sources(n)` if a non-DSL card needs the same cost wrapper.
 - **Workaround:** Older hand-expanded `select_own_sources` + `trash_selected_sources` bodies are still faithful, but new YAML should use `digi_burst` to keep cost ordering consistent.
 - **Updated 2026-05-07:** BT4-072 Gogmamon is authored and tested with `digi_burst`. Its source selection is restricted to `target: source`, excludes other own stacks from the action mask, trashes the selected source through the source-trash payload path, then exposes the printed DP target selection. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt4_072`.
+- **Updated 2026-05-08:** A synthetic `digi_burst: { count: 2 }` fixture now proves the multi-source contract: exactly two self-stack sources are required, PASS is not legal before the count is satisfied, other own stacks are excluded, each selected source emits `OnDigivolutionCardTrashed`, and the nested body continues after the source-trash cost. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- digi_burst_two_selects_exact_self_sources_and_fires_source_trash_per_card`.
 - **Related:** Existing "Dynamic cost reduction at `BeforePayCost`"; existing "`<Armor Purge>` keyword" (sibling trash-top-source-of-self); existing "Native printed keyword parsing"; new "`OnDigivolutionCardTrashed` observer timing".
 ## Puppets Batch 5/6 Residual Engine Gaps
 

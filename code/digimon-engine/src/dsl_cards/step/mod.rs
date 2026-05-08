@@ -233,7 +233,19 @@ fn park_pending_selection_tail(
 pub(crate) fn drain_dsl_outer_tail(cb_ctx: &mut EffectContext<'_>) {
     if let Some((outer_tail, mut outer_b, runtime)) = cb_ctx.game.dsl_outer_tail.take() {
         cb_ctx.set_override_selecting_player(None);
-        run_steps_with_runtime(&outer_tail, cb_ctx, &mut outer_b, &runtime);
+        if cb_ctx.game.pending_selection.is_some() {
+            wrap_pending_selection_with_tail(
+                cb_ctx.game,
+                cb_ctx.source_card,
+                cb_ctx.source_permanent,
+                cb_ctx.player,
+                outer_tail,
+                outer_b,
+                runtime,
+            );
+        } else {
+            run_steps_with_runtime(&outer_tail, cb_ctx, &mut outer_b, &runtime);
+        }
     }
 }
 

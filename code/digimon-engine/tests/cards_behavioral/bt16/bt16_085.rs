@@ -45,7 +45,9 @@
 //! - Clause 1: DNA trash sub-clause (#[ignore] — G-DSL-IS-DNA-DIGIVOLVING + G-SELECT-OPPONENT-SOURCES).
 //! - Clause 2: Security clause structural shape verified.
 
-use digimon_dsl::compiled::{CompiledClause, CompiledColor, CompiledScope, CompiledStep, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledColor, CompiledScope, CompiledStep, CompiledTiming,
+};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -158,17 +160,11 @@ fn bt16_085_metadata_matches_printed_text() {
     assert_eq!(compiled.name, "Davis Motomiya & Ken Ichijoji");
     assert_eq!(compiled.cost, Some(4));
     assert!(
-        compiled
-            .color
-            .iter()
-            .any(|c| *c == CompiledColor::Blue),
+        compiled.color.iter().any(|c| *c == CompiledColor::Blue),
         "must include blue"
     );
     assert!(
-        compiled
-            .color
-            .iter()
-            .any(|c| *c == CompiledColor::Green),
+        compiled.color.iter().any(|c| *c == CompiledColor::Green),
         "must include green"
     );
 }
@@ -221,9 +217,7 @@ fn bt16_085_clause_0_is_optional() {
         .expect("BT16-085 in embedded DSL pack");
 
     let somp_clause = compiled.effects.iter().find_map(|c| match c {
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::StartOfYourMainPhase) =>
-        {
+        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::StartOfYourMainPhase) => {
             Some(t)
         }
         _ => None,
@@ -510,12 +504,10 @@ fn bt16_085_digivolve_observer_suspends_tamer_and_gains_1_memory() {
         .position(|c| c.card_id(&runner.game.card_data) == "EVOLVED")
         .expect("EVOLVED in hand");
 
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        base.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
     assert!(ok, "digivolve_from_hand must succeed");
     runner.game.drain_effect_queue();
 
@@ -566,9 +558,10 @@ fn bt16_085_digivolve_observer_does_not_fire_on_opponent_digivolve() {
     // Simulate an opponent Digimon digivolving: TriggerSource::Permanent(opp_base)
     // where opp_base belongs to player 1. The condition event_target_owner: you
     // should prevent the tamer from activating.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(opp_base));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnDigivolve,
+        TriggerSource::Permanent(opp_base),
+    );
     runner.game.drain_effect_queue();
 
     let memory_after = runner.game.memory;
@@ -645,12 +638,10 @@ fn bt16_085_digivolve_observer_fires_on_own_digimon_digivolve_via_action() {
         .position(|c| c.card_id(&runner.game.card_data) == "EVOLVED")
         .expect("EVOLVED in hand");
 
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        base.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
     assert!(ok, "digivolve_from_hand must succeed");
     runner.game.drain_effect_queue();
 
@@ -676,7 +667,10 @@ fn bt16_085_digivolve_observer_fires_on_own_digimon_digivolve_via_action() {
         "memory must be unchanged (declined) or +1 (accepted); was {memory_before} → {memory_after}"
     );
     if memory_after == memory_before + 1 {
-        assert!(is_suspended, "tamer must be suspended when memory was gained");
+        assert!(
+            is_suspended,
+            "tamer must be suspended when memory was gained"
+        );
     }
 }
 
@@ -709,9 +703,10 @@ fn bt16_085_security_clause_fires_without_panic() {
     // The security card has no field permanent, so we use PlayerBattleArea fan-out.
     // This is a no-panic smoke test; the actual play_from_security path is gated
     // on the security-check-resolution flow in Game::resolve_security_check.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::SecuritySkill, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     // Accept any pending selection (if a prompt installed).

@@ -107,8 +107,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost,
-    CompiledDeclarativeClause, CompiledScope, CompiledTiming, CompiledTriggeredClause,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -229,10 +229,7 @@ fn p_182_compiles_with_standard_and_alt_digivolve_paths() {
     // The any_of branch contains either the name_contains MetalGreymon OR the
     // trait_has ADVENTURE leaf — assert the all_of vector contains a slot
     // that holds the any_of disjunction.
-    let has_anyof = from
-        .all_of
-        .iter()
-        .any(|p| !p.any_of.is_empty());
+    let has_anyof = from.all_of.iter().any(|p| !p.any_of.is_empty());
     assert!(
         has_anyof,
         "alt path's all_of must include an any_of disjunction (MetalGreymon name OR ADVENTURE trait)"
@@ -336,7 +333,12 @@ fn p_182_does_not_publish_static_dp_modifier_aura_today() {
     let aura_count = card
         .effects
         .iter()
-        .filter(|c| matches!(c, CompiledClause::Declarative(CompiledDeclarativeClause::Aura { .. })))
+        .filter(|c| {
+            matches!(
+                c,
+                CompiledClause::Declarative(CompiledDeclarativeClause::Aura { .. })
+            )
+        })
         .count();
     assert_eq!(
         aura_count, 0,

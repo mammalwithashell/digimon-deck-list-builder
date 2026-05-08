@@ -105,8 +105,14 @@ fn stingmon_runner() -> DebugRunner {
         .add_card(make_green_digimon("GREEN-DIGI"))
         .add_card(make_lv5_carrier("LV5-CARRIER"))
         .add_card(make_filler("DECK-PAD"))
-        .deck(0, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
-        .deck(1, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
+        .deck(
+            0,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
+        .deck(
+            1,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
         .memory(10)
         .start()
 }

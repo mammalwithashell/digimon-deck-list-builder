@@ -68,8 +68,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
-    CompiledStep, CompiledTiming, CompiledTriggeredClause,
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
+    CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -84,10 +84,9 @@ const YAML: &str = include_str!("../../../cards/ex4/EX4-060.yaml");
 
 /// Compile EX4-060 from the production YAML and return the CompiledCard.
 fn compiled_ex4_060() -> digimon_dsl::compiled::CompiledCard {
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(YAML).expect("EX4-060.yaml parses");
-    let registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
-        .expect("EX4-060.yaml compiles");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("EX4-060.yaml parses");
+    let registry =
+        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("EX4-060.yaml compiles");
     registry
         .lookup("EX4-060")
         .expect("EX4-060 in registry")

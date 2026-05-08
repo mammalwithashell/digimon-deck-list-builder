@@ -75,10 +75,7 @@ fn bt20_084_has_printed_stats_alt_path_and_supported_shared_lock_clause() {
             _ => None,
         })
         .expect("trash on_ally_played clause");
-    assert!(
-        trash_clause.optional,
-        "printed trash digivolve uses 'may'"
-    );
+    assert!(trash_clause.optional, "printed trash digivolve uses 'may'");
     assert!(matches!(
         trash_clause.process.as_slice(),
         [

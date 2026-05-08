@@ -82,9 +82,7 @@
 
 #![allow(dead_code)]
 
-use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledClause, CompiledScope, CompiledTiming,
-};
+use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::CardKind;
@@ -250,9 +248,7 @@ fn bt5_092_clause1_on_play_offers_and_plays_agumon_free() {
         .start();
 
     let memory_before_nokia = runner.memory();
-    runner
-        .play(0, 0)
-        .expect("Nokia plays from hand (cost 3)");
+    runner.play(0, 0).expect("Nokia plays from hand (cost 3)");
 
     // After Nokia hits the field, On Play fires; clause 1 should install a
     // selection prompt to play 1 Agumon/Gabumon free.
@@ -315,7 +311,12 @@ fn bt5_092_clause1_on_play_offers_gabumon() {
         "Nokia On Play must install prompt when Gabumon is the eligible candidate"
     );
 
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     runner
         .game
         .resolve_selection(0, action)

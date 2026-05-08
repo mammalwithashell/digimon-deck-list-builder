@@ -136,6 +136,10 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_owner: Option<PlayerRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_permanent_is_source: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_is_effect_initiated: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_name_contains: Option<String>,

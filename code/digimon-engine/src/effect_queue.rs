@@ -187,6 +187,14 @@ impl Game {
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
+            TriggerSource::PlayerBreedingArea(player) => {
+                let handle = PermanentHandle {
+                    player,
+                    index: BREEDING_TARGET as u8,
+                };
+                let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                self.enqueue_from_breeding_permanent(timing, handle, Some(trigger_context));
+            }
             TriggerSource::SecurityRevealed { defender, card } => {
                 let trigger_context = self.trigger_context_for_source(&source, None);
                 self.enqueue_from_security_card(
@@ -345,6 +353,49 @@ impl Game {
                     let trigger_context = self.trigger_context_for_source(&source, Some(handle));
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
+                let breeding_handle = PermanentHandle {
+                    player: observer_player,
+                    index: BREEDING_TARGET as u8,
+                };
+                let trigger_context =
+                    self.trigger_context_for_source(&source, Some(breeding_handle));
+                self.enqueue_from_breeding_permanent(
+                    timing,
+                    breeding_handle,
+                    Some(trigger_context),
+                );
+            }
+            TriggerSource::SecurityPlaced {
+                affected_player, ..
+            } => {
+                let count = self.player(affected_player).battle_area.len();
+                for i in 0..count {
+                    let handle = PermanentHandle {
+                        player: affected_player,
+                        index: i as u8,
+                    };
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                }
+                let breeding_handle = PermanentHandle {
+                    player: affected_player,
+                    index: BREEDING_TARGET as u8,
+                };
+                let trigger_context =
+                    self.trigger_context_for_source(&source, Some(breeding_handle));
+                self.enqueue_from_breeding_permanent(
+                    timing,
+                    breeding_handle,
+                    Some(trigger_context),
+                );
+            }
+            TriggerSource::SecurityDiscarded {
+                affected_player,
+                card,
+                ..
+            } => {
+                let trigger_context = self.trigger_context_for_source(&source, None);
+                self.enqueue_from_security_card(timing, affected_player, card, Some(trigger_context));
             }
         }
         if matches!(source, TriggerSource::EventObserved { .. }) {
@@ -565,7 +616,7 @@ impl Game {
         source: &TriggerSource,
         source_permanent: Option<PermanentHandle>,
     ) -> TriggerContext {
-        match *source {
+        let mut context = match *source {
             TriggerSource::Permanent(handle) => TriggerContext {
                 target_permanent: Some(handle),
                 target_card: self.top_card_handle(handle),
@@ -573,6 +624,12 @@ impl Game {
                 ..TriggerContext::default()
             },
             TriggerSource::PlayerBattleArea(player) => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::PlayerBreedingArea(player) => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 source_player: Some(player),
@@ -614,24 +671,30 @@ impl Game {
                 player,
                 permanent,
                 card,
+                effect_initiated,
+                dna_origin,
             } => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 event_permanent: Some(permanent),
                 event_card: Some(card),
                 source_player: Some(player),
+                effect_initiated,
+                dna_origin,
                 ..TriggerContext::default()
             },
             TriggerSource::EnteredField {
                 player,
                 permanent,
                 card,
+                effect_initiated,
             } => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 event_permanent: Some(permanent),
                 event_card: Some(card),
                 source_player: Some(player),
+                effect_initiated,
                 ..TriggerContext::default()
             },
             TriggerSource::OptionPlaced {
@@ -713,7 +776,63 @@ impl Game {
                 }],
                 ..TriggerContext::default()
             },
+            TriggerSource::SecurityPlaced {
+                affected_player,
+                source_player,
+                card,
+                cause,
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::Security,
+                }),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_card: Some(card),
+                affected_player: Some(affected_player),
+                source_player: Some(source_player),
+                cause: Some(cause),
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: vec![card],
+                    from: None,
+                    to: Some(crate::enums::Zone::Security),
+                }],
+                ..TriggerContext::default()
+            },
+            TriggerSource::SecurityDiscarded {
+                affected_player,
+                source_player,
+                card,
+                cause,
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::Security,
+                }),
+                event_card: Some(card),
+                affected_player: Some(affected_player),
+                source_player: Some(source_player),
+                cause: Some(cause),
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: vec![card],
+                    from: Some(crate::enums::Zone::Security),
+                    to: Some(crate::enums::Zone::Trash),
+                }],
+                ..TriggerContext::default()
+            },
+        };
+        if context.source_effect.is_none() {
+            context.source_effect = self.current_effect_attribution();
         }
+        context
+    }
+
+    fn current_effect_attribution(&self) -> Option<crate::trigger_context::EffectAttribution> {
+        Some(crate::trigger_context::EffectAttribution {
+            controller: self.effect_source_player?,
+            source_card: self.effect_source_card,
+            source_permanent: self.effect_source_permanent,
+        })
     }
 
     fn top_card_handle(&self, handle: PermanentHandle) -> Option<CardHandle> {
@@ -1289,11 +1408,17 @@ impl Game {
         // effect queues another effect that recursively drains before this
         // one returns).
         let prev_effect_source = self.effect_source_player;
+        let prev_effect_source_card = self.effect_source_card;
+        let prev_effect_source_permanent = self.effect_source_permanent;
         let prev_trigger_context = self.current_trigger_context.clone();
         self.effect_source_player = Some(qe.controller);
+        self.effect_source_card = Some(qe.source_card);
+        self.effect_source_permanent = qe.source_permanent;
         self.current_trigger_context = qe.trigger_context.clone();
         let out = self.run_queued_effect_inner(qe);
         self.current_trigger_context = prev_trigger_context;
+        self.effect_source_permanent = prev_effect_source_permanent;
+        self.effect_source_card = prev_effect_source_card;
         self.effect_source_player = prev_effect_source;
         out
     }
@@ -1629,13 +1754,19 @@ impl Game {
 
     fn resume_queued_effect_process_tail(&mut self, qe: QueuedEffect) {
         let prev_effect_source = self.effect_source_player;
+        let prev_effect_source_card = self.effect_source_card;
+        let prev_effect_source_permanent = self.effect_source_permanent;
         let prev_trigger_context = self.current_trigger_context.clone();
         self.effect_source_player = Some(qe.controller);
+        self.effect_source_card = Some(qe.source_card);
+        self.effect_source_permanent = qe.source_permanent;
         self.current_trigger_context = qe.trigger_context.clone();
         let event_delay_source = self.event_gated_delay_source(&qe);
         self.run_queued_effect_process_tail(&qe);
         self.trash_event_gated_delay_after_activation(event_delay_source);
         self.current_trigger_context = prev_trigger_context;
+        self.effect_source_permanent = prev_effect_source_permanent;
+        self.effect_source_card = prev_effect_source_card;
         self.effect_source_player = prev_effect_source;
     }
 
@@ -1655,13 +1786,42 @@ impl Game {
 
     pub(crate) fn complete_effect_security_removal(
         &mut self,
-        pending: PendingEffectSecurityRemoval,
+        mut pending: PendingEffectSecurityRemoval,
     ) {
-        let mut completed_digivolve: Option<PermanentHandle> = None;
+        let mut completed_digivolve: Option<(PermanentHandle, crate::card_source::CardHandle)> =
+            None;
+        let mut completed_security_placement: Option<(
+            PlayerId,
+            crate::card_source::CardHandle,
+        )> = None;
         let removed_card = self
             .pending_security
             .as_ref()
             .map(|security| security.card.handle());
+        if matches!(pending.destination, SecurityRemovalDestination::Trash)
+            && !pending.discard_security_fired
+        {
+            if let Some(security) = self.pending_security.as_ref() {
+                if !security.played {
+                    let card = security.card.handle();
+                    pending.discard_security_fired = true;
+                    self.enqueue_triggered(
+                        EffectTiming::OnDiscardSecurity,
+                        TriggerSource::SecurityDiscarded {
+                            affected_player: pending.defender,
+                            source_player: pending.source_player,
+                            card,
+                            cause: pending.cause,
+                        },
+                    );
+                    self.drain_effect_queue();
+                    if self.pending_selection.is_some() {
+                        self.pending_effect_security_removal.push(pending);
+                        return;
+                    }
+                }
+            }
+        }
         if let Some(security) = self.pending_security.take() {
             if !security.played {
                 match pending.destination {
@@ -1703,8 +1863,9 @@ impl Game {
                             .battle_area
                             .get_mut(target.index as usize)
                         {
+                            let event_card = security.card.handle();
                             perm.digivolve(security.card, turn);
-                            completed_digivolve = Some(target);
+                            completed_digivolve = Some((target, event_card));
                         } else {
                             let owner = security.card.owner;
                             self.player_mut(owner).trash.push(security.card);
@@ -1715,6 +1876,7 @@ impl Game {
                         position,
                         face_up,
                     } => {
+                        let placed_card = security.card.handle();
                         let face_up_key = security.card.card_index;
                         match position {
                             crate::enums::StackPosition::Top => {
@@ -1737,6 +1899,7 @@ impl Game {
                         if face_up {
                             self.player_mut(player).face_up_security.insert(face_up_key);
                         }
+                        completed_security_placement = Some((player, placed_card));
                     }
                 }
             }
@@ -1744,19 +1907,27 @@ impl Game {
 
         self.pending_security = pending.previous_pending_security;
 
-        if let Some(target) = completed_digivolve {
+        if let Some((player, placed_card)) = completed_security_placement {
+            self.fire_on_place_security(player, pending.source_player, placed_card);
+        }
+
+        if let Some((target, event_card)) = completed_digivolve {
             self.enqueue_triggered(
                 EffectTiming::WhenDigivolving,
                 TriggerSource::Permanent(target),
             );
             self.drain_effect_queue();
 
-            for pid in 0..self.players.len() {
-                self.enqueue_triggered(
-                    EffectTiming::OnDigivolve,
-                    TriggerSource::PlayerBattleArea(pid as PlayerId),
-                );
-            }
+            self.enqueue_triggered(
+                EffectTiming::OnDigivolve,
+                TriggerSource::Digivolved {
+                    player: target.player,
+                    permanent: target,
+                    card: event_card,
+                    effect_initiated: true,
+                    dna_origin: false,
+                },
+            );
             self.drain_effect_queue();
         }
 
@@ -1828,6 +1999,7 @@ impl Game {
             cause,
             destination,
             previous_pending_security: previous_pending,
+            discard_security_fired: false,
         };
 
         if self.pending_selection.is_some() {

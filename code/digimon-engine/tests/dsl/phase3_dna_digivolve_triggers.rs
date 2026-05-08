@@ -195,3 +195,88 @@ effects:
     assert_eq!(runner.game.player(0).battle_area.len(), 1);
     assert!(runner.game.pending_selection.is_none());
 }
+
+#[test]
+fn on_digivolve_global_observer_reads_dna_origin_payload() {
+    let yaml = r#"
+card: DNA-RESULT
+name: DNA Result
+kind: digimon
+level: 4
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_digivolve
+    condition: { dna_origin: true }
+    process:
+      - gain_memory: 4
+"#;
+
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon("SRC-A", 3, Vec::new(), Vec::new()))
+        .add_card(digimon("SRC-B", 3, Vec::new(), Vec::new()))
+        .add_card(digimon("DNA-RESULT", 4, vec![dna_cost()], Vec::new()))
+        .hand(0, &["DNA-RESULT"])
+        .memory(5)
+        .start();
+    register_dsl(&mut runner, yaml);
+
+    let a = runner.place_on_field(0, "SRC-A", None);
+    let b = runner.place_on_field(0, "SRC-B", None);
+    let hand_card = runner.game.player(0).hand[0].handle();
+
+    let before = runner.game.memory;
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card, None, 0);
+        assert!(ctx
+            .effect_initiated_dna_digivolve(a, b, hand_card, 0, true)
+            .is_some());
+    }
+
+    assert_eq!(runner.game.memory, before + 4);
+}
+
+#[test]
+fn effect_initiated_dna_sets_effect_origin_on_global_payload() {
+    let yaml = r#"
+card: DNA-RESULT
+name: DNA Result
+kind: digimon
+level: 4
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_digivolve
+    condition:
+      all_of:
+        - dna_origin: true
+        - event_is_effect_initiated: true
+    process:
+      - gain_memory: 4
+"#;
+
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon("SRC-A", 3, Vec::new(), Vec::new()))
+        .add_card(digimon("SRC-B", 3, Vec::new(), Vec::new()))
+        .add_card(digimon("DNA-RESULT", 4, vec![dna_cost()], Vec::new()))
+        .hand(0, &["DNA-RESULT"])
+        .memory(5)
+        .start();
+    register_dsl(&mut runner, yaml);
+
+    let a = runner.place_on_field(0, "SRC-A", None);
+    let b = runner.place_on_field(0, "SRC-B", None);
+    let hand_card = runner.game.player(0).hand[0].handle();
+
+    let before = runner.game.memory;
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card, None, 0);
+        assert!(ctx
+            .effect_initiated_dna_digivolve(a, b, hand_card, 0, true)
+            .is_some());
+    }
+
+    assert_eq!(runner.game.memory, before + 4);
+}

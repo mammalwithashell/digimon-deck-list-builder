@@ -303,6 +303,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 Some(ResolvedBinding::Permanent(h)) => h,
                 _ => return true,
             };
+            if let Some(ResolvedBinding::Permanent(source_handle)) =
+                resolve_binding_ref(source, ctx, bindings)
+            {
+                let _ = ctx.place_permanent_as_bottom_sources(source_handle, target_handle);
+                return true;
+            }
             let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
                 return true;
             };

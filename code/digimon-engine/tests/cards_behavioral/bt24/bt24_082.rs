@@ -75,6 +75,8 @@ fn enqueue_digivolve_event_for(runner: &mut DebugRunner, target: PermanentHandle
             player: target.player,
             permanent: target,
             card,
+            effect_initiated: false,
+            dna_origin: false,
         },
     );
     runner.game.drain_effect_queue();

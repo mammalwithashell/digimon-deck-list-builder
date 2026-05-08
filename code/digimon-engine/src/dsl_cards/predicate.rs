@@ -577,29 +577,55 @@ fn subject_not_in_binding(
 
 fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> bool {
     if let Some(want) = pred.event_target_kind {
-        let Some(card) = event_target_card(rctx) else {
-            return false;
-        };
-        let Some(data) = rctx.game.card_data_for_handle(card) else {
-            return false;
-        };
-        if !kind_matches_card_search(want, data) {
-            return false;
+        if let Some(snapshot) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+        {
+            if !kind_matches_field(want, snapshot.card_kind) {
+                return false;
+            }
+        } else {
+            let Some(card) = event_target_card(rctx) else {
+                return false;
+            };
+            let Some(data) = rctx.game.card_data_for_handle(card) else {
+                return false;
+            };
+            if !kind_matches_card_search(want, data) {
+                return false;
+            }
         }
     }
     if let Some(ref trait_name) = pred.event_target_trait_has {
-        let Some(card) = event_target_card(rctx) else {
-            return false;
-        };
-        let Some(data) = rctx.game.card_data_for_handle(card) else {
-            return false;
-        };
-        if !data
-            .traits
-            .iter()
-            .any(|t| t.eq_ignore_ascii_case(trait_name))
+        if let Some(snapshot) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
         {
-            return false;
+            if !snapshot
+                .traits
+                .iter()
+                .any(|t| t.eq_ignore_ascii_case(trait_name))
+            {
+                return false;
+            }
+        } else {
+            let Some(card) = event_target_card(rctx) else {
+                return false;
+            };
+            let Some(data) = rctx.game.card_data_for_handle(card) else {
+                return false;
+            };
+            if !data
+                .traits
+                .iter()
+                .any(|t| t.eq_ignore_ascii_case(trait_name))
+            {
+                return false;
+            }
         }
     }
     if let Some(want) = pred.event_target_owner {
@@ -607,6 +633,40 @@ fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> 
             return false;
         };
         if !player_ref_matches(want, owner, rctx) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_permanent_is_source {
+        let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
+            return false;
+        };
+        let Some(event_permanent) = trigger.event_permanent else {
+            return false;
+        };
+        let Some(source_permanent) = rctx.source_permanent else {
+            return false;
+        };
+        if (event_permanent == source_permanent) != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_is_effect_initiated {
+        let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
+            return false;
+        };
+        if trigger.effect_initiated != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.dna_origin {
+        let actual = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.dna_origin)
+            .unwrap_or(false)
+            || rctx.game.current_dna_origin.unwrap_or(false);
+        if actual != want {
             return false;
         }
     }

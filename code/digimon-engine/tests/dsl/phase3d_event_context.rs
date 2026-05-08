@@ -2,7 +2,11 @@ use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming, PlaySource};
+use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::{
+    CardColor, CardKind, CardSourceRef, CostDelta, DelayTrigger, EffectTiming, PlaySource,
+    StackPosition,
+};
 use digimon_engine::permanent::{Permanent, PermanentHandle};
 use digimon_engine::selection::{OptionPlayResult, TriggerSource};
 use std::sync::Arc;
@@ -503,6 +507,131 @@ effects:
 }
 
 #[test]
+fn event_is_effect_initiated_matches_effect_play_only() {
+    let yaml = r#"
+card: DSL-EFFECT-PLAY-OBS
+name: Effect Play Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_enter_field_anyone
+    condition: { event_is_effect_initiated: true }
+    process:
+      - gain_memory: 2
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("NORMAL-PLAY", "Normal Play", &[], 1000))
+        .add_card(digimon_card("EFFECT-PLAY", "Effect Play", &[], 1000))
+        .hand(0, &["NORMAL-PLAY", "EFFECT-PLAY"])
+        .build();
+    runner.place_on_field(0, "DSL-EFFECT-PLAY-OBS", None);
+    runner.game.enter_main_phase();
+
+    assert_eq!(
+        runner
+            .game
+            .play_from_hand_with_cost(0, 0, CostDelta::Free, PlaySource::ByHand),
+        Some(1),
+        "normal play precondition"
+    );
+    assert_eq!(
+        runner.memory(),
+        0,
+        "normal main-phase play must not satisfy event_is_effect_initiated"
+    );
+
+    let effect_card = runner.game.players[0].hand[0].handle();
+    assert_eq!(
+        runner.game.play_card_from_effect_without_cost(0, effect_card),
+        Some(PermanentHandle {
+            player: 0,
+            index: 2,
+        }),
+        "effect play precondition"
+    );
+    assert_eq!(
+        runner.memory(),
+        2,
+        "effect play should satisfy event_is_effect_initiated"
+    );
+}
+
+#[test]
+fn event_is_effect_initiated_matches_effect_digivolve_only() {
+    let yaml = r#"
+card: DSL-EFFECT-DIGI-OBS
+name: Effect Digivolve Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_digivolve
+    condition:
+      all_of:
+        - event_is_effect_initiated: true
+        - event_card_trait_has: Mineral
+    process:
+      - gain_memory: 3
+"#;
+    let evo = |id: &str| {
+        let mut card = digimon_card(id, "Mineral Evo", &["Mineral"], 3000);
+        card.level = Some(4);
+        card.evo_costs = vec![EvoCost {
+            card_color: CardColor::Red as u8,
+            level: 3,
+            memory_cost: 0,
+        }];
+        card
+    };
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("BASE-NORMAL", "Normal Base", &[], 1000))
+        .add_card(digimon_card("BASE-EFFECT", "Effect Base", &[], 1000))
+        .add_card(evo("NORMAL-EVO"))
+        .add_card(evo("EFFECT-EVO"))
+        .hand(0, &["NORMAL-EVO", "EFFECT-EVO"])
+        .build();
+    runner.place_on_field(0, "DSL-EFFECT-DIGI-OBS", None);
+    let normal_target = runner.place_on_field(0, "BASE-NORMAL", None);
+    let effect_target = runner.place_on_field(0, "BASE-EFFECT", None);
+    runner.game.enter_main_phase();
+
+    assert!(runner.game.digivolve_from_hand(
+        0,
+        0,
+        normal_target.index as usize,
+        PlaySource::ByDigivolve,
+    ));
+    assert_eq!(
+        runner.memory(),
+        0,
+        "normal digivolve must not satisfy event_is_effect_initiated"
+    );
+
+    assert!(runner.game.effect_initiated_digivolve(
+        0,
+        0,
+        effect_target,
+        digimon_engine::enums::CostDelta::Free,
+        false,
+        PlaySource::ByEffect,
+    ));
+    assert_eq!(
+        runner.memory(),
+        3,
+        "effect-initiated digivolve should carry event card plus effect-origin flag"
+    );
+}
+
+#[test]
 fn event_target_owner_predicate_compiles() {
     let yaml = r#"
 card: DSL-EVT-OWNER-COMPILE
@@ -527,6 +656,70 @@ effects:
     assert_eq!(
         condition.event_target_owner,
         Some(digimon_dsl::compiled::CompiledPlayerRef::You)
+    );
+}
+
+#[test]
+fn event_permanent_is_source_predicate_compiles() {
+    let yaml = r#"
+card: DSL-EVT-SOURCE
+name: Event Source
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_suspend
+    condition: { event_permanent_is_source: true }
+    process:
+      - gain_memory: 1
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let digimon_dsl::compiled::CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let condition = triggered.condition.as_ref().expect("condition");
+    assert_eq!(condition.event_permanent_is_source, Some(true));
+}
+
+#[test]
+fn event_permanent_is_source_matches_suspended_subject_to_observer_source() {
+    let yaml = r#"
+card: DSL-SELF-SUSPEND
+name: Self Suspend Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_suspend
+    condition: { event_permanent_is_source: true }
+    process:
+      - gain_memory: 2
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("ALLY-SUSPEND", "Ally Suspend", &[], 1000))
+        .build();
+    let observer = runner.place_on_field(0, "DSL-SELF-SUSPEND", None);
+    let ally = runner.place_on_field(0, "ALLY-SUSPEND", None);
+
+    runner.game.suspend(ally);
+    assert_eq!(
+        runner.memory(),
+        0,
+        "ally suspending must not satisfy event_permanent_is_source for the observer"
+    );
+
+    runner.game.suspend(observer);
+    assert_eq!(
+        runner.memory(),
+        2,
+        "self suspending should satisfy event_permanent_is_source"
     );
 }
 
@@ -610,6 +803,45 @@ effects:
 }
 
 #[test]
+fn on_any_digimon_played_alias_uses_enter_field_payload() {
+    let yaml = r#"
+card: DSL-ANY-PLAYED-OBS
+name: Any Played Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_any_digimon_played
+    condition: { event_card_trait_has: Royal Knight }
+    process:
+      - gain_memory: 4
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card({
+            let mut card = digimon_card("RK-ANY-PLAYED", "Royal Knight", &["Royal Knight"], 3000);
+            card.play_cost = 0;
+            card
+        })
+        .hand(1, &["RK-ANY-PLAYED"])
+        .memory(10)
+        .build();
+    runner.place_on_field(0, "DSL-ANY-PLAYED-OBS", None);
+
+    let before = runner.memory();
+    assert_eq!(runner.play(1, 0), Some(0));
+
+    assert_eq!(
+        runner.memory(),
+        before + 4,
+        "alias should share OnEnterFieldAnyone subject and event_card payload"
+    );
+}
+
+#[test]
 fn on_option_placed_event_card_trait_predicate_matches_placed_option() {
     let yaml = r#"
 card: DSL-OPT-OBS
@@ -651,6 +883,148 @@ effects:
     );
 
     assert_eq!(runner.memory(), before + 2);
+}
+
+#[test]
+fn on_place_security_event_card_trait_predicate_matches_placed_card() {
+    let yaml = r#"
+card: DSL-PLACE-SEC-OBS
+name: Place Security Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_place_security
+    condition: { event_card_trait_has: Royal Knight }
+    process:
+      - gain_memory: 3
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card(
+            "RK-SECURITY-PLACED",
+            "Royal Knight Security",
+            &["Royal Knight"],
+            3000,
+        ))
+        .memory(5)
+        .build();
+    let observer = runner.place_on_field(0, "DSL-PLACE-SEC-OBS", None);
+    let placed_data = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "RK-SECURITY-PLACED")
+        .expect("registered security placement card");
+    let placed = CardSource::new(placed_data, 0, runner.game.next_card_index());
+    runner.game.players[0].trash.push(placed);
+
+    let before = runner.memory();
+    let source_card = runner.game.players[observer.player as usize].battle_area
+        [observer.index as usize]
+        .top_card()
+        .handle();
+    let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(observer), 0);
+    assert!(ctx.place_on_security(0, CardSourceRef::Trash(0, 0), StackPosition::Top, false));
+
+    assert_eq!(
+        runner.memory(),
+        before + 3,
+        "DSL on_place_security should expose the placed card as event_card"
+    );
+}
+
+#[test]
+fn on_added_to_security_alias_uses_place_security_payload() {
+    let yaml = r#"
+card: DSL-ADDED-SEC-OBS
+name: Added Security Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_added_to_security
+    condition: { event_card_trait_has: Royal Knight }
+    process:
+      - gain_memory: 3
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card(
+            "RK-SECURITY-ADDED",
+            "Royal Knight Security",
+            &["Royal Knight"],
+            3000,
+        ))
+        .memory(5)
+        .build();
+    let observer = runner.place_on_field(0, "DSL-ADDED-SEC-OBS", None);
+    let placed_data = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == "RK-SECURITY-ADDED")
+        .expect("registered security placement card");
+    let placed = CardSource::new(placed_data, 0, runner.game.next_card_index());
+    runner.game.players[0].trash.push(placed);
+
+    let before = runner.memory();
+    let source_card = runner.game.players[observer.player as usize].battle_area
+        [observer.index as usize]
+        .top_card()
+        .handle();
+    let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(observer), 0);
+    assert!(ctx.place_on_security(0, CardSourceRef::Trash(0, 0), StackPosition::Top, false));
+
+    assert_eq!(
+        runner.memory(),
+        before + 3,
+        "alias should share OnPlaceSecurity event_card payload"
+    );
+}
+
+#[test]
+fn on_discard_security_event_cause_predicate_matches_effect_trash() {
+    let yaml = r#"
+card: DSL-DISCARD-SEC
+name: Discard Security
+kind: option
+color: [yellow]
+cost: 0
+effects:
+  - when: on_discard_security
+    condition: { event_cause: opponent_effect }
+    process:
+      - gain_memory: 4
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("TRASHER", "Security Trasher", &[], 3000))
+        .security(1, &["DSL-DISCARD-SEC"])
+        .memory(0)
+        .build();
+    let trasher = runner.place_on_field(0, "TRASHER", None);
+    let source_card = runner.game.players[trasher.player as usize].battle_area
+        [trasher.index as usize]
+        .top_card()
+        .handle();
+    runner.game.set_effect_source_player_for_test(Some(0));
+    let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(trasher), 0);
+    assert!(ctx.trash_top_security(1));
+    runner.game.set_effect_source_player_for_test(None);
+
+    assert_eq!(
+        runner.memory(),
+        -4,
+        "DSL on_discard_security should see opponent-effect security trash payload"
+    );
 }
 
 #[test]

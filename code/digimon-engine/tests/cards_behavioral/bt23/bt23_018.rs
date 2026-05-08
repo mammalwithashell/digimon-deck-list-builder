@@ -116,9 +116,7 @@ fn bt23_018_compiles_in_embedded_pack() {
 #[test]
 fn bt23_018_card_metadata_matches_print() {
     let runner = garurumon_runner();
-    let card = runner
-        .compiled_card("BT23-018")
-        .expect("BT23-018 compiles");
+    let card = runner.compiled_card("BT23-018").expect("BT23-018 compiles");
 
     assert_eq!(card.level, Some(4), "Garurumon is Lv.4");
     assert_eq!(card.dp, Some(5000), "Garurumon is DP 5000");
@@ -129,9 +127,7 @@ fn bt23_018_card_metadata_matches_print() {
 #[test]
 fn bt23_018_standard_digivolve_alt_path_present() {
     let runner = garurumon_runner();
-    let card = runner
-        .compiled_card("BT23-018")
-        .expect("BT23-018 compiles");
+    let card = runner.compiled_card("BT23-018").expect("BT23-018 compiles");
 
     let std_path = card
         .alt_paths
@@ -159,9 +155,7 @@ fn bt23_018_standard_digivolve_alt_path_present() {
 #[test]
 fn bt23_018_alt_digivolve_gabumon_or_cs_cost_2_ignores_requirements() {
     let runner = garurumon_runner();
-    let card = runner
-        .compiled_card("BT23-018")
-        .expect("BT23-018 compiles");
+    let card = runner.compiled_card("BT23-018").expect("BT23-018 compiles");
 
     let alt = card
         .alt_paths
@@ -171,9 +165,7 @@ fn bt23_018_alt_digivolve_gabumon_or_cs_cost_2_ignores_requirements() {
                 && p.cost == Some(CompiledCost::Literal(2))
                 && p.ignore_requirements
         })
-        .expect(
-            "BT23-018 must declare an alt-digivolve path with cost 2 and ignore_requirements",
-        );
+        .expect("BT23-018 must declare an alt-digivolve path with cost 2 and ignore_requirements");
 
     let from = alt
         .from
@@ -230,9 +222,7 @@ fn bt23_018_alt_digivolve_gabumon_or_cs_cost_2_ignores_requirements() {
 #[test]
 fn bt23_018_has_face_up_jamming_grant_keyword() {
     let runner = garurumon_runner();
-    let card = runner
-        .compiled_card("BT23-018")
-        .expect("BT23-018 compiles");
+    let card = runner.compiled_card("BT23-018").expect("BT23-018 compiles");
 
     let face_up_jamming = card.effects.iter().any(|c| {
         matches!(
@@ -255,9 +245,7 @@ fn bt23_018_has_face_up_jamming_grant_keyword() {
 #[test]
 fn bt23_018_has_inherited_opponents_turn_dp_aura() {
     let runner = garurumon_runner();
-    let card = runner
-        .compiled_card("BT23-018")
-        .expect("BT23-018 compiles");
+    let card = runner.compiled_card("BT23-018").expect("BT23-018 compiles");
 
     let aura = card.effects.iter().find_map(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
@@ -277,8 +265,7 @@ fn bt23_018_has_inherited_opponents_turn_dp_aura() {
         "the aura clause must have Inherited scope (active as a digivolution source)"
     );
     assert_eq!(dp, Some(2000), "the aura dp_modifier must be +2000 DP");
-    let aw = active_when
-        .expect("the aura must declare active_when (opponents_turn: true)");
+    let aw = active_when.expect("the aura must declare active_when (opponents_turn: true)");
     assert_eq!(
         aw.opponents_turn,
         Some(true),
@@ -291,9 +278,7 @@ fn bt23_018_has_inherited_opponents_turn_dp_aura() {
 #[test]
 fn bt23_018_no_main_on_field_triggered_clause() {
     let runner = garurumon_runner();
-    let card = runner
-        .compiled_card("BT23-018")
-        .expect("BT23-018 compiles");
+    let card = runner.compiled_card("BT23-018").expect("BT23-018 compiles");
 
     let main_clauses = card
         .effects

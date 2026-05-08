@@ -280,9 +280,10 @@ fn bt21_102_when_attacking_clause_fires_for_tamer_observer() {
     // Manually enqueue OnAllyAttack with Tai as the observer source. This
     // mirrors what combat.rs does after a Digimon attacks (minus the
     // attacker-self filter, which only drops the attacker, not other observers).
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(tai_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(tai_perm),
+    );
     runner.game.drain_effect_queue();
 
     // The clause is optional ("by suspending this Tamer"), so the engine should
@@ -333,9 +334,10 @@ fn bt21_102_when_attacking_activate_suspends_tai_and_draws_one() {
     );
 
     // Fire the OnAllyAttack observer for Tai.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(tai_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(tai_perm),
+    );
     runner.game.drain_effect_queue();
 
     // Auto-resolve any prompt — first legal action activates the optional clause.
@@ -363,14 +365,8 @@ fn bt21_102_when_attacking_activate_suspends_tai_and_draws_one() {
         );
     } else {
         // Decline path — confirm no draw and no suspend (clean PASS).
-        assert_eq!(
-            hand_after, hand_before,
-            "On decline: hand unchanged"
-        );
-        assert_eq!(
-            deck_after, deck_before,
-            "On decline: deck unchanged"
-        );
+        assert_eq!(hand_after, hand_before, "On decline: hand unchanged");
+        assert_eq!(deck_after, deck_before, "On decline: deck unchanged");
     }
 }
 
@@ -393,9 +389,10 @@ fn bt21_102_when_attacking_no_draw_when_tai_already_suspended() {
     let hand_before = runner.game.players[0].hand.len();
     let deck_before = runner.game.players[0].deck.len();
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(tai_perm));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(tai_perm),
+    );
     runner.game.drain_effect_queue();
     let _ = runner.auto_resolve();
 
@@ -415,9 +412,7 @@ fn bt21_102_when_attacking_no_draw_when_tai_already_suspended() {
         // If the lowering allowed a draw, Tai must have ended up suspended (paid
         // the cost). Since Tai was already suspended, this is the failure mode
         // we're guarding against.
-        panic!(
-            "Tai drew a card without paying the suspend cost (Tai was already suspended)"
-        );
+        panic!("Tai drew a card without paying the suspend cost (Tai was already suspended)");
     }
 }
 

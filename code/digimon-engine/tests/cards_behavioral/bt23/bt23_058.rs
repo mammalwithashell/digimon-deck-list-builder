@@ -45,18 +45,16 @@ fn bt23_058_has_printed_metadata_routes_reboot_and_blocker() {
     assert!(card.alt_paths.iter().any(|path| {
         path.kind == CompiledAltPathKind::Digivolve
             && path.cost == Some(CompiledCost::Literal(3))
-            && path
-                .from
-                .as_ref()
-                .is_some_and(|from| from.level_eq == Some(5) && from.color_is == Some(CompiledColor::White))
+            && path.from.as_ref().is_some_and(|from| {
+                from.level_eq == Some(5) && from.color_is == Some(CompiledColor::White)
+            })
     }));
     assert!(card.alt_paths.iter().any(|path| {
         path.kind == CompiledAltPathKind::Digivolve
             && path.cost == Some(CompiledCost::Literal(3))
-            && path
-                .from
-                .as_ref()
-                .is_some_and(|from| from.level_eq == Some(5) && from.trait_has.as_deref() == Some("CS"))
+            && path.from.as_ref().is_some_and(|from| {
+                from.level_eq == Some(5) && from.trait_has.as_deref() == Some("CS")
+            })
     }));
 
     for expected in ["Reboot", "Blocker"] {

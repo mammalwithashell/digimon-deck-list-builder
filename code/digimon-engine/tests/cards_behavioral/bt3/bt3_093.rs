@@ -26,10 +26,10 @@
 //!   neither hit
 
 use digimon_dsl::compiled::{CompiledClause, CompiledColor, CompiledScope, CompiledTiming};
+use digimon_engine::action::space::SEL_REVEAL_START;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::CardKind;
-use digimon_engine::action::space::SEL_REVEAL_START;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -65,15 +65,12 @@ fn revealed_action_for_id(runner: &DebugRunner, id: &str) -> Option<u16> {
         .iter()
         .enumerate()
         .find_map(|(idx, card)| {
-            (card.card_id(&runner.game.card_data) == id)
-                .then_some(SEL_REVEAL_START + idx as u16)
+            (card.card_id(&runner.game.card_data) == id).then_some(SEL_REVEAL_START + idx as u16)
         })
 }
 
 fn hand_ids(runner: &DebugRunner) -> Vec<String> {
-    runner
-        .game
-        .players[0]
+    runner.game.players[0]
         .hand
         .iter()
         .map(|c| c.card_id(&runner.game.card_data).to_string())
@@ -81,9 +78,7 @@ fn hand_ids(runner: &DebugRunner) -> Vec<String> {
 }
 
 fn deck_ids(runner: &DebugRunner) -> Vec<String> {
-    runner
-        .game
-        .players[0]
+    runner.game.players[0]
         .deck
         .iter()
         .map(|c| c.card_id(&runner.game.card_data).to_string())
@@ -141,8 +136,15 @@ fn bt3_093_clause1_start_of_your_turn_mandatory_face_up() {
         .find(|t| t.when.contains(&CompiledTiming::StartOfYourTurn))
         .expect("start_of_your_turn clause must exist");
 
-    assert_eq!(clause1.scope, CompiledScope::FaceUp, "clause 1 must be FaceUp scope");
-    assert!(!clause1.optional, "clause 1 is mandatory — no 'you may' in printed text");
+    assert_eq!(
+        clause1.scope,
+        CompiledScope::FaceUp,
+        "clause 1 must be FaceUp scope"
+    );
+    assert!(
+        !clause1.optional,
+        "clause 1 is mandatory — no 'you may' in printed text"
+    );
     assert!(!clause1.once_per_turn, "clause 1 is not once_per_turn");
 }
 
@@ -166,8 +168,15 @@ fn bt3_093_clause2_on_play_mandatory_face_up() {
         .find(|t| t.when.contains(&CompiledTiming::OnPlay))
         .expect("on_play clause must exist");
 
-    assert_eq!(clause2.scope, CompiledScope::FaceUp, "clause 2 must be FaceUp scope");
-    assert!(!clause2.optional, "clause 2 is mandatory — no 'you may' gate");
+    assert_eq!(
+        clause2.scope,
+        CompiledScope::FaceUp,
+        "clause 2 must be FaceUp scope"
+    );
+    assert!(
+        !clause2.optional,
+        "clause 2 is mandatory — no 'you may' gate"
+    );
     assert!(!clause2.once_per_turn, "clause 2 is not once_per_turn");
 }
 
@@ -192,8 +201,14 @@ fn bt3_093_clause3_on_security_mandatory_face_up() {
         .expect("on_security clause must exist");
 
     assert_eq!(clause3.scope, CompiledScope::FaceUp);
-    assert!(!clause3.optional, "on_security is mandatory — [Security] plays are never optional");
-    assert!(!clause3.once_per_turn, "on_security must not be once_per_turn");
+    assert!(
+        !clause3.optional,
+        "on_security is mandatory — [Security] plays are never optional"
+    );
+    assert!(
+        !clause3.once_per_turn,
+        "on_security must not be once_per_turn"
+    );
 }
 
 /// Compiled card must be declared as a blue Tamer with cost 4.
@@ -357,7 +372,9 @@ fn bt3_093_on_play_adds_blue_and_green_digimon_when_both_present() {
         let green_action = revealed_action_for_id(&runner, "GREEN-DG");
         if let Some(action) = green_action {
             if view.valid_action_ids.contains(&action) {
-                runner.execute_action(0, action).expect("pick green Digimon");
+                runner
+                    .execute_action(0, action)
+                    .expect("pick green Digimon");
             }
         }
     }
@@ -447,7 +464,9 @@ fn bt3_093_on_play_only_green_found_skips_blue_bucket() {
         let green_action = revealed_action_for_id(&runner, "GREEN-DG");
         if let Some(action) = green_action {
             if view.valid_action_ids.contains(&action) {
-                runner.execute_action(0, action).expect("pick green Digimon");
+                runner
+                    .execute_action(0, action)
+                    .expect("pick green Digimon");
                 continue;
             }
         }
@@ -483,7 +502,9 @@ fn bt3_093_on_play_no_matching_digimon_bottoms_all_three() {
         .start();
 
     runner.play(0, 0).expect("play Davis Motomiya BT3-093");
-    runner.auto_resolve().expect("resolve through empty buckets and bottom placement");
+    runner
+        .auto_resolve()
+        .expect("resolve through empty buckets and bottom placement");
 
     let hand = hand_ids(&runner);
     for id in ["RED-DG", "FILL1", "FILL2"] {
@@ -516,7 +537,9 @@ fn bt3_093_on_play_blue_tamer_rejected_by_blue_digimon_bucket() {
         .start();
 
     runner.play(0, 0).expect("play BT3-093");
-    runner.auto_resolve().expect("both buckets empty — no Digimon present");
+    runner
+        .auto_resolve()
+        .expect("both buckets empty — no Digimon present");
 
     let hand = hand_ids(&runner);
     assert!(
@@ -556,9 +579,7 @@ fn bt3_093_security_plays_itself_without_paying_cost() {
 
     // Davis must be played (without paying cost 4) onto P1's battle area.
     assert!(
-        runner
-            .game
-            .players[1]
+        runner.game.players[1]
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT3-093"),

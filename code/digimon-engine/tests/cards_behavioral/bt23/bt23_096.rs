@@ -224,9 +224,9 @@ fn bt23_096_clause_0_is_flood_gate_with_ignore_color_modifier() {
     let card = runner.compiled_card(CARD_ID).expect("BT23-096 compiled");
 
     let is_flood_gate_with_modifier = match &card.effects[0] {
-        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
-            modifier, ..
-        }) => modifier.eq_ignore_ascii_case("IgnoreColorRequirement"),
+        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { modifier, .. }) => {
+            modifier.eq_ignore_ascii_case("IgnoreColorRequirement")
+        }
         _ => false,
     };
     assert!(
@@ -274,7 +274,10 @@ fn bt23_096_clause_1_main_from_hand_face_up_mandatory() {
                 "clause 1 carries no [Once Per Turn] in printed text"
             );
         }
-        other => panic!("clause 1 must be Triggered(main_from_hand); got {:?}", other),
+        other => panic!(
+            "clause 1 must be Triggered(main_from_hand); got {:?}",
+            other
+        ),
     }
 }
 
@@ -510,11 +513,7 @@ fn bt23_096_security_clause_shares_body_shape_with_main() {
     // Both bodies must mention the same key step shapes (select-opp + de-digi-4
     // + place-self). We don't require byte-for-byte equality (prompts may
     // differ), only structural parity in the three load-bearing steps.
-    for marker in [
-        "DeDigivolve",
-        "amount: Some(4)",
-        "PlaceSelfAsDelayOption",
-    ] {
+    for marker in ["DeDigivolve", "amount: Some(4)", "PlaceSelfAsDelayOption"] {
         assert!(
             main_proc_dbg.contains(marker),
             "[Main] process must contain {marker:?}; got {main_proc_dbg}"

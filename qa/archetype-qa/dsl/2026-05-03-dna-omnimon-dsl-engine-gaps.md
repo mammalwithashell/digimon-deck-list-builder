@@ -143,6 +143,7 @@ The local `DNA Omnimon` decklists most heavily use:
 - **Blocks:** `EX9-019`, `EX9-012`, `AD1-001`, `AD1-010`, `BT17-081`, `EX4-061`, `EX4-039`, `EX4-038`
 - **Cross-archetype value:** Any hand-resident "when your Digimon/Tamer is played or digivolves" effect, Tamer observer, or ally digivolve observer.
 - **Missing capability:** Trigger fan-out needs consistent event payloads for hand, field, inherited, Tamer, and breeding sources. The event must identify the entering or digivolving permanent/card so filters do not inspect the observer itself.
+- **Updated 2026-05-08:** DSL now accepts the printed timing token `when: on_any_digimon_played` as an alias of `OnEnterFieldAnyone`, sharing the existing `EnteredField` payload and one fan-out path. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- new_effect_timings_are_constructible` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_any_digimon_played_alias_uses_enter_field_payload`. Hand-resident fan-out and ally-digivolve authoring remain in this gap.
 - **First regression:** `AD1-001` in hand observes an ally Garurumon/Tai being played or digivolving, then offers the printed free digivolve from hand into a Greymon-named card.
 - **Implementation hint:** Extend event dispatch and `TriggerContext` payloads before adding card-specific YAML.
 

@@ -371,6 +371,33 @@ impl<'a> EffectReadContext<'a> {
             .and_then(|trigger| trigger.cause)
     }
 
+    pub fn event_source_effect(&self) -> Option<crate::trigger_context::EffectAttribution> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.source_effect)
+    }
+
+    pub fn event_selected_results(&self) -> &[crate::trigger_context::ResultBinding] {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.selected_results.as_slice())
+            .unwrap_or(&[])
+    }
+
+    pub fn event_moved_card_sets(&self) -> &[crate::trigger_context::MovedCardSet] {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.moved_card_sets.as_slice())
+            .unwrap_or(&[])
+    }
+
+    pub fn event_dna_origin(&self) -> Option<bool> {
+        event_dna_origin(self.game)
+    }
+
     pub fn source_kind(&self) -> EffectSourceKind {
         self.source_kind
     }
@@ -514,6 +541,22 @@ fn live_event_permanent(
         Some(expected_card) if card != expected_card => None,
         _ => Some(handle),
     }
+}
+
+fn event_dna_origin(game: &Game) -> Option<bool> {
+    let has_trigger_context = game.current_trigger_context.is_some();
+    let has_dna_scope = game.current_dna_origin.is_some();
+    if !has_trigger_context && !has_dna_scope {
+        return None;
+    }
+
+    let trigger_origin = game
+        .current_trigger_context
+        .as_ref()
+        .map(|trigger| trigger.dna_origin)
+        .unwrap_or(false);
+    let scoped_origin = game.current_dna_origin.unwrap_or(false);
+    Some(trigger_origin || scoped_origin)
 }
 
 /// The context passed to every effect's `process` closure.
@@ -995,6 +1038,30 @@ impl<'a> EffectContext<'a> {
 
     pub fn event_cause(&self) -> Option<crate::trigger_context::EventCause> {
         self.as_read().event_cause()
+    }
+
+    pub fn event_source_effect(&self) -> Option<crate::trigger_context::EffectAttribution> {
+        self.as_read().event_source_effect()
+    }
+
+    pub fn event_selected_results(&self) -> &[crate::trigger_context::ResultBinding] {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.selected_results.as_slice())
+            .unwrap_or(&[])
+    }
+
+    pub fn event_moved_card_sets(&self) -> &[crate::trigger_context::MovedCardSet] {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.moved_card_sets.as_slice())
+            .unwrap_or(&[])
+    }
+
+    pub fn event_dna_origin(&self) -> Option<bool> {
+        self.as_read().event_dna_origin()
     }
 
     pub fn source_kind(&self) -> EffectSourceKind {
@@ -1801,6 +1868,14 @@ impl<'a> EffectContext<'a> {
         self.game.reveal_top_deck(player, n)
     }
 
+    pub fn reveal_top_digitama(
+        &mut self,
+        player: PlayerId,
+        n: u8,
+    ) -> Vec<crate::card_source::CardHandle> {
+        self.game.reveal_top_digitama(player, n)
+    }
+
     /// Snapshot of the current reveal pool. Scripts inspect this to decide
     /// follow-up moves.
     pub fn revealed(&self) -> &[crate::card_source::CardSource] {
@@ -2034,6 +2109,17 @@ impl<'a> EffectContext<'a> {
         hand_index: usize,
     ) -> Option<PermanentHandle> {
         self.play_from_hand_with_cost(player, hand_index, crate::enums::CostDelta::Free)
+    }
+
+    pub fn play_from_hand_free_with_provenance(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+    ) -> Option<(PermanentHandle, crate::trigger_context::ProvenanceToken)> {
+        let card = self.game.player(player).hand.get(hand_index)?.handle();
+        let token = self.game.provenance_token_for_card(card);
+        let permanent = self.play_from_hand_free(player, hand_index)?;
+        Some((permanent, token))
     }
 
     /// Play the top card of `player`'s security stack **without paying
@@ -2333,6 +2419,14 @@ impl<'a> EffectContext<'a> {
     ) -> bool {
         self.game
             .place_as_bottom_source_observed(source, target, self.player)
+    }
+
+    pub fn place_permanent_as_bottom_sources(
+        &mut self,
+        source: PermanentHandle,
+        target: PermanentHandle,
+    ) -> bool {
+        self.game.place_permanent_as_bottom_sources(source, target)
     }
 
     /// Move `player`'s real breeding permanent into the battle area by effect.
@@ -2876,6 +2970,23 @@ impl<'a> EffectContext<'a> {
         )
     }
 
+    pub fn effect_initiated_digivolve_with_provenance(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+        ignore_color: bool,
+    ) -> Option<(PermanentHandle, crate::trigger_context::ProvenanceToken)> {
+        let card = self.game.player(player).hand.get(hand_index)?.handle();
+        let token = self.game.provenance_token_for_card(card);
+        if self.effect_initiated_digivolve(player, hand_index, target, cost_delta, ignore_color) {
+            Some((target, token))
+        } else {
+            None
+        }
+    }
+
     /// Digivolve a card from any supported source zone onto `target` by
     /// effect. See `Game::effect_initiated_digivolve_from_source`.
     pub fn effect_initiated_digivolve_from_source(
@@ -2982,7 +3093,7 @@ impl<'a> EffectContext<'a> {
             self.game.pay_memory_unchecked(effective_cost);
             // Pass cost=0 to the inner so it doesn't double-pay.
             self.game
-                .dna_digivolve_inner(target_a, target_b, hand_owner, hand_index, 0, false)
+                .dna_digivolve_inner(target_a, target_b, hand_owner, hand_index, 0, false, true)
         } else {
             self.game.dna_digivolve_inner(
                 target_a,
@@ -2991,8 +3102,35 @@ impl<'a> EffectContext<'a> {
                 hand_index,
                 effective_cost,
                 false,
+                true,
             )
         }
+    }
+
+    pub fn effect_initiated_dna_digivolve_with_provenance(
+        &mut self,
+        target_a: PermanentHandle,
+        target_b: PermanentHandle,
+        from_hand: CardHandle,
+        cost: i32,
+        ignore_requirements: bool,
+    ) -> Option<(PermanentHandle, crate::trigger_context::ProvenanceToken)> {
+        let token = self.game.provenance_token_for_card(from_hand);
+        let permanent = self.effect_initiated_dna_digivolve(
+            target_a,
+            target_b,
+            from_hand,
+            cost,
+            ignore_requirements,
+        )?;
+        Some((permanent, token))
+    }
+
+    pub fn resolve_provenance_token(
+        &self,
+        token: crate::trigger_context::ProvenanceToken,
+    ) -> Option<crate::trigger_context::EventSubject> {
+        self.game.resolve_provenance_token(token)
     }
 
     // ─── Modifier registration ────────────────────────────────────────

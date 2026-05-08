@@ -38,7 +38,10 @@ fn bt22_009_has_on_play_and_when_digivolving_delete_clause() {
         })
         .expect("BT22-009 must have a shared OnPlay/WhenDigivolving clause");
 
-    assert!(!clause.optional, "delete clause is mandatory when a target exists");
+    assert!(
+        !clause.optional,
+        "delete clause is mandatory when a target exists"
+    );
 }
 
 #[test]

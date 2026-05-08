@@ -475,7 +475,7 @@ impl Game {
         hand_index: usize,
         target_card: crate::card_source::CardHandle,
         cost_delta: crate::enums::CostDelta,
-        _source: PlaySource,
+        source: PlaySource,
         total_reduction: i32,
     ) -> PlayFromHandCostResult {
         let turn = self.turn_count;
@@ -526,12 +526,14 @@ impl Game {
         });
 
         self.fire_on_play(player_id, field_index);
+        let effect_initiated = source == PlaySource::ByEffect;
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnEnterFieldAnyone,
             crate::selection::TriggerSource::EnteredField {
                 player: player_id,
                 permanent: entered,
                 card: entered_card,
+                effect_initiated,
             },
         );
         self.enqueue_triggered(
@@ -540,6 +542,7 @@ impl Game {
                 player: player_id,
                 permanent: entered,
                 card: entered_card,
+                effect_initiated,
             },
         );
         self.drain_effect_queue();
@@ -1710,6 +1713,23 @@ impl Game {
         handles
     }
 
+    pub fn reveal_top_digitama(
+        &mut self,
+        player_id: PlayerId,
+        n: u8,
+    ) -> Vec<crate::card_source::CardHandle> {
+        let mut handles = Vec::new();
+        for _ in 0..n {
+            let p = self.player_mut(player_id);
+            let Some(card) = p.digitama_deck.pop() else {
+                break;
+            };
+            handles.push(card.handle());
+            self.revealed_cards.push(card);
+        }
+        handles
+    }
+
     /// Shuffle `player`'s deck.
     pub fn shuffle_deck(&mut self, player_id: PlayerId) {
         // Split-borrow idiom: take deck out, shuffle, put back.
@@ -2703,6 +2723,8 @@ impl Game {
                 player: player_id,
                 permanent: handle,
                 card: event_card,
+                effect_initiated: false,
+                dna_origin: false,
             },
         );
         self.drain_effect_queue();
@@ -3014,6 +3036,74 @@ impl Game {
             return false;
         }
         target_player.battle_area[target.index as usize].push_under(taken.card);
+        true
+    }
+
+    pub fn place_permanent_as_bottom_sources(
+        &mut self,
+        source: PermanentHandle,
+        target: PermanentHandle,
+    ) -> bool {
+        if source.index == crate::action::space::BREEDING_TARGET as u8 {
+            return false;
+        }
+        if source == target {
+            return false;
+        }
+        if self
+            .player(source.player)
+            .battle_area
+            .get(source.index as usize)
+            .is_none()
+        {
+            return false;
+        }
+
+        let mut adjusted_target = target;
+        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+            if self.player(target.player).breeding_area.is_none() {
+                return false;
+            }
+        } else {
+            if self
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)
+                .is_none()
+            {
+                return false;
+            }
+            if source.player == target.player && source.index < target.index {
+                adjusted_target.index = adjusted_target.index.saturating_sub(1);
+            }
+        }
+
+        let removed = self
+            .player_mut(source.player)
+            .battle_area
+            .remove(source.index as usize);
+        let cards = removed.card_sources;
+
+        if adjusted_target.index == crate::action::space::BREEDING_TARGET as u8 {
+            let Some(breeding) = self
+                .player_mut(adjusted_target.player)
+                .breeding_area
+                .as_mut()
+            else {
+                return false;
+            };
+            breeding.card_sources.splice(0..0, cards);
+            return true;
+        }
+
+        let Some(target_perm) = self
+            .player_mut(adjusted_target.player)
+            .battle_area
+            .get_mut(adjusted_target.index as usize)
+        else {
+            return false;
+        };
+        target_perm.card_sources.splice(0..0, cards);
         true
     }
 
@@ -3729,6 +3819,7 @@ impl Game {
             evo_hand_index,
             effective_cost,
             true,
+            false,
         );
 
         if route_window == crate::dna_digivolve::DnaRouteWindow::EndOfTurnAction {
@@ -3745,7 +3836,8 @@ impl Game {
     /// `card_index` is inserted into `face_up_security` so subsequent reveals
     /// know it was placed face-up. Returns false if the source index is invalid.
     ///
-    /// Does not fire `OnLoseSecurity` or any security-related observers.
+    /// Does not fire `OnLoseSecurity`; successful placements fire
+    /// `OnPlaceSecurity` observers after the card reaches the security stack.
     ///
     /// Phase 7 Task 4: fires `WhenWouldPlaceInSecurity` at entry. Subject
     /// carries the card handle via the source zone; cause is inferred.
@@ -3837,7 +3929,26 @@ impl Game {
         }
 
         self.player_mut(player_id).security.insert(0, card);
+        self.fire_on_place_security(player_id, observer_player, source_card);
         true
+    }
+
+    pub(crate) fn fire_on_place_security(
+        &mut self,
+        affected_player: PlayerId,
+        source_player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) {
+        self.enqueue_triggered(
+            EffectTiming::OnPlaceSecurity,
+            TriggerSource::SecurityPlaced {
+                affected_player,
+                source_player,
+                card,
+                cause: crate::trigger_context::EventCause::SecurityPlacement,
+            },
+        );
+        self.drain_effect_queue();
     }
 
     pub(crate) fn place_on_security_observed(
@@ -4000,6 +4111,7 @@ impl Game {
                 .face_up_security
                 .insert(face_up_key);
         }
+        self.fire_on_place_security(player_id, observer_player, source_card);
         true
     }
 
@@ -4164,6 +4276,12 @@ impl Game {
         let turn = self.turn_count;
         self.player_mut(target.player).battle_area[target.index as usize]
             .digivolve(taken.card, turn);
+        let event_card = self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .map(|perm| perm.top_card().handle())
+            .expect("effect digivolve target remains in battle area after stack mutation");
 
         // 5. Fire WhenDigivolving triggers.
         self.enqueue_triggered(
@@ -4172,15 +4290,18 @@ impl Game {
         );
         self.drain_effect_queue();
 
-        // OnDigivolve: global observer — fires in every player's battle area
-        // after the evolving permanent's WhenDigivolving resolves. Distinct
-        // from WhenDigivolving (self-timing on the evolving permanent).
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                EffectTiming::OnDigivolve,
-                TriggerSource::PlayerBattleArea(pid as PlayerId),
-            );
-        }
+        // OnDigivolve: global observer — carries the evolved permanent/card
+        // plus effect-origin provenance for "digivolved by an effect" gates.
+        self.enqueue_triggered(
+            EffectTiming::OnDigivolve,
+            TriggerSource::Digivolved {
+                player: player_id,
+                permanent: target,
+                card: event_card,
+                effect_initiated: true,
+                dna_origin: false,
+            },
+        );
         self.drain_effect_queue();
 
         true

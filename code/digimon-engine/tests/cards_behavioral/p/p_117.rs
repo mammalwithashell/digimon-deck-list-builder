@@ -171,10 +171,7 @@ fn p_117_clause0_is_inherited_when_attacking() {
                 t.when
             );
         }
-        other => panic!(
-            "clause 0 must be a Triggered clause; got {:?}",
-            other
-        ),
+        other => panic!("clause 0 must be a Triggered clause; got {:?}", other),
     }
 }
 
@@ -381,7 +378,12 @@ fn p_117_inherited_when_attacking_fires_on_each_attack_no_opt() {
         .add_card(make_defender("DEF-1"))
         .add_card(make_defender("DEF-2"))
         .add_card(filler("FILL"))
-        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL", "FILL", "FILL", "FILL"])
+        .deck(
+            0,
+            &[
+                "FILL", "FILL", "FILL", "FILL", "FILL", "FILL", "FILL", "FILL",
+            ],
+        )
         .deck(1, &["FILL"])
         .security(1, &["FILL", "FILL", "FILL", "FILL", "FILL"])
         .memory(10)
@@ -438,7 +440,5 @@ fn p_117_inherited_when_attacking_fires_on_each_attack_no_opt() {
             scan_before_pay_cost_reduction does not thread digivolution-target \
             into condition closure. Same gap as BT23-005."]
 fn p_117_clause0_cost_reduction_when_digivolving_into_free_with_tamer() {
-    unimplemented!(
-        "blocked on G-BEFORE-PAY-COST-DIGIVOLVE-TARGET — see qa/dsl-vocab-gaps.md"
-    );
+    unimplemented!("blocked on G-BEFORE-PAY-COST-DIGIVOLVE-TARGET — see qa/dsl-vocab-gaps.md");
 }

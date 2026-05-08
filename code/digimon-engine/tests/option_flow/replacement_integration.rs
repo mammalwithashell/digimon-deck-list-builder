@@ -791,11 +791,15 @@ fn bt17_097_delay_rebuilds_hand_candidates_after_cost_triggers() {
         .and_then(|selection| selection.effect_choices.as_ref())
         .expect("Delay hand choice is exposed");
     assert!(
-        choices.iter().any(|choice| choice.label == "Imperialdramon New"),
+        choices
+            .iter()
+            .any(|choice| choice.label == "Imperialdramon New"),
         "post-cost hand card is offered"
     );
     assert!(
-        !choices.iter().any(|choice| choice.label == "Imperialdramon Old"),
+        !choices
+            .iter()
+            .any(|choice| choice.label == "Imperialdramon Old"),
         "pre-cost stale hand card is not offered"
     );
 

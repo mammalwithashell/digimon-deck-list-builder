@@ -35,9 +35,7 @@
 
 #![allow(dead_code, unused_imports)]
 
-use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope,
-};
+use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, Keyword};
 use digimon_engine::permanent::PermanentHandle;

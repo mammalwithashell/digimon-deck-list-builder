@@ -304,7 +304,6 @@ fn lm_030_main_no_selection_when_no_green_digimon_anywhere() {
     );
 }
 
-
 /// When the player selects a green source Digimon and a green hand card to
 /// digivolve into, the evo cost 4 reduced by 3 costs 1 memory, and the target
 /// lands on the stack.

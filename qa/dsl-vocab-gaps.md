@@ -59,7 +59,7 @@ Format per entry:
 ## Royal Knights full pool pass — residual reusable DSL/engine gaps  [RK-G005]
 - Status: PARTIAL pool pass completed on 2026-05-05. The Royal Knights resolver pool has 72 unique cards and now has 72 Rust DSL YAML entries. Fully unsupported clauses were left as explicit YAML comments plus ignored Rust tests instead of hidden approximations.
 - Newly routed or reaffirmed blocked cards/clauses: `BT13-019`, `BT13-030`, `BT13-075`, `BT13-087`, `BT13-102`, `BT13-111`, `BT13-112`, `BT15-092`, `BT17-077`, `BT19-093`, `BT20-017`, `BT20-021`, `BT20-045`, `BT20-056`, `BT22-025`, `BT22-041`, `BT22-052`, `BT23-013`, `BT23-035`, `BT23-047`, `BT23-057`, `BT23-072`, `EX8-073`, `EX10-068`, and `EX11-053`.
-- Missing DSL/engine areas: union selection across hand/trash/breeding/source zones; play from King Drasil or other source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; Blast Digivolve and Blast DNA action paths; Option battle-area carrier lifecycle for non-Delay options; security-trash self-dispatch; security search/play and self-to-security placement; security-removed card-local follow-up shapes beyond the now-wired battle/effect `OnOpponentSecurityRemoved` / `OnOwnSecurityRemoved` timing payloads; immediate may-attack/action prompts; Partition; and replacement/security-trash costs tied atomically to prevention.
+- Missing DSL/engine areas: union selection across hand/trash/breeding/source zones; play from King Drasil or other source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; Blast Digivolve and Blast DNA action paths; Option battle-area carrier lifecycle for non-Delay options; security search/play and self-to-security placement; security-removed card-local follow-up shapes beyond the now-wired battle/effect `OnOpponentSecurityRemoved` / `OnOwnSecurityRemoved` timing payloads; immediate may-attack/action prompts; Partition; and replacement/security-trash costs tied atomically to prevention. `when: on_place_security`, alias `when: on_added_to_security`, `when: on_discard_security`, and the printed-text alias `when: on_any_digimon_played` are now wired as of 2026-05-08 with event-card/effect-cause payloads where applicable; the remaining "self-to-security" and security-trash entries are about moving the resolving object legally or authoring card-local bodies, not the observer timing tokens.
 - Workaround policy: no approximations were used for these blockers. If a printed clause required one of the missing primitives, the YAML either implemented an independent faithful slice such as a keyword/security play/simple trigger, or used a load-only gap stub.
 - Verification: targeted `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- <card_filter> --nocapture` passed for the final 25 filters, with one active load test and one ignored gap test per card.
 - First reported: 2026-05-05 Royal Knights full pool implementation pass.
@@ -189,6 +189,7 @@ Format per entry:
 - Updated 2026-05-07: Return-to-deck source disposition and de-digivolve now emit `TriggerSource::SourceTrashedFromStack` through `Game::fire_digivolution_card_trashed(...)`, including cause and moved-card payload data. `host_permanent_trait_has` now falls back to the event host-card snapshot after the host leaves the battle area. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_digivolution_card_trashed_return_to_deck_carries_host_and_trashed_source on_digivolution_card_trashed_de_digivolve_carries_host_and_trashed_source` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex8_051_inherited_source_trash_dedigivolves_after_host_return_to_deck`. Remaining source-trash DSL work is producer/card-local for additional source-trash cost shapes.
 - Updated 2026-05-07: `select_own_sources` now accepts `target: <binding-ref>`, so inline source costs can be restricted to the activating permanent (`target: source`) rather than all own stacks. BT4-072 proves exact-N Digi-Burst authoring with a target-scoped source selection, `trash_selected_sources`, and the follow-up DP target choice. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt4_072` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- select_sources`.
 - Updated 2026-05-07: `digi_burst` is now a reusable DSL step that lowers to the canonical self-source exact-N selection and inserted trash-cost step before the nested body. BT4-072 now uses this wrapper, and printed keyword parsing carries `Keyword::DigiBurst(N)`. Covered by `cargo test --manifest-path code/digimon-dsl/Cargo.toml --test parse_source_selection_steps` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parser_digi_burst_parametric`.
+- Updated 2026-05-08: `digi_burst` now has a count-2 regression fixture proving exact-N self-stack masking, no PASS before the required count, per-selected-source `OnDigivolutionCardTrashed` emission, and continuation into the nested body after the source-trash cost. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- digi_burst_two_selects_exact_self_sources_and_fires_source_trash_per_card`.
 - Lowers to engine API: `TriggerContext` / event payload fields containing `{host_permanent, trashed_card, trashed_source_index, cause_player}` plus predicate evaluation against those fields.
 - Suggested DSL syntax:
   ```yaml
@@ -456,6 +457,7 @@ Format per entry:
 - Workaround: None faithful. Auto-targeting the only breeding permanent would hide a player-visible selection and violates the no-approximations policy.
 - First reported: 2026-04-28 (Royal Knights archetype assessment)
 - Updated 2026-05-02: remaining open follow-ups are breeding-area trigger fan-out (`G-BREEDING-TRIGGER-DISPATCH`) and card-specific optional/filter wrappers, not the basic breeding selection or real-zone movement primitives.
+- Updated 2026-05-08: Track A resolved the security-removal breeding fan-out slice: `OnOpponentSecurityRemoved` / `OnOwnSecurityRemoved` scan the observer player's breeding slot through the existing top-card/inherited breeding enqueue path and carry the `TriggerSource::SecurityRemoved` payload. This narrows BT20-083 to its printed body support: suspend a breeding carrier as the cost and play an [Omekamon] from the selected breeding stack's materials without paying the cost. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_opponent_security_removed_fans_out_to_breeding_inherited_once_with_payload`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_083_inherited_breeding_security_removed_fans_out_once_with_payload`.
 
 ---
 
@@ -485,7 +487,8 @@ Format per entry:
 
 ## AD1-012 — `on_opponent_attack` Timing variant on triggered clauses  [G-DSL-ON-OPPONENT-ATTACK]
 - Effect text: AD1-012 CresGarurumon: "[Opponent's Turn][Once Per Turn] When one of your opponent's Digimon attacks, 2 of your Digimon may DNA digivolve into [Omnimon Alter-S] in the hand. Then, you may change the attack target to 1 of your Digimon."
-- Missing DSL verb / step kind / predicate: `Timing::OnOpponentAttack` variant on `digimon_dsl::clause::Timing` (`code/digimon-dsl/src/clause.rs:83-125`); no mapping in `compile_timing` (`code/digimon-dsl/src/compile.rs:173-216`).
+- Status: resolved for the timing token. `Timing::OnOpponentAttack`, `CompiledTiming::OnOpponentAttack`, `compile_timing`, and `compiled_timing_to_engine` are wired.
+- Former missing DSL verb / step kind / predicate: `Timing::OnOpponentAttack` variant on `digimon_dsl::clause::Timing` (`code/digimon-dsl/src/clause.rs:83-125`); no mapping in `compile_timing` (`code/digimon-dsl/src/compile.rs:173-216`).
 - Lowers to engine API: `Effect::on_opponent_attack` (`code/digimon-engine/src/effect.rs:427`) — engine timing dispatch already handles `EffectTiming::OnOpponentAttack` (`lower_triggered.rs:181`) and the combat state machine fires it (`combat.rs:2237-2242`). The hybrid declared-attack-observer engine slice closed 2026-04-29 unblocks the engine half; DSL just lacks the timing token.
 - Suggested DSL syntax:
   ```yaml
@@ -495,9 +498,9 @@ Format per entry:
     optional: true
     process: [...]
   ```
-- Implementation: add `Timing::OnOpponentAttack` variant + serde wiring + `compile_timing` arm; the existing `lower_triggered.rs` already routes `EffectTiming::OnOpponentAttack`, so no new lowering code needed.
-- Gap kind: dsl. Engine has the primitive.
-- Workaround: None faithful. AD1-012's Opp-Turn clause is documented as commented stub in YAML; behavioral test `#[ignore = "pending: G-DSL-ON-OPPONENT-ATTACK"]`.
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2a_triggered parse_clauses`.
+- Remaining gap kind: card-local body DSL. AD1-012 still needs the redirect-attack-target step below for its full printed body.
+- Workaround: no longer needed for the timing token. AD1-012's Opp-Turn clause remains blocked on the separate redirect step.
 - First reported: 2026-05-03 (AD1-012 batch-implement-cards-rust-dsl, DNA Omnimon Batch 1)
 
 ---
@@ -537,13 +540,15 @@ Format per entry:
       - unsuspend: { target: source }
   ```
 - Implementation: add `event_target_is_source: Option<bool>` to `PredicateSpec`, compile to a new `CompiledPredicate` field, evaluate inside `eval_event_fields` in `dsl_cards/predicate.rs`.
+- Updated 2026-05-08: Implemented under the clearer name `event_permanent_is_source: true`, comparing `TriggerContext.event_permanent` to the observer's `source_permanent`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- event_permanent_is_source` and BT23-077's card-shaped fixture. BT15-101 still needs card-local YAML/test adoption before this card entry can be closed.
 - Gap kind: dsl. Engine has the comparison primitive (handles are equality-comparable).
 - Workaround: AD1-014 pattern (`event_target_owner: you, event_target_kind: digimon`) — over-fires when ANY of the controller's Digimon (allies) suspend, so OPT may be consumed at the wrong moment and a "may unsuspend" prompt may appear when the source is not actually suspended. Faithful for "any of your Digimon"-style triggers (AD1-014, BT13-012); approximation-only for "this Digimon" triggers (BT15-101).
 - First reported: 2026-05-03 (BT15-101 batch-implement-cards-rust-dsl)
 
 ## BT21-102 — `on_ally_attack` / `on_opponent_attack` timings missing from DSL
 - Effect text: BT21-102 Tai Kamiya — "[Your Turn] When one of your Digimon attacks, by suspending this Tamer, ＜Draw 1＞."
-- Missing DSL verb / step kind / predicate: `digimon_dsl::clause::Timing` enum (`code/digimon-dsl/src/clause.rs`) does not include `OnAllyAttack` or `OnOpponentAttack`. Both timings exist as `EffectTiming` variants in the engine and are dispatched correctly by `combat.rs` §Phase 9 Task 8, and `lower_triggered.rs` line 180 even maps `EffectTiming::OnAllyAttack`, but no `CompiledTiming::OnAllyAttack` exists so the mapping is unreachable from YAML.
+- Status: resolved for the timing tokens. `on_ally_attack` and `on_opponent_attack` parse, compile, and lower to the engine timings.
+- Former missing DSL verb / step kind / predicate: `digimon_dsl::clause::Timing` enum (`code/digimon-dsl/src/clause.rs`) did not include `OnAllyAttack` or `OnOpponentAttack`, making the engine mappings unreachable from YAML.
 - Lowers to engine API: `Effect::on_ally_attack(card)` / `Effect::on_opponent_attack(card)` already exist (`code/digimon-engine/src/effect.rs` line 421+).
 - Suggested DSL syntax:
   ```yaml
@@ -554,9 +559,8 @@ Format per entry:
       - suspend: { target: source }
       - draw: { of: you, count: 1 }
   ```
-- Implementation: add `OnAllyAttack` and `OnOpponentAttack` to both `digimon_dsl::clause::Timing` (with `#[serde(rename = "on_ally_attack")]` / `on_opponent_attack`) and `digimon_dsl::compiled::CompiledTiming`, plus the `compile.rs` and `timing_map.rs` entries. The lowering already exists.
-- Gap kind: dsl. Engine and dispatch are complete; only the DSL surface is missing.
-- Workaround used in BT21-102: `when: when_attacking`. Faithful only when the source is a Tamer (since Tamers never declare attacks, the source firing the clause is never the attacker, mirroring OnAllyAttack semantics). For Digimon sources this workaround is over-permissive (would also fire on the Digimon's own attacks). Track BT21-102 as PARTIAL until the timing tokens land.
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2a_triggered parse_clauses`.
+- Gap kind: resolved DSL timing surface. Card-local YAML can now use the faithful timing token instead of the `when_attacking` workaround.
 - First reported: 2026-05-03 (BT21-102 Tai Kamiya, batch-implement-cards-rust-dsl)
 
 ## BT21-102 — `play_cost_lte` formula-valued variant
@@ -774,7 +778,8 @@ Format per entry:
 
 ## EX9-021 — `is_dna_digivolving` predicate on triggered clauses  [G-DSL-IS-DNA-DIGIVOLVING]
 - Effect text: EX9-021 Omnimon Alter-S — "[When Digivolving] **If DNA digivolving**, your opponent's effects don't affect this Digimon for the turn. Then, delete all of their Digimon with the highest level." DCGO splits the body on `CardEffectCommons.IsJogress(_hashtable)` — a per-trigger hashtable flag set when the digivolve was a DNA / jogress path.
-- Status: OPEN (filed 2026-05-03 during EX9-021 batch-implement-cards-rust-dsl). Hybrid engine + DSL gap.
+- Status: RESOLVED 2026-05-08 for the reusable event predicate under the engine/DSL spelling `dna_origin: true` / `false`. `TriggerSource::Digivolved` now carries `dna_origin`, `TriggerContext` stores it, `EffectReadContext` / `EffectContext` expose `event_dna_origin()`, and DNA digivolve drains set the bit for `WhenDigivolving`, `OnDnaDigivolve`, and global `OnDigivolve`. Effect-initiated DNA additionally sets `effect_initiated` on the global payload, so `event_is_effect_initiated` composes with `dna_origin`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase3_dna_digivolve_triggers` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078_when_digivolving`.
+- Remaining limits: EX9-021 and BT17-078 still have card-local body gaps (`G-PLACE-SELF-AT-SECURITY-TOP`, `G-BIND-SELECTED-PROPERTY-FOR-EACH`, etc.), and BT16-085 still needs `G-SELECT-OPPONENT-SOURCES` for the DNA trash rider. Do not keep `G-DSL-IS-DNA-DIGIVOLVING` as the blocker for new authoring; use `dna_origin`.
 - Missing DSL verb / step kind / predicate: `PredicateSpec` exposes no `is_dna_digivolving: bool` leaf, and the `condition:` shape on a triggered clause has no equivalent. There is also no clause-level `if:` form (matches in `process:` body) that can branch on the DNA-vs-standard digivolve origin.
 - Engine substrate also missing: `TriggerSource::Digivolved { player, permanent, card }` (`code/digimon-engine/src/selection.rs:352`) has NO `via_dna` / `from_dna_pair` flag. The DNA digivolve action path (`Game::initiate_dna_digivolve` etc.) does not currently enqueue a distinct trigger source for the DNA case. The dispatch code that lifts `Digivolved { ... }` into `TriggerContext` (`effect_queue.rs` around line 479) builds a context with `event_permanent` / `event_card` / `source_player` but no DNA discriminator.
 - Lowers to engine API: needs (a) `via_dna: bool` (or `dna_pair: Option<(CardHandle, CardHandle)>`) field on `TriggerSource::Digivolved`, populated from the DNA-digivolve action handler; (b) surfacing on `TriggerContext` so DSL predicates can read it; (c) DSL `is_dna_digivolving: Option<bool>` leaf on `PredicateSpec` + `CompiledPredicate` with an evaluator that consults the trigger context flag (false at non-trigger-time, same convention as `event_target_owner`).
@@ -782,7 +787,7 @@ Format per entry:
   ```yaml
   - when: when_digivolving
     condition:
-      is_dna_digivolving: true
+      dna_origin: true
     process:
       - grant_effect_immunity:
           target: source
@@ -981,8 +986,8 @@ Format per entry:
 ## BT23-077 — self-scoped OnSuspend event predicate  [PUPPETS-G029]
 
 - Effect text: "[All Turns] When this Digimon suspends, <De-Digivolve 1> 1 of your opponent's Digimon."
-- Missing DSL verb / step kind / predicate: a predicate over `OnSuspend` event context that proves the suspending event permanent is the same permanent as the effect source.
-- Companion engine state: `OnSuspend` dispatch exists and event context is available for observed suspend events, but YAML cannot currently express `event_permanent_is_source`.
+- Status 2026-05-08: `PUPPETS-G029` closed. `event_permanent_is_source` compiles and evaluates against `TriggerContext.event_permanent` and the observer source permanent, and BT23-077 now uses it for the printed self-suspend `<De-Digivolve 1>` clause.
+- Companion engine state: `OnSuspend` dispatch exists and event context is available for observed suspend events; this slice adds the missing self-scoped predicate.
 - Suggested DSL syntax:
   ```yaml
   - when: on_suspend
@@ -993,9 +998,10 @@ Format per entry:
           filter: { kind: digimon }
       - de_digivolve: { target: target, count: 1 }
   ```
-- Gap kind: dsl predicate/evaluator gap.
-- Workaround: None faithful. A broad `on_suspend` trigger would over-fire when any other permanent suspends.
+- Gap kind: dsl predicate/evaluator gap, closed for BT23-077.
+- Workaround: no longer needed for BT23-077. A broad `on_suspend` trigger remains an approximation for any future "this permanent" authoring that does not use `event_permanent_is_source`.
 - First reported: 2026-05-04 (Puppets resolver Batch 9, BT23-077)
+- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- event_permanent_is_source` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt23_077`.
 
 ---
 
@@ -1185,9 +1191,9 @@ Format per entry:
 
 - Effect text: "[All Turns] When an effect plays or digivolves an opponent's Digimon, if you have a Tamer, this Digimon may digivolve into [Imperialdramon: Fighter Mode] in the hand without paying the cost."
 - Card first discovered in: BT16-028 Imperialdramon: Dragon Mode (2026-05-04).
-- Missing DSL verb / step kind / predicate: `event_is_effect_initiated: bool` — a BoolPredicate leaf that evaluates to `true` only when the entering/digivolving permanent was placed by a card effect (DCGO's `IsByEffect`) rather than by a player's normal main-phase play action. Without this gate, the `on_enter_field_anyone` / `on_digivolve` observer timings fire on ALL enters/digivolves regardless of cause, over-firing for normal player plays. This violates the printed "when an EFFECT plays or digivolves" condition.
-- Companion engine gap: the engine must thread an `is_effect_initiated` flag through `TriggerContext` (or the event payload) when dispatching `OnEnterFieldAnyone` and `OnDigivolve`. Normal `Game::play_from_hand` and `Game::digivolve_from_hand` would emit `is_effect_initiated: false`; effect-driven entry/digivolve paths (e.g. `EffectContext::effect_play_card`, `EffectContext::effect_initiated_digivolve`) would emit `is_effect_initiated: true`. The DCGO `IsByEffect` check uses the `hashtable` context carried into each coroutine, which records the originating cause.
-- Lowers to engine API: `TriggerContext` (or `EventPayload`) would need a new field `cause_is_effect: bool`. The DSL predicate would evaluate `rctx.game.current_trigger_context.map(|ctx| ctx.cause_is_effect).unwrap_or(false)`.
+- Status 2026-05-08: PARTIALLY RESOLVED. `PredicateSpec::event_is_effect_initiated` now compiles and evaluates against `TriggerContext.effect_initiated`. `TriggerSource::EnteredField` and `TriggerSource::Digivolved` carry the flag; normal hand play/digivolve set it false, while effect play helpers and `effect_initiated_digivolve` set it true. BT16-028 now authors the effect-play/digivolve observer with this gate.
+- Remaining limits: This closes the reusable "by an effect" flag for `OnEnterFieldAnyone` / standard `OnDigivolve` observer predicates. It does not close stricter "by THIS effect" per-activation identity, effect-spawned permanent cleanup tokens, or DNA-specific origin flags.
+- Lowers to engine API: `TriggerContext.effect_initiated`.
 - Suggested DSL syntax:
   ```yaml
   - when: [on_enter_field_anyone, on_digivolve]
@@ -1212,14 +1218,14 @@ Format per entry:
               - name_contains: "Imperialdramon: Fighter Mode"
           prompt: "Digivolve into Imperialdramon: Fighter Mode (free, ignore reqs)"
       - effect_initiated_digivolve:
-          target: self
+          target: source
           from_hand: fighter
           cost: 0
           ignore_requirements: true
   ```
 - Gap kind: hybrid (engine must thread the cause flag through TriggerContext; DSL then needs the predicate leaf).
-- Workaround: Clause omitted from BT16-028.yaml while this gap is open. Authoring it without the `event_is_effect_initiated` gate would fire on all plays/digivolves (violates printed text and no-approximations policy).
-- Behavioral tests: 4 tests `#[ignore = "pending: G-IS-EFFECT-INITIATED from qa/dsl-vocab-gaps.md"]`.
+- Workaround: no longer needed for BT16-028's effect-play half. Remaining ignored BT16-028 subtests cover narrower card-local follow-ups, not the reusable predicate itself.
+- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- event_context` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt16_028`.
 - First reported: 2026-05-04 (BT16-028 batch-implement-cards-rust-dsl).
 
 ---

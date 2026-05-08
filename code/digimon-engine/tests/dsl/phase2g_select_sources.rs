@@ -2,7 +2,7 @@
 //! consume them from later DSL steps.
 
 use digimon_dsl::compiled::CompiledStep;
-use digimon_engine::action::space::encode_source_select;
+use digimon_engine::action::space::{encode_source_select, PASS};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::{run_steps, RunOutcome};
@@ -101,4 +101,142 @@ fn empty_select_own_sources_runs_outer_tail_synchronously() {
     assert_eq!(outcome, RunOutcome::Synchronous);
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(runner.game.memory, 3);
+}
+
+#[test]
+fn digi_burst_two_selects_exact_self_sources_and_fires_source_trash_per_card() {
+    let burst_yaml = r#"
+card: DSL-DIGI-BURST-2
+name: Digi-Burst Two
+kind: digimon
+level: 5
+color: [black]
+cost: 8
+dp: 7000
+effects:
+  - when: main_on_field
+    process:
+      - digi_burst:
+          count: 2
+          bind_as: burst_sources
+          prompt: "Choose 2 digivolution cards under this Digimon"
+          then:
+            - gain_memory: 3
+"#;
+    let observer_yaml = r#"
+card: DSL-SOURCE-TRASH-OBSERVER
+name: Source Trash Observer
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+effects:
+  - when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+    process:
+      - gain_memory: 1
+"#;
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(burst_yaml)
+        .expect("burst fixture compiles")
+        .from_dsl_yaml(observer_yaml)
+        .expect("observer fixture compiles")
+        .add_card(make_test_card("SRC-A", "Source A"))
+        .add_card(make_test_card("SRC-B", "Source B"))
+        .add_card(make_test_card("SRC-C", "Source C"))
+        .add_card(make_test_card("OTHER-SRC", "Other Source"))
+        .add_card(make_test_card("OTHER-HOST", "Other Host"))
+        .build();
+    let carrier = runner.place_stack(0, &["SRC-A", "SRC-B", "SRC-C", "DSL-DIGI-BURST-2"]);
+    let other = runner.place_stack(0, &["OTHER-SRC", "OTHER-HOST"]);
+    runner.place_on_field(0, "DSL-SOURCE-TRASH-OBSERVER", None);
+
+    assert!(
+        runner.game.activate_field_main(0, carrier.index as usize),
+        "Digi-Burst fixture should expose its Main effect"
+    );
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::SourceMulti {
+            min: 2,
+            max: 2,
+            picked: 0,
+        })
+    );
+
+    let pick_a = encode_source_select(carrier.index as u16, 0).expect("source A action");
+    let pick_b = encode_source_select(carrier.index as u16, 1).expect("source B action");
+    let pick_c = encode_source_select(carrier.index as u16, 2).expect("source C action");
+    let other_pick = encode_source_select(other.index as u16, 0).expect("other source action");
+    {
+        let selection = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("source cost pending");
+        assert!(selection.valid_action_ids.contains(&pick_a));
+        assert!(selection.valid_action_ids.contains(&pick_b));
+        assert!(selection.valid_action_ids.contains(&pick_c));
+        assert!(
+            !selection.valid_action_ids.contains(&other_pick),
+            "Digi-Burst must not expose sources under another own stack"
+        );
+        assert!(
+            !selection.valid_action_ids.contains(&PASS),
+            "exact-N Digi-Burst must not allow passing before N sources are chosen"
+        );
+    }
+
+    runner
+        .execute_action(0, pick_a)
+        .expect("first Digi-Burst source pick resolves");
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::SourceMulti {
+            min: 2,
+            max: 2,
+            picked: 1,
+        })
+    );
+    {
+        let selection = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("second source still pending");
+        assert!(!selection.valid_action_ids.contains(&pick_a));
+        assert!(selection.valid_action_ids.contains(&pick_b));
+        assert!(selection.valid_action_ids.contains(&pick_c));
+        assert!(!selection.valid_action_ids.contains(&other_pick));
+        assert!(!selection.valid_action_ids.contains(&PASS));
+    }
+
+    runner
+        .execute_action(0, pick_b)
+        .expect("second Digi-Burst source pick resolves");
+
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(
+        runner.game.players[0].battle_area[carrier.index as usize]
+            .card_sources
+            .len(),
+        2,
+        "two selected sources should be trashed from the carrier stack"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[other.index as usize]
+            .card_sources
+            .len(),
+        2,
+        "other own stack should be untouched"
+    );
+    assert_eq!(runner.game.players[0].trash.len(), 2);
+    assert_eq!(
+        runner.game.memory, 5,
+        "two source-trash observer firings (+2) should resolve before/alongside the nested body (+3)"
+    );
 }
