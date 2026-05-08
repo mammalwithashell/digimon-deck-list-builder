@@ -30,11 +30,21 @@ effects:
           prompt: "Delete 1 opponent Digimon with play cost 4 or less"
       - delete_permanent: { target: target }
 
-  # Printed but omitted:
-  # [All Turns] When this Digimon suspends, <De-Digivolve 1> 1 of your opponent's Digimon.
-  #
-  # Current OnSuspend/EventObserved dispatch can scan every battle-area
-  # permanent when any permanent suspends, but the DSL does not expose the
-  # PUPPETS-G029 predicate that gates the event subject to this source
-  # permanent. Authoring this as a broad on_suspend trigger would over-fire when
-  # another permanent suspends.
+  - when: on_suspend
+    summary: "When this Digimon suspends, De-Digivolve 1 one opponent Digimon"
+    condition:
+      all_of:
+        - event_permanent_is_source: true
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
+      - de_digivolve:
+          target: target
+          amount: 1
+          stop_at_level: 3

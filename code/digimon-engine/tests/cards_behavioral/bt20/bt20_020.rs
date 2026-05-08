@@ -341,8 +341,8 @@ fn bt20_020_clause3_is_on_opp_security_removed_opt() {
         })
         .find(|t| t.when.contains(&CompiledTiming::OnOpponentSecurityRemoved));
 
-    let clause = clause
-        .expect("[OnOpponentSecurityRemoved] triggered clause (clause 3) must exist");
+    let clause =
+        clause.expect("[OnOpponentSecurityRemoved] triggered clause (clause 3) must exist");
 
     assert_eq!(
         clause.scope,

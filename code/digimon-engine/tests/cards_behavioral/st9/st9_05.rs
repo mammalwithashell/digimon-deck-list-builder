@@ -33,7 +33,9 @@
 
 #![allow(unused_imports)]
 
-use digimon_dsl::compiled::{CompiledAltPath, CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledAltPath, CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming,
+};
 use digimon_engine::card_data::{CardData, DnaCost, DnaRequirement, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, GamePhase};
@@ -367,7 +369,9 @@ fn st9_05_dna_digivolve_returns_target_to_bottom_of_opp_deck() {
         .first()
         .copied()
         .expect("at least one valid action for OppField selection");
-    runner.execute_action(0, action_id).expect("select opp target");
+    runner
+        .execute_action(0, action_id)
+        .expect("select opp target");
 
     // Opp's field should now be empty (the Digimon was returned to deck).
     assert_eq!(

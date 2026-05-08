@@ -63,7 +63,10 @@ fn demiveemon_runner() -> DebugRunner {
         )
         // P1 security: enough cards that successive attack_player calls don't
         // end the game and set game_over = true (which blocks further attacks).
-        .security(1, &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"])
+        .security(
+            1,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
         .memory(5)
         .start()
 }

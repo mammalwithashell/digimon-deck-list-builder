@@ -155,7 +155,11 @@ fn bt16_040_has_two_triggered_clauses() {
         })
         .collect();
 
-    assert_eq!(triggered.len(), 2, "BT16-040 must have exactly 2 triggered clauses");
+    assert_eq!(
+        triggered.len(),
+        2,
+        "BT16-040 must have exactly 2 triggered clauses"
+    );
 }
 
 /// Clause 0 has both StartOfYourMainPhase and OnPlay in its `when` vector.
@@ -209,8 +213,7 @@ fn bt16_040_clause1_inherited_when_attacking_once_per_turn() {
             _ => None,
         })
         .find(|t| {
-            t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::WhenAttacking)
+            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::WhenAttacking)
         })
         .expect("inherited WhenAttacking clause must be present");
 
@@ -260,7 +263,11 @@ fn bt16_040_on_play_with_eligible_trash_installs_own_field_then_trash_selection(
     let kind = runner
         .pending_kind()
         .expect("OwnField selection must install after OnPlay");
-    assert_eq!(kind, SelectionKind::OwnField, "first selection must be OwnField");
+    assert_eq!(
+        kind,
+        SelectionKind::OwnField,
+        "first selection must be OwnField"
+    );
     runner.auto_resolve().expect("pick Digimon");
 
     // Second selection (gap-blocked): trash pick should install but won't under the gap.
@@ -320,7 +327,9 @@ fn bt16_040_inherited_when_attacking_installs_opp_field_selection() {
 
     runner.attack_digimon(carrier, opp_perm, false);
 
-    let kind = runner.pending_kind().expect("OppField selection must install");
+    let kind = runner
+        .pending_kind()
+        .expect("OppField selection must install");
     assert_eq!(
         kind,
         SelectionKind::OppField,
@@ -356,7 +365,9 @@ fn bt16_040_inherited_when_attacking_suspends_selected_opp_digimon() {
     );
 
     runner.attack_digimon(carrier, opp_perm, false);
-    runner.auto_resolve().expect("resolve selection and suspend");
+    runner
+        .auto_resolve()
+        .expect("resolve selection and suspend");
 
     // OPP-TANKY survives the battle (99 000 DP vs 5 000 DP carrier) and must
     // now be suspended from the inherited trigger.

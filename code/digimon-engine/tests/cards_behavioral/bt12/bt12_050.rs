@@ -126,9 +126,9 @@ fn bt12_050_has_one_inherited_grant_keyword_piercing() {
         .iter()
         .filter(|c| match c {
             CompiledClause::Declarative(d) => match d {
-                CompiledDeclarativeClause::GrantKeyword {
-                    keyword, scope, ..
-                } => *scope == CompiledScope::Inherited && keyword.eq_ignore_ascii_case("Piercing"),
+                CompiledDeclarativeClause::GrantKeyword { keyword, scope, .. } => {
+                    *scope == CompiledScope::Inherited && keyword.eq_ignore_ascii_case("Piercing")
+                }
                 _ => false,
             },
             _ => false,
@@ -278,9 +278,7 @@ fn bt12_050_no_piercing_when_alone_on_field_as_top_card() {
     let handle = runner.place_on_field(0, CARD_ID, Some(0));
 
     // BT12-050 is the top card — its inherited effect is not active for itself.
-    let data_idx = runner.game.player(0).battle_area[0]
-        .top_card()
-        .data_index;
+    let data_idx = runner.game.player(0).battle_area[0].top_card().data_index;
     let top_card_id = runner.game.card_data[data_idx].card_id.clone();
     assert_eq!(
         top_card_id, CARD_ID,

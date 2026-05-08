@@ -1101,6 +1101,7 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "Progress",
     "Evade",
     "MaterialSave",
+    "DigiBurst",
     "Decode",
     "ArmorPurge",
     "Fragment",

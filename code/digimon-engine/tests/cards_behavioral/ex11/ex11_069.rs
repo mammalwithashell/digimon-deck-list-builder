@@ -56,7 +56,11 @@ fn ex11_069_on_play_trashes_one_card_and_gains_memory() {
         1,
         "Yuuki should gain 1 memory after paying the 4 play cost"
     );
-    assert_eq!(runner.game.players[0].trash.len(), 1, "one hand card should be trashed");
+    assert_eq!(
+        runner.game.players[0].trash.len(),
+        1,
+        "one hand card should be trashed"
+    );
 }
 
 #[ignore = "pending: G-EFFECT-INITIATED-DIGIVOLVE-FROM-TRASH-ON-ATTACK — attack observer needs trash digivolve into Dark/Evil Dragon with reduced cost"]

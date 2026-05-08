@@ -72,7 +72,7 @@ Cumulative across all batches; see `qa/dsl-vocab-gaps.md` and `qa/archetype-qa/e
 - G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (BT23-005 origin → P-117, BT12-022, BT12-050)
 - G-DECLARATIVE-KEYWORD (Phase 3 → BT21-037)
 - G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (EX4-060/BT22-015 → ST9-06)
-- G-DSL-IS-DNA-DIGIVOLVING (DNA Omnimon → BT12-028, BT16-085)
+- G-DSL-IS-DNA-DIGIVOLVING (DNA Omnimon → BT12-028, BT16-085) — RESOLVED 2026-05-08 as `dna_origin: true`; BT16-085 still needs opponent-source selection for its DNA rider
 - G-ASL-07 (BT17-077 mass trash, sibling of G-DSL-TRASH-TOP-N-DIGI-CARDS)
 - G-DELAY-START-OF-TURN, G-PRED-DP-LTE, G-ZONE-TRASH-TO-DECK, G-OPTIONAL-SELECTION-CONTINUE-TAIL (LM-027/LM-029 → LM-030)
 

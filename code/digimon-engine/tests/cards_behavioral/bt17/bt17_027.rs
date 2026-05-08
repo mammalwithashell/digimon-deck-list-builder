@@ -162,7 +162,10 @@ fn bt17_027_compiles_with_two_triggered_and_one_cost_reduction_declarative() {
         })
         .count();
 
-    assert_eq!(triggered, 2, "expected 2 triggered clauses (OnPlay/WhenDigi + inherited WhenAttacking)");
+    assert_eq!(
+        triggered, 2,
+        "expected 2 triggered clauses (OnPlay/WhenDigi + inherited WhenAttacking)"
+    );
     assert_eq!(cost_reduction, 1, "expected 1 cost_reduction declarative");
     assert_eq!(
         compiled.effects.len(),
@@ -195,8 +198,14 @@ fn bt17_027_has_on_play_when_digivolving_clause_face_up_mandatory() {
         .expect("must have [On Play][When Digivolving] clause");
 
     assert_eq!(clause.scope, CompiledScope::FaceUp);
-    assert!(!clause.optional, "branch-choice itself is mandatory once triggered");
-    assert!(!clause.once_per_turn, "no [Once Per Turn] on the branch-choice clause");
+    assert!(
+        !clause.optional,
+        "branch-choice itself is mandatory once triggered"
+    );
+    assert!(
+        !clause.once_per_turn,
+        "no [Once Per Turn] on the branch-choice clause"
+    );
 }
 
 #[test]
@@ -222,7 +231,10 @@ fn bt17_027_has_inherited_when_attacking_opt_clause() {
         })
         .expect("must have inherited [When Attacking] clause");
 
-    assert!(clause.once_per_turn, "[When Attacking] inherited must be once_per_turn");
+    assert!(
+        clause.once_per_turn,
+        "[When Attacking] inherited must be once_per_turn"
+    );
     assert_eq!(clause.scope, CompiledScope::Inherited);
 }
 
@@ -242,7 +254,10 @@ fn bt17_027_has_lv5_cost3_digivolve_alt_path() {
                 Some(digimon_dsl::compiled::CompiledCost::Literal(3))
             )
     });
-    assert!(standard.is_some(), "must have Lv.5 / cost 3 digivolve alt-path");
+    assert!(
+        standard.is_some(),
+        "must have Lv.5 / cost 3 digivolve alt-path"
+    );
 }
 
 // ─── Section 2 — Cost-reduction condition gating ────────────────────────────
@@ -354,10 +369,7 @@ fn bt17_027_cost_reduction_does_not_leak_to_other_plays() {
 
 // ─── Section 3 — [On Play][When Digivolving] branch-choice behavioral ───────
 
-fn play_and_install_branch_choice(
-    runner: &mut DebugRunner,
-    hand_idx: usize,
-) -> SelectionKind {
+fn play_and_install_branch_choice(runner: &mut DebugRunner, hand_idx: usize) -> SelectionKind {
     runner.play(0, hand_idx).expect("BT17-027 plays");
     runner
         .pending_kind()
@@ -383,14 +395,21 @@ fn bt17_027_on_play_branch_0_locks_opp_digimon_cannot_suspend() {
     let opp_handle = runner.place_on_field(1, "OPP-DIGI", None);
 
     let kind = play_and_install_branch_choice(&mut runner, 0);
-    assert_eq!(kind, SelectionKind::EffectChoice, "must be 2-way EffectChoice");
+    assert_eq!(
+        kind,
+        SelectionKind::EffectChoice,
+        "must be 2-way EffectChoice"
+    );
 
     runner.execute_branch(0).expect("pick CannotSuspend branch");
     runner.auto_resolve().expect("auto-resolve target pick");
 
     // Opp digimon is still on board (CannotSuspend doesn't delete).
     let opp_after = runner.battle_area_size(1);
-    assert!(opp_after >= 1, "lock branch must NOT delete the opp Digimon");
+    assert!(
+        opp_after >= 1,
+        "lock branch must NOT delete the opp Digimon"
+    );
 
     // Inspect the chosen opp permanent for the CannotSuspend modifier via the
     // game-scoped modifier registry.

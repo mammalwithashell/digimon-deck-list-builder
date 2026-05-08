@@ -136,6 +136,7 @@ pub enum StepSpec {
     SelectTrash(SelectZoneArgs),
     SelectMaterial(SelectMaterialArgs),
     SelectOwnSources(SelectOwnSourcesArgs),
+    DigiBurst(DigiBurstArgs),
     SelectOpponentDpBudget(SelectOpponentDpBudgetArgs),
     SelectOwnBreedingPermanent(SelectOwnBreedingPermanentArgs),
     SelectReveal(SelectZoneArgs),
@@ -240,7 +241,11 @@ impl Serialize for StepSpec {
                 kv!(s, "trash_top_security_and_cancel_replacement", v)
             }
             StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(v) => {
-                kv!(s, "place_permanent_bottom_security_and_cancel_replacement", v)
+                kv!(
+                    s,
+                    "place_permanent_bottom_security_and_cancel_replacement",
+                    v
+                )
             }
             StepSpec::Recover(v) => kv!(s, "recover", v),
             StepSpec::MarkSecurityFaceUp(v) => kv!(s, "mark_security_face_up", v),
@@ -259,6 +264,7 @@ impl Serialize for StepSpec {
             StepSpec::SelectTrash(v) => kv!(s, "select_trash", v),
             StepSpec::SelectMaterial(v) => kv!(s, "select_material", v),
             StepSpec::SelectOwnSources(v) => kv!(s, "select_own_sources", v),
+            StepSpec::DigiBurst(v) => kv!(s, "digi_burst", v),
             StepSpec::SelectOpponentDpBudget(v) => kv!(s, "select_opponent_dp_budget", v),
             StepSpec::SelectOwnBreedingPermanent(v) => {
                 kv!(s, "select_own_breeding_permanent", v)
@@ -341,9 +347,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_to_hand_from_trash" => StepSpec::AddToHandFromTrash(map.next_value()?),
             "add_to_hand_from_security" => StepSpec::AddToHandFromSecurity(map.next_value()?),
             "add_top_security_to_hand" => StepSpec::AddTopSecurityToHand(map.next_value()?),
-            "may_add_top_security_to_hand" => {
-                StepSpec::MayAddTopSecurityToHand(map.next_value()?)
-            }
+            "may_add_top_security_to_hand" => StepSpec::MayAddTopSecurityToHand(map.next_value()?),
             "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
             "add_this_option_to_hand" => StepSpec::AddThisOptionToHand(map.next_value()?),
             "trash_from_hand_by_index" => StepSpec::TrashFromHandByIndex(map.next_value()?),
@@ -410,6 +414,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "select_trash" => StepSpec::SelectTrash(map.next_value()?),
             "select_material" => StepSpec::SelectMaterial(map.next_value()?),
             "select_own_sources" => StepSpec::SelectOwnSources(map.next_value()?),
+            "digi_burst" => StepSpec::DigiBurst(map.next_value()?),
             "select_opponent_dp_budget" => StepSpec::SelectOpponentDpBudget(map.next_value()?),
             "select_own_breeding_permanent" => {
                 StepSpec::SelectOwnBreedingPermanent(map.next_value()?)
@@ -508,6 +513,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "select_trash",
                         "select_material",
                         "select_own_sources",
+                        "digi_burst",
                         "select_opponent_dp_budget",
                         "select_own_breeding_permanent",
                         "select_reveal",
@@ -1044,11 +1050,29 @@ fn default_select_sources_prompt() -> String {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectOwnSourcesArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<BindingRef>,
     pub min: u8,
     pub max: u8,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     #[serde(default = "default_select_sources_prompt")]
+    pub prompt: String,
+    #[serde(default)]
+    pub then: Vec<StepSpec>,
+}
+
+fn default_digi_burst_prompt() -> String {
+    "Choose digivolution cards for <Digi-Burst>".to_string()
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DigiBurstArgs {
+    pub count: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    #[serde(default = "default_digi_burst_prompt")]
     pub prompt: String,
     #[serde(default)]
     pub then: Vec<StepSpec>,

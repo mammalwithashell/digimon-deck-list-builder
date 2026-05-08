@@ -244,9 +244,9 @@ fn lm_034_clause_0_is_flood_gate_with_ignore_color_modifier() {
     let card = runner.compiled_card(CARD_ID).expect("LM-034 compiled");
 
     let is_flood_gate_with_modifier = match &card.effects[0] {
-        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
-            modifier, ..
-        }) => modifier.eq_ignore_ascii_case("IgnoreColorRequirement"),
+        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { modifier, .. }) => {
+            modifier.eq_ignore_ascii_case("IgnoreColorRequirement")
+        }
         _ => false,
     };
     assert!(
@@ -293,7 +293,10 @@ fn lm_034_clause_1_main_from_hand_face_up_mandatory() {
                 "clause 1 carries no [Once Per Turn] in printed text"
             );
         }
-        other => panic!("clause 1 must be Triggered(main_from_hand); got {:?}", other),
+        other => panic!(
+            "clause 1 must be Triggered(main_from_hand); got {:?}",
+            other
+        ),
     }
 }
 
@@ -475,8 +478,7 @@ fn lm_034_main_picks_blue_digimon_and_bottoms_remainder() {
         .collect();
     let bottom_two: Vec<String> = deck_ids.iter().take(2).cloned().collect();
     assert!(
-        bottom_two.iter().any(|id| id == "FILL-A")
-            && bottom_two.iter().any(|id| id == "FILL-B"),
+        bottom_two.iter().any(|id| id == "FILL-A") && bottom_two.iter().any(|id| id == "FILL-B"),
         "FILL-A and FILL-B must be at the bottom of the deck; bottom-2 was {bottom_two:?}"
     );
 }
@@ -592,7 +594,14 @@ fn lm_034_main_deck_size_shrinks_by_one_when_eligible_digi_added() {
         // Top of deck = last in slice. BLUE-DIGI is on top, in the reveal-3.
         .deck(
             0,
-            &["FILL-A", "FILL-B", "FILL-C", "FILL-D", "FILL-A", "BLUE-DIGI"],
+            &[
+                "FILL-A",
+                "FILL-B",
+                "FILL-C",
+                "FILL-D",
+                "FILL-A",
+                "BLUE-DIGI",
+            ],
         )
         .deck(1, &["FILL-A"])
         .memory(10)

@@ -316,6 +316,11 @@ pub enum TriggerSource {
     /// (EndOfYourTurn, StartOfYourTurn, etc.). Effects are collected in
     /// battle-area order; the player is the controller of every entry.
     PlayerBattleArea(PlayerId),
+    /// The permanent in the player's breeding area fires the trigger through
+    /// the stable breeding sentinel handle. This is intentionally separate
+    /// from `PlayerBattleArea` so a breeding observer is reachable through
+    /// exactly one scan path.
+    PlayerBreedingArea(PlayerId),
     /// A card revealed from security is firing `SecuritySkill` effects. The
     /// defender is the controller of the triggers; the card itself lives in
     /// `Game.pending_security` during resolution (it has been popped off the
@@ -353,6 +358,8 @@ pub enum TriggerSource {
         player: PlayerId,
         permanent: PermanentHandle,
         card: CardHandle,
+        effect_initiated: bool,
+        dna_origin: bool,
     },
     /// Observer timing fired after a permanent enters the battle area. Scans
     /// all players' battle areas while carrying the entering permanent/card
@@ -361,6 +368,7 @@ pub enum TriggerSource {
         player: PlayerId,
         permanent: PermanentHandle,
         card: CardHandle,
+        effect_initiated: bool,
     },
     /// Observer timing fired after a persistent Option is placed. Delay and
     /// Training Options have a standalone permanent; Link Options instead
@@ -387,6 +395,36 @@ pub enum TriggerSource {
         host: PermanentHandle,
         host_card: CardHandle,
         card: CardHandle,
+        cause: crate::trigger_context::EventCause,
+    },
+    /// Observer timing fired after a card is removed from a player's security
+    /// stack. `affected_player` owns the security stack; `observer_player`
+    /// is the zone being scanned for either own-side or opponent-side
+    /// observers; `source_player` is the attacker/effect controller.
+    SecurityRemoved {
+        affected_player: PlayerId,
+        observer_player: PlayerId,
+        source_player: PlayerId,
+        card: CardHandle,
+        cause: crate::trigger_context::EventCause,
+    },
+    /// Observer timing fired after a card is placed into security. Scans the
+    /// affected player's observer zones while carrying the placed card as the
+    /// event subject.
+    SecurityPlaced {
+        affected_player: PlayerId,
+        source_player: PlayerId,
+        card: CardHandle,
+        cause: crate::trigger_context::EventCause,
+    },
+    /// Observer timing fired on a security card that an effect trashes from
+    /// the security stack. The card is staged in `pending_security` while
+    /// its own `OnDiscardSecurity` effects are collected.
+    SecurityDiscarded {
+        affected_player: PlayerId,
+        source_player: PlayerId,
+        card: CardHandle,
+        cause: crate::trigger_context::EventCause,
     },
 }
 
@@ -425,8 +463,11 @@ pub enum SecurityRemovalDestination {
 pub struct PendingEffectSecurityRemoval {
     pub defender: PlayerId,
     pub observer_player: PlayerId,
+    pub source_player: PlayerId,
+    pub cause: crate::trigger_context::EventCause,
     pub destination: SecurityRemovalDestination,
     pub previous_pending_security: Option<PendingSecurity>,
+    pub discard_security_fired: bool,
 }
 
 /// Transient state for an Option card mid-resolution. Mirrors

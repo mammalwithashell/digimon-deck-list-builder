@@ -99,9 +99,7 @@ fn bt12_059_has_one_on_play_triggered_and_one_inherited_aura() {
         .expect("BT12-059 in embedded DSL pack")
         .memory(0)
         .start();
-    let compiled = runner
-        .compiled_card("BT12-059")
-        .expect("BT12-059 compiled");
+    let compiled = runner.compiled_card("BT12-059").expect("BT12-059 compiled");
 
     let triggered: Vec<&CompiledTriggeredClause> = compiled
         .effects
@@ -154,10 +152,7 @@ fn make_named_tamer(id: &str, name: &str) -> digimon_engine::card_data::CardData
     card
 }
 
-fn zone_ids(
-    cards: &[CardSource],
-    data: &[digimon_engine::card_data::CardData],
-) -> Vec<String> {
+fn zone_ids(cards: &[CardSource], data: &[digimon_engine::card_data::CardData]) -> Vec<String> {
     cards
         .iter()
         .map(|card| card.card_id(data).to_string())
@@ -278,7 +273,9 @@ fn bt12_059_on_play_only_greymon_found_skips_tamer_bucket() {
         "Greymon must be added to hand"
     );
     assert!(
-        !hand_ids.iter().any(|id| id == "FILLER1" || id == "FILLER2" || id == "FILLER3"),
+        !hand_ids
+            .iter()
+            .any(|id| id == "FILLER1" || id == "FILLER2" || id == "FILLER3"),
         "no Tamer was found, no extra Tamer add"
     );
 }
@@ -448,9 +445,7 @@ fn bt12_059_inherited_dp_active_when_carrier_name_contains_greymon() {
     // The BT12-059 source is at index 0 (the base of the stack).
     let bt12_059_src_idx = 0;
 
-    let contribution = runner
-        .game
-        .source_dp_contribution(handle, bt12_059_src_idx);
+    let contribution = runner.game.source_dp_contribution(handle, bt12_059_src_idx);
     assert_eq!(
         contribution, 1000,
         "BT12-059's inherited +1000 DP must contribute when the carrier's stack \
@@ -472,9 +467,7 @@ fn bt12_059_inherited_dp_active_when_carrier_name_contains_omnimon() {
     let handle = runner.place_stack(0, &["BT12-059", "OMNIMON-CARRIER"]);
     let bt12_059_src_idx = 0;
 
-    let contribution = runner
-        .game
-        .source_dp_contribution(handle, bt12_059_src_idx);
+    let contribution = runner.game.source_dp_contribution(handle, bt12_059_src_idx);
     assert_eq!(
         contribution, 1000,
         "BT12-059's inherited +1000 DP must contribute when the carrier's stack \
@@ -496,9 +489,7 @@ fn bt12_059_inherited_dp_inactive_when_carrier_name_unrelated() {
     let handle = runner.place_stack(0, &["BT12-059", "TYRANNO"]);
     let bt12_059_src_idx = 0;
 
-    let contribution = runner
-        .game
-        .source_dp_contribution(handle, bt12_059_src_idx);
+    let contribution = runner.game.source_dp_contribution(handle, bt12_059_src_idx);
     assert_eq!(
         contribution, 0,
         "BT12-059's inherited +1000 DP must NOT contribute when the carrier \
@@ -525,9 +516,7 @@ fn bt12_059_inherited_dp_inactive_when_alone_on_field() {
     let handle: PermanentHandle = runner.place_on_field(0, "BT12-059", Some(0));
     let bt12_059_src_idx = 0;
 
-    let contribution = runner
-        .game
-        .source_dp_contribution(handle, bt12_059_src_idx);
+    let contribution = runner.game.source_dp_contribution(handle, bt12_059_src_idx);
     assert_eq!(
         contribution, 0,
         "with no Greymon/Omnimon-named card in its own stack, the inherited \

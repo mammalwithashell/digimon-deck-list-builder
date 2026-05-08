@@ -15,7 +15,14 @@ use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledCostDelta, CompiledDeclarativeClause,
     CompiledStep, CompiledTiming,
 };
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::action::space::BREEDING_TARGET;
+use digimon_engine::card_source::{CardHandle, CardSource};
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::enums::{CardKind, EffectTiming};
+use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::trigger_context::EventCause;
+use std::sync::{Arc, Mutex};
 
 fn runner() -> DebugRunner {
     DebugRunner::builder()
@@ -23,6 +30,49 @@ fn runner() -> DebugRunner {
         .expect("BT20-083 YAML loads")
         .memory(10)
         .start()
+}
+
+fn add_breeding_source(r: &mut DebugRunner, player: u8, card_id: &str) -> CardHandle {
+    let data_idx = r
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("add_breeding_source: unknown card_id {card_id}"));
+    let next_idx = r.game.next_card_index();
+    let card = CardSource::new(data_idx, player, next_idx);
+    let handle = card.handle();
+    let permanent = r.game.players[player as usize]
+        .breeding_area
+        .as_mut()
+        .expect("breeding permanent exists");
+    let top = permanent.card_sources.pop().expect("breeding top exists");
+    permanent.card_sources.push(card);
+    permanent.card_sources.push(top);
+    handle
+}
+
+struct Bt20_083BreedingFanoutWitness {
+    seen: Arc<Mutex<Vec<(Option<u8>, Option<u8>, Option<EventCause>, Option<PermanentHandle>)>>>,
+}
+
+impl CardEffect for Bt20_083BreedingFanoutWitness {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = Arc::clone(&self.seen);
+        vec![Effect::inherited(card)
+            .name("BT20-083 breeding security removed witness")
+            .timing(EffectTiming::OnOpponentSecurityRemoved)
+            .process(move |ctx| {
+                seen.lock().unwrap().push((
+                    ctx.event_affected_player(),
+                    ctx.event_source_player(),
+                    ctx.event_cause(),
+                    ctx.source_permanent,
+                ));
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
 }
 
 #[test]
@@ -106,6 +156,65 @@ fn bt20_083_has_blocker_grant_and_low_security_on_play_digivolve() {
 #[ignore = "pending: RK-G001 — filtered select_own_breeding_permanent target for [King Drasil_7D6]"]
 fn bt20_083_on_deletion_places_self_under_king_drasil_only() {
     panic!("requires filtered breeding permanent selection before this clause can be authored");
+}
+
+#[test]
+fn bt20_083_inherited_breeding_security_removed_fans_out_once_with_payload() {
+    let mut attacker = make_test_card("BT20-083-ATTACKER", "BT20-083 attacker");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.level = Some(5);
+    attacker.dp = Some(9000);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-083")
+        .expect("BT20-083 YAML loads")
+        .add_card(attacker)
+        .add_card(make_test_card("BT20-083-BREED-TOP", "King Drasil carrier"))
+        .add_card(make_test_card("BT20-083-SEC", "Security card"))
+        .add_card(make_test_card("BT20-083-FILL", "Filler"))
+        .security(1, &["BT20-083-SEC", "BT20-083-SEC"])
+        .deck(0, &["BT20-083-FILL"; 10])
+        .deck(1, &["BT20-083-FILL"; 10])
+        .memory(5)
+        .start();
+
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    runner.register_effect(
+        "BT20-083",
+        Arc::new(Bt20_083BreedingFanoutWitness {
+            seen: Arc::clone(&seen),
+        }),
+    );
+
+    let attacker = runner.place_on_field(0, "BT20-083-ATTACKER", Some(0));
+    runner.place_in_breeding(0, "BT20-083-BREED-TOP");
+    add_breeding_source(&mut runner, 0, "BT20-083");
+
+    let before = runner.memory();
+    let _ = runner.attack_player(attacker, 1, true);
+
+    let seen = seen.lock().unwrap();
+    assert_eq!(
+        seen.len(),
+        1,
+        "BT20-083 as an inherited breeding source should observe the opponent-security removal exactly once"
+    );
+    assert_eq!(
+        runner.memory(),
+        before + 1,
+        "BT20-083 witness gained memory only if the inherited source fired"
+    );
+    assert_eq!(seen[0].0, Some(1), "defender security was removed");
+    assert_eq!(seen[0].1, Some(0), "attacker caused the security removal");
+    assert_eq!(seen[0].2, Some(EventCause::SecurityRemoval));
+    assert_eq!(
+        seen[0].3,
+        Some(PermanentHandle {
+            player: 0,
+            index: BREEDING_TARGET as u8,
+        }),
+        "BT20-083 inherited source should retain the breeding carrier sentinel"
+    );
 }
 
 #[test]

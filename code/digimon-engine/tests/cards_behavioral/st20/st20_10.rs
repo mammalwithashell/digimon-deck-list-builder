@@ -189,7 +189,9 @@ fn st20_10_second_alt_path_is_xros_req_lv2_adventure_or_hero_cost0() {
         .expect("xros_req path must carry a `from:` predicate");
     let pretty = format!("{from:?}");
     assert!(
-        pretty.contains("ADVENTURE") || pretty.contains("Adventure") || pretty.contains("adventure"),
+        pretty.contains("ADVENTURE")
+            || pretty.contains("Adventure")
+            || pretty.contains("adventure"),
         "xros_req `from:` must mention ADVENTURE trait somewhere; got {pretty}"
     );
     assert!(

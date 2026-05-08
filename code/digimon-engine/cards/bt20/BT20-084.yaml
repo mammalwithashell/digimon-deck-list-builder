@@ -13,6 +13,27 @@ alt_paths:
     cost: 1
 
 effects:
+  - when: on_ally_played
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[Trash] When any of your Digimon are played, may digivolve 1 Sistermon Ciel into this card for free"
+    condition:
+      event_target_kind: digimon
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "Sistermon Ciel"
+          prompt: "Choose a Sistermon Ciel to digivolve into this card"
+      - effect_initiated_digivolve:
+          target: target
+          source: self
+          cost: free
+          ignore_requirements: true
+
   - when: [on_play, when_digivolving]
     summary: "1 opponent Digimon or Tamer can't suspend until the end of their turn"
     process:

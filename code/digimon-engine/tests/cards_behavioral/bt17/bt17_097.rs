@@ -137,7 +137,10 @@ fn make_ken_tamer(id: &str) -> CardData {
 }
 
 /// Seat BT17-097 as a Delay-Option permanent (bypasses Main trigger).
-fn place_as_delay(runner: &mut DebugRunner, player: u8) -> digimon_engine::permanent::PermanentHandle {
+fn place_as_delay(
+    runner: &mut DebugRunner,
+    player: u8,
+) -> digimon_engine::permanent::PermanentHandle {
     let handle = runner.place_on_field(player, "BT17-097", Some(0));
     runner.game.player_mut(player).battle_area[handle.index as usize].option_state =
         OptionState::Delayed {
@@ -299,7 +302,11 @@ fn bt17_097_main_places_self_as_delay_option_on_field() {
     );
     runner.game.drain_effect_queue();
 
-    assert_eq!(runner.hand_size(0), 0, "BT17-097 must leave hand after Main");
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "BT17-097 must leave hand after Main"
+    );
     assert_eq!(
         runner.battle_area_size(0),
         1,
@@ -428,9 +435,7 @@ fn bt17_097_delay_does_not_fire_for_own_effect_deletion_of_free_digimon() {
         "Delay replacement must NOT fire for OwnEffect deletion (printed: 'other than by one of your effects')"
     );
     // The Free Digimon should be gone (deletion proceeded).
-    let still_present = runner
-        .game
-        .players[0]
+    let still_present = runner.game.players[0]
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17097-FREE");
@@ -668,17 +673,13 @@ fn bt17_097_security_plays_davis_from_hand_and_places_self_on_field() {
     }
 
     // The Davis Motomiya Tamer should be on the field.
-    let davis_on_field = runner
-        .game
-        .players[0]
+    let davis_on_field = runner.game.players[0]
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17097-DAVIS");
 
     // BT17-097 should also be on the field as a Delay-Option (place_self_as_delay_option).
-    let bt17_097_on_field = runner
-        .game
-        .players[0]
+    let bt17_097_on_field = runner.game.players[0]
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-097");

@@ -85,28 +85,11 @@
 #       ignoreDigivolutionRequirementFixedCost=-1,
 #       isHand=true, ignoreSelection=true)            ← auto-select (no pick prompt)
 #
-#   TWO separate gaps block this clause:
-#
-#   GAP G-IS-EFFECT-INITIATED [new gap]:
-#     The printed "When an effect plays" requires distinguishing effect-initiated
-#     plays/digivolves from player-action plays/digivolves. The DSL observer timings
-#     `on_enter_field_anyone` and `on_digivolve` fire on ALL enters/digivolves regardless
-#     of whether they were triggered by a card effect or by a player's normal play action.
-#     There is no DSL predicate `event_is_effect_initiated: true` (or equivalent) that maps
-#     to DCGO's `IsByEffect(hashtable, null)` gate. Without this gate, the clause would
-#     fire even when the opponent plays a Digimon normally (not via an effect), violating
-#     the printed condition and over-exposing the digivolve offer to the RL action space.
-#
-#   GAP G-FIGHTER-MODE-IN-HAND [conditional context]:
-#     DCGO's CanUseCondition also checks `HandCards.Count(HasFighterMode) >= 1`. The DSL
-#     has `exists: { of: you, zone: [hand], name_contains: "Imperialdramon: Fighter Mode" }`
-#     as a condition predicate shape, but this compound condition must coexist with the
-#     effect-initiated gate. If G-IS-EFFECT-INITIATED closes, the hand-filter condition
-#     can be expressed via `any_permanent: { of: you, zone: [hand], name_contains: ... }`.
-#
-#   Both gaps are distinct but composited in the same clause. Until G-IS-EFFECT-INITIATED
-#   closes, this entire clause is BLOCKED — we cannot approximate by omitting the
-#   effect-initiated gate (that would fire on all plays/digivolves, over-permissive).
+#   Track A update (2026-05-08): `event_is_effect_initiated` now maps to the
+#   trigger payload's effect-origin flag for `OnEnterFieldAnyone` and
+#   `OnDigivolve`, so this clause is authored below. The follow-up hand pick is
+#   still exposed as a selection, which is stricter than DCGO's auto-select and
+#   keeps the no-hidden-choice contract intact when multiple Fighter Modes exist.
 #
 # ─── Implementation status ────────────────────────────────────────────────────
 #
@@ -115,7 +98,7 @@
 # | Standard digivolve Lv.5 Blue / Cost 4                             | IMPLEMENTED       |
 # | [When Digivolving] Select 1 opp Digimon/Tamer → CannotUnsuspend   | IMPLEMENTED       |
 # | [When Digivolving] By suspending opp → unsuspend own Digimon      | BLOCKED — G-DSL-IF-NO-TARGET |
-# | [All Turns] Effect-play/digivolve opp Digimon → conditional free  | BLOCKED — G-IS-EFFECT-INITIATED |
+# | [All Turns] Effect-play/digivolve opp Digimon → conditional free  | IMPLEMENTED       |
 # |   digivolve self into Fighter Mode from hand                      |                   |
 #
 # Gaps:
@@ -123,11 +106,8 @@
 #     prior optional selection produced a target vs. produced nothing. Tracked in
 #     qa/archetype-qa/engine-gaps.md.
 #
-#   G-IS-EFFECT-INITIATED [new]: No DSL predicate leaf distinguishing effect-
-#     initiated enters/digivolves from player-action enters/digivolves. The engine
-#     must thread an `is_effect_initiated` flag through TriggerContext so DSL
-#     condition predicates can gate on `IsByEffect` semantics. Required by any
-#     "[All Turns] When an effect plays/digivolves" trigger. See qa/dsl-vocab-gaps.md.
+#   G-IS-EFFECT-INITIATED: Closed for this card's OnEnterFieldAnyone/OnDigivolve
+#     observer shape by Track A on 2026-05-08.
 
 card: BT16-028
 name: "Imperialdramon: Dragon Mode"
@@ -210,36 +190,30 @@ effects:
       #         - unsuspend: { target: unsuspend_target }
 
   # ─── Clause 1: [All Turns] effect-play/digivolve opp Digimon → conditional free digivolve ─
-  #
-  # BLOCKED — G-IS-EFFECT-INITIATED: no DSL predicate to gate on effect-initiated
-  # play/digivolve vs. player-action play/digivolve. See header comment for full analysis.
-  #
-  # When G-IS-EFFECT-INITIATED closes (suggested DSL shape):
-  #
-  #   - when: [on_enter_field_anyone, on_digivolve]
-  #     optional: true
-  #     active_when: { all_turns: true }
-  #     summary: "[All Turns] When effect plays/digivolves opp Digimon + own Tamer, may free-digivolve self into Fighter Mode"
-  #     condition:
-  #       all_of:
-  #         - event_target_owner: opponent
-  #         - event_target_kind: digimon
-  #         - event_is_effect_initiated: true     # ← requires G-IS-EFFECT-INITIATED
-  #         - any_permanent:
-  #             of: you
-  #             zone: [battle_area]
-  #             kind: tamer
-  #     process:
-  #       - select_hand:
-  #           of: you
-  #           bind_as: fighter
-  #           filter:
-  #             all_of:
-  #               - kind: digimon
-  #               - name_contains: "Imperialdramon: Fighter Mode"
-  #           prompt: "Digivolve into Imperialdramon: Fighter Mode (free, ignore reqs)"
-  #       - effect_initiated_digivolve:
-  #           target: self
-  #           from_hand: fighter
-  #           cost: 0
-  #           ignore_requirements: true
+  - when: [on_enter_field_anyone, on_digivolve]
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[All Turns] When effect plays/digivolves opp Digimon + own Tamer, may free-digivolve self into Fighter Mode"
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+        - event_is_effect_initiated: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+    process:
+      - select_hand:
+          of: you
+          bind_as: fighter
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Imperialdramon: Fighter Mode"
+          prompt: "Digivolve into Imperialdramon: Fighter Mode"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: fighter
+          cost: 0
+          ignore_requirements: true
