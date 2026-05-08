@@ -204,9 +204,9 @@ fn st20_15_clause_0_is_flood_gate_with_ignore_color_modifier() {
     let card = runner.compiled_card(CARD_ID).expect("ST20-15 compiled");
 
     let is_flood_gate_with_modifier = match &card.effects[0] {
-        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
-            modifier, ..
-        }) => modifier.eq_ignore_ascii_case("IgnoreColorRequirement"),
+        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { modifier, .. }) => {
+            modifier.eq_ignore_ascii_case("IgnoreColorRequirement")
+        }
         _ => false,
     };
     assert!(

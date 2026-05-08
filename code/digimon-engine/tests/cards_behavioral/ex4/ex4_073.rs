@@ -161,9 +161,10 @@ fn ex4_073_clause_b_installs_selection_for_de_digivolve_target() {
     let handle = runner.place_on_field(0, "EX4-073", Some(0));
     runner.place_on_field(1, "OPP-LV5", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 
     // A pending selection must be installed for the de-digivolve pick.
@@ -180,9 +181,10 @@ fn ex4_073_clause_b_no_fire_when_opponent_has_no_digimon() {
     let mut runner = runner();
     let handle = runner.place_on_field(0, "EX4-073", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 
     assert!(

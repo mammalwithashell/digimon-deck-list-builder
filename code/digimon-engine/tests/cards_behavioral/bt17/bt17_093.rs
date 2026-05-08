@@ -234,10 +234,7 @@ fn bt17_093_clause3_on_security_face_up_mandatory() {
         !security.optional,
         "Security clause must be mandatory — [Security] effects are not opt-out per RULES_CONTEXT.md §16"
     );
-    assert!(
-        !security.once_per_turn,
-        "Security clause has no OPT"
-    );
+    assert!(!security.once_per_turn, "Security clause has no OPT");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -289,7 +286,10 @@ fn bt17_093_clause1_on_hatch_suspends_self_and_gains_memory() {
     // (any_permanent self & is_unsuspended) AND active_when:your_turn
     // ensure only P0's tamer is eligible.
     let ok = runner.game.hatch(0);
-    assert!(ok, "P0 hatch must succeed (digitama non-empty + breeding empty)");
+    assert!(
+        ok,
+        "P0 hatch must succeed (digitama non-empty + breeding empty)"
+    );
 
     // If a selection installed (the optional accept-cost prompt), resolve it
     // by accepting the first non-PASS action.
@@ -437,7 +437,9 @@ fn bt17_093_clause2_eot_returns_self_draws_and_plays_tai_tamer_free() {
     runner.game.players[0]
         .hand
         .push(digimon_engine::card_source::CardSource::new(
-            tai_data_idx, 0, next,
+            tai_data_idx,
+            0,
+            next,
         ));
 
     let hand_before = runner.game.players[0].hand.len();
@@ -541,7 +543,9 @@ fn bt17_093_clause2_inner_tamer_pick_declined_still_pays_cost_and_draws() {
     runner.game.players[0]
         .hand
         .push(digimon_engine::card_source::CardSource::new(
-            tai_data_idx, 0, next,
+            tai_data_idx,
+            0,
+            next,
         ));
 
     runner.end_turn();
@@ -633,9 +637,7 @@ fn bt17_093_clause2_eot_no_eligible_tamer_in_hand_still_pays_cost_and_draws() {
             .copied()
             .find(|&id| id != digimon_engine::action::space::PASS)
             .unwrap_or(view.valid_action_ids[0]);
-        runner
-            .execute_action(0, accept)
-            .expect("accept install");
+        runner.execute_action(0, accept).expect("accept install");
     }
     let _ = runner.auto_resolve();
 

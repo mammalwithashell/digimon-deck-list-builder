@@ -57,8 +57,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPath, CompiledAltPathKind, CompiledClause, CompiledCost,
-    CompiledScope, CompiledTiming, CompiledTriggeredClause,
+    CompiledAltPath, CompiledAltPathKind, CompiledClause, CompiledCost, CompiledScope,
+    CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -201,16 +201,17 @@ fn ex9_021_when_digivolving_delete_clause_shape() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::WhenDigivolving) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenDigivolving) => {
                 Some(t)
             }
             _ => None,
         })
         .expect("must have [WhenDigivolving] delete clause");
     assert_eq!(clause.scope, CompiledScope::FaceUp);
-    assert!(!clause.optional, "delete-highest is unconditional (no 'may')");
+    assert!(
+        !clause.optional,
+        "delete-highest is unconditional (no 'may')"
+    );
     assert!(!clause.once_per_turn, "no [Once Per Turn] on this clause");
     // The DNA-only immunity is BLOCKED → the delete clause should NOT carry
     // an `is_dna_digivolving: true` condition (would block the delete arm

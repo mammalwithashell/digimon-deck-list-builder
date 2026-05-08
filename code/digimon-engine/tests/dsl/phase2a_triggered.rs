@@ -50,14 +50,18 @@ fn compiled_timing_mapping_covers_common_triggered_timings() {
         compiled_timing_to_engine(CompiledTiming::OnOptionPlaced),
         Some(EffectTiming::OnOptionPlaced)
     );
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::OnAllyPlayed),
+        Some(EffectTiming::OnAllyPlayed)
+    );
+    assert_eq!(
+        compiled_timing_to_engine(CompiledTiming::OnAddedToSecurity),
+        Some(EffectTiming::OnPlaceSecurity)
+    );
 }
 
 #[test]
 fn compiled_timing_non_targets_return_none() {
-    assert_eq!(
-        compiled_timing_to_engine(CompiledTiming::OnAllyPlayed),
-        None
-    );
     assert_eq!(compiled_timing_to_engine(CompiledTiming::Delayed), None);
 }
 
@@ -194,11 +198,11 @@ fn triggered_clause_once_per_turn_sets_max_per_turn_to_one() {
 
 #[test]
 fn triggered_clause_skips_non_target_timings() {
-    // OnAllyPlayed is a DSL-only virtual timing — timing_map returns None,
+    // Delayed is a DSL-only virtual timing — timing_map returns None,
     // so the clause should not emit.
     let mut c = fixture_on_play_gain_memory(1);
     if let CompiledClause::Triggered(t) = &mut c.effects[0] {
-        t.when = vec![CompiledTiming::OnAllyPlayed];
+        t.when = vec![CompiledTiming::Delayed];
     }
     let dsl = DslCardEffect::new(Arc::new(c));
     assert!(dsl.effects(CardHandle(0)).is_empty());

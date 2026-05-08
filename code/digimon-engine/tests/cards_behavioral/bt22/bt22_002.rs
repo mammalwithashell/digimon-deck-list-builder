@@ -13,15 +13,15 @@
 //! - Once-per-turn mandatory draw
 //! - Printed "other [Puppet]" exclusion for the carrier itself
 //!
-//! # Blocked behavior
+//! # Event-context contract
 //!
-//! The inherited deletion observer is intentionally omitted from YAML pending
-//! `G-ON-ANY-DELETION-EVENT-CONTEXT`: OnAnyDeletion observer fan-out currently
-//! scans PlayerBattleArea without carrying the deleted permanent/card in
-//! TriggerContext.event_permanent/event_card. As a result, event_target_*
-//! predicates evaluate the observing carrier, not the deleted object.
+//! `OnAnyDeletion` must evaluate event-target predicates against the deleted
+//! object's pre-removal snapshot, not the carrier holding this inherited effect.
 
-use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledColor};
+use digimon_dsl::compiled::{
+    CompiledCardKind, CompiledClause, CompiledColor, CompiledPlayerRef, CompiledPredicate,
+    CompiledTiming,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -91,6 +91,29 @@ fn place_token_on_field(runner: &mut DebugRunner, player: u8, card_id: &str) -> 
     }
 }
 
+fn predicate_has_event_target_owner(
+    predicate: &CompiledPredicate,
+    owner: CompiledPlayerRef,
+) -> bool {
+    predicate.event_target_owner == Some(owner)
+        || predicate
+            .all_of
+            .iter()
+            .any(|child| predicate_has_event_target_owner(child, owner))
+        || predicate
+            .any_of
+            .iter()
+            .any(|child| predicate_has_event_target_owner(child, owner))
+        || predicate
+            .none_of
+            .iter()
+            .any(|child| predicate_has_event_target_owner(child, owner))
+        || predicate
+            .not
+            .as_ref()
+            .is_some_and(|child| predicate_has_event_target_owner(child, owner))
+}
+
 #[test]
 fn bt22_002_is_blue_digi_egg_with_lesser_liberator_traits() {
     let runner = runner_with_kyaromon();
@@ -121,27 +144,45 @@ fn bt22_002_is_blue_digi_egg_with_lesser_liberator_traits() {
 }
 
 #[test]
-fn bt22_002_deletion_observer_is_omitted_pending_deleted_event_context() {
+fn bt22_002_deletion_observer_uses_deleted_object_event_context() {
     let runner = runner_with_kyaromon();
     let card = runner
         .compiled_card("BT22-002")
         .expect("BT22-002 compiled card present");
 
-    let triggered_count = card
+    let deletion_clause = card
         .effects
         .iter()
-        .filter(|clause| matches!(clause, CompiledClause::Triggered(_)))
-        .count();
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(triggered)
+                if triggered.when.contains(&CompiledTiming::OnAnyDeletion) =>
+            {
+                Some(triggered)
+            }
+            _ => None,
+        })
+        .expect("BT22-002 must ship an inherited OnAnyDeletion observer");
 
+    assert!(
+        deletion_clause.once_per_turn,
+        "printed inherited effect is Once Per Turn"
+    );
     assert_eq!(
-        triggered_count, 0,
-        "BT22-002 must not ship an approximating OnAnyDeletion clause until \
-         deleted-permanent event context is available"
+        deletion_clause.scope,
+        digimon_dsl::compiled::CompiledScope::Inherited,
+        "printed effect is inherited"
+    );
+    let condition = deletion_clause
+        .condition
+        .as_ref()
+        .expect("BT22-002 deletion observer must gate on deleted-object context");
+    assert!(
+        predicate_has_event_target_owner(condition, CompiledPlayerRef::You),
+        "deleted object must be controlled by the observer's controller"
     );
 }
 
 #[test]
-#[ignore = "pending: G-ON-ANY-DELETION-EVENT-CONTEXT — OnAnyDeletion lacks deleted permanent/card TriggerContext for event_target_* predicates"]
 fn bt22_002_draws_when_own_token_is_deleted() {
     let mut runner = runner_with_kyaromon();
     place_kyaromon_under_carrier(&mut runner);
@@ -159,7 +200,6 @@ fn bt22_002_draws_when_own_token_is_deleted() {
 }
 
 #[test]
-#[ignore = "pending: G-ON-ANY-DELETION-EVENT-CONTEXT — OnAnyDeletion lacks deleted permanent/card TriggerContext for event_target_* predicates"]
 fn bt22_002_draws_when_own_other_puppet_digimon_is_deleted() {
     let mut runner = runner_with_kyaromon();
     place_kyaromon_under_carrier(&mut runner);
@@ -177,7 +217,6 @@ fn bt22_002_draws_when_own_other_puppet_digimon_is_deleted() {
 }
 
 #[test]
-#[ignore = "pending: G-ON-ANY-DELETION-EVENT-CONTEXT — OnAnyDeletion lacks deleted permanent/card TriggerContext for event_target_* predicates"]
 fn bt22_002_does_not_draw_for_own_non_puppet_digimon_deletion() {
     let mut runner = runner_with_kyaromon();
     place_kyaromon_under_carrier(&mut runner);
@@ -195,7 +234,6 @@ fn bt22_002_does_not_draw_for_own_non_puppet_digimon_deletion() {
 }
 
 #[test]
-#[ignore = "pending: G-ON-ANY-DELETION-EVENT-CONTEXT — OnAnyDeletion lacks deleted permanent/card TriggerContext for event_target_* predicates"]
 fn bt22_002_does_not_draw_for_opponent_puppet_deletion() {
     let mut runner = runner_with_kyaromon();
     place_kyaromon_under_carrier(&mut runner);
@@ -213,7 +251,6 @@ fn bt22_002_does_not_draw_for_opponent_puppet_deletion() {
 }
 
 #[test]
-#[ignore = "pending: G-ON-ANY-DELETION-EVENT-CONTEXT — OnAnyDeletion lacks deleted permanent/card TriggerContext for event_target_* predicates"]
 fn bt22_002_does_not_draw_when_carrier_itself_is_deleted() {
     let mut runner = runner_with_kyaromon();
     let carrier = place_kyaromon_under_carrier(&mut runner);
@@ -230,7 +267,6 @@ fn bt22_002_does_not_draw_when_carrier_itself_is_deleted() {
 }
 
 #[test]
-#[ignore = "pending: G-ON-ANY-DELETION-EVENT-CONTEXT — OnAnyDeletion lacks deleted permanent/card TriggerContext for event_target_* predicates"]
 fn bt22_002_once_per_turn_blocks_second_eligible_deletion() {
     let mut runner = runner_with_kyaromon();
     place_kyaromon_under_carrier(&mut runner);

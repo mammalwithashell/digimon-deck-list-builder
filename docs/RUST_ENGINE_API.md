@@ -152,7 +152,7 @@ ctx.lose_memory(amount: i16)
 ctx.set_memory(value: i16)
 ```
 
-Memory is the seesaw — positive favors the active player, negative crosses into the opponent's turn. Use `gain_memory(n)` and `lose_memory(n)`; the engine clamps to `rules.memory_range`.
+Memory is the seesaw — positive favors the active player, negative crosses into the opponent's turn. `ctx.gain_memory(n)` gives memory to the resolving effect's controller; if that controller is not the active player, the raw gauge moves negative from the active player's perspective. `ctx.lose_memory(n)` subtracts from the current raw gauge. The engine clamps gains to `rules.memory_range`.
 
 ### Card flow
 
@@ -2241,6 +2241,10 @@ Effect::on_play(card).process(|ctx| {
 
 `reveal_top_deck(player, n) -> Vec<CardHandle>` — move up to N cards from deck top into the transient reveal pool (`game.revealed_cards`, cleared on turn rotation).
 
+`reveal_top_digitama(player, n) -> Vec<CardHandle>` — same reveal-pool contract,
+but from the player's Digi-Egg deck. DSL `reveal_top_deck` honors
+`zone: digi_egg_deck` by calling this path.
+
 `revealed() -> &[CardSource]` — read-only snapshot of the pool. Scripts inspect it to decide follow-up moves.
 
 ### Placement
@@ -2248,13 +2252,193 @@ Effect::on_play(card).process(|ctx| {
 | Method | Purpose |
 |--------|---------|
 | `place_as_bottom_source(CardSourceRef, target: PermanentHandle)` → `bool` | Insert a card at the bottom of target's digivolution stack. |
-| `place_on_security(player, CardSourceRef, StackPosition, face_up: bool)` → `bool` | Move to security stack at Top/Bottom/Random; optionally face-up. |
+| `place_permanent_as_bottom_sources(source: PermanentHandle, target: PermanentHandle)` → `bool` | Remove a battle-area permanent and insert its whole stack under the target, preserving the source stack order. DSL `place_as_bottom_source` uses this when `source: { permanent: <binding> }`. |
+| `place_on_security(player, CardSourceRef, StackPosition, face_up: bool)` → `bool` | Move to security stack at Top/Bottom/Random; optionally face-up; fires `OnPlaceSecurity` with `EventCause::SecurityPlacement` after a successful commit. |
 | `hatch(player) -> bool` | Move top of digitama deck to breeding area. Returns false if breeding is occupied or digitama deck is empty. |
 | `effect_initiated_digivolve(player, hand_index, target, CostDelta, ignore_color)` → `bool` | Script-driven digivolve. Validates level match; optionally bypasses color check. Fires WhenDigivolving. |
 
 ### No-approximations note
 
 Each of these primitives is a pure movement or cost-payment operation. *Which* card to move is always the caller's responsibility, and the choice must surface through a `PendingSelection` built with `select_hand`, `select_trash`, `select_reveal`, or `select_own_permanent`. Never let a script auto-pick a target without a selection — the RL action space must observe the branch.
+
+---
+
+## Event Payload Contract
+
+Slice 0 publishes a first-class trigger payload in
+`code/digimon-engine/src/trigger_context.rs`. The payload belongs to the event
+being observed, not to the card carrying the observer. `QueuedEffect` still
+carries the observer source separately through `source_card`,
+`source_permanent`, `source_kind`, `controller`, and `effect_slot`.
+
+### Field semantics
+
+| Field | Meaning |
+|-------|---------|
+| `subject` | Typed event subject: permanent, card in a zone, or player. Use this for "what happened". |
+| `event_permanent` / `event_card` | Compatibility accessors for the primary permanent/card involved in the event. For deletion events these are supplemented by `deleted_object`. |
+| `target_permanent` / `target_card` | Legacy target fields. Prefer `event_*` or typed snapshot fields for new observers. |
+| `source_player` / `affected_player` | Player that caused the event, and player affected by it when those differ. |
+| `cause: EventCause` | Coarse event cause: battle deletion, effect deletion, own/opponent effect, Overclock, return, deck-bottom, security placement/removal, cost, or rule. Emitters set this; observers only read it. |
+| `source_effect: EffectAttribution` | Effect/card/permanent that caused the event. This is distinct from the observer currently resolving. |
+| `selected_results` | Named bindings from the event's just-made selections for follow-up predicates. |
+| `moved_card_sets` | Batches of cards moved together, with optional from/to zones. Bulk-move triggers should append one set per semantic move. |
+| `effect_initiated` | True when the play/digivolve/move originated from an effect rather than a natural action. |
+| `dna_origin` | True when the digivolution event came from the DNA/Jogress path rather than a standard digivolve. Mirrors DCGO's per-trigger `isJogress` payload flag. |
+| `deleted_object` | Pre-removal snapshot for deletion observers: former controller, top card, kind, traits, level, DP, and cause. Valid after the permanent has left the battle area. |
+| `old_attack_target` / `new_attack_target` | Old/new target pair for `OnAttackTargetChange`. |
+| `provenance_token` | Stable token for effect-created plays/digivolutions and later cleanup/suppression. Do not key cleanup on battle-area index. |
+| `was_security_skill` | Compatibility marker for security-originated effects. |
+
+`ProvenanceToken` is keyed to the physical `CardSource` instance, not the
+battle-area slot. Use `Game::resolve_provenance_token(token)` (or the
+`EffectContext` wrapper) to find the current subject after other permanents
+leave the battle area or after the card moves zones. It returns a live
+`EventSubject::Permanent(...)` while the token's card is in a stack, or
+`EventSubject::Card { card, zone }` after it moves to hand/trash/security/deck
+or reveal.
+
+Effect helpers that create a new object or top card have provenance-returning
+siblings:
+
+| Helper | Provenance-returning sibling |
+|--------|------------------------------|
+| `play_from_hand_free` | `play_from_hand_free_with_provenance` |
+| `effect_initiated_digivolve` | `effect_initiated_digivolve_with_provenance` |
+| `effect_initiated_dna_digivolve` | `effect_initiated_dna_digivolve_with_provenance` |
+
+Use these when a later cleanup, suppression, or result predicate must identify
+the same effect-created card after zone movement or battle-area compaction.
+Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- provenance_tokens`.
+
+`EffectReadContext::deleted_object_snapshot()` and
+`EffectContext::deleted_object_snapshot()` expose the deletion snapshot to Rust
+card scripts. DSL event-target bindings also prefer `deleted_object.top_card`
+after a deletion, so post-removal predicates can still resolve the deleted
+card's printed data. For deletion events, `event_target_kind` and
+`event_target_trait_has` read `deleted_object.card_kind` / `traits` before
+falling back to live card data, so deleted Tokens and removed permanents remain
+matchable after they leave the battle area.
+
+`EffectReadContext` / `EffectContext` also expose
+`event_affected_player()`, `event_source_player()`, `event_source_effect()`,
+`event_cause()`, `event_selected_results()`, and `event_moved_card_sets()` for
+observers that need to distinguish "whose thing changed" from "who caused it"
+or inspect the selection/movement results carried by the payload.
+`source_effect` is populated from the currently
+resolving queued effect (`controller`, `source_card`, and optional
+`source_permanent`) when that effect emits a nested event.
+Security-removal observers populate these fields with the security owner, the
+attacking/effect source player, and `EventCause::SecurityRemoval`,
+`OwnEffect`, or `OpponentEffect` depending on the emitter. Security-placement
+observers populate `event_card` with the card that reached security,
+`affected_player` with the player whose security stack received it,
+`source_player` with the effect controller, `cause =
+EventCause::SecurityPlacement`, and a moved-card set whose destination is
+`Zone::Security`. `OnDiscardSecurity` uses the discarded security card as both
+the observer source and event subject; it fires only for effect-driven
+security-to-trash movement, not normal attack security checks, and carries a
+moved-card set from `Zone::Security` to `Zone::Trash`.
+`event_dna_origin()` exposes the DNA/Jogress provenance bit as
+`Option<bool>`: `Some(true)` during DNA digivolve trigger drains and global
+`OnDigivolve` payloads, `Some(false)` during standard digivolve trigger drains,
+and `None` outside an event context.
+
+DSL predicates can read the same observer cause with `event_cause:
+<snake_case_cause>`. Supported values mirror `EventCause`, including
+`battle_deletion`, `own_effect`, `opponent_effect`, `overclock`,
+`security_removal`, `cost`, and `rule`. Use this for post-event branches such
+as EX11-060's "if deleted by <Overclock>" rider; replacement-window predicates
+continue to use `replacement_cause`.
+DSL predicates can also compare the event permanent to the resolving observer's
+source permanent with `event_permanent_is_source: true`. Use this for "when
+this Digimon suspends" and similar self-scoped event observers; broader
+`event_target_owner` / `event_target_kind` gates are for "any of your Digimon"
+style triggers and will over-fire for "this" wording.
+
+DSL predicates can read the effect-origin flag with
+`event_is_effect_initiated: true` / `false`. `OnEnterFieldAnyone` and
+`OnDigivolve` payloads set it to `false` for normal player-action play and
+digivolve, and to `true` for effect play helpers and
+`effect_initiated_digivolve` / `effect_initiated_dna_digivolve`. Use this for
+printed text such as "when an effect plays or digivolves"; do not use it as a
+"by this specific effect" identity token.
+DSL predicates can read the DNA/Jogress origin bit with `dna_origin: true` /
+`false`. DNA digivolve drains set the scoped bit for `WhenDigivolving` and
+`OnDnaDigivolve`, and the global `OnDigivolve` payload carries
+`TriggerSource::Digivolved { dna_origin: true, ... }`. Standard digivolve
+payloads set it to `false`.
+
+### Fan-out policy
+
+Observer fan-out must keep the event subject distinct from the observer source
+and make each observer reachable through exactly one path. The canonical paths
+are: battle-area top cards, inherited digivolution-stack sources, breeding-area
+top/inherited sources, hand-resident observers, trash-resident observers,
+security-resident observers, linked/field Option observers, and Delay observers.
+Do not scan overlapping zones for the same source/effect slot; use a stable
+observer identity of `(zone path, source_card, source_permanent, effect_slot)`
+when adding new fan-out paths.
+
+Slice 0 wires the contract through `OnAnyDeletion` enough to prove an inherited
+observer can read a deleted-object snapshot from another permanent exactly once.
+BT20-084's slice also wires the trash-resident `OnAllyPlayed` path: a played
+permanent is the event subject, while the trash card remains the observer source
+with `source_permanent = None`.
+EX11-060's slice wires the first Overclock-specific deletion payload: the
+Overclock sacrifice deletion still uses `ReplacementCause::Cost` for
+replacement windows, but the resulting `OnAnyDeletion` trigger carries
+`EventCause::Overclock` so observers can branch without confusing the
+replacement/cost model.
+The source-trash slice routes digivolution-source movement through
+`Game::fire_digivolution_card_trashed(...)`. `OnDigivolutionCardTrashed`
+payloads now carry `event_card` / `event_source_card` for the trashed source,
+`event_host_card` for the former or remaining host top card,
+`event_host_permanent` when a stable host handle is available,
+`affected_player` / `source_player`, `cause`, and a one-card
+`moved_card_sets` entry from `BattleArea` to `Trash`. DSL
+`host_permanent_trait_has` first checks the live host and then falls back to
+the host-card snapshot, so return-to-hand/deck source disposition remains
+observable after the host leaves the battle area.
+For source-cost authoring, DSL `select_own_sources` accepts an optional
+`target: <binding-ref>` field. When omitted, it scans the controller's own
+battle-area source cards as before. When set, it resolves the binding to a
+single permanent and only exposes source action IDs from that permanent; a
+resolution failure produces no candidates. `target: source` is the canonical
+inline shape for exact-N source costs on the activating stack, binding stable
+`SourceSelectionRef` values that `trash_selected_sources` consumes through the
+same source-trash payload path.
+
+`digi_burst` is the reusable DSL wrapper for printed `<Digi-Burst N>` bodies.
+It lowers to `select_own_sources { target: source, min: count, max: count }`
+with `trash_selected_sources` inserted before its nested `then:` steps. The
+card author still writes the printed "effect below" inside `then:`. Card data
+also parses printed `Digi-Burst N` into `Keyword::DigiBurst(N)`, but this
+keyword does not auto-install a body because the keyword token alone does not
+define the effect below it. Regression coverage includes `count: 2`: PASS is
+withheld until two self-stack sources are selected, other own stacks are
+excluded from the action mask, each selected source emits
+`OnDigivolutionCardTrashed`, and the nested body continues after the cost.
+Additional timings should be added one slice at a time with a failing fixture
+first.
+
+For phase fan-out, `StartOfYourMainPhase` scans the turn player's battle area
+and breeding area through distinct trigger sources. The breeding path uses
+`TriggerSource::PlayerBreedingArea(player)` and the stable
+`BREEDING_TARGET` permanent handle, so top-card and inherited breeding
+observers retain normal source-card attribution and activation counts without
+being reachable through the battle-area scan.
+Security-removal fan-out uses the same zone split: the observer player's
+battle area is scanned first, then the observer player's breeding slot is
+scanned through `enqueue_from_breeding_permanent` with `BREEDING_TARGET`.
+Both passes share the same `TriggerSource::SecurityRemoved` payload, so
+breeding top-card and inherited observers can read `affected_player`,
+`source_player`, `event_card`, and `cause` exactly like battle-area observers.
+
+Single triggered observers auto-enter their body. If the printed trigger is
+optional, the first actionable body selection must expose PASS through the action
+mask, and no prompt should be installed when the body has no legal result.
+Multi-trigger bundles use `TriggerOrder` for player-chosen ordering/decline.
 
 ---
 
@@ -2267,7 +2451,7 @@ Added in Phase 1 to wire every declared-but-unfired `EffectTiming` variant + 2 n
 | Timing | Builder | Fire site |
 |--------|---------|-----------|
 | `StartOfYourTurn` | `Effect::start_of_your_turn(card)` | `begin_turn` (before Unsuspend) |
-| `StartOfYourMainPhase` | `Effect::start_of_your_main_phase(card)` | `enter_main_phase` (before phase set to Main) |
+| `StartOfYourMainPhase` | `Effect::start_of_your_main_phase(card)` | `enter_main_phase` (before phase set to Main; scans battle area plus breeding via `PlayerBreedingArea`) |
 | `EndOfYourTurn` | `Effect::end_of_your_turn(card)` | `fire_end_of_your_turn` (already wired) |
 | `EndOfOpponentsTurn` | `Effect::end_of_opponents_turn(card)` | `rotate_turn_player` (between EndOfYourTurn drain and turn advance) |
 
@@ -2285,7 +2469,8 @@ Added in Phase 1 to wire every declared-but-unfired `EffectTiming` variant + 2 n
 
 | Timing | Builder | Fire site |
 |--------|---------|-----------|
-| `OnEnterFieldAnyone` | `Effect::on_enter_field_anyone(card)` | `play_from_hand_with_cost` + `play_from_trash_with_cost` (after OnPlay) |
+| `OnEnterFieldAnyone` / `OnAnyDigimonPlayed` | `Effect::on_enter_field_anyone(card)` / `Effect::on_any_digimon_played(card)` | `play_from_hand_with_cost` + `play_from_trash_with_cost` (after OnPlay); `OnAnyDigimonPlayed` is a printed-text alias sharing the same payload and fan-out path |
+| `OnAllyPlayed` | `Effect::on_ally_played(card)` | Play emitters after `OnPlay`; scans the playing player's battle area and trash observers |
 | `OnAnyDeletion` | `Effect::on_any_deletion(card)` | `delete_permanent_with_effects` (single chokepoint for all deletions) |
 | `OnSuspend` | `Effect::on_suspend(card)` | `Game::suspend` (guarded on state change) |
 | `OnUnsuspend` | `Effect::on_unsuspend(card)` | `Game::unsuspend` (bulk unsuspend_all does NOT fire — StartOfYourTurn is the canonical turn-start timing) |
@@ -2296,12 +2481,41 @@ Added in Phase 1 to wire every declared-but-unfired `EffectTiming` variant + 2 n
 
 | Timing | Builder | Fire site | Archetype |
 |--------|---------|-----------|-----------|
-| `OnOpponentSecurityRemoved` | `Effect::on_opponent_security_removed(card)` | `SecurityPhase::Dispose` (attacker's battle area only) | Medusamon core |
-| `OnDigivolutionCardTrashed` | `Effect::on_digivolution_card_trashed(card)` | Per-source in `return_to_hand` / `return_to_deck` (sources-below-top, not linked_cards) | Rocks core |
+| `OnOpponentSecurityRemoved` | `Effect::on_opponent_security_removed(card)` | Security removal disposition for the opponent of the affected player | Medusamon core |
+| `OnOwnSecurityRemoved` | `Effect::on_own_security_removed(card)` | Security removal disposition for the affected player's own battle area | BT4-097 Kari Kamiya |
+| `OnPlaceSecurity` / `OnAddedToSecurity` | `Effect::on_place_security(card)` / `Effect::on_added_to_security(card)` | `place_on_security` / security-removal-to-security disposition after the card reaches the stack; `OnAddedToSecurity` is a printed-text alias sharing the same payload and fan-out path | Track A security placement |
+| `OnDiscardSecurity` | `Effect::on_discard_security(card)` | Effect-driven security-to-trash disposition on the discarded security card itself | BT13-106 Odin's Breath |
+| `OnDigivolutionCardTrashed` | `Effect::on_digivolution_card_trashed(card)` | `Game::fire_digivolution_card_trashed(...)` from return-to-hand/deck source disposition, de-digivolve, Armor Purge, Fragment/source-trash helpers, and explicit source-trash DSL steps (digivolution stack only, not linked cards) | Rocks core |
 
 ### Scoping
 
-All observer fire sites use `TriggerSource::PlayerBattleArea(PlayerId)` — effects with the given timing in a player's battle area fire.
+Most observer fire sites use `TriggerSource::PlayerBattleArea(PlayerId)` —
+effects with the given timing in a player's battle area fire. Phase timings that
+also work from breeding use a separate `TriggerSource::PlayerBreedingArea` pass
+with `BREEDING_TARGET`, keeping the breeding observer path one-shot and distinct
+from battle-area indices. Security-removal
+observers use `TriggerSource::SecurityRemoved`, which carries the affected
+player, observer player, source player, removed security card, and cause. Both
+battle damage and effect-driven security movement use the same payload path.
+The observer player's battle area and breeding slot are distinct fan-out paths;
+the breeding path uses `BREEDING_TARGET` for source-permanent attribution.
+Security-placement observers use `TriggerSource::SecurityPlaced`, scanning the
+affected player's battle area and breeding slot once each while carrying the
+placed card as the event subject. DSL authors can use `when:
+on_place_security` or the alias `when: on_added_to_security` and event
+predicates such as `event_card_trait_has`.
+Effect-driven security-to-trash movement uses
+`TriggerSource::SecurityDiscarded` before the card leaves pending-security
+staging, so the trashed card's own `when: on_discard_security` effects can
+resolve with `event_cause` and `event_card` available. Attack security checks
+do not emit this timing.
+`OnAllyPlayed` uses `TriggerSource::EnteredField` but narrows fan-out to the
+playing player's battle-area observers plus top-level trash observers, so the
+same source/effect slot is not reachable through the global `OnEnterFieldAnyone`
+scan.
+The DSL token `when: on_any_digimon_played` lowers to the same engine timing as
+`when: on_enter_field_anyone`; it exists for printed-text vocabulary, not as a
+separate observer pass.
 
 Per-permanent events (`OnAttack` on the attacker) use `TriggerSource::Permanent(handle)`.
 
@@ -2389,6 +2603,12 @@ filter from the bracketed trait. DSL `grant_keyword` clauses may provide an
 `overclock_cost_filter` predicate; lowering attaches it with
 `EffectBuilder::overclock_with_cost_filter`, and runtime candidate collection
 uses the same predicate path.
+
+If deleting the Overclock cost produces observer selections, the attack is
+paused and resumed after those selections finish. The resumed attack re-finds
+the Overclock source by its stable `CardHandle`, not by the pre-cost
+battle-area index, so lower-slot sacrifices and observer-driven field changes
+do not stale the attacker handle.
 
 ---
 

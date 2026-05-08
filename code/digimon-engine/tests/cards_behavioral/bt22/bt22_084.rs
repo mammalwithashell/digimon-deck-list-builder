@@ -217,7 +217,12 @@ fn bt22_084_has_three_triggered_clauses_and_one_aura() {
     let aura_count = card
         .effects
         .iter()
-        .filter(|c| matches!(c, CompiledClause::Declarative(CompiledDeclarativeClause::Aura { .. })))
+        .filter(|c| {
+            matches!(
+                c,
+                CompiledClause::Declarative(CompiledDeclarativeClause::Aura { .. })
+            )
+        })
         .count();
     assert_eq!(
         aura_count, 1,
@@ -300,7 +305,10 @@ fn bt22_084_clause3_is_aura_clause() {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura { .. }) => Some(c),
         _ => None,
     });
-    assert!(aura.is_some(), "BT22-084 must have a declarative Aura clause");
+    assert!(
+        aura.is_some(),
+        "BT22-084 must have a declarative Aura clause"
+    );
 }
 
 /// Clause 4: on_security triggered clause that lowers to play_from_security.
@@ -438,9 +446,7 @@ fn bt22_084_clause2_on_play_offers_and_plays_agumon_free() {
         .start();
 
     let memory_before_nokia = runner.memory();
-    runner
-        .play(0, 0)
-        .expect("Nokia plays from hand (cost 5)");
+    runner.play(0, 0).expect("Nokia plays from hand (cost 5)");
 
     // After Nokia hits the field, On Play fires; clause 2 should install a
     // selection prompt to play 1 Agumon/Gabumon free.
@@ -503,7 +509,12 @@ fn bt22_084_clause2_on_play_offers_gabumon() {
         "Nokia On Play must install prompt when Gabumon is the eligible candidate"
     );
 
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     runner
         .game
         .resolve_selection(0, action)
@@ -669,7 +680,10 @@ fn bt22_084_clause3_aura_buffs_own_garurumon_named_digimon() {
     runner.game.tick_declarative_effects();
 
     let dp = runner.effective_dp(garu).expect("Garurumon has DP");
-    assert_eq!(dp, 4000, "Garurumon must be 3000 + 1000 = 4000 DP; got {dp}");
+    assert_eq!(
+        dp, 4000,
+        "Garurumon must be 3000 + 1000 = 4000 DP; got {dp}"
+    );
 }
 
 /// Positive: Omnimon-named Digimon (e.g. "Omnimon", "Omnimon X Antibody")
@@ -690,7 +704,10 @@ fn bt22_084_clause3_aura_buffs_own_omnimon_named_digimon() {
     runner.game.tick_declarative_effects();
 
     let dp = runner.effective_dp(omni).expect("Omnimon has DP");
-    assert_eq!(dp, 14000, "Omnimon must be 13000 + 1000 = 14000 DP; got {dp}");
+    assert_eq!(
+        dp, 14000,
+        "Omnimon must be 13000 + 1000 = 14000 DP; got {dp}"
+    );
 }
 
 /// Negative: own Digimon whose name does NOT contain Greymon/Garurumon/
@@ -734,7 +751,9 @@ fn bt22_084_clause3_aura_does_not_buff_opponent_greymon() {
     let opp_greymon = runner.place_on_field(1, "OPP-GREYMON", Some(0));
     runner.game.tick_declarative_effects();
 
-    let dp = runner.effective_dp(opp_greymon).expect("Opp Greymon has DP");
+    let dp = runner
+        .effective_dp(opp_greymon)
+        .expect("Opp Greymon has DP");
     assert_eq!(
         dp, 4000,
         "Opponent's Greymon must NOT receive Nokia's aura (owner: you predicate)"

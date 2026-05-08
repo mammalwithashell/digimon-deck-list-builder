@@ -153,20 +153,14 @@ fn bt5_093_metadata_matches_printed_text() {
 
     assert_eq!(card.cost, Some(4), "BT5-093 prints Cost 4");
     assert!(
-        matches!(
-            card.kind,
-            digimon_dsl::compiled::CompiledCardKind::Tamer
-        ),
+        matches!(card.kind, digimon_dsl::compiled::CompiledCardKind::Tamer),
         "BT5-093 must be a Tamer"
     );
     assert_eq!(
         card.level, None,
         "Tamers carry no printed level (DSL: omitted)"
     );
-    assert_eq!(
-        card.dp, None,
-        "Tamers carry no printed DP (DSL: omitted)"
-    );
+    assert_eq!(card.dp, None, "Tamers carry no printed DP (DSL: omitted)");
     assert!(
         card.color
             .iter()
@@ -314,10 +308,7 @@ fn bt5_093_clause3_on_security_mandatory_with_play_from_security() {
         !security.optional,
         "[Security] play_from_security is mandatory per RULES_CONTEXT.md §16"
     );
-    assert!(
-        !security.once_per_turn,
-        "Security clause has no OPT marker"
-    );
+    assert!(!security.once_per_turn, "Security clause has no OPT marker");
 
     let has_play_from_security = security
         .process
@@ -341,9 +332,10 @@ fn bt5_093_clause1_no_opp_digimon_no_memory_gain() {
     let owen = runner.place_on_field(0, CARD_ID, Some(0));
     let mem_before = runner.memory();
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::StartOfYourTurn, TriggerSource::Permanent(owen));
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourTurn,
+        TriggerSource::Permanent(owen),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -372,9 +364,10 @@ fn bt5_093_clause1_opp_only_lv5_digimon_no_memory_gain() {
     runner.place_on_field(1, "OPP-LV5", Some(0));
     let mem_before = runner.memory();
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::StartOfYourTurn, TriggerSource::Permanent(owen));
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourTurn,
+        TriggerSource::Permanent(owen),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -398,9 +391,10 @@ fn bt5_093_clause1_opp_lv6_digimon_gains_two_memory() {
     runner.place_on_field(1, "OPP-LV6", Some(0));
     let mem_before = runner.memory();
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::StartOfYourTurn, TriggerSource::Permanent(owen));
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourTurn,
+        TriggerSource::Permanent(owen),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -424,9 +418,10 @@ fn bt5_093_clause1_opp_lv7_digimon_gains_two_memory() {
     runner.place_on_field(1, "OPP-LV7", Some(0));
     let mem_before = runner.memory();
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::StartOfYourTurn, TriggerSource::Permanent(owen));
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourTurn,
+        TriggerSource::Permanent(owen),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -479,12 +474,10 @@ fn bt5_093_aura_grants_security_attack_plus_to_own_omnimon() {
 #[test]
 fn bt5_093_aura_does_not_grant_to_non_omnimon_own_digimon() {
     let mut runner = taimatt_runner();
-    runner.game.card_data.push(make_named_digimon(
-        "OWN-PLAIN",
-        "PlainDigimon",
-        6,
-        9000,
-    ));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("OWN-PLAIN", "PlainDigimon", 6, 9000));
 
     let _owen = runner.place_on_field(0, CARD_ID, Some(0));
     let plain = runner.place_on_field(0, "OWN-PLAIN", Some(0));

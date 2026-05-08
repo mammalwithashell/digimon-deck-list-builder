@@ -28,6 +28,17 @@ impl CardEffect for LoseSecurityGainTwo {
     }
 }
 
+struct DiscardSecurityGainThree;
+
+impl CardEffect for DiscardSecurityGainThree {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_discard_security(card)
+            .name("gain 3 on effect-discarded security")
+            .process(|ctx| ctx.gain_memory(3))
+            .build()]
+    }
+}
+
 struct LoseSecurityAddPendingToHand;
 
 impl CardEffect for LoseSecurityAddPendingToHand {
@@ -268,6 +279,54 @@ fn trash_top_security_fires_removed_cards_on_lose_security_once() {
         runner.game.memory, 3,
         "OnLoseSecurity (+2) and OnOpponentSecurityRemoved (+1) should each fire once"
     );
+}
+
+#[test]
+fn trash_top_security_fires_removed_cards_on_discard_security_once() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("OBS", "Observer"))
+        .add_card(make_test_card("SEC", "Security"))
+        .security(1, &["SEC"])
+        .memory(0)
+        .start();
+    runner.register_effect("SEC", Arc::new(DiscardSecurityGainThree));
+    runner.place_on_field(0, "OBS", Some(0));
+
+    let source_card = runner.game.players[0].battle_area[0].top_card().handle();
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        assert!(ctx.trash_top_security(1));
+    }
+
+    assert_eq!(
+        runner.game.memory, -3,
+        "OnDiscardSecurity should fire once for the defender's trashed security card"
+    );
+    assert_eq!(runner.game.players[1].security.len(), 0);
+    assert_eq!(runner.game.players[1].trash.len(), 1);
+}
+
+#[test]
+fn attack_security_check_does_not_fire_on_discard_security() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("ATK", "Attacker"))
+        .add_card(make_test_card("SEC", "Security"))
+        .security(1, &["SEC"])
+        .memory(0)
+        .start();
+    runner.register_effect("SEC", Arc::new(DiscardSecurityGainThree));
+    let attacker = runner.place_on_field(0, "ATK", Some(0));
+
+    let before = runner.game.memory;
+    let _ = runner.attack_player(attacker, 1, true);
+
+    assert_eq!(
+        runner.game.memory, before,
+        "normal attack security checks should not fire OnDiscardSecurity"
+    );
+    assert_eq!(runner.game.players[1].security.len(), 0);
+    assert_eq!(runner.game.players[1].trash.len(), 1);
 }
 
 #[test]

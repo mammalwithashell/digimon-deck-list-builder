@@ -1,6 +1,6 @@
 //! Map `digimon_dsl::compiled::CompiledTiming` → engine `EffectTiming`.
 //! Returns None for DSL-only virtual timings that don't map to a single
-//! engine timing (e.g. `Delayed`, `OnAllyPlayed`) — callers skip emission.
+//! engine timing (e.g. `Delayed`) — callers skip emission.
 
 use digimon_dsl::compiled::CompiledTiming;
 
@@ -19,6 +19,8 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnDeletion => EffectTiming::OnDeletion,
         CompiledTiming::OnAnyDeletion => EffectTiming::OnAnyDeletion,
         CompiledTiming::OnEnterFieldAnyone => EffectTiming::OnEnterFieldAnyone,
+        CompiledTiming::OnAnyDigimonPlayed => EffectTiming::OnEnterFieldAnyone,
+        CompiledTiming::OnAllyPlayed => EffectTiming::OnAllyPlayed,
         CompiledTiming::OnLeaveField => EffectTiming::OnLeaveField,
         CompiledTiming::OnSuspend => EffectTiming::OnSuspend,
         CompiledTiming::OnUnsuspend => EffectTiming::OnUnsuspend,
@@ -28,9 +30,11 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnDnaDigivolve => EffectTiming::OnDnaDigivolve,
         CompiledTiming::OnDigixros => EffectTiming::OnDigiXros,
         CompiledTiming::OnOpponentSecurityRemoved => EffectTiming::OnOpponentSecurityRemoved,
+        CompiledTiming::OnOwnSecurityRemoved => EffectTiming::OnOwnSecurityRemoved,
         CompiledTiming::OnDigivolutionCardTrashed => EffectTiming::OnDigivolutionCardTrashed,
         CompiledTiming::OnSecurityCheck => EffectTiming::OnSecurityCheck,
         CompiledTiming::OnLoseSecurity => EffectTiming::OnLoseSecurity,
+        CompiledTiming::OnDiscardSecurity => EffectTiming::OnDiscardSecurity,
         CompiledTiming::OnSecurity => EffectTiming::SecuritySkill,
         CompiledTiming::StartOfYourTurn => EffectTiming::StartOfYourTurn,
         CompiledTiming::StartOfOpponentsTurn => EffectTiming::StartOfOpponentsTurn,
@@ -47,9 +51,10 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::Counter => EffectTiming::CounterEffect,
         CompiledTiming::BeforePayCost => EffectTiming::BeforePayCost,
         CompiledTiming::OnOptionPlaced => EffectTiming::OnOptionPlaced,
+        CompiledTiming::OnPlaceSecurity => EffectTiming::OnPlaceSecurity,
+        CompiledTiming::OnAddedToSecurity => EffectTiming::OnPlaceSecurity,
         CompiledTiming::Main => EffectTiming::OptionMain,
         // Phase 2a non-targets — skip emission.
-        CompiledTiming::OnAllyPlayed => return None,
         CompiledTiming::Delayed => return None,
     })
 }

@@ -380,10 +380,7 @@ fn st2_13_has_no_extraneous_timings() {
 
     for clause in &card.effects {
         let CompiledClause::Triggered(t) = clause else {
-            panic!(
-                "ST2-13 must have only Triggered clauses; got {:?}",
-                clause
-            );
+            panic!("ST2-13 must have only Triggered clauses; got {:?}", clause);
         };
         for timing in &t.when {
             assert!(
@@ -516,15 +513,12 @@ fn st2_13_main_activation_respects_memory_upper_clamp() {
 // resolving_security_option_can_move_self_to_hand_without_trashing`.
 //
 // Memory semantics: `CompiledStep::GainMemory(n)` lowers to
-// `EffectContext::gain_memory(n)` → `Game::gain_memory(n)` which adds n to
-// the seesaw absolute value. Per Digimon TCG conventions, when a defender
-// "gains memory" the seesaw shifts toward them, but the engine models the
-// raw integer mutation: memory += 2. We assert the absolute mutation; the
-// per-perspective interpretation is consistent across the codebase
-// (compare BT1-090 / EX1-068).
+// `EffectContext::gain_memory(n)`, which gives memory to the resolving
+// effect's controller. From P0's attack-turn perspective, a P1 security
+// effect gaining memory moves the raw gauge negative.
 
 /// Attack P1's security where the only security card is ST2-13 → P1's
-/// on_security clause fires → memory increases by exactly 2.
+/// on_security clause fires → P1 gains exactly 2 memory.
 #[test]
 fn st2_13_security_reveal_gains_2_memory() {
     let mut runner = DebugRunner::builder()
@@ -562,13 +556,12 @@ fn st2_13_security_reveal_gains_2_memory() {
         "ATK must survive the security check (no defender, no attack-cancel)"
     );
 
-    // The memory delta is +2 (defender gain). The engine's gain_memory is
-    // an absolute add; this matches both EX1-068's [Security] semantics and
-    // BT1-090's [Main] arithmetic.
+    // The memory delta is -2 from P0's turn-player perspective because the
+    // security effect's controller is the defender, P1.
     assert_eq!(
         runner.memory() - mem_before,
-        2,
-        "[Security] gain_memory: 2 must add exactly 2 to memory; \
+        -2,
+        "[Security] gain_memory: 2 must give exactly 2 memory to the defender; \
          before={mem_before}, after={}",
         runner.memory()
     );

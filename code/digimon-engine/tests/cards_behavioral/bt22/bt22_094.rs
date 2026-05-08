@@ -267,7 +267,11 @@ fn bt22_094_clause2_cost_reduction_optional_your_turn_amount_2() {
 
     let (scope, active_when, optional, once_per_turn, amount, when_any_ally, pay_cost) = cr;
 
-    assert_eq!(scope, CompiledScope::FaceUp, "cost_reduction is FaceUp scope");
+    assert_eq!(
+        scope,
+        CompiledScope::FaceUp,
+        "cost_reduction is FaceUp scope"
+    );
     assert!(
         optional,
         "cost_reduction must be optional — DCGO isOptional: true; printed 'by returning ...' \
@@ -485,7 +489,10 @@ fn bt22_094_cost_reduction_fires_on_ally_cs_digimon_play() {
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID);
-    assert!(yuugo_present_before, "BT22-094 must be on P0's field before the play");
+    assert!(
+        yuugo_present_before,
+        "BT22-094 must be on P0's field before the play"
+    );
 
     let mem_before = runner.memory();
     let deck_size_before = runner.game.players[0].deck.len();
@@ -549,7 +556,10 @@ fn bt22_094_cost_reduction_fires_on_ally_cs_digimon_play() {
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "CS-DIGI");
-    assert!(ally_on_field, "CS-DIGI must be on field after the reduced-cost play");
+    assert!(
+        ally_on_field,
+        "CS-DIGI must be on field after the reduced-cost play"
+    );
 }
 
 /// Positive: also fires for an ally CS Tamer play (kind: tamer + trait: CS).

@@ -153,7 +153,9 @@ fn ad1_001_alt_digivolve_path_omnimon_or_adventure_cost_2() {
     let alt = card
         .alt_paths
         .iter()
-        .find(|p| p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(2)))
+        .find(|p| {
+            p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(2))
+        })
         .expect("AD1-001 must declare a Digivolve alt_path with cost 2");
 
     let from = alt
@@ -361,12 +363,10 @@ fn ad1_001_on_play_no_eligible_trash_card_no_prompt() {
 fn ad1_001_on_play_with_eligible_trash_installs_optional_prompt() {
     let mut runner = greymon_runner();
     // Add an eligible card to the registry and push to player 0's trash.
-    runner.game.card_data.push(make_named_digimon(
-        "TEST-GREYMON",
-        "Greymon",
-        4,
-        4000,
-    ));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("TEST-GREYMON", "Greymon", 4, 4000));
     push_to_hand(&mut runner, 0, "AD1-001");
     push_to_trash(&mut runner, 0, "TEST-GREYMON");
 
@@ -394,12 +394,10 @@ fn ad1_001_on_play_with_eligible_trash_installs_optional_prompt() {
 #[test]
 fn ad1_001_all_turns_observer_no_match_no_prompt() {
     let mut runner = greymon_runner();
-    runner.game.card_data.push(make_named_digimon(
-        "GREY-IN-HAND",
-        "Greymon",
-        4,
-        4000,
-    ));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("GREY-IN-HAND", "Greymon", 4, 4000));
     push_to_hand(&mut runner, 0, "GREY-IN-HAND");
     // Greymon (AD1-001) on field as the observer.
     let _ad1 = runner.place_on_field(0, "AD1-001", Some(0));
@@ -434,18 +432,14 @@ fn ad1_001_all_turns_observer_no_match_no_prompt() {
 #[test]
 fn ad1_001_all_turns_observer_garurumon_play_installs_prompt() {
     let mut runner = greymon_runner();
-    runner.game.card_data.push(make_named_digimon(
-        "GREY-IN-HAND",
-        "Greymon",
-        4,
-        4000,
-    ));
-    runner.game.card_data.push(make_named_digimon(
-        "GARU-IN-HAND",
-        "Garurumon",
-        4,
-        4000,
-    ));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("GREY-IN-HAND", "Greymon", 4, 4000));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("GARU-IN-HAND", "Garurumon", 4, 4000));
     push_to_hand(&mut runner, 0, "GREY-IN-HAND");
     push_to_hand(&mut runner, 0, "GARU-IN-HAND");
     // AD1-001 on field as the observer (placed on prior turn so no fresh-play
@@ -476,12 +470,10 @@ fn ad1_001_all_turns_observer_garurumon_play_installs_prompt() {
 #[test]
 fn ad1_001_all_turns_observer_opponent_play_does_not_fire() {
     let mut runner = greymon_runner();
-    runner.game.card_data.push(make_named_digimon(
-        "GREY-IN-HAND",
-        "Greymon",
-        4,
-        4000,
-    ));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("GREY-IN-HAND", "Greymon", 4, 4000));
     let mut opp_garu = make_named_digimon("OPP-GARU", "Garurumon", 4, 4000);
     opp_garu.play_cost = 0;
     runner.game.card_data.push(opp_garu);
@@ -507,7 +499,9 @@ fn ad1_001_all_turns_observer_opponent_play_does_not_fire() {
         .iter()
         .position(|c| c.card_id(&runner.game.card_data) == "OPP-GARU")
         .expect("OPP-GARU in hand");
-    runner.play(1, hand_idx).expect("opponent's Garurumon plays");
+    runner
+        .play(1, hand_idx)
+        .expect("opponent's Garurumon plays");
 
     assert!(
         runner.pending_selection().is_none(),
@@ -522,12 +516,10 @@ fn ad1_001_all_turns_observer_opponent_play_does_not_fire() {
 #[test]
 fn ad1_001_on_play_accept_returns_greymon_from_trash_to_hand() {
     let mut runner = greymon_runner();
-    runner.game.card_data.push(make_named_digimon(
-        "TEST-GREYMON",
-        "Greymon",
-        4,
-        4000,
-    ));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("TEST-GREYMON", "Greymon", 4, 4000));
     push_to_hand(&mut runner, 0, "AD1-001");
     push_to_trash(&mut runner, 0, "TEST-GREYMON");
 
@@ -590,12 +582,10 @@ fn ad1_001_on_play_accept_returns_greymon_from_trash_to_hand() {
 #[test]
 fn ad1_001_on_play_decline_leaves_trash_unchanged() {
     let mut runner = greymon_runner();
-    runner.game.card_data.push(make_named_digimon(
-        "TEST-GREYMON",
-        "Greymon",
-        4,
-        4000,
-    ));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("TEST-GREYMON", "Greymon", 4, 4000));
     push_to_hand(&mut runner, 0, "AD1-001");
     push_to_trash(&mut runner, 0, "TEST-GREYMON");
 
@@ -623,7 +613,9 @@ fn ad1_001_on_play_decline_leaves_trash_unchanged() {
     runner
         .execute_action(player, digimon_engine::action::space::PASS)
         .expect("PASS to decline");
-    runner.auto_resolve().expect("nothing to resolve after pass");
+    runner
+        .auto_resolve()
+        .expect("nothing to resolve after pass");
 
     assert_eq!(
         runner.trash_size(0),
@@ -679,12 +671,10 @@ fn ad1_001_all_turns_observer_accept_free_digivolves_into_greymon() {
         card_color: 0, // Red — not consulted under ignore_color
     }];
     runner.game.card_data.push(grey_lv5);
-    runner.game.card_data.push(make_named_digimon(
-        "GARU-IN-HAND",
-        "Garurumon",
-        4,
-        4000,
-    ));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("GARU-IN-HAND", "Garurumon", 4, 4000));
     push_to_hand(&mut runner, 0, "GREY-LV5");
     push_to_hand(&mut runner, 0, "GARU-IN-HAND");
     let ad1 = runner.place_on_field(0, "AD1-001", Some(0));
@@ -747,18 +737,14 @@ fn ad1_001_all_turns_observer_accept_free_digivolves_into_greymon() {
 #[test]
 fn ad1_001_all_turns_observer_decline_leaves_perm_untouched() {
     let mut runner = greymon_runner();
-    runner.game.card_data.push(make_named_digimon(
-        "GREY-LV5",
-        "MetalGreymon",
-        5,
-        7000,
-    ));
-    runner.game.card_data.push(make_named_digimon(
-        "GARU-IN-HAND",
-        "Garurumon",
-        4,
-        4000,
-    ));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("GREY-LV5", "MetalGreymon", 5, 7000));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("GARU-IN-HAND", "Garurumon", 4, 4000));
     push_to_hand(&mut runner, 0, "GREY-LV5");
     push_to_hand(&mut runner, 0, "GARU-IN-HAND");
     let ad1 = runner.place_on_field(0, "AD1-001", Some(0));
@@ -798,12 +784,10 @@ fn ad1_001_all_turns_observer_decline_leaves_perm_untouched() {
 #[test]
 fn ad1_001_all_turns_observer_fires_on_garurumon_digivolve() {
     let mut runner = greymon_runner();
-    runner.game.card_data.push(make_named_digimon(
-        "GREY-LV5",
-        "MetalGreymon",
-        5,
-        7000,
-    ));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("GREY-LV5", "MetalGreymon", 5, 7000));
     // Garurumon hand card with a Lv3 evo-cost so it can digivolve onto LV3-PLAT.
     let mut garu = make_named_digimon("GARU-IN-HAND", "Garurumon", 4, 4000);
     garu.evo_costs = vec![digimon_engine::card_data::EvoCost {
@@ -828,7 +812,12 @@ fn ad1_001_all_turns_observer_fires_on_garurumon_digivolve() {
     //
     // (We avoid `Game::digivolve_from_hand` because it pays memory and runs
     // affordability checks that aren't relevant to this observer test.)
-    let garu_card = runner.game.player_mut(0).hand.pop().expect("Garurumon hand card");
+    let garu_card = runner
+        .game
+        .player_mut(0)
+        .hand
+        .pop()
+        .expect("Garurumon hand card");
     let garu_handle = garu_card.handle();
     let turn = runner.game.turn_count;
     {
@@ -840,10 +829,9 @@ fn ad1_001_all_turns_observer_fires_on_garurumon_digivolve() {
             .expect("Lv3 platform on field");
         perm.digivolve(garu_card, turn);
     }
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenDigivolving,
-        TriggerSource::Permanent(lv3),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(lv3));
     runner.game.drain_effect_queue();
     runner.game.enqueue_triggered(
         EffectTiming::OnDigivolve,
@@ -851,6 +839,8 @@ fn ad1_001_all_turns_observer_fires_on_garurumon_digivolve() {
             player: 0,
             permanent: lv3,
             card: garu_handle,
+            effect_initiated: false,
+            dna_origin: false,
         },
     );
     runner.game.drain_effect_queue();

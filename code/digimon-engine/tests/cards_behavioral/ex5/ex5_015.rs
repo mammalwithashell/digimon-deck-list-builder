@@ -136,10 +136,7 @@ fn pick_revealed_by_id(runner: &mut DebugRunner, p: PlayerId, id: &str, label: &
 
 /// Convert a zone of `CardSource`s into a Vec of card_id strings, in order.
 fn zone_ids(cards: &[CardSource], data: &[CardData]) -> Vec<String> {
-    cards
-        .iter()
-        .map(|c| c.card_id(data).to_string())
-        .collect()
+    cards.iter().map(|c| c.card_id(data).to_string()).collect()
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -167,9 +164,7 @@ fn ex5_015_compiles_with_printed_metadata() {
     assert_eq!(card.cost, Some(3));
     assert_eq!(card.dp, Some(2000));
     assert!(
-        card.traits
-            .iter()
-            .any(|t| t.eq_ignore_ascii_case("Beast")),
+        card.traits.iter().any(|t| t.eq_ignore_ascii_case("Beast")),
         "EX5-015 must carry the Beast trait; got traits={:?}",
         card.traits
     );
@@ -194,7 +189,10 @@ fn ex5_015_has_standard_lv2_blue_digivolve_alt_path_at_cost_one() {
         standard.is_some(),
         "EX5-015 must declare its standard Lv.2 Blue / cost 1 digivolve path; \
          alt_paths={:?}",
-        card.alt_paths.iter().map(|p| (p.kind, p.cost.clone())).collect::<Vec<_>>()
+        card.alt_paths
+            .iter()
+            .map(|p| (p.kind, p.cost.clone()))
+            .collect::<Vec<_>>()
     );
 }
 
@@ -321,11 +319,7 @@ fn ex5_015_on_play_picks_two_eligible_and_bottoms_remainder() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX5-015 YAML loads")
-        .add_card(make_named_digimon(
-            "GARU",
-            "WereGarurumon",
-            &["Beast Man"],
-        ))
+        .add_card(make_named_digimon("GARU", "WereGarurumon", &["Beast Man"]))
         .add_card(make_named_digimon(
             "XANT",
             "MetalGarurumon (X Antibody)",
@@ -373,8 +367,7 @@ fn ex5_015_on_play_picks_two_eligible_and_bottoms_remainder() {
         "XANT must be added to hand; hand={hand_ids:?}"
     );
     assert!(
-        !hand_ids.contains(&"FILLER1".to_string())
-            && !hand_ids.contains(&"FILLER2".to_string()),
+        !hand_ids.contains(&"FILLER1".to_string()) && !hand_ids.contains(&"FILLER2".to_string()),
         "FILLERs must NOT enter hand; hand={hand_ids:?}"
     );
 }
@@ -438,11 +431,7 @@ fn ex5_015_on_play_trash_branch_trashes_chosen_hand_card() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX5-015 YAML loads")
-        .add_card(make_named_digimon(
-            "GARU",
-            "WereGarurumon",
-            &["Beast Man"],
-        ))
+        .add_card(make_named_digimon("GARU", "WereGarurumon", &["Beast Man"]))
         .add_card(make_named_digimon(
             "XANT",
             "MetalGarurumon (X Antibody)",

@@ -75,5 +75,7 @@ fn bt20_091_security_plays_self() {
 #[test]
 #[ignore = "pending: RK-G004 — would-leave Royal Knight observer into optional Omekamon hand play"]
 fn bt20_091_opponent_turn_may_play_omekamon_when_royal_knight_would_leave() {
-    panic!("requires would-leave observer that plays a selected hand card without cancelling leave");
+    panic!(
+        "requires would-leave observer that plays a selected hand card without cancelling leave"
+    );
 }

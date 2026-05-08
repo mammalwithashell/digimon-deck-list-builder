@@ -507,9 +507,7 @@ fn ex4_038_greymon_bucket_rejects_tamer_named_greymon() {
                 );
             }
             if allows_gabu {
-                runner
-                    .execute_action(0, gabu)
-                    .expect("pick Gabumon");
+                runner.execute_action(0, gabu).expect("pick Gabumon");
                 continue;
             }
         }
@@ -832,7 +830,10 @@ fn ex4_038_inherited_once_per_turn_locks_out_second_trigger() {
 
 #[allow(dead_code)]
 fn _unused_silencer() {
-    let _: PermanentHandle = PermanentHandle { player: 0, index: 0 };
+    let _: PermanentHandle = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     let _ = make_filler("X");
     let _ = make_named_digimon("X", "X");
     let _ = make_named_tamer("X", "X");

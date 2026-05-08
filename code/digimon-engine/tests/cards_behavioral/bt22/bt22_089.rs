@@ -499,9 +499,7 @@ fn bt22_089_clause1_no_eligible_tamer_in_hand_still_pays_cost() {
             .copied()
             .find(|&id| id != digimon_engine::action::space::PASS)
             .unwrap_or(view.valid_action_ids[0]);
-        runner
-            .execute_action(0, accept)
-            .expect("accept install");
+        runner.execute_action(0, accept).expect("accept install");
     }
     let _ = runner.auto_resolve();
 
@@ -578,9 +576,7 @@ fn bt22_089_clause1_blocks_cs_tamer_below_cost_4() {
             .copied()
             .find(|&id| id != digimon_engine::action::space::PASS)
             .unwrap_or(view.valid_action_ids[0]);
-        runner
-            .execute_action(0, accept)
-            .expect("accept install");
+        runner.execute_action(0, accept).expect("accept install");
     }
     let _ = runner.auto_resolve();
 
@@ -616,9 +612,7 @@ fn bt22_089_clause2_on_play_trash_holy_beast_and_draws_two() {
         .add_card(make_trait_digimon("HB-DIGI", "Saberdramon", "Holy Beast"))
         .deck(
             0,
-            &[
-                "FILLER", "FILLER", "FILLER", "FILLER", "FILLER", "FILLER",
-            ],
+            &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER", "FILLER"],
         )
         .deck(
             1,
@@ -699,8 +693,7 @@ fn bt22_089_clause2_on_play_trash_holy_beast_and_draws_two() {
     // field), −1 Holy-Beast (trashed as cost), +2 drawn = hand_before net 0.
     let hand_after = runner.game.players[0].hand.len();
     assert_eq!(
-        hand_after,
-        hand_before,
+        hand_after, hand_before,
         "hand must net 0 after Clause 2 (−1 Mirei played, −1 cost trashed, +2 drawn)"
     );
 

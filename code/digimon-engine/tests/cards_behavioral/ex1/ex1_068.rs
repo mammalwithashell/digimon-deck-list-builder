@@ -113,8 +113,9 @@ fn ex1_068_is_option_blue_cost_1() {
     );
     assert_eq!(card.cost, Some(1), "EX1-068 prints Cost 1");
     assert!(
-        card.color.iter().any(|c| matches!(c,
-            digimon_dsl::compiled::CompiledColor::Blue)),
+        card.color
+            .iter()
+            .any(|c| matches!(c, digimon_dsl::compiled::CompiledColor::Blue)),
         "EX1-068 must be a Blue Option (printed card_colors=[1]); got {:?}",
         card.color
     );
