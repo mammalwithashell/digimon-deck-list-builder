@@ -89,9 +89,7 @@ fn fire_when_digivolving(runner: &mut DebugRunner, fm: digimon_engine::permanent
 #[test]
 fn bt12_031_compiles_to_two_clauses() {
     let runner = fighter_mode();
-    let compiled = runner
-        .compiled_card("BT12-031")
-        .expect("BT12-031 compiled");
+    let compiled = runner.compiled_card("BT12-031").expect("BT12-031 compiled");
 
     assert_eq!(
         compiled.effects.len(),
@@ -103,9 +101,7 @@ fn bt12_031_compiles_to_two_clauses() {
 #[test]
 fn bt12_031_clause_0_is_when_digivolving() {
     let runner = fighter_mode();
-    let compiled = runner
-        .compiled_card("BT12-031")
-        .expect("BT12-031 compiled");
+    let compiled = runner.compiled_card("BT12-031").expect("BT12-031 compiled");
 
     let triggered: Vec<_> = compiled
         .effects
@@ -140,9 +136,7 @@ fn bt12_031_clause_0_is_when_digivolving() {
 #[test]
 fn bt12_031_clause_1a_is_declarative_aura() {
     let runner = fighter_mode();
-    let compiled = runner
-        .compiled_card("BT12-031")
-        .expect("BT12-031 compiled");
+    let compiled = runner.compiled_card("BT12-031").expect("BT12-031 compiled");
 
     let declaratives: Vec<_> = compiled
         .effects
@@ -256,7 +250,9 @@ fn bt12_031_when_digivolving_installs_return_selection_after_suspend() {
 
     // After for_each suspend runs, a selection for returning 1 suspended Digimon
     // to hand must be pending.
-    let kind = runner.pending_kind().expect("Return selection must be pending");
+    let kind = runner
+        .pending_kind()
+        .expect("Return selection must be pending");
     assert_eq!(
         kind,
         SelectionKind::OppField,
@@ -281,7 +277,9 @@ fn bt12_031_when_digivolving_returned_digimon_moves_to_opponents_hand() {
     let view = runner
         .pending_selection_view()
         .expect("Selection must be pending");
-    runner.execute_action(0, view.valid_action_ids[0]).expect("select target");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("select target");
     runner.auto_resolve().ok();
 
     assert_eq!(

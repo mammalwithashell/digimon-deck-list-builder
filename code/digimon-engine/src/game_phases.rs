@@ -7,6 +7,7 @@
 //! `StartOfYourMainPhase`, and `OnLoseSecurity` fan-out all live at phase
 //! boundaries.
 
+use crate::card_source::CardHandle;
 use crate::effect_context::EffectReadContext;
 use crate::enums::{
     CardKind, DelayTrigger, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId, SkipDraw,
@@ -163,6 +164,10 @@ impl Game {
         self.enqueue_triggered(
             EffectTiming::StartOfYourMainPhase,
             crate::selection::TriggerSource::PlayerBattleArea(tp),
+        );
+        self.enqueue_triggered(
+            EffectTiming::StartOfYourMainPhase,
+            crate::selection::TriggerSource::PlayerBreedingArea(tp),
         );
         self.drain_effect_queue();
 
@@ -573,40 +578,62 @@ impl Game {
                     index: sacrifice_index,
                 };
 
-                // Delete the sacrifice (firing OnDeletion triggers).
-                game.delete_permanent_with_effects(sacrifice_handle);
+                // Delete the sacrifice (firing OnDeletion triggers). Replacement
+                // windows still see this as a cost; observer payloads see the
+                // keyword-specific Overclock cause.
+                let previous_cause = game.current_deletion_event_cause_override;
+                game.current_deletion_event_cause_override =
+                    Some(crate::trigger_context::EventCause::Overclock);
+                game.delete_permanent_with_cause(
+                    sacrifice_handle,
+                    crate::replacement::ReplacementCause::Cost,
+                );
+                game.current_deletion_event_cause_override = previous_cause;
 
-                // OnDeletion may have removed the Overclock Digimon, shifted
-                // indices, or killed the game. Re-find the captured top card
-                // before attacking so lower-slot costs don't stale the handle.
-                let Some(current_overclock_handle) =
-                    game.players.get(player as usize).and_then(|p| {
-                        p.battle_area.iter().enumerate().find_map(|(i, perm)| {
-                            (perm.top_card().card_index == source_card.0).then_some(
-                                PermanentHandle {
-                                    player,
-                                    index: i as u8,
-                                },
-                            )
-                        })
-                    })
-                else {
-                    return;
-                };
-                if game.game_over {
+                if game.pending_selection.is_some() {
+                    game.pending_overclock_attack = Some((player, source_card, opponent));
                     return;
                 }
 
-                // Fire the attack on the opponent player without suspending.
-                game.begin_attack_overclock(
-                    current_overclock_handle,
-                    AttackTarget::Player(opponent),
-                );
+                game.resume_overclock_attack(player, source_card, opponent);
             }),
             on_decline: None,
         });
 
         Ok(())
+    }
+
+    pub(crate) fn resume_pending_overclock_attack(&mut self) {
+        if self.pending_selection.is_some() {
+            return;
+        }
+        let Some((player, source_card, opponent)) = self.pending_overclock_attack.take() else {
+            return;
+        };
+        self.resume_overclock_attack(player, source_card, opponent);
+    }
+
+    fn resume_overclock_attack(
+        &mut self,
+        player: PlayerId,
+        source_card: CardHandle,
+        opponent: PlayerId,
+    ) {
+        let Some(current_overclock_handle) = self.players.get(player as usize).and_then(|p| {
+            p.battle_area.iter().enumerate().find_map(|(i, perm)| {
+                (perm.top_card().card_index == source_card.0).then_some(PermanentHandle {
+                    player,
+                    index: i as u8,
+                })
+            })
+        }) else {
+            return;
+        };
+        if self.game_over {
+            return;
+        }
+
+        self.begin_attack_overclock(current_overclock_handle, AttackTarget::Player(opponent));
     }
 
     /// Pass action: give the next player 3 memory, then end turn.

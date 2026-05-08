@@ -39,7 +39,11 @@ fn bt20_060_has_printed_metadata_ace_overflow_and_routes() {
     assert_eq!(card.dp, Some(16000));
     assert_eq!(
         card.color,
-        vec![CompiledColor::Black, CompiledColor::Purple, CompiledColor::Red]
+        vec![
+            CompiledColor::Black,
+            CompiledColor::Purple,
+            CompiledColor::Red
+        ]
     );
     assert!(card.traits.iter().any(|name| name == "X Antibody"));
     assert!(card.traits.iter().any(|name| name == "Royal Knight"));
@@ -50,10 +54,9 @@ fn bt20_060_has_printed_metadata_ace_overflow_and_routes() {
     assert!(card.alt_paths.iter().any(|path| {
         path.kind == CompiledAltPathKind::Digivolve
             && path.cost == Some(CompiledCost::Literal(6))
-            && path
-                .from
-                .as_ref()
-                .is_some_and(|from| from.level_eq == Some(6) && from.color_is == Some(CompiledColor::Black))
+            && path.from.as_ref().is_some_and(|from| {
+                from.level_eq == Some(6) && from.color_is == Some(CompiledColor::Black)
+            })
     }));
     assert!(card.alt_paths.iter().any(|path| {
         path.kind == CompiledAltPathKind::DnaDigivolve

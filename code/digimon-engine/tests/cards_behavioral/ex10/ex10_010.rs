@@ -588,7 +588,11 @@ fn ex10_010_dp_aura_applies_when_opp_has_13000_dp_digimon() {
     let bwg = runner.place_on_field(0, "EX10-010", None);
     let _opp = runner.place_on_field(1, "OPP-BIG", None);
     let contrib = runner.game.source_dp_contribution(bwg, 0);
-    assert_eq!(contrib, 3000, "expected +3000 with >=13000 DP opp; got {}", contrib);
+    assert_eq!(
+        contrib, 3000,
+        "expected +3000 with >=13000 DP opp; got {}",
+        contrib
+    );
 }
 
 #[test]
@@ -627,7 +631,13 @@ fn ex10_010_on_play_filter_excludes_cost_above_7_target() {
     let _ = runner.place_on_field(1, "OPP-CHEAP", None);
     let _ = runner.place_on_field(1, "OPP-BIG", None);
     let _ = runner.play(0, 0);
-    let n = runner.game.pending_selection.as_ref().expect("prompt").valid_action_ids.len();
+    let n = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("prompt")
+        .valid_action_ids
+        .len();
     assert_eq!(n, 1, "only cost-3 should be valid; got {}", n);
 }
 
@@ -645,8 +655,13 @@ fn ex10_010_cannot_be_affected_installed_when_opp_has_13000_dp_digimon() {
     let bwg = runner.place_on_field(0, "EX10-010", None);
     let _opp = runner.place_on_field(1, "OPP-BIG", None);
     runner.game.tick_declarative_effects();
-    assert!(runner.game.modifiers.has(bwg, ModifierType::CannotBeAffected),
-        "expected CannotBeAffected installed");
+    assert!(
+        runner
+            .game
+            .modifiers
+            .has(bwg, ModifierType::CannotBeAffected),
+        "expected CannotBeAffected installed"
+    );
 }
 
 #[test]
@@ -663,6 +678,11 @@ fn ex10_010_cannot_be_affected_not_installed_when_opp_lacks_13000_dp_digimon() {
     let bwg = runner.place_on_field(0, "EX10-010", None);
     let _opp = runner.place_on_field(1, "OPP-SMALL", None);
     runner.game.tick_declarative_effects();
-    assert!(!runner.game.modifiers.has(bwg, ModifierType::CannotBeAffected),
-        "expected CannotBeAffected NOT installed");
+    assert!(
+        !runner
+            .game
+            .modifiers
+            .has(bwg, ModifierType::CannotBeAffected),
+        "expected CannotBeAffected NOT installed"
+    );
 }

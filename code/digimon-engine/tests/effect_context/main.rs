@@ -18,6 +18,7 @@ mod play_from_hand_free;
 mod play_from_materials;
 mod play_from_security;
 mod play_from_trash;
+mod provenance_tokens;
 mod schedule_delayed;
 mod security_stack_operations;
 mod source_stack_operations;

@@ -17,9 +17,43 @@ effects:
     process:
       - play_from_security: {}
 
-  # [All Turns] When any of your Tokens or Puppet Digimon are deleted, by
-  # suspending this Tamer, Draw 1. If deleted by Overclock, you may play 1
-  # level 4 or lower Puppet Digimon from hand without paying the cost.
-  # Omitted rather than approximated: this needs deleted-object event context,
-  # Overclock cause context, suspend-this-Tamer cost payment, draw, and the
-  # optional play branch surfaced through action/pending-selection contracts.
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    summary: "[All Turns] When your Token/Puppet is deleted, suspend self -> Draw 1; if by Overclock, may play a level 4 Puppet"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_kind: token
+            - all_of:
+                - event_target_kind: digimon
+                - event_target_trait_has: Puppet
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "EX11-060"
+            is_unsuspended: true
+    process:
+      - select_effect_choice:
+          labels: ["Suspend this Tamer", "Decline"]
+          bind_as: arisa_choice
+          prompt: "Suspend Arisa Kinosaki to Draw 1?"
+      - if:
+          condition: { equals: [arisa_choice, 0] }
+          then:
+            - suspend: { target: source }
+            - draw: { of: you, count: 1 }
+            - if:
+                condition: { event_cause: overclock }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: puppet
+                      optional: true
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - level_lte: 4
+                          - trait_has: Puppet
+                      prompt: "Play 1 level 4 or lower Puppet Digimon from hand"
+                  - play_from_hand_free: { of: you, hand_index: puppet }

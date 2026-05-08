@@ -296,11 +296,7 @@ fn ex4_003_traits_include_lesser() {
         .compiled_card("EX4-003")
         .expect("EX4-003 compiled card present");
 
-    let traits: Vec<String> = compiled
-        .traits
-        .iter()
-        .map(|t| t.to_lowercase())
-        .collect();
+    let traits: Vec<String> = compiled.traits.iter().map(|t| t.to_lowercase()).collect();
 
     assert!(
         traits.iter().any(|t| t == "lesser"),

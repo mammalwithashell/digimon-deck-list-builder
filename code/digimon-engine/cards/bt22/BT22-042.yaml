@@ -24,21 +24,72 @@ effects:
             - kind: digimon
             - trait_has: Puppet
 
+  - when: when_digivolving
+    summary: "You may play 1 level 4 or lower Puppet Digimon from hand; then -3000 DP per own Digimon"
+    process:
+      - if:
+          condition:
+            count_gte:
+              filter:
+                of: you
+                zone: [hand]
+                all_of:
+                  - kind: digimon
+                  - level_lte: 4
+                  - trait_has: Puppet
+              n: 1
+          then:
+            - select_effect_choice:
+                labels: ["Play Puppet Digimon", "Decline"]
+                bind_as: puppet_choice
+                prompt: "Play 1 level 4 or lower [Puppet] Digimon from hand?"
+            - if:
+                condition: { equals: [puppet_choice, 0] }
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: puppet
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - level_lte: 4
+                          - trait_has: Puppet
+                      prompt: "Play 1 level 4 or lower [Puppet] Digimon from hand"
+                  - play_from_hand_free: { of: you, hand_index: puppet }
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Give -3000 DP per own Digimon"
+      - add_dp_modifier:
+          target: dp_target
+          value:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  of: you
+                  zone: battle_area
+                  filter: { kind: digimon }
+              delta: -3000
+          expiry: end_of_opponents_turn
+
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "When any of your other Digimon are deleted, you may activate this Digimon's When Digivolving effect"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: token
+        - event_permanent_is_source: false
+    process:
+      - refire_effect:
+          source: source
+          timing: when_digivolving
+          optional: true
+
   # Omitted until the DSL can gate an alternate digivolve route with
   # "while you have [Arisa Kinosaki]" instead of exposing a permanently legal
   # Chaperomon route.
-  #
-  # Omitted until optional sub-selections can continue into mandatory tail
-  # steps on decline for this When Digivolving shape. This card's text is not
-  # one optional effect: "You may play ..." is optional, but the following
-  # "Then" DP reduction still resolves and must count only your Digimon via a
-  # filtered card_count_in_zone formula.
-  #
-  # Omitted until OnAnyDeletion carries deleted-permanent event context for
-  # "your other Digimon"; once that substrate is available, use:
-  #   when: on_any_deletion
-  #   once_per_turn: true
-  #   optional: true
-  #   condition: { ... your other Digimon ... }
-  #   process:
-  #     - refire_effect: { source: source, timing: when_digivolving, optional: true }

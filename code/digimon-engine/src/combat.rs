@@ -1944,20 +1944,43 @@ impl Game {
                     // resume through `DisposeFinalize` (§2.5j residual).
                     let defender = state.defender;
                     let attacker_opt = state.attacker;
+                    let revealed_card = state.revealed_card;
                     if let Some(pending) = self.pending_security.take() {
                         if !pending.played {
                             self.player_mut(defender).trash.push(pending.card);
                         }
                     }
 
-                    // OnOpponentSecurityRemoved: fires in the attacker's
-                    // battle area after a security card leaves the defender's
-                    // stack (trashed or played from security). Medusamon core
-                    // archetype observer.
+                    // Security-removed observers fire after a security card
+                    // leaves the defender's stack (trashed or played from
+                    // security). Own-side observers scan the defender's
+                    // battle area; opponent-side observers scan the attacker's.
                     if let Some(atk) = attacker_opt {
                         self.enqueue_triggered(
+                            crate::enums::EffectTiming::OnOwnSecurityRemoved,
+                            crate::selection::TriggerSource::SecurityRemoved {
+                                affected_player: defender,
+                                observer_player: defender,
+                                source_player: atk.player,
+                                card: revealed_card,
+                                cause: crate::trigger_context::EventCause::SecurityRemoval,
+                            },
+                        );
+                        self.drain_effect_queue();
+                        if self.pending_selection.is_some() {
+                            self.set_security_phase(SecurityPhase::DisposeFinalize);
+                            return None;
+                        }
+
+                        self.enqueue_triggered(
                             crate::enums::EffectTiming::OnOpponentSecurityRemoved,
-                            crate::selection::TriggerSource::PlayerBattleArea(atk.player),
+                            crate::selection::TriggerSource::SecurityRemoved {
+                                affected_player: defender,
+                                observer_player: atk.player,
+                                source_player: atk.player,
+                                card: revealed_card,
+                                cause: crate::trigger_context::EventCause::SecurityRemoval,
+                            },
                         );
                         self.drain_effect_queue();
                         if self.pending_selection.is_some() {
@@ -2576,11 +2599,29 @@ impl Game {
         // Permanent may already have been removed by an OnDeletion effect
         // (self-sacrifice patterns). Check before deleting. Keep the deleted
         // top card as event context for the subsequent OnAnyDeletion broadcast.
-        let deleted_top_card = self
+        let deleted_snapshot = self
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)
-            .map(|permanent| permanent.top_card().handle());
+            .map(|permanent| {
+                let top = permanent.top_card();
+                crate::trigger_context::DeletedObjectSnapshot {
+                    former_controller: handle.player,
+                    top_card: top.handle(),
+                    card_kind: top.card_kind(&self.card_data),
+                    traits: top.traits(&self.card_data).to_vec(),
+                    level: top.level(&self.card_data),
+                    dp: self.effective_dp(handle),
+                    cause: self
+                        .current_deletion_event_cause_override
+                        .or_else(|| {
+                            self.current_deletion_cause
+                                .map(crate::trigger_context::EventCause::from)
+                        })
+                        .unwrap_or(crate::trigger_context::EventCause::Rule),
+                }
+            });
+        let deleted_top_card = deleted_snapshot.as_ref().map(|snapshot| snapshot.top_card);
         if self
             .player(handle.player)
             .battle_area
@@ -2649,6 +2690,7 @@ impl Game {
         // battle_area at this point, so scan live listeners while carrying the
         // deleted permanent/card as event context.
         if let Some(card) = deleted_top_card {
+            let queue_start = self.effect_queue.len();
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnAnyDeletion,
                 crate::selection::TriggerSource::EventObserved {
@@ -2657,6 +2699,20 @@ impl Game {
                     card,
                 },
             );
+            if let Some(snapshot) = deleted_snapshot {
+                for queued in self.effect_queue.iter_mut().skip(queue_start) {
+                    if queued.timing != crate::enums::EffectTiming::OnAnyDeletion {
+                        continue;
+                    }
+                    if let Some(trigger) = queued.trigger_context.as_mut() {
+                        trigger.deleted_object = Some(snapshot.clone());
+                        trigger.cause = Some(snapshot.cause);
+                        trigger.affected_player = Some(snapshot.former_controller);
+                        trigger.subject =
+                            Some(crate::trigger_context::EventSubject::Permanent(handle));
+                    }
+                }
+            }
         } else {
             for pid in 0..self.players.len() {
                 self.enqueue_triggered(

@@ -48,8 +48,8 @@
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledTiming,
 };
-use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::ModifierType;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardKind, CostDelta, ModifierType, PlaySource};
 use digimon_engine::selection::SelectionKind;
 
 // ─── Fixture helpers ─────────────────────────────────────────────────────────
@@ -58,6 +58,20 @@ fn dragon_mode_builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
     DebugRunner::builder()
         .dsl_card("BT16-028")
         .expect("BT16-028 YAML must load")
+}
+
+fn dragon_mode_and_fighter_builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
+    dragon_mode_builder()
+        .dsl_card("BT16-027")
+        .expect("BT16-027 YAML must load")
+}
+
+fn tamer_card(id: &str, name: &str) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, name);
+    card.card_kind = CardKind::Tamer;
+    card.level = None;
+    card.dp = None;
+    card
 }
 
 /// Standard fixture: Dragon Mode in hand, opponent has a Digimon and a Tamer on field.
@@ -75,9 +89,7 @@ fn dragon_mode_with_opp_field() -> DebugRunner {
 #[test]
 fn bt16_028_metadata_name_level_cost_dp_color_trait() {
     let runner = dragon_mode_builder().start();
-    let compiled = runner
-        .compiled_card("BT16-028")
-        .expect("BT16-028 compiles");
+    let compiled = runner.compiled_card("BT16-028").expect("BT16-028 compiles");
 
     assert_eq!(compiled.name, "Imperialdramon: Dragon Mode");
     assert_eq!(compiled.level, Some(6));
@@ -104,16 +116,14 @@ fn bt16_028_metadata_name_level_cost_dp_color_trait() {
 #[test]
 fn bt16_028_has_standard_lv5_blue_digivolve_path() {
     let runner = dragon_mode_builder().start();
-    let compiled = runner
-        .compiled_card("BT16-028")
-        .expect("BT16-028 compiles");
+    let compiled = runner.compiled_card("BT16-028").expect("BT16-028 compiles");
 
     let has_standard = compiled.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::Digivolve
             && p.cost == Some(CompiledCost::Literal(4))
-            && p.from.as_ref().is_some_and(|f| {
-                f.level_eq == Some(5) && f.color_is == Some(CompiledColor::Blue)
-            })
+            && p.from
+                .as_ref()
+                .is_some_and(|f| f.level_eq == Some(5) && f.color_is == Some(CompiledColor::Blue))
     });
     assert!(
         has_standard,
@@ -126,17 +136,13 @@ fn bt16_028_has_standard_lv5_blue_digivolve_path() {
 #[test]
 fn bt16_028_has_one_when_digivolving_clause() {
     let runner = dragon_mode_builder().start();
-    let compiled = runner
-        .compiled_card("BT16-028")
-        .expect("BT16-028 compiles");
+    let compiled = runner.compiled_card("BT16-028").expect("BT16-028 compiles");
 
     let wd_clauses: Vec<_> = compiled
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::WhenDigivolving) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenDigivolving) => {
                 Some(t)
             }
             _ => None,
@@ -157,27 +163,37 @@ fn bt16_028_has_one_when_digivolving_clause() {
     );
 }
 
-/// Verify Clause 1 (on_enter_field_anyone / on_digivolve) is ABSENT from the YAML
-/// while G-IS-EFFECT-INITIATED is open. Authoring it without the
-/// effect-initiated gate would fire on all plays/digivolves, violating printed text.
+/// Verify Clause 1 (on_enter_field_anyone / on_digivolve) carries the
+/// effect-initiated event gate required by the printed "when an effect plays
+/// or digivolves" condition.
 #[test]
-fn bt16_028_all_turns_observer_clause_is_absent_while_effect_initiated_gap_is_open() {
+fn bt16_028_all_turns_observer_clause_has_effect_initiated_gate() {
     let runner = dragon_mode_builder().start();
-    let compiled = runner
-        .compiled_card("BT16-028")
-        .expect("BT16-028 compiles");
+    let compiled = runner.compiled_card("BT16-028").expect("BT16-028 compiles");
 
-    let has_all_turns_observer = compiled.effects.iter().any(|clause| match clause {
-        CompiledClause::Triggered(t) => {
-            t.when.contains(&CompiledTiming::OnEnterFieldAnyone)
-                || t.when.contains(&CompiledTiming::OnDigivolve)
-        }
-        _ => false,
-    });
+    let observer = compiled
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::OnEnterFieldAnyone)
+                    && t.when.contains(&CompiledTiming::OnDigivolve) =>
+            {
+                Some(t)
+            }
+            _ => None,
+        })
+        .expect("all-turns effect-play/digivolve observer must be authored");
+    let condition = observer
+        .condition
+        .as_ref()
+        .expect("observer must be gated");
     assert!(
-        !has_all_turns_observer,
-        "on_enter_field_anyone / on_digivolve clause must not be authored while \
-         G-IS-EFFECT-INITIATED is open — it would over-fire on all plays/digivolves"
+        condition
+            .all_of
+            .iter()
+            .any(|p| p.event_is_effect_initiated == Some(true)),
+        "observer condition must include event_is_effect_initiated: true; condition={condition:?}"
     );
 }
 
@@ -317,7 +333,9 @@ fn bt16_028_cannot_unsuspend_modifier_expires_at_end_of_opp_turn() {
 
     // Confirm modifier is present immediately.
     assert!(
-        runner.modifiers().has(opp_digimon, ModifierType::CannotUnsuspend),
+        runner
+            .modifiers()
+            .has(opp_digimon, ModifierType::CannotUnsuspend),
         "modifier must be present before end of opponent's turn"
     );
 
@@ -326,7 +344,9 @@ fn bt16_028_cannot_unsuspend_modifier_expires_at_end_of_opp_turn() {
     runner.end_turn(); // switches back to player 0; opp turn ended → modifier expired
 
     assert!(
-        !runner.modifiers().has(opp_digimon, ModifierType::CannotUnsuspend),
+        !runner
+            .modifiers()
+            .has(opp_digimon, ModifierType::CannotUnsuspend),
         "CannotUnsuspend modifier must expire at end of opponent's turn"
     );
 }
@@ -371,37 +391,83 @@ fn bt16_028_when_digivolving_declining_suspend_does_not_unsuspend_own() {
 /// [All Turns] When effect plays opp Digimon + own Tamer → may free-digivolve self
 /// into [Imperialdramon: Fighter Mode] from hand.
 ///
-/// BLOCKED: G-IS-EFFECT-INITIATED (qa/dsl-vocab-gaps.md).
-/// No DSL predicate leaf to gate `on_enter_field_anyone` / `on_digivolve` on whether
-/// the entering/digivolving permanent was played by an effect (`IsByEffect` in DCGO)
-/// rather than by a player's normal play action. The clause is absent from the YAML
-/// while this gap is open to avoid over-firing on all plays/digivolves.
 #[test]
-#[ignore = "pending: G-IS-EFFECT-INITIATED from qa/dsl-vocab-gaps.md — no predicate to gate on effect-initiated play/digivolve vs. player-action play/digivolve"]
 fn bt16_028_all_turns_effect_plays_opp_digimon_with_own_tamer_offers_free_digivolve() {
-    // When G-IS-EFFECT-INITIATED closes:
-    // 1. Place BT16-028 (Dragon Mode) on own field.
-    // 2. Place a Tamer on own field.
-    // 3. Place [Imperialdramon: Fighter Mode] in own hand.
-    // 4. Trigger an effect that plays an opponent's Digimon (not player-action play).
-    // 5. Assert: optional EffectChoice or HandSelection prompt installs to digivolve
-    //    Dragon Mode into Fighter Mode from hand for free.
-    // 6. Execute the digivolve; assert Dragon Mode is replaced by Fighter Mode.
-    // Also test: player declines → Dragon Mode stays on field.
+    let mut runner = dragon_mode_and_fighter_builder()
+        .add_card(tamer_card("OWN-TAMER", "Own Tamer"))
+        .add_card(make_test_card("OPP-EFFECT-PLAY", "Opponent Effect Play"))
+        .hand(0, &["BT16-027"])
+        .hand(1, &["OPP-EFFECT-PLAY"])
+        .memory(0)
+        .start();
+
+    let dragon = runner.place_on_field(0, "BT16-028", None);
+    runner.place_on_field(0, "OWN-TAMER", None);
+    let played_by_effect = runner.game.players[1].hand[0].handle();
+
+    assert_eq!(
+        runner
+            .game
+            .play_card_from_effect_without_cost(1, played_by_effect),
+        Some(digimon_engine::permanent::PermanentHandle {
+            player: 1,
+            index: 0,
+        }),
+        "opponent effect play precondition"
+    );
+
+    assert!(
+        runner.pending_selection().is_some(),
+        "effect-initiated opponent play should expose a follow-up choice"
+    );
+    for _ in 0..3 {
+        let Some(view) = runner.pending_selection_view() else {
+            break;
+        };
+        let action = view.valid_action_ids[0];
+        runner
+            .execute_action(view.selecting_player, action)
+            .expect("execute pending Dragon Mode follow-up");
+    }
+    runner.auto_resolve().expect("finish free digivolve");
+
+    let top_name = runner.game.players[0].battle_area[dragon.index as usize]
+        .top_card()
+        .card_name(&runner.game.card_data)
+        .to_string();
+    assert_eq!(
+        top_name, "Imperialdramon: Fighter Mode",
+        "Dragon Mode should free-digivolve into Fighter Mode after opponent effect play"
+    );
 }
 
 /// [All Turns] Trigger does NOT fire when opponent's Digimon enters by player action
 /// (not by an effect). This is the primary correctness test for the effect-initiated gate.
 ///
-/// BLOCKED: G-IS-EFFECT-INITIATED from qa/dsl-vocab-gaps.md.
 #[test]
-#[ignore = "pending: G-IS-EFFECT-INITIATED from qa/dsl-vocab-gaps.md — player-action play must not trigger the All Turns observer"]
 fn bt16_028_all_turns_player_action_play_does_not_trigger() {
-    // When G-IS-EFFECT-INITIATED closes:
-    // 1. Place BT16-028 (Dragon Mode) on own field, own Tamer on field,
-    //    Fighter Mode in own hand.
-    // 2. Player 1 plays a Digimon normally (player-action, not by effect).
-    // 3. Assert: no digivolve prompt installs (the gate suppresses it).
+    let mut runner = dragon_mode_and_fighter_builder()
+        .add_card(tamer_card("OWN-TAMER", "Own Tamer"))
+        .add_card(make_test_card("OPP-NORMAL-PLAY", "Opponent Normal Play"))
+        .hand(0, &["BT16-027"])
+        .hand(1, &["OPP-NORMAL-PLAY"])
+        .memory(0)
+        .start();
+
+    runner.place_on_field(0, "BT16-028", None);
+    runner.place_on_field(0, "OWN-TAMER", None);
+
+    assert_eq!(
+        runner
+            .game
+            .play_from_hand_with_cost(1, 0, CostDelta::Free, PlaySource::ByHand),
+        Some(0),
+        "opponent normal play precondition"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "normal player-action play must not satisfy event_is_effect_initiated"
+    );
 }
 
 /// [All Turns] Trigger does NOT fire when own Tamer is absent (Tamer condition fails).

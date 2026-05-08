@@ -273,9 +273,7 @@ fn bt16_025_has_standard_digivolve_lv4_cost4() {
         .filter(|p| p.kind == CompiledAltPathKind::Digivolve)
         .find(|p| {
             p.cost == Some(CompiledCost::Literal(4))
-                && p.from
-                    .as_ref()
-                    .is_some_and(|f| f.level_eq == Some(4))
+                && p.from.as_ref().is_some_and(|f| f.level_eq == Some(4))
         });
     assert!(
         standard.is_some(),
@@ -491,7 +489,9 @@ fn bt16_025_non_dna_digivolve_does_not_apply_cannot_unsuspend() {
         TriggerSource::Permanent(paildramon),
     );
     runner.game.drain_effect_queue();
-    runner.auto_resolve().expect("resolve non-DNA WhenDigivolving");
+    runner
+        .auto_resolve()
+        .expect("resolve non-DNA WhenDigivolving");
 
     assert!(
         !runner
@@ -632,7 +632,9 @@ fn bt16_025_when_attacking_no_eligible_targets_selection_skipped() {
         TriggerSource::Permanent(paildramon),
     );
     runner.game.drain_effect_queue();
-    runner.auto_resolve().expect("resolve with no eligible targets");
+    runner
+        .auto_resolve()
+        .expect("resolve with no eligible targets");
 
     // No pending selection should remain; the step was skipped cleanly.
     assert!(
@@ -675,7 +677,9 @@ fn bt16_025_when_attacking_suspends_selected_opp_digimon() {
     runner.game.drain_effect_queue();
 
     // Drive the OppField selection to target the one available opp Digimon.
-    let view = runner.pending_selection_view().expect("selection must install");
+    let view = runner
+        .pending_selection_view()
+        .expect("selection must install");
     assert_eq!(view.kind, SelectionKind::OppField);
     let action_id = view.valid_action_ids[0];
     runner.execute_action(0, action_id).expect("select target");

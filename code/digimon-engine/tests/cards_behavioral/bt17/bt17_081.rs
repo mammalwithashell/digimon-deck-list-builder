@@ -117,9 +117,7 @@ fn bt17_081_compiles() {
 #[test]
 fn bt17_081_card_metadata_matches_print() {
     let runner = taimatt_runner();
-    let card = runner
-        .compiled_card("BT17-081")
-        .expect("BT17-081 compiles");
+    let card = runner.compiled_card("BT17-081").expect("BT17-081 compiles");
 
     assert_eq!(card.cost, Some(4), "Tai & Matt costs 4");
     // Tamer cards have no level or DP.
@@ -329,8 +327,7 @@ fn bt17_081_observer_does_not_fire_on_own_tamer_play() {
     // Tai & Matt must remain unsuspended — the observer's event_target_kind
     // filter must reject a tamer-entering event.
     assert_eq!(
-        runner.game.players[0].battle_area[owen.index as usize].is_suspended,
-        owen_suspended_before,
+        runner.game.players[0].battle_area[owen.index as usize].is_suspended, owen_suspended_before,
         "Tai & Matt must NOT suspend itself when an own TAMER (not Digimon) enters"
     );
     assert!(
@@ -373,8 +370,7 @@ fn bt17_081_observer_does_not_fire_on_opponent_digimon_play() {
     runner.play(1, hand_idx).expect("opponent Digimon plays");
 
     assert_eq!(
-        runner.game.players[0].battle_area[owen.index as usize].is_suspended,
-        owen_suspended_before,
+        runner.game.players[0].battle_area[owen.index as usize].is_suspended, owen_suspended_before,
         "Tai & Matt must NOT suspend on an opponent Digimon play"
     );
     assert!(
@@ -630,10 +626,9 @@ fn bt17_081_clause2_blocked_when_no_omnimon_on_field() {
     let mut runner = taimatt_runner();
     let owen = runner.place_on_field(0, "BT17-081", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::EndOfYourTurn,
-        TriggerSource::Permanent(owen),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(owen));
     runner.game.drain_effect_queue();
 
     assert!(
@@ -648,19 +643,16 @@ fn bt17_081_clause2_blocked_when_no_omnimon_on_field() {
 #[test]
 fn bt17_081_clause2_omnimon_present_installs_prompt() {
     let mut runner = taimatt_runner();
-    runner.game.card_data.push(make_named_digimon(
-        "OWN-OMN",
-        "Omnimon",
-        6,
-        13000,
-    ));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("OWN-OMN", "Omnimon", 6, 13000));
     let owen = runner.place_on_field(0, "BT17-081", Some(0));
     runner.place_on_field(0, "OWN-OMN", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::EndOfYourTurn,
-        TriggerSource::Permanent(owen),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(owen));
     runner.game.drain_effect_queue();
 
     assert!(
@@ -674,19 +666,16 @@ fn bt17_081_clause2_omnimon_present_installs_prompt() {
 #[test]
 fn bt17_081_clause2_blocked_by_non_omnimon_named_digimon() {
     let mut runner = taimatt_runner();
-    runner.game.card_data.push(make_named_digimon(
-        "OWN-PLAIN",
-        "PlainDigimon",
-        4,
-        4000,
-    ));
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("OWN-PLAIN", "PlainDigimon", 4, 4000));
     let owen = runner.place_on_field(0, "BT17-081", Some(0));
     runner.place_on_field(0, "OWN-PLAIN", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::EndOfYourTurn,
-        TriggerSource::Permanent(owen),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(owen));
     runner.game.drain_effect_queue();
 
     assert!(

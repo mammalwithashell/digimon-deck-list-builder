@@ -227,9 +227,9 @@ fn bt22_099_clause_0_is_flood_gate_with_ignore_color_modifier() {
     let card = runner.compiled_card(CARD_ID).expect("BT22-099 compiled");
 
     let is_flood_gate_with_modifier = match &card.effects[0] {
-        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
-            modifier, ..
-        }) => modifier.eq_ignore_ascii_case("IgnoreColorRequirement"),
+        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { modifier, .. }) => {
+            modifier.eq_ignore_ascii_case("IgnoreColorRequirement")
+        }
         _ => false,
     };
     assert!(
@@ -276,7 +276,10 @@ fn bt22_099_clause_1_main_from_hand_face_up_mandatory() {
                 "clause 1 carries no [Once Per Turn] in printed text"
             );
         }
-        other => panic!("clause 1 must be Triggered(main_from_hand); got {:?}", other),
+        other => panic!(
+            "clause 1 must be Triggered(main_from_hand); got {:?}",
+            other
+        ),
     }
 }
 
@@ -459,8 +462,7 @@ fn bt22_099_main_picks_cs_card_and_bottoms_remainder() {
         .collect();
     let bottom_two: Vec<String> = deck_ids.iter().take(2).cloned().collect();
     assert!(
-        bottom_two.iter().any(|id| id == "FILL-A")
-            && bottom_two.iter().any(|id| id == "FILL-B"),
+        bottom_two.iter().any(|id| id == "FILL-A") && bottom_two.iter().any(|id| id == "FILL-B"),
         "FILL-A and FILL-B must be at the bottom of the deck; bottom-2 was {bottom_two:?}"
     );
 }

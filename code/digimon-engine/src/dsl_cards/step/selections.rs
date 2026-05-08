@@ -13,9 +13,11 @@
 use std::sync::Arc;
 
 use digimon_dsl::compiled::{
-    CompiledFieldSelector, CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledZone,
+    CompiledBindingRef, CompiledFieldSelector, CompiledPlayerRef, CompiledPredicate, CompiledStep,
+    CompiledZone,
 };
 
+use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::predicate::{eval_predicate, eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::step::{
@@ -148,7 +150,7 @@ fn run_tail_preserving_trigger_context(
     bindings: &mut Bindings,
     runtime: &StepRuntime,
 ) {
-    let previous = cb_ctx.game.current_trigger_context;
+    let previous = cb_ctx.game.current_trigger_context.clone();
     cb_ctx.game.current_trigger_context = trigger_context;
     run_steps_with_runtime(tail, cb_ctx, bindings, runtime);
     drain_dsl_outer_tail(cb_ctx);
@@ -457,6 +459,7 @@ pub fn try_install(
             selection_result(ctx)
         }
         CompiledStep::SelectOwnSources {
+            target,
             min,
             max,
             bind_as,
@@ -472,6 +475,7 @@ pub fn try_install(
                 ctx,
                 *min,
                 *max,
+                target.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 inner_tail,
@@ -656,7 +660,7 @@ fn install_select_hand(
 ) {
     let target_player = resolve_player(ctx, of);
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
@@ -707,7 +711,7 @@ fn install_select_trash(
 ) {
     let target_player = resolve_player(ctx, of);
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
@@ -772,7 +776,7 @@ fn install_select_own_permanent(
     }
 
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
@@ -830,7 +834,7 @@ fn install_select_opponent_permanent(
     }
 
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
@@ -906,7 +910,7 @@ fn install_select_any_permanent(
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
 
     let previous_phase = ctx.game.current_phase;
     ctx.game.current_phase = GamePhase::SelectTarget;
@@ -1072,7 +1076,7 @@ fn install_select_count_capped_multi(
         _ => return,
     };
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     ctx.select_count_capped_multi(
         target_player,
         engine_zone,
@@ -1101,7 +1105,7 @@ fn install_select_effect_choice(
     runtime: StepRuntime,
 ) {
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     ctx.select_effect_choice(&prompt, labels, move |cb_ctx, idx| {
         let mut b = bindings.clone();
         if let Some(name) = &bind_as {
@@ -1123,7 +1127,7 @@ fn install_select_reveal(
     runtime: StepRuntime,
 ) -> bool {
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
@@ -1225,7 +1229,7 @@ fn install_select_reveal_buckets(
 
     let prompt = prompt.unwrap_or_else(|| "Choose revealed cards".to_string());
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     if ctx.select_reveal_buckets(
         engine_buckets,
         &prompt,
@@ -1270,7 +1274,7 @@ fn install_select_security(
 ) {
     let target_player = resolve_player(ctx, of);
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     ctx.select_security(
         target_player,
         &prompt,
@@ -1299,7 +1303,7 @@ fn install_select_material(
     runtime: StepRuntime,
 ) {
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     // Top-card exclusion is enforced by EffectContext::select_material itself
     // (matches CountCappedZone::Material). Phase 2b accept-all filter applies.
     ctx.select_material(
@@ -1331,6 +1335,7 @@ fn install_select_own_sources(
     ctx: &mut EffectContext<'_>,
     min: u8,
     max: u8,
+    target: Option<CompiledBindingRef>,
     bind_as: Option<String>,
     prompt: String,
     tail: Vec<CompiledStep>,
@@ -1342,12 +1347,27 @@ fn install_select_own_sources(
     }
 
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let target_permanent =
+        target
+            .as_ref()
+            .and_then(|target| match resolve_binding_ref(target, ctx, &bindings) {
+                Some(ResolvedBinding::Permanent(handle)) => Some(handle),
+                _ => None,
+            });
+    let target_resolution_failed = target.is_some() && target_permanent.is_none();
     ctx.select_own_sources(
         &prompt,
         min,
         max,
-        |_game, _source| true,
+        move |_game, source| {
+            if target_resolution_failed {
+                return false;
+            }
+            target_permanent
+                .map(|handle| source.permanent == handle)
+                .unwrap_or(true)
+        },
         move |cb_ctx, source_refs| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -1370,7 +1390,7 @@ fn install_select_opponent_dp_budget(
     runtime: StepRuntime,
 ) {
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     ctx.select_opponent_permanents_by_dp_budget(
         &prompt,
         dp_budget,
@@ -1395,7 +1415,7 @@ fn install_select_own_breeding_permanent(
     runtime: StepRuntime,
 ) {
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     ctx.select_own_breeding_permanent(
         &prompt,
         |_game, _target| true,
@@ -1419,7 +1439,7 @@ fn install_select_ordered_permutation(
     runtime: StepRuntime,
 ) {
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     ctx.select_ordered_permutation(items, &prompt, move |cb_ctx, ordered| {
         let mut b = bindings.clone();
         if let Some(name) = &bind_as {
@@ -1443,7 +1463,7 @@ fn install_select_union_zone(
 ) {
     let target_player = resolve_player(ctx, of);
     let tail = Arc::new(tail);
-    let trigger_context = ctx.game.current_trigger_context;
+    let trigger_context = ctx.game.current_trigger_context.clone();
     ctx.select_union_zone(
         target_player,
         zoneset,

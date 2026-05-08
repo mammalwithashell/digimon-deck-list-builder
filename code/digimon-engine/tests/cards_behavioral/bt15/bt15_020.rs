@@ -301,7 +301,12 @@ fn bt15_020_blocker_persists_through_your_turn_end() {
     let g = place_gabumon(&mut runner);
 
     runner.game.enter_main_phase();
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     runner.game.resolve_selection(0, action).expect("resolves");
     let _ = runner.auto_resolve();
     assert!(runner.game.has_keyword(g, Keyword::Blocker));
@@ -321,7 +326,12 @@ fn bt15_020_blocker_expires_at_end_of_opponents_turn() {
     let g = place_gabumon(&mut runner);
 
     runner.game.enter_main_phase();
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     runner.game.resolve_selection(0, action).expect("resolves");
     let _ = runner.auto_resolve();
     assert!(runner.game.has_keyword(g, Keyword::Blocker));
@@ -376,7 +386,12 @@ fn bt15_020_start_of_main_draws_when_matt_ishida_tamer_present() {
     let hand_before = runner.hand_size(0);
 
     runner.game.enter_main_phase();
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     runner.game.resolve_selection(0, action).expect("resolves");
     let _ = runner.auto_resolve();
 
@@ -400,7 +415,12 @@ fn bt15_020_start_of_main_does_not_draw_when_tamer_is_not_matt() {
     let hand_before = runner.hand_size(0);
 
     runner.game.enter_main_phase();
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     runner.game.resolve_selection(0, action).expect("resolves");
     let _ = runner.auto_resolve();
 
@@ -421,7 +441,12 @@ fn bt15_020_start_of_main_does_not_draw_when_no_tamer() {
     let hand_before = runner.hand_size(0);
 
     runner.game.enter_main_phase();
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     runner.game.resolve_selection(0, action).expect("resolves");
     let _ = runner.auto_resolve();
 
@@ -446,11 +471,7 @@ fn bt15_020_start_of_main_does_not_draw_when_no_tamer() {
 fn bt15_020_inherited_when_attacking_draws_one_from_carrier() {
     let mut runner = gabumon_runner();
     // Make sure P1 has a security card the carrier can attack.
-    runner
-        .game_mut()
-        .players[1]
-        .security
-        .clear();
+    runner.game_mut().players[1].security.clear();
     let carrier = place_gabumon_as_source(&mut runner);
 
     let hand_before = runner.hand_size(0);

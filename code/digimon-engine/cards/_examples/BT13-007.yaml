@@ -25,14 +25,14 @@ effects:
       - reveal_top_deck: { of: you, count: 1, zone: digi_egg_deck, bind_as: shown }
       - place_as_bottom_source:
           source: shown
-          target: self
+          target: source
       - for_each:
           over: { of: you, zone: [battle_area], trait_has: "Royal Knight" }
           bind_as: rk
           body:
             - place_as_bottom_source:
                 source: { permanent: rk }
-                target: self
+                target: source
 
   - scope: inherited
     when: on_option_placed

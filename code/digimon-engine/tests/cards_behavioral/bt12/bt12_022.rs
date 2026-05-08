@@ -126,9 +126,9 @@ fn bt12_022_has_one_inherited_grant_keyword_jamming() {
         .iter()
         .filter(|c| match c {
             CompiledClause::Declarative(d) => match d {
-                CompiledDeclarativeClause::GrantKeyword {
-                    keyword, scope, ..
-                } => *scope == CompiledScope::Inherited && keyword.eq_ignore_ascii_case("Jamming"),
+                CompiledDeclarativeClause::GrantKeyword { keyword, scope, .. } => {
+                    *scope == CompiledScope::Inherited && keyword.eq_ignore_ascii_case("Jamming")
+                }
                 _ => false,
             },
             _ => false,
@@ -281,9 +281,7 @@ fn bt12_022_no_jamming_when_alone_on_field_as_top_card() {
     // Check via source_dp_contribution (no Jamming expected; this test is
     // structural since Jamming doesn't affect DP).
     // Instead, verify the grant didn't fire against itself:
-    let data_idx = runner.game.player(0).battle_area[0]
-        .top_card()
-        .data_index;
+    let data_idx = runner.game.player(0).battle_area[0].top_card().data_index;
     let top_card_id = runner.game.card_data[data_idx].card_id.clone();
     assert_eq!(
         top_card_id, CARD_ID,

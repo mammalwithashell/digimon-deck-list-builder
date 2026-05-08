@@ -400,19 +400,15 @@ fn ad1_009_no_own_garurumon_skips_garurumon_select_then_grants_self_immunity() {
     // Self-immunity must be installed: opponent Digimon-source effects must
     // not reach BlitzGreymon, but Option-source effects still do.
     assert!(
-        runner.game.permanent_is_unaffected_by_effect(
-            blitz,
-            1,
-            EffectSourceKind::Digimon,
-        ),
+        runner
+            .game
+            .permanent_is_unaffected_by_effect(blitz, 1, EffectSourceKind::Digimon,),
         "BlitzGreymon should be immune to opponent's Digimon-source effects"
     );
     assert!(
-        !runner.game.permanent_is_unaffected_by_effect(
-            blitz,
-            1,
-            EffectSourceKind::Option,
-        ),
+        !runner
+            .game
+            .permanent_is_unaffected_by_effect(blitz, 1, EffectSourceKind::Option,),
         "BlitzGreymon should remain affected by opponent's Option effects"
     );
 }

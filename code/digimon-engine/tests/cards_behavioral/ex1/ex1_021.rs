@@ -125,10 +125,12 @@ fn ex1_021_compiles_from_yaml() {
 fn ex1_021_has_lv5_blue_cost4_digivolve_alt_path() {
     let compiled = compiled_ex1_021();
     let dv = compiled.alt_paths.iter().find(|p| {
-        p.kind == CompiledAltPathKind::Digivolve
-            && matches!(p.cost, Some(CompiledCost::Literal(4)))
+        p.kind == CompiledAltPathKind::Digivolve && matches!(p.cost, Some(CompiledCost::Literal(4)))
     });
-    assert!(dv.is_some(), "Must have Lv.5 Blue / Cost 4 digivolve alt-path");
+    assert!(
+        dv.is_some(),
+        "Must have Lv.5 Blue / Cost 4 digivolve alt-path"
+    );
 }
 
 #[test]
@@ -168,7 +170,10 @@ fn ex1_021_has_when_attacking_clause() {
     });
     assert!(clause.is_some(), "Must have [When Attacking] clause");
     let c = clause.unwrap();
-    assert!(!c.optional, "[When Attacking] is mandatory (per DCGO canNoSelect: false)");
+    assert!(
+        !c.optional,
+        "[When Attacking] is mandatory (per DCGO canNoSelect: false)"
+    );
     assert!(!c.once_per_turn, "[When Attacking] has no printed OPT");
     assert_eq!(c.scope, CompiledScope::FaceUp);
 }
@@ -200,8 +205,10 @@ fn ex1_021_when_digivolving_hand_lt_4_gains_no_memory() {
     set_hand_size(&mut r, 0, 3);
 
     let mem_before = r.memory();
-    r.game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(perm));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(perm),
+    );
     r.game.drain_effect_queue();
     let _ = r.auto_resolve();
 
@@ -221,8 +228,10 @@ fn ex1_021_when_digivolving_hand_eq_4_gains_one_memory() {
     set_hand_size(&mut r, 0, 4);
 
     let mem_before = r.memory();
-    r.game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(perm));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(perm),
+    );
     r.game.drain_effect_queue();
     let _ = r.auto_resolve();
 
@@ -242,8 +251,10 @@ fn ex1_021_when_digivolving_hand_eq_8_gains_two_memory() {
     set_hand_size(&mut r, 0, 8);
 
     let mem_before = r.memory();
-    r.game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(perm));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(perm),
+    );
     r.game.drain_effect_queue();
     let _ = r.auto_resolve();
 
@@ -263,8 +274,10 @@ fn ex1_021_when_digivolving_hand_eq_7_gains_one_memory() {
     set_hand_size(&mut r, 0, 7);
 
     let mem_before = r.memory();
-    r.game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(perm));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(perm),
+    );
     r.game.drain_effect_queue();
     let _ = r.auto_resolve();
 
@@ -288,8 +301,10 @@ fn ex1_021_when_digivolving_currently_does_not_change_memory() {
     set_hand_size(&mut r, 0, 8);
 
     let mem_before = r.memory();
-    r.game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(perm));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(perm),
+    );
     r.game.drain_effect_queue();
     let _ = r.auto_resolve();
 
@@ -379,8 +394,10 @@ fn ex1_021_when_attacking_returns_selected_digimon_to_deck_bottom() {
     let opp_deck_before = r.deck_size(1);
     let opp_field_before = r.battle_area_size(1);
 
-    r.game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(attacker));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(attacker),
+    );
     r.game.drain_effect_queue();
     let _ = r.auto_resolve();
 

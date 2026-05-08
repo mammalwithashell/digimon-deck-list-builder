@@ -536,6 +536,13 @@ fn parser_material_save_parametric() {
 }
 
 #[test]
+fn parser_digi_burst_parametric() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords("\u{ff1c}Digi-Burst 1\u{ff1e} (...)", "", "");
+    assert_eq!(kws, vec![Keyword::DigiBurst(1)]);
+}
+
+#[test]
 fn parser_material_save_no_alias_to_save() {
     // "<Material Save>" with no number should not alias back to Save —
     // it must either produce MaterialSave(1) or not parse at all.
