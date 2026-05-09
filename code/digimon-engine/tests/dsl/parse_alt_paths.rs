@@ -49,6 +49,40 @@ alt_paths:
 }
 
 #[test]
+fn parse_blast_dna_digivolve() {
+    let yaml = r#"
+card: BT17-078
+name: Omnimon
+kind: digimon
+level: 7
+color: [white]
+cost: 9
+dp: 15000
+alt_paths:
+  - kind: blast_dna_digivolve
+    materials:
+      - { kind: digimon, name_is: WarGreymon }
+      - { kind: digimon, name_is: MetalGarurumon }
+    cost: 0
+    stacks_unsuspended: true
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+    let ap = &spec.alt_paths[0];
+    assert!(matches!(ap.kind, AltPathKind::BlastDnaDigivolve));
+    assert_eq!(ap.materials.len(), 2);
+    assert_eq!(
+        ap.materials[0].inline_filter.name_is.as_deref(),
+        Some("WarGreymon")
+    );
+    assert_eq!(
+        ap.materials[1].inline_filter.name_is.as_deref(),
+        Some("MetalGarurumon")
+    );
+    assert_eq!(ap.cost, Some(CostSpec::Literal(0)));
+    assert_eq!(ap.stacks_unsuspended, true);
+}
+
+#[test]
 fn parse_digixros_unbounded() {
     let yaml = r#"
 card: BT12-112

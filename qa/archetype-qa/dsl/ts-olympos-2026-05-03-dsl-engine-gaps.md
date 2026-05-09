@@ -12,7 +12,7 @@ Target: `data/deck_library.json` archetype `TS Olympos`, using the current 64-li
 
 TS Olympos is not currently faithfully implementable as executable Rust YAML DSL. The old QA report marks the archetype as faithful/fixed in the Python lane, but the current Rust DSL pack has only a small BT24 production slice and does not include the TS Olympos core cards.
 
-The remaining most important blockers are reusable: cross-card effect re-firing, remaining cross-permanent replacement variants, source-stack aggregate predicates/dynamic amounts, effect-timing suppression variants, immediate may-attack effects, and dynamic option-use-from-hand flows. Top-security-to-hand, Recovery, multi-bucket reveal selection, BT24-040 targeted timing lock/protection, and BT24-101 security-loss protection now have focused Rust coverage and should stay out of the remaining-blocker backlog unless a new card exposes a new primitive gap.
+The remaining most important blockers are reusable: cross-card effect re-firing, remaining cross-permanent replacement variants, source-stack aggregate predicates/dynamic amounts, effect-timing suppression variants, and dynamic option-use-from-hand flows. Top-security-to-hand, Recovery, multi-bucket reveal selection, immediate may-attack prompts, BT24-040 targeted timing lock/protection, and BT24-101 security-loss protection now have focused Rust coverage and should stay out of the remaining-blocker backlog unless a new card exposes a new primitive gap.
 
 ## Coverage Snapshot
 
@@ -30,7 +30,7 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
   - `BT24-043` Tapirmon: 41/64 lists.
   - `BT24-090` Abyss Sanctuary: Throne Room: 38/64 lists.
 - Rust YAML currently found under `code/digimon-engine/cards/bt24/`: `BT24-001`, `BT24-008`, `BT24-011`, `BT24-012`, `BT24-016`, `BT24-017`, `BT24-018`, `BT24-031`, `BT24-040`, `BT24-082`, `BT24-089`, `BT24-101`.
-- TS Olympos core cards currently missing production Rust YAML include `BT24-034`, `BT24-100`, `BT24-102`, `BT24-041`, `BT24-043`, `BT24-085`, `BT24-030`, `BT24-014`, `BT24-004`, `BT24-083`, `BT24-088`, `BT24-020`, `BT24-090`, `BT24-037`, `BT24-046`, and the common promo support cards.
+- TS Olympos core cards currently missing production Rust YAML include `BT24-034`, `BT24-100`, `BT24-102`, `BT24-041`, `BT24-043`, `BT24-085`, `BT24-030`, `BT24-014`, `BT24-004`, `BT24-083`, `BT24-088`, `BT24-020`, `BT24-090`, `BT24-046`, and the common promo support cards. `BT24-037` now has production YAML and focused Track D coverage for its shared On Play/When Digivolving -5000 DP plus may-attack branch and its DNA-origin Security A.+1/+5000 DP rider.
 
 ## Reusable Gaps For Cross-Archetype Spec
 
@@ -225,12 +225,12 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
 
 ### G-TS-IMMEDIATE-MAY-ATTACK
 
-- **Type:** engine gap
-- **Blocks TS Olympos cards:** `BT24-085`, `BT24-037`, `BT24-091`, `BT24-095`, plus any TS option/tamer that says a Digimon may attack after another effect resolves.
+- **Type:** resolved reusable engine/DSL primitive; remaining card-authoring/test coverage gap
+- **Blocks TS Olympos cards:** No longer a reusable primitive blocker for immediate prompts. `BT24-037` is implemented. `BT24-085`, `BT24-091`, and `BT24-095` still need card YAML/tests and may have other blockers such as dynamic Option-use-from-hand.
 - **Cross-archetype reuse:** Royal Knights, Zephagamon, Silphymon DNA shells, and many "then, 1 of your Digimon may attack" effects.
 - **Printed shape:** after an effect resolves, choose one eligible Digimon and optionally attack, sometimes without suspending or with temporary modifiers.
-- **Current evidence:** Existing tracker entries call out force-follow-up attack / may-attack helpers as blocking. Granting Rush or auto-attacking does not preserve the player decision.
-- **Required capability:** a pending attack action opened from an effect, with target selection, optional decline, legality checks, and any "without suspending" or temporary rider metadata preserved.
+- **Current evidence:** The shared `may_attack_now` path opens a pending attack from inside effect resolution, preserves the optional decline via PASS, and resumes the calling effect after the attack flow. `BT24-037` proves the TS Silphymon branch with an opponent -5000 DP selection followed by one own Digimon may attacking through the normal target/security flow.
+- **Required capability:** closed for immediate optional attack prompts. Remaining TS cards should use the shared DSL shape below unless a focused failing test proves a new primitive gap.
 - **Suggested DSL shape:**
 
   ```yaml
@@ -244,8 +244,9 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
       without_suspending: false
   ```
 
-- **First test:** Resolve `BT24-037` after DNA digivolving, select one of your Digimon for the may-attack effect, and assert the engine opens a normal legal attack flow with PASS available before the attack is committed.
+- **First test:** Implemented for `BT24-037`: resolve the shared On Play/When Digivolving body, select one opposing Digimon for -5000 DP, then select one own Digimon for the optional may-attack branch. The pending selection exposes PASS before attack commitment and the selected attack resolves through the normal security flow.
 - **Spec note:** This should share the same engine work as Royal Knights' end-of-turn attack and Zephagamon's attack/battle branches, while keeping effect battles separate from attacks.
+- **Updated 2026-05-08:** `BT24-037` production YAML and behavioral coverage landed, including the DNA-origin rider and trigger-order DNA-context preservation. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_037`.
 
 ### G-TS-OPTION-USE-FROM-HAND-BY-COST-CEILING
 
@@ -297,7 +298,7 @@ Task 10 production-authoring audit update (2026-05-03): `BT24-031`, `BT24-040`, 
 | `BT24-030` Neptunemon | blocked by source-count aggregate + cross-permanent protection | Bottom-deck all fewest-source opponent Digimon, unsuspend self once, opponent-effect protection by suspending self |
 | `BT24-101` Jupitermon | implemented 2026-05-03; production YAML and 12 focused behavioral tests pass | Keep in validated-cards report as implemented; standard Lv5 yellow cost-5, Lv5 TS cost-3, and dynamic Aegiochusmon route precedence are covered; no remaining BT24-101-specific blocker from this audit. |
 | `BT24-085` Dan Yuki & Kanan Yuki | blocked by Option use from hand and may-attack | End-turn suspend cost, dynamic Option use ceiling, then TS may-attack |
-| `BT24-037` Silphymon | blocked by immediate may-attack and DNA-origin riders | On Play/WD -5000 DP, may-attack, DNA-origin Security A.+1/+5000 DP |
+| `BT24-037` Silphymon | implemented Track D slice 2026-05-08; shared On Play/WD -5000 DP + may-attack branch and DNA-origin Security A.+1/+5000 DP rider covered | Track D proof: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_037`. |
 | `BT24-083`, `BT24-088` | authoring / test gap with existing play-from-hand/trash helpers | Return Tamer to deck as cost, free-play matching card, On Play search/trash-draw |
 | `BT24-090` Abyss Sanctuary | blocked by top/bottom security movement and option self-disposition tests | Main bottom-security-to-hand, self face-up bottom security, reduced-cost play, Security hand/trash free play |
 
@@ -319,7 +320,7 @@ Before compiling the cross-archetype spec, review these older TS Olympos notes s
 4. Keep `G-TS-CROSS-PERMANENT-REPLACEMENT-PREVENTION` open for unimplemented cards; `BT24-040` and `BT24-101` protection are implemented and verified.
 5. Promote remaining `G-TS-SOURCE-STACK-AGGREGATES` slices for source-count aggregate predicate and dynamic De-Digivolve amount; `BT24-040` trash-all-sources is implemented and verified.
 6. Keep `G-TS-TIMING-SUPPRESSION-MODIFIERS` open for aura/other-card variants; `BT24-040` targeted lockout is implemented and verified.
-7. Promote `G-TS-IMMEDIATE-MAY-ATTACK` jointly with Royal Knights and Zephagamon immediate-attack needs.
+7. Keep `G-TS-IMMEDIATE-MAY-ATTACK` closed as a reusable primitive and use BT24-037/BT24-082/BT20-102 style card-shaped tests when authoring remaining TS or Zephagamon immediate-attack cards.
 8. Promote `G-TS-OPTION-USE-FROM-HAND-BY-COST-CEILING` only if Dan Yuki & Kanan Yuki cannot be authored with existing Option flow and formula predicates.
 9. Keep the rest as TDD card migration under `code/digimon-engine/tests/cards_behavioral/bt24/` and `code/digimon-engine/cards/bt24/`.
 

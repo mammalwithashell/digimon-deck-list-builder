@@ -31,10 +31,9 @@
 #     digivolve into Omnimon Alter-S in hand, then optional redirect attack
 #     target to 1 own Digimon. Requires DSL `on_opponent_attack` timing
 #     and `redirect_attack_target` step. See qa/dsl-vocab-gaps.md.
-#   Clause 5 (BLOCKED — engine gap):
+#   Clause 5 (declarative inherited):
 #     Inherited [Your Turn] "This Digimon's attack target can't change."
-#     Requires `ModifierType::CannotChangeAttackTarget` in engine enums.
-#     See qa/archetype-qa/engine-gaps.md.
+#     Lowered as a self inherited aura using `CanNotSwitchAttackTarget`.
 
 card: AD1-012
 name: CresGarurumon
@@ -131,25 +130,19 @@ effects:
               prompt: "Select 1 of your suspended [Greymon] to unsuspend"
           - unsuspend: { target: greymon_pick }
 
-  # ─── Clause 4 — BLOCKED ────────────────────────────────────────────────────
+  # ─── Clause 4 — BLOCKED on effect DNA route ───────────────────────────────
   #
   # "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon
   #  attacks, 2 of your Digimon may DNA digivolve into [Omnimon Alter-S]
   #  in the hand. Then, you may change the attack target to 1 of your Digimon."
   #
-  # BLOCKED on TWO DSL vocab gaps:
-  #   1. `on_opponent_attack` Timing variant — code/digimon-dsl/src/clause.rs:83
-  #      enum Timing has no OnOpponentAttack entry, and compile.rs:173 maps
-  #      no Timing → CompiledTiming::OnOpponentAttack. The engine *does* expose
-  #      `Effect::on_opponent_attack` (effect.rs:427) and the lowering layer
-  #      (lower_triggered.rs:181) handles `EffectTiming::OnOpponentAttack`,
-  #      but the DSL surface can't currently route a clause there.
-  #   2. `redirect_attack_target` step verb — code/digimon-dsl/src/step.rs has
-  #      no entry for it. The engine has `EffectContext::redirect_attack`
-  #      (effect_context/mod.rs:3099). DCGO uses `attackProcess.SwitchDefender`
-  #      with canNoSelect: true (optional pick).
+  # `on_opponent_attack` and `redirect_attack_target` are now first-class DSL
+  # primitives. The remaining faithful blocker is the effect-initiated DNA route
+  # into a selected [Omnimon Alter-S] in hand from a defender-side attack
+  # interrupt, including paying its printed cost and then resuming the same
+  # attack-interrupt flow before optional redirect.
   #
-  # Once both gaps close, the clause shape will be:
+  # Once that route is available, the clause shape will be:
   #
   # - when: on_opponent_attack
   #   active_when: { opponents_turn: true }
@@ -182,24 +175,16 @@ effects:
   #         prompt: "Change the attack target to 1 of your Digimon"
   #     - redirect_attack_target: { new_target: redirect_target }
 
-  # ─── Clause 5 — BLOCKED ────────────────────────────────────────────────────
+  # ─── Clause 5 — Inherited [Your Turn] attack target can't change ──────────
   #
   # Inherited Effect: [Your Turn] "This Digimon's attack target can't change."
   #
-  # BLOCKED on engine gap: ModifierType::CannotChangeAttackTarget.
-  #   - code/digimon-engine/src/enums.rs:463-575 ModifierType enum has no
-  #     CannotChangeAttackTarget variant. The closest is CannotAttackTarget
-  #     (which prevents attacking specific targets, not target redirection).
-  #   - DCGO uses `CanNotSwitchAttackTargetClass` with PermanentCondition
-  #     `permanent == card.PermanentOfThisCard()` — i.e. only protects this
-  #     specific Digimon (the source carrying the inherited effect).
-  #
-  # Once the engine gap closes, the clause shape will be:
-  #
-  # - kind: aura
-  #   scope: inherited
-  #   active_when: { your_turn: true }
-  #   target: self
-  #   grant_modifier:
-  #     modifier: CannotChangeAttackTarget
-  #     value: 1
+  # DCGO uses `CanNotSwitchAttackTargetClass` with PermanentCondition
+  # `permanent == card.PermanentOfThisCard()` — i.e. only protects this
+  # specific Digimon (the source carrying the inherited effect).
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    modifier: CanNotSwitchAttackTarget
+    summary: "[Your Turn] This Digimon's attack target can't change"

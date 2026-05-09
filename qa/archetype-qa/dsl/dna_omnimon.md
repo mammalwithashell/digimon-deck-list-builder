@@ -27,7 +27,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | AD1-001 | Greymon | I | IMPLEMENTED | 18/19 | Cross-perm observer + free-digivolve from hand |
 | AD1-009 | BlitzGreymon | I | IMPLEMENTED | 19/20 | De-Digivolve 3 + immunity + EOT DNA |
 | AD1-010 | Garurumon | I | IMPLEMENTED | 13/14 | Draw + name observer |
-| AD1-012 | CresGarurumon | I | PARTIAL (hybrid) | 12/15 | Opp-Turn + inherited attack-target restriction BLOCKED |
+| AD1-012 | CresGarurumon | I | PARTIAL (hybrid) | 13/15 | Opp-Turn effect DNA route BLOCKED; inherited no-retarget live |
 | AD1-014 | MetalGarurumon | I | PARTIAL (hybrid) | 13/18 | Distinct-Tamer-colors formula BLOCKED |
 | AD1-025 | Omnimon | AE | AUDITED-DRIFT | 8/16 | raw_rust unregistered; missing All-Turns clause |
 | BT12-059 | Agumon | I | IMPLEMENTED | 12/12 | Reveal-buckets + self_digivolution_contains_name aura |
@@ -39,7 +39,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT17-015 | WarGreymon | AE | AUDITED-DRIFT (dsl) | 13/16 | NEW G-DSL-SOURCE-NAME-CONTAINS + G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET |
 | BT17-019 | Gabumon | I | IMPLEMENTED | 12/12 | Sister to BT17-007 |
 | BT17-027 | MetalGarurumon | I | PARTIAL (dsl) | 11/13 | Branch-1 digivolve BLOCKED on G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET |
-| BT17-078 | Omnimon | I | PARTIAL (dsl) | 7/15 | NEW G-BLAST-DNA-DIGIVOLVE; G-BIND-SELECTED-PROPERTY-FOR-EACH |
+| BT17-078 | Omnimon | I | IMPLEMENTED | 12/12 | Blast DNA Counter route, DNA-origin gate, selected-level bottom-deck, and follow-up delete prompt covered |
 | BT17-081 | Tai/Matt Tamer | I | IMPLEMENTED | 19/20 | All-Turns observer + EOT may-attack |
 | BT17-093 | Tai/Kari Tamer | I | IMPLEMENTED | 11/11 | on_hatch + EOT return-to-deck draw |
 | BT17-095 | Miraculous Mega Knight | I | PARTIAL (dsl) | 12/16 | NEW G-DSL-UNION-PLAY-FREE + G-DSL-DNA-FROM-HAND-PARTNER |
@@ -49,7 +49,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT22-005 | Tsumemon | I | PARTIAL (engine) | 11/14 | DigiEgg G-INHERITED-DISPATCH |
 | BT22-008 | Agumon | I | IMPLEMENTED | 12/12 | Sister to BT17-007 |
 | BT22-013 | WarGreymon | I | PARTIAL (dsl) | 10/15 | 4 known-gap branches BLOCKED |
-| BT22-015 | Omnimon | I | PARTIAL (dsl) | 11/15 | Decode keyword BLOCKED on NEW G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES |
+| BT22-015 | Omnimon | I | PARTIAL (dsl) | 14/15 | Decode color-gated source play RESOLVED; same-level pair bottom-deck RESOLVED; lowest-DP predicate remains blocked |
 | BT22-017 | Gabumon | I | IMPLEMENTED | 14/15 | NEW G-DSL-PREDICATE-TEXT-CONTAINS approximated |
 | BT22-026 | MetalGarurumon | I | PARTIAL (dsl) | 11/15 | Sister to BT22-013 |
 | BT22-084 | Nokia Shiramine | AE | AUDITED-OK | 17/19 | Faithful _examples YAML |
@@ -74,7 +74,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | EX5-015 | Gabumon (X Antibody) | I | PARTIAL (dsl) | 10/14 | Inherited replacement BLOCKED on NEW G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH |
 | EX9-012 | MetalGreymon: Alterous Mode | I | IMPLEMENTED | 21/22 | dp_lte + observer free-digivolve self + inherited +4000 DP |
 | EX9-019 | WereGarurumon: Sagittarius Mode | I | IMPLEMENTED | 16/16 | Sister to EX9-012 |
-| EX9-021 | Omnimon Alter-S | I | PARTIAL (hybrid) | 10/14 | NEW G-DSL-IS-DNA-DIGIVOLVING + G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES + G-PLACE-SELF-AT-SECURITY-TOP |
+| EX9-021 | Omnimon Alter-S | I | PARTIAL (hybrid) | 12/14 | End of Attack source plays + top-security tail implemented; DNA-only immunity still needs card-local authoring now that `dna_origin: true` exists |
 | EX9-066 | Tai/Matt Tamer | I | IMPLEMENTED | 25/25 | All 25 pass via faithful workaround. NEW G-DSL-BIND-PRESENT + G-COUNT-GTE-NOT-EVALUATED |
 | LM-034 | Wisteria Memory Boost! | I | IMPLEMENTED | 12/12 | Sister to BT22-099 |
 | P-123 | Ukkomon | I | IMPLEMENTED | 13/15 | on_move trigger |
@@ -110,23 +110,23 @@ Pipeline: batch-implement-cards-rust-dsl
 - G-DSL-GAIN-MEMORY-FN (EX1-021) — `gain_memory` only accepts literal i32
 - G-DSL-HAS-ON-DELETION-EFFECT (EX1-021) — no predicate to filter permanents by [On Deletion] presence
 - G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT (EX1-068) — DSL only exposes static grants
-- G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (EX4-060, EX9-021) — sibling to BT22-015's Decode gap
+- G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (EX4-060, EX9-021) — narrowed 2026-05-08: BT22-015 single selected-source Decode, EX4-060 sequential named source plays, and EX9-021 End of Attack sequential source plays are closed; batch / different-name variants remain open.
 - G-PLACE-SELF-AT-SECURITY-BOTTOM (EX4-060) — face-down self-disposition
-- G-PLACE-SELF-AT-SECURITY-TOP (EX9-021) — face-up self-disposition
+- G-PLACE-SELF-AT-SECURITY-TOP (EX9-021) — closed 2026-05-08 via `place_permanent_on_security`; verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_021`
 - G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION (ST20-15) — Option-card variant
-- G-DSL-IS-DNA-DIGIVOLVING (EX9-021) — RESOLVED 2026-05-08 as `dna_origin: true`; remaining EX9-021 blockers are card-local body/disposition gaps
-- G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (BT22-015) — Decode keyword variant
-- G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET (BT22-015) — repeat-N target-selection from formula
+- G-DSL-IS-DNA-DIGIVOLVING (EX9-021) — RESOLVED 2026-05-08 as `dna_origin: true`; remaining EX9-021 blockers are card-local body/disposition gaps.
+- G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (BT22-015) — closed 2026-05-07 via color/level-gated `select_material` plus `play_from_materials`; verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_015_decode`
+- G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET (BT22-015) — closed 2026-05-07 via formula-bound `select_count_capped_multi` plus battle-area permanent-list picks. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_015_when_digivolving_bottom_decks_n_opp_digimon_per_same_level_pair`.
 - G-FORMULA-SOURCE-DP (BT17-102, P-182) — formula reading source permanent's DP
 - G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA (P-182) — broader scope than tamer-only variant
 - G-DYNAMIC-NAME-ALIAS-FROM-STACK (BT17-102) — declaratives derive name set from current materials
-- G-BIND-SELECTED-PROPERTY-FOR-EACH (BT17-078) — bind selected property + for-each-matching pattern
-- G-BLAST-DNA-DIGIVOLVE (BT17-078) — Blast DNA Digivolve alt-path variant
+- G-BIND-SELECTED-PROPERTY-FOR-EACH (BT17-078) — closed: `bind_permanent_property` + `level_eq_binding` cover the selected-level for-each pattern. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- parse_bind_permanent_level_property_step bind_permanent_level_filters_for_each_same_level_permanents` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078`.
+- G-BLAST-DNA-DIGIVOLVE (BT17-078) — resolved for field+hand Counter Blast DNA. `blast_dna_digivolve` carries exact printed materials; BT17-078 proves WarGreymon + MetalGarurumon and rejects broad Greymon/Garurumon names. Additional printed field+hand Blast DNA fixtures now cover BT20-045, BT20-076, BT20-081, EX6-011, and EX6-029. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078_counter_blast_dna`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_045_counter_blast_dna bt20_076_counter_blast_dna bt20_081_counter_blast_dna ex6_029_counter_blast_dna`.
 - G-DSL-UNION-PLAY-FREE (BT17-095) — `select_union_zone` binding doesn't feed `play_from_*_free`
 - G-DSL-DNA-FROM-HAND-PARTNER (BT17-095) — DNA digivolve where 2nd material lives in hand
 - G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH (EX5-015) — inherited replacement with trash-cost-then-cancel
 - G-MULTI-SELECT-OPP-PLAY-COST-SUM (EX4-073) — sibling of resolved DP-budget for play-cost
-- G-DSL-SELECT-OWN-SOURCES-FILTER (EX4-073) — `SelectOwnSourcesArgs` lacks `filter:` field
+- G-DSL-SELECT-OWN-SOURCES-FILTER (EX4-073) — resolved 2026-05-08; remaining EX4-073 blockers are play-cost aggregate/count-binding work.
 - G-PLAY-COST-AGGREGATE (EX4-073) — `lowest_play_cost` aggregate predicate
 - G-EVENT-CARD-TAMER-PLAY (AD1-010, EX9-012) — event_card population for tamer plays unconfirmed
 - G-DSL-EVENT-TARGET-IS-OTHER (EX4-003, EX4-039) — no `event_target_is_other` predicate
@@ -134,13 +134,13 @@ Pipeline: batch-implement-cards-rust-dsl
 - G-ALT-PATH-DIRECTION-INTO (ST20-10) — alt-path inverse: card grants itself ability to digivolve INTO X
 
 ### Engine gaps
-- G-MOD-CANNOT-CHANGE-ATTACK-TARGET (AD1-012) — `ModifierType::CannotChangeAttackTarget` missing
+- G-MOD-CANNOT-CHANGE-ATTACK-TARGET (AD1-012) — resolved 2026-05-08 via `ModifierType::CanNotSwitchAttackTarget` self inherited aura; covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ad1_012_inherited_blocks_attack_target_change_during_your_turn`
 - G-AURA-GRANTED-SECURITY-KEYWORD (BT5-093) — aura-granted SecurityAttackPlus not consumed by security loop
 - G-SECURITY-ZONE-AURA-SOURCE (ST20-15) — security-zone aura sources not iterated by Group 6 tick
 
 ### Hybrid gaps (engine+DSL)
-- G-DSL-ON-OPPONENT-ATTACK (AD1-012) — DSL Timing variant + engine has primitive
-- G-DSL-REDIRECT-ATTACK-TARGET (AD1-012) — DSL step verb + engine has redirect_attack
+- G-DSL-ON-OPPONENT-ATTACK (AD1-012) — resolved; remaining AD1-012 blocker is defender-side effect DNA into Omnimon Alter-S during the attack interrupt
+- G-DSL-REDIRECT-ATTACK-TARGET (AD1-012) — resolved; redirect step parses/lowers to `ctx.redirect_attack`
 - G-DSL-ON-ALLY-ATTACK-TIMING (BT21-102, BT23-096) — DSL Timing variant
 
 ## Test Suite Status

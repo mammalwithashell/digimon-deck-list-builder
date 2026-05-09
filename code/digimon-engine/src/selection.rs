@@ -18,7 +18,7 @@ use std::collections::VecDeque;
 use crate::card_source::{CardHandle, CardSource};
 use crate::enums::{EffectSourceKind, EffectTiming, GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
-use crate::trigger_context::TriggerContext;
+use crate::trigger_context::{AttackTargetChangeReason, TriggerContext};
 
 /// Bitset of zones for `SelectionKind::UnionZone`. Designed to be extended
 /// with additional zone bits in later Phase 4 tasks without breaking callers.
@@ -33,6 +33,8 @@ impl UnionZoneSet {
     pub const HAND: UnionZoneSet = UnionZoneSet(0b0001);
     /// The player's trash.
     pub const TRASH: UnionZoneSet = UnionZoneSet(0b0010);
+    /// Digivolution-source cards under the effect's source permanent.
+    pub const MATERIAL: UnionZoneSet = UnionZoneSet(0b0100);
 
     /// Returns `true` if the given zone bit is set.
     pub fn contains(self, other: UnionZoneSet) -> bool {
@@ -292,6 +294,9 @@ pub struct QueuedEffect {
     /// digivolution source scan. Prevents top-card effects from gaining
     /// source-position liveness after being covered by a later digivolution.
     pub allow_below_top_liveness: bool,
+    /// Preserves transient DNA-origin context when a DNA digivolve parks on
+    /// trigger-order or target selections before the queued effect runs.
+    pub dna_origin_context: Option<bool>,
 }
 
 /// Queued triggered effect parked after its `pay_cost_fn` installed a
@@ -331,6 +336,12 @@ pub enum TriggerSource {
         defender: PlayerId,
         card: CardHandle,
     },
+    /// A card still in a player's security stack is firing a turn-boundary
+    /// `[Security]` effect, such as `[Security] [End of Opponent's Turn]`.
+    /// Unlike `SecurityRevealed`, the card has not been popped into
+    /// `Game.pending_security`; effect bodies that play it must remove this
+    /// exact card from the persistent security zone.
+    SecurityStackCard { player: PlayerId, card: CardHandle },
     /// Global observer timing fired after a security card's own
     /// `SecuritySkill` effects resolve and the Digimon battle (if any) has
     /// been decided. Scans every permanent in the defender's battle area for
@@ -386,6 +397,17 @@ pub enum TriggerSource {
         player: PlayerId,
         permanent: PermanentHandle,
         card: CardHandle,
+    },
+    /// Observer timing fired after an attack's effective target changes.
+    /// Scans battle areas while carrying the attacker plus old/new target
+    /// payload for `OnAttackTargetChange` predicates and effect bodies.
+    AttackTargetChanged {
+        player: PlayerId,
+        attacker: PermanentHandle,
+        card: CardHandle,
+        old_target: AttackTarget,
+        new_target: AttackTarget,
+        reason: AttackTargetChangeReason,
     },
     /// Observer timing fired after a card under a permanent's top card is
     /// trashed from that digivolution stack. Scans all players' battle areas
@@ -548,6 +570,9 @@ pub enum SecurityPhase {
     /// Enqueue + drain `OnSecurityCheck` observer effects over the defender's
     /// battle area.
     OnSecurityCheckDrain,
+    /// Offer `WhenWouldLoseSecurity` replacements before the revealed card is
+    /// finally removed from the security stack.
+    WhenWouldLoseSecurity,
     /// Enqueue + drain `OnLoseSecurity` on the revealed card (observer timing).
     OnLoseSecurityDrain,
     /// Trash the card (unless `pending_security.played` is set), then fire
@@ -611,6 +636,9 @@ pub struct SecurityRevealSnapshot {
 pub enum AttackState {
     /// Just declared; `OnAttack` effects about to resolve, then Alliance.
     Declared,
+    /// Waiting for the attacker's controller to optionally switch the target
+    /// with `<Raid>` after declaration.
+    RaidOpen,
     /// Waiting for the attacker's controller to pick an ally to suspend
     /// (or decline).
     AllianceOpen,

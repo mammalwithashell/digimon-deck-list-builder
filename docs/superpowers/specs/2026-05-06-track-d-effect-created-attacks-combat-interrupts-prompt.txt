@@ -1,0 +1,223 @@
+Track D - Effect-Created Attacks and Combat Interrupts
+
+Source: user prompt provided on 2026-05-06.
+
+Implement effect-created attack flows and combat-interrupt machinery in the Rust game engine at
+code/digimon-engine/. The current engine handles natural main-phase attacks reasonably well, but
+effect-driven attacks and mid-flow interrupts must be centralized so every player-visible choice
+flows through pending_selection and the action mask.
+
+Core capabilities requested:
+
+- Create attacks from inside effect resolution.
+- Allow an attack without suspending.
+- Force an opponent's Digimon to attack.
+- Redirect an existing attack to a different target mid-flow.
+- Observe attack-target changes from inherited or third-party effects.
+- Honor granted <Collision> and the must-block aura it creates.
+- Cancel an attack through an effect.
+- Fully enforce <Retaliation>, <Reboot>, <Piercing>, and <Blast Digivolve>.
+- Preserve the no-approximations policy: no hidden auto-selection, no private one-off booleans on Permanent,
+  no action-space or tensor contract expansion.
+
+Required reading order:
+
+1. CLAUDE.md Working Rules 17-22.
+2. docs/RUST_ENGINE_API.md.
+3. code/digimon-engine/src/combat.rs.
+4. code/digimon-engine/src/effect_context.rs or effect_context/, selection.rs, action/mask.rs,
+   action/decoder.rs, enums.rs, permanent.rs, effect_queue.rs, modifiers.rs.
+5. Existing combat tests: combat_scenarios.rs, tensor_and_mask.rs, mask_*_parity.rs, dsl.rs.
+6. docs/RULES_CONTEXT.md sections 11, 12, and 16.
+7. DCGO reference files for flow and emitter shape only:
+   - DCGO/Assets/Scripts/Script/AttackProcess.cs
+   - DCGO/Assets/Scripts/Script/SelectAttackEffect.cs
+   - DCGO/Assets/Scripts/Script/MainPhaseAction/AttackPermanentAction.cs
+   - DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Raid.cs
+   - DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Blocker.cs
+   - DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Collision.cs
+   - DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Alliance.cs
+   - DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Pierce.cs
+   - DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Retaliation.cs
+   - DCGO/Assets/Scripts/Script/CardEffectCommons/KeyWordEffects/Reboot.cs
+   - DCGO/Assets/Scripts/Script/SelectBurstDigivolutionEffect.cs
+   - DCGO/Assets/Scripts/Script/CardEffectCommons/CanUseEffects/IgnoreBattle.cs
+8. Cross-archetype gap reports for TS Olympos, Royal Knights, Red Hybrid AncientGreymon,
+   DNA Omnimon, Zephagamon, Alter-S Ladder, BG Imperial, and Rocks.
+
+Requested design:
+
+1. Centralize attack-flow entry with an AttackOpen-style parameter struct:
+
+   struct AttackOpen {
+       attacker: PermanentHandle,
+       initiator: AttackInitiator,         // NaturalMainPhase | Effect { source, optional }
+       suspend_attacker: bool,
+       target_constraint: TargetConstraint, // PlayerOnly | DigimonOnly | Any | Forced(Target)
+       allow_cancel: bool,
+   }
+
+   Natural main-phase attacks construct AttackOpen with NaturalMainPhase, suspend_attacker true,
+   target_constraint Any, allow_cancel false. Effect attacks construct the same entry point with
+   effect-specific flags. Document the public signature in docs/RUST_ENGINE_API.md.
+
+2. Reshape combat.rs around named phases:
+
+   - Declaration: attacker locked, suspend cost paid or skipped, WhenAttacking dispatched.
+   - Target lock: target selected or forced; attack-restriction modifiers read here.
+   - Interrupt window: Raid, Collision, Blocker-adjacent switch, effect redirect, Alliance.
+   - Blocker resolution: blockers update target; re-enter interrupt once for target-change triggers.
+   - Counter window: [Hand][Counter] / Blast Digivolve choices during damage step.
+   - Damage step + security trigger + end-of-attack: DP comparison, security continuation, EndOfBattle,
+     EndOfAttack.
+
+   Each phase should publish a flow event and keep active phase visible to predicates.
+
+3. Wire attack-restriction modifier reads:
+
+   - CannotAttack
+   - CannotBeAttacked or nearest current equivalent
+   - CannotAttackPlayer
+   - MayAttackPlayerOnly
+   - VortexCanAttackPlayers
+   - CannotBeRedirectedAsAttackTarget
+   - CanAttackTargetDefendingPermanent
+   - CanNotAttackTargetDefendingPermanent
+   - CanNotSwitchAttackTarget
+   - CanNotBlock
+   - Reboot
+   - GrantCollision
+
+   If a variant is missing, file the gap and use the closest existing variant. Do not invent private booleans.
+
+4. Add or extend EffectContext helpers:
+
+   - ctx.initiate_attack(attacker, opts) -> EffectStep-like suspend/resume step.
+   - ctx.may_attack_now(attacker, opts) with optional true and PASS/decline in mask.
+   - ctx.force_opponent_attack(attacker, target_constraint).
+   - ctx.redirect_attack_target(new_target).
+   - ctx.cancel_pending_attack().
+   - ctx.open_counter_window().
+
+5. Define OnAttackTargetChange observer payload:
+
+   - Subject: attacker.
+   - Old target, new target.
+   - Reason: Raid, Collision, Blocker, EffectRedirect(source_card), EffectForced.
+   - Controller of attacker.
+
+   Fire once per successful retarget only. Inherited observers must see the timing. Predicates must be able
+   to read reason and old/new target identities.
+
+6. Land keywords against the right phase:
+
+   - <Retaliation>: attacker is deleted when this Digimon is deleted by an attacker in battle.
+   - <Reboot>: unsuspends during opponent's unsuspend phase.
+   - <Piercing>: security continuation only after winning an attack battle against a Digimon; effect battles
+     must not trigger Piercing.
+   - <Collision> granted by GrantCollision: Blocker resolution consults granted state and enforces must-block
+     only during the attack window.
+   - <Blast Digivolve>: Counter-window activation from hand.
+
+   Confirm Raid, Blocker, Alliance, and Jamming consume the new pipeline phases and target-change payload.
+
+7. Add effect-driven attack cost-upgrade support. Cost payments must surface through pending_selection and
+   temporary benefits must tear down at EndOfAttack.
+
+8. Keep effect battles distinct from attacks. YAML battle: resolves a DP comparison and EndOfBattle but never
+   opens attack flow, triggers security, or triggers Piercing.
+
+9. Implement attack cancellation:
+
+   - Legal only from target lock through Blocker resolution.
+   - Rejected after Counter window opens.
+   - Closes attack cleanly with no damage, no security trigger, no EndOfBattle, and no Retaliation/Pierce/Counter.
+
+10. Add DSL schema and lowering for:
+
+   - may_attack:
+   - force_attack:
+   - redirect_attack_target:
+   - cancel_attack:
+   - open_counter_window:
+   - battle:
+   - Phase predicates: during_attack, during_counter_window, is_attack_initiator(self).
+   - Event predicates on OnAttackTargetChange.
+   - Keyword grants for retaliation, reboot, piercing, collision, blast_digivolve.
+
+11. Add card-shaped behavioral fixtures:
+
+   - BT24-037 TS Olympos may-attack branch.
+   - BT20-102 Royal Knights attack without suspending.
+   - ST18-14 Zephagamon or matching redirect text.
+   - AD1-012 redirect_attack_target observer.
+   - Rocks BT20-055 cancellation.
+   - DNA Omnimon Counter Blast.
+   - Alter-S Ladder G-ASL-02 cost upgrade.
+   - A Retaliation card.
+   - A Reboot card.
+   - A Piercing card plus effect-battle non-Piercing regression.
+   - GrantCollision scenario.
+   - Zephagamon ZEPH-G010 effect battle plus Fortitude/immunity cascade.
+
+12. Tests:
+
+   Framework tests in code/digimon-engine/tests/combat.rs or existing combat test modules:
+
+   - Natural and effect-driven attack route through the same entry point and produce identical phase events.
+   - Optional effect attack exposes decline/PASS through action mask.
+   - Mandatory effect attack still uses target legality and pending selection.
+   - suspend_attacker false does not suspend; true does.
+   - Attack-state restrictions tear down at EndOfAttack.
+   - OnAttackTargetChange fires once per successful retarget and never on rejected retarget.
+   - Payload carries attacker, old target, new target, reason, controller.
+   - Inherited observers under attacker and target see the timing without double-fire.
+   - Effect battles resolve DP and EndOfBattle but do not open attack flow, security, or Piercing.
+   - Retaliation battle deletion only.
+   - Reboot unsuspends during opponent's unsuspend phase for permanent- and player-scoped cases.
+   - Piercing only in attack context.
+   - GrantCollision must-block only during attack.
+   - Counter window opens at damage step and PASS works.
+   - cancel_pending_attack rejected after Counter window opens.
+   - Modifier consult tests for every requested modifier.
+   - VortexCanAttackPlayers flips with live condition.
+
+Acceptance gates:
+
+- One attack-flow entry point for natural and effect-driven attacks.
+- Optional effect-created attacks expose PASS/decline.
+- Mandatory attacks still use target legality and pending selection.
+- Attack-state restrictions do not leak into later attacks.
+- OnAttackTargetChange fires exactly once per successful retarget with enough payload for inherited predicates.
+- Effect battles remain distinct from attacks.
+- Retaliation, Reboot, Piercing, GrantCollision, Blast Digivolve, and cancellation work at their correct phases.
+- Every player-visible attack-flow choice surfaces through pending_selection and the action mask.
+
+Verification commands:
+
+    cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat
+    cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat_scenarios
+    cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- combat may_attack redirect counter
+    cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral
+    cargo test --manifest-path code/digimon-engine/Cargo.toml
+
+Tracker discipline:
+
+- Update docs/RUST_ENGINE_GAPS.md.
+- Update qa/archetype-qa/engine-gaps.md.
+- Update qa/dsl-vocab-gaps.md.
+- Update relevant qa/archetype-qa/dsl/*.md rollups.
+- Update docs/RUST_ENGINE_API.md.
+
+Implementation order requested:
+
+1. Read listed files in order.
+2. Sketch the central entry signature and phase pipeline.
+3. Convert natural main-phase attack onto the new entry point first.
+4. Layer effect helpers onto the same entry point.
+5. Add OnAttackTargetChange observer.
+6. Add keywords one at a time.
+7. Add card fixtures after framework tests pass.
+
+When a missing event payload, modifier variant, or selection shape is encountered, file the specific gap in the
+relevant tracker and proceed using the closest existing API instead of building a private substitute.

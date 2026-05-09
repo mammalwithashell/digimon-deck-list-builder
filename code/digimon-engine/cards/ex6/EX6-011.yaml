@@ -19,8 +19,20 @@ alt_paths:
       - { level_eq: 6, color_is: black }
     cost: 0
     stacks_unsuspended: true
+  # DCGO EX6_011 registers BlastDNADigivolveEffect at OnCounterTiming with
+  # named materials Durandamon + BryweLudramon. Printed text:
+  # [Hand] [Counter] <Blast DNA Digivolve ([Durandamon] + [BryweLudramon])>.
+  - kind: blast_dna_digivolve
+    materials:
+      - { kind: digimon, name_is: "Durandamon" }
+      - { kind: digimon, name_is: "BryweLudramon" }
+    cost: 0
+    stacks_unsuspended: true
 
 effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
   - kind: grant_keyword
     keyword: Raid
 
@@ -72,6 +84,5 @@ effects:
             - delete_permanent: { target: delete_target }
 
   # [Hand][Counter] Blast DNA Digivolve ([Durandamon] + [BryweLudramon]) is
-  # blocked by PUPPETS-G032 / the reusable Counter-window Blast DNA activation
-  # gap. The normal DNA route above is implemented; the Counter activation is
-  # not approximated.
+  # represented by the `blast_dna_digivolve` alt path plus the BlastDigivolve
+  # marker above.

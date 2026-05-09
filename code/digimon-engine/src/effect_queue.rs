@@ -67,7 +67,8 @@ fn permanent_activation_blocked_for_timing(
     handle: PermanentHandle,
     timing: EffectTiming,
 ) -> bool {
-    match timing {
+    // ── Per-timing player-scoped/permanent-scoped category gates ──
+    let category_block = match timing {
         EffectTiming::WhenDigivolving => game
             .modifiers
             .has(handle, ModifierType::CannotActivateWhenDigivolvingEffects),
@@ -75,7 +76,24 @@ fn permanent_activation_blocked_for_timing(
             .modifiers
             .has(handle, ModifierType::CannotActivateWhenAttackingEffects),
         _ => false,
+    };
+    if category_block {
+        return true;
     }
+
+    // ── DisableEffect timing-suppression ──
+    // Track C taxonomy (2026-05-06): a permanent-scoped
+    // `ModifierType::DisableEffect` entry whose `disable_effect_timing`
+    // matches the firing timing suppresses that timing only on this
+    // permanent. Other timings on the same permanent fire normally.
+    // Mirrors DCGO `DisableEffectClass.cs`. Used by the TS Olympos
+    // timing-suppression slice (see RUST_ENGINE_API.md "Modifier
+    // consult-site checklist").
+    if game.modifiers.is_timing_disabled(handle, timing) {
+        return true;
+    }
+
+    false
 }
 
 impl Game {
@@ -95,6 +113,7 @@ impl Game {
             is_turn_player,
             card_id: effect.card_id,
             allow_below_top_liveness: false,
+            dna_origin_context: None,
         }
     }
 
@@ -214,6 +233,10 @@ impl Game {
                     }
                 }
             }
+            TriggerSource::SecurityStackCard { player, card } => {
+                let trigger_context = self.trigger_context_for_source(&source, None);
+                self.enqueue_from_security_stack_card(timing, player, card, Some(trigger_context));
+            }
             TriggerSource::OnSecurityCheck { defender, .. } => {
                 // Observer timing: scan every permanent in the defender's
                 // battle area for `OnSecurityCheck`-timed effects. Attacker
@@ -309,7 +332,7 @@ impl Game {
                     );
                 }
             }
-            TriggerSource::EventObserved { .. } => {
+            TriggerSource::EventObserved { .. } | TriggerSource::AttackTargetChanged { .. } => {
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
                     let count = self.player(player).battle_area.len();
@@ -395,10 +418,18 @@ impl Game {
                 ..
             } => {
                 let trigger_context = self.trigger_context_for_source(&source, None);
-                self.enqueue_from_security_card(timing, affected_player, card, Some(trigger_context));
+                self.enqueue_from_security_card(
+                    timing,
+                    affected_player,
+                    card,
+                    Some(trigger_context),
+                );
             }
         }
-        if matches!(source, TriggerSource::EventObserved { .. }) {
+        if matches!(
+            source,
+            TriggerSource::EventObserved { .. } | TriggerSource::AttackTargetChanged { .. }
+        ) {
             let trigger_context = self.trigger_context_for_source(&source, None);
             self.enqueue_event_gated_delayed_options(timing, trigger_context);
         }
@@ -444,6 +475,7 @@ impl Game {
                 is_turn_player,
                 card_id: card_id.clone(),
                 allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
             });
         }
     }
@@ -499,6 +531,7 @@ impl Game {
                     is_turn_player,
                     card_id: card_id.clone(),
                     allow_below_top_liveness: false,
+                    dna_origin_context: self.current_dna_origin,
                 });
             }
         }
@@ -642,6 +675,13 @@ impl Game {
                 was_security_skill: true,
                 ..TriggerContext::default()
             },
+            TriggerSource::SecurityStackCard { player, card } => TriggerContext {
+                target_card: Some(card),
+                event_card: Some(card),
+                source_player: Some(player),
+                was_security_skill: false,
+                ..TriggerContext::default()
+            },
             TriggerSource::OnSecurityCheck {
                 attacker,
                 defender,
@@ -722,6 +762,28 @@ impl Game {
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
                 event_permanent: Some(permanent),
                 event_card: Some(card),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::AttackTargetChanged {
+                player,
+                attacker,
+                card,
+                old_target,
+                new_target,
+                reason,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_permanent: Some(attacker),
+                event_card: Some(card),
+                attack_target_change: Some(crate::trigger_context::AttackTargetChange {
+                    attacker,
+                    old_target,
+                    new_target,
+                    reason,
+                    controller: player,
+                }),
                 source_player: Some(player),
                 ..TriggerContext::default()
             },
@@ -943,6 +1005,7 @@ impl Game {
                 is_turn_player,
                 card_id: card_id.clone(),
                 allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
             });
         }
     }
@@ -1028,6 +1091,61 @@ impl Game {
                 is_turn_player,
                 card_id: card_id.clone(),
                 allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
+            });
+        }
+    }
+
+    /// Collect turn-boundary `[Security]` effects from a card that still
+    /// lives in the persistent security stack. This is distinct from
+    /// `SecuritySkill`, where combat has already popped the card into
+    /// `pending_security`.
+    fn enqueue_from_security_stack_card(
+        &mut self,
+        timing: EffectTiming,
+        player: PlayerId,
+        card: CardHandle,
+        trigger_context: Option<TriggerContext>,
+    ) {
+        let Some(card_source) = self
+            .player(player)
+            .security
+            .iter()
+            .find(|source| source.handle() == card)
+        else {
+            return;
+        };
+        let card_id = card_source.card_id(&self.card_data).to_string();
+        let source_kind = source_kind_for_card_kind(card_source.card_kind(&self.card_data));
+
+        let Some(effects) = self.effects_for_card(&card_id, card) else {
+            return;
+        };
+
+        let is_turn_player = player == self.turn_player();
+        for (slot, effect) in effects.iter().enumerate() {
+            if security_activation_blocked_for_timing(self, player, timing) {
+                continue;
+            }
+            if !timing_flag_matches(effect, timing) {
+                continue;
+            }
+            if !effect.security {
+                continue;
+            }
+            self.effect_queue.push_back(QueuedEffect {
+                source_card: card,
+                source_permanent: None,
+                source_kind,
+                controller: player,
+                timing,
+                trigger_context: trigger_context.clone(),
+                effect_slot: slot as u8,
+                is_optional: effect.optional,
+                is_turn_player,
+                card_id: card_id.clone(),
+                allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
             });
         }
     }
@@ -1105,6 +1223,7 @@ impl Game {
                     is_turn_player,
                     card_id: card_id.clone(),
                     allow_below_top_liveness: false,
+                    dna_origin_context: self.current_dna_origin,
                 });
             }
         }
@@ -1155,6 +1274,7 @@ impl Game {
                     is_turn_player,
                     card_id: linked_card_id.clone(),
                     allow_below_top_liveness: false,
+                    dna_origin_context: self.current_dna_origin,
                 });
             }
         }
@@ -1240,6 +1360,7 @@ impl Game {
                         is_turn_player,
                         card_id: training_card_id.clone(),
                         allow_below_top_liveness: false,
+                        dna_origin_context: self.current_dna_origin,
                     });
                 }
             }
@@ -1289,6 +1410,7 @@ impl Game {
                     is_turn_player,
                     card_id: source_card_id.clone(),
                     allow_below_top_liveness: true,
+                    dna_origin_context: self.current_dna_origin,
                 });
             }
         }
@@ -1333,6 +1455,7 @@ impl Game {
                     is_turn_player,
                     card_id: card_id.clone(),
                     allow_below_top_liveness: false,
+                    dna_origin_context: self.current_dna_origin,
                 });
             }
         }
@@ -1374,6 +1497,7 @@ impl Game {
                     is_turn_player,
                     card_id: source_card_id.clone(),
                     allow_below_top_liveness: true,
+                    dna_origin_context: self.current_dna_origin,
                 });
             }
         }
@@ -1411,11 +1535,16 @@ impl Game {
         let prev_effect_source_card = self.effect_source_card;
         let prev_effect_source_permanent = self.effect_source_permanent;
         let prev_trigger_context = self.current_trigger_context.clone();
+        let prev_dna_origin = self.current_dna_origin;
         self.effect_source_player = Some(qe.controller);
         self.effect_source_card = Some(qe.source_card);
         self.effect_source_permanent = qe.source_permanent;
         self.current_trigger_context = qe.trigger_context.clone();
+        if qe.dna_origin_context.is_some() {
+            self.current_dna_origin = qe.dna_origin_context;
+        }
         let out = self.run_queued_effect_inner(qe);
+        self.current_dna_origin = prev_dna_origin;
         self.current_trigger_context = prev_trigger_context;
         self.effect_source_permanent = prev_effect_source_permanent;
         self.effect_source_card = prev_effect_source_card;
@@ -1790,10 +1919,8 @@ impl Game {
     ) {
         let mut completed_digivolve: Option<(PermanentHandle, crate::card_source::CardHandle)> =
             None;
-        let mut completed_security_placement: Option<(
-            PlayerId,
-            crate::card_source::CardHandle,
-        )> = None;
+        let mut completed_security_placement: Option<(PlayerId, crate::card_source::CardHandle)> =
+            None;
         let removed_card = self
             .pending_security
             .as_ref()
@@ -2030,6 +2157,13 @@ impl Game {
 
         // Map each bundle position to an action ID in the 30-59 range.
         // action_id = HAND_EFFECT_START + position.
+        if self.current_dna_origin.is_some() {
+            for &qe_idx in bundle {
+                if let Some(qe) = self.effect_queue.get_mut(qe_idx) {
+                    qe.dna_origin_context = self.current_dna_origin;
+                }
+            }
+        }
         let capped = bundle.len().min(HAND_MAIN_LIMIT);
         let mut valid_action_ids: Vec<u16> = Vec::with_capacity(capped);
         let mut choices: Vec<EffectChoiceEntry> = Vec::with_capacity(capped);

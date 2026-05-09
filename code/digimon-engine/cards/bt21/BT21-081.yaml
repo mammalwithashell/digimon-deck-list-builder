@@ -20,13 +20,9 @@ traits: [LIBERATOR]
 # (so the suspend cost can be paid). If no eligible Reptile/Dragonkin exists,
 # the condition gate (any_permanent) blocks activation.
 #
-# "Then, that Digimon attacks": BLOCKED — DSL-vocab gap. The engine has
-# ModifierType::MayAttack and ModifierType::ForceAttack but neither is
-# registered in lookup_modifier_type for use via add_modifier. Even if
-# MayAttack were registered, the DCGO uses SelectAttackEffect.SetCanNotSelectNotAttack
-# which is a mandatory (not optional) attack in the EOT effect window,
-# not a standard EndOfTurnAction optional attack. The attack step is
-# omitted here pending DSL vocabulary expansion. See qa/dsl-vocab-gaps.md.
+# "Then, that Digimon attacks": DCGO uses SelectAttackEffect with
+# SetCanNotSelectNotAttack, so Rust lowers the selected Digimon into a
+# mandatory `force_attack` step rather than optional `may_attack_now`.
 #
 # Clause (c): [Security] Play this card without paying the cost.
 # Standard play_from_security pattern — same as BT18-087, BT22-084, BT21-015.
@@ -84,10 +80,9 @@ effects:
           target: tgt
           keyword: Piercing
           expiry: end_of_turn
-      # "Then, that Digimon attacks."
-      # BLOCKED: no DSL verb for effect-initiated mandatory EOT attack on a specific
-      # Digimon. MayAttack and ForceAttack ModifierTypes are not in lookup_modifier_type.
-      # See qa/dsl-vocab-gaps.md DSL-GAP entry.
+      - force_attack:
+          attacker: tgt
+          targets: any
 
   # ─── Clause (c): [Security] Play without paying the cost ─────────────────────
   - when: on_security

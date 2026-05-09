@@ -34,7 +34,7 @@ Highest-frequency Medusamon cards from the current deck library:
 | `BT24-017` Medusamon | Main finisher | Needs exact opponent-trash return cost, Petrification Token follow-up, and DP scaling. |
 | `BT24-016` Lamiamon | Main level 5 engine | Needs alt-path condition and refreshed opponent-choice/security tests. |
 | `BT24-018` Styracomon | Main top end / protection | Needs selected security trash and cross-permanent would-leave replacement. |
-| `BT21-081` / `BT24-082` Owen Dreadnought | Tamer engine | Needs forced or optional immediate attack prompts. |
+| `BT21-081` / `BT24-082` Owen Dreadnought | Tamer engine | Immediate attack prompts resolved 2026-05-08; remaining BT24-082 risk is generic OPT enforcement. |
 | `BT24-089` Unique Emblem | Delay option | Needs native event-gated Delay migration and body coverage. |
 | `P-103` Offense Training / `LM-027` Red Scramble | Option package | Mostly authored, but security/Delay disposition needs migration/tests. |
 | `BT21-029` / `EX11-012` Medusamon | Secondary bosses | `EX11-012` is close; `BT21-029` needs the omitted deletion observer arm. |
@@ -91,18 +91,20 @@ Highest-frequency Medusamon cards from the current deck library:
 ### MED-GAP-03: Immediate follow-up attack prompts
 
 - **Type:** engine-gap plus DSL vocabulary.
+- **Status:** resolved for BT21-081 and BT24-082 as of 2026-05-08.
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` "Force-follow-up-attack / may attack
   without suspending script helpers" and companion DSL entry for an
-  `offer_follow_up_attack` / `force_follow_up_attack` step.
-- **Blocks:** `BT21-081`, `BT24-082`; also many cross-archetype cards with
+  `may_attack_now` / `force_attack` step.
+- **Formerly blocked:** `BT21-081`, `BT24-082`; also many cross-archetype cards with
   "then this/that Digimon may attack" or "that Digimon attacks".
 - **Required behavior:** After an effect resolves, expose a legal attack action
   for a specific Digimon, preserving printed optionality, attack legality,
   target selection, suspend rules, and action masking.
-- **Evidence:** `BT21-081.yaml` omits "Then, that Digimon attacks." `BT24-082`
-  omits "Then, it may attack." Existing comments route both to the
-  `G-MAY-ATTACK-NOW` family.
-- **First tests:**
+- **Evidence:** `BT21-081.yaml` now grants Piercing then uses mandatory
+  `force_attack`. `BT24-082.yaml` buffs the digivolved event target then uses
+  optional `may_attack_now`, with PASS exposed through the mask.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt21_081_end_of_turn_selected_digimon_attacks_after_piercing_grant bt24_082_clause2_may_attack_prompt_installs_after_dp_buff`.
+- **Regression tests:**
   - End-of-turn `BT21-081` should suspend Owen, grant Piercing, then force the
     selected Reptile/Dragonkin Digimon to attack.
   - `BT24-082` should offer, not auto-run, the attack after the matching
@@ -142,19 +144,20 @@ Highest-frequency Medusamon cards from the current deck library:
 - **Tracker:** `qa/dsl-vocab-gaps.md` for missing predicate aliases or lowering;
   do not file a new engine gap until current `event_target` and
   `event_card_trait_has` support is rechecked.
-- **Blocks:** `BT24-082`, `EX11-054`, `BT21-029`; related to any observer that
+- **Blocks:** `EX11-054`, `BT21-029`; related to any observer that
   grants DP, suspends, draws, or plays a token based on the permanent involved
   in the triggering event.
 - **Required behavior:** Observer effects need to inspect and bind the card or
   permanent that just digivolved, entered play, was deleted, or caused security
   removal.
-- **Evidence:** `BT24-082` currently approximates "that Digimon" with a manual
-  selected Reptile/Dragonkin. `EX11-054` has a registered raw no-op observer.
+- **Evidence:** `BT24-082` was rechecked and now uses `event_card_trait_has`
+  plus `target: event_target` for the exact digivolved permanent. `EX11-054` has a registered raw no-op observer.
   `BT21-029` omits the opponent-deletion token arm even though current predicate
   code appears to include `event_target_owner`.
-- **First tests:**
-  - `BT24-082` should fire only when a Digimon digivolves into a
-    Reptile/Dragonkin and should grant +3000 DP to that exact Digimon.
+- **First tests / evidence:**
+  - `BT24-082` now fires only when a Digimon digivolves into a
+    Reptile/Dragonkin and grants +3000 DP to that exact Digimon; covered by
+    `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_082_clause2_may_attack_prompt_installs_after_dp_buff`.
   - `BT21-029` should play a Petrification Token when an opponent Digimon is
     deleted, not when your own Digimon is deleted.
 - **Implementation hint:** Prefer native `target: event_target` and

@@ -47,5 +47,29 @@ effects:
   # Inherited [All Turns] [Once Per Turn]
   # When this Digimon would leave the battle area other than by your effects,
   # delete 1 Token or other Puppet trait Digimon so it doesn't leave.
-  # Omitted rather than approximated: current replacement dispatch does not
-  # install this inherited-source replacement from beneath a carrier.
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - none_of:
+            - replacement_cause: own_effect
+    summary: "[All Turns][OPT] Delete 1 Token or other Puppet Digimon so this Digimon doesn't leave"
+    process:
+      - select_own_permanent:
+          bind_as: prevent_cost
+          filter:
+            all_of:
+              - other: true
+              - any_of:
+                  - kind: token
+                  - all_of:
+                      - kind: digimon
+                      - trait_has: Puppet
+          prompt: "Delete 1 of your Tokens or other Puppet Digimon"
+      - delete_permanent: { target: prevent_cost }
+      - cancel_replacement: {}

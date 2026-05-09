@@ -78,6 +78,35 @@ effects:
 }
 
 #[test]
+fn predicate_of_alias_lowers_to_owner_scope() {
+    let yaml = r#"
+card: T-G7-OF
+name: Predicate Of Alias
+kind: option
+color: [white]
+cost: 0
+effects:
+  - when: main_from_hand
+    process:
+      - for_each:
+          over: { of: opponent, kind: digimon }
+          bind_as: target
+          body:
+            - suspend: { target: target }
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let CompiledStep::ForEach { over, .. } = &triggered.process[0] else {
+        panic!("expected for_each");
+    };
+
+    assert_eq!(over.owner, Some(CompiledPlayerRef::Opponent));
+}
+
+#[test]
 fn color_matches_any_field_digimon_compiles() {
     let yaml = r#"
 card: T-G7-COLOR

@@ -19,9 +19,9 @@ The remaining blocker is mostly authored card coverage plus a smaller set of reu
 ## Coverage Snapshot
 
 - Archetype pool: 47 unique card IDs.
-- YAML found under `code/digimon-engine/cards/**` after the 2026-05-04 pool pass plus pulled main updates: 40 of 47 pool cards.
+- YAML found under `code/digimon-engine/cards/**` after the 2026-05-04 pool pass plus pulled main updates and the 2026-05-08 EX10-003 Track D slice: 41 of 47 pool cards.
 - Rocks pool cards with production YAML/test slices added or audited on 2026-05-04: `BT14-009`, `BT18-064`, `BT21-055`, `BT23-059`, `BT23-096`, `BT4-072`, `BT8-094`, `EX10-025`, `EX10-028`, `EX10-032`, `EX10-033`, `EX10-034`, `EX10-036`, `EX10-063`, `EX10-069`, `EX11-038`, `EX11-044`, `EX7-049`, `EX8-005`, `EX8-046`, `EX8-047`, `EX8-048`, `EX8-050`, `EX8-051`, `EX8-055`, `EX8-067`, `LM-031`, `LM-032`, `P-039`, `P-107`, `P-167`, `P-169`, `P-186`, `P-215`, `ST13-08`, `ST22-11`.
-- Remaining Rocks pool cards without production YAML after one pass: `BT20-055`, `BT21-021`, `BT9-103`, `EX10-003`, `EX11-065`, `EX8-070`, `P-130`.
+- Remaining Rocks pool cards without production YAML after one pass: `BT21-021`, `BT9-103`, `EX11-065`, `EX8-070`, `P-130`. `BT20-055` now has production YAML/test coverage for its security end-of-opponent-turn self-play slice; its security-flip rider remains gap-routed.
 - Existing YAML quality notes:
   - `BT16-082` is still a documented no-op placeholder even though `OnMove` support now exists.
   - `P-206` and `EX7-074` still contain raw-Rust/self-disposition workarounds that should be revisited against newer DSL support.
@@ -154,14 +154,16 @@ These should not become cross-archetype gap entries unless authoring proves a re
 | `BT16-082` | placeholder replacement / test gap | OnMove reveal-add flow, bottom remainder handling, then optional hatch without triggering on hatch |
 | `P-206`, `EX7-074` | modernization / test gap | Remove raw-Rust self-disposition where standard DSL can express the printed Option flow |
 | `BT14-009`, `BT18-064`, `EX8-051`, `ST13-08` | implemented 2026-05-04 | Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt14_009 bt18_064 ex8_051 st13_08 --nocapture` |
-| `BT20-055`, `BT21-021`, `BT9-103`, `EX10-003`, `EX11-065`, `EX8-070`, `P-130` | blocked after pass | See `qa/archetype-qa/dsl/rocks.md` and `qa/qa-reports/validated_cards_dsl.json` for per-card gap routing. |
+| `EX10-003` | implemented 2026-05-08 | Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex10_003`; also proves `select_own_sources` `from:` + `filter:` lowering. |
+| `BT21-021`, `BT9-103`, `EX11-065`, `EX8-070`, `P-130` | blocked after pass | See `qa/archetype-qa/dsl/rocks.md` and `qa/qa-reports/validated_cards_dsl.json` for per-card gap routing. |
+| `BT20-055` | partial production YAML | `[Security] [End of Opponent's Turn]` self-play covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_055_security_end_of_opponents_turn_plays_self_from_security`; security-flip rider still blocked on face-up security lifecycle. |
 | `P-123` | covered by pulled main update | Production YAML/tests are present on main after the pull; no longer counted in the Rocks blocked remainder. |
 
 ## Stale Tracker Cleanup Candidates
 
 The following older Rocks gap claims should be reviewed before a new roadmap spec is compiled:
 
-- `G-ROCKS-SOURCE-SELECTION-DSL`: now mostly closed for `select_own_sources` and `trash_selected_sources`; keep only producer-context completeness and card authoring work.
+- `G-ROCKS-SOURCE-SELECTION-DSL`: now mostly closed for `select_own_sources`, `from:` host restriction, source-card `filter:`, and `trash_selected_sources`; keep only producer-context completeness and card authoring work.
 - `G-ON-MOVE`: no longer a primitive blocker for `BT16-082`; the card is blocked by placeholder YAML and reveal/hatch authoring.
 - `G-COLLISION`: no longer a primitive blocker; combat tests cover Collision.
 - `G-IGNORE-COLOR-MASK`, `G-PLAY-COST-LTE`, `color_matches_any_field_digimon`: no longer broad primitive blockers; remaining work is card modernization and tests.

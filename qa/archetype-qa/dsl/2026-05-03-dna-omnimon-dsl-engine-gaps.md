@@ -34,7 +34,7 @@ The base engine now supports more DNA infrastructure than the older 2026-04-17 a
 - Top-level `alt_paths: kind: dna_digivolve` authoring into runtime `CardData.dna_costs`.
 - Inherited end-of-turn DNA registration for the v1 literal-cost, two-material action path.
 
-The archetype remains blocked because its most important cards need specialized cross-zone DNA, Counter-window DNA, leave-field replacement, Decode/material play, immediate attack, and mass-selection semantics.
+The archetype remains partially blocked by remaining specialized cross-zone DNA follow-ups, immediate attack, security-removed observers, and mass-selection semantics. The Track B Counter-window DNA, leave-field replacement, and Decode/material-play slices are now implemented for the covered fixtures and should not be treated as whole-archetype blockers without a new failing card case.
 
 ## Core Archetype Cards And Pressure Points
 
@@ -62,8 +62,9 @@ The local `DNA Omnimon` decklists most heavily use:
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` under Counter hand-play / Blast DNA residuals and selection DNA-pair residuals
 - **Blocks:** `BT17-078`, `BT17-095`, `AD1-009`, `AD1-012`
 - **Cross-archetype value:** Any future Blast DNA, effect DNA using a material from hand, defender-side reactive DNA, or named-material fusion route.
-- **Missing capability:** Counter timing can perform ordinary Blast Digivolve, and effect-initiated DNA can consume two battle-area materials, but DNA Omnimon needs pair selection where one material may be a field Digimon and another may be a card in hand, with the evolution card also in hand.
-- **First regression:** Set up opponent attack into a Digimon target while `BT17-078` is in defender hand, `WarGreymon` is on field, and `MetalGarurumon` is in hand. The Counter mask must expose the Blast DNA action, then a pending selection must choose the hand material, perform DNA, fire When Digivolving, and resume the attack state correctly.
+- **Status update (2026-05-08):** The reusable Counter-window field+hand Blast DNA path is now implemented and covered by BT20-060, BT17-078, BT20-045, BT20-076, BT20-081, EX6-011, and EX6-029. The Counter mask exposes the result-card action, then pending selections choose the field material and hand material, stack both under the result, fire `WhenDigivolving` / `OnDnaDigivolve` / `OnDigivolve`, and preserve `dna_origin` through parked target-selection continuations. `kind: blast_dna_digivolve` lets card YAML carry exact printed material predicates; BT17-078 accepts WarGreymon + MetalGarurumon and rejects broad Greymon + Garurumon. The selected-level mass bottom-deck branch for BT17-078 is also implemented via `bind_permanent_property` + `level_eq_binding`. Proof: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078_counter_blast_dna`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078_blast_dna_bottom_decks_same_level_then_prompts_delete`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_060_hand_counter_blast_dna_uses_alphamon_and_ouryumon bt20_060_dna_origin_trashes_security_and_recovers`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_045_counter_blast_dna bt20_076_counter_blast_dna bt20_081_counter_blast_dna ex6_029_counter_blast_dna`.
+- **Remaining capability:** two-field-material Counter Blast DNA variants, if printed, still need their own pending-selection route. AD1-012's defender-side effect DNA clause remains blocked by effect-initiated DNA during the attack interrupt, not by Counter Blast DNA.
+- **First regression:** For any future two-field-material Counter Blast DNA card, set up opponent attack into a Digimon target while the result card is in defender hand and both materials are on the defender field. The Counter mask must expose the Blast DNA action, then pending selections must choose both field materials, perform DNA, fire When Digivolving, and resume the attack state correctly.
 - **Implementation hint:** `code/digimon-engine/src/combat.rs`, `code/digimon-engine/src/game_actions.rs`, `code/digimon-engine/src/effect_context/`, `code/digimon-engine/src/action/`, plus DSL lowering for a mixed-material DNA verb.
 
 ### 2. Leave-field replacement framework with cause discrimination
@@ -72,7 +73,8 @@ The local `DNA Omnimon` decklists most heavily use:
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` under `WhenWouldBeDeleted` / leave-field replacement-effect framework
 - **Blocks:** `BT17-095`, `BT22-015`, `EX4-060`, `AD1-025`, `EX5-015`, `AD1-012`, `AD1-014`
 - **Cross-archetype value:** Decode, Partition, Armor Purge, Evade, Fragment, Scapegoat, non-battle leave observers, own-effect vs opponent-effect prevention.
-- **Missing capability:** Replacement checks need to see why a card would leave, who caused it, whether it is battle or non-battle, and whether the prevention is optional or cost-gated. DNA Omnimon particularly needs "would leave the battle area outside of a battle" and "other than by one of your effects".
+- **Status:** Track B framework closed/narrowed 2026-05-08 for the reusable replacement substrate: leave-field replacement context carries cause, subject, destination, and battle/non-battle semantics; optional replacements decline through `PendingSelection`; non-cancelling subscribers can run side effects then proceed; Decode/material play is live for `BT22-015`, EX4-060, and EX9-021; and inherited/cross-permanent replacement scans are covered in `--test replacements`.
+- **Remaining capability:** Card-specific DNA Omnimon residuals now center on follow-up text that is not replacement-specific, such as global security-removed observers, immediate attacks, and broader King Drasil/source-stack plays.
 - **First regression:** `BT17-095` in battle area should offer its Delay only when a level 6 Greymon/Garurumon would leave outside battle, not when deleted in battle. Declining the Delay must allow the leave event to continue unchanged.
 - **Implementation hint:** Centralize leave-field attempts in engine movement/deletion helpers before destination mutation; thread cause/controller/source-player into replacement evaluation.
 
@@ -80,21 +82,22 @@ The local `DNA Omnimon` decklists most heavily use:
 
 - **Type:** engine-gap, dsl-gap
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` under Decode keyword
-- **Blocks:** `BT22-015`
+- **Status:** Closed 2026-05-07 for `BT22-015`; narrowed 2026-05-08 for EX4-060 and EX9-021 sequential source-play follow-ups. Broader batch / different-name material plays remain tracked under `G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES`.
+- **Blocks:** EX10-061-style batch / different-name multi-source plays, not BT22-015, EX4-060, or EX9-021.
 - **Cross-archetype value:** Decode-style mechanics, Partition variants, source extraction, play material without paying cost, source-trigger interactions.
-- **Missing capability:** Current keyword handling does not model printed Decode as "select a matching source and play it for free". It needs `SelectSource` over the triggering stack and a movement helper that pops that source card, creates a fresh permanent, and fires On Play.
-- **First regression:** `BT22-015` leaving outside battle should offer a source-selection prompt for matching Lv.3 material. Selecting a legal source plays that material without paying cost and does not redirect the original Omnimon to hand/deck.
+- **Closed capability:** `BT22-015` leaving outside battle offers an optional source-selection prompt for matching Lv.3 material, with separate Red/Black and Blue/Yellow color gates. `EX4-060` and `EX9-021` can run sequential named/trait source picks, play those sources without paying costs, and resolve their follow-up security placement tails.
+- **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_015_decode`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex4_060`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_021`.
 - **Implementation hint:** `code/digimon-engine/src/effect_context/`, `code/digimon-engine/src/action/`, `code/digimon-engine/src/cards/keyword_effects.rs`, plus DSL/keyword metadata for Decode filters.
 
 ### 4. Immediate follow-up attack and attack without suspending
 
 - **Type:** engine-gap, dsl-gap
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` under force-follow-up-attack; `qa/dsl-vocab-gaps.md` under `G-MAY-ATTACK-NOW`
-- **Blocks:** `BT22-015`, `BT20-102`, `AD1-009`, `EX9-013`
+- **Status:** resolved for the listed immediate prompt routes as of 2026-05-08.
+- **Formerly blocked:** `BT22-015`, `BT20-102`, `AD1-009`, `EX9-013`
 - **Cross-archetype value:** Any "then it may attack", "then that Digimon attacks", or "attack without suspending" effect that occurs inside an effect resolution rather than the normal attack window.
-- **Missing capability:** Existing attack masks cover ordinary attack windows and some end-of-turn granted attack shapes, but there is no effect step that starts an immediate attack on a bound permanent while optionally skipping suspension.
-- **First regression:** `BT22-015` When Digivolving resolves its bottom-deck effect and then offers an attack for that same Digimon even if memory has passed. If selected, it starts combat through the normal attack state machine.
-- **Implementation hint:** Add an engine primitive such as `ctx.attack_now(target, without_suspending, optional)` and a DSL step like `force_attack_now` or `may_attack_now`.
+- **Implemented capability:** `ctx.may_attack_now_optional(...)` / DSL `may_attack_now` open the centralized attack flow from effect resolution, expose PASS for printed optionality, and support `without_suspending`. Mandatory flows use DSL `force_attack`.
+- **Regression evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_013_eot_clause_contains_post_dna_may_attack_now ex9_013_eot_after_dna_one_digimon_may_attack`; BT20-102/AD1-009/BT22-015 card-shaped tests also exercise the same primitive.
 
 ### 5. Option, Delay, and security disposition completeness
 
@@ -110,21 +113,22 @@ The local `DNA Omnimon` decklists most heavily use:
 
 - **Type:** dsl-gap
 - **Tracker:** `qa/dsl-vocab-gaps.md` under `BT17-078 -- bottom-deck all opponent Digimon sharing chosen level`
-- **Blocks:** `BT17-078`
+- **Blocks:** closed for `BT17-078`
 - **Cross-archetype value:** Any "choose 1, affect all with same level/play cost/name/trait/color" card text.
-- **Missing capability:** The DSL can select targets and iterate permanents, but needs a clean way to bind a selected permanent's property and use that bound value as a later predicate.
-- **First regression:** `BT17-078` selects one opponent Digimon, returns all opponent Digimon with that selected level to the bottom of deck, then deletes one remaining opponent Digimon if any are legal.
-- **Implementation hint:** Add a property binding form such as `bind_property: { from: chosen, property: level, as: chosen_level }` and allow predicate comparisons to binding values.
+- **Status:** resolved 2026-05-07. `bind_permanent_property` binds a selected permanent property, currently `level`, and `level_eq_binding` lets later predicates compare against that captured value.
+- **First regression:** `BT17-078` selects one opponent Digimon, returns all opponent Digimon with that selected level to the bottom of deck, then deletes one remaining opponent Digimon if any are legal. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- parse_bind_permanent_level_property_step bind_permanent_level_filters_for_each_same_level_permanents` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078`.
+- **Implementation hint:** Use `bind_permanent_property: { from: chosen, property: level, bind_as: chosen_level }` followed by a selector or for-each predicate with `level_eq_binding: chosen_level`.
 
 ### 7. Stack-derived formulas and same-level pair counts
 
 - **Type:** dsl-gap, engine-gap if formula inputs are unavailable
+- **Status:** Closed 2026-05-07 for BT22-015. Formula-bound `select_count_capped_multi` now supports `{ formula: ... }` counts, `zone: battle_area` permanent picks, and `per_selected` bottom-deck resolution. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_015_when_digivolving_bottom_decks_n_opp_digimon_per_same_level_pair`.
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` dynamic formula sections; `qa/dsl-vocab-gaps.md` formula/residual entries
 - **Blocks:** `BT22-015`
 - **Cross-archetype value:** Stack-depth formulas, source-count formulas, per-N source scaling, source-level grouping.
-- **Missing capability:** `BT22-015` needs "for every 2 same-level cards in this Digimon's stack, return 1 opponent Digimon to bottom deck". This requires grouping the source stack by level, summing floor(count / 2), and using the result as a capped target count.
-- **First regression:** A `BT22-015` stack with two Lv.3, two Lv.4, and one Lv.6 source should allow exactly two opponent Digimon to be selected for bottom-decking.
-- **Implementation hint:** Add formula terms for source-stack grouping and bind the computed count into a count-capped selection.
+- **Closed capability:** `BT22-015` groups the source stack by level, sums floor(count / 2), uses the result as a capped target count, and bottom-decks the selected opponent Digimon before the follow-up attack prompt.
+- **Regression:** A `BT22-015` stack with two Lv.6 sources, two Lv.5 sources, and one unmatched source allows exactly two opponent Digimon to be selected for bottom-decking.
+- **Implementation note:** The reusable formula term remains `same_level_pairs_in_sources`; the reusable selector surface is `select_count_capped_multi.max.formula`.
 
 ### 8. Source-scoped immunity and `CannotBeAffected` enforcement
 

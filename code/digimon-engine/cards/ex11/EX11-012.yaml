@@ -20,6 +20,13 @@ effects:
 
   - when: [when_digivolving, end_of_attack]
     optional: true
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        all_of:
+          - kind: digimon
+          - dp_lte: 12000
     summary: "Delete <=12000 DP Digimon; return trash; play Petrification Token"
     process:
       - select_opponent_permanent:

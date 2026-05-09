@@ -44,7 +44,7 @@ Do not claim this archetype is playable in Rust yet. The blockers are mostly aut
 |---|---|---|---|---|
 | `BT16-082` Ukkomon | On move from breeding: reveal 3, add Digimon/Tamer, bottom rest, may hatch | dsl-gap | `code/digimon-engine/cards/bt16/BT16-082.yaml`; `code/digimon-engine/tests/cards_behavioral/bt16/bt16_082.rs` | Replace raw-rust no-op body with real reveal/select/hatch process; unignore behavioral tests. |
 | `EX10-010` BlackWarGreymon | Blast/Raid/Reboot/Blocker; delete cost <=7 Digimon/Tamer; conditional +3000 DP and opponent-Digimon-effect immunity | dsl-gap / engine-gap | `code/digimon-engine/cards/ex10/EX10-010.yaml`; `code/digimon-engine/tests/cards_behavioral/ex10/ex10_010.rs` | Add `play_cost_lte: 7` to YAML now that predicate support exists; implement/wire source-kind effect immunity for the conditional aura. |
-| `EX9-013` BlitzGreymon | Blast/Alliance/Blocker; De-Digivolve 3; end-turn optional DNA into Omnimon Alter-S, then optional attack | dsl-gap | `code/digimon-engine/cards/ex9/EX9-013.yaml`; `code/digimon-engine/tests/cards_behavioral/ex9/ex9_013.rs` | Implement `G-MAY-ATTACK-NOW` as a pending-selection-backed effect attack step. |
+| `EX9-013` BlitzGreymon | Blast/Alliance/Blocker; De-Digivolve 3; end-turn optional DNA into Omnimon Alter-S, then optional attack | implemented slice | `code/digimon-engine/cards/ex9/EX9-013.yaml`; `code/digimon-engine/tests/cards_behavioral/ex9/ex9_013.rs` | Track D may-attack step implemented 2026-05-08; remaining Alter-S Ladder blockers are elsewhere in the pool. |
 | `EX10-008` MetalGreymon | Grant Collision and forced start-main attack to opponent Digimon; inherited target-change security trash | engine-gap | no YAML under `code/digimon-engine/cards/`; printed text in `data/cards.json` | Need granted Collision/forced attack effect coverage plus inherited attack-target-change observer. |
 | `EX9-011` MetalGreymon | Cost reduction by trashing hand card; tuck trash card face down; delete DP budget scaling with face-down sources | dsl-gap | no YAML | Author card after validating face-down source representation and DP-budget formula/count support. |
 | `EX9-020` CresGarurumon | Bottom-deck Lv5 or lower; when any Lv6 would leave by opponent effect, play a Lv6 source instead | engine-gap | no YAML | Needs leave-field replacement scoped to any own Lv6 and source-stack play. |
@@ -58,7 +58,7 @@ Do not claim this archetype is playable in Rust yet. The blockers are mostly aut
 
 1. `EX4-060`: when it would leave by opponent effect, present source selections for one `BlitzGreymon` and one `CresGarurumon`, play both, then place `EX4-060` at bottom security.
 2. `EX9-021`: DNA digivolving deletes all opponent Digimon tied for highest level and grants opponent-effect immunity only for that turn.
-3. `EX9-013`: after the end-turn DNA process resolves, the player receives an optional pending selection to attack with one of their Digimon.
+3. `EX9-013`: after the end-turn DNA process resolves, the player receives an optional pending selection to attack with one of their Digimon. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_013_eot_clause_contains_post_dna_may_attack_now ex9_013_eot_after_dna_one_digimon_may_attack`.
 4. `EX10-010`: opponent cost-8 permanent is excluded from the delete target mask; opponent cost-7 permanent is legal.
 5. `BT16-082`: moving an own Digimon out of breeding installs reveal selection, adds exactly one Digimon/Tamer, bottoms the rest, then gates an optional hatch action.
 

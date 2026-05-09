@@ -32,27 +32,17 @@
 //!
 //! # Known engine/DSL gaps blocking parts of this card
 //!
-//! - **G-DSL-IS-DNA-DIGIVOLVING** (NEW — surfaced by EX9-021's
-//!   `[When Digivolving] If DNA digivolving, ...` head). Both
-//!   `TriggerSource::Digivolved` and the DSL `PredicateSpec` lack a
-//!   "via DNA digivolve path" flag. The DNA-only opp-effect-immunity arm
-//!   is OMITTED entirely from `effects:` per no-approximations. The
+//! - **EX9-021 card-local DNA immunity adoption**: the reusable
+//!   `dna_origin: true` payload is now available, but this YAML still omits
+//!   the DNA-only opponent-effect immunity arm per no-approximations. The
 //!   unconditional delete-highest arm IS implemented (printed grammar +
 //!   DCGO sequencing both confirm the delete fires regardless of the DNA
-//!   gate). Behavioral tests for the DNA-only immunity arm are
-//!   `#[ignore]`'d under this gap tag.
+//!   gate). Behavioral tests for the DNA-only immunity arm stay ignored until
+//!   that card-local body is authored.
 //!
-//! - **G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES** (existing, EX4-060 / BT22-015
-//!   sibling). No DSL bind/play step pair for "play a filtered card from
-//!   THIS permanent's digivolution stack without paying the cost". Blocks
-//!   the entire [End of Attack] head arm.
-//!
-//! - **G-PLACE-SELF-AT-SECURITY-TOP** (NEW — sibling of
-//!   G-PLACE-SELF-AT-SECURITY-BOTTOM filed for EX4-060). No DSL/engine
-//!   primitive for "place this Digimon as your top security card". Blocks
-//!   the [End of Attack] tail arm. The tail also depends on the head having
-//!   played at least one card (printed "If this effect played" gate), so the
-//!   entire [End of Attack] clause is OMITTED until both gaps close.
+//! The [End of Attack] source-play and top-security tail are implemented via
+//! `select_material`, `play_from_materials.bind_as`, `binding_exists`, and
+//! `place_permanent_on_security`.
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -64,7 +54,7 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, EffectTiming, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::TriggerSource;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 /// Production YAML for EX9-021, loaded at compile time.
 const YAML: &str = include_str!("../../../cards/ex9/EX9-021.yaml");
@@ -77,6 +67,22 @@ fn make_opp_digimon(id: &str, name: &str, level: u8, dp: i32) -> CardData {
     card.level = Some(level);
     card.dp = Some(dp);
     card
+}
+
+fn make_named_source(id: &str, name: &str, traits: &[&str]) -> CardData {
+    let mut card = make_test_card(id, name);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(6);
+    card.dp = Some(11000);
+    card.traits = traits.iter().map(|t| t.to_string()).collect();
+    card
+}
+
+fn battle_area_has_top_card(runner: &DebugRunner, player: PlayerId, card_id: &str) -> bool {
+    runner.game.players[player as usize]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == card_id)
 }
 
 // ─── Compile / structural helpers ────────────────────────────────────────────
@@ -174,11 +180,12 @@ fn ex9_021_has_dna_digivolve_lv6_blue_red_cost0_unsuspended() {
     );
 }
 
-/// Exactly one face-up triggered clause must be present (the unconditional
-/// delete-highest arm). The DNA-only immunity arm and the [End of Attack]
-/// clause are OMITTED per no-approximations (BLOCKED on listed gaps).
+/// Two face-up triggered clauses are present: the unconditional
+/// delete-highest [When Digivolving] arm and the explicit-choice
+/// [End of Attack] source-play / top-security arm. The DNA-only immunity
+/// arm remains omitted per no-approximations.
 #[test]
-fn ex9_021_has_exactly_one_face_up_triggered_clause() {
+fn ex9_021_has_two_face_up_triggered_clauses() {
     let compiled = compiled_ex9_021();
     let face_up_triggered = compiled
         .effects
@@ -186,9 +193,9 @@ fn ex9_021_has_exactly_one_face_up_triggered_clause() {
         .filter(|c| matches!(c, CompiledClause::Triggered(t) if matches!(t.scope, CompiledScope::FaceUp)))
         .count();
     assert_eq!(
-        face_up_triggered, 1,
-        "EX9-021 must have exactly 1 face-up triggered clause (the unconditional \
-         delete-highest arm). DNA-immunity + [End of Attack] arms are BLOCKED."
+        face_up_triggered, 2,
+        "EX9-021 must have 2 face-up triggered clauses: delete-highest and End of Attack. \
+         DNA-immunity remains BLOCKED."
     );
 }
 
@@ -325,7 +332,7 @@ fn ex9_021_when_digivolving_ties_capture_full_set() {
 
 // ─── Section 3: BLOCKED test stubs (#[ignore]'d under tracked gap tags) ─────
 
-/// BLOCKED — G-DSL-IS-DNA-DIGIVOLVING.
+/// BLOCKED — EX9-021 card-local DNA immunity adoption.
 ///
 /// Printed: "[When Digivolving] If DNA digivolving, your opponent's effects
 /// don't affect this Digimon for the turn." When this card is DNA-digivolved
@@ -334,7 +341,7 @@ fn ex9_021_when_digivolving_ties_capture_full_set() {
 /// at the end of the current turn. Opponent's normal-digivolve / standard
 /// triggers must NOT grant this immunity (printed gate).
 #[test]
-#[ignore = "pending: G-DSL-IS-DNA-DIGIVOLVING — TriggerSource::Digivolved has no via_dna flag, no PredicateSpec::is_dna_digivolving leaf"]
+#[ignore = "pending: EX9-021 card-local DNA immunity adoption now that dna_origin payload exists"]
 fn ex9_021_when_digivolving_dna_path_grants_self_opp_effect_immunity() {
     // Setup would: DNA-digivolve EX9-021 from a Lv.6 Blue + Lv.6 Red pair on
     // own field, then assert that the resulting Omnimon Alter-S permanent
@@ -345,48 +352,123 @@ fn ex9_021_when_digivolving_dna_path_grants_self_opp_effect_immunity() {
     unreachable!("unblock: add via_dna to TriggerSource::Digivolved + is_dna_digivolving DSL leaf");
 }
 
-/// BLOCKED — G-DSL-IS-DNA-DIGIVOLVING (negative test).
+/// BLOCKED — EX9-021 card-local DNA immunity adoption (negative test).
 ///
 /// When EX9-021 is reached via standard digivolve (Lv.6 Blue / Cost 5) NOT
 /// via the DNA-pair path, the printed "If DNA digivolving" gate fails, and
 /// the opp-effect immunity must NOT be granted.
 #[test]
-#[ignore = "pending: G-DSL-IS-DNA-DIGIVOLVING — same gap, negative test (immunity must NOT install on standard digivolve path)"]
+#[ignore = "pending: EX9-021 card-local DNA immunity adoption; immunity must NOT install on standard digivolve path"]
 fn ex9_021_when_digivolving_standard_path_does_not_grant_immunity() {
     unreachable!("unblock: same gap as above");
 }
 
-/// BLOCKED — G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (head arm) +
-/// G-PLACE-SELF-AT-SECURITY-TOP (tail arm).
-///
 /// Printed: "[End of Attack] You may play 1 card with [Greymon] in its name
 /// or the [Ver.1] trait and 1 card with [Garurumon] in its name or the
 /// [Ver.2] trait from this Digimon's digivolution cards without paying the
 /// costs. If this effect played, place this Digimon as your top security
 /// card."
-///
-/// Setup would: stack a Greymon-named (or Ver.1-trait) Digimon and a
-/// Garurumon-named (or Ver.2-trait) Digimon under EX9-021 on the field,
-/// trigger End of Attack, accept the optional outer prompt, pick both
-/// targets, observe both played onto own field free, AND observe EX9-021
-/// itself moved to the TOP of own security stack face-up.
 #[test]
-#[ignore = "pending: G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES + G-PLACE-SELF-AT-SECURITY-TOP — no DSL bind/play steps for own digivolution sources, no DSL/engine primitive for self-placement at security top"]
 fn ex9_021_end_of_attack_plays_two_from_stack_then_places_self_top_security() {
-    unreachable!(
-        "unblock: add select_self_digivolution_source + play_from_own_digivolution_free \
-         + place_self_at_security_top to DSL + EffectContext"
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX9-021 YAML loads")
+        .add_card(make_named_source("GREY", "WarGreymon", &[]))
+        .add_card(make_named_source("GARU", "MetalGarurumon", &[]))
+        .add_card(make_named_source("OTHER", "Othermon", &[]))
+        .memory(15)
+        .start();
+    let ex9 = runner.place_stack(0, &["GREY", "GARU", "OTHER", "EX9-021"]);
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfAttack, TriggerSource::Permanent(ex9));
+    runner.game.drain_effect_queue();
+
+    let choice = runner
+        .pending_selection_view()
+        .expect("End of Attack optional choice should be offered");
+    assert_eq!(choice.kind, SelectionKind::EffectChoice);
+    runner
+        .execute_action(0, choice.valid_action_ids[0])
+        .expect("accept End of Attack source play");
+
+    let greymon_pick = runner
+        .pending_selection_view()
+        .expect("first source pick should select Greymon/Ver.1");
+    assert_eq!(greymon_pick.kind, SelectionKind::Material);
+    assert_eq!(greymon_pick.valid_action_ids.len(), 1);
+    runner
+        .execute_action(0, greymon_pick.valid_action_ids[0])
+        .expect("select Greymon source");
+
+    let garurumon_pick = runner
+        .pending_selection_view()
+        .expect("second source pick should select Garurumon/Ver.2");
+    assert_eq!(garurumon_pick.kind, SelectionKind::Material);
+    assert_eq!(garurumon_pick.valid_action_ids.len(), 1);
+    runner
+        .execute_action(0, garurumon_pick.valid_action_ids[0])
+        .expect("select Garurumon source");
+
+    assert!(battle_area_has_top_card(&runner, 0, "GREY"));
+    assert!(battle_area_has_top_card(&runner, 0, "GARU"));
+    assert!(
+        !battle_area_has_top_card(&runner, 0, "EX9-021"),
+        "EX9-021 should leave the battle area after its source play effect resolves"
+    );
+    let top_security = runner.game.players[0]
+        .security
+        .last()
+        .expect("EX9-021 should be placed as top security");
+    assert_eq!(top_security.card_id(&runner.game.card_data), "EX9-021");
+    assert!(
+        runner.game.players[0]
+            .face_up_security
+            .contains(&top_security.card_index),
+        "EX9-021 top-security placement is face-up"
+    );
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "OTHER"),
+        "unplayed leftover source should be trashed when EX9-021 moves to security"
     );
 }
 
-/// BLOCKED — G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (head arm).
-///
 /// "If this effect played" tail conditional — when the head arm plays
 /// nothing (player declines the optional outer prompt OR no eligible
 /// candidates), the place-self-at-security-top tail must NOT fire and the
 /// EX9-021 permanent must remain on the battle area.
 #[test]
-#[ignore = "pending: G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES — head arm cannot run today, so the 'if played' tail gate is unreachable"]
 fn ex9_021_end_of_attack_no_play_does_not_place_self_at_security() {
-    unreachable!("unblock: same gap as above");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX9-021 YAML loads")
+        .add_card(make_named_source("GREY", "WarGreymon", &[]))
+        .add_card(make_named_source("GARU", "MetalGarurumon", &[]))
+        .memory(15)
+        .start();
+    let ex9 = runner.place_stack(0, &["GREY", "GARU", "EX9-021"]);
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfAttack, TriggerSource::Permanent(ex9));
+    runner.game.drain_effect_queue();
+
+    let choice = runner
+        .pending_selection_view()
+        .expect("End of Attack optional choice should be offered");
+    assert_eq!(choice.kind, SelectionKind::EffectChoice);
+    runner
+        .execute_action(0, choice.valid_action_ids[1])
+        .expect("decline End of Attack source play");
+
+    assert!(runner.pending_selection().is_none());
+    assert!(battle_area_has_top_card(&runner, 0, "EX9-021"));
+    assert!(
+        runner.game.players[0].security.is_empty(),
+        "declining the optional effect must not place EX9-021 in security"
+    );
 }

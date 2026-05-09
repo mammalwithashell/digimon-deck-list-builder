@@ -15,8 +15,10 @@
 
 use std::sync::{Arc, Mutex};
 
-use digimon_engine::action::space::{encode_attack, encode_digivolve, PLAY_HAND_START};
-use digimon_engine::card_data::{CardData, EvoCost};
+use digimon_engine::action::space::{
+    encode_attack, encode_digivolve, DNA_DIGIVOLVE_START, PLAY_HAND_START,
+};
+use digimon_engine::card_data::{CardData, DnaCost, DnaRequirement, EvoCost};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -59,6 +61,26 @@ fn blast_card(id: &str, level: u8, base_level: u8, base_color: u8) -> CardData {
     c.evo_costs.push(EvoCost {
         card_color: base_color,
         level: base_level,
+        memory_cost: 0,
+    });
+    c
+}
+
+fn blast_dna_card(id: &str, level: u8, req1_level: u8, req2_level: u8) -> CardData {
+    let mut c = dgmn(id, level, 9000);
+    c.dna_costs.push(DnaCost {
+        requirement1: DnaRequirement {
+            level: req1_level,
+            card_colors: Vec::new(),
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+        requirement2: DnaRequirement {
+            level: req2_level,
+            card_colors: Vec::new(),
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
         memory_cost: 0,
     });
     c
@@ -148,6 +170,22 @@ impl CardEffect for FieldCounterAbility {
             .process(move |ctx| {
                 *w.lock().unwrap() += 1;
                 ctx.gain_memory(2);
+            })
+            .build()]
+    }
+}
+
+struct BlastDnaWitness {
+    witness: Arc<Mutex<u32>>,
+}
+impl CardEffect for BlastDnaWitness {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let witness = self.witness.clone();
+        vec![Effect::when_digivolving(card)
+            .name("Blast DNA witness")
+            .blast_digivolve()
+            .process(move |_ctx| {
+                *witness.lock().unwrap() += 1;
             })
             .build()]
     }
@@ -354,7 +392,8 @@ fn counter_hand_option_resolves_through_play_option_pipeline() {
     assert_eq!(*main_w.lock().unwrap(), 1, "OptionMain fired once");
     assert_eq!(r.hand_size(1), hand_before - 1, "card left hand");
     assert_eq!(r.trash_size(1), trash_before + 1, "card in trash");
-    // Counter body gained +3 memory (cost was zero).
+    // Counter body gained +3 memory for the defender; the Option pipeline's
+    // normal turn-end check then flips the raw memory counter.
     assert_eq!(r.memory(), memory_before + 3);
 }
 
@@ -447,8 +486,8 @@ fn counter_field_ability_fires_without_play_cost() {
     assert_eq!(*witness.lock().unwrap(), 1);
     assert_eq!(r.hand_size(1), hand_before, "no card consumed from hand");
     assert_eq!(r.trash_size(1), trash_before, "no card consumed to trash");
-    // Field counter body gained +2 memory.
-    assert_eq!(r.memory(), memory_before + 2);
+    // Field counter body gained +2 memory for the defender.
+    assert_eq!(r.memory(), memory_before - 2);
 }
 
 #[test]
@@ -496,6 +535,121 @@ fn counter_blast_and_hand_option_coexist_in_selection() {
         "hand-option candidate missing from {:?}",
         sel.valid_action_ids
     );
+}
+
+#[test]
+fn counter_blast_dna_uses_field_material_plus_named_hand_material() {
+    // Mirrors DCGO BlastDNADigivolveEffect: the Counter window first
+    // selects one own field material, then selects the matching hand
+    // material, then performs the zero-cost DNA digivolve.
+    let witness = Arc::new(Mutex::new(0u32));
+
+    let mut r = DebugRunner::builder()
+        .add_card(blast_dna_card("DNA-EVO", 6, 5, 5))
+        .add_card(dgmn("FIELD-MAT", 5, 5000))
+        .add_card(dgmn("HAND-MAT", 5, 5000))
+        .add_card(dgmn("ATK", 4, 5000))
+        .hand(1, &["DNA-EVO", "HAND-MAT"])
+        .memory(0)
+        .start();
+    r.register_effect(
+        "DNA-EVO",
+        Arc::new(BlastDnaWitness {
+            witness: witness.clone(),
+        }),
+    );
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let target = r.place_on_field(1, "FIELD-MAT", Some(0));
+
+    let result = r.attack_digimon(atk, target, false);
+    assert_eq!(result, AttackResult::InProgress);
+
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Counter window installs Blast DNA field-material selection");
+    assert_eq!(sel.selecting_player, 1);
+    assert!(sel.valid_action_ids.contains(&DNA_DIGIVOLVE_START));
+
+    r.game.decode_action(DNA_DIGIVOLVE_START, 1);
+
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Blast DNA installs field-material selection");
+    assert_eq!(sel.selecting_player, 1);
+    assert_eq!(sel.valid_action_ids, vec![0]);
+
+    r.game.decode_action(0, 1);
+
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Blast DNA installs hand-material selection");
+    assert_eq!(sel.selecting_player, 1);
+    assert_eq!(sel.valid_action_ids, vec![PLAY_HAND_START + 1]);
+
+    r.game.decode_action(PLAY_HAND_START + 1, 1);
+
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(*witness.lock().unwrap(), 1);
+    assert_eq!(r.game.player(1).hand.len(), 0);
+    assert_eq!(r.game.player(1).battle_area.len(), 1);
+    let stack_ids: Vec<_> = r.game.player(1).battle_area[0]
+        .card_sources
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    assert_eq!(stack_ids, vec!["FIELD-MAT", "HAND-MAT", "DNA-EVO"]);
+}
+
+#[test]
+fn dsl_blast_dna_counter_does_not_require_normal_dna_route() {
+    let yaml = r#"
+card: BLAST-DNA-ONLY
+name: Blast DNA Only
+kind: digimon
+level: 7
+color: [red, black]
+cost: 9
+dp: 15000
+alt_paths:
+  - kind: blast_dna_digivolve
+    materials:
+      - { name_is: Field Mat }
+      - { name_is: Hand Mat }
+    cost: 0
+"#;
+    let mut field_mat = dgmn("FIELD-MAT", 6, 6000);
+    field_mat.card_name = "Field Mat".to_string();
+    let mut hand_mat = dgmn("HAND-MAT", 6, 6000);
+    hand_mat.card_name = "Hand Mat".to_string();
+
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("Blast DNA-only DSL loads")
+        .add_card(field_mat)
+        .add_card(hand_mat)
+        .add_card(dgmn("ATK", 4, 5000))
+        .hand(1, &["BLAST-DNA-ONLY", "HAND-MAT"])
+        .memory(0)
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let target = r.place_on_field(1, "FIELD-MAT", Some(0));
+    let result = r.attack_digimon(atk, target, false);
+    assert_eq!(result, AttackResult::InProgress);
+
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Counter window must see DSL blast_dna_digivolve alt path");
+    assert!(sel.valid_action_ids.contains(&DNA_DIGIVOLVE_START));
 }
 
 #[test]

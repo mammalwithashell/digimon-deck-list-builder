@@ -22,9 +22,11 @@ use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{Expiry, Keyword};
+use digimon_engine::enums::{Expiry, Keyword, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{AttackTarget, SelectionKind};
+use digimon_engine::AttackTargetChangeReason;
 
 fn card(id: &str) -> digimon_engine::CardData {
     make_test_card(id, id)
@@ -65,6 +67,32 @@ impl CardEffect for WitnessTargetChange {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct TargetChangeSnapshot {
+    old_target: AttackTarget,
+    new_target: AttackTarget,
+    reason: AttackTargetChangeReason,
+}
+
+struct WitnessTargetChangePayload(Arc<Mutex<Vec<TargetChangeSnapshot>>>);
+impl CardEffect for WitnessTargetChangePayload {
+    fn effects(&self, c: CardHandle) -> Vec<Effect> {
+        let log = self.0.clone();
+        vec![Effect::on_attack_target_change(c)
+            .name("Witness raid target change payload")
+            .process(move |ctx| {
+                if let Some(change) = ctx.attack_target_change() {
+                    log.lock().unwrap().push(TargetChangeSnapshot {
+                        old_target: change.old_target,
+                        new_target: change.new_target,
+                        reason: change.reason,
+                    });
+                }
+            })
+            .build()]
+    }
+}
+
 // ─── Tests ─────────────────────────────────────────────────────────────
 
 /// Test 1: Raid attacker retargets when the original target leaves mid-attack.
@@ -77,6 +105,38 @@ impl CardEffect for WitnessTargetChange {
 /// At PostBlock, effective_target is invalid AND a legal retarget exists
 /// (DEF at slot 0). Assert: attack paused on an opposing-field selection
 /// whose candidates include DEF.
+#[test]
+fn raid_opens_optional_target_switch_when_attacking_player() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("LOW"))
+        .add_card(card("HIGH"))
+        .add_card(card("SEC"))
+        .security(1, &["SEC"])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let _low = r.place_on_field(1, "LOW", Some(0));
+    let high = r.place_on_field(1, "HIGH", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Raid, Expiry::Permanent, 0);
+    r.game.modifiers.add(
+        high,
+        ModifierEntry::simple(ModifierType::ChangeDp, 3000, Expiry::Permanent, 1),
+    );
+
+    let result = r.attack_player(atk, 1, false);
+    assert_eq!(result, AttackResult::InProgress);
+    let prompt = r
+        .pending_selection()
+        .expect("Raid should offer an optional target switch before security");
+    assert_eq!(prompt.kind, SelectionKind::OppField);
+    assert_eq!(prompt.selecting_player, 0);
+    assert!(prompt.is_optional, "Raid target switch is printed as 'may'");
+    assert_eq!(prompt.valid_action_ids, vec![encode_attack(0, 1)]);
+}
+
 #[test]
 fn raid_attacker_retargets_when_original_target_leaves() {
     let mut r = DebugRunner::builder()
@@ -113,16 +173,13 @@ fn raid_attacker_retargets_when_original_target_leaves() {
         .game
         .pending_selection
         .as_ref()
-        .expect("PostBlock Raid retarget installs a selection");
+        .expect("Raid target switch installs a selection");
     assert_eq!(
         sel.selecting_player, 0,
         "attacker's controller picks the new target"
     );
     assert_eq!(sel.kind, SelectionKind::OppField);
-    assert!(
-        !sel.is_optional,
-        "Raid retarget is mandatory once candidates exist"
-    );
+    assert!(sel.is_optional, "Raid target switch is printed as 'may'");
     // DEF is the only surviving opposing Digimon — at slot 0.
     // Candidates are encoded as encode_attack(0, target_index).
     assert_eq!(
@@ -277,4 +334,124 @@ fn raid_retarget_fires_on_attack_target_change() {
         "OnAttackTargetChange must fire with new target == DEF @ slot 0 (saw {:?})",
         log
     );
+}
+
+#[test]
+fn raid_retarget_payload_carries_old_new_and_raid_reason() {
+    let payload_log: Arc<Mutex<Vec<TargetChangeSnapshot>>> = Arc::new(Mutex::new(Vec::new()));
+
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("DEF"))
+        .add_card(card("VICTIM"))
+        .add_card(card("WITNESS"))
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let _def = r.place_on_field(1, "DEF", Some(0));
+    let victim = r.place_on_field(1, "VICTIM", Some(0));
+
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Raid, Expiry::Permanent, 0);
+    r.register_effect("ATK", Arc::new(DeleteOnAttack(victim)));
+    r.register_effect(
+        "WITNESS",
+        Arc::new(WitnessTargetChangePayload(payload_log.clone())),
+    );
+    let _witness = r.place_on_field(0, "WITNESS", Some(0));
+
+    let _result = r.attack_digimon(atk, victim, false);
+
+    let retarget_action = encode_attack(0, 0);
+    r.game
+        .resolve_selection(0, retarget_action)
+        .expect("attacker's controller resolves Raid retarget");
+
+    let def_after_retarget = PermanentHandle {
+        player: 1,
+        index: 0,
+    };
+    assert_eq!(
+        payload_log.lock().unwrap().as_slice(),
+        &[TargetChangeSnapshot {
+            old_target: AttackTarget::Digimon(victim),
+            new_target: AttackTarget::Digimon(def_after_retarget),
+            reason: AttackTargetChangeReason::Raid,
+        }]
+    );
+}
+
+#[test]
+fn raid_retarget_respects_attacker_cannot_switch_target() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("DEF"))
+        .add_card(card("VICTIM"))
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let _def = r.place_on_field(1, "DEF", Some(0));
+    let victim = r.place_on_field(1, "VICTIM", Some(0));
+
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Raid, Expiry::Permanent, 0);
+    r.game.modifiers.add(
+        atk,
+        ModifierEntry::simple(
+            ModifierType::CanNotSwitchAttackTarget,
+            0,
+            Expiry::EndOfTurn,
+            0,
+        ),
+    );
+    r.register_effect("ATK", Arc::new(DeleteOnAttack(victim)));
+
+    let result = r.attack_digimon(atk, victim, false);
+
+    assert_ne!(
+        result,
+        AttackResult::InProgress,
+        "Raid must fizzle instead of offering a forbidden target switch"
+    );
+    assert!(r.game.pending_selection.is_none());
+    assert!(r.game.pending_attack.is_none());
+}
+
+#[test]
+fn raid_retarget_respects_cannot_be_redirected_candidate() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("FIXED"))
+        .add_card(card("VICTIM"))
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let fixed = r.place_on_field(1, "FIXED", Some(0));
+    let victim = r.place_on_field(1, "VICTIM", Some(0));
+
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Raid, Expiry::Permanent, 0);
+    r.game.modifiers.add(
+        fixed,
+        ModifierEntry::simple(
+            ModifierType::CannotBeRedirectedAsAttackTarget,
+            0,
+            Expiry::EndOfTurn,
+            1,
+        ),
+    );
+    r.register_effect("ATK", Arc::new(DeleteOnAttack(victim)));
+
+    let result = r.attack_digimon(atk, victim, false);
+
+    assert_ne!(
+        result,
+        AttackResult::InProgress,
+        "Raid must not offer a fixed-target Digimon as a retarget candidate"
+    );
+    assert!(r.game.pending_selection.is_none());
+    assert!(r.game.pending_attack.is_none());
 }

@@ -16,6 +16,9 @@ pub fn lookup_replacement_trigger(s: &str) -> Option<EffectTiming> {
         "when_would_lose_security" => Some(EffectTiming::WhenWouldLoseSecurity),
         "when_would_draw" => Some(EffectTiming::WhenWouldDraw),
         "when_would_place_in_security" => Some(EffectTiming::WhenWouldPlaceInSecurity),
+        "when_would_digivolve" => Some(EffectTiming::WhenPermanentWouldDigivolve),
+        "when_would_play" => Some(EffectTiming::WhenPermanentWouldPlay),
+        "when_would_link" => Some(EffectTiming::WhenWouldLink),
         _ => None,
     }
 }

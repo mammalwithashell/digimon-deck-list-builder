@@ -1,0 +1,45 @@
+card: BT20-055
+name: Invisimon
+kind: digimon
+level: 6
+color: [black, blue]
+cost: 11
+dp: 11000
+traits: [Cyborg, LIBERATOR]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+
+# The On Play / When Digivolving branch authors the De-Digivolve and
+# low-source deletion pieces. The security flip rider still needs a no-choice
+# "mark opponent top face-down security face-up" step; do not approximate it
+# with a player choice.
+effects:
+  - scope: security
+    when: end_of_opponents_turn
+    summary: "Security: play this card at end of opponent's turn"
+    process:
+      - play_from_security: {}
+
+  - when: [on_play, when_digivolving]
+    summary: "De-Digivolve 2, then delete an opponent Digimon with 1 or fewer sources"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigivolve_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
+      - de_digivolve:
+          target: dedigivolve_target
+          amount: 2
+          stop_at_level: 3
+      - select_opponent_permanent:
+          bind_as: delete_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 1
+          prompt: "Choose 1 opponent Digimon with 1 or fewer digivolution cards to delete"
+      - delete_permanent: { target: delete_target }

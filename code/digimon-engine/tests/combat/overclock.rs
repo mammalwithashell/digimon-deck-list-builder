@@ -6,12 +6,17 @@
 //! `action_decoder._initiate_overclock` /
 //! [action_decoder.py:501-522](../digimon_gym/engine/game/action_decoder.py#L501).
 
+use std::sync::{Arc, Mutex};
+
 use digimon_engine::action::space::{encode_attack, ATTACK_START, PASS, TARGETS_PER_ATTACKER};
 use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword};
 use digimon_engine::game::OverclockError;
+use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::{AttackTarget, SelectionKind};
 
 fn make_digimon(id: &str, dp: i32) -> CardData {
@@ -63,6 +68,20 @@ fn setup_overclock_scenario() -> (
     assert_eq!(r.game.current_phase, GamePhase::EndOfTurnAction);
 
     (r, tp, oc)
+}
+
+struct CaptureDeletionCause(Arc<Mutex<Option<ReplacementCause>>>);
+
+impl CardEffect for CaptureDeletionCause {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let cause = self.0.clone();
+        vec![Effect::on_deletion(card)
+            .name("capture deletion cause")
+            .process(move |ctx| {
+                *cause.lock().unwrap() = ctx.deletion_cause();
+            })
+            .build()]
+    }
 }
 
 #[test]
@@ -217,6 +236,34 @@ fn full_flow_sacrifice_and_attack_resolves_on_security() {
     );
     // Phase returned to EndOfTurnAction so further EOT actions can continue.
     assert_eq!(r.game.current_phase, GamePhase::EndOfTurnAction);
+}
+
+#[test]
+fn overclock_sacrifice_deletion_reports_overclock_cause() {
+    let cause = Arc::new(Mutex::new(None));
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("OC", 7000))
+        .add_card(make_digimon("SAC", 3000))
+        .start();
+    r.register_effect("SAC", Arc::new(CaptureDeletionCause(cause.clone())));
+
+    let tp = r.game.turn_player();
+    let oc = r.place_on_field(tp, "OC", Some(0));
+    let sac = r.place_on_field(tp, "SAC", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
+    r.game.end_turn();
+
+    r.game.activate_overclock(0).unwrap();
+    let sac_action = encode_attack(0, sac.index as u16);
+    r.game.resolve_selection(tp, sac_action).unwrap();
+
+    assert_eq!(
+        *cause.lock().unwrap(),
+        Some(ReplacementCause::Overclock),
+        "Overclock sacrifice deletion must preserve Overclock as the cause"
+    );
 }
 
 #[test]

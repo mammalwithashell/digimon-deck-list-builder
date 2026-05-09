@@ -64,19 +64,37 @@ impl DslCardEffect {
 
 impl CardEffect for DslCardEffect {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
-        use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause};
+        use digimon_dsl::compiled::{
+            CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause,
+        };
 
         let mut out = Vec::new();
+        for path in &self.compiled.alt_paths {
+            if matches!(
+                path.kind,
+                CompiledAltPathKind::BurstDigivolve | CompiledAltPathKind::BlastDnaDigivolve
+            ) {
+                out.push(
+                    Effect::declarative(card)
+                        .name("Blast digivolve marker")
+                        .blast_digivolve()
+                        .build(),
+                );
+            }
+        }
         let option_use_requirement = option_use_requirement_for_card(&self.compiled);
         'clause: for clause in &self.compiled.effects {
             match clause {
                 CompiledClause::Triggered(clause) => {
-                    out.extend(lower_triggered::lower_with_raw_and_option_use_requirement(
-                        card,
-                        clause,
-                        self.raw.clone(),
-                        option_use_requirement.clone(),
-                    ));
+                    out.extend(
+                        lower_triggered::lower_with_raw_and_option_use_requirement_for_kind(
+                            card,
+                            clause,
+                            self.raw.clone(),
+                            option_use_requirement.clone(),
+                            Some(self.compiled.kind),
+                        ),
+                    );
                 }
                 CompiledClause::Declarative(decl) => match decl {
                     CompiledDeclarativeClause::GrantKeyword {

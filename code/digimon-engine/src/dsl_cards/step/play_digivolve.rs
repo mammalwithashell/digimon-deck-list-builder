@@ -181,6 +181,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             target,
             source_index,
             cost_delta,
+            bind_as,
         } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
@@ -188,10 +189,28 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             };
             let src_idx = match resolve_binding_ref(source_index, ctx, bindings) {
                 Some(ResolvedBinding::Literal(v)) if v >= 0 => v as usize,
+                Some(ResolvedBinding::Card(card)) => ctx
+                    .game
+                    .player(target_handle.player)
+                    .battle_area
+                    .get(target_handle.index as usize)
+                    .and_then(|perm| {
+                        perm.card_sources
+                            .iter()
+                            .position(|source| source.handle() == card)
+                    })
+                    .unwrap_or(usize::MAX),
                 _ => return true,
             };
+            if src_idx == usize::MAX {
+                return true;
+            }
             let delta = lower_cost_delta(cost_delta.as_ref());
-            let _ = ctx.play_from_materials(target_handle, src_idx, delta);
+            if let Some(played) = ctx.play_from_materials(target_handle, src_idx, delta) {
+                if let Some(name) = bind_as {
+                    bindings.insert_permanent(name, played);
+                }
+            }
             true
         }
 
@@ -214,13 +233,22 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // applied to `target`; the result card can now come from any
             // supported source zone.
             let player = target_handle.player;
-            let _ = ctx.effect_initiated_digivolve_from_source(
-                player,
-                source_ref,
-                target_handle,
-                delta,
-                *ignore_requirements,
-            );
+            let _ = if *ignore_requirements {
+                ctx.effect_initiated_digivolve_from_source_ignore_requirements(
+                    player,
+                    source_ref,
+                    target_handle,
+                    delta,
+                )
+            } else {
+                ctx.effect_initiated_digivolve_from_source(
+                    player,
+                    source_ref,
+                    target_handle,
+                    delta,
+                    false,
+                )
+            };
             true
         }
         CompiledStep::EffectInitiatedDnaDigivolve {

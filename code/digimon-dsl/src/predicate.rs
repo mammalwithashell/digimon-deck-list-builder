@@ -26,6 +26,8 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level_eq: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub level_eq_binding: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub level_lte: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level_gte: Option<u8>,
@@ -87,7 +89,7 @@ pub struct PredicateSpec {
     // Leaf — zone / owner
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub zone: Vec<Zone>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "of")]
     pub owner: Option<PlayerRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub other: Option<bool>,
@@ -95,6 +97,8 @@ pub struct PredicateSpec {
     pub of_permanent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_in_binding: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding_owner: Option<BindingOwnerPredicate>,
 
     // Leaf — source-relative
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -140,6 +144,14 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_is_effect_initiated: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_is_player: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_was_self: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attack_target_change_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attacker_trait_has: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_name_contains: Option<String>,
@@ -165,6 +177,8 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Option<Vec<serde_json::Value>>")]
     pub not_equals: Option<Vec<serde_yml::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding_exists: Option<String>,
 
     // Count aggregates
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -201,6 +215,19 @@ pub struct PredicateSpec {
     #[serde(flatten)]
     #[schemars(skip)]
     pub extra: IndexMap<String, serde_yml::Value>,
+}
+
+impl PredicateSpec {
+    pub fn is_empty(&self) -> bool {
+        self == &Self::default()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BindingOwnerPredicate {
+    pub binding: String,
+    pub of: PlayerRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
@@ -240,6 +267,7 @@ pub enum ReplacementCauseSpec {
     OpponentEffect,
     SecurityCheck,
     Cost,
+    Overclock,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]

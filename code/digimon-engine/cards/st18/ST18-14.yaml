@@ -1,0 +1,37 @@
+card: ST18-14
+name: Shoto Kazama
+kind: tamer
+color: [green]
+cost: 4
+traits: [LIBERATOR]
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  - when: on_ally_attack
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When one of your Digimon attacks an opponent Digimon, suspend this Tamer to change the target"
+    condition:
+      all_of:
+        - event_target_is_player: false
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "ST18-14"
+            is_unsuspended: true
+    process:
+      - suspend: { target: source }
+      - redirect_attack_target:
+          targets: any
+          optional: true
+          prompt: "Change the attack target to another Digimon or the player"
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: { of: you }

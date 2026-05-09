@@ -13,8 +13,16 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: green }
     cost: 5
+  - kind: blast_dna_digivolve
+    materials:
+      - { kind: digimon, name_is: "Breakdramon" }
+      - { kind: digimon, name_is: "Slayerdramon" }
+    cost: 0
+    stacks_unsuspended: true
 
 effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
   - kind: grant_keyword
     keyword: Raid
   - kind: grant_keyword
@@ -25,8 +33,6 @@ effects:
     keyword: Evade
 
 # Stubbed:
-# - [Hand][Counter] Blast DNA Digivolve (Breakdramon + Slayerdramon) needs the
-#   combined Blast DNA alt-path primitive.
 # - DNA-gated highest-DP bottom-deck sweep needs DNA-origin gating plus highest
 #   DP aggregate selection over all opponent Digimon.
 # - [All Turns][Once Per Turn] when any Digimon suspends, may unsuspend this

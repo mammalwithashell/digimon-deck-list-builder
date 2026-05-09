@@ -62,6 +62,12 @@ fn blast_card(card_id: &str, level: u8, base_level: u8, base_color: u8) -> CardD
     card
 }
 
+fn native_blast_card(card_id: &str, level: u8, base_level: u8, base_color: u8) -> CardData {
+    let mut card = blast_card(card_id, level, base_level, base_color);
+    card.keywords.push(Keyword::BlastDigivolve);
+    card
+}
+
 /// Build the runner with a blast-capable defender and a fresh attacker
 /// already on the field.
 fn scenario_with_blast_in_hand(
@@ -140,6 +146,29 @@ fn counter_prompt_installs_with_valid_pair() {
 }
 
 #[test]
+fn native_blast_digivolve_keyword_installs_counter_candidate() {
+    let mut r = DebugRunner::builder()
+        .add_card(native_blast_card("NATIVE-BLAST", 4, 3, 0 /* Red */))
+        .add_card(dgmn("ATK", 4, 5000))
+        .add_card(dgmn("BASE", 3, 3000))
+        .hand(1, &["NATIVE-BLAST"])
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let target = r.place_on_field(1, "BASE", Some(0));
+
+    let result = r.attack_digimon(atk, target, false);
+
+    assert_eq!(result, AttackResult::InProgress);
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming);
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("native BlastDigivolve keyword should install Counter selection");
+    assert_eq!(sel.valid_action_ids, vec![encode_digivolve(0, 0)]);
+}
+
+#[test]
 fn counter_mask_emits_digivolve_bits_plus_pass_for_defender() {
     let (mut r, atk) = scenario_with_blast_in_hand("TEST-013", 3, 0, 5000);
     r.attack_digimon(atk, r.perm_handle(1, 0), false);
@@ -199,8 +228,9 @@ fn counter_declared_stacks_card_and_fires_when_digivolving() {
         2,
         "blast card stacked on base — digivolution stack size = 2"
     );
-    // WhenDigivolving fired — pilot grants +1 memory.
-    assert_eq!(r.memory(), memory_before + 1);
+    // WhenDigivolving fired — pilot grants +1 memory to the defender,
+    // moving the seesaw toward player 1 during player 0's attack.
+    assert_eq!(r.memory(), memory_before - 1);
     // Attacker deleted by defender's stacked Digimon.
     assert_eq!(r.battle_area_size(0), 0);
 }

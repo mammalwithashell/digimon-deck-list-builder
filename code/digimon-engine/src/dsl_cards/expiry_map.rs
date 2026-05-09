@@ -13,9 +13,15 @@ static EXPIRY_TABLE: &[(&str, Expiry)] = &[
     ("permanent", Expiry::Permanent),
     ("end_of_turn", Expiry::EndOfTurn),
     ("end_of_opponents_turn", Expiry::EndOfOpponentsTurn),
+    ("end_of_your_turn", Expiry::EndOfYourTurn),
     ("end_of_attack", Expiry::EndOfAttack),
     ("end_of_battle", Expiry::EndOfBattle),
     ("until_leave_field", Expiry::UntilLeaveField),
+    ("until_condition", Expiry::UntilCondition),
+    // `OnceUsed(N)` requires a parameter — DSL surface uses the parametric
+    // form `once_used: { uses: N }` not a bare key, so it does not appear
+    // in this table. The key string `"once_used"` is reserved by the DSL
+    // validator for the parameterized form (see KNOWN_EXPIRY_KEYS).
 ];
 
 pub fn lookup_expiry(s: &str) -> Option<Expiry> {
@@ -28,15 +34,24 @@ pub fn lookup_expiry(s: &str) -> Option<Expiry> {
 /// a new variant breaks this match's exhaustiveness, prompting the engineer
 /// to also add a row to `EXPIRY_TABLE`. Paired with the unit test
 /// `every_variant_has_a_table_entry` which catches the runtime side.
+///
+/// `OnceUsed(_)` and `UntilCondition` deliberately do NOT have a bare-key
+/// table entry — `OnceUsed` carries a parameter so the DSL surface uses
+/// the parametric form `once_used: { uses: N }` (validator-side check),
+/// and `UntilCondition` holds a predicate on the `ModifierEntry` rather
+/// than in the enum variant.
 #[allow(dead_code)]
 const fn _expiry_variant_exhaustiveness_check(e: Expiry) {
     match e {
         Expiry::Permanent
         | Expiry::EndOfTurn
         | Expiry::EndOfOpponentsTurn
+        | Expiry::EndOfYourTurn
         | Expiry::EndOfAttack
         | Expiry::EndOfBattle
-        | Expiry::UntilLeaveField => {}
+        | Expiry::UntilLeaveField
+        | Expiry::UntilCondition
+        | Expiry::OnceUsed(_) => {}
     }
 }
 
@@ -54,9 +69,11 @@ mod tests {
             Expiry::Permanent,
             Expiry::EndOfTurn,
             Expiry::EndOfOpponentsTurn,
+            Expiry::EndOfYourTurn,
             Expiry::EndOfAttack,
             Expiry::EndOfBattle,
             Expiry::UntilLeaveField,
+            Expiry::UntilCondition,
         ]
     }
 

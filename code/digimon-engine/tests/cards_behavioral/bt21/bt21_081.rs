@@ -27,10 +27,12 @@
 //! |--------|-----|--------|
 //! | (a) [Start of Main Phase] gain 1 mem when opp has Digimon | none | PASS |
 //! | (b) [End of Turn] suspend self → select Reptile/Dragonkin → grant Piercing | none | PASS |
-//! | (b-attack) "Then, that Digimon attacks" | DSL-GAP: no `add_modifier` DSL entry for `MayAttack`/`ForceAttack` to produce mandatory EOT attack | BLOCKED – #[ignore] |
+//! | (b-attack) "Then, that Digimon attacks" | none | PASS — force_attack after selected Piercing target |
 //! | (c) [Security] play self free | none | PASS |
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::Keyword;
 use digimon_engine::permanent::PermanentHandle;
@@ -90,6 +92,7 @@ fn owen_on_field_with_reptile() -> DebugRunner {
             1,
             &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
         )
+        .security(1, &["DECK-PAD"])
         .start();
 
     runner.place_on_field(0, "BT21-081", None);
@@ -453,11 +456,31 @@ fn bt21_081_piercing_expires_end_of_turn() {
         "Reptile should have Piercing modifier active after Owen's effect resolves"
     );
 
-    // Step 4: P1 ends their turn — expire_end_of_turn(1) clears all EndOfTurn
+    // Step 4: the newly real "then, that Digimon attacks" prompt is mandatory.
+    // Resolve it before advancing turns; otherwise the parked selection keeps
+    // the game from reaching the cleanup path this test is about.
+    if let Some(ref pending) = runner.game.pending_selection {
+        let attack_action = pending.valid_action_ids[0];
+        assert!(
+            !pending.is_optional,
+            "forced attack cleanup path should be blocked on a mandatory attack prompt"
+        );
+        runner
+            .game
+            .resolve_selection(0, attack_action)
+            .expect("forced attack target resolves");
+    }
+
+    assert!(
+        runner.game.has_keyword(reptile_handle, Keyword::Piercing),
+        "Piercing should remain for the turn after the forced attack resolves"
+    );
+
+    // Step 5: P1 ends their turn — expire_end_of_turn(1) clears all EndOfTurn
     // modifiers (including Piercing) before P0's begin_turn.
     runner.game.end_turn();
 
-    // Step 5: Piercing must have expired after P1's turn ended.
+    // Step 6: Piercing must have expired after P1's turn ended.
     assert!(
         !runner.game.has_keyword(reptile_handle, Keyword::Piercing),
         "Piercing must expire at end of the turn it was granted"
@@ -513,24 +536,10 @@ fn bt21_081_end_of_turn_no_selection_when_owen_already_suspended() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 4 — "Then, that Digimon attacks" — BLOCKED (DSL vocab gap)
+// Section 4 — "Then, that Digimon attacks"
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// BLOCKED: The "Then, that Digimon attacks" clause requires granting a
-/// forced end-of-turn attack on a specific Digimon. The engine has
-/// `ModifierType::MayAttack` for optional attacks and `ModifierType::ForceAttack`
-/// for Main-phase mask replacement, but:
-///   1. Neither `MayAttack` nor `ForceAttack` is registered in DSL
-///      `lookup_modifier_type` — so `add_modifier` cannot grant them.
-///   2. `ForceAttack` is NOT checked in `has_end_of_turn_keywords`, so even if
-///      it were grantable it would not surface as an EOT attack action.
-///   3. A proper implementation would need either:
-///      a. `MayAttack` added to `lookup_modifier_type` (gives optional EOT attack), or
-///      b. A new DSL verb `force_attack_with: { target: tgt }` / a separate
-///         `GrantMayAttack` step that also unsuspends the target if needed.
-/// See `qa/dsl-vocab-gaps.md` for the tracking entry.
 #[test]
-#[ignore = "pending: DSL-GAP — no `add_modifier` support for MayAttack/ForceAttack; no DSL verb for effect-initiated EOT attack on a specific Digimon"]
 fn bt21_081_end_of_turn_selected_digimon_attacks_after_piercing_grant() {
     let mut runner = owen_on_field_with_reptile();
 
@@ -544,13 +553,42 @@ fn bt21_081_end_of_turn_selected_digimon_attacks_after_piercing_grant() {
             .expect("selection resolves");
     }
 
-    // After resolving, the game should park in EndOfTurnAction for the Reptile
-    // to make its mandatory attack. This currently does NOT happen.
-    use digimon_engine::enums::GamePhase;
+    let reptile_handle = PermanentHandle {
+        player: 0,
+        index: 1,
+    };
+    let attack_player = encode_attack(reptile_handle.index as u16, SECURITY_TARGET);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("force_attack should install a mandatory attack-target prompt");
+    assert!(
+        !pending.is_optional,
+        "printed 'that Digimon attacks' must not expose decline on the attack prompt"
+    );
     assert_eq!(
-        runner.current_phase(),
-        GamePhase::EndOfTurnAction,
-        "game should park in EndOfTurnAction for the selected Digimon to attack"
+        pending.selecting_player, 0,
+        "selected Digimon's controller chooses the attack target"
+    );
+    assert!(
+        pending.valid_action_ids.contains(&attack_player),
+        "selected Reptile should be able to attack the opponent player"
+    );
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[PASS as usize],
+        0.0,
+        "mandatory forced attack must not expose PASS"
+    );
+
+    runner
+        .game
+        .resolve_selection(0, attack_player)
+        .expect("resolve forced attack target");
+
+    assert!(
+        runner.game.players[0].battle_area[reptile_handle.index as usize].is_suspended,
+        "the selected Digimon must pay the normal suspend cost while attacking"
     );
 }
 

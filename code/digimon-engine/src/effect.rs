@@ -528,6 +528,15 @@ impl Effect {
     pub fn when_would_place_in_security(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::WhenWouldPlaceInSecurity)
     }
+    pub fn when_permanent_would_digivolve(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenPermanentWouldDigivolve)
+    }
+    pub fn when_permanent_would_play(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenPermanentWouldPlay)
+    }
+    pub fn when_would_link(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::WhenWouldLink)
+    }
 }
 
 /// Builder for constructing effects ergonomically.
@@ -618,6 +627,10 @@ impl EffectBuilder {
         self
     }
     fn security_flag(mut self) -> Self {
+        self.inner.security = true;
+        self
+    }
+    pub fn security_zone(mut self) -> Self {
         self.inner.security = true;
         self
     }

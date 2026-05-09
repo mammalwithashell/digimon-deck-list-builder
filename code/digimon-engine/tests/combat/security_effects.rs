@@ -156,7 +156,7 @@ fn test_022_gains_memory_from_security() {
 
     assert_eq!(
         r.memory(),
-        memory_before + 3,
+        memory_before - 3,
         "SecuritySkill memory gain must apply to the defender's side of the seesaw"
     );
     assert_eq!(r.trash_size(1), 1);
@@ -363,6 +363,6 @@ fn two_security_effects_same_source_auto_fire_in_order() {
         "TriggerOrder prompt must NOT install for single-source security bundle"
     );
     // Both effects ran: +2 memory AND +1 hand card.
-    assert_eq!(r.memory(), memory_before + 2);
+    assert_eq!(r.memory(), memory_before - 2);
     assert_eq!(r.hand_size(1), hand_before + 1);
 }

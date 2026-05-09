@@ -187,7 +187,8 @@ fn shamanmon_style_tamer_anchors_opponent_memory_gain() {
     //
     // Player 1's Tamer (TMR-P1) gives player 1 memory.
     // source_card = tmr_src (Tamer kind → source_is_tamer() returns true).
-    // Expected: gain_memory succeeds; memory changes by +2.
+    // Expected: gain_memory succeeds for player 1; from player 0's
+    // turn-player perspective the raw memory counter changes by -2.
 
     r.game.set_memory(0);
     let memory_before_phase2 = r.game.memory;
@@ -199,11 +200,11 @@ fn shamanmon_style_tamer_anchors_opponent_memory_gain() {
 
     assert_eq!(
         r.game.memory,
-        memory_before_phase2 + 2,
+        memory_before_phase2 - 2,
         "Phase 2: Tamer-sourced gain_memory must be ALLOWED under \
          CannotGainMemoryExceptFromTamers (memory must change from {} to {})",
         memory_before_phase2,
-        memory_before_phase2 + 2
+        memory_before_phase2 - 2
     );
 
     // ─── Phase 3: Delete ANCHOR → modifier expires via UntilLeaveField ────────
@@ -241,10 +242,10 @@ fn shamanmon_style_tamer_anchors_opponent_memory_gain() {
 
     assert_eq!(
         r.game.memory,
-        memory_before_phase4 + 2,
+        memory_before_phase4 - 2,
         "Phase 4: after ANCHOR is deleted, Digimon-sourced gain_memory must be \
          ALLOWED (modifier expired; memory must change from {} to {})",
         memory_before_phase4,
-        memory_before_phase4 + 2
+        memory_before_phase4 - 2
     );
 }

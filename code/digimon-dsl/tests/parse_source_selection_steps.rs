@@ -45,6 +45,7 @@ effects:
             bind_as,
             prompt,
             then,
+            ..
         } => {
             assert!(target.is_none());
             assert_eq!(min, 1);
@@ -91,6 +92,7 @@ effects:
             bind_as,
             prompt,
             then,
+            ..
         } => {
             assert_eq!(target, Some(CompiledBindingRef::Source));
             assert_eq!(min, 1);
@@ -108,6 +110,60 @@ effects:
             );
         }
         other => panic!("expected Digi-Burst to lower into SelectOwnSources, got {other:?}"),
+    }
+}
+
+#[test]
+fn select_own_sources_accepts_host_and_card_filter() {
+    let yaml = r#"
+card: X-SRC
+name: Source Picker
+kind: digimon
+level: 6
+color: [red]
+cost: 8
+dp: 9000
+effects:
+  - scope: inherited
+    when: on_opponent_attack
+    process:
+      - select_own_sources:
+          from: source
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          min: 3
+          max: 3
+          bind_as: picked_sources
+          then:
+            - trash_selected_sources:
+                source_refs: picked_sources
+"#;
+
+    match compile_first_step(yaml) {
+        CompiledStep::SelectOwnSources {
+            target,
+            min,
+            max,
+            bind_as,
+            prompt,
+            then,
+            ..
+        } => {
+            assert_eq!(target, Some(CompiledBindingRef::Source));
+            assert_eq!(min, 3);
+            assert_eq!(max, 3);
+            assert_eq!(bind_as.as_deref(), Some("picked_sources"));
+            assert_eq!(prompt, "Choose source cards");
+            assert_eq!(
+                then,
+                vec![CompiledStep::TrashSelectedSources {
+                    source_refs: "picked_sources".to_string(),
+                }]
+            );
+        }
+        other => panic!("expected SelectOwnSources, got {other:?}"),
     }
 }
 

@@ -256,16 +256,6 @@ fn trash_top_security_fires_opponent_security_removed_once() {
     assert_eq!(runner.game.players[1].trash.len(), 1);
 }
 
-// TODO(Track A merge 2026-05-08): Track A renamed/split this dispatch path —
-// `trash_top_security` now fires `OnDiscardSecurity` (covered by the sibling
-// `…_on_discard_security_once` test added in PR #451), not `OnLoseSecurity`.
-// The pre-Track A assertion (memory == +3) is stale and the test now fails
-// with memory == -1 due to the cross-player memory accounting (player 1's
-// observer registers as a memory swing in the wrong direction relative to
-// the turn player). This test should be deleted or updated by Track A
-// authors; ignored here so the merge passes without regressing Track A's
-// new sibling test.
-#[ignore = "Track A (PR #451) split OnLoseSecurity → OnDiscardSecurity for trash_top_security; sibling test _on_discard_security_once covers the new dispatch"]
 #[test]
 fn trash_top_security_fires_removed_cards_on_lose_security_once() {
     let mut runner = DebugRunner::builder()
@@ -286,8 +276,8 @@ fn trash_top_security_fires_removed_cards_on_lose_security_once() {
     }
 
     assert_eq!(
-        runner.game.memory, 3,
-        "OnLoseSecurity (+2) and OnOpponentSecurityRemoved (+1) should each fire once"
+        runner.game.memory, -1,
+        "OnLoseSecurity for defender (+2) and OnOpponentSecurityRemoved for source player (+1) should each fire once"
     );
 }
 
@@ -562,13 +552,6 @@ fn place_on_security_bottom_from_trash_preserves_owner_and_does_not_fire_loss_ob
     );
 }
 
-// TODO(Track A merge 2026-05-08): Same issue as
-// `trash_top_security_fires_removed_cards_on_lose_security_once` — Track A
-// changed the observer dispatch path so the pre-Track A memory assertion
-// (memory == +1 from `OnOpponentSecurityRemoved`) is now stale. Test fails
-// with memory == -1. Should be deleted or updated by Track A authors;
-// ignored here so the merge passes.
-#[ignore = "Track A (PR #451) changed security-removal observer dispatch; assertion stale"]
 #[test]
 fn add_top_security_to_hand_moves_top_card_and_fires_loss_observer() {
     let mut runner = DebugRunner::builder()
@@ -597,7 +580,7 @@ fn add_top_security_to_hand_moves_top_card_and_fires_loss_observer() {
     );
     assert_eq!(
         runner.memory(),
-        1,
+        -1,
         "security removal observers fire for security-to-hand"
     );
 }

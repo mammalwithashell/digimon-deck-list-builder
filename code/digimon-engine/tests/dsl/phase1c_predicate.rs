@@ -1,4 +1,7 @@
-use digimon_dsl::compiled::{CompiledBindingCompare, CompiledCardKind, CompiledPredicate};
+use digimon_dsl::compiled::{
+    CompiledBindingCompare, CompiledBindingOwnerPredicate, CompiledCardKind, CompiledPlayerRef,
+    CompiledPredicate,
+};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, make_test_egg, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
@@ -230,6 +233,35 @@ fn missing_binding_makes_equals_and_not_equals_false() {
 }
 
 #[test]
+fn binding_owner_predicate_matches_bound_permanent_controller() {
+    let mut runner = fresh_runner();
+    let mine = runner.place_on_field(0, "TEST-A", Some(0));
+    let opponent = runner.place_on_field(1, "TEST-B", Some(0));
+    let source = any_card_handle(&runner);
+    let rctx = EffectReadContext::new(&runner.game, source, None, 0);
+    let pred = CompiledPredicate {
+        binding_owner: Some(CompiledBindingOwnerPredicate {
+            binding: "picked".to_string(),
+            of: CompiledPlayerRef::You,
+        }),
+        ..Default::default()
+    };
+
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("picked", mine);
+    assert!(
+        eval_predicate_with_bindings(&pred, &rctx, PredicateSubject::None, Some(&bindings)),
+        "a permanent bound to the effect controller should satisfy binding_owner: you"
+    );
+
+    bindings.insert_permanent("picked", opponent);
+    assert!(
+        !eval_predicate_with_bindings(&pred, &rctx, PredicateSubject::None, Some(&bindings)),
+        "an opponent permanent should not satisfy binding_owner: you"
+    );
+}
+
+#[test]
 fn binding_comparisons_flow_through_compound_predicates() {
     let runner = fresh_runner();
     let card = any_card_handle(&runner);
@@ -289,7 +321,7 @@ fn binding_comparisons_flow_through_compound_predicates() {
 
 // ── Task 3: combinators + existentials ────────────────────────────────
 
-use digimon_dsl::compiled::{CompiledExistential, CompiledPlayerRef};
+use digimon_dsl::compiled::CompiledExistential;
 
 #[test]
 fn all_of_combinator_ands_children() {

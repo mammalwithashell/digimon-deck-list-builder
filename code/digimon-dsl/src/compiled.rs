@@ -128,6 +128,7 @@ pub struct CompiledAltPath {
 pub enum CompiledAltPathKind {
     Digivolve,
     DnaDigivolve,
+    BlastDnaDigivolve,
     DigiXros,
     BurstDigivolve,
     AppFusion,
@@ -169,6 +170,7 @@ pub enum CompiledCost {
 pub struct CompiledPredicate {
     pub kind: Option<CompiledCardKind>,
     pub level_eq: Option<u8>,
+    pub level_eq_binding: Option<String>,
     pub level_lte: Option<u8>,
     pub level_gte: Option<u8>,
     pub color_is: Option<CompiledColor>,
@@ -199,6 +201,7 @@ pub struct CompiledPredicate {
     pub other: Option<bool>,
     pub of_permanent: Option<String>,
     pub not_in_binding: Option<String>,
+    pub binding_owner: Option<CompiledBindingOwnerPredicate>,
     pub source_is_tamer: Option<bool>,
     pub source_name_contains: Option<String>,
     pub source_permanent_trait_has: Option<String>,
@@ -215,6 +218,10 @@ pub struct CompiledPredicate {
     pub dna_origin: Option<bool>,
     pub event_target_kind: Option<CompiledCardKind>,
     pub event_target_trait_has: Option<String>,
+    pub event_target_is_player: Option<bool>,
+    pub event_target_was_self: Option<bool>,
+    pub attack_target_change_reason: Option<String>,
+    pub attacker_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
     pub event_card_name_contains: Option<String>,
     pub event_permanent_is_source: Option<bool>,
@@ -225,6 +232,7 @@ pub struct CompiledPredicate {
     pub replacement_subject_is_mine: Option<bool>,
     pub equals: Option<Vec<CompiledBindingCompare>>,
     pub not_equals: Option<Vec<CompiledBindingCompare>>,
+    pub binding_exists: Option<String>,
     pub count_lte: Option<CompiledCountAggregate>,
     pub count_gte: Option<CompiledCountAggregate>,
     pub any_permanent: Option<Box<CompiledExistential>>,
@@ -244,6 +252,11 @@ pub struct CompiledPredicate {
     pub trashed_source_card_id_is: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledPermanentProperty {
+    Level,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledDpConstraint {
     Literal(i32),
@@ -257,6 +270,7 @@ pub enum CompiledReplacementCause {
     OpponentEffect,
     SecurityCheck,
     Cost,
+    Overclock,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -278,6 +292,12 @@ pub enum CompiledEventCause {
 pub enum CompiledBindingCompare {
     Binding(String),
     Literal(i64),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledBindingOwnerPredicate {
+    pub binding: String,
+    pub of: CompiledPlayerRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -346,6 +366,12 @@ pub enum CompiledPerSelector {
         of: CompiledPlayerRef,
         filter: Box<CompiledPredicate>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CompiledCountBound {
+    Literal(u8),
+    Formula(CompiledFormula),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -502,6 +528,7 @@ pub enum CompiledScope {
     Inherited,
     Both,
     Linked,
+    Security,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -583,6 +610,12 @@ pub enum CompiledFieldSelector {
 }
 
 // ── Steps ───────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct CompiledAttackCostUpgrade {
+    pub dp: i32,
+    pub security_attack: i32,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledStep {
@@ -720,6 +753,7 @@ pub enum CompiledStep {
         target: CompiledBindingRef,
         source_index: CompiledBindingRef,
         cost_delta: Option<CompiledCostDelta>,
+        bind_as: Option<String>,
     },
     PlaySelectedSourcesFree {
         source_refs: String,
@@ -746,6 +780,18 @@ pub enum CompiledStep {
     PlacePermanentBottomSecurityAndCancelReplacement {
         of: CompiledPlayerRef,
         target: CompiledBindingRef,
+    },
+    PlacePermanentOnSecurity {
+        of: CompiledPlayerRef,
+        target: CompiledBindingRef,
+        position: CompiledStackPosition,
+        face_up: bool,
+    },
+    PlacePermanentOnSecurityAndHandleReplacement {
+        of: CompiledPlayerRef,
+        target: CompiledBindingRef,
+        position: CompiledStackPosition,
+        face_up: bool,
     },
     Recover {
         of: CompiledPlayerRef,
@@ -842,6 +888,7 @@ pub enum CompiledStep {
     },
     SelectOwnSources {
         target: Option<CompiledBindingRef>,
+        filter: CompiledPredicate,
         min: u8,
         max: u8,
         bind_as: Option<String>,
@@ -862,6 +909,11 @@ pub enum CompiledStep {
     },
     TrashSelectedSources {
         source_refs: String,
+    },
+    BindPermanentProperty {
+        from: CompiledBindingRef,
+        property: CompiledPermanentProperty,
+        bind_as: String,
     },
     SelectReveal {
         of: CompiledPlayerRef,
@@ -903,7 +955,7 @@ pub enum CompiledStep {
     SelectCountCappedMulti {
         of: CompiledPlayerRef,
         zone: CompiledZone,
-        max: u8,
+        max: CompiledCountBound,
         filter: CompiledPredicate,
         bind_as: Option<String>,
         prompt: String,
@@ -957,7 +1009,24 @@ pub enum CompiledStep {
         without_suspending: bool,
         optional: bool,
         prompt: Option<String>,
+        cost_upgrade: Option<CompiledAttackCostUpgrade>,
     },
+    ForceAttack {
+        attacker: CompiledBindingRef,
+        targets: CompiledAttackTargetSpec,
+        without_suspending: bool,
+        prompt: Option<String>,
+        cost_upgrade: Option<CompiledAttackCostUpgrade>,
+    },
+    RedirectAttackTarget {
+        new_target: Option<CompiledBindingRef>,
+        player: Option<CompiledPlayerRef>,
+        targets: CompiledAttackTargetSpec,
+        optional: bool,
+        prompt: Option<String>,
+    },
+    CancelAttack,
+    OpenCounterWindow,
     RefireEffect {
         source: CompiledBindingRef,
         timing: String,

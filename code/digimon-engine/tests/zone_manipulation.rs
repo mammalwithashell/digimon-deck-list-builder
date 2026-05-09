@@ -1075,14 +1075,13 @@ fn effect_initiated_digivolve_ignore_color_bypasses_color_check() {
 }
 
 #[test]
-fn effect_initiated_digivolve_bad_level_with_ignore_color_now_succeeds_post_track_a() {
-    // Pre-Track A semantic: `ignore_color=true` bypassed only the color
-    // check; a level mismatch still aborted. Track A (PR #451, 2026-05-08)
-    // widened `ignore_color` to also bypass the level check via
-    // `.or_else(|| ignore_color.then_some(0))` in
-    // `effect_initiated_digivolve_from_source` — printed-text shorthand
-    // for "ignore digivolution requirements" cards. EVO requires Lv.5,
-    // target is Lv.3; under the new semantic, the digivolve succeeds.
+fn effect_initiated_digivolve_bad_level_returns_false() {
+    // `ignore_color=true` bypasses only the color check; a level mismatch
+    // still aborts. Cards that need to bypass level requirements use the
+    // separate `effect_initiated_digivolve_ignore_requirements` entry
+    // (Track A iteration that introduced `ignore_requirements: bool`).
+    //
+    // EVO requires Lv.5, target is Lv.3 → no matching evo_cost.
     let base = plain_digimon("B3", "Base3", 3);
     let evo = digimon_with_evo_costs(
         "E4",
@@ -1126,10 +1125,11 @@ fn effect_initiated_digivolve_bad_level_with_ignore_color_now_succeeds_post_trac
         PlaySource::ByEffect,
     );
     assert!(
-        ok,
-        "Track A: ignore_color=true now bypasses level requirement too \
-         (printed-text shorthand for 'ignore digivolution requirements')"
+        !ok,
+        "level mismatch should return false even with ignore_color=true \
+         (use effect_initiated_digivolve_ignore_requirements for level bypass)"
     );
+    assert_eq!(r.hand_size(0), 1, "hand untouched after failure");
 }
 
 // ─── EffectContext::hatch ─────────────────────────────────────────────────────

@@ -21,10 +21,10 @@ pub use selections::{
 pub use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef};
 
 use crate::action::mask::effect_attack_target_action_ids;
-use crate::action::space::{decode_attack, SECURITY_TARGET};
+use crate::action::space::{decode_attack, encode_attack, SECURITY_TARGET};
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
-use crate::combat::{AttackError, AttackResult};
+use crate::combat::{AttackError, AttackInitiator, AttackOpen, AttackResult, TargetConstraint};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
 use crate::effect::enumerate_refireable_effects;
@@ -33,6 +33,7 @@ use crate::enums::{
     ModifierType, PlaySource, PlayerId, StackPosition,
 };
 use crate::game::Game;
+use crate::game::PendingWouldPlayOrigin;
 use crate::game_actions::PlayFromHandCostResult;
 use crate::modifiers::{
     EffectControllerFilter, EffectImmunityFilter, ModifierEntry, PlayerModifierEntry,
@@ -398,6 +399,17 @@ impl<'a> EffectReadContext<'a> {
         event_dna_origin(self.game)
     }
 
+    pub fn attack_target_change(&self) -> Option<crate::trigger_context::AttackTargetChange> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.attack_target_change)
+    }
+
+    pub fn dna_origin(&self) -> bool {
+        self.game.current_dna_origin.unwrap_or(false)
+    }
+
     pub fn source_kind(&self) -> EffectSourceKind {
         self.source_kind
     }
@@ -473,7 +485,7 @@ impl<'a> EffectReadContext<'a> {
     /// `was_deleted_by_effect`, since they fire for `Battle` /
     /// `SecurityCheck` / `Cost` causes too.
     pub fn deletion_cause(&self) -> Option<crate::replacement::ReplacementCause> {
-        self.game.current_deletion_cause
+        observed_deletion_cause(self.game)
     }
 
     /// `true` when the current OnDeletion observer is firing because of an
@@ -557,6 +569,13 @@ fn event_dna_origin(game: &Game) -> Option<bool> {
         .unwrap_or(false);
     let scoped_origin = game.current_dna_origin.unwrap_or(false);
     Some(trigger_origin || scoped_origin)
+}
+
+fn observed_deletion_cause(game: &Game) -> Option<ReplacementCause> {
+    match game.current_deletion_event_cause_override {
+        Some(crate::trigger_context::EventCause::Overclock) => Some(ReplacementCause::Overclock),
+        _ => game.current_deletion_cause,
+    }
 }
 
 /// The context passed to every effect's `process` closure.
@@ -1064,6 +1083,13 @@ impl<'a> EffectContext<'a> {
         self.as_read().event_dna_origin()
     }
 
+    pub fn attack_target_change(&self) -> Option<crate::trigger_context::AttackTargetChange> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.attack_target_change)
+    }
+
     pub fn source_kind(&self) -> EffectSourceKind {
         self.source_kind
     }
@@ -1143,7 +1169,7 @@ impl<'a> EffectContext<'a> {
     /// directly rather than via `was_deleted_by_effect`, since they fire for
     /// `Battle` / `SecurityCheck` / `Cost` causes too.
     pub fn deletion_cause(&self) -> Option<crate::replacement::ReplacementCause> {
-        self.game.current_deletion_cause
+        observed_deletion_cause(self.game)
     }
 
     /// See `EffectReadContext::was_deleted_by_effect`. Convenience for
@@ -1246,9 +1272,46 @@ impl<'a> EffectContext<'a> {
         }
     }
 
-    /// Move the resolving effect's source permanent (`self.source_permanent`)
-    /// into its owner's security stack at `position` with the requested
-    /// orientation. Sugar over `Game::place_permanent_on_security_observed`.
+    /// (Track A) Variant of `place_sourceless_permanent_bottom_security_…` that
+    /// targets any permanent at any position, then handles the current
+    /// replacement window via `handle_replacement` rather than `cancel_leave`.
+    pub fn place_permanent_on_security_and_handle_current_replacement(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        if self
+            .game
+            .modifiers
+            .player_has(self.player, ModifierType::CannotAddSecurityByEffect)
+        {
+            return false;
+        }
+        if self
+            .game
+            .place_permanent_on_security_without_leave_replacement(
+                player,
+                target,
+                position,
+                face_up,
+                self.player,
+            )
+        {
+            if self.game.parked_replacement.is_some() {
+                self.handle_replacement();
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    /// (Track E) Move the resolving effect's source permanent
+    /// (`self.source_permanent`) into its owner's security stack at
+    /// `position` with the requested orientation. Sugar over
+    /// `Game::place_permanent_on_security_observed`.
     ///
     /// Sources below the top card are routed to each source's owner's trash
     /// (firing `OnDigivolutionCardTrashed` per source). Linked cards likewise
@@ -1284,10 +1347,11 @@ impl<'a> EffectContext<'a> {
             .place_permanent_on_security_observed(owner, handle, position, face_up, self.player)
     }
 
-    /// Replacement-aware sibling of `place_self_at_security`. When invoked
-    /// inside a parked replacement (e.g. a "would leave" replacement whose
-    /// subject is the source permanent), runs the move and then cancels the
-    /// parked replacement so the original event does not also fire.
+    /// (Track E) Replacement-aware sibling of `place_self_at_security`. When
+    /// invoked inside a parked replacement (e.g. a "would leave" replacement
+    /// whose subject is the source permanent), runs the move and then
+    /// cancels the parked replacement so the original event does not also
+    /// fire.
     ///
     /// Mirrors the shape of
     /// `place_sourceless_permanent_bottom_security_and_cancel_current_replacement`.
@@ -1308,10 +1372,10 @@ impl<'a> EffectContext<'a> {
         }
     }
 
-    /// Option-card flavor of `place_self_at_security`. Consumes the
-    /// `Game.pending_option` transient that carries the in-flight Option
-    /// card mid-resolution (between pay-cost and dispose), routing it into
-    /// its owner's security stack at `position` with the requested
+    /// (Track E) Option-card flavor of `place_self_at_security`. Consumes
+    /// the `Game.pending_option` transient that carries the in-flight
+    /// Option card mid-resolution (between pay-cost and dispose), routing
+    /// it into its owner's security stack at `position` with the requested
     /// orientation. Used by ST20-15 Island of Adventure's [Main] tail
     /// "Then, place this card face up as the top security card."
     ///
@@ -1606,6 +1670,22 @@ impl<'a> EffectContext<'a> {
             && !self.source_is_tamer()
         {
             return;
+        }
+        // Track C / D consult site (2026-05-08): permanent-scoped
+        // `CannotAddMemory` — while any permanent in the acting player's
+        // battle area carries this modifier, the controller's effects
+        // can't add memory. Sibling of player-scoped
+        // `CannotGainMemoryByEffect` for printed text anchored to a
+        // specific Digimon.
+        let battle_area_len = self.game.player(target).battle_area.len();
+        for i in 0..battle_area_len {
+            let h = PermanentHandle {
+                player: target,
+                index: i as u8,
+            };
+            if self.game.modifiers.has(h, ModifierType::CannotAddMemory) {
+                return;
+            }
         }
         self.game.gain_memory_for_player(target, amount);
     }
@@ -2325,16 +2405,34 @@ impl<'a> EffectContext<'a> {
     /// if security is empty, the battle area is full, or the play was
     /// gated by a flood-gate.
     pub fn play_from_security(&mut self, player: PlayerId) -> Option<PermanentHandle> {
-        // Pop the top of security. Empty stack → nothing to do.
-        let card = match self.game.player_mut(player).security.pop() {
-            Some(c) => c,
-            None => return None,
+        let security_index = self
+            .game
+            .player(player)
+            .security
+            .iter()
+            .position(|card| card.handle() == self.source_card)
+            .or_else(|| self.game.player(player).security.len().checked_sub(1))?;
+        self.play_from_security_index(player, security_index)
+    }
+
+    fn play_from_security_index(
+        &mut self,
+        player: PlayerId,
+        security_index: usize,
+    ) -> Option<PermanentHandle> {
+        let card = {
+            let player_state = self.game.player_mut(player);
+            if security_index >= player_state.security.len() {
+                return None;
+            }
+            player_state.security.remove(security_index)
         };
 
         // `face_up_security` is keyed by card_index — clear it whether or
         // not the card was face-up; remove() is a no-op when absent.
         let card_index = card.card_index;
-        self.game
+        let was_face_up = self
+            .game
             .player_mut(player)
             .face_up_security
             .remove(&card_index);
@@ -2344,12 +2442,13 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(card);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.game.play_from_hand_with_cost_result(
+        match self.game.play_from_hand_with_cost_result_from_origin(
             player,
             hand_index,
             crate::enums::CostDelta::Free,
             PlaySource::ByEffect,
             false,
+            PendingWouldPlayOrigin::SecurityTop { was_face_up },
         ) {
             PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
                 player,
@@ -2373,7 +2472,9 @@ impl<'a> EffectContext<'a> {
                 // consumed by the abortive play attempt. Matches the
                 // tradeoff `play_from_hand_with_cost` makes elsewhere on
                 // gated rollbacks.
-                self.game.player_mut(player).security.push(card);
+                let player_state = self.game.player_mut(player);
+                let restore_at = security_index.min(player_state.security.len());
+                player_state.security.insert(restore_at, card);
                 None
             }
         }
@@ -2440,12 +2541,16 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(source);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.game.play_from_hand_with_cost_result(
+        match self.game.play_from_hand_with_cost_result_from_origin(
             player,
             hand_index,
             cost_delta,
             PlaySource::ByEffect,
             false,
+            PendingWouldPlayOrigin::Source {
+                permanent: target,
+                source_index,
+            },
         ) {
             PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
                 player,
@@ -3024,6 +3129,18 @@ impl<'a> EffectContext<'a> {
     /// Reject-before-mutate discipline: invalid handle and empty stack both
     /// return `false` before any state change.
     pub fn trash_top_source(&mut self, target: PermanentHandle) -> bool {
+        // Track C / D consult site (2026-05-08): `ImmuneFromStackTrashing`
+        // on the host permanent blocks the inherited stack-peel mutation.
+        // Distinct from `CannotBeDestroyed` (which protects the live top
+        // card from deletion) — this protects the digivolution sources
+        // sitting beneath the top from being peeled off and trashed.
+        if self
+            .game
+            .modifiers
+            .has(target, ModifierType::ImmuneFromStackTrashing)
+        {
+            return false;
+        }
         // Validate target slot.
         let (removed, host_card) = {
             let permanent = match self
@@ -3148,6 +3265,22 @@ impl<'a> EffectContext<'a> {
         )
     }
 
+    pub fn effect_initiated_digivolve_ignore_requirements(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+    ) -> bool {
+        self.game.effect_initiated_digivolve_ignore_requirements(
+            player,
+            hand_index,
+            target,
+            cost_delta,
+            PlaySource::ByEffect,
+        )
+    }
+
     pub fn effect_initiated_digivolve_with_provenance(
         &mut self,
         player: PlayerId,
@@ -3183,6 +3316,23 @@ impl<'a> EffectContext<'a> {
             ignore_color,
             PlaySource::ByEffect,
         )
+    }
+
+    pub fn effect_initiated_digivolve_from_source_ignore_requirements(
+        &mut self,
+        player: PlayerId,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+    ) -> bool {
+        self.game
+            .effect_initiated_digivolve_from_source_ignore_requirements(
+                player,
+                source,
+                target,
+                cost_delta,
+                PlaySource::ByEffect,
+            )
     }
 
     /// Merge two existing battle-area permanents into a single permanent
@@ -3493,11 +3643,27 @@ impl<'a> EffectContext<'a> {
         {
             return false;
         }
+        // Track C / D consult site (2026-05-08): permanent-scoped
+        // `CannotAddSecurity` — sibling of player-scoped
+        // `CannotAddSecurityByEffect`. Anchored to a specific permanent in
+        // the acting player's battle area, mirroring the printed-text
+        // shape "while this Digimon is in play, your effects can't add
+        // security cards."
+        let battle_area_len = self.game.player(self.player).battle_area.len();
+        for i in 0..battle_area_len {
+            let h = PermanentHandle {
+                player: self.player,
+                index: i as u8,
+            };
+            if self.game.modifiers.has(h, ModifierType::CannotAddSecurity) {
+                return false;
+            }
+        }
         self.game
             .place_on_security_observed(player, source, position, face_up, self.player)
     }
 
-    /// Extract a digivolution source identified by its stable `CardHandle`
+    /// (Track E) Extract a digivolution source identified by its stable `CardHandle`
     /// from `carrier`'s stack and place it into `target_player`'s security
     /// stack at `position` with the requested orientation. Track E Tier 2
     /// Task 6 — sugar over `select_own_sources` -> `place_on_security` for
@@ -3762,6 +3928,28 @@ impl<'a> EffectContext<'a> {
         handles
     }
 
+    /// (Track A) Move a battle-area permanent to a player's security stack
+    /// through the normal leave-field replacement window. This is for
+    /// effects that initiate a new move to security, not replacement bodies
+    /// already handling an in-flight leave event.
+    pub fn place_permanent_on_security(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        if self
+            .game
+            .modifiers
+            .player_has(self.player, ModifierType::CannotAddSecurityByEffect)
+        {
+            return false;
+        }
+        self.game
+            .place_permanent_on_security(player, target, position, face_up, self.player)
+    }
+
     /// Recover up to `count` cards from `player`'s deck to the top of security.
     pub fn recover_from_deck(&mut self, player: PlayerId, count: u8) -> u8 {
         let mut recovered = 0;
@@ -3807,8 +3995,121 @@ impl<'a> EffectContext<'a> {
             return Err(AttackError::NoActiveAttack);
         };
         let attacker = pa.attacker;
-        self.game.validate_attack_target(attacker, new_target)?;
-        self.game.apply_attack_target_substitution(new_target);
+        self.game
+            .validate_attack_redirect_target(attacker, new_target)?;
+        self.game.apply_attack_target_substitution_with_reason(
+            new_target,
+            crate::trigger_context::AttackTargetChangeReason::EffectRedirect(Some(
+                self.source_card,
+            )),
+        );
+        Ok(())
+    }
+
+    pub fn select_redirect_attack_target(
+        &mut self,
+        targets: AttackTargetRestriction,
+        optional: bool,
+        prompt: &str,
+    ) -> Result<(), crate::combat::AttackError> {
+        use crate::combat::AttackError;
+        let Some(pa) = self.game.pending_attack.as_ref() else {
+            return Err(AttackError::NoActiveAttack);
+        };
+        let attacker = pa.attacker;
+        let current_target = pa.effective_target;
+        let opponent = self.game.next_clockwise(attacker.player);
+        let mut valid_action_ids = Vec::new();
+
+        if matches!(
+            targets,
+            AttackTargetRestriction::Any | AttackTargetRestriction::PlayerOnly
+        ) {
+            let target = AttackTarget::Player(opponent);
+            if target != current_target
+                && self
+                    .game
+                    .validate_attack_redirect_target(attacker, target)
+                    .is_ok()
+            {
+                valid_action_ids.push(encode_attack(attacker.index as u16, SECURITY_TARGET));
+            }
+        }
+
+        if matches!(
+            targets,
+            AttackTargetRestriction::Any | AttackTargetRestriction::DigimonOnly
+        ) {
+            for index in 0..self.game.player(opponent).battle_area.len() {
+                let target = AttackTarget::Digimon(PermanentHandle {
+                    player: opponent,
+                    index: index as u8,
+                });
+                if target != current_target
+                    && self
+                        .game
+                        .validate_attack_redirect_target(attacker, target)
+                        .is_ok()
+                {
+                    valid_action_ids.push(encode_attack(attacker.index as u16, index as u16));
+                }
+            }
+        }
+
+        if valid_action_ids.is_empty() {
+            return Ok(());
+        }
+
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let previous_phase = self.game.current_phase;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
+
+        self.game.current_phase = GamePhase::SelectTarget;
+        self.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Target,
+            selecting_player,
+            previous_phase,
+            valid_action_ids,
+            is_optional: optional,
+            prompt: prompt.to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent,
+            source_kind,
+            callback: Box::new(move |game, action_id| {
+                let (decoded_attacker, decoded_target) = decode_attack(action_id);
+                if decoded_attacker as u8 != attacker.index {
+                    return;
+                }
+                let opponent = game.next_clockwise(attacker.player);
+                let target = if decoded_target == SECURITY_TARGET {
+                    AttackTarget::Player(opponent)
+                } else {
+                    AttackTarget::Digimon(PermanentHandle {
+                        player: opponent,
+                        index: decoded_target as u8,
+                    })
+                };
+                if game
+                    .validate_attack_redirect_target(attacker, target)
+                    .is_ok()
+                {
+                    game.apply_attack_target_substitution_with_reason(
+                        target,
+                        crate::trigger_context::AttackTargetChangeReason::EffectRedirect(Some(
+                            source_card,
+                        )),
+                    );
+                }
+            }),
+            on_decline: if optional {
+                Some(Box::new(|_game: &mut Game| {}) as DeclineCallback)
+            } else {
+                None
+            },
+        });
         Ok(())
     }
 
@@ -3827,16 +4128,15 @@ impl<'a> EffectContext<'a> {
     /// observable only via the `OnAttackTargetChange` observer that
     /// already fired.
     pub fn cancel_attack(&mut self) -> Result<(), crate::combat::AttackError> {
-        use crate::combat::AttackError;
-        let Some(pa) = self.game.pending_attack.as_mut() else {
-            return Err(AttackError::NoActiveAttack);
-        };
-        pa.cancelled = true;
-        Ok(())
+        self.game.cancel_pending_attack_from_effect_checked()
     }
 
     pub fn cancel_pending_attack(&mut self) {
         self.game.cancel_pending_attack_from_effect();
+    }
+
+    pub fn open_counter_window(&mut self) -> Result<bool, crate::combat::AttackError> {
+        self.game.open_counter_window_from_effect_checked()
     }
 
     pub fn battle_digimon(
@@ -3854,7 +4154,7 @@ impl<'a> EffectContext<'a> {
         without_suspending: bool,
         prompt: &str,
     ) -> Result<(), AttackError> {
-        self.may_attack_now_optional(attacker, targets, without_suspending, false, prompt)
+        self.may_attack_now_optional(attacker, targets, without_suspending, true, prompt)
     }
 
     pub fn may_attack_now_optional(
@@ -3864,6 +4164,25 @@ impl<'a> EffectContext<'a> {
         without_suspending: bool,
         optional: bool,
         prompt: &str,
+    ) -> Result<(), AttackError> {
+        self.may_attack_now_optional_with_upgrade(
+            attacker,
+            targets,
+            without_suspending,
+            optional,
+            prompt,
+            None,
+        )
+    }
+
+    pub fn may_attack_now_optional_with_upgrade(
+        &mut self,
+        attacker: PermanentHandle,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        optional: bool,
+        prompt: &str,
+        cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
     ) -> Result<(), AttackError> {
         let valid_action_ids =
             effect_attack_target_action_ids(self.game, attacker, targets, without_suspending);
@@ -3903,11 +4222,17 @@ impl<'a> EffectContext<'a> {
                         index: decoded_target as u8,
                     })
                 };
-                if without_suspending {
-                    game.begin_attack_without_suspending(attacker, target);
-                } else {
-                    game.begin_attack(attacker, target, false);
-                }
+                game.begin_attack_open(AttackOpen {
+                    attacker,
+                    initiator: AttackInitiator::Effect {
+                        source: Some(source_card),
+                        optional,
+                    },
+                    suspend_attacker: !without_suspending,
+                    target_constraint: TargetConstraint::Forced(target),
+                    allow_cancel: optional,
+                    cost_upgrade,
+                });
             }),
             on_decline: if optional {
                 Some(Box::new(|_game: &mut Game| {}) as DeclineCallback)
@@ -3916,6 +4241,38 @@ impl<'a> EffectContext<'a> {
             },
         });
         Ok(())
+    }
+
+    pub fn force_opponent_attack(
+        &mut self,
+        attacker: PermanentHandle,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        prompt: &str,
+    ) -> Result<(), AttackError> {
+        self.force_opponent_attack_with_upgrade(attacker, targets, without_suspending, prompt, None)
+    }
+
+    pub fn force_opponent_attack_with_upgrade(
+        &mut self,
+        attacker: PermanentHandle,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        prompt: &str,
+        cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
+    ) -> Result<(), AttackError> {
+        let previous_override = self.override_selecting_player;
+        self.override_selecting_player = Some(attacker.player);
+        let result = self.may_attack_now_optional_with_upgrade(
+            attacker,
+            targets,
+            without_suspending,
+            false,
+            prompt,
+            cost_upgrade,
+        );
+        self.override_selecting_player = previous_override;
+        result
     }
 
     /// Move the top of `player`'s digitama deck into the breeding area.

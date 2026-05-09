@@ -86,6 +86,31 @@ impl Game {
             .is_some()
     }
 
+    pub(crate) fn has_valid_blast_dna_route_for_hand_card(
+        &self,
+        player: PlayerId,
+        hand_index: usize,
+    ) -> bool {
+        self.valid_blast_dna_field_targets_for_hand_card(player, hand_index)
+            .next()
+            .is_some()
+    }
+
+    pub(crate) fn hand_card_has_registered_blast_dna_paths(
+        &self,
+        player: PlayerId,
+        hand_index: usize,
+    ) -> bool {
+        let Some(result) = self
+            .players
+            .get(player as usize)
+            .and_then(|state| state.hand.get(hand_index))
+        else {
+            return false;
+        };
+        self.has_registered_blast_dna_paths(result)
+    }
+
     pub fn has_registered_end_of_turn_dna_action(&self, player: PlayerId) -> bool {
         let hand_len = self
             .players
@@ -313,6 +338,161 @@ impl Game {
             );
         }
         None
+    }
+
+    pub(crate) fn valid_blast_dna_field_targets_for_hand_card(
+        &self,
+        player: PlayerId,
+        result_hand_index: usize,
+    ) -> impl Iterator<Item = u16> + '_ {
+        let battle_len = self
+            .players
+            .get(player as usize)
+            .map(|p| p.battle_area.len())
+            .unwrap_or(0);
+        (0..battle_len).filter_map(move |field_idx| {
+            self.valid_blast_dna_hand_materials_for_hand_card(player, result_hand_index, field_idx)
+                .next()
+                .map(|_| field_idx as u16)
+        })
+    }
+
+    pub(crate) fn valid_blast_dna_hand_materials_for_hand_card(
+        &self,
+        player: PlayerId,
+        result_hand_index: usize,
+        field_idx: usize,
+    ) -> impl Iterator<Item = u16> + '_ {
+        let hand_len = self
+            .players
+            .get(player as usize)
+            .map(|p| p.hand.len())
+            .unwrap_or(0);
+        (0..hand_len).filter_map(move |material_idx| {
+            if material_idx == result_hand_index {
+                return None;
+            }
+            self.blast_dna_route_for_hand_card(player, result_hand_index, field_idx, material_idx)
+                .map(|_| material_idx as u16)
+        })
+    }
+
+    pub(crate) fn blast_dna_route_for_hand_card(
+        &self,
+        player: PlayerId,
+        result_hand_index: usize,
+        field_idx: usize,
+        material_hand_index: usize,
+    ) -> Option<DnaRouteMatch> {
+        if result_hand_index == material_hand_index {
+            return None;
+        }
+        let player_state = self.players.get(player as usize)?;
+        let result = player_state.hand.get(result_hand_index)?;
+        let material = player_state.hand.get(material_hand_index)?;
+        let field = player_state.battle_area.get(field_idx)?;
+
+        if let Some(route) =
+            self.registered_blast_dna_route_for_hand_card(player, result, material, field_idx)
+        {
+            return Some(route);
+        }
+
+        if self.has_registered_blast_dna_paths(result) {
+            return None;
+        }
+
+        let result_meta = &self.card_data[result.data_index];
+        let material_meta = &self.card_data[material.data_index];
+
+        for cost in &result_meta.dna_costs {
+            if perm_matches_req(field, &cost.requirement1, &self.card_data)
+                && card_data_matches_req(material_meta, &cost.requirement2)
+            {
+                return Some(DnaRouteMatch {
+                    first_is_top: true,
+                    memory_cost: cost.memory_cost,
+                });
+            }
+            if perm_matches_req(field, &cost.requirement2, &self.card_data)
+                && card_data_matches_req(material_meta, &cost.requirement1)
+            {
+                return Some(DnaRouteMatch {
+                    first_is_top: false,
+                    memory_cost: cost.memory_cost,
+                });
+            }
+        }
+        None
+    }
+
+    fn has_registered_blast_dna_paths(&self, result: &CardSource) -> bool {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            let card_id = result.card_id(&self.card_data);
+            self.alt_path_registry
+                .get(card_id)
+                .map(|paths| {
+                    paths
+                        .iter()
+                        .any(|path| matches!(path.kind, CompiledAltPathKind::BlastDnaDigivolve))
+                })
+                .unwrap_or(false)
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            let _ = result;
+            false
+        }
+    }
+
+    fn registered_blast_dna_route_for_hand_card(
+        &self,
+        player: PlayerId,
+        result: &CardSource,
+        material: &CardSource,
+        field_idx: usize,
+    ) -> Option<DnaRouteMatch> {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            let card_id = result.card_id(&self.card_data);
+            let paths = self.alt_path_registry.get(card_id)?;
+            let field_handle = PermanentHandle {
+                player,
+                index: field_idx as u8,
+            };
+            let rctx = EffectReadContext::new(self, result.handle(), Some(field_handle), player);
+            for path in paths {
+                if !matches!(path.kind, CompiledAltPathKind::BlastDnaDigivolve)
+                    || path.materials.len() != 2
+                {
+                    continue;
+                }
+                let cost = registered_blast_dna_literal_cost(path)?;
+                if blast_material_matches_permanent(&path.materials[0], &rctx, field_handle)
+                    && blast_material_matches_card(&path.materials[1], &rctx, material)
+                {
+                    return Some(DnaRouteMatch {
+                        first_is_top: true,
+                        memory_cost: cost,
+                    });
+                }
+                if blast_material_matches_permanent(&path.materials[1], &rctx, field_handle)
+                    && blast_material_matches_card(&path.materials[0], &rctx, material)
+                {
+                    return Some(DnaRouteMatch {
+                        first_is_top: false,
+                        memory_cost: cost,
+                    });
+                }
+            }
+            None
+        }
+        #[cfg(not(feature = "dsl-yaml-loader"))]
+        {
+            let _ = (player, result, material, field_idx);
+            None
+        }
     }
 
     fn registered_end_of_turn_dna_route_for_hand_card(
@@ -548,6 +728,23 @@ fn registered_path_literal_cost(path: &CompiledAltPath) -> Option<i16> {
     }
 }
 
+fn registered_blast_dna_literal_cost(path: &CompiledAltPath) -> Option<i16> {
+    if path.from.is_some()
+        || !path.extra_cost.is_empty()
+        || !path.on_burst_turn_end.is_empty()
+        || path.ignore_requirements
+        || path.source_treated_as.is_some()
+        || path.marker
+    {
+        return None;
+    }
+    match &path.cost {
+        None => Some(0),
+        Some(CompiledCost::Literal(n)) => i16::try_from(*n).ok(),
+        Some(CompiledCost::Formula(_)) => None,
+    }
+}
+
 fn material_matches(
     material: &CompiledMaterial,
     rctx: &EffectReadContext<'_>,
@@ -566,10 +763,53 @@ fn material_matches(
     eval_predicate(&material.filter, rctx, PredicateSubject::Permanent(handle))
 }
 
+fn blast_material_matches_permanent(
+    material: &CompiledMaterial,
+    rctx: &EffectReadContext<'_>,
+    handle: PermanentHandle,
+) -> bool {
+    if material.repeat.is_some()
+        || material.distinct_by.is_some()
+        || material.stack_under
+        || !material
+            .zones
+            .iter()
+            .all(|z| matches!(*z, CompiledZone::BattleArea | CompiledZone::Material))
+    {
+        return false;
+    }
+    eval_predicate(&material.filter, rctx, PredicateSubject::Permanent(handle))
+}
+
+fn blast_material_matches_card(
+    material: &CompiledMaterial,
+    rctx: &EffectReadContext<'_>,
+    card: &CardSource,
+) -> bool {
+    if material.repeat.is_some()
+        || material.distinct_by.is_some()
+        || material.stack_under
+        || !material
+            .zones
+            .iter()
+            .all(|z| matches!(*z, CompiledZone::Hand | CompiledZone::Material))
+    {
+        return false;
+    }
+    eval_predicate(
+        &material.filter,
+        rctx,
+        PredicateSubject::Card(card.handle()),
+    )
+}
+
 fn perm_matches_req(perm: &Permanent, req: &DnaRequirement, data: &[CardData]) -> bool {
     let top = perm.top_card();
     let meta = &data[top.data_index];
+    card_data_matches_req(meta, req)
+}
 
+fn card_data_matches_req(meta: &CardData, req: &DnaRequirement) -> bool {
     if req.level > 0 {
         match meta.level {
             Some(l) if l == req.level => {}

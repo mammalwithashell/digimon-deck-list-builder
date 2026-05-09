@@ -217,6 +217,11 @@ fn bt22_042_when_digivolving_plays_puppet_then_debuffs_by_own_digimon_count() {
     }
     assert_eq!(runner.turn_player(), 1, "first turn rotation reaches the opponent");
     assert_eq!(
+        runner.turn_player(),
+        1,
+        "first turn rotation reaches the opponent"
+    );
+    assert_eq!(
         runner.dp_of(target),
         Some(8000),
         "debuff persists through the opponent's turn"
@@ -226,6 +231,11 @@ fn bt22_042_when_digivolving_plays_puppet_then_debuffs_by_own_digimon_count() {
         runner.game.pass_end_of_turn_action();
     }
     assert_eq!(runner.turn_player(), 0, "second turn rotation returns to Nyabootmon's controller");
+    assert_eq!(
+        runner.turn_player(),
+        0,
+        "second turn rotation returns to Nyabootmon's controller"
+    );
     assert_eq!(
         runner.dp_of(target),
         Some(14000),

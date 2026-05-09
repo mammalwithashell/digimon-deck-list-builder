@@ -46,24 +46,23 @@
 //! | Standard digivolve Lv.6 Red / Cost 6                            | OK             |
 //! | DNA Lv.6 Greymon-named + Lv.6 Garurumon-named / Cost 0          | OK             |
 //! | <Blocker>                                                       | OK (grant_keyword) |
-//! | <Decode (Red/Black Lv.3)>                                       | BLOCKED (G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES) |
-//! | <Decode (Blue/Yellow Lv.3)>                                     | BLOCKED (G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES) |
+//! | <Decode (Red/Black Lv.3)>                                       | OK (color/level-gated source play) |
+//! | <Decode (Blue/Yellow Lv.3)>                                     | OK (color/level-gated source play) |
 //! | [On Play] Delete opp lowest-DP                                   | PARTIAL (G-PRED-DP-LTE) |
 //! | [When Attacking] Delete opp lowest-DP                            | PARTIAL (G-PRED-DP-LTE) |
-//! | [When Digivolving] Bottom-deck N opp Digimon (N = same-level pairs) | BLOCKED (G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET) |
+//! | [When Digivolving] Bottom-deck N opp Digimon (N = same-level pairs) | OK |
 //! | [When Digivolving] "Then, this Digimon may attack"               | OK (may_attack_now optional/any) |
 //!
 //! # Known engine/DSL gaps affecting these tests
 //!
-//! - **G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES** (NEW): printed Decode
-//!   on this card differs from generic `Keyword::Decode`; it allows playing
-//!   a Lv.3 Red/Black or Blue/Yellow source from this card's own
-//!   digivolution stack on leave-other-than-battle. No DSL verb / keyword
-//!   variant exists. Decode clauses are OMITTED from the YAML.
-//! - **G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET** (PARTIALLY RESOLVED):
-//!   formula `SameLevelPairsInSources` is implemented but cannot feed a
-//!   repeat-count target selection. The bottom-deck arm of [When Digivolving]
-//!   is OMITTED.
+//! - **G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES** (RESOLVED 2026-05-07
+//!   for BT22-015): printed Decode on this card differs from generic
+//!   `Keyword::Decode`; it plays a color/level-gated source from this card's
+//!   own digivolution stack on leave-other-than-battle, then the original
+//!   leave event proceeds.
+//! - **G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET** (RESOLVED 2026-05-07):
+//!   formula `SameLevelPairsInSources` feeds `select_count_capped_multi.max`
+//!   and `zone: battle_area` binds the selected opponent permanents.
 //! - **G-PRED-DP-LTE**: `dp_lte` predicate (with `aggregate: lowest_dp`)
 //!   parses + compiles but the engine evaluator does not narrow targets to
 //!   the lowest-DP one. The delete clauses offer all opp Digimon as legal
@@ -75,9 +74,10 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
     CompiledTiming, CompiledTriggeredClause,
 };
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming, PlayerId};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlayerId};
 use digimon_engine::events::GameEvent;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
@@ -108,11 +108,28 @@ fn make_opp_digimon(id: &str, name: &str, dp: i32) -> CardData {
 }
 
 fn make_filler_digimon(id: &str) -> CardData {
+    make_filler_digimon_with_level(id, 6)
+}
+
+fn make_filler_digimon_with_level(id: &str, level: u8) -> CardData {
     let mut card = make_test_card(id, id);
     card.card_kind = CardKind::Digimon;
-    card.level = Some(6);
+    card.level = Some(level);
     card.dp = Some(11000);
     card
+}
+
+fn make_colored_level_digimon(id: &str, color: CardColor, level: u8) -> CardData {
+    let mut card = make_filler_digimon_with_level(id, level);
+    card.colors = vec![color];
+    card
+}
+
+fn battle_area_has_top_card(runner: &DebugRunner, player: PlayerId, card_id: &str) -> bool {
+    runner.game.players[player as usize]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == card_id)
 }
 
 fn place_bt22_on_field(runner: &mut DebugRunner, player: PlayerId) -> PermanentHandle {
@@ -467,73 +484,192 @@ fn bt22_015_when_digivolving_no_opp_digimon_does_not_panic() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 4 — BLOCKED tests for omitted clauses
+// SECTION 4 — Decode and remaining blocked coverage
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// BLOCKED — G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES: when BT22-015
-/// would leave the battle area outside of battle, the player should be
-/// offered the chance to play a Lv.3 Red/Black source from BT22-015's
-/// digivolution stack without paying the cost. No DSL verb / keyword
-/// variant exists today that surfaces a play-from-source-stack option on
-/// leave-other-than-battle.
+/// When BT22-015 would leave the battle area outside of battle, the player
+/// may play a Red/Black Lv.3 source from BT22-015's digivolution stack
+/// without paying the cost. Decode does not cancel the original leave event.
 #[test]
-#[ignore = "BLOCKED: G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES — printed Decode on this card \
-            differs from generic Keyword::Decode (which redirects the leaving permanent to hand). \
-            BT22-015's Decode allows playing a Lv.3 source from THIS card's digivolution stack \
-            on leave-other-than-battle; no DSL verb or keyword variant exists. The two Decode \
-            clauses are OMITTED from the YAML until the gap closes."]
 fn bt22_015_decode_red_black_offers_play_from_source_stack_on_leave() {
-    // Setup: BT22-015 on field with a Red Lv.3 source under it; trigger a
-    // would-leave-other-than-battle event (e.g. a delete from an effect, not
-    // from combat). The player should be offered the optional play of the
-    // Red Lv.3 source from the digivolution stack, free.
-    //
-    // Until the gap closes, no replacement-clause body exists in the YAML
-    // for the Decode clauses, so no prompt installs. This test serves as the
-    // regression once a DSL replacement-clause variant lands that can issue
-    // a `play_from_source_stack` step.
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("BT22-015 YAML loads")
+        .add_card(make_colored_level_digimon("RED-L3", CardColor::Red, 3))
+        .add_card(make_colored_level_digimon("GREEN-L3", CardColor::Green, 3))
+        .add_card(make_colored_level_digimon("RED-L4", CardColor::Red, 4))
         .memory(15)
         .start();
-    let _ = runner;
+    let bt22 = runner.place_stack(0, &["RED-L3", "GREEN-L3", "RED-L4", "BT22-015"]);
+
+    runner.game.return_to_hand_from_effect(bt22, 1);
+
+    let accept = runner
+        .pending_selection_view()
+        .expect("Decode outer accept prompt should install");
+    assert_eq!(accept.kind, SelectionKind::Replacement);
+    assert_eq!(accept.valid_action_ids, vec![REPLACEMENT_ACCEPT]);
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept Decode source-play option");
+
+    let source_pick = runner
+        .pending_selection_view()
+        .expect("Decode should ask which matching source to play");
+    assert_eq!(source_pick.kind, SelectionKind::Material);
+    assert_eq!(
+        source_pick.valid_action_ids.len(),
+        1,
+        "only Red/Black Lv.3 sources should be legal; off-color Lv.3 and Red Lv.4 are excluded"
+    );
+    runner
+        .execute_action(0, source_pick.valid_action_ids[0])
+        .expect("play Red Lv.3 source");
+
+    assert!(
+        battle_area_has_top_card(&runner, 0, "RED-L3"),
+        "the selected Red Lv.3 source should be played for free"
+    );
+    assert!(
+        !battle_area_has_top_card(&runner, 0, "BT22-015"),
+        "Decode does not cancel or redirect the original leave event"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "BT22-015 should still finish returning to its owner's hand"
+    );
 }
 
-/// BLOCKED — G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES: same as above
-/// for the Blue/Yellow Lv.3 Decode clause.
+/// Same as the Red/Black Decode clause, but gated to Blue/Yellow Lv.3
+/// sources.
 #[test]
-#[ignore = "BLOCKED: G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES — see Red/Black sibling test."]
 fn bt22_015_decode_blue_yellow_offers_play_from_source_stack_on_leave() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("BT22-015 YAML loads")
+        .add_card(make_colored_level_digimon(
+            "YELLOW-L3",
+            CardColor::Yellow,
+            3,
+        ))
+        .add_card(make_colored_level_digimon("GREEN-L3", CardColor::Green, 3))
+        .add_card(make_colored_level_digimon("BLUE-L4", CardColor::Blue, 4))
         .memory(15)
         .start();
-    let _ = runner;
+    let bt22 = runner.place_stack(0, &["YELLOW-L3", "GREEN-L3", "BLUE-L4", "BT22-015"]);
+
+    runner.game.return_to_hand_from_effect(bt22, 1);
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept Decode source-play option");
+
+    let source_pick = runner
+        .pending_selection_view()
+        .expect("Decode should ask which matching source to play");
+    assert_eq!(
+        source_pick.valid_action_ids.len(),
+        1,
+        "only Blue/Yellow Lv.3 sources should be legal; off-color Lv.3 and Blue Lv.4 are excluded"
+    );
+    runner
+        .execute_action(0, source_pick.valid_action_ids[0])
+        .expect("play Yellow Lv.3 source");
+
+    assert!(
+        battle_area_has_top_card(&runner, 0, "YELLOW-L3"),
+        "the selected Yellow Lv.3 source should be played for free"
+    );
+    assert!(!battle_area_has_top_card(&runner, 0, "BT22-015"));
 }
 
-/// BLOCKED — G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET: with K same-level
-/// pairs in BT22-015's digivolution stack, the player should be offered up
-/// to K opp Digimon to bottom-deck. The formula leaf is resolved
-/// (SameLevelPairsInSources), but feeding it as the COUNT bound on a
-/// player-visible repeat-target select is open. The bottom-deck arm of
-/// [When Digivolving] is OMITTED from the YAML until the gap closes.
+/// With K same-level pairs in BT22-015's digivolution stack, the player is
+/// offered up to K opponent Digimon to bottom-deck before the follow-up
+/// attack prompt.
 #[test]
-#[ignore = "BLOCKED: G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET — formula leaf \
-            (SameLevelPairsInSources) is resolved, but feeding it as a repeat-count bound on \
-            a player-visible target selection is open. The bottom-deck arm of [When Digivolving] \
-            is OMITTED from the YAML; the may_attack_now arm IS implemented and tested above."]
 fn bt22_015_when_digivolving_bottom_decks_n_opp_digimon_per_same_level_pair() {
-    // Setup intent: stack BT22-015 over sources with several same-level
-    // pairs (e.g. 4 Lv.6 sources → 2 pairs → bottom-deck up to 2 opp
-    // Digimon). With K opp Digimon on the field, the prompt should accept
-    // up to min(K, 2) bottom-deck targets. Until the gap closes, no
-    // bottom-deck arm exists in the YAML, so this assertion cannot run.
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("BT22-015 YAML loads")
+        .add_card(make_filler_digimon_with_level("SRC-L6A", 6))
+        .add_card(make_filler_digimon_with_level("SRC-L6B", 6))
+        .add_card(make_filler_digimon_with_level("SRC-L5A", 5))
+        .add_card(make_filler_digimon_with_level("SRC-L5B", 5))
+        .add_card(make_filler_digimon_with_level("SRC-L4", 4))
+        .add_card(make_filler_digimon("OPP-A"))
+        .add_card(make_filler_digimon("OPP-B"))
+        .add_card(make_filler_digimon("OPP-C"))
         .memory(15)
         .start();
-    let _ = runner;
+    runner.game.turn_count = 1;
+
+    let bt22 = runner.place_stack(
+        0,
+        &[
+            "SRC-L6A", "SRC-L6B", "SRC-L5A", "SRC-L5B", "SRC-L4", "BT22-015",
+        ],
+    );
+    runner.place_on_field(1, "OPP-A", None);
+    runner.place_on_field(1, "OPP-B", None);
+    runner.place_on_field(1, "OPP-C", None);
+    let opp_deck_before = runner.deck_size(1);
+
+    trigger_when_digivolving(&mut runner, bt22);
+
+    let pending = runner
+        .pending_selection_view()
+        .expect("same-level pair bottom-deck selection installs before may_attack_now");
+    assert_eq!(
+        pending.selecting_player, 0,
+        "BT22-015's controller chooses the opponent Digimon to bottom-deck"
+    );
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        3,
+        "three opponent Digimon should be legal candidates before the first pick"
+    );
+    assert!(
+        !pending.valid_action_ids.contains(&PASS),
+        "the mandatory bottom-deck arm cannot be declined while targets exist"
+    );
+    match pending.kind {
+        SelectionKind::CountCappedMultiSelect { max, picked } => {
+            assert_eq!(
+                max, 2,
+                "2 same-level pairs in source stack should cap picks at 2"
+            );
+            assert_eq!(picked, 0);
+        }
+        other => panic!("expected count-capped multi-select, got {other:?}"),
+    }
+
+    let first = runner
+        .pending_selection_view()
+        .expect("first pick still pending")
+        .valid_action_ids[0];
+    runner
+        .execute_action(0, first)
+        .expect("select first opponent Digimon to bottom-deck");
+    let second = runner
+        .pending_selection_view()
+        .expect("second pick still pending")
+        .valid_action_ids[0];
+    runner
+        .execute_action(0, second)
+        .expect("select second opponent Digimon to bottom-deck");
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "exactly two opponent Digimon should be moved from battle area"
+    );
+    assert_eq!(
+        runner.deck_size(1),
+        opp_deck_before + 2,
+        "bottom-decked Digimon should be placed in opponent deck"
+    );
+    assert!(
+        runner.pending_selection().is_some(),
+        "the 'Then, this Digimon may attack' prompt should still follow"
+    );
 }

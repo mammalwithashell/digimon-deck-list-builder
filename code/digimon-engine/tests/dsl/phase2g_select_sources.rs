@@ -1,7 +1,7 @@
 //! Phase 2g: source selections can bind stable cross-permanent source refs and
 //! consume them from later DSL steps.
 
-use digimon_dsl::compiled::CompiledStep;
+use digimon_dsl::compiled::{CompiledBindingRef, CompiledPredicate, CompiledStep};
 use digimon_engine::action::space::{encode_source_select, PASS};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
@@ -26,6 +26,7 @@ fn select_own_sources_binds_source_refs_for_trashing() {
 
     let steps = vec![CompiledStep::SelectOwnSources {
         target: None,
+        filter: CompiledPredicate::default(),
         min: 2,
         max: 2,
         bind_as: Some("chosen_sources".to_string()),
@@ -83,6 +84,7 @@ fn empty_select_own_sources_runs_outer_tail_synchronously() {
     let steps = vec![
         CompiledStep::SelectOwnSources {
             target: None,
+            filter: CompiledPredicate::default(),
             min: 1,
             max: 1,
             bind_as: Some("chosen_sources".to_string()),
@@ -238,5 +240,86 @@ effects:
     assert_eq!(
         runner.game.memory, 5,
         "two source-trash observer firings (+2) should resolve before/alongside the nested body (+3)"
+    );
+}
+
+#[test]
+fn select_own_sources_filters_cards_from_source_carrier_only() {
+    let mut rock = make_test_card("ROCK-SRC", "Rock Source");
+    rock.traits = vec!["Rock".to_string()];
+    let mut mineral = make_test_card("MIN-SRC", "Mineral Source");
+    mineral.traits = vec!["Mineral".to_string()];
+    let mut other_rock = make_test_card("OTHER-ROCK", "Other Rock Source");
+    other_rock.traits = vec!["Rock".to_string()];
+
+    let mut runner = DebugRunner::builder()
+        .add_card(rock)
+        .add_card(mineral)
+        .add_card(make_test_card("BAD-SRC", "Nonmatching Source"))
+        .add_card(make_test_card("TOP-A", "Top A"))
+        .add_card(other_rock)
+        .add_card(make_test_card("TOP-B", "Top B"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let carrier = runner.place_stack(0, &["ROCK-SRC", "MIN-SRC", "BAD-SRC", "TOP-A"]);
+    let other_stack = runner.place_stack(0, &["OTHER-ROCK", "TOP-B"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    let mut rock_filter = CompiledPredicate::default();
+    rock_filter.trait_has = Some("Rock".to_string());
+    let mut mineral_filter = CompiledPredicate::default();
+    mineral_filter.trait_has = Some("Mineral".to_string());
+    let mut filter = CompiledPredicate::default();
+    filter.any_of = vec![rock_filter, mineral_filter];
+
+    let steps = vec![CompiledStep::SelectOwnSources {
+        target: Some(CompiledBindingRef::Source),
+        filter,
+        min: 2,
+        max: 2,
+        bind_as: Some("chosen_sources".to_string()),
+        prompt: "Choose two Rock/Mineral sources".to_string(),
+        then: vec![CompiledStep::TrashSelectedSources {
+            source_refs: "chosen_sources".to_string(),
+        }],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(carrier), 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    assert_eq!(outcome, RunOutcome::Parked);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("source selection should be pending");
+    let rock_action = encode_source_select(carrier.index as u16, 0).expect("rock source action");
+    let mineral_action =
+        encode_source_select(carrier.index as u16, 1).expect("mineral source action");
+    let bad_action = encode_source_select(carrier.index as u16, 2).expect("bad source action");
+    let other_rock_action =
+        encode_source_select(other_stack.index as u16, 0).expect("other rock source action");
+    assert!(pending.valid_action_ids.contains(&rock_action));
+    assert!(pending.valid_action_ids.contains(&mineral_action));
+    assert!(!pending.valid_action_ids.contains(&bad_action));
+    assert!(!pending.valid_action_ids.contains(&other_rock_action));
+
+    runner.execute_action(0, rock_action).expect("pick rock");
+    runner
+        .execute_action(0, mineral_action)
+        .expect("pick mineral");
+
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(runner.game.players[0].trash.len(), 2);
+    assert_eq!(
+        runner.game.players[0].battle_area[other_stack.index as usize]
+            .card_sources
+            .len(),
+        2
     );
 }
