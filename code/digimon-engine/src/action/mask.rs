@@ -691,6 +691,9 @@ pub(crate) fn option_use_requirement_or_color_available(
     let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
         return false;
     };
+    if effects.is_empty() {
+        return false;
+    }
     let ctx = EffectReadContext::new(game, card.handle(), None, player_id);
     effects.iter().any(|effect| {
         if !matches!(
@@ -716,8 +719,11 @@ pub(crate) fn option_has_active_main_effect(
 ) -> bool {
     let card_id = card.card_id(&game.card_data);
     let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
-        return false;
+        return true;
     };
+    if effects.is_empty() {
+        return true;
+    }
     let ctx = EffectReadContext::new_with_source_kind(
         game,
         card.handle(),
@@ -729,7 +735,10 @@ pub(crate) fn option_has_active_main_effect(
         if effect.delay_trigger.is_some() {
             return true;
         }
-        if effect.timing != EffectTiming::OptionMain {
+        if !matches!(
+            effect.timing,
+            EffectTiming::OptionMain | EffectTiming::MainFromHand
+        ) {
             return false;
         }
         effect

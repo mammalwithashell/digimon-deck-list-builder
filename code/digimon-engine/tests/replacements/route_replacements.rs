@@ -5,19 +5,20 @@
 //! through their respective fire-sites in `game_actions.rs` and
 //! `effect_context/mod.rs`.
 //!
-//! Task 4 does NOT wire `WhenWouldLoseSecurity` — see the Task 4 spec note in
-//! `drive_security_resolution`: reinstating the revealed card back onto the
-//! security stack requires non-trivial security-phase replumbing that is best
-//! revisited in Task 6 (native keyword parsing) or Task 7 (end-to-end).
+//! The security-damage route now includes `WhenWouldLoseSecurity`, restoring
+//! the revealed card to security when a replacement cancels the removal.
 
 use std::sync::{Arc, Mutex};
 
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
+use digimon_engine::card_data::EvoCost;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{
-    CardSourceRef, EffectTiming, Expiry, ModifierType, StackPosition, Zone,
+    CardColor, CardKind, CardSourceRef, CostDelta, EffectTiming, Expiry, ModifierType, PlaySource,
+    StackPosition, Zone,
 };
 use digimon_engine::modifiers::PlayerModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
@@ -37,12 +38,76 @@ impl CardEffect for CancelOn {
             EffectTiming::WhenWouldBeDeDigivolved => Effect::when_would_be_de_digivolved(card),
             EffectTiming::WhenWouldDraw => Effect::when_would_draw(card),
             EffectTiming::WhenWouldPlaceInSecurity => Effect::when_would_place_in_security(card),
+            EffectTiming::WhenWouldLoseSecurity => Effect::when_would_lose_security(card),
+            EffectTiming::WhenPermanentWouldPlay => Effect::when_permanent_would_play(card),
+            EffectTiming::WhenPermanentWouldDigivolve => {
+                Effect::when_permanent_would_digivolve(card)
+            }
             _ => panic!("CancelOn: unsupported timing {:?}", self.0),
         };
         vec![builder
             .name("Cancel always")
             .replacement_process(|rctx| {
                 rctx.cancel();
+            })
+            .build()]
+    }
+}
+
+/// Optional cancel replacement for any single Would* timing that this test
+/// module needs. The process cancels only if the player accepts the outer
+/// replacement prompt.
+struct OptionalCancelOn(EffectTiming);
+impl CardEffect for OptionalCancelOn {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let builder = match self.0 {
+            EffectTiming::WhenPermanentWouldPlay => Effect::when_permanent_would_play(card),
+            EffectTiming::WhenPermanentWouldDigivolve => {
+                Effect::when_permanent_would_digivolve(card)
+            }
+            EffectTiming::WhenWouldLoseSecurity => Effect::when_would_lose_security(card),
+            _ => panic!("OptionalCancelOn: unsupported timing {:?}", self.0),
+        };
+        vec![builder
+            .name("Optional cancel")
+            .optional()
+            .replacement_process(|rctx| {
+                rctx.cancel();
+            })
+            .build()]
+    }
+}
+
+/// Optional pre-play cancel that only offers for the named card. Used when the
+/// test itself must play a setup card before the replacement target appears.
+struct OptionalCancelNamedPlay(&'static str);
+impl CardEffect for OptionalCancelNamedPlay {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let target_id = self.0;
+        vec![Effect::when_permanent_would_play(card)
+            .name("Optional named play cancel")
+            .optional()
+            .replacement_condition(move |ctx, subject| match subject {
+                digimon_engine::replacement::ReplacementSubject::Card(handle, _) => ctx
+                    .game
+                    .card_data_for_handle(*handle)
+                    .is_some_and(|data| data.card_id == target_id),
+                _ => false,
+            })
+            .replacement_process(|rctx| {
+                rctx.cancel();
+            })
+            .build()]
+    }
+}
+
+/// On play, play the controller's top security card via the effect helper.
+struct PlayTopSecurityOnPlay;
+impl CardEffect for PlayTopSecurityOnPlay {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .process(|ctx| {
+                let _ = ctx.play_from_security(ctx.player);
             })
             .build()]
     }
@@ -129,6 +194,464 @@ impl CardEffect for DrawCancelWithSentinel {
 
 fn card(id: &str) -> digimon_engine::CardData {
     make_test_card(id, id)
+}
+
+fn costed_card(id: &str, play_cost: u16) -> digimon_engine::CardData {
+    let mut card = make_test_card(id, id);
+    card.play_cost = play_cost;
+    card
+}
+
+fn security_option(id: &str) -> digimon_engine::CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Option;
+    card.level = None;
+    card.dp = None;
+    card
+}
+
+fn lv4_red_evo(id: &str, memory_cost: u16) -> digimon_engine::CardData {
+    let mut card = make_test_card(id, id);
+    card.level = Some(4);
+    card.colors = vec![CardColor::Red];
+    card.evo_costs = vec![EvoCost {
+        card_color: CardColor::Red as u8,
+        level: 3,
+        memory_cost,
+    }];
+    card
+}
+
+// ─── Tests: named pre-move play window ───────────────────────────────
+
+/// Cancel-on-WhenPermanentWouldPlay prevents the card from entering play and
+/// does not pay the play cost. The replacement source is a different own
+/// permanent, so this also covers cross-permanent scanning for the named
+/// pre-play window.
+#[test]
+fn permanent_would_play_cancel_keeps_card_in_hand_without_paying_memory() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("WATCHER"))
+        .add_card(card("TARGET"))
+        .hand(0, &["TARGET"])
+        .memory(5)
+        .start();
+    r.register_effect(
+        "WATCHER",
+        Arc::new(CancelOn(EffectTiming::WhenPermanentWouldPlay)),
+    );
+    r.place_on_field(0, "WATCHER", Some(0));
+    let memory_before = r.game.memory;
+
+    let result = r.game.play_from_hand(0, 0);
+
+    assert_eq!(result, None, "cancelled would-play returns None");
+    assert_eq!(r.game.player(0).hand.len(), 1, "target stayed in hand");
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "only the watcher remains on field"
+    );
+    assert_eq!(r.game.memory, memory_before, "memory cost was not paid");
+}
+
+#[test]
+fn optional_permanent_would_play_accept_cancels_and_keeps_card_in_hand() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("WATCHER"))
+        .add_card(costed_card("TARGET", 2))
+        .hand(0, &["TARGET"])
+        .memory(5)
+        .start();
+    r.register_effect(
+        "WATCHER",
+        Arc::new(OptionalCancelOn(EffectTiming::WhenPermanentWouldPlay)),
+    );
+    r.place_on_field(0, "WATCHER", Some(0));
+    let memory_before = r.game.memory;
+
+    let result = r.game.play_from_hand(0, 0);
+
+    assert_eq!(result, None, "optional would-play parks the play");
+    assert!(r.game.pending_selection.is_some());
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept optional would-play replacement");
+
+    assert_eq!(r.game.player(0).hand.len(), 1, "target stayed in hand");
+    assert_eq!(r.battle_area_size(0), 1, "target did not enter play");
+    assert_eq!(r.game.memory, memory_before, "memory cost was not paid");
+    assert!(r.game.pending_selection.is_none());
+}
+
+#[test]
+fn optional_permanent_would_play_decline_resumes_original_play() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("WATCHER"))
+        .add_card(costed_card("TARGET", 2))
+        .hand(0, &["TARGET"])
+        .memory(5)
+        .start();
+    r.register_effect(
+        "WATCHER",
+        Arc::new(OptionalCancelOn(EffectTiming::WhenPermanentWouldPlay)),
+    );
+    r.place_on_field(0, "WATCHER", Some(0));
+
+    let result = r.game.play_from_hand(0, 0);
+
+    assert_eq!(result, None, "optional would-play parks the play");
+    assert!(r.game.pending_selection.is_some());
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline optional would-play replacement");
+
+    assert_eq!(r.game.player(0).hand.len(), 0, "target left hand");
+    assert_eq!(r.battle_area_size(0), 2, "target entered play");
+    assert_eq!(r.game.memory, 3, "printed play cost was paid");
+    assert!(r.game.pending_selection.is_none());
+}
+
+#[test]
+fn optional_permanent_would_play_from_trash_accept_restores_trash_origin() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("WATCHER"))
+        .add_card(costed_card("TARGET", 4))
+        .hand(0, &["TARGET"])
+        .memory(5)
+        .start();
+    let target = r.game.player_mut(0).hand.remove(0);
+    r.game.player_mut(0).trash.push(target);
+    r.register_effect(
+        "WATCHER",
+        Arc::new(OptionalCancelOn(EffectTiming::WhenPermanentWouldPlay)),
+    );
+    r.place_on_field(0, "WATCHER", Some(0));
+    let memory_before = r.game.memory;
+
+    let result = r
+        .game
+        .play_from_trash_with_cost(0, 0, CostDelta::Free, PlaySource::ByEffect);
+
+    assert_eq!(result, None, "optional trash play parks the play");
+    assert!(r.game.pending_selection.is_some());
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept optional trash-origin play replacement");
+
+    assert_eq!(
+        r.game.player(0).hand.len(),
+        0,
+        "target is not stranded in hand"
+    );
+    assert_eq!(r.trash_size(0), 1, "accepted cancel restores trash origin");
+    assert_eq!(r.battle_area_size(0), 1, "target did not enter play");
+    assert_eq!(r.game.memory, memory_before, "free play did not pay memory");
+    assert!(r.game.pending_selection.is_none());
+}
+
+#[test]
+fn optional_permanent_would_play_from_trash_decline_resumes_play() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("WATCHER"))
+        .add_card(costed_card("TARGET", 4))
+        .hand(0, &["TARGET"])
+        .memory(5)
+        .start();
+    let target = r.game.player_mut(0).hand.remove(0);
+    r.game.player_mut(0).trash.push(target);
+    r.register_effect(
+        "WATCHER",
+        Arc::new(OptionalCancelOn(EffectTiming::WhenPermanentWouldPlay)),
+    );
+    r.place_on_field(0, "WATCHER", Some(0));
+
+    let result = r
+        .game
+        .play_from_trash_with_cost(0, 0, CostDelta::Free, PlaySource::ByEffect);
+
+    assert_eq!(result, None, "optional trash play parks the play");
+    assert!(r.game.pending_selection.is_some());
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline optional trash-origin play replacement");
+
+    assert_eq!(r.game.player(0).hand.len(), 0, "target left hand transit");
+    assert_eq!(r.trash_size(0), 0, "target left trash");
+    assert_eq!(r.battle_area_size(0), 2, "target entered play");
+    assert_eq!(r.game.memory, 5, "free play cost was zero");
+    assert!(r.game.pending_selection.is_none());
+}
+
+#[test]
+fn optional_permanent_would_play_from_security_accept_restores_security_origin() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("WATCHER"))
+        .add_card(card("TRIGGER"))
+        .add_card(costed_card("TARGET", 4))
+        .hand(0, &["TRIGGER"])
+        .security(0, &["TARGET"])
+        .memory(5)
+        .start();
+    r.register_effect("TRIGGER", Arc::new(PlayTopSecurityOnPlay));
+    r.register_effect("WATCHER", Arc::new(OptionalCancelNamedPlay("TARGET")));
+    r.place_on_field(0, "WATCHER", Some(0));
+
+    let result = r.game.play_from_hand(0, 0);
+
+    assert_eq!(result, Some(1), "trigger card entered play");
+    assert!(r.game.pending_selection.is_some());
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept optional security-origin play replacement");
+
+    assert_eq!(
+        r.game.player(0).hand.len(),
+        0,
+        "target is not stranded in hand"
+    );
+    assert_eq!(
+        r.game.player(0).security.len(),
+        1,
+        "accepted cancel restores security origin"
+    );
+    assert_eq!(r.battle_area_size(0), 2, "target did not enter play");
+    assert!(r.game.pending_selection.is_none());
+}
+
+#[test]
+fn optional_permanent_would_play_from_security_decline_resumes_play() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("WATCHER"))
+        .add_card(card("TRIGGER"))
+        .add_card(costed_card("TARGET", 4))
+        .hand(0, &["TRIGGER"])
+        .security(0, &["TARGET"])
+        .memory(5)
+        .start();
+    r.register_effect("TRIGGER", Arc::new(PlayTopSecurityOnPlay));
+    r.register_effect("WATCHER", Arc::new(OptionalCancelNamedPlay("TARGET")));
+    r.place_on_field(0, "WATCHER", Some(0));
+
+    let result = r.game.play_from_hand(0, 0);
+
+    assert_eq!(result, Some(1), "trigger card entered play");
+    assert!(r.game.pending_selection.is_some());
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline optional security-origin play replacement");
+
+    assert_eq!(r.game.player(0).hand.len(), 0, "target left hand transit");
+    assert_eq!(r.game.player(0).security.len(), 0, "target left security");
+    assert_eq!(r.battle_area_size(0), 3, "target entered play");
+    assert!(r.game.pending_selection.is_none());
+}
+
+// ─── Tests: named pre-move digivolve window ──────────────────────────
+
+/// Cancel-on-WhenPermanentWouldDigivolve prevents the stack mutation and does
+/// not pay the digivolution cost. The subject is the permanent that would
+/// become the new permanent.
+#[test]
+fn permanent_would_digivolve_cancel_keeps_stack_and_memory_unchanged() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("BASE"))
+        .add_card(lv4_red_evo("EVO", 2))
+        .hand(0, &["EVO"])
+        .memory(5)
+        .start();
+    r.register_effect(
+        "BASE",
+        Arc::new(CancelOn(EffectTiming::WhenPermanentWouldDigivolve)),
+    );
+    let base = r.place_on_field(0, "BASE", Some(0));
+    r.game.enter_main_phase();
+    let memory_before = r.game.memory;
+
+    let result = r
+        .game
+        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve);
+
+    assert!(!result, "cancelled would-digivolve returns false");
+    assert_eq!(r.game.player(0).hand.len(), 1, "evo card stayed in hand");
+    let perm = &r.game.player(0).battle_area[base.index as usize];
+    assert_eq!(perm.stack_size(), 1, "stack was not mutated");
+    assert_eq!(
+        perm.top_card().card_id(&r.game.card_data),
+        "BASE",
+        "base remains the top card"
+    );
+    assert_eq!(r.game.memory, memory_before, "memory cost was not paid");
+}
+
+#[test]
+fn optional_permanent_would_digivolve_accept_cancels_and_keeps_stack() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("BASE"))
+        .add_card(lv4_red_evo("EVO", 2))
+        .hand(0, &["EVO"])
+        .memory(5)
+        .start();
+    r.register_effect(
+        "BASE",
+        Arc::new(OptionalCancelOn(EffectTiming::WhenPermanentWouldDigivolve)),
+    );
+    let base = r.place_on_field(0, "BASE", Some(0));
+    r.game.enter_main_phase();
+    let memory_before = r.game.memory;
+
+    let result = r
+        .game
+        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve);
+
+    assert!(!result, "optional would-digivolve parks the digivolve");
+    assert!(r.game.pending_selection.is_some());
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept optional would-digivolve replacement");
+
+    assert_eq!(r.game.player(0).hand.len(), 1, "evo card stayed in hand");
+    let perm = &r.game.player(0).battle_area[base.index as usize];
+    assert_eq!(perm.stack_size(), 1, "stack was not mutated");
+    assert_eq!(perm.top_card().card_id(&r.game.card_data), "BASE");
+    assert_eq!(r.game.memory, memory_before, "memory cost was not paid");
+    assert!(r.game.pending_selection.is_none());
+}
+
+#[test]
+fn optional_permanent_would_digivolve_decline_resumes_original_digivolve() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("BASE"))
+        .add_card(lv4_red_evo("EVO", 2))
+        .hand(0, &["EVO"])
+        .memory(5)
+        .start();
+    r.register_effect(
+        "BASE",
+        Arc::new(OptionalCancelOn(EffectTiming::WhenPermanentWouldDigivolve)),
+    );
+    let base = r.place_on_field(0, "BASE", Some(0));
+    r.game.enter_main_phase();
+
+    let result = r
+        .game
+        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve);
+
+    assert!(!result, "optional would-digivolve parks the digivolve");
+    assert!(r.game.pending_selection.is_some());
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline optional would-digivolve replacement");
+
+    let perm = &r.game.player(0).battle_area[base.index as usize];
+    assert_eq!(perm.stack_size(), 2, "decline resumes stack mutation");
+    assert_eq!(
+        perm.top_card().card_id(&r.game.card_data),
+        "EVO",
+        "evo card becomes top card"
+    );
+    assert_eq!(r.game.player(0).hand.len(), 0, "evo card left hand");
+    assert_eq!(r.game.memory, 3, "digivolution cost was paid");
+    assert!(r.game.pending_selection.is_none());
+}
+
+// ─── Tests: security-damage replacement window ───────────────────────
+
+#[test]
+fn would_lose_security_cancel_restores_revealed_card() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATTACKER"))
+        .add_card(card("WATCHER"))
+        .add_card(security_option("SECURITY"))
+        .security(1, &["SECURITY"])
+        .start();
+    r.register_effect(
+        "WATCHER",
+        Arc::new(CancelOn(EffectTiming::WhenWouldLoseSecurity)),
+    );
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(1, "WATCHER", Some(0));
+    let security_before = r.security_count(1);
+    let trash_before = r.trash_size(1);
+
+    let _ = r.attack_player(attacker, 1, false);
+
+    assert_eq!(
+        r.security_count(1),
+        security_before,
+        "cancelled security loss restores the revealed card"
+    );
+    assert_eq!(
+        r.trash_size(1),
+        trash_before,
+        "cancelled security loss does not trash the revealed card"
+    );
+    assert!(r.game.pending_security.is_none());
+    assert!(r.game.security_resolution.is_none());
+}
+
+#[test]
+fn optional_would_lose_security_accept_restores_revealed_card() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATTACKER"))
+        .add_card(card("WATCHER"))
+        .add_card(security_option("SECURITY"))
+        .security(1, &["SECURITY"])
+        .start();
+    r.register_effect(
+        "WATCHER",
+        Arc::new(OptionalCancelOn(EffectTiming::WhenWouldLoseSecurity)),
+    );
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(1, "WATCHER", Some(0));
+
+    let result = r.attack_player(attacker, 1, false);
+
+    assert_eq!(
+        result,
+        digimon_engine::combat::AttackResult::InProgress,
+        "optional security-loss replacement parks the attack"
+    );
+    assert!(r.game.pending_selection.is_some());
+    r.game
+        .resolve_selection(1, REPLACEMENT_ACCEPT)
+        .expect("defender accepts optional security-loss replacement");
+
+    assert_eq!(r.security_count(1), 1, "revealed card restored");
+    assert_eq!(r.trash_size(1), 0, "revealed card was not trashed");
+    assert!(r.game.pending_selection.is_none());
+    assert!(r.game.pending_security.is_none());
+    assert!(r.game.security_resolution.is_none());
+}
+
+#[test]
+fn optional_would_lose_security_decline_trashes_revealed_card() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATTACKER"))
+        .add_card(card("WATCHER"))
+        .add_card(security_option("SECURITY"))
+        .security(1, &["SECURITY"])
+        .start();
+    r.register_effect(
+        "WATCHER",
+        Arc::new(OptionalCancelOn(EffectTiming::WhenWouldLoseSecurity)),
+    );
+    let attacker = r.place_on_field(0, "ATTACKER", Some(0));
+    r.place_on_field(1, "WATCHER", Some(0));
+
+    let result = r.attack_player(attacker, 1, false);
+
+    assert_eq!(result, digimon_engine::combat::AttackResult::InProgress);
+    assert!(r.game.pending_selection.is_some());
+    r.game
+        .resolve_selection(1, PASS)
+        .expect("defender declines optional security-loss replacement");
+
+    assert_eq!(r.security_count(1), 0, "security was consumed");
+    assert_eq!(r.trash_size(1), 1, "revealed card was trashed");
+    assert!(r.game.pending_selection.is_none());
+    assert!(r.game.pending_security.is_none());
+    assert!(r.game.security_resolution.is_none());
 }
 
 // ─── Tests: return-to-hand ────────────────────────────────────────────

@@ -103,6 +103,7 @@ fn cause_is_excluded(
         crate::replacement::ReplacementCause::OpponentEffect => "opponent_effect",
         crate::replacement::ReplacementCause::SecurityCheck => "security_check",
         crate::replacement::ReplacementCause::Cost => "cost",
+        crate::replacement::ReplacementCause::Overclock => "overclock",
     };
     exclude.iter().any(|s| s == normalized)
 }

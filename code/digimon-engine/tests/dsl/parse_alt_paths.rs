@@ -49,6 +49,37 @@ alt_paths:
 }
 
 #[test]
+fn parse_blast_dna_digivolve() {
+    let yaml = r#"
+card: EX6-011
+name: RagnaLoardmon
+kind: digimon
+level: 7
+color: [red, black]
+cost: 9
+dp: 15000
+alt_paths:
+  - kind: blast_dna_digivolve
+    materials:
+      - { name_is: Durandamon }
+      - { name_is: BryweLudramon }
+    cost: 0
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+    let ap = &spec.alt_paths[0];
+    assert!(matches!(ap.kind, AltPathKind::BlastDnaDigivolve));
+    assert_eq!(ap.materials.len(), 2);
+    assert_eq!(
+        ap.materials[0].inline_filter.name_is.as_deref(),
+        Some("Durandamon")
+    );
+    assert_eq!(
+        ap.materials[1].inline_filter.name_is.as_deref(),
+        Some("BryweLudramon")
+    );
+}
+
+#[test]
 fn parse_digixros_unbounded() {
     let yaml = r#"
 card: BT12-112

@@ -96,7 +96,10 @@ fn end_of_opponents_next_turn_skips_current_opponent_end_turn() {
         &mut runner.game,
         EffectTiming::EndOfOpponentsNextTurn,
     );
-    assert_eq!(runner.game.memory, 4);
+    assert_eq!(
+        runner.game.memory, -4,
+        "scheduled body gains memory for its controller during the opponent's turn"
+    );
     assert!(runner.game.scheduled_effects.is_empty());
 }
 

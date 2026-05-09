@@ -28,6 +28,8 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::replacement::ReplacementCause;
+use digimon_engine::selection::SelectionKind;
 
 use crate::dsl_card_data::{card_data_from_compiled, compiled};
 
@@ -284,83 +286,184 @@ fn bt24_018_clause_f_opt_lockout() {
 /// Own Dragonkin Digimon would be deleted → replacement prompt installs.
 /// Accept + pay cost (delete opp lowest DP) → Dragonkin stays on field.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER + raw_rust bt24_018_would_leave_replacement"]
 fn bt24_018_own_dragonkin_would_leave_accept_pays_cost_and_stays() {
-    // Scaffolding (pending both gaps):
-    //
-    // 1. Place BT24-018 (source) on P0's field.
-    // 2. Place a Dragonkin ally on P0's field.
-    // 3. Place a 3000 DP Digimon on P1's field.
-    // 4. delete_permanent_with_effects on the Dragonkin ally.
-    // 5. Replacement prompt installs (optional, REPLACEMENT_ACCEPT action).
-    // 6. Accept → delete_permanent of P1's 3000 DP Digimon.
-    // 7. Ally stays on P0's field; P1 Digimon count = 0.
-    todo!("pending G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER")
+    let mut runner = bt24_018_clause_g_runner();
+    runner.place_on_field(0, "BT24-018", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-DRAGONKIN", Some(0));
+    runner.place_on_field(1, "LOW-DP", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    accept_replacement(&mut runner);
+    let cost = runner
+        .pending_selection_view()
+        .expect("lowest-DP cost prompt");
+    assert_eq!(cost.kind, SelectionKind::OppField);
+    assert_eq!(cost.valid_action_ids.len(), 1);
+    runner
+        .execute_action(0, cost.valid_action_ids[0])
+        .expect("delete opponent lowest DP");
+    runner.auto_resolve().expect("finish replacement");
+
+    assert!(permanent_exists(&runner, 0, "ALLY-DRAGONKIN"));
+    assert!(!permanent_exists(&runner, 1, "LOW-DP"));
 }
 
 /// Styracomon itself has Dragonkin trait → clause (g) should self-trigger
 /// when Styracomon would be deleted.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER + raw_rust bt24_018_would_leave_replacement"]
 fn bt24_018_itself_as_dragonkin_triggers_own_replacement() {
-    // Scaffolding (pending both gaps):
-    //
-    // 1. Place BT24-018 on P0's field (it IS Dragonkin).
-    // 2. Place a 3000 DP Digimon on P1's field.
-    // 3. delete_permanent_with_effects on BT24-018 itself.
-    // 4. Replacement prompt installs → accept.
-    // 5. P1 Digimon deleted; BT24-018 stays on P0's field.
-    todo!("pending G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER")
+    let mut runner = bt24_018_clause_g_runner();
+    let styracomon = runner.place_on_field(0, "BT24-018", Some(0));
+    runner.place_on_field(1, "LOW-DP", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(styracomon, ReplacementCause::OpponentEffect);
+
+    accept_replacement(&mut runner);
+    let cost = runner
+        .pending_selection_view()
+        .expect("lowest-DP cost prompt");
+    runner
+        .execute_action(0, cost.valid_action_ids[0])
+        .expect("delete opponent lowest DP");
+    runner.auto_resolve().expect("finish replacement");
+
+    assert!(permanent_exists(&runner, 0, "BT24-018"));
+    assert!(!permanent_exists(&runner, 1, "LOW-DP"));
 }
 
 /// Declining the replacement prompt → own Digimon leaves normally.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER + raw_rust bt24_018_would_leave_replacement"]
 fn bt24_018_decline_replacement_digimon_leaves_normally() {
-    // Scaffolding (pending both gaps):
-    //
-    // 1. Place BT24-018 + Dragonkin ally on P0; opp Digimon on P1.
-    // 2. delete_permanent_with_effects on ally → prompt → PASS.
-    // 3. Ally deleted; P1 Digimon count unchanged.
-    todo!("pending G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER")
+    let mut runner = bt24_018_clause_g_runner();
+    runner.place_on_field(0, "BT24-018", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-DRAGONKIN", Some(0));
+    runner.place_on_field(1, "LOW-DP", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("replacement prompt");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner.execute_action(0, PASS).expect("decline replacement");
+    runner.auto_resolve().expect("finish decline");
+
+    assert!(!permanent_exists(&runner, 0, "ALLY-DRAGONKIN"));
+    assert!(permanent_exists(&runner, 1, "LOW-DP"));
 }
 
 /// Clause (g) must NOT fire for an opponent's Reptile/Dragonkin Digimon leaving
 /// (the "your" in card text limits trigger to own permanents only).
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER + raw_rust bt24_018_would_leave_replacement"]
 fn bt24_018_does_not_fire_for_opponent_dragonkin_leaving() {
-    // Scaffolding (pending both gaps):
-    //
-    // 1. Place BT24-018 on P0; opponent Dragonkin on P1.
-    // 2. delete_permanent_with_effects on P1's Dragonkin.
-    // 3. No replacement prompt → P1 Dragonkin deleted normally.
-    todo!("pending G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER")
+    let mut runner = bt24_018_clause_g_runner();
+    runner.place_on_field(0, "BT24-018", Some(0));
+    let opponent = runner.place_on_field(1, "ALLY-DRAGONKIN", Some(0));
+    runner.place_on_field(1, "LOW-DP", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(opponent, ReplacementCause::OpponentEffect);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "BT24-018 only protects its controller's Reptile/Dragonkin Digimon"
+    );
+    assert!(!permanent_exists(&runner, 1, "ALLY-DRAGONKIN"));
 }
 
 /// If opponent has NO Digimon (cost unpayable), clause (g) must not offer
 /// the replacement prompt.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER + raw_rust bt24_018_would_leave_replacement"]
 fn bt24_018_no_cost_target_replacement_does_not_install() {
-    // Scaffolding (pending both gaps):
-    //
-    // 1. Place BT24-018 + Dragonkin ally on P0. P1 has NO Digimon.
-    // 2. delete_permanent_with_effects on ally.
-    // 3. No prompt installs; ally deleted normally (can't pay cost).
-    todo!("pending G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER")
+    let mut runner = bt24_018_clause_g_runner();
+    runner.place_on_field(0, "BT24-018", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-DRAGONKIN", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "unpayable replacement must not install"
+    );
+    assert!(!permanent_exists(&runner, 0, "ALLY-DRAGONKIN"));
 }
 
 /// OPT lockout: clause (g) fires only once per turn even when two own
 /// Reptile/Dragonkin Digimon would leave in the same turn.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — OPT on replacement clauses not yet implemented"]
 fn bt24_018_clause_g_opt_lockout() {
-    // Scaffolding (pending G-OPT-TRIGGERED):
-    //
-    // 1. Two own Dragonkin Digimon + two opp Digimon.
-    // 2. Delete first ally → prompt → accept → cost paid.
-    // 3. Delete second ally in same turn → NO prompt (OPT locked).
-    // 4. End turn + new turn → delete ally → prompt returns.
-    todo!("pending G-OPT-TRIGGERED: clause g OPT lockout")
+    let mut runner = bt24_018_clause_g_runner();
+    runner.place_on_field(0, "BT24-018", Some(0));
+    let first = runner.place_on_field(0, "ALLY-DRAGONKIN", Some(0));
+    let second = runner.place_on_field(0, "ALLY-REPTILE", Some(0));
+    runner.place_on_field(1, "LOW-DP", Some(0));
+    runner.place_on_field(1, "HIGH-DP", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(first, ReplacementCause::OpponentEffect);
+    accept_replacement(&mut runner);
+    let cost = runner
+        .pending_selection_view()
+        .expect("first lowest-DP cost prompt");
+    runner
+        .execute_action(0, cost.valid_action_ids[0])
+        .expect("delete first cost body");
+    runner.auto_resolve().expect("finish first replacement");
+
+    runner
+        .game
+        .delete_permanent_with_cause(second, ReplacementCause::OpponentEffect);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "second matching leave in the same turn is OPT-locked"
+    );
+    assert!(!permanent_exists(&runner, 0, "ALLY-REPTILE"));
+}
+
+fn bt24_018_clause_g_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card("BT24-018")
+        .expect("BT24-018 YAML loads")
+        .add_card(make_digimon("ALLY-DRAGONKIN", 6000, &["Dragonkin"]))
+        .add_card(make_digimon("ALLY-REPTILE", 6000, &["Reptile"]))
+        .add_card(make_digimon("LOW-DP", 3000, &[]))
+        .add_card(make_digimon("HIGH-DP", 9000, &[]))
+        .start()
+}
+
+fn accept_replacement(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("replacement accept prompt");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    assert!(view.is_optional);
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("accept replacement");
+}
+
+fn make_digimon(id: &str, dp: i32, traits: &[&str]) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.dp = Some(dp);
+    card.traits = traits.iter().map(|s| s.to_string()).collect();
+    card
+}
+
+fn permanent_exists(runner: &DebugRunner, player: usize, card_id: &str) -> bool {
+    runner.game.players[player]
+        .battle_area
+        .iter()
+        .any(|permanent| permanent.top_card().card_id(&runner.game.card_data) == card_id)
 }

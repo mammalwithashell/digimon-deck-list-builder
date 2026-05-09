@@ -24,8 +24,37 @@ effects:
       - draw: { of: you, count: 1 }
       - gain_memory: 1
 
-  # BLOCKED: RK-G004 — opponent-turn would-leave observer into optional
-  # [Omekamon] hand play without cancelling the leave.
+  # [Opponent's Turn] [Once Per Turn] When any of your Digimon with the
+  # [Royal Knight] trait would leave the battle area, you may play 1
+  # [Omekamon] from your hand without paying the cost.
+  #
+  # DCGO subscribes at WhenRemoveField but does not clear willBeRemoveField;
+  # this is a non-cancelling would-leave subscriber. In the Rust replacement
+  # layer the accepted body deliberately leaves the replacement outcome as
+  # Proceed/None, so the original leave event commits after the hand-play
+  # selection resolves.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - opponents_turn: true
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - trait_has: "Royal Knight"
+    summary: "[Opponent's Turn][OPT] When own Royal Knight would leave, may play 1 [Omekamon] from hand; the leave proceeds"
+    process:
+      - select_hand:
+          of: you
+          bind_as: omekamon_pick
+          optional: false
+          filter:
+            name_is: "Omekamon"
+          prompt: "Play 1 [Omekamon] from hand"
+      - play_from_hand_free:
+          of: you
+          hand_index: omekamon_pick
 
   - when: on_security
     summary: "[Security] Play this card without paying the cost"

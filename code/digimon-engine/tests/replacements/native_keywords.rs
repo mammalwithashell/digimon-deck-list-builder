@@ -12,6 +12,7 @@
 use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::Keyword;
+use digimon_engine::replacement::ReplacementCause;
 
 fn card_with_keywords(id: &str, keywords: Vec<Keyword>) -> digimon_engine::CardData {
     let mut c = make_test_card(id, id);
@@ -21,21 +22,22 @@ fn card_with_keywords(id: &str, keywords: Vec<Keyword>) -> digimon_engine::CardD
 
 /// Printed `<Barrier>` on a card's `CardData::keywords` should auto-install
 /// an optional `WhenWouldBeDeleted` replacement that, on accept, trashes the
-/// top of the owner's deck and cancels the deletion.
+/// top of the owner's security and cancels the deletion.
 #[test]
 fn printed_barrier_keyword_auto_installs_replacement() {
     let mut r = DebugRunner::builder()
         .add_card(card_with_keywords("BARRIER_CARD", vec![Keyword::Barrier]))
-        .add_card(make_test_card("FILLER", "FILLER"))
-        .deck(0, &["FILLER"; 5])
+        .add_card(make_test_card("SEC", "SEC"))
+        .security(0, &["SEC", "SEC"])
         .start();
     let handle = r.place_on_field(0, "BARRIER_CARD", Some(0));
 
-    assert_eq!(r.game.player(0).deck.len(), 5);
+    assert_eq!(r.game.player(0).security.len(), 2);
     assert_eq!(r.game.player(0).trash.len(), 0);
     assert_eq!(r.battle_area_size(0), 1);
 
-    r.game.delete_permanent_with_effects(handle);
+    r.game
+        .delete_permanent_with_cause(handle, ReplacementCause::Battle);
 
     // Barrier is optional — selection should be installed.
     assert!(
@@ -52,9 +54,9 @@ fn printed_barrier_keyword_auto_installs_replacement() {
         "Barrier should prevent the deletion"
     );
     assert_eq!(
-        r.game.player(0).deck.len(),
-        4,
-        "top of deck should be trashed"
+        r.game.player(0).security.len(),
+        1,
+        "top of security should be trashed"
     );
     assert_eq!(r.game.player(0).trash.len(), 1);
 }
@@ -64,12 +66,13 @@ fn printed_barrier_keyword_auto_installs_replacement() {
 fn printed_barrier_keyword_decline_allows_deletion() {
     let mut r = DebugRunner::builder()
         .add_card(card_with_keywords("BARRIER_CARD", vec![Keyword::Barrier]))
-        .add_card(make_test_card("FILLER", "FILLER"))
-        .deck(0, &["FILLER"; 5])
+        .add_card(make_test_card("SEC", "SEC"))
+        .security(0, &["SEC", "SEC"])
         .start();
     let handle = r.place_on_field(0, "BARRIER_CARD", Some(0));
 
-    r.game.delete_permanent_with_effects(handle);
+    r.game
+        .delete_permanent_with_cause(handle, ReplacementCause::Battle);
     assert!(r.game.pending_selection.is_some());
     r.game
         .resolve_selection(0, PASS)
@@ -80,11 +83,62 @@ fn printed_barrier_keyword_decline_allows_deletion() {
         0,
         "declined Barrier should allow deletion"
     );
-    assert_eq!(r.game.player(0).deck.len(), 5, "deck unchanged on decline");
+    assert_eq!(
+        r.game.player(0).security.len(),
+        2,
+        "security unchanged on decline"
+    );
     assert_eq!(
         r.game.player(0).trash.len(),
         1,
         "the permanent itself goes to trash"
+    );
+}
+
+/// Barrier cannot be paid with no security, so the optional replacement should
+/// not even install.
+#[test]
+fn printed_barrier_keyword_without_security_does_not_install() {
+    let mut r = DebugRunner::builder()
+        .add_card(card_with_keywords("BARRIER_CARD", vec![Keyword::Barrier]))
+        .start();
+    let handle = r.place_on_field(0, "BARRIER_CARD", Some(0));
+
+    r.game
+        .delete_permanent_with_cause(handle, ReplacementCause::Battle);
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "Barrier should not prompt when its security-trash cost cannot be paid"
+    );
+    assert_eq!(r.battle_area_size(0), 0, "deletion proceeds normally");
+    assert_eq!(r.game.player(0).trash.len(), 1);
+}
+
+/// Barrier only covers battle deletion; effect deletion should proceed without
+/// offering the replacement.
+#[test]
+fn printed_barrier_keyword_ignores_non_battle_deletion() {
+    let mut r = DebugRunner::builder()
+        .add_card(card_with_keywords("BARRIER_CARD", vec![Keyword::Barrier]))
+        .add_card(make_test_card("SEC", "SEC"))
+        .security(0, &["SEC", "SEC"])
+        .start();
+    let handle = r.place_on_field(0, "BARRIER_CARD", Some(0));
+
+    r.game
+        .delete_permanent_with_cause(handle, ReplacementCause::OpponentEffect);
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "Barrier should not prompt for non-battle deletion"
+    );
+    assert_eq!(r.battle_area_size(0), 0, "deletion proceeds normally");
+    assert_eq!(r.game.player(0).security.len(), 2);
+    assert_eq!(
+        r.game.player(0).trash.len(),
+        1,
+        "only the deleted permanent should be trashed"
     );
 }
 

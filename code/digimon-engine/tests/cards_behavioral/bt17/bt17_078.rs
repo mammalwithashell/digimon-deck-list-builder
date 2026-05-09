@@ -28,34 +28,17 @@
 //! # Patterns this card exercises (test API §4.3)
 //! - H5  Blocker (face-up declarative grant_keyword)
 //! - H9  Raid (face-up declarative grant_keyword) — canonical example for §4.3
-//! - H12 Blast (specifically Blast DNA Digivolve marker — BLOCKED, see below)
+//! - H12 Blast (specifically Blast DNA Digivolve marker)
 //! - H13 ACE Overflow (-5 metadata via `ace_overflow:`)
 //! - G2  DNA digivolve alt-path (Lv.6 Greymon + Lv.6 Garurumon, cost 0)
 //! - Shared OnPlay+WhenDigivolving body (DNA-gated bottom-deck-by-level + delete)
 //!
-//! # Known gaps that block behavioral coverage of Clause 3
-//!
-//! - **G-BIND-SELECTED-PROPERTY-FOR-EACH** (qa/dsl-vocab-gaps.md, BT17-078 entry):
-//!   no DSL pattern for "bind one selected permanent's property (level), then
-//!   for-each opponent permanent matching that bound property". The
-//!   `level_eq` predicate is `Option<u8>` literal-only; no `level_eq_binding`
-//!   form exists. Suggested syntax in the gap entry:
-//!     - bind_selected: { name: chosen_level, selector: opponent_digimon, property: level }
-//!     - for_each_opponent_permanent: { where: { level_eq: "$chosen_level" }, do: return_to_deck_bottom }
-//!
-//! - **G-BLAST-DNA-DIGIVOLVE** (NEW — to be filed by the orchestrator on this
-//!   card's verdict): the engine has `BurstDigivolve` (single-card hand-counter
-//!   via the BlastDigivolve keyword) and `dna_digivolve` (board-pair, normal
-//!   timing), but no combined alt-path that uses 2 specific named DNA materials
-//!   firing from hand at counter timing with cost 0. The
-//!   `[Hand][Counter] <Blast DNA Digivolve ([WarGreymon] + [MetalGarurumon])>`
-//!   entry path is therefore unmodelable; only the standard digivolve and the
-//!   regular DNA path are present.
-//!
-//! All behavioral tests for Clause 3 and the Blast DNA alt-path are
-//! `#[ignore]`'d with the appropriate gap tag. Structural tests for Clauses
-//! 1–2, the Ace Overflow value, and the two implementable alt-paths run
-//! green and lock the YAML shape.
+//! The Blast DNA alt-path is active through `alt_paths.kind:
+//! blast_dna_digivolve`, using the DCGO OnCounterTiming emitter shape: field
+//! material first, then matching hand material, then zero-cost DNA into this
+//! hand card. Clause 3 uses `bind_permanent_property` plus `level_eq_binding`
+//! to capture the selected Digimon's level, bottom-deck every opponent Digimon
+//! at that level, then surface the mandatory delete target prompt.
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -63,9 +46,10 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause,
     CompiledPredicate, CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{encode_digivolve, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::{CardHandle, CardSource};
+use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
@@ -214,7 +198,7 @@ fn bt17_078_has_dna_digivolve_alt_path_greymon_garurumon() {
         dna_paths.len(),
         1,
         "BT17-078 must have exactly one regular DNA digivolve alt-path \
-         (the Blast DNA variant is BLOCKED — see G-BLAST-DNA-DIGIVOLVE)"
+         separate from the Blast DNA Counter route"
     );
 
     let path = dna_paths[0];
@@ -322,7 +306,7 @@ fn bt17_078_when_digivolving_standard_does_not_read_dna_origin() {
 
     let succeeded = {
         let mut ctx = EffectContext::new(&mut runner.game, hand_card, None, 0);
-        ctx.effect_initiated_digivolve(0, 0, base, CostDelta::Free, true)
+        ctx.effect_initiated_digivolve_ignore_requirements(0, 0, base, CostDelta::Free)
     };
 
     assert!(succeeded, "fixture standard digivolve should succeed");
@@ -336,25 +320,12 @@ fn bt17_078_when_digivolving_standard_does_not_read_dna_origin() {
     );
 }
 
-/// BLOCKED structural assertion — when G-BLAST-DNA-DIGIVOLVE closes, the
-/// Blast DNA alt-path becomes a third entry. Materials would be specifically
-/// WarGreymon + MetalGarurumon (distinct from the regular DNA path's broader
-/// Greymon/Garurumon name family).
+/// Blast DNA alt-path: [Hand][Counter] WarGreymon + MetalGarurumon, cost 0.
 #[test]
-#[ignore = "pending: G-BLAST-DNA-DIGIVOLVE from qa/dsl-vocab-gaps.md \
-            -- engine has BurstDigivolve (single-card hand-counter) and \
-            dna_digivolve (board-pair, normal timing), but no combined \
-            blast_dna_digivolve alt-path kind that takes 2 specific named \
-            materials firing from hand at counter timing with cost 0."]
 fn bt17_078_has_blast_dna_digivolve_alt_path_wargreymon_metalgarurumon() {
     let c = compiled_bt17_078();
     let blast_dna = c.alt_paths.iter().find(|p| {
-        // When the gap closes, this will be a new CompiledAltPathKind variant
-        // (e.g. `BlastDnaDigivolve`). For now we approximate the shape: a DNA
-        // digivolve at cost 0 whose materials are name_is "WarGreymon" /
-        // name_is "MetalGarurumon" — distinct from the regular DNA path
-        // above which uses name_contains "Greymon" / "Garurumon".
-        p.kind == CompiledAltPathKind::DnaDigivolve
+        p.kind == CompiledAltPathKind::BlastDnaDigivolve
             && matches!(p.cost, Some(CompiledCost::Literal(0)))
             && p.materials
                 .iter()
@@ -414,15 +385,10 @@ fn bt17_078_has_face_up_blocker_grant_keyword() {
     );
 }
 
-/// BLOCKED structural assertion — Clause 3 (DNA-gated bottom-deck + delete).
-/// When G-BIND-SELECTED-PROPERTY-FOR-EACH closes, the YAML will gain a
-/// triggered clause covering OnPlay + WhenDigivolving with a DNA gate. Check
-/// the shape so the unblock is mechanical.
+/// Clause 3 (DNA-gated bottom-deck + delete) is shared by OnPlay and
+/// WhenDigivolving, with the printed "If DNA digivolving" antecedent modeled
+/// as an `active_when` gate.
 #[test]
-#[ignore = "pending: G-BIND-SELECTED-PROPERTY-FOR-EACH from qa/dsl-vocab-gaps.md \
-            -- DSL lacks bind_selected + for_each over a captured property; the \
-            Clause 3 body is a commented stub in BT17-078.yaml until the gap \
-            closes."]
 fn bt17_078_has_on_play_when_digivolving_dna_gated_clause() {
     let c = compiled_bt17_078();
     let clause = c
@@ -465,17 +431,16 @@ fn bt17_078_has_on_play_when_digivolving_dna_gated_clause() {
 // Clauses 1 (Raid) and 2 (Blocker) are unconditional declarative grants — no
 // condition gating to test.
 //
-// Clause 3's `dna_origin: true` condition is now a reusable Track A payload
-// predicate. The full printed body remains blocked on binding one selected
-// Digimon's level and applying a for-each move to all matching opponent
-// Digimon, so the original full-body condition-gating tests stay ignored.
-
 #[test]
-#[ignore = "pending: G-BIND-SELECTED-PROPERTY-FOR-EACH -- Clause 3 body absent from YAML"]
 fn bt17_078_on_play_dna_gate_blocks_when_played_normally_from_hand() {
     // Negative: playing Omnimon from hand (no DNA digivolve in the trigger
     // hashtable) must NOT install any pending selection from Clause 3.
     let mut runner = omnimon_runner();
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("OPP-LV6", "OppLv6", 6, 8000));
+    let _opp = runner.place_on_field(1, "OPP-LV6", Some(0));
     let omni = runner.place_on_field(0, "BT17-078", None);
     runner.fire_on_play(0, omni.index as usize);
     assert!(
@@ -484,204 +449,154 @@ fn bt17_078_on_play_dna_gate_blocks_when_played_normally_from_hand() {
     );
 }
 
+// ─── SECTION 3 — Behavioral outcome (integrated Blast DNA route) ─────────────
+
 #[test]
-#[ignore = "pending: G-BIND-SELECTED-PROPERTY-FOR-EACH -- Clause 3 body absent from YAML"]
-fn bt17_078_on_play_dna_gate_passes_when_dna_digivolving_with_opp_digimon() {
-    // Positive: DNA-digivolving onto the field with at least one opp Digimon
-    // must install the bottom-deck selection.
-    let mut runner = omnimon_runner();
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("OPP-LV6", "OppLv6", 6, 8000));
-    let _opp = runner.place_on_field(1, "OPP-LV6", Some(0));
-    let omni = runner.place_on_field(0, "BT17-078", None);
-    // Synthesize a DNA-origin trigger by enqueueing WhenDigivolving with a
-    // DNA hashtable. Until G-BIND-SELECTED-PROPERTY-FOR-EACH closes, this
-    // path is gap-blocked.
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenDigivolving,
-        TriggerSource::Permanent(omni),
+fn bt17_078_counter_blast_dna_uses_wargreymon_and_metalgarurumon() {
+    let mut wargreymon = make_named_digimon("WAR", "WarGreymon", 6, 11000);
+    let mut metalgarurumon = make_named_digimon("METAL", "MetalGarurumon", 6, 11000);
+    let attacker_card = make_named_digimon("ATK", "Attacker", 4, 1000);
+
+    wargreymon.card_name = "WarGreymon".to_string();
+    metalgarurumon.card_name = "MetalGarurumon".to_string();
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-078 YAML loads")
+        .add_card(wargreymon)
+        .add_card(metalgarurumon)
+        .add_card(attacker_card)
+        .hand(1, &["BT17-078", "METAL"])
+        .memory(0)
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATK", Some(0));
+    let target = runner.place_on_field(1, "WAR", Some(0));
+
+    let result = runner.game.begin_attack(
+        attacker,
+        digimon_engine::selection::AttackTarget::Digimon(target),
+        false,
     );
-    runner.game.drain_effect_queue();
+    assert_eq!(result, AttackResult::InProgress);
+
+    let selection = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Blast DNA CounterTiming selection must be installed");
+    assert_eq!(selection.selecting_player, 1);
     assert!(
-        runner.pending_selection().is_some(),
-        "DNA-digivolving onto the field with opp Digimon must install the \
-         choose-1-opponent-Digimon selection."
+        selection.valid_action_ids.contains(&encode_digivolve(0, 0)),
+        "field WarGreymon must be selectable as the first Blast DNA material: {:?}",
+        selection.valid_action_ids
     );
-}
 
-// ─── SECTION 3 — Behavioral outcome (per branch, integrated) ─────────────────
-
-#[test]
-#[ignore = "pending: G-BIND-SELECTED-PROPERTY-FOR-EACH from qa/dsl-vocab-gaps.md \
-            -- Clause 3 body is commented stub; cannot return-by-level until \
-            DSL gains bind_selected + for_each over a captured property."]
-fn bt17_078_on_play_dna_returns_all_opponent_digimon_of_chosen_level_to_deck_bottom() {
-    // Setup: opp has two Lv.5 Digimon and one Lv.6 Digimon; player chooses
-    // one of the Lv.5s. Expect: BOTH Lv.5 Digimon move to the bottom of the
-    // opp deck; the Lv.6 stays on the field.
-    let mut runner = omnimon_runner();
     runner
         .game
-        .card_data
-        .push(make_named_digimon("OPP-A-LV5", "OppA", 5, 5000));
+        .resolve_selection(1, encode_digivolve(0, 0))
+        .expect("select field WarGreymon");
+    let selection = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Blast DNA hand-material selection must be installed");
+    assert_eq!(selection.valid_action_ids, vec![PLAY_HAND_START + 1]);
+
     runner
         .game
-        .card_data
-        .push(make_named_digimon("OPP-B-LV5", "OppB", 5, 6000));
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("OPP-C-LV6", "OppC", 6, 9000));
+        .resolve_selection(1, PLAY_HAND_START + 1)
+        .expect("select hand MetalGarurumon");
 
-    let _opp_a = runner.place_on_field(1, "OPP-A-LV5", Some(0));
-    let _opp_b = runner.place_on_field(1, "OPP-B-LV5", Some(0));
-    let _opp_c = runner.place_on_field(1, "OPP-C-LV6", Some(0));
-
-    let opp_battle_before = runner.battle_area_size(1);
-    let opp_deck_before = runner.deck_size(1);
-    assert_eq!(opp_battle_before, 3);
-
-    let omni = runner.place_on_field(0, "BT17-078", None);
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenDigivolving,
-        TriggerSource::Permanent(omni),
-    );
-    runner.game.drain_effect_queue();
-    runner.auto_resolve().expect("auto-resolve after pick");
-
+    assert_eq!(runner.game.player(1).hand.len(), 0);
+    assert_eq!(runner.game.player(1).battle_area.len(), 1);
+    let stack_ids: Vec<_> = runner.game.player(1).battle_area[0]
+        .card_sources
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect();
     assert_eq!(
-        runner.battle_area_size(1),
-        1,
-        "Both Lv.5 Digimon must leave the battle area (chosen + same-level peer)"
-    );
-    assert_eq!(
-        runner.deck_size(1),
-        opp_deck_before + 2,
-        "Both Lv.5 Digimon must land at the bottom of the opp deck"
+        stack_ids,
+        vec!["WAR", "METAL", "BT17-078"],
+        "Blast DNA must stack field WarGreymon, hand MetalGarurumon, then BT17-078"
     );
 }
 
 #[test]
-#[ignore = "pending: G-BIND-SELECTED-PROPERTY-FOR-EACH -- Clause 3 body absent from YAML"]
-fn bt17_078_on_play_dna_then_delete_installs_after_bottom_deck() {
-    // Setup: opp has one Lv.5 (will be bounced) and one Lv.6 (survives). After
-    // the bottom-deck step, the "Then, delete 1 of your opponent's Digimon"
-    // step must install an OppField selection over the surviving Lv.6.
-    let mut runner = omnimon_runner();
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("OPP-LV5", "Opp5", 5, 5000));
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("OPP-LV6", "Opp6", 6, 9000));
-    let _opp_5 = runner.place_on_field(1, "OPP-LV5", Some(0));
-    let _opp_6 = runner.place_on_field(1, "OPP-LV6", Some(0));
+fn bt17_078_blast_dna_bottom_decks_same_level_then_prompts_delete() {
+    let mut wargreymon = make_named_digimon("WAR", "WarGreymon", 6, 11000);
+    let mut metalgarurumon = make_named_digimon("METAL", "MetalGarurumon", 6, 11000);
+    let attacker_card = make_named_digimon("ATK", "Attacker", 5, 7000);
+    let opp_peer_lv5 = make_named_digimon("OPP-PEER-LV5", "OppPeer5", 5, 6000);
+    let opp_survivor_lv6 = make_named_digimon("OPP-LV6", "Opp6", 6, 9000);
 
-    let omni = runner.place_on_field(0, "BT17-078", None);
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenDigivolving,
-        TriggerSource::Permanent(omni),
+    wargreymon.card_name = "WarGreymon".to_string();
+    metalgarurumon.card_name = "MetalGarurumon".to_string();
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-078 YAML loads")
+        .add_card(wargreymon)
+        .add_card(metalgarurumon)
+        .add_card(attacker_card)
+        .add_card(opp_peer_lv5)
+        .add_card(opp_survivor_lv6)
+        .hand(1, &["BT17-078", "METAL"])
+        .memory(0)
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATK", Some(0));
+    let _peer = runner.place_on_field(0, "OPP-PEER-LV5", Some(0));
+    let _survivor = runner.place_on_field(0, "OPP-LV6", Some(0));
+    let target = runner.place_on_field(1, "WAR", Some(0));
+    let p0_deck_before = runner.deck_size(0);
+
+    let result = runner.game.begin_attack(
+        attacker,
+        digimon_engine::selection::AttackTarget::Digimon(target),
+        false,
     );
-    runner.game.drain_effect_queue();
-    // Resolve the bottom-deck pick (auto-pick Lv.5).
-    runner
-        .auto_resolve()
-        .expect("auto-resolve bottom-deck pick");
+    assert_eq!(result, AttackResult::InProgress);
 
-    let pending = runner
+    runner
+        .game
+        .resolve_selection(1, encode_digivolve(0, 0))
+        .expect("select field WarGreymon");
+    runner
+        .game
+        .resolve_selection(1, PLAY_HAND_START + 1)
+        .expect("select hand MetalGarurumon");
+
+    let choose_level = runner
         .pending_selection()
-        .expect("delete prompt must install after bottom-deck step");
+        .expect("BT17-078 DNA-origin clause must ask for the level anchor");
+    assert_eq!(choose_level.kind, SelectionKind::OppField);
+    assert_eq!(choose_level.selecting_player, 1);
+    let choose_level_action = choose_level.valid_action_ids[0];
+    runner
+        .game
+        .resolve_selection(1, choose_level_action)
+        .expect("choose a Lv.5 opponent Digimon");
+
     assert_eq!(
-        pending.kind,
-        SelectionKind::OppField,
-        "Second step is select_opponent_permanent → OppField"
+        runner.deck_size(0),
+        p0_deck_before + 2,
+        "chosen Lv.5 and same-level peer must both go to opponent deck bottom"
     );
+    assert_eq!(
+        runner.battle_area_size(0),
+        1,
+        "only the nonmatching Lv.6 opponent Digimon should remain before delete"
+    );
+
+    let delete_prompt = runner
+        .pending_selection()
+        .expect("delete prompt must install after bottom-decking same-level Digimon");
+    assert_eq!(delete_prompt.kind, SelectionKind::OppField);
+    assert_eq!(delete_prompt.selecting_player, 1);
     assert!(
-        !pending.is_optional,
-        "DCGO line 301 SelectPermanentEffect.SetUp passes canNoSelect: false → \
-         delete-target select is mandatory once eligible targets exist"
-    );
-}
-
-#[test]
-#[ignore = "pending: G-BIND-SELECTED-PROPERTY-FOR-EACH -- Clause 3 body absent from YAML"]
-fn bt17_078_when_digivolving_fires_same_body_as_on_play() {
-    // DCGO uses identical SharedActivateCoroutine bodies for OnPlay and
-    // WhenDigivolving (lines 142-313 mirror lines 316-487). Verify the
-    // observable outcome is the same when WhenDigivolving fires directly.
-    let mut runner = omnimon_runner();
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("OPP-LV4", "Opp4", 4, 4000));
-    let _opp = runner.place_on_field(1, "OPP-LV4", Some(0));
-
-    let omni = runner.place_on_field(0, "BT17-078", None);
-    let opp_battle_before = runner.battle_area_size(1);
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenDigivolving,
-        TriggerSource::Permanent(omni),
-    );
-    runner.game.drain_effect_queue();
-    runner.auto_resolve().expect("auto-resolve");
-
-    assert!(
-        runner.battle_area_size(1) < opp_battle_before,
-        "WhenDigivolving must fire the same body as OnPlay (DNA-gated)."
-    );
-}
-
-// ─── SECTION 4 — Cost-firing event-log assertions ────────────────────────────
-//
-// Clause 3 has no cost (the bottom-deck and delete are body steps, not
-// payments). Raid/Blocker are static keyword grants without cost firing.
-// Nothing to assert here beyond observing that no cost-firing GameEvent
-// (e.g., Trash, LoseSecurity) is emitted by the keyword grants themselves.
-//
-// Once Clause 3 is unblocked, an event-log assertion for the delete arm
-// (GameEvent::Delete on the chosen surviving opp Digimon) becomes appropriate.
-
-#[test]
-#[ignore = "pending: G-BIND-SELECTED-PROPERTY-FOR-EACH -- Clause 3 body absent from YAML; \
-            re-enable to assert GameEvent::Delete on the surviving opp Digimon."]
-fn bt17_078_on_play_dna_delete_arm_emits_delete_event() {
-    use digimon_engine::events::GameEvent;
-
-    let mut runner = omnimon_runner();
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("OPP-LV5", "Opp5", 5, 5000));
-    runner
-        .game
-        .card_data
-        .push(make_named_digimon("OPP-LV6", "Opp6", 6, 9000));
-    let _opp_5 = runner.place_on_field(1, "OPP-LV5", Some(0));
-    let _opp_6 = runner.place_on_field(1, "OPP-LV6", Some(0));
-    let omni = runner.place_on_field(0, "BT17-078", None);
-
-    let cp = runner.event_checkpoint();
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenDigivolving,
-        TriggerSource::Permanent(omni),
-    );
-    runner.game.drain_effect_queue();
-    runner.auto_resolve().expect("auto-resolve");
-
-    let events = runner.events_since(cp);
-    // Note: GameEvent currently has no `Delete` variant. The closest
-    // observable event for a delete is `Trash` (the deleted permanent's top
-    // card lands in trash). Once GameEvent::Delete is wired, replace this
-    // matcher.
-    let has_trash = events.iter().any(|e| matches!(e, GameEvent::Trash { .. }));
-    assert!(
-        has_trash,
-        "delete arm must emit at least one Trash event for the surviving opp Digimon \
-         (proxy for the not-yet-wired GameEvent::Delete)"
+        !delete_prompt.is_optional,
+        "the printed delete step is mandatory once an opponent Digimon remains"
     );
 }
 

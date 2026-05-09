@@ -40,6 +40,25 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::PlacePermanentOnSecurityAndHandleReplacement {
+            of,
+            target,
+            position,
+            face_up,
+        } => {
+            let player = crate::dsl_cards::step::resolve_player(ctx, *of);
+            if let Some(ResolvedBinding::Permanent(handle)) =
+                resolve_binding_ref(target, ctx, bindings)
+            {
+                let position = crate::dsl_cards::step::map_stack_position(*position);
+                if ctx.place_permanent_on_security_and_handle_current_replacement(
+                    player, handle, position, *face_up,
+                ) {
+                    set_outcome(ctx, ReplacementOutcome::CustomHandled);
+                }
+            }
+            true
+        }
         CompiledStep::HandleReplacement => {
             set_outcome(ctx, ReplacementOutcome::CustomHandled);
             true

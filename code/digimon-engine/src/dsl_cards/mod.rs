@@ -64,9 +64,24 @@ impl DslCardEffect {
 
 impl CardEffect for DslCardEffect {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
-        use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause};
+        use digimon_dsl::compiled::{
+            CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause,
+        };
 
         let mut out = Vec::new();
+        for path in &self.compiled.alt_paths {
+            if matches!(
+                path.kind,
+                CompiledAltPathKind::BurstDigivolve | CompiledAltPathKind::BlastDnaDigivolve
+            ) {
+                out.push(
+                    Effect::declarative(card)
+                        .name("Blast digivolve marker")
+                        .blast_digivolve()
+                        .build(),
+                );
+            }
+        }
         let option_use_requirement = option_use_requirement_for_card(&self.compiled);
         'clause: for clause in &self.compiled.effects {
             match clause {

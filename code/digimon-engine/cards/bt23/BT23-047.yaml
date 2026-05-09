@@ -14,6 +14,13 @@ alt_paths:
     cost: 5
 
 effects:
+  - kind: partition
+    summary: "<Partition (Green Lv.5 & Blue Lv.5)>"
+    sources:
+      - { level_eq: 5, color_is: green }
+      - { level_eq: 5, color_is: blue }
+    exclude_cause: [own_effect, battle]
+
   - kind: grant_keyword
     keyword: Piercing
   - kind: grant_keyword
@@ -21,8 +28,6 @@ effects:
     value: 1
 
 # Stubbed:
-# - Partition (green Lv.5 & blue Lv.5) needs a typed Partition DSL clause with
-#   two material filters and leave-field replacement play.
 # - [On Play][When Digivolving] suspend 5 opponent Digimon/Tamers, prevent all
 #   opponent Digimon unsuspend next phase, then may attack. Needs N-target
 #   suspend, next-unsuspend-phase blanket lock, and in-effect attack.

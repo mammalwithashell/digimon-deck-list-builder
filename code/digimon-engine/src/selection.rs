@@ -33,6 +33,8 @@ impl UnionZoneSet {
     pub const HAND: UnionZoneSet = UnionZoneSet(0b0001);
     /// The player's trash.
     pub const TRASH: UnionZoneSet = UnionZoneSet(0b0010);
+    /// Digivolution-source cards under the effect's source permanent.
+    pub const MATERIAL: UnionZoneSet = UnionZoneSet(0b0100);
 
     /// Returns `true` if the given zone bit is set.
     pub fn contains(self, other: UnionZoneSet) -> bool {
@@ -548,6 +550,9 @@ pub enum SecurityPhase {
     /// Enqueue + drain `OnSecurityCheck` observer effects over the defender's
     /// battle area.
     OnSecurityCheckDrain,
+    /// Offer `WhenWouldLoseSecurity` replacements before the revealed card is
+    /// finally removed from the security stack.
+    WhenWouldLoseSecurity,
     /// Enqueue + drain `OnLoseSecurity` on the revealed card (observer timing).
     OnLoseSecurityDrain,
     /// Trash the card (unless `pending_security.played` is set), then fire

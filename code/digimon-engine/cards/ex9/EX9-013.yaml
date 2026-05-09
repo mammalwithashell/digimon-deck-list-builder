@@ -86,10 +86,19 @@ effects:
     summary: "[End of Your Turn] 2 Digimon may DNA digivolve into Omnimon Alter-S in hand"
     condition:
       all_of:
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            kind: digimon
+        - count_gte:
+            filter:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+            n: 2
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              kind: digimon
+              name_contains: "Omnimon Alter-S"
+            n: 1
         - any_permanent:
             of: you
             zone: [battle_area]

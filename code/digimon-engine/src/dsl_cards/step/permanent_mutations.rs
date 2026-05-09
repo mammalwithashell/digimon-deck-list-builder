@@ -5,7 +5,7 @@
 //! `ResolvedBinding::Permanent`; any other variant is silently skipped (same
 //! convention as the 2b zone-move handlers).
 
-use digimon_dsl::compiled::CompiledStep;
+use digimon_dsl::compiled::{CompiledPermanentProperty, CompiledStep};
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
@@ -69,6 +69,20 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::PlacePermanentOnSecurity {
+            of,
+            target,
+            position,
+            face_up,
+        } => {
+            let player = crate::dsl_cards::step::resolve_player(ctx, *of);
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
+                let position = super::map_stack_position(*position);
+                let _ = ctx.place_permanent_on_security(player, h, position, *face_up);
+            }
+            true
+        }
         CompiledStep::DeDigivolve {
             target,
             amount,
@@ -89,6 +103,36 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::BindPermanentProperty {
+            from,
+            property,
+            bind_as,
+        } => {
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(from, ctx, bindings) {
+                if let Some(value) = permanent_property(ctx, h, *property) {
+                    bindings.insert_literal(bind_as, value);
+                }
+            }
+            true
+        }
         _ => false,
+    }
+}
+
+fn permanent_property(
+    ctx: &EffectContext<'_>,
+    handle: crate::permanent::PermanentHandle,
+    property: CompiledPermanentProperty,
+) -> Option<i64> {
+    let permanent = if handle.index == crate::action::space::BREEDING_TARGET as u8 {
+        ctx.game.player(handle.player).breeding_area.as_ref()?
+    } else {
+        ctx.game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)?
+    };
+    match property {
+        CompiledPermanentProperty::Level => permanent.level(&ctx.game.card_data).map(i64::from),
     }
 }

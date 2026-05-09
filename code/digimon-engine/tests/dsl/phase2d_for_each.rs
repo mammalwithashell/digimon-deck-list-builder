@@ -171,3 +171,58 @@ fn for_each_owner_you_only_matches_self_permanents() {
         "owner: You should restrict the scan to P0's permanent (1 match), not P1's"
     );
 }
+
+#[test]
+fn bind_permanent_level_filters_for_each_same_level_permanents() {
+    let mut lv5_a = make_test_card("LV5-A", "LV5-A");
+    lv5_a.level = Some(5);
+    let mut lv5_b = make_test_card("LV5-B", "LV5-B");
+    lv5_b.level = Some(5);
+    let mut lv6 = make_test_card("LV6", "LV6");
+    lv6.level = Some(6);
+
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "SRC"))
+        .add_card(lv5_a)
+        .add_card(lv5_b)
+        .add_card(lv6)
+        .hand(0, &["SRC"])
+        .build();
+
+    let chosen = runner.place_on_field(1, "LV5-A", None);
+    runner.place_on_field(1, "LV5-B", None);
+    runner.place_on_field(1, "LV6", None);
+    let src_card = runner.game.players[0].hand[0].handle();
+    let memory_before = runner.game.memory;
+
+    let steps = vec![
+        CompiledStep::BindPermanentProperty {
+            from: digimon_dsl::compiled::CompiledBindingRef::Named("chosen".to_string()),
+            property: digimon_dsl::compiled::CompiledPermanentProperty::Level,
+            bind_as: "chosen_level".to_string(),
+        },
+        CompiledStep::ForEach {
+            over: CompiledPredicate {
+                kind: Some(CompiledCardKind::Digimon),
+                owner: Some(CompiledPlayerRef::Opponent),
+                level_eq_binding: Some("chosen_level".to_string()),
+                ..CompiledPredicate::default()
+            },
+            bind_as: "same_level".to_string(),
+            body: vec![CompiledStep::GainMemory(1)],
+        },
+    ];
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        let mut bindings = Bindings::new();
+        bindings.insert_permanent("chosen", chosen);
+        run_steps(&steps, &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(
+        runner.game.memory,
+        memory_before + 2,
+        "only the two opponent Lv.5 permanents should match the bound level"
+    );
+}

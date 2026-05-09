@@ -18,7 +18,8 @@ use digimon_dsl::compiled::{
     CompiledDeclarativeClause,
 };
 use digimon_engine::action::build_action_mask;
-use digimon_engine::action::space::DNA_DIGIVOLVE_START;
+use digimon_engine::action::space::{encode_digivolve, DNA_DIGIVOLVE_START, PLAY_HAND_START};
+use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{
     CardColor, EffectSourceKind, EffectTiming, GamePhase, Keyword, ModifierType,
@@ -110,6 +111,18 @@ fn ex6_011_has_standard_red_lv6_and_dna_red_black_lv6_routes() {
             && path.materials[1].filter.color_is == Some(CompiledColor::Black)
     });
     assert!(dna, "missing red Lv.6 + black Lv.6 cost-0 DNA route");
+
+    let blast_dna = card.alt_paths.iter().any(|path| {
+        path.kind == CompiledAltPathKind::BlastDnaDigivolve
+            && matches!(path.cost, Some(CompiledCost::Literal(0)))
+            && path.materials.len() == 2
+            && path.materials[0].filter.name_is.as_deref() == Some("Durandamon")
+            && path.materials[1].filter.name_is.as_deref() == Some("BryweLudramon")
+    });
+    assert!(
+        blast_dna,
+        "missing [Hand][Counter] Blast DNA route for Durandamon + BryweLudramon"
+    );
 }
 
 #[test]
@@ -260,7 +273,82 @@ fn ex6_011_runtime_keywords_are_available_on_field() {
 }
 
 #[test]
-#[ignore = "pending: PUPPETS-G032 — Counter window + Blast Digivolve activation flow lacks prompt_blast_dna_digivolve/action-mask support"]
 fn ex6_011_counter_blast_dna_uses_durandamon_and_bryweludramon() {
-    unimplemented!("Counter Blast DNA must select Durandamon + BryweLudramon through the Counter action surface");
+    let mut durandamon = colored_lv6("DURANDA", CardColor::Red);
+    durandamon.card_name = "Durandamon".to_string();
+    let mut bryweludramon = colored_lv6("BRYWE", CardColor::Black);
+    bryweludramon.card_name = "BryweLudramon".to_string();
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX6-011 YAML loads")
+        .add_card(durandamon)
+        .add_card(bryweludramon)
+        .add_card(leveled_digimon("ATK", 4))
+        .hand(1, &["EX6-011", "BRYWE"])
+        .memory(0)
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATK", Some(0));
+    let target = runner.place_on_field(1, "DURANDA", Some(0));
+
+    let result = runner.game.begin_attack(
+        attacker,
+        digimon_engine::selection::AttackTarget::Digimon(target),
+        false,
+    );
+    assert_eq!(result, AttackResult::InProgress);
+
+    let selection = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Blast DNA CounterTiming selection must be installed");
+    assert_eq!(selection.selecting_player, 1);
+    assert!(
+        selection.valid_action_ids.contains(&encode_digivolve(0, 0)),
+        "field Durandamon must be selectable as the first Blast DNA material: {:?}",
+        selection.valid_action_ids
+    );
+
+    runner
+        .game
+        .resolve_selection(1, encode_digivolve(0, 0))
+        .expect("select field Durandamon");
+    let selection = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Blast DNA hand-material selection must be installed");
+    assert_eq!(selection.valid_action_ids, vec![PLAY_HAND_START + 1]);
+
+    runner
+        .game
+        .resolve_selection(1, PLAY_HAND_START + 1)
+        .expect("select hand BryweLudramon");
+
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OppField),
+        "Blast DNA must count as DNA-origin and surface EX6-011's delete target choice"
+    );
+    assert_eq!(runner.game.player(1).hand.len(), 0);
+    assert_eq!(runner.game.player(1).battle_area.len(), 1);
+    let stack_ids: Vec<_> = runner.game.player(1).battle_area[0]
+        .card_sources
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect();
+    let trash_ids: Vec<_> = runner
+        .game
+        .player(1)
+        .trash
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        stack_ids,
+        vec!["DURANDA", "BRYWE", "EX6-011"],
+        "P1 trash after Blast DNA: {trash_ids:?}"
+    );
 }

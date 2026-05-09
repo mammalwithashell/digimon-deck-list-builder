@@ -115,7 +115,6 @@ fn st19_11_dp_reduction_increases_to_6000_with_three_or_more_total_digimon() {
 }
 
 #[test]
-#[ignore = "BLOCKED: inherited when-would-leave replacement does not install the Token/other Puppet cost prompt from the carrier stack"]
 fn st19_11_inherited_prevents_opponent_effect_leave_by_deleting_other_puppet() {
     let mut runner = DebugRunner::builder()
         .dsl_card("ST19-11")
@@ -130,14 +129,22 @@ fn st19_11_inherited_prevents_opponent_effect_leave_by_deleting_other_puppet() {
         .game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
 
+    let accept = runner
+        .pending_selection_view()
+        .expect("inherited replacement accept prompt");
+    assert_eq!(accept.kind, SelectionKind::Replacement);
+    assert!(
+        accept.is_optional,
+        "prevention replacement must be a visible optional choice"
+    );
+    runner
+        .execute_action(0, accept.valid_action_ids[0])
+        .expect("accept inherited replacement");
+
     let view = runner
         .pending_selection_view()
         .expect("Puppet/token prevention cost prompt");
     assert_eq!(view.kind, SelectionKind::OwnField);
-    assert!(
-        runner.pending_is_optional(),
-        "prevention cost must be a visible optional choice"
-    );
     assert_eq!(
         view.valid_action_ids.len(),
         1,
@@ -159,7 +166,6 @@ fn st19_11_inherited_prevents_opponent_effect_leave_by_deleting_other_puppet() {
 }
 
 #[test]
-#[ignore = "BLOCKED: paired with inherited leave-prevention positive coverage"]
 fn st19_11_inherited_does_not_prevent_own_effect_leave() {
     let mut runner = DebugRunner::builder()
         .dsl_card("ST19-11")
