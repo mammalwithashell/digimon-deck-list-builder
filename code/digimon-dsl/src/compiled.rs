@@ -128,6 +128,7 @@ pub struct CompiledAltPath {
 pub enum CompiledAltPathKind {
     Digivolve,
     DnaDigivolve,
+    BlastDnaDigivolve,
     DigiXros,
     BurstDigivolve,
     AppFusion,
@@ -169,6 +170,7 @@ pub enum CompiledCost {
 pub struct CompiledPredicate {
     pub kind: Option<CompiledCardKind>,
     pub level_eq: Option<u8>,
+    pub level_eq_binding: Option<String>,
     pub level_lte: Option<u8>,
     pub level_gte: Option<u8>,
     pub color_is: Option<CompiledColor>,
@@ -225,6 +227,7 @@ pub struct CompiledPredicate {
     pub replacement_subject_is_mine: Option<bool>,
     pub equals: Option<Vec<CompiledBindingCompare>>,
     pub not_equals: Option<Vec<CompiledBindingCompare>>,
+    pub binding_exists: Option<String>,
     pub count_lte: Option<CompiledCountAggregate>,
     pub count_gte: Option<CompiledCountAggregate>,
     pub any_permanent: Option<Box<CompiledExistential>>,
@@ -244,6 +247,11 @@ pub struct CompiledPredicate {
     pub trashed_source_card_id_is: Option<String>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledPermanentProperty {
+    Level,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledDpConstraint {
     Literal(i32),
@@ -257,6 +265,7 @@ pub enum CompiledReplacementCause {
     OpponentEffect,
     SecurityCheck,
     Cost,
+    Overclock,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -346,6 +355,12 @@ pub enum CompiledPerSelector {
         of: CompiledPlayerRef,
         filter: Box<CompiledPredicate>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CompiledCountBound {
+    Literal(u8),
+    Formula(CompiledFormula),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -720,6 +735,7 @@ pub enum CompiledStep {
         target: CompiledBindingRef,
         source_index: CompiledBindingRef,
         cost_delta: Option<CompiledCostDelta>,
+        bind_as: Option<String>,
     },
     PlaySelectedSourcesFree {
         source_refs: String,
@@ -746,6 +762,18 @@ pub enum CompiledStep {
     PlacePermanentBottomSecurityAndCancelReplacement {
         of: CompiledPlayerRef,
         target: CompiledBindingRef,
+    },
+    PlacePermanentOnSecurity {
+        of: CompiledPlayerRef,
+        target: CompiledBindingRef,
+        position: CompiledStackPosition,
+        face_up: bool,
+    },
+    PlacePermanentOnSecurityAndHandleReplacement {
+        of: CompiledPlayerRef,
+        target: CompiledBindingRef,
+        position: CompiledStackPosition,
+        face_up: bool,
     },
     Recover {
         of: CompiledPlayerRef,
@@ -863,6 +891,11 @@ pub enum CompiledStep {
     TrashSelectedSources {
         source_refs: String,
     },
+    BindPermanentProperty {
+        from: CompiledBindingRef,
+        property: CompiledPermanentProperty,
+        bind_as: String,
+    },
     SelectReveal {
         of: CompiledPlayerRef,
         filter: CompiledPredicate,
@@ -903,7 +936,7 @@ pub enum CompiledStep {
     SelectCountCappedMulti {
         of: CompiledPlayerRef,
         zone: CompiledZone,
-        max: u8,
+        max: CompiledCountBound,
         filter: CompiledPredicate,
         bind_as: Option<String>,
         prompt: String,

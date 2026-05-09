@@ -321,9 +321,14 @@ impl Game {
             player: opponent,
             index: target_idx,
         };
+        // Track C / D consult site (2026-05-08): `CanAttackTargetDefendingPermanent`
+        // overrides `CannotAttackTarget` at attack action decode.
         if self
             .modifiers
             .has(defender, ModifierType::CannotAttackTarget)
+            && !self
+                .modifiers
+                .has(defender, ModifierType::CanAttackTargetDefendingPermanent)
         {
             return None;
         }

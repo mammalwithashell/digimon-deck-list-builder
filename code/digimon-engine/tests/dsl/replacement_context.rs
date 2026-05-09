@@ -31,6 +31,57 @@ effects:
 }
 
 #[test]
+fn replacement_cause_overclock_predicate_compiles_and_matches() {
+    let yaml = r#"
+card: TEST-OVERCLOCK-PROTECTOR
+name: Overclock Protector
+kind: digimon
+color: [yellow]
+level: 6
+cost: 11
+dp: 11000
+effects:
+  - kind: replacement
+    timing: when_would_be_deleted
+    active_when:
+      replacement_cause: overclock
+    process:
+      - cancel_replacement: {}
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).expect("yaml parses");
+    let compiled = compile(&spec).expect("replacement compiles");
+
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon_card(
+            "TEST-OVERCLOCK-PROTECTOR",
+            CardColor::Yellow,
+            &[],
+        ))
+        .start();
+    runner.register_effect(
+        "TEST-OVERCLOCK-PROTECTOR",
+        Arc::new(DslCardEffect::new(Arc::new(compiled))),
+    );
+
+    let protector = runner.place_on_field(0, "TEST-OVERCLOCK-PROTECTOR", Some(0));
+    runner
+        .game
+        .delete_permanent_with_cause(protector, ReplacementCause::Overclock);
+    assert!(
+        find_permanent(&runner, 0, "TEST-OVERCLOCK-PROTECTOR").is_some(),
+        "overclock cause predicate should cancel matching deletion"
+    );
+
+    runner
+        .game
+        .delete_permanent_with_cause(protector, ReplacementCause::OwnEffect);
+    assert!(
+        find_permanent(&runner, 0, "TEST-OVERCLOCK-PROTECTOR").is_none(),
+        "own-effect deletion must not match the overclock predicate"
+    );
+}
+
+#[test]
 fn replacement_active_when_trait_matches_replacement_subject_not_source() {
     let yaml = r#"
 card: TEST-SUBJECT-TRAIT-PROTECTOR

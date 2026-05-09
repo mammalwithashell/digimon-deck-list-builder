@@ -404,6 +404,20 @@ fn compile_formula(
     }
 }
 
+fn compile_count_bound(
+    bound: &crate::step::CountBound,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> CompiledCountBound {
+    match bound {
+        crate::step::CountBound::Literal(n) => CompiledCountBound::Literal(*n),
+        crate::step::CountBound::Formula { formula } => {
+            CompiledCountBound::Formula(compile_formula(formula, prefix, card_id, errors))
+        }
+    }
+}
+
 // ── Predicate ───────────────────────────────────────────────────────
 
 fn compile_predicate(
@@ -419,6 +433,7 @@ fn compile_predicate(
     CompiledPredicate {
         kind: p.kind.map(compile_card_kind),
         level_eq: p.level_eq,
+        level_eq_binding: p.level_eq_binding.clone(),
         level_lte: p.level_lte,
         level_gte: p.level_gte,
         level_matches_aggregate: p.level_matches_aggregate.map(|m| {
@@ -513,6 +528,7 @@ fn compile_predicate(
             .not_equals
             .as_ref()
             .map(|v| v.iter().map(compile_binding_compare).collect()),
+        binding_exists: p.binding_exists.clone(),
         count_lte: p.count_lte.as_ref().map(|c| CompiledCountAggregate {
             filter: Box::new(compile_predicate(
                 &c.filter,
@@ -624,6 +640,7 @@ fn compile_replacement_cause(
             CompiledReplacementCause::SecurityCheck
         }
         crate::predicate::ReplacementCauseSpec::Cost => CompiledReplacementCause::Cost,
+        crate::predicate::ReplacementCauseSpec::Overclock => CompiledReplacementCause::Overclock,
     }
 }
 
@@ -749,6 +766,7 @@ fn compile_alt_path_kind(k: crate::alt_path::AltPathKind) -> CompiledAltPathKind
     match k {
         S::Digivolve => CompiledAltPathKind::Digivolve,
         S::DnaDigivolve => CompiledAltPathKind::DnaDigivolve,
+        S::BlastDnaDigivolve => CompiledAltPathKind::BlastDnaDigivolve,
         S::DigiXros => CompiledAltPathKind::DigiXros,
         S::BurstDigivolve => CompiledAltPathKind::BurstDigivolve,
         S::AppFusion => CompiledAltPathKind::AppFusion,
@@ -992,6 +1010,9 @@ fn is_known_replacement_timing(value: &str) -> bool {
             | "when_would_lose_security"
             | "when_would_draw"
             | "when_would_place_in_security"
+            | "when_would_digivolve"
+            | "when_would_play"
+            | "when_would_link"
     )
 }
 
@@ -1459,6 +1480,15 @@ fn compile_step(
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
         },
+        S::BindPermanentProperty(a) => CompiledStep::BindPermanentProperty {
+            from: compile_binding_ref(&a.from),
+            property: match a.property {
+                crate::step::PermanentProperty::Level => {
+                    crate::compiled::CompiledPermanentProperty::Level
+                }
+            },
+            bind_as: a.bind_as.clone(),
+        },
         S::Hatch(a) => CompiledStep::Hatch {
             of: compile_player_ref(a.of),
         },
@@ -1490,6 +1520,7 @@ fn compile_step(
             target: compile_binding_ref(&a.target),
             source_index: compile_binding_ref(&a.source_index),
             cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
+            bind_as: a.bind_as.clone(),
         },
         S::PlaySelectedSourcesFree(a) => CompiledStep::PlaySelectedSourcesFree {
             source_refs: a.source_refs.clone(),
@@ -1531,6 +1562,20 @@ fn compile_step(
             CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement {
                 of: compile_player_ref(a.of),
                 target: compile_binding_ref(&a.target),
+            }
+        }
+        S::PlacePermanentOnSecurity(a) => CompiledStep::PlacePermanentOnSecurity {
+            of: compile_player_ref(a.of),
+            target: compile_binding_ref(&a.target),
+            position: compile_stack_position(a.position),
+            face_up: a.face_up,
+        },
+        S::PlacePermanentOnSecurityAndHandleReplacement(a) => {
+            CompiledStep::PlacePermanentOnSecurityAndHandleReplacement {
+                of: compile_player_ref(a.of),
+                target: compile_binding_ref(&a.target),
+                position: compile_stack_position(a.position),
+                face_up: a.face_up,
             }
         }
         S::Recover(a) => CompiledStep::Recover {
@@ -1759,7 +1804,7 @@ fn compile_step(
         S::SelectCountCappedMulti(a) => CompiledStep::SelectCountCappedMulti {
             of: compile_player_ref(a.of),
             zone: compile_zone(a.zone),
-            max: a.max,
+            max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
@@ -1982,7 +2027,7 @@ effects:
             .join("_examples");
         let (specs, errs) = load_dir_ok(&examples);
         assert!(errs.is_empty(), "parse errors: {errs:#?}");
-        assert_eq!(specs.len(), 21);
+        assert_eq!(specs.len(), 20);
 
         let mut failures = Vec::new();
         for spec in &specs {

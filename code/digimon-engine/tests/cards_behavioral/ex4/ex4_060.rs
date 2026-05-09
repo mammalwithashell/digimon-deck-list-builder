@@ -76,6 +76,7 @@ use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, EffectTiming, PlayerId};
 use digimon_engine::events::GameEvent;
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 /// Production YAML for EX4-060, inlined at compile time from the canonical
@@ -101,6 +102,21 @@ fn make_opp_digimon(id: &str, name: &str, level: u8, dp: i32) -> CardData {
     card.level = Some(level);
     card.dp = Some(dp);
     card
+}
+
+fn make_named_digimon(id: &str, name: &str) -> CardData {
+    let mut card = make_test_card(id, name);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(6);
+    card.dp = Some(11000);
+    card
+}
+
+fn battle_area_has_top_card(runner: &DebugRunner, player: PlayerId, card_id: &str) -> bool {
+    runner.game.players[player as usize]
+        .battle_area
+        .iter()
+        .any(|perm| perm.top_card().card_id(&runner.game.card_data) == card_id)
 }
 
 fn place_ex4_on_field(runner: &mut DebugRunner, player: PlayerId) -> PermanentHandle {
@@ -431,73 +447,157 @@ fn ex4_060_when_digivolving_both_arms_fire_independently_lv5_and_lv7() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// SECTION 4 — BLOCKED tests for omitted [All Turns] clause
+// SECTION 4 — [All Turns] leave replacement
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// BLOCKED — G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES: when EX4-060 would
-/// leave the battle area outside of own-effect cause (e.g. opp deletion
-/// effect, battle, security check), the player should be offered the
-/// chance to play 1 [BlitzGreymon] and 1 [CresGarurumon] from EX4-060's
-/// digivolution stack without paying the cost. No DSL verb / keyword
-/// variant exists today that surfaces a play-from-own-digivolution-stack
-/// option. The entire [All Turns] clause is OMITTED from the YAML.
+/// When EX4-060 would leave the battle area outside of own-effect cause,
+/// its controller plays 1 [BlitzGreymon] source and 1 [CresGarurumon]
+/// source without paying the costs, then EX4-060 is placed as bottom
+/// security face-down.
 #[test]
-#[ignore = "BLOCKED: G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (NEW) — no DSL verb / step for \
-            'play a named card from THIS permanent's digivolution cards without paying the cost'. \
-            Sibling of BT22-015's G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES. The entire \
-            [All Turns] clause is OMITTED from the YAML; no replacement-clause body installs. \
-            Test serves as the regression once a DSL `select_self_digivolution_source` + \
-            `play_from_own_digivolution_free` (or combined) verb lands."]
 fn ex4_060_all_turns_offers_play_blitz_and_cres_from_own_digivolution_on_leave() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("EX4-060 YAML loads")
+        .add_card(make_named_digimon("BLITZ", "BlitzGreymon"))
+        .add_card(make_named_digimon("CRES", "CresGarurumon"))
+        .add_card(make_named_digimon("OTHER", "OtherGreymon"))
         .memory(15)
         .start();
-    let _ = runner;
+    let ex4 = runner.place_stack(0, &["BLITZ", "CRES", "OTHER", "EX4-060"]);
+
+    runner
+        .game
+        .delete_permanent_with_cause(ex4, ReplacementCause::OpponentEffect);
+
+    let blitz_pick = runner
+        .pending_selection_view()
+        .expect("EX4-060 should first ask for a [BlitzGreymon] source");
+    assert_eq!(blitz_pick.kind, SelectionKind::Material);
+    assert_eq!(
+        blitz_pick.valid_action_ids.len(),
+        1,
+        "only the BlitzGreymon-named source should pass the first source filter"
+    );
+    runner
+        .execute_action(0, blitz_pick.valid_action_ids[0])
+        .expect("select BlitzGreymon source");
+
+    let cres_pick = runner
+        .pending_selection_view()
+        .expect("EX4-060 should then ask for a [CresGarurumon] source");
+    assert_eq!(cres_pick.kind, SelectionKind::Material);
+    assert_eq!(
+        cres_pick.valid_action_ids.len(),
+        1,
+        "only the CresGarurumon-named source should pass the second source filter"
+    );
+    runner
+        .execute_action(0, cres_pick.valid_action_ids[0])
+        .expect("select CresGarurumon source");
+
+    assert!(
+        battle_area_has_top_card(&runner, 0, "BLITZ"),
+        "selected BlitzGreymon source should be played for free"
+    );
+    assert!(
+        battle_area_has_top_card(&runner, 0, "CRES"),
+        "selected CresGarurumon source should be played for free"
+    );
+    assert!(
+        !battle_area_has_top_card(&runner, 0, "EX4-060"),
+        "the original EX4-060 should leave the battle area"
+    );
+    let bottom_security = runner
+        .game
+        .players
+        .first()
+        .and_then(|player| player.security.first())
+        .expect("EX4-060 should be placed as bottom security");
+    assert_eq!(bottom_security.card_id(&runner.game.card_data), "EX4-060");
+    assert!(
+        !runner.game.players[0]
+            .face_up_security
+            .contains(&bottom_security.card_index),
+        "EX4-060 places itself face-down at security bottom"
+    );
 }
 
-/// BLOCKED — G-PLACE-SELF-AT-SECURITY-BOTTOM: after the play-from-stack
-/// arm resolves, the leaving EX4-060 should be placed face-down at the
-/// bottom of its controller's security stack — NOT routed to the trash.
-/// No DSL verb / step exists for "place this leaving Digimon at the
-/// bottom of own security stack face down" as a self-disposition reroute.
-/// The entire [All Turns] clause is OMITTED from the YAML.
+/// After the play-from-stack arm resolves, the leaving EX4-060 is placed
+/// face-down at the bottom of its controller's security stack. Any sources
+/// left under it after the BlitzGreymon/CresGarurumon plays are trashed by
+/// the normal stack-disposition rule.
 #[test]
-#[ignore = "BLOCKED: G-PLACE-SELF-AT-SECURITY-BOTTOM (NEW) — no DSL verb / step for the \
-            self-disposition reroute 'place this leaving Digimon at the bottom of own security \
-            stack face down' on a `kind: replacement` clause whose subject IS this permanent. \
-            Sibling of the engine-side 'Zone-manipulation: security stack operations' gap in \
-            docs/RUST_ENGINE_GAPS.md. The entire [All Turns] clause is OMITTED from the YAML; \
-            test serves as the regression once a DSL `place_self_at_security_bottom: {}` step \
-            lands AND the engine substrate (face-down placement + zone reroute on Proceed \
-            replacement outcome + CannotAddSecurityByEffect modifier check) is in place."]
 fn ex4_060_all_turns_places_self_at_security_bottom_face_down_after_leave() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("EX4-060 YAML loads")
+        .add_card(make_named_digimon("BLITZ", "BlitzGreymon"))
+        .add_card(make_named_digimon("CRES", "CresGarurumon"))
+        .add_card(make_named_digimon("OTHER", "OtherGreymon"))
         .memory(15)
         .start();
-    let _ = runner;
+    let ex4 = runner.place_stack(0, &["BLITZ", "CRES", "OTHER", "EX4-060"]);
+
+    runner
+        .game
+        .delete_permanent_with_cause(ex4, ReplacementCause::OpponentEffect);
+    while let Some(view) = runner.pending_selection_view() {
+        runner
+            .execute_action(0, view.valid_action_ids[0])
+            .expect("choose required EX4-060 source");
+    }
+
+    let bottom_security = runner
+        .game
+        .players
+        .first()
+        .and_then(|player| player.security.first())
+        .expect("EX4-060 should be placed as bottom security");
+    assert_eq!(bottom_security.card_id(&runner.game.card_data), "EX4-060");
+    assert!(
+        !runner.game.players[0]
+            .face_up_security
+            .contains(&bottom_security.card_index),
+        "EX4-060 should be face-down in security"
+    );
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "OTHER"),
+        "unplayed leftover sources should be trashed when EX4-060 leaves"
+    );
 }
 
-/// BLOCKED — G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES + G-PLACE-SELF-AT-SECURITY-BOTTOM:
-/// when EX4-060 would leave by ITS controller's OWN effect, the [All
-/// Turns] clause should NOT fire (DCGO's `!IsByEffect(IsOwnerEffect)`
-/// gate at line 260). Today the entire clause is OMITTED so this is
-/// trivially satisfied — but pinning the negative case as a test helps
-/// regression once the gaps close: when own-effect causes the leave,
-/// the leaving Digimon should go to trash as normal, NOT to security bottom.
+/// When EX4-060 would leave by its controller's own effect, the [All Turns]
+/// clause must not fire (DCGO's `!IsByEffect(IsOwnerEffect)` gate). The
+/// leaving Digimon goes to trash normally, not to security bottom.
 #[test]
-#[ignore = "BLOCKED: G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES + G-PLACE-SELF-AT-SECURITY-BOTTOM — \
-            negative case: on own-effect-caused leave the [All Turns] clause must NOT fire. \
-            The entire clause is OMITTED until both gaps close; this test pins the \
-            'cause = own_effect' branch for regression once the clause is authored."]
 fn ex4_060_all_turns_does_not_fire_on_own_effect_leave() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("EX4-060 YAML loads")
+        .add_card(make_named_digimon("BLITZ", "BlitzGreymon"))
+        .add_card(make_named_digimon("CRES", "CresGarurumon"))
         .memory(15)
         .start();
-    let _ = runner;
+    let ex4 = runner.place_stack(0, &["BLITZ", "CRES", "EX4-060"]);
+
+    runner
+        .game
+        .delete_permanent_with_cause(ex4, ReplacementCause::OwnEffect);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "own-effect leave must not install the EX4-060 source-play replacement"
+    );
+    assert!(
+        runner.game.players[0].security.is_empty(),
+        "own-effect leave must not place EX4-060 into security"
+    );
+    assert!(
+        !battle_area_has_top_card(&runner, 0, "EX4-060"),
+        "own-effect leave still deletes EX4-060 normally"
+    );
 }

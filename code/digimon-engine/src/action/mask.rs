@@ -194,10 +194,16 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     };
                     // §4.7a CANNOT_ATTACK_TARGET — suppress this target if
                     // it carries the modifier. Per-attacker discriminant
-                    // from Python is §4.7x.
+                    // from Python is §4.7x. Track C / D (2026-05-08):
+                    // `CanAttackTargetDefendingPermanent` overrides this
+                    // gate so the affirmative form remains visible to
+                    // both mask emission and the action decode path.
                     if game
                         .modifiers
                         .has(t_handle, ModifierType::CannotAttackTarget)
+                        && !game
+                            .modifiers
+                            .has(t_handle, ModifierType::CanAttackTargetDefendingPermanent)
                     {
                         continue;
                     }
@@ -564,10 +570,17 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     };
                     // §4.7a CANNOT_ATTACK_TARGET — suppress attacks against
                     // a target carrying the modifier, regardless of which
-                    // keyword granted the attack.
+                    // keyword granted the attack. Track C / D (2026-05-08):
+                    // `CanAttackTargetDefendingPermanent` is the
+                    // affirmative override; when set, the mask must
+                    // continue emitting the bit so the granted attack
+                    // remains usable.
                     if game
                         .modifiers
                         .has(t_handle, ModifierType::CannotAttackTarget)
+                        && !game
+                            .modifiers
+                            .has(t_handle, ModifierType::CanAttackTargetDefendingPermanent)
                     {
                         continue;
                     }
@@ -691,6 +704,9 @@ pub(crate) fn option_use_requirement_or_color_available(
     let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
         return false;
     };
+    if effects.is_empty() {
+        return false;
+    }
     let ctx = EffectReadContext::new(game, card.handle(), None, player_id);
     effects.iter().any(|effect| {
         if !matches!(
@@ -716,8 +732,11 @@ pub(crate) fn option_has_active_main_effect(
 ) -> bool {
     let card_id = card.card_id(&game.card_data);
     let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
-        return false;
+        return true;
     };
+    if effects.is_empty() {
+        return true;
+    }
     let ctx = EffectReadContext::new_with_source_kind(
         game,
         card.handle(),
@@ -729,7 +748,10 @@ pub(crate) fn option_has_active_main_effect(
         if effect.delay_trigger.is_some() {
             return true;
         }
-        if effect.timing != EffectTiming::OptionMain {
+        if !matches!(
+            effect.timing,
+            EffectTiming::OptionMain | EffectTiming::MainFromHand
+        ) {
             return false;
         }
         effect
@@ -873,9 +895,16 @@ pub(crate) fn effect_attack_target_action_ids(
                 player: opponent,
                 index: j as u8,
             };
+            // Track C / D consult site (2026-05-08):
+            // `CanAttackTargetDefendingPermanent` is the affirmative
+            // override of `CannotAttackTarget` at the granted-attack
+            // mask emission site too.
             if game
                 .modifiers
                 .has(target_handle, ModifierType::CannotAttackTarget)
+                && !game
+                    .modifiers
+                    .has(target_handle, ModifierType::CanAttackTargetDefendingPermanent)
             {
                 continue;
             }

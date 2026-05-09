@@ -67,7 +67,8 @@ fn permanent_activation_blocked_for_timing(
     handle: PermanentHandle,
     timing: EffectTiming,
 ) -> bool {
-    match timing {
+    // ── Per-timing player-scoped/permanent-scoped category gates ──
+    let category_block = match timing {
         EffectTiming::WhenDigivolving => game
             .modifiers
             .has(handle, ModifierType::CannotActivateWhenDigivolvingEffects),
@@ -75,7 +76,24 @@ fn permanent_activation_blocked_for_timing(
             .modifiers
             .has(handle, ModifierType::CannotActivateWhenAttackingEffects),
         _ => false,
+    };
+    if category_block {
+        return true;
     }
+
+    // ── DisableEffect timing-suppression ──
+    // Track C taxonomy (2026-05-06): a permanent-scoped
+    // `ModifierType::DisableEffect` entry whose `disable_effect_timing`
+    // matches the firing timing suppresses that timing only on this
+    // permanent. Other timings on the same permanent fire normally.
+    // Mirrors DCGO `DisableEffectClass.cs`. Used by the TS Olympos
+    // timing-suppression slice (see RUST_ENGINE_API.md "Modifier
+    // consult-site checklist").
+    if game.modifiers.is_timing_disabled(handle, timing) {
+        return true;
+    }
+
+    false
 }
 
 impl Game {

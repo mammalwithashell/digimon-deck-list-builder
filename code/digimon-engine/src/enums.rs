@@ -270,6 +270,12 @@ pub enum EffectTiming {
     WhenWouldLoseSecurity,
     WhenWouldDraw,
     WhenWouldPlaceInSecurity,
+    /// Fires before a permanent digivolves into another card.
+    WhenPermanentWouldDigivolve,
+    /// Fires before a permanent enters play.
+    WhenPermanentWouldPlay,
+    /// Fires before a Plug-In/Link option attaches to a carrier.
+    WhenWouldLink,
     // Reserved — Phase 9 wires dispatch.
     WhenWouldAttack,
     WhenWouldBeAttackTarget,
@@ -589,17 +595,171 @@ pub enum ModifierType {
     CannotTrashOpponentSecurity,
     CannotReduceOpponentSecurity,
     IgnoreColorRequirement,
+
+    // ── Track C taxonomy completion (2026-05-06) ─────────────────────────
+    // Cross-track foundation publishes these symbols early so Tracks B / D /
+    // G / H / I / J can read them as they wire enforcement at their consult
+    // sites. See `docs/RUST_ENGINE_API.md` §"Modifier consult-site checklist"
+    // for the per-variant mutation paths.
+
+    // Combat / attack-flow modifiers
+    /// Player-scoped: this player's Digimon may attack the opposing player
+    /// but not opposing Digimon. Companion to `CannotAttackPlayer`.
+    /// Consult site: `combat::begin_attack` target legality (Track D).
+    MayAttackPlayerOnly,
+    /// Permanent-scoped: blocks the breeding-area → battle move and any
+    /// effect-driven inter-zone move on this Digimon. Distinct from
+    /// `CannotSuspend` (which only blocks orientation flips).
+    /// Consult site: `move_from_breeding`, effect-driven move helpers.
+    CannotMove,
+    /// Permanent-scoped: this attacker cannot have its declared target
+    /// switched mid-attack (Block / Raid / Counter retarget all skip).
+    /// Consult site: `combat::redirect_attack_target` (Track D).
+    CannotSwitchAttackTarget,
+    /// Permanent-scoped: this defender cannot be redirected TO as an
+    /// attack target by Block / Raid / retarget rider. Consult site:
+    /// retarget candidate filter in `try_enter_block` and the Raid post-
+    /// block rider (Track D).
+    CannotBeRedirectedAsAttackTarget,
+    /// Permanent-scoped affirmative inverse of `CannotAttackTarget` —
+    /// "this Digimon CAN attack the otherwise-illegal defending permanent
+    /// (e.g. an unsuspended Digimon)". Stack-overrides the negative.
+    /// Consult site: `combat::is_legal_attack_target` (Track D).
+    CanAttackTargetDefendingPermanent,
+
+    // Memory / security gates
+    /// Permanent-scoped: while this permanent is on the field, the
+    /// controller's effects can't add memory (printed-text "your effects
+    /// can't add memory" anchored to a specific Digimon). Distinct from
+    /// player-scoped `CannotGainMemoryByEffect`.
+    /// Consult site: `Game::adjust_memory_by_effect`.
+    CannotAddMemory,
+    /// Permanent-scoped: while this permanent is on the field, the
+    /// controller's effects can't add security cards. Distinct from
+    /// player-scoped `CannotAddSecurityByEffect`.
+    /// Consult site: `Game::add_security_by_effect`.
+    CannotAddSecurity,
+    /// Player-scoped or permanent-scoped: replaces the end-of-turn
+    /// "memory clamps to zero" rule with a different floor (e.g.
+    /// "at end of turn, set memory to 1 if it would be 0"). The
+    /// `value` field carries the new floor as a signed delta from
+    /// the standard rule (default rule: clamp to 0).
+    /// Consult site: `Game::end_turn` memory adjustment (Track D / E).
+    ChangeEndTurnMinMemory,
+
+    // Narrow protection (printed-text exact)
+    /// Permanent-scoped: this Digimon's DP cannot be reduced by negative
+    /// `ChangeDp` modifiers from any (or filtered) cause. Narrower than
+    /// `CannotBeAffected` — only DP-minus is blocked. Honors
+    /// `effect_immunity_filter` for opponent-only scope.
+    /// Consult site: `Permanent::dp_modifier_apply` / DP calculation.
+    ImmuneFromDPMinus,
+    /// Permanent-scoped: this Digimon's digivolution-stack sources cannot
+    /// be trashed (peeled) by effects. Distinct from `CannotBeDestroyed`,
+    /// which protects the top card. Consult site: source-trash mutation
+    /// (the inherited stack-peel path).
+    ImmuneFromStackTrashing,
+
+    // Effect-suppression
+    /// Permanent-scoped: suppresses dispatch of one specific timing's
+    /// observers on this permanent. The suppressed timing parameter is
+    /// not encoded in the variant (which would explode the enum); it is
+    /// stored on `ModifierEntry::disable_effect_timing` instead. Use
+    /// `ModifierEntry::disable_effect(...)` constructor and read the
+    /// timing via the entry. Consult site: Track A's observer dispatch
+    /// before firing per-permanent observers.
+    DisableEffect,
+
+    // Identity / treat-as
+    /// Permanent-scoped: this Tamer permanent is treated as a Digimon
+    /// for predicates that gate on "Digimon" (e.g. attack-target legality,
+    /// archetype counts). Consult site: `Permanent::is_digimon_for_rules`
+    /// helper used by attack legality and archetype predicates.
+    TreatAsDigimon,
+
+    // ── DP / cost / metadata scaling (Track H aura territory) ────────────
+    // Variants published here so the aura system can deliver them; many
+    // overlap with existing `ChangeDp` / `ChangeBaseDp` / `ChangePlayCost`
+    // but have narrower printed-text semantics that auras need to express.
+
+    /// Like `ChangeDp` but applies to the topmost card's printed DP
+    /// rather than the live permanent's DP — used by "this card's DP
+    /// becomes X" effects that ignore stack DP.
+    ChangeCardDP,
+    /// Like `ChangeBaseDp` but applies to the bottom-of-stack origin
+    /// (the digi-egg) — used by hatching-DP modifiers.
+    ChangeOriginDP,
+    /// Modifies the printed Security Attack value (`<Security Attack +N>`
+    /// keyword count adjustment from external sources).
+    ChangeSAttack,
+    /// Modifies the link cost when this card is the host. Track Link's
+    /// territory; published here for the aura system.
+    ChangeLinkCost,
+    /// Modifies the maximum number of linked cards on this host.
+    ChangeLinkMax,
+    /// Overrides the live permanent's level for predicates and digivolution
+    /// requirements. Distinct from `ChangeLevel` which adjusts level by
+    /// a delta on the printed value.
+    ChangePermanentLevel,
+    /// Adds or removes printed traits on this permanent — printed-text
+    /// "this Digimon also has the [TRAIT] trait" effects.
+    ChangeTraits,
+    /// Treats this permanent as if its top card had a different printed
+    /// name — used by "this Digimon is also named X" effects.
+    ChangeBaseCardName,
+    /// Treats this permanent as if its top card had a different printed
+    /// color — distinct from `AddColor` which appends rather than replaces.
+    ChangeBaseCardColor,
+    /// Adjusts the level used when this card is being assembled (DigiXros
+    /// material-level computation). Track Xros's territory.
+    ChangeCardLevelForAssembly,
+    /// Adds names this card is treated as for DigiXros material matching
+    /// (printed-text "treat this card as named X for DigiXros").
+    ChangeCardNamesForDigiXros,
 }
 
 /// When a modifier expires.
+///
+/// Lifecycle taxonomy used by the modifier registry. The expiry decides
+/// when `ModifierRegistry::expire_*` removes the entry, and (for
+/// `UntilCondition`) when the future continuous controller toggles it
+/// active/inactive.
+///
+/// Variants:
+/// - `Permanent` — never expires until the source is removed.
+/// - `EndOfTurn` — removed at every turn-end regardless of whose turn.
+/// - `EndOfOpponentsTurn` — removed at the end of an opponent's turn
+///   (i.e. `ending_player != source_player`).
+/// - `EndOfYourTurn` — removed at the end of the source player's own
+///   turn (i.e. `ending_player == source_player`). Mirror of
+///   `EndOfOpponentsTurn`. Use this for "until the end of your next turn"
+///   effects scripted from the source player's POV.
+/// - `EndOfAttack` — removed at the end of the current attack flow.
+/// - `EndOfBattle` — removed at the end of the current battle resolution.
+/// - `UntilLeaveField` — removed when the source permanent leaves the
+///   battle area (consumes the leave-field event).
+/// - `UntilCondition` — re-evaluated by the continuous controller; the
+///   modifier is active while a per-entry boolean predicate holds. The
+///   predicate itself lives on `ModifierEntry::condition_predicate` so
+///   the `Expiry` enum stays `Copy + Eq + Hash`. Until the controller
+///   wires up, entries with this expiry are stored but not toggled —
+///   document the predicate at the install site so consumers know what
+///   shape Track J's evaluator should provide.
+/// - `OnceUsed(u32)` — the value is the limit; the entry tracks
+///   `uses_consumed` and is removed once `uses_consumed >= limit`. Use
+///   `ModifierRegistry::consume_use` from the consult site to advance
+///   the counter.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Expiry {
     Permanent,
     EndOfTurn,
     EndOfOpponentsTurn,
+    EndOfYourTurn,
     EndOfAttack,
     EndOfBattle,
     UntilLeaveField,
+    UntilCondition,
+    OnceUsed(u32),
 }
 
 /// How first-turn draw skip works.

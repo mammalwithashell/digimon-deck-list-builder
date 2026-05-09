@@ -10,6 +10,7 @@
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, Keyword};
+use digimon_engine::replacement::ReplacementCause;
 
 fn with_keyword(id: &str, dp: i32, keywords: Vec<Keyword>) -> CardData {
     CardData {
@@ -41,28 +42,29 @@ fn barrier_synchronous_process_unchanged() {
     use digimon_engine::action::space::REPLACEMENT_ACCEPT;
     let mut r = DebugRunner::builder()
         .add_card(with_keyword("BARRIER-D", 3000, vec![Keyword::Barrier]))
-        .add_card(make_test_card("FILLER", "FILLER"))
-        .deck(0, &["FILLER"; 5])
+        .add_card(make_test_card("SEC", "SEC"))
+        .security(0, &["SEC", "SEC"])
         .start();
     let b = r.place_on_field(0, "BARRIER-D", None);
-    let deck_size_before = r.game.players[0].deck.len();
+    let security_size_before = r.game.players[0].security.len();
 
-    r.game.delete_permanent_with_effects(b);
+    r.game
+        .delete_permanent_with_cause(b, ReplacementCause::Battle);
     assert!(r.game.pending_selection.is_some());
     r.game
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("accept Barrier");
 
-    // Barrier: trash top of deck, cancel deletion.
+    // Barrier: trash top of security, cancel deletion.
     assert_eq!(
         r.game.players[0].battle_area.len(),
         1,
         "Barrier preserved digimon"
     );
     assert_eq!(
-        r.game.players[0].deck.len(),
-        deck_size_before - 1,
-        "Barrier trashed top of deck"
+        r.game.players[0].security.len(),
+        security_size_before - 1,
+        "Barrier trashed top of security"
     );
     assert!(
         r.game.parked_replacement_outcome_for_test().is_none(),

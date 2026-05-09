@@ -56,6 +56,9 @@ use crate::selection::{
 pub(crate) enum CounterCandidate {
     /// Blast-digivolve from `hand_index` onto `field_index`.
     Blast { hand_index: u8, field_index: u8 },
+    /// Blast DNA digivolve from `hand_index`, first selecting a field
+    /// material at `field_index`, then selecting the matching hand material.
+    BlastDna { hand_index: u8, field_index: u8 },
     /// Play the Option at `hand_index` as a Counter Option (normal cost).
     HandOption { hand_index: u8 },
     /// Activate the Counter ability on battle-area permanent at
@@ -182,14 +185,33 @@ pub enum AttackResult {
 
 impl Game {
     /// Compute a permanent's effective DP (base + modifier sum).
+    ///
+    /// Track C / D consult site (2026-05-08): if the target carries any
+    /// `ModifierType::ImmuneFromDPMinus` entry, negative `ChangeDp`
+    /// modifiers are filtered out before summing — the protection
+    /// narrows to DP-minus only, leaving positive `ChangeDp` and the
+    /// dynamic aura bonus untouched. `effect_immunity_filter` on the
+    /// `ImmuneFromDPMinus` entry is reserved for a future refinement
+    /// (opponent-only / source-kind filtering of the protected delta);
+    /// the unfiltered path is what the published variant currently
+    /// promises.
     pub fn effective_dp(&self, handle: PermanentHandle) -> Option<i32> {
         let perm = self
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)?;
         let base = perm.base_dp(&self.card_data)?;
-        let bonus =
-            self.modifiers.sum(handle, ModifierType::ChangeDp) + self.dynamic_dp_aura_bonus(handle);
+        let immune_to_dp_minus = self
+            .modifiers
+            .has(handle, ModifierType::ImmuneFromDPMinus);
+        let change_dp_sum: i32 = self
+            .modifiers
+            .get(handle, ModifierType::ChangeDp)
+            .iter()
+            .filter(|entry| !(immune_to_dp_minus && entry.value < 0))
+            .map(|entry| entry.value)
+            .sum();
+        let bonus = change_dp_sum + self.dynamic_dp_aura_bonus(handle);
         Some(base + bonus)
     }
 
@@ -401,10 +423,22 @@ impl Game {
             return AttackResult::Invalid;
         }
         // Target validation (Digimon must be a Digimon on field; Player target
-        // is legal unless the attacker is under a CannotAttackPlayer gate).
+        // is legal unless the attacker is under a CannotAttackPlayer gate;
+        // Digimon target is illegal when the attacker's controller is under a
+        // player-scoped MayAttackPlayerOnly gate).
         match target {
             AttackTarget::Digimon(d) => {
                 if !self.handle_valid(d) {
+                    return AttackResult::Invalid;
+                }
+                // Track C: `MayAttackPlayerOnly` (player-scoped) restricts the
+                // attacker's controller to attacking the opposing player only.
+                // Companion to permanent-scoped `CannotAttackPlayer`; reject
+                // Digimon targets when the modifier is active.
+                if self
+                    .modifiers
+                    .player_has(attacker.player, ModifierType::MayAttackPlayerOnly)
+                {
                     return AttackResult::Invalid;
                 }
             }
@@ -824,6 +858,30 @@ impl Game {
             return;
         }
         let attacker = pa.attacker;
+
+        // Track C: `CannotSwitchAttackTarget` on the attacker locks the
+        // target — silently drop the substitution. Covers both the
+        // dispatcher path (replacement-driven `Substituted` outcome) and
+        // the script-facing `EffectContext::redirect_attack` helper.
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CannotSwitchAttackTarget)
+        {
+            return;
+        }
+        // Track C: `CannotBeRedirectedAsAttackTarget` on the candidate new
+        // target prevents being chosen as the redirected target via this
+        // unified path. Player targets bypass — the modifier is permanent-
+        // scoped and only applies to Digimon-as-target.
+        if let AttackTarget::Digimon(h) = new_target {
+            if self
+                .modifiers
+                .has(h, ModifierType::CannotBeRedirectedAsAttackTarget)
+            {
+                return;
+            }
+        }
+
         pa.effective_target = new_target;
 
         self.fire_attack_target_change_observers(attacker);
@@ -1103,24 +1161,40 @@ impl Game {
                 continue;
             };
 
-            // Blast digivolve (existing path).
+            // Blast digivolve / Blast DNA digivolve. DCGO models both at
+            // OnCounterTiming; Blast DNA first selects a field material,
+            // then a matching hand material.
             let has_blast = effects.iter().any(|e| e.blast_digivolve);
             if has_blast {
                 // Re-borrow hand with fresh index; effects_for_card only
                 // saw a local view.
                 let card = &self.player(defender_player).hand[h_idx];
-                for f_idx in 0..field_len {
-                    let perm = &self.player(defender_player).battle_area[f_idx];
-                    if !perm.is_digimon(&self.card_data) {
-                        continue;
+                if !self.blast_dna_costs_for_card(card).is_empty() {
+                    for f_idx in 0..field_len {
+                        if !self
+                            .blast_dna_hand_material_actions(defender_player, h_idx, f_idx)
+                            .is_empty()
+                        {
+                            candidates.push(CounterCandidate::BlastDna {
+                                hand_index: h_idx as u8,
+                                field_index: f_idx as u8,
+                            });
+                        }
                     }
-                    if !self.can_digivolve(card, perm) {
-                        continue;
+                } else {
+                    for f_idx in 0..field_len {
+                        let perm = &self.player(defender_player).battle_area[f_idx];
+                        if !perm.is_digimon(&self.card_data) {
+                            continue;
+                        }
+                        if !self.can_digivolve(card, perm) {
+                            continue;
+                        }
+                        candidates.push(CounterCandidate::Blast {
+                            hand_index: h_idx as u8,
+                            field_index: f_idx as u8,
+                        });
                     }
-                    candidates.push(CounterCandidate::Blast {
-                        hand_index: h_idx as u8,
-                        field_index: f_idx as u8,
-                    });
                 }
             }
 
@@ -1190,6 +1264,10 @@ impl Game {
                 CounterCandidate::Blast {
                     hand_index,
                     field_index,
+                }
+                | CounterCandidate::BlastDna {
+                    hand_index,
+                    field_index,
                 } => encode_digivolve(*hand_index as u16, *field_index as u16),
                 CounterCandidate::HandOption { hand_index } => PLAY_HAND_START + *hand_index as u16,
                 CounterCandidate::FieldAbility { perm_index } => {
@@ -1239,6 +1317,10 @@ impl Game {
                     game.resolve_counter_selection(defender_player, cand);
                 }
 
+                if game.pending_selection.is_some() {
+                    return;
+                }
+
                 // WhenDigivolving / field-counter bodies may have deleted
                 // the attacker. If so skip Block + Battle; jump to
                 // Cleanup (mirrors DCGO AttackProcess.cs:301).
@@ -1275,6 +1357,16 @@ impl Game {
                 field_index,
             } => {
                 self.execute_blast_digivolve(defender, hand_index as usize, field_index as usize);
+            }
+            CounterCandidate::BlastDna {
+                hand_index,
+                field_index,
+            } => {
+                self.install_blast_dna_hand_selection(
+                    defender,
+                    hand_index as usize,
+                    field_index as usize,
+                );
             }
             CounterCandidate::HandOption { hand_index } => {
                 // Route through Phase 8's Option pipeline with the
@@ -1340,6 +1432,218 @@ impl Game {
         self.drain_effect_queue();
     }
 
+    fn blast_dna_hand_material_actions(
+        &self,
+        defender: PlayerId,
+        evo_hand_index: usize,
+        field_index: usize,
+    ) -> Vec<u16> {
+        use crate::action::space::PLAY_HAND_START;
+        use crate::dna_digivolve::matching_dna_cost;
+        use crate::permanent::Permanent;
+
+        let player = self.player(defender);
+        if evo_hand_index >= player.hand.len() || field_index >= player.battle_area.len() {
+            return Vec::new();
+        }
+        let evo_card = &player.hand[evo_hand_index];
+        let dna_costs = self.blast_dna_costs_for_card(evo_card);
+        if dna_costs.is_empty() {
+            return Vec::new();
+        }
+        let field_perm = &player.battle_area[field_index];
+        if !field_perm.is_digimon(&self.card_data) {
+            return Vec::new();
+        }
+
+        let mut out = Vec::new();
+        for hand_index in 0..player.hand.len() {
+            if hand_index == evo_hand_index {
+                continue;
+            }
+            let hand_card = &player.hand[hand_index];
+            if hand_card.card_kind(&self.card_data) != crate::enums::CardKind::Digimon {
+                continue;
+            }
+            let hand_perm = Permanent::new(hand_card.clone(), self.turn_count);
+            let mut evo_meta = self.card_data[evo_card.data_index].clone();
+            evo_meta.dna_costs = dna_costs.clone();
+            if matching_dna_cost(&evo_meta, field_perm, &hand_perm, &self.card_data).is_some() {
+                out.push(PLAY_HAND_START + hand_index as u16);
+            }
+        }
+        out
+    }
+
+    fn blast_dna_costs_for_card(
+        &self,
+        card: &crate::card_source::CardSource,
+    ) -> Vec<crate::card_data::DnaCost> {
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            let card_id = card.card_id(&self.card_data);
+            let dsl_costs: Vec<_> = self
+                .alt_path_registry
+                .get(card_id)
+                .into_iter()
+                .flat_map(|paths| paths.iter())
+                .filter(|path| {
+                    matches!(
+                        path.kind,
+                        digimon_dsl::compiled::CompiledAltPathKind::BlastDnaDigivolve
+                    )
+                })
+                .filter_map(crate::dsl_bridge::compiled_alt_path_dna_cost)
+                .collect();
+            if !dsl_costs.is_empty() {
+                return dsl_costs;
+            }
+        }
+
+        self.card_data[card.data_index].dna_costs.clone()
+    }
+
+    fn install_blast_dna_hand_selection(
+        &mut self,
+        defender: PlayerId,
+        evo_hand_index: usize,
+        field_index: usize,
+    ) {
+        let valid_action_ids =
+            self.blast_dna_hand_material_actions(defender, evo_hand_index, field_index);
+        if valid_action_ids.is_empty() {
+            return;
+        }
+        let source_card = self.player(defender).hand[evo_hand_index].handle();
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::SelectHand;
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Hand,
+            selecting_player: defender,
+            previous_phase,
+            valid_action_ids,
+            is_optional: false,
+            prompt: "Select hand DNA material".to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: Some(PermanentHandle {
+                player: defender,
+                index: field_index as u8,
+            }),
+            source_kind: crate::enums::EffectSourceKind::Digimon,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                use crate::action::space::PLAY_HAND_START;
+
+                let Some(hand_material_index) = action_id.checked_sub(PLAY_HAND_START) else {
+                    return;
+                };
+                game.execute_blast_dna_digivolve(
+                    defender,
+                    evo_hand_index,
+                    field_index,
+                    hand_material_index as usize,
+                );
+
+                if game.pending_selection.is_some() {
+                    return;
+                }
+
+                let next_state = match game.pending_attack.as_ref() {
+                    Some(pa) if game.handle_valid(pa.attacker) => AttackState::BlockOpen,
+                    Some(_) => AttackState::Cleanup,
+                    None => return,
+                };
+                game.transition_attack_state(next_state);
+                game.advance_pending_attack();
+            }),
+            on_decline: None,
+        });
+    }
+
+    fn execute_blast_dna_digivolve(
+        &mut self,
+        defender: PlayerId,
+        evo_hand_index: usize,
+        field_index: usize,
+        hand_material_index: usize,
+    ) -> Option<PermanentHandle> {
+        use crate::dna_digivolve::get_dna_stacking_order;
+        use crate::permanent::Permanent;
+
+        let player = self.player(defender);
+        if evo_hand_index >= player.hand.len()
+            || hand_material_index >= player.hand.len()
+            || evo_hand_index == hand_material_index
+            || field_index >= player.battle_area.len()
+        {
+            return None;
+        }
+
+        let dna_costs = self.blast_dna_costs_for_card(&player.hand[evo_hand_index]);
+        if dna_costs.is_empty() {
+            return None;
+        }
+        let mut evo_meta = self.card_data[player.hand[evo_hand_index].data_index].clone();
+        evo_meta.dna_costs = dna_costs;
+        let field_perm = &player.battle_area[field_index];
+        let hand_perm = Permanent::new(player.hand[hand_material_index].clone(), self.turn_count);
+        let (field_is_top, _) =
+            get_dna_stacking_order(&evo_meta, field_perm, &hand_perm, &self.card_data)?;
+
+        let hand_material = self.player_mut(defender).hand.remove(hand_material_index);
+        let evo_index_after_material = if hand_material_index < evo_hand_index {
+            evo_hand_index.saturating_sub(1)
+        } else {
+            evo_hand_index
+        };
+        if evo_index_after_material >= self.player(defender).hand.len() {
+            self.player_mut(defender)
+                .hand
+                .insert(hand_material_index, hand_material);
+            return None;
+        }
+
+        let temp_index = self.player(defender).battle_area.len();
+        let turn = self.turn_count;
+        self.player_mut(defender)
+            .battle_area
+            .push(Permanent::new(hand_material, turn));
+
+        let field_handle = PermanentHandle {
+            player: defender,
+            index: field_index as u8,
+        };
+        let hand_handle = PermanentHandle {
+            player: defender,
+            index: temp_index as u8,
+        };
+        let (target_a, target_b) = if field_is_top {
+            (field_handle, hand_handle)
+        } else {
+            (hand_handle, field_handle)
+        };
+
+        let merged = self.dna_digivolve_inner(
+            target_a,
+            target_b,
+            defender,
+            evo_index_after_material,
+            0,
+            false,
+            false,
+        );
+        if merged.is_none() {
+            let maybe_temp = self.player_mut(defender).battle_area.pop();
+            if let Some(temp) = maybe_temp {
+                if let Some(card) = temp.card_sources.into_iter().next() {
+                    let insert_at = hand_material_index.min(self.player(defender).hand.len());
+                    self.player_mut(defender).hand.insert(insert_at, card);
+                }
+            }
+        }
+        merged
+    }
+
     /// Scan the defender's battle area for unsuspended Digimon with the
     /// Blocker keyword (modifier-granted or native — native/static parsing
     /// still pending §4.3b/§2.1b; only granted Blocker keywords are
@@ -1361,6 +1665,17 @@ impl Game {
             AttackTarget::Player(pid) => pid,
         };
         let attacker = pa.attacker;
+
+        // Track C: `CannotSwitchAttackTarget` on the attacker locks the
+        // declared target — Block (and any redirect path that routes
+        // through here) is suppressed. Mirrors BT24-062 MasterBlimpmon's
+        // "[Your Turn] This Digimon's attack target can't change."
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CannotSwitchAttackTarget)
+        {
+            return false;
+        }
 
         // Self-block is not allowed — attacker cannot block their own
         // attack. Also rules out the edge case where attacker and blocker
@@ -1398,6 +1713,18 @@ impl Game {
             // every opponent Digimon to "has Blocker" but does NOT
             // override a printed/modifier `CannotBlock` gate.
             if self.modifiers.has(h, ModifierType::CannotBlock) {
+                continue;
+            }
+            // Track C: `CannotBeRedirectedAsAttackTarget` on a candidate
+            // blocker prevents it from becoming the new attack target via
+            // the Block redirect path. Distinct from `CannotBlock`
+            // (which forbids declaring a block at all) — this modifier
+            // only protects the candidate from being chosen AS the new
+            // target, leaving its blocker semantics untouched.
+            if self
+                .modifiers
+                .has(h, ModifierType::CannotBeRedirectedAsAttackTarget)
+            {
                 continue;
             }
             // Blocker required UNLESS the attacker has Collision, which
@@ -1545,6 +1872,19 @@ impl Game {
         if !self.has_keyword(attacker, Keyword::Raid) {
             return RaidRetargetOutcome::Proceed;
         }
+        // Track C: `CannotSwitchAttackTarget` on the attacker suppresses
+        // Raid retarget. The attack proceeds with its (now-invalid)
+        // effective_target — `resolve_pending_battle` treats a deleted
+        // defender as a clean attacker-wins, matching the no-Raid path.
+        // Without this gate the engine would still install the mandatory
+        // retarget selection, then `apply_attack_target_substitution`
+        // would silently no-op when the user picks — confusing UX.
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CannotSwitchAttackTarget)
+        {
+            return RaidRetargetOutcome::Proceed;
+        }
 
         let candidates = self.raid_retarget_candidates(attacker);
         if candidates.is_empty() {
@@ -1568,6 +1908,10 @@ impl Game {
     /// - Must be in `OptionState::Standard` (excludes Delayed/Training/
     ///   Linked option permanents).
     /// - Must NOT carry `ModifierType::CannotAttackTarget` (Phase 6).
+    /// - Must NOT carry `ModifierType::CannotBeRedirectedAsAttackTarget`
+    ///   (Track C / 2026-05-07): a candidate protected from being
+    ///   chosen as the redirected target is filtered out before the
+    ///   selection installs, mirroring the Block candidate filter.
     ///
     /// Returns permanent indices on the opposing side (same ordering
     /// as battle_area).
@@ -1593,9 +1937,24 @@ impl Game {
                 player: opp_id,
                 index: j as u8,
             };
+            // Track C / D consult site (2026-05-08):
+            // `CanAttackTargetDefendingPermanent` is the affirmative
+            // override of `CannotAttackTarget` — when both are present
+            // on a candidate, the affirmative wins ("this Digimon CAN
+            // attack the otherwise-illegal target"). Read at every
+            // `CannotAttackTarget` consult site.
             if self
                 .modifiers
                 .has(t_handle, ModifierType::CannotAttackTarget)
+                && !self
+                    .modifiers
+                    .has(t_handle, ModifierType::CanAttackTargetDefendingPermanent)
+            {
+                continue;
+            }
+            if self
+                .modifiers
+                .has(t_handle, ModifierType::CannotBeRedirectedAsAttackTarget)
             {
                 continue;
             }
@@ -1631,9 +1990,21 @@ impl Game {
                 player: opp_id,
                 index: j as u8,
             };
+            // Track C / D consult site (2026-05-08):
+            // `CanAttackTargetDefendingPermanent` overrides
+            // `CannotAttackTarget` in the Raid fallback pass too.
             if self
                 .modifiers
                 .has(t_handle, ModifierType::CannotAttackTarget)
+                && !self
+                    .modifiers
+                    .has(t_handle, ModifierType::CanAttackTargetDefendingPermanent)
+            {
+                continue;
+            }
+            if self
+                .modifiers
+                .has(t_handle, ModifierType::CannotBeRedirectedAsAttackTarget)
             {
                 continue;
             }
@@ -1971,7 +2342,26 @@ impl Game {
                             return None;
                         }
                     }
-                    self.set_security_phase(SecurityPhase::OnLoseSecurityDrain);
+                    self.set_security_phase(SecurityPhase::WhenWouldLoseSecurity);
+                }
+                SecurityPhase::WhenWouldLoseSecurity => {
+                    let Some(state) = self.security_resolution.as_ref() else {
+                        break;
+                    };
+                    let subject = crate::replacement::ReplacementSubject::Card(
+                        state.revealed_card,
+                        crate::enums::Zone::Security,
+                    );
+                    let outcome = self.try_replace(
+                        EffectTiming::WhenWouldLoseSecurity,
+                        subject,
+                        crate::replacement::ReplacementCause::SecurityCheck,
+                        Some(crate::enums::Zone::Trash),
+                    );
+                    if self.pending_selection.is_some() {
+                        return None;
+                    }
+                    self.commit_pending_security_loss_replacement(outcome);
                 }
                 SecurityPhase::OnLoseSecurityDrain => {
                     let Some(state) = self.security_resolution.as_ref() else {
@@ -1993,15 +2383,6 @@ impl Game {
                     self.set_security_phase(SecurityPhase::Dispose);
                 }
                 SecurityPhase::Dispose => {
-                    // TODO(phase-7-task-6): fire `WhenWouldLoseSecurity` here
-                    // (subject: Card(revealed_card, Zone::Security), cause:
-                    // SecurityCheck, original_destination: Some(Zone::Trash))
-                    // before the `pending_security` trash below. Deferred in
-                    // Task 4 because cancelling the security-loss requires
-                    // re-inserting the revealed card back into
-                    // `player.security` — non-trivial plumbing that's best
-                    // addressed alongside native keyword wiring (Task 6).
-
                     // Trash the revealed card unless an effect raised the
                     // `played` bit via `EffectContext::play_pending_security`.
                     // `security_resolution` stays alive across the observer
@@ -2100,6 +2481,58 @@ impl Game {
         // Defensive fallback: some branch break'd out (state unexpectedly
         // cleared). Treat as survived.
         Some(AttackResult::SecurityCheckSurvived)
+    }
+
+    pub(crate) fn commit_pending_security_loss_replacement(
+        &mut self,
+        outcome: crate::replacement::ReplacementOutcome,
+    ) {
+        use crate::replacement::ReplacementOutcome;
+
+        match outcome {
+            ReplacementOutcome::None => {
+                self.set_security_phase(SecurityPhase::OnLoseSecurityDrain);
+            }
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                self.restore_pending_security_to_stack();
+                self.set_security_phase(SecurityPhase::DisposeFinalize);
+            }
+            ReplacementOutcome::Redirected(crate::enums::Zone::Hand) => {
+                if let Some(pending) = self.pending_security.take() {
+                    self.player_mut(pending.defender).hand.push(pending.card);
+                }
+                self.set_security_phase(SecurityPhase::DisposeFinalize);
+            }
+            ReplacementOutcome::Redirected(crate::enums::Zone::Deck) => {
+                if let Some(pending) = self.pending_security.take() {
+                    self.player_mut(pending.defender)
+                        .deck
+                        .insert(0, pending.card);
+                }
+                self.set_security_phase(SecurityPhase::DisposeFinalize);
+            }
+            ReplacementOutcome::Redirected(_) | ReplacementOutcome::Substituted(_) => {
+                self.set_security_phase(SecurityPhase::OnLoseSecurityDrain);
+            }
+        }
+    }
+
+    fn restore_pending_security_to_stack(&mut self) {
+        let Some(state) = self.security_resolution.as_ref() else {
+            return;
+        };
+        let defender = state.defender;
+        let was_face_up = state.was_face_up;
+        let Some(pending) = self.pending_security.take() else {
+            return;
+        };
+        let card_index = pending.card.card_index;
+        self.player_mut(defender).security.push(pending.card);
+        if was_face_up {
+            self.player_mut(defender)
+                .face_up_security
+                .insert(card_index);
+        }
     }
 
     /// Resume the security state machine after a `pending_selection`
@@ -2581,6 +3014,11 @@ impl Game {
     /// `resolve_generic_selection`'s post-callback hook (calls
     /// `resume_pending_deletion`).
     fn commit_permanent_deletion(&mut self, handle: PermanentHandle) {
+        let deleted_top_card = self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .and_then(|permanent| permanent.card_sources.last().map(|card| card.handle()));
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnDeletion,
             crate::selection::TriggerSource::Permanent(handle),
@@ -2597,7 +3035,7 @@ impl Game {
                 self.pending_deletion_resume.is_none(),
                 "nested deferred deletion not supported (single-outstanding invariant)"
             );
-            self.pending_deletion_resume = Some(handle);
+            self.pending_deletion_resume = Some((handle, deleted_top_card));
             return;
         }
 
@@ -2617,6 +3055,19 @@ impl Game {
     /// (`commit_permanent_deletion_no_replace`) can share the same finalize
     /// step (linked-card cascade, post-deletion replays drain, OnAnyDeletion).
     pub(crate) fn finalize_permanent_deletion(&mut self, handle: PermanentHandle) {
+        let deleted_top_card = self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .and_then(|permanent| permanent.card_sources.last().map(|card| card.handle()));
+        self.finalize_permanent_deletion_with_event_card(handle, deleted_top_card);
+    }
+
+    pub(crate) fn finalize_permanent_deletion_with_event_card(
+        &mut self,
+        handle: PermanentHandle,
+        deleted_top_card: Option<CardHandle>,
+    ) {
         // Phase 8 Task 4: drain any linked cards BEFORE removing the
         // permanent so the OnLinkedCardTrashed observer sees the host still
         // in place (as required by the Appmon-trait card text). Each linked
@@ -2664,29 +3115,34 @@ impl Game {
         // Permanent may already have been removed by an OnDeletion effect
         // (self-sacrifice patterns). Check before deleting. Keep the deleted
         // top card as event context for the subsequent OnAnyDeletion broadcast.
-        let deleted_snapshot = self
+        let live_deleted_top_card = self
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)
-            .map(|permanent| {
-                let top = permanent.top_card();
-                crate::trigger_context::DeletedObjectSnapshot {
-                    former_controller: handle.player,
-                    top_card: top.handle(),
-                    card_kind: top.card_kind(&self.card_data),
-                    traits: top.traits(&self.card_data).to_vec(),
-                    level: top.level(&self.card_data),
-                    dp: self.effective_dp(handle),
-                    cause: self
-                        .current_deletion_event_cause_override
-                        .or_else(|| {
-                            self.current_deletion_cause
-                                .map(crate::trigger_context::EventCause::from)
-                        })
-                        .unwrap_or(crate::trigger_context::EventCause::Rule),
-                }
-            });
-        let deleted_top_card = deleted_snapshot.as_ref().map(|snapshot| snapshot.top_card);
+            .and_then(|permanent| permanent.card_sources.last().map(|card| card.handle()));
+        let snapshot_top_card = live_deleted_top_card.or(deleted_top_card);
+        let deleted_snapshot = snapshot_top_card.and_then(|top_card| {
+            let data = self.card_data_for_handle(top_card)?;
+            Some(crate::trigger_context::DeletedObjectSnapshot {
+                former_controller: handle.player,
+                top_card,
+                card_kind: data.card_kind,
+                traits: data.traits.clone(),
+                level: data.level,
+                dp: live_deleted_top_card.and_then(|_| self.effective_dp(handle)),
+                cause: self
+                    .current_deletion_event_cause_override
+                    .or_else(|| {
+                        self.current_deletion_cause
+                            .map(crate::trigger_context::EventCause::from)
+                    })
+                    .unwrap_or(crate::trigger_context::EventCause::Rule),
+            })
+        });
+        let event_deleted_top_card = deleted_snapshot
+            .as_ref()
+            .map(|snapshot| snapshot.top_card)
+            .or(deleted_top_card);
         if self
             .player(handle.player)
             .battle_area
@@ -2754,7 +3210,7 @@ impl Game {
         // security-check). The deleted permanent is already gone from
         // battle_area at this point, so scan live listeners while carrying the
         // deleted permanent/card as event context.
-        if let Some(card) = deleted_top_card {
+        if let Some(card) = event_deleted_top_card {
             let queue_start = self.effect_queue.len();
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnAnyDeletion,
@@ -2801,9 +3257,9 @@ impl Game {
     /// — the new selection drives the resume of its OWN drain through the
     /// effect queue, not through this hook.
     pub(crate) fn resume_pending_deletion(&mut self) {
-        let Some(handle) = self.pending_deletion_resume.take() else {
+        let Some((handle, deleted_top_card)) = self.pending_deletion_resume.take() else {
             return;
         };
-        self.finalize_permanent_deletion(handle);
+        self.finalize_permanent_deletion_with_event_card(handle, deleted_top_card);
     }
 }

@@ -54,6 +54,7 @@ pub struct AltPathSpec {
 pub enum AltPathKind {
     Digivolve,
     DnaDigivolve,
+    BlastDnaDigivolve,
     #[serde(rename = "digixros")]
     DigiXros,
     BurstDigivolve,

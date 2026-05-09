@@ -115,10 +115,24 @@ use crate::replacement::ReplacementSubject;
 pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect> {
     match keyword {
         // Printed Barrier: "When this Digimon would be deleted, you may trash
-        // the top card of your deck. If you do, it isn't deleted."
+        // the top card of your security stack. If you do, it isn't deleted."
+        // DCGO `Barrier.cs` gates on `SecurityCards.Count >= 1` before the
+        // optional replacement is offered.
         Keyword::Barrier => vec![Effect::when_would_be_deleted(card)
             .name("<Barrier>")
             .optional()
+            .condition(|ctx| {
+                let Some(perm) = ctx.source_permanent() else {
+                    return false;
+                };
+                !ctx.game.players[perm.top_card().owner as usize]
+                    .security
+                    .is_empty()
+            })
+            .replacement_condition(|ctx, _subject| {
+                use crate::replacement::ReplacementCause;
+                matches!(ctx.replacement_cause(), Some(ReplacementCause::Battle))
+            })
             .replacement_process(|rctx| {
                 // Only replace the subject's own deletion (the keyword is
                 // printed on this card). Without the self-scope guard the
@@ -129,12 +143,9 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                         return;
                     }
                     let owner = subject.player;
-                    let game = &mut *rctx.effect.game;
-                    if let Some(top) = game.players[owner as usize].deck.pop() {
-                        game.players[owner as usize].trash.push(top);
+                    if rctx.effect.trash_top_security(owner) {
+                        rctx.handled();
                     }
-                    // Empty-deck case: replacement still fires (spec §14 Q2).
-                    rctx.handled();
                 }
             })
             .build()],

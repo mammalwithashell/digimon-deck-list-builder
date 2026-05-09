@@ -39,7 +39,7 @@ The biggest concrete issue is coverage: 23 of the 24 card IDs in the archetype l
 | `EX1-066` Analog Youth | On play reveal top 3, add Digimon, trash rest; deletion observer for level >=5 Digimon with sources: suspend, gain memory, hatch | card-yaml / test-gap | Needs hatch helper and event-target/source-count predicates in card coverage |
 | `EX7-056` Orochimon | Blocker; on deletion trash hand then delete opponent level 3 and level 4; inherited Retaliation | card-yaml / test-gap | Straightforward if multiple independent target deletes are authored |
 | `EX7-053` Eyesmon: Scatter Mode | On play trash hand then optional return trait Digimon from trash; inherited Retaliation | card-yaml / test-gap | Needs filtered optional trash-to-hand |
-| `EX11-050` Loudmon | Trash 2 hand, select own Dark Dragon / Evil Dragon as DP reference, delete opponent Digimon with DP <= reference; aura grants Scapegoat to trait Digimon while hand <=4; inherited Security A +1 aura while hand <=4 | card-yaml / engine-gap / test-gap | Scapegoat is a reusable replacement/keyword capability; dynamic target-DP reference needs card tests |
+| `EX11-050` Loudmon | Trash 2 hand, select own Dark Dragon / Evil Dragon as DP reference, delete opponent Digimon with DP <= reference; aura grants Scapegoat to trait Digimon while hand <=4; inherited Security A +1 aura while hand <=4 | card-yaml / test-gap | Scapegoat replacement/keyword capability is available; dynamic target-DP reference and the conditional grant aura need card tests |
 | `ST16-14` Matt Ishida | Start-turn memory set; when hand trashed by own effect, suspend for memory; security play | card-yaml / test-gap | Needs hand-trash event observer with cause/controller |
 | `P-205` Insane Synthetic Monster | Ignore color with DM; main draw 2/trash 2/place self; Delay deletes own cost <=7 Digimon to play Kimeramon/Millenniummon from trash cost -3; security same draw/trash/place self | card-yaml / test-gap | Uses resolved Delay placement and play-from-trash cost override; needs cost target and security placement tests |
 | `EX4-006` Guilmon | On play gains Rush if total trashes >=20 | card-yaml / test-gap | Uses shared trash count predicate/formula; needs temporary keyword grant coverage |
@@ -104,14 +104,14 @@ The biggest concrete issue is coverage: 23 of the 24 card IDs in the archetype l
 
 ### G-CHAOS-SCAPEGOAT-KEYWORD-REPLACEMENT
 
-- **Gap:** Scapegoat needs a reusable keyword / replacement implementation that filters "would be deleted other than by your effects" and prompts the controller to delete another Digimon to prevent that deletion.
+- **Gap:** Scapegoat's reusable keyword / replacement implementation is available; `EX11-050` still needs the conditional granted-Scapegoat aura plus its dynamic DP-reference body.
 - **Type:** `engine-gap` / `dsl-gap`
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md`
 - **Blocks:** `EX11-050`; also future cards granting Scapegoat-like prevention.
 - **Why it matters:** `EX11-050` grants Scapegoat to all own Dark Dragon / Evil Dragon Digimon while hand <=4. This is a real replacement choice with a cost, not an aura-only keyword label.
-- **Evidence:** No Chaos YAML exists; replacement/cost infrastructure has improved, but a dedicated Scapegoat route is not evidenced by local Chaos coverage.
+- **Evidence:** `Keyword::Scapegoat` and EX11 card fixtures prove the reusable delete-another-own-Digimon replacement route. No Chaos YAML exists yet for `EX11-050`, so the aura grant and DP-reference body remain card-work.
 - **First test:** With `EX11-050` active and hand <=4, opponent effect would delete a trait Digimon. The mask should offer Scapegoat; accepting deletes another own Digimon and prevents the original deletion. Own-effect deletion should not offer it.
-- **Implementation hint:** Implement as a granted replacement effect or native keyword effect using replacement cause/controller predicates and `select_own_permanent` as a cost.
+- **Implementation hint:** Reuse the native Scapegoat replacement body for the granted aura, and focus new work on the hand-count condition and Dark Dragon / Evil Dragon DP-reference selection.
 
 ### G-CHAOS-HAND-TRASH-EVENT-OBSERVERS
 
@@ -139,6 +139,6 @@ When compiling the cross-archetype DSL / engine gap spec, route findings this wa
 2. `BT24-080` deletes all tied lowest-level opponent Digimon on each printed trigger.
 3. `BT21-100` places itself as a delayed Option, respects placement-turn gating, and activates after an effect deletion.
 4. `BT20-096` exposes and resolves trash-main activation from trash.
-5. `EX11-050` proves Scapegoat replacement behavior or files the missing engine primitive.
+5. `EX11-050` proves conditional granted Scapegoat behavior using the existing replacement primitive.
 
 Passing those five tests would separate remaining bulk YAML work from true cross-archetype DSL / engine gaps.

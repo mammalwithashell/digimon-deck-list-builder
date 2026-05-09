@@ -26,6 +26,8 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level_eq: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub level_eq_binding: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub level_lte: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level_gte: Option<u8>,
@@ -87,7 +89,7 @@ pub struct PredicateSpec {
     // Leaf — zone / owner
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub zone: Vec<Zone>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", alias = "of")]
     pub owner: Option<PlayerRef>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub other: Option<bool>,
@@ -165,6 +167,8 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[schemars(with = "Option<Vec<serde_json::Value>>")]
     pub not_equals: Option<Vec<serde_yml::Value>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding_exists: Option<String>,
 
     // Count aggregates
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -240,6 +244,7 @@ pub enum ReplacementCauseSpec {
     OpponentEffect,
     SecurityCheck,
     Cost,
+    Overclock,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]

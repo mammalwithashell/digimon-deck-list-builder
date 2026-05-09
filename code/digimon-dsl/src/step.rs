@@ -100,6 +100,7 @@ pub enum StepSpec {
     TrashTopSource(TargetArg),
     TrashAllSources(TargetArg),
     TrashSelectedSources(TrashSelectedSourcesArgs),
+    BindPermanentProperty(BindPermanentProperty),
     Hatch(PlayerArg),
 
     // Play / digivolve
@@ -117,6 +118,8 @@ pub enum StepSpec {
     TrashTopSecurity(PlayerArg),
     TrashTopSecurityAndCancelReplacement(PlayerArg),
     PlacePermanentBottomSecurityAndCancelReplacement(PlacePermanentSecurityReplacementArgs),
+    PlacePermanentOnSecurity(PlacePermanentOnSecurityReplacementArgs),
+    PlacePermanentOnSecurityAndHandleReplacement(PlacePermanentOnSecurityReplacementArgs),
     Recover(DrawArgs),
     MarkSecurityFaceUp(MarkSecurityArgs),
 
@@ -224,6 +227,7 @@ impl Serialize for StepSpec {
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
             StepSpec::TrashAllSources(v) => kv!(s, "trash_all_sources", v),
             StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
+            StepSpec::BindPermanentProperty(v) => kv!(s, "bind_permanent_property", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             // Play / digivolve
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
@@ -246,6 +250,10 @@ impl Serialize for StepSpec {
                     "place_permanent_bottom_security_and_cancel_replacement",
                     v
                 )
+            }
+            StepSpec::PlacePermanentOnSecurity(v) => kv!(s, "place_permanent_on_security", v),
+            StepSpec::PlacePermanentOnSecurityAndHandleReplacement(v) => {
+                kv!(s, "place_permanent_on_security_and_handle_replacement", v)
             }
             StepSpec::Recover(v) => kv!(s, "recover", v),
             StepSpec::MarkSecurityFaceUp(v) => kv!(s, "mark_security_face_up", v),
@@ -372,6 +380,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
             "trash_all_sources" => StepSpec::TrashAllSources(map.next_value()?),
             "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
+            "bind_permanent_property" => StepSpec::BindPermanentProperty(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
 
             // Play / digivolve
@@ -394,6 +403,10 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             }
             "place_permanent_bottom_security_and_cancel_replacement" => {
                 StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(map.next_value()?)
+            }
+            "place_permanent_on_security" => StepSpec::PlacePermanentOnSecurity(map.next_value()?),
+            "place_permanent_on_security_and_handle_replacement" => {
+                StepSpec::PlacePermanentOnSecurityAndHandleReplacement(map.next_value()?)
             }
             "recover" => StepSpec::Recover(map.next_value()?),
             "mark_security_face_up" => StepSpec::MarkSecurityFaceUp(map.next_value()?),
@@ -486,6 +499,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_top_source",
                         "trash_all_sources",
                         "trash_selected_sources",
+                        "bind_permanent_property",
                         "hatch",
                         "play_from_hand",
                         "play_from_hand_free",
@@ -499,6 +513,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_top_security",
                         "trash_top_security_and_cancel_replacement",
                         "place_permanent_bottom_security_and_cancel_replacement",
+                        "place_permanent_on_security",
+                        "place_permanent_on_security_and_handle_replacement",
                         "recover",
                         "mark_security_face_up",
                         "add_dp_modifier",
@@ -619,6 +635,20 @@ pub struct EmptyArgs {}
 #[serde(deny_unknown_fields)]
 pub struct TargetArg {
     pub target: BindingRef,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum PermanentProperty {
+    Level,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BindPermanentProperty {
+    pub from: BindingRef,
+    pub property: PermanentProperty,
+    pub bind_as: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -766,6 +796,17 @@ pub struct PlacePermanentSecurityReplacementArgs {
     pub target: BindingRef,
 }
 
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlacePermanentOnSecurityReplacementArgs {
+    #[serde(default = "default_player_ref_you")]
+    pub of: PlayerRef,
+    pub target: BindingRef,
+    pub position: StackPosition,
+    #[serde(default)]
+    pub face_up: bool,
+}
+
 fn default_player_ref_you() -> PlayerRef {
     PlayerRef::You
 }
@@ -821,6 +862,8 @@ pub struct PlayFromMaterialsArgs {
     pub source_index: BindingRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_delta: Option<CostDelta>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 /// Empty args struct for `play_from_security:` — the step carries no
@@ -1136,7 +1179,7 @@ pub struct SelectPermutationArgs {
 pub struct SelectCountCappedArgs {
     pub of: PlayerRef,
     pub zone: Zone,
-    pub max: u8,
+    pub max: CountBound,
     pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
@@ -1149,6 +1192,15 @@ pub struct SelectCountCappedArgs {
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(untagged)]
+pub enum CountBound {
+    Literal(u8),
+    Formula {
+        formula: crate::formula::FormulaSpec,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
