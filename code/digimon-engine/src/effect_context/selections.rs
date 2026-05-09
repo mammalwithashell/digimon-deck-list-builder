@@ -1218,6 +1218,49 @@ impl<'a> EffectContext<'a> {
         );
     }
 
+    /// Track E Tier 2 Task 10 — search the **own** security stack with a
+    /// filter, surfacing a single-pick selection to the controller. Sugar
+    /// over `select_security(self.player, ...)` for the common shape "look
+    /// at your security stack and choose 1 card matching <filter>".
+    ///
+    /// `is_optional` controls whether the controller may PASS without
+    /// picking. Empty-filter case is a silent no-op (no selection
+    /// installed) — matches the contract of every other `select_*` helper.
+    /// The callback receives the chosen security slot index. Caller is
+    /// responsible for the post-pick mutation (e.g., add to hand, place in
+    /// digivolution stack, return to deck).
+    ///
+    /// **Reveal semantics (no-approximations note):** the controller can
+    /// inspect each candidate card's identity during the selection because
+    /// the action mask exposes only own-side security indices that the
+    /// controller is allowed to see. The opponent does NOT receive any
+    /// information (the mask + observation tensor route own-security to
+    /// the controller's observation only). Temporary face-up marking is
+    /// not required — the visibility is implicit in the controller's view
+    /// of their own stack.
+    pub fn search_own_security_stack<F, C>(
+        &mut self,
+        prompt: &str,
+        is_optional: bool,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, &CardSource) -> bool,
+        C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
+    {
+        let player = self.player;
+        // Adapt the &CardSource filter to the existing `select_security`'s
+        // filter signature (Game, usize).
+        let filter_by_index = |game: &Game, idx: usize| -> bool {
+            game.player(player)
+                .security
+                .get(idx)
+                .map(|c| filter(game, c))
+                .unwrap_or(false)
+        };
+        self.select_security(player, prompt, is_optional, filter_by_index, callback);
+    }
+
     /// Mark a security slot face-up. Consumed by the observation tensor so
     /// the card's identity is exposed to the RL agent (it would otherwise be
     /// zeroed for hidden-information safety — §3.3). The slot is keyed by

@@ -1076,6 +1076,11 @@ fn effect_initiated_digivolve_ignore_color_bypasses_color_check() {
 
 #[test]
 fn effect_initiated_digivolve_bad_level_returns_false() {
+    // `ignore_color=true` bypasses only the color check; a level mismatch
+    // still aborts. Cards that need to bypass level requirements use the
+    // separate `effect_initiated_digivolve_ignore_requirements` entry
+    // (Track A iteration that introduced `ignore_requirements: bool`).
+    //
     // EVO requires Lv.5, target is Lv.3 → no matching evo_cost.
     let base = plain_digimon("B3", "Base3", 3);
     let evo = digimon_with_evo_costs(
@@ -1116,12 +1121,13 @@ fn effect_initiated_digivolve_bad_level_returns_false() {
         0,
         target,
         CostDelta::Free,
-        true,
+        /* ignore_color = */ true,
         PlaySource::ByEffect,
     );
     assert!(
         !ok,
-        "level mismatch should return false even with ignore_color=true"
+        "level mismatch should return false even with ignore_color=true \
+         (use effect_initiated_digivolve_ignore_requirements for level bypass)"
     );
     assert_eq!(r.hand_size(0), 1, "hand untouched after failure");
 }
@@ -1244,4 +1250,936 @@ fn place_on_security_bad_source_returns_false() {
         r.game_mut()
             .place_on_security(0, CardSourceRef::Hand(0, 99), StackPosition::Top, false);
     assert!(!ok);
+}
+
+// ─── bounce_self ──────────────────────────────────────────────────────────────
+
+/// TEST-BOUNCE-SELF: on play, return self to hand via `ctx.bounce_self()`.
+struct TestBounceSelf;
+impl CardEffect for TestBounceSelf {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Bounce self on play")
+            .process(|ctx| {
+                ctx.bounce_self();
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn bounce_self_on_play_returns_card_to_hand() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("BOUNCE", "Bouncer", 3))
+        .hand(0, &["BOUNCE"])
+        .memory(3)
+        .start();
+
+    r.register_effect("BOUNCE", Arc::new(TestBounceSelf));
+
+    // Play BOUNCE (hand slot 0). OnPlay fires, calls bounce_self, the card
+    // should return to its owner's hand and not stay on the field.
+    let res = r.play(0, 0);
+    assert_eq!(res, Some(0), "play should succeed");
+    assert_eq!(
+        r.battle_area_size(0),
+        0,
+        "card bounced off the field by its own OnPlay"
+    );
+    assert_eq!(
+        r.hand_size(0),
+        1,
+        "card returned to its owner's hand"
+    );
+    let card_id = {
+        let g = r.game_mut();
+        g.player(0).hand[0].card_id(&g.card_data).to_string()
+    };
+    assert_eq!(card_id, "BOUNCE", "the same card was returned to hand");
+}
+
+/// `bounce_self` must be a no-op when the effect has no source permanent
+/// (e.g. an Option-card OptionMain effect or a rule-source effect). Returns
+/// `None` rather than panicking.
+#[test]
+fn bounce_self_with_no_source_permanent_returns_none() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("PLACEHOLDER", "P", 1))
+        .hand(0, &["PLACEHOLDER"])
+        .start();
+    let card_handle = {
+        let g = r.game_mut();
+        g.player(0).hand[0].handle()
+    };
+    let mut ctx = EffectContext::new(r.game_mut(), card_handle, /* source_permanent */ None, 0);
+    let result = ctx.bounce_self();
+    assert!(
+        result.is_none(),
+        "bounce_self with no source_permanent must return None, got {:?}",
+        result
+    );
+}
+
+// ─── place_self_at_security ──────────────────────────────────────────────────
+
+/// TEST-PSAS-TOP-FACE-UP: on play, place self at top of own security stack
+/// face-up via `ctx.place_self_at_security(Top, true)`. Single-source
+/// permanent (no sources to trash). Mirrors EX9-021's printed
+/// "place this Digimon as your top security card".
+struct TestPlaceSelfTopFaceUp;
+impl CardEffect for TestPlaceSelfTopFaceUp {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Place self at top security face-up")
+            .process(|ctx| {
+                ctx.place_self_at_security(StackPosition::Top, /* face_up = */ true);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn place_self_at_security_top_face_up_moves_card_to_top_of_security() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("PSAS_TFU", "Top Face-Up", 3))
+        .add_card(plain_digimon("FILLER", "Filler", 1))
+        .hand(0, &["PSAS_TFU"])
+        .security(0, &["FILLER", "FILLER"])
+        .memory(3)
+        .start();
+
+    r.register_effect("PSAS_TFU", Arc::new(TestPlaceSelfTopFaceUp));
+
+    let before_security = r.security_count(0);
+    let res = r.play(0, 0);
+    assert_eq!(res, Some(0), "play should succeed");
+    assert_eq!(
+        r.battle_area_size(0),
+        0,
+        "card moved off the field by its own OnPlay"
+    );
+    assert_eq!(
+        r.security_count(0),
+        before_security + 1,
+        "security stack grew by 1"
+    );
+    // Top of security (highest index in the Vec) is the just-placed card.
+    let top_id = {
+        let g = r.game_mut();
+        g.player(0)
+            .security
+            .last()
+            .unwrap()
+            .card_id(&g.card_data)
+            .to_string()
+    };
+    assert_eq!(top_id, "PSAS_TFU", "the moved card sits at the top of security");
+    // face_up_security tracking: the placed card's card_index is in the set.
+    let placed_key = {
+        let g = r.game_mut();
+        g.player(0).security.last().unwrap().card_index
+    };
+    assert!(
+        r.game_mut().player(0).face_up_security.contains(&placed_key),
+        "face_up_security records the face-up placement"
+    );
+}
+
+/// TEST-PSAS-BOTTOM-FACE-DOWN: at OnPlay, place self at bottom of own security
+/// stack face-down. Multi-source permanent — exercises the source-trash
+/// dispatch path. Mirrors EX4-060's printed "place this Digimon at the
+/// bottom of your security stack face down" (via a self-replacement; here
+/// we trigger the same engine path via OnPlay for testing simplicity).
+struct TestPlaceSelfBottomFaceDown;
+impl CardEffect for TestPlaceSelfBottomFaceDown {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .name("Place self at bottom security face-down")
+            .process(|ctx| {
+                ctx.place_self_at_security(StackPosition::Bottom, /* face_up = */ false);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn place_self_at_security_bottom_face_down_routes_sources_to_trash() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("PSAS_BFD", "Bottom Face-Down", 3))
+        .add_card(plain_digimon("UNDER1", "Under1", 1))
+        .add_card(plain_digimon("UNDER2", "Under2", 1))
+        .add_card(plain_digimon("FILLER", "Filler", 1))
+        .security(0, &["FILLER", "FILLER"])
+        .memory(3)
+        .start();
+    r.register_effect("PSAS_BFD", Arc::new(TestPlaceSelfBottomFaceDown));
+
+    // Seed a 3-source permanent on player 0's field with PSAS_BFD on top.
+    // The OnPlay effect can't fire from this seeded layout (we didn't play
+    // it normally), so we install a Main-on-field effect via a custom path
+    // — but keeping the test simple, route the effect through ctx directly.
+    let handle = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let u1 = g.card_data.iter().position(|c| c.card_id == "UNDER1").unwrap();
+        let u2 = g.card_data.iter().position(|c| c.card_id == "UNDER2").unwrap();
+        let top = g.card_data.iter().position(|c| c.card_id == "PSAS_BFD").unwrap();
+        let i1 = g.next_card_index();
+        let i2 = g.next_card_index();
+        let it = g.next_card_index();
+        let s_under1 = digimon_engine::card_source::CardSource::new(u1, 0, i1);
+        let s_under2 = digimon_engine::card_source::CardSource::new(u2, 0, i2);
+        let s_top = digimon_engine::card_source::CardSource::new(top, 0, it);
+        let mut perm = digimon_engine::permanent::Permanent::new(s_under1, turn);
+        perm.card_sources.push(s_under2);
+        perm.card_sources.push(s_top);
+        g.players[0].battle_area.push(perm);
+        digimon_engine::permanent::PermanentHandle {
+            player: 0,
+            index: 0,
+        }
+    };
+
+    let top_card_handle = {
+        let g = r.game_mut();
+        g.player(0).battle_area[0].top_card().handle()
+    };
+
+    // Drive the placement directly through EffectContext, simulating the
+    // permanent's own effect resolving with source_permanent set.
+    {
+        use digimon_engine::effect_context::EffectContext;
+        let mut ctx =
+            EffectContext::new(r.game_mut(), top_card_handle, Some(handle), 0);
+        let ok = ctx.place_self_at_security(StackPosition::Bottom, /* face_up = */ false);
+        assert!(ok, "place_self_at_security should succeed");
+    }
+
+    assert_eq!(
+        r.battle_area_size(0),
+        0,
+        "permanent gone from battle area"
+    );
+    // Security: started with 2 fillers; bottom is now the moved top card.
+    assert_eq!(r.security_count(0), 3, "security grew by exactly 1");
+    let bottom_id = {
+        let g = r.game_mut();
+        g.player(0)
+            .security
+            .first()
+            .unwrap()
+            .card_id(&g.card_data)
+            .to_string()
+    };
+    assert_eq!(
+        bottom_id, "PSAS_BFD",
+        "moved top card sits at the bottom of security"
+    );
+
+    // Sources routed to owner's trash: 2 sources below top, both owner=0.
+    assert_eq!(
+        r.trash_size(0),
+        2,
+        "both sources-below-top went to owner's trash"
+    );
+    let trash_ids: Vec<String> = {
+        let g = r.game_mut();
+        g.player(0)
+            .trash
+            .iter()
+            .map(|c| c.card_id(&g.card_data).to_string())
+            .collect()
+    };
+    assert!(trash_ids.contains(&"UNDER1".to_string()));
+    assert!(trash_ids.contains(&"UNDER2".to_string()));
+
+    // face-down: the placed card_index must NOT be in face_up_security.
+    let placed_key = {
+        let g = r.game_mut();
+        g.player(0).security.first().unwrap().card_index
+    };
+    assert!(
+        !r.game_mut().player(0).face_up_security.contains(&placed_key),
+        "face-down placement leaves face_up_security unset"
+    );
+}
+
+// ─── place_self_option_at_security ───────────────────────────────────────────
+
+/// Helper: a Lv-less Option CardData with configurable play_cost.
+fn plain_option(card_id: &str, name: &str, play_cost: u16) -> CardData {
+    CardData {
+        card_id: card_id.to_string(),
+        card_name: name.to_string(),
+        card_kind: CardKind::Option,
+        level: None,
+        dp: None,
+        play_cost,
+        colors: vec![CardColor::Red],
+        traits: Vec::new(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        keywords: Vec::new(),
+        dual: None,
+        effect_class_name: card_id.to_string(),
+        index: 0,
+        norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
+    }
+}
+
+/// TEST-PSOAS-TOP-FACE-UP: an Option card whose [Main] body places itself at
+/// the top of own security stack face-up. Mirrors ST20-15 Island of
+/// Adventure's [Main] tail "Then, place this card face up as the top
+/// security card."
+struct TestPlaceSelfOptionTopFaceUp;
+impl CardEffect for TestPlaceSelfOptionTopFaceUp {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        use digimon_engine::effect::EffectBuilder;
+        use digimon_engine::enums::EffectTiming;
+        vec![EffectBuilder::new(card, EffectTiming::OptionMain)
+            .option_main()
+            .name("Place self (Option) at top security face-up")
+            .process(|ctx| {
+                ctx.place_self_option_at_security(StackPosition::Top, /* face_up = */ true);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn place_self_option_at_security_top_face_up_routes_option_to_security() {
+    use digimon_engine::selection::OptionPlayResult;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_option("PSOAS_TFU", "Top Face-Up Option", 2))
+        .add_card(plain_digimon("ANCHOR", "Anchor", 3))
+        .add_card(plain_digimon("FILLER", "F", 1))
+        .hand(0, &["PSOAS_TFU"])
+        .security(0, &["FILLER", "FILLER"])
+        .memory(3)
+        .start();
+
+    r.register_effect("PSOAS_TFU", Arc::new(TestPlaceSelfOptionTopFaceUp));
+    // Options require a same-color (Red) Digimon on the field to be playable.
+    r.place_on_field(0, "ANCHOR", Some(0));
+    r.game_mut().enter_main_phase();
+
+    let before_security = r.security_count(0);
+    let before_trash = r.trash_size(0);
+
+    let result = r.game_mut().play_option_from_hand(0, 0);
+    assert_eq!(
+        result,
+        OptionPlayResult::Trashed,
+        "play_option_from_hand returns Trashed when no pending selection \
+         was installed; the dispose flow short-circuits because \
+         pending_option was consumed by place_self_option_at_security"
+    );
+
+    assert_eq!(r.hand_size(0), 0, "Option left hand");
+    assert_eq!(
+        r.trash_size(0),
+        before_trash,
+        "Option did NOT route to trash — it landed in security instead"
+    );
+    assert_eq!(
+        r.security_count(0),
+        before_security + 1,
+        "security stack grew by 1"
+    );
+    let top_id = {
+        let g = r.game_mut();
+        g.player(0)
+            .security
+            .last()
+            .unwrap()
+            .card_id(&g.card_data)
+            .to_string()
+    };
+    assert_eq!(top_id, "PSOAS_TFU", "moved Option sits at top of security");
+    let placed_key = {
+        let g = r.game_mut();
+        g.player(0).security.last().unwrap().card_index
+    };
+    assert!(
+        r.game_mut().player(0).face_up_security.contains(&placed_key),
+        "face_up_security records the face-up placement"
+    );
+    assert!(
+        r.game_mut().pending_option.is_none(),
+        "pending_option was consumed; no further dispose"
+    );
+}
+
+/// `place_self_option_at_security` returns `false` when no Option resolution
+/// is in flight (no `pending_option`). Defensive correctness.
+#[test]
+fn place_self_option_at_security_with_no_pending_option_returns_false() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_option("PLACEHOLDER", "P", 2))
+        .hand(0, &["PLACEHOLDER"])
+        .start();
+    let card_handle = {
+        let g = r.game_mut();
+        g.player(0).hand[0].handle()
+    };
+    let mut ctx = EffectContext::new(r.game_mut(), card_handle, None, 0);
+    let result = ctx.place_self_option_at_security(StackPosition::Top, true);
+    assert!(
+        !result,
+        "place_self_option_at_security with no pending_option must return false"
+    );
+}
+
+// ─── security_place_stacked_card ─────────────────────────────────────────────
+
+/// TEST-SPSC-TOP: extract the top stacked source (one below visible top) and
+/// place it on top of own security stack face-down. Mirrors Puppets G027
+/// "move the top stacked card to top security card."
+#[test]
+fn security_place_top_stacked_card_extracts_source_and_places_on_security() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("CARRIER", "Carrier", 3))
+        .add_card(plain_digimon("UNDER", "Under", 1))
+        .add_card(plain_digimon("BOTTOM", "Bottom", 1))
+        .start();
+
+    // Seed a 3-source permanent: BOTTOM, UNDER, CARRIER (top).
+    let handle = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let bot_data = g.card_data.iter().position(|c| c.card_id == "BOTTOM").unwrap();
+        let under_data = g.card_data.iter().position(|c| c.card_id == "UNDER").unwrap();
+        let top_data = g.card_data.iter().position(|c| c.card_id == "CARRIER").unwrap();
+        let i_bot = g.next_card_index();
+        let i_under = g.next_card_index();
+        let i_top = g.next_card_index();
+        let s_bot = digimon_engine::card_source::CardSource::new(bot_data, 0, i_bot);
+        let s_under = digimon_engine::card_source::CardSource::new(under_data, 0, i_under);
+        let s_top = digimon_engine::card_source::CardSource::new(top_data, 0, i_top);
+        let mut perm = digimon_engine::permanent::Permanent::new(s_bot, turn);
+        perm.card_sources.push(s_under);
+        perm.card_sources.push(s_top);
+        g.players[0].battle_area.push(perm);
+        digimon_engine::permanent::PermanentHandle {
+            player: 0,
+            index: 0,
+        }
+    };
+
+    let before_security = r.security_count(0);
+    let top_card_handle = {
+        let g = r.game_mut();
+        g.player(0).battle_area[0].top_card().handle()
+    };
+
+    // Drive via EffectContext directly (avoids needing to play a card).
+    {
+        let mut ctx = EffectContext::new(r.game_mut(), top_card_handle, Some(handle), 0);
+        let ok = ctx.security_place_top_stacked_card(handle, 0, StackPosition::Top, false);
+        assert!(ok, "security_place_top_stacked_card should succeed");
+    }
+
+    // The carrier permanent still exists with a 2-source stack (BOTTOM + CARRIER).
+    let stack_size = r.game_mut().player(0).battle_area[0].stack_size();
+    assert_eq!(
+        stack_size, 2,
+        "the top stacked card (UNDER) was extracted; carrier retains BOTTOM + CARRIER"
+    );
+
+    // Security grew by 1; the new top of security is UNDER.
+    assert_eq!(r.security_count(0), before_security + 1);
+    let placed_id = {
+        let g = r.game_mut();
+        g.player(0)
+            .security
+            .last()
+            .unwrap()
+            .card_id(&g.card_data)
+            .to_string()
+    };
+    assert_eq!(placed_id, "UNDER", "the extracted source moved to security top");
+}
+
+/// `security_place_top_stacked_card` returns `false` when the carrier has
+/// fewer than 2 sources (no stacked card below the top).
+#[test]
+fn security_place_top_stacked_card_returns_false_with_single_source() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("LONE", "Lone", 3))
+        .start();
+
+    let handle = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let data_idx = g.card_data.iter().position(|c| c.card_id == "LONE").unwrap();
+        let idx = g.next_card_index();
+        let card = digimon_engine::card_source::CardSource::new(data_idx, 0, idx);
+        let perm = digimon_engine::permanent::Permanent::new(card, turn);
+        g.players[0].battle_area.push(perm);
+        digimon_engine::permanent::PermanentHandle {
+            player: 0,
+            index: 0,
+        }
+    };
+
+    let card_handle = {
+        let g = r.game_mut();
+        g.player(0).battle_area[0].top_card().handle()
+    };
+    let before_security = r.security_count(0);
+    let before_battle = r.battle_area_size(0);
+
+    let mut ctx = EffectContext::new(r.game_mut(), card_handle, Some(handle), 0);
+    let ok = ctx.security_place_top_stacked_card(handle, 0, StackPosition::Top, false);
+    assert!(!ok, "single-source carrier has no stacked card below top");
+    assert_eq!(r.security_count(0), before_security, "no security mutation");
+    assert_eq!(r.battle_area_size(0), before_battle, "no carrier mutation");
+}
+
+// ─── search_own_security_stack ────────────────────────────────────────────────
+
+#[test]
+fn search_own_security_stack_installs_selection_with_matching_filter() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card({
+            let mut c = plain_digimon("WANTED", "Wanted", 3);
+            c.traits = vec!["TARGET".to_string()];
+            c
+        })
+        .add_card(plain_digimon("FILLER", "F", 1))
+        .security(0, &["FILLER", "WANTED", "FILLER"])
+        .start();
+
+    {
+        let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, /* acting */ 0);
+        ctx.search_own_security_stack(
+            "Search own security",
+            /* is_optional */ false,
+            |_g, c| c.card_id(&_g.card_data) == "WANTED",
+            |_ctx, _idx| {
+                // Test only verifies installation — no follow-up mutation.
+            },
+        );
+    }
+    let pending = r
+        .game_mut()
+        .pending_selection
+        .as_ref()
+        .expect("selection installed");
+    assert_eq!(
+        pending.selecting_player, 0,
+        "the controller (acting player) is the selector"
+    );
+    // Filter matches exactly 1 card → 1 valid action id.
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        1,
+        "exactly one slot matches the WANTED filter"
+    );
+}
+
+#[test]
+fn search_own_security_stack_silent_noop_with_no_match() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("FILLER", "F", 1))
+        .security(0, &["FILLER", "FILLER"])
+        .start();
+
+    {
+        let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, 0);
+        ctx.search_own_security_stack(
+            "Search",
+            false,
+            |_g, _c| false, // matches nothing
+            |_ctx, _idx| {},
+        );
+    }
+    assert!(
+        r.game_mut().pending_selection.is_none(),
+        "no candidates → no selection installed (silent no-op contract)"
+    );
+}
+
+// ─── trash_opponent_hand_to_count ─────────────────────────────────────────────
+
+#[test]
+fn trash_opponent_hand_to_count_noop_when_hand_already_below_target() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("CARD", "C", 1))
+        .hand(1, &["CARD"])
+        .start();
+
+    let ok = {
+        let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, /* acting */ 0);
+        ctx.trash_opponent_hand_to_count(/* opponent */ 1, /* target */ 5)
+    };
+    assert!(!ok, "hand size 1 already <= target 5; no-op");
+    assert!(
+        r.game_mut().pending_selection.is_none(),
+        "no selection installed for no-op path"
+    );
+    assert_eq!(r.hand_size(1), 1, "hand untouched");
+}
+
+#[test]
+fn trash_opponent_hand_to_count_installs_opponent_selection_when_hand_over_target() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("C1", "C1", 1))
+        .add_card(plain_digimon("C2", "C2", 1))
+        .add_card(plain_digimon("C3", "C3", 1))
+        .add_card(plain_digimon("C4", "C4", 1))
+        .add_card(plain_digimon("C5", "C5", 1))
+        .hand(1, &["C1", "C2", "C3", "C4", "C5"])
+        .start();
+
+    let ok = {
+        let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, /* acting */ 0);
+        ctx.trash_opponent_hand_to_count(/* opponent */ 1, /* target */ 2)
+    };
+    assert!(ok, "hand size 5 > target 2 — must install selection");
+    let pending = r
+        .game_mut()
+        .pending_selection
+        .as_ref()
+        .expect("multi-pick selection installed");
+    assert_eq!(
+        pending.selecting_player, 1,
+        "the OPPONENT picks which cards to trash (no-approximations rule)"
+    );
+    assert!(
+        !pending.is_optional,
+        "forced reduction must not allow PASS at zero picks"
+    );
+}
+
+// ─── trash_top_n_digivolution_cards_of_each ──────────────────────────────────
+
+#[test]
+fn trash_top_n_digivolution_cards_of_each_peels_one_source_per_perm() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("TOP_A", "TopA", 3))
+        .add_card(plain_digimon("UNDER_A", "UnderA", 1))
+        .add_card(plain_digimon("BASE_A", "BaseA", 1))
+        .add_card(plain_digimon("TOP_B", "TopB", 3))
+        .add_card(plain_digimon("UNDER_B", "UnderB", 1))
+        .add_card(plain_digimon("LONE", "Lone", 1))
+        .start();
+
+    // Player 1's field: 3 permanents.
+    //   [0] 3-source: BASE_A, UNDER_A, TOP_A (visible top = TOP_A)
+    //   [1] 2-source: UNDER_B, TOP_B (visible top = TOP_B)
+    //   [2] 1-source: LONE (visible top = LONE; no digivolution sources)
+    let _ = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        for (top_id, under_ids) in &[
+            ("TOP_A", vec!["BASE_A", "UNDER_A"]),
+            ("TOP_B", vec!["UNDER_B"]),
+            ("LONE", vec![]),
+        ] {
+            let mut sources = Vec::new();
+            for under in under_ids {
+                let data_idx = g
+                    .card_data
+                    .iter()
+                    .position(|c| c.card_id == *under)
+                    .unwrap();
+                let next_idx = g.next_card_index();
+                sources.push(digimon_engine::card_source::CardSource::new(
+                    data_idx, 1, next_idx,
+                ));
+            }
+            let top_idx = g.card_data.iter().position(|c| c.card_id == *top_id).unwrap();
+            let next_idx = g.next_card_index();
+            let top = digimon_engine::card_source::CardSource::new(top_idx, 1, next_idx);
+            let mut perm = if let Some(first_under) = sources.into_iter().next() {
+                let mut p = digimon_engine::permanent::Permanent::new(first_under, turn);
+                // Re-build remaining sources + top
+                if *top_id == "TOP_A" {
+                    let under_a_idx = g
+                        .card_data
+                        .iter()
+                        .position(|c| c.card_id == "UNDER_A")
+                        .unwrap();
+                    let ix = g.next_card_index();
+                    p.card_sources
+                        .push(digimon_engine::card_source::CardSource::new(under_a_idx, 1, ix));
+                }
+                p.card_sources.push(top);
+                p
+            } else {
+                digimon_engine::permanent::Permanent::new(top, turn)
+            };
+            // Quick correctness assert during seed
+            let _ = &mut perm;
+            g.players[1].battle_area.push(perm);
+        }
+    };
+
+    // Confirm seeded layout.
+    assert_eq!(r.battle_area_size(1), 3);
+    let stack_sizes: Vec<usize> = (0..3)
+        .map(|i| r.game_mut().player(1).battle_area[i].stack_size())
+        .collect();
+    assert_eq!(stack_sizes, vec![3, 2, 1]);
+
+    let p1_trash_before = r.trash_size(1);
+
+    let trashed = {
+        let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, /* acting */ 0);
+        ctx.trash_top_n_digivolution_cards_of_each(/* target */ 1, 1)
+    };
+
+    // 2 sources peeled (one each from the 3-source and 2-source perms; the
+    // 1-source perm is skipped — its visible top is not a digivolution card).
+    assert_eq!(trashed, 2, "expected 2 sources peeled");
+
+    // Battle area still has 3 permanents (visible tops untouched).
+    assert_eq!(r.battle_area_size(1), 3);
+    let stack_sizes_after: Vec<usize> = (0..3)
+        .map(|i| r.game_mut().player(1).battle_area[i].stack_size())
+        .collect();
+    assert_eq!(
+        stack_sizes_after,
+        vec![2, 1, 1],
+        "3-source → 2 (peeled UNDER_A); 2-source → 1 (peeled UNDER_B); 1-source unchanged"
+    );
+
+    assert_eq!(
+        r.trash_size(1),
+        p1_trash_before + 2,
+        "two sources routed to player 1's trash (both owned by player 1)"
+    );
+}
+
+#[test]
+fn trash_top_n_digivolution_cards_of_each_handles_n_zero() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder().start();
+    let trashed = {
+        let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, 0);
+        ctx.trash_top_n_digivolution_cards_of_each(1, 0)
+    };
+    assert_eq!(trashed, 0);
+}
+
+// ─── return_all_trash_to_deck_bottom ─────────────────────────────────────────
+
+#[test]
+fn return_all_trash_to_deck_bottom_drains_trash_to_owners_deck() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("T1", "T1", 1))
+        .add_card(plain_digimon("T2", "T2", 1))
+        .add_card(plain_digimon("T3", "T3", 1))
+        .start();
+
+    // Seed three cards in player 0's trash, all owned by player 0.
+    {
+        let g = r.game_mut();
+        for id in &["T1", "T2", "T3"] {
+            let data_idx = g.card_data.iter().position(|c| c.card_id == *id).unwrap();
+            let next_idx = g.next_card_index();
+            let card = digimon_engine::card_source::CardSource::new(data_idx, 0, next_idx);
+            g.players[0].trash.push(card);
+        }
+    }
+
+    let p0_deck_before = r.deck_size(0);
+    assert_eq!(r.trash_size(0), 3);
+
+    let handles = {
+        let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, 0);
+        ctx.return_all_trash_to_deck_bottom(0)
+    };
+
+    assert_eq!(handles.len(), 3, "all 3 cards moved");
+    assert_eq!(r.trash_size(0), 0, "trash drained");
+    assert_eq!(
+        r.deck_size(0),
+        p0_deck_before + 3,
+        "deck grew by exactly 3"
+    );
+    // Bottom of deck is at index 0; after `insert(0, card)` for T1 then T2 then T3,
+    // T3 is at index 0, T2 at index 1, T1 at index 2 — i.e. T3 is the deck bottom,
+    // T1 is closest to the top among the inserted set.
+    let bottom_id = {
+        let g = r.game_mut();
+        g.player(0).deck[0].card_id(&g.card_data).to_string()
+    };
+    assert_eq!(bottom_id, "T3", "last-drained card sits at deck bottom");
+}
+
+#[test]
+fn return_all_trash_to_deck_bottom_routes_each_card_to_its_owner() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OWNED_BY_A", "A", 1))
+        .add_card(plain_digimon("OWNED_BY_B", "B", 1))
+        .start();
+
+    // Seed player 1's trash with one card owned by player 0 and one by player 1.
+    {
+        let g = r.game_mut();
+        let a_idx = g.card_data.iter().position(|c| c.card_id == "OWNED_BY_A").unwrap();
+        let b_idx = g.card_data.iter().position(|c| c.card_id == "OWNED_BY_B").unwrap();
+        let i_a = g.next_card_index();
+        let i_b = g.next_card_index();
+        let card_a = digimon_engine::card_source::CardSource::new(a_idx, /* owner */ 0, i_a);
+        let card_b = digimon_engine::card_source::CardSource::new(b_idx, /* owner */ 1, i_b);
+        g.players[1].trash.push(card_a);
+        g.players[1].trash.push(card_b);
+    }
+
+    let p0_deck_before = r.deck_size(0);
+    let p1_deck_before = r.deck_size(1);
+
+    let _handles = {
+        let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, 0);
+        ctx.return_all_trash_to_deck_bottom(/* drain player 1's trash */ 1)
+    };
+
+    assert_eq!(r.trash_size(1), 0, "player 1's trash drained");
+    assert_eq!(
+        r.deck_size(0),
+        p0_deck_before + 1,
+        "player 0's card returned to player 0's deck"
+    );
+    assert_eq!(
+        r.deck_size(1),
+        p1_deck_before + 1,
+        "player 1's card returned to player 1's deck"
+    );
+}
+
+// ─── Owner-vs-controller routing ─────────────────────────────────────────────
+
+/// Track E owner-routing rule: a permanent owned by player A but
+/// controlled by player B (e.g. via a future control-transfer effect)
+/// returns to A's deck, not B's, when bounced. Today the engine has no
+/// control-transfer mechanic, but the routing must be correct so a future
+/// landing card doesn't silently misroute.
+#[test]
+fn return_to_deck_routes_top_card_to_owner_not_controller() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OWNED_BY_A", "OwnedByA", 3))
+        .start();
+
+    // Seed a 1-card permanent in player B's (1's) battle area, but with
+    // top.owner = 0 (player A is the owner). Simulates a control-transfer
+    // having taken place. Direct mutation is the only way to set up this
+    // shape today since the engine doesn't yet have a control-transfer
+    // effect.
+    let handle = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let data_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "OWNED_BY_A")
+            .unwrap();
+        let idx = g.next_card_index();
+        let card = digimon_engine::card_source::CardSource::new(data_idx, /* owner */ 0, idx);
+        let perm = digimon_engine::permanent::Permanent::new(card, turn);
+        g.players[1].battle_area.push(perm);
+        digimon_engine::permanent::PermanentHandle {
+            player: 1,
+            index: 0,
+        }
+    };
+
+    let p0_deck_before = r.deck_size(0);
+    let p1_deck_before = r.deck_size(1);
+
+    let ok = r.game_mut().return_to_deck(handle, StackPosition::Bottom);
+    assert!(ok, "return_to_deck should succeed");
+
+    assert_eq!(
+        r.deck_size(0),
+        p0_deck_before + 1,
+        "card returned to OWNER's deck (player 0), not controller's"
+    );
+    assert_eq!(
+        r.deck_size(1),
+        p1_deck_before,
+        "controller's deck (player 1) unchanged"
+    );
+    assert_eq!(r.battle_area_size(1), 0, "permanent gone from battle area");
+}
+
+#[test]
+fn return_to_hand_routes_top_card_to_owner_not_controller() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OWNED_BY_A", "OwnedByA", 3))
+        .start();
+
+    let handle = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let data_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "OWNED_BY_A")
+            .unwrap();
+        let idx = g.next_card_index();
+        let card = digimon_engine::card_source::CardSource::new(data_idx, /* owner */ 0, idx);
+        let perm = digimon_engine::permanent::Permanent::new(card, turn);
+        g.players[1].battle_area.push(perm);
+        digimon_engine::permanent::PermanentHandle {
+            player: 1,
+            index: 0,
+        }
+    };
+
+    let p0_hand_before = r.hand_size(0);
+    let p1_hand_before = r.hand_size(1);
+
+    let returned = r.game_mut().return_to_hand(handle);
+    assert!(returned.is_some(), "return_to_hand should succeed");
+
+    assert_eq!(
+        r.hand_size(0),
+        p0_hand_before + 1,
+        "card returned to OWNER's hand (player 0), not controller's"
+    );
+    assert_eq!(
+        r.hand_size(1),
+        p1_hand_before,
+        "controller's hand (player 1) unchanged"
+    );
+}
+
+/// `place_self_at_security` must return `false` when the effect has no
+/// source permanent.
+#[test]
+fn place_self_at_security_with_no_source_permanent_returns_false() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("PLACEHOLDER", "P", 1))
+        .hand(0, &["PLACEHOLDER"])
+        .start();
+    let card_handle = {
+        let g = r.game_mut();
+        g.player(0).hand[0].handle()
+    };
+    let mut ctx = EffectContext::new(r.game_mut(), card_handle, /* source_permanent */ None, 0);
+    let result = ctx.place_self_at_security(StackPosition::Top, true);
+    assert!(
+        !result,
+        "place_self_at_security with no source_permanent must return false"
+    );
 }

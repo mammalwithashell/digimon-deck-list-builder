@@ -4,6 +4,25 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+## Track E (2026-05-08) — engine helpers shipped, DSL verbs pending
+
+Track E shipped 8 zone-movement helpers + the owner-routing fix at the engine layer. The DSL verbs that lower printed text into these helpers are pending — each verb is a small parser/lowering change, but together they're the bottleneck for several BLOCKED card YAMLs. Verbs to add (with their target `EffectContext` method):
+
+| DSL verb | Engine target | Card driver |
+|---|---|---|
+| `place_self_at_security: { position, face }` | `place_self_at_security` / `place_self_at_security_and_cancel_current_replacement` | EX9-021 (top, face-up), EX4-060 (bottom, face-down) |
+| `place_self_option_at_security: { position, face }` | `place_self_option_at_security` | ST20-15 (top, face-up Option flavor) |
+| `bounce_self: {}` | `bounce_self` | BT24-012 Dimetromon |
+| `security_place_top_stacked_card: { target_player, position, face }` | `security_place_top_stacked_card` | Puppets G027 |
+| `security_place_stacked_card: { source: <BindingRef>, target_player, position, face }` | `security_place_stacked_card` (full form, source picked by `select_own_sources`) | follow-up Puppets / Mineral cards |
+| `return_all_trash_to_deck_bottom: { whose }` | `return_all_trash_to_deck_bottom` (with player-choice wrapper) | BT17-077 Imperialdramon: Paladin Mode |
+| `trash_top_n_digivolution_cards: { of, n, filter }` | `trash_top_n_digivolution_cards_of_each` | BT12-028 |
+| `trash_opponent_hand_to_count: { count }` | `trash_opponent_hand_to_count` | BT19-075 MoonMillenniummon |
+| `search_own_security_stack: { filter, prompt }` | `search_own_security_stack` | TS Olympos cards |
+| `scheduled_delayed_return: { subject, destination, position, fire_at }` | `schedule_delayed` (substrate already exists) | BG Imperial G-BG-02 |
+
+Engine helpers covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test zone_manipulation`. Each verb still needs (a) a YAML schema entry in `code/digimon-dsl/src/spec/step.rs`, (b) a `CompiledStep` variant, (c) lowering in `code/digimon-engine/src/dsl_cards/step/`, and (d) a per-verb DSL test in `code/digimon-engine/tests/dsl/`.
+
 Format per entry:
 
 ```
@@ -59,7 +78,7 @@ Format per entry:
 ## Royal Knights full pool pass — residual reusable DSL/engine gaps  [RK-G005]
 - Status: PARTIAL pool pass completed on 2026-05-05. The Royal Knights resolver pool has 72 unique cards and now has 72 Rust DSL YAML entries. Fully unsupported clauses were left as explicit YAML comments plus ignored Rust tests instead of hidden approximations.
 - Newly routed or reaffirmed blocked cards/clauses: `BT13-019`, `BT13-030`, `BT13-075`, `BT13-087`, `BT13-102`, `BT13-111`, `BT13-112`, `BT15-092`, `BT17-077`, `BT19-093`, `BT20-017`, `BT20-021`, `BT20-045`, `BT20-056`, `BT22-025`, `BT22-041`, `BT22-052`, `BT23-013`, `BT23-035`, `BT23-047`, `BT23-057`, `BT23-072`, `EX8-073`, `EX10-068`, and `EX11-053`.
-- Missing DSL/engine areas: broader union selection across hand/trash/breeding/source stacks with uniqueness/name-exclusion filters; play from King Drasil or other source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; card-specific post-Blast-DNA effect bodies after the covered field+hand-material Counter path (`BT17-078`, `BT20-045`, `BT20-060`, `BT20-076`, `BT20-081`, `EX6-011`, `EX6-029`); residual native `<Blast Digivolve>` helper APIs; Option battle-area carrier lifecycle for non-Delay options; security-trash self-dispatch; security search/play and self-to-security placement; security-removed card-local follow-up shapes beyond the now-wired battle/effect `OnOpponentSecurityRemoved` / `OnOwnSecurityRemoved` timing payloads; generalized source-list Partition lowering beyond authored card clauses; and unusual replacement/security-trash costs tied atomically to prevention. `when: on_place_security`, alias `when: on_added_to_security`, `when: on_discard_security`, and the printed-text alias `when: on_any_digimon_played` are now wired as of 2026-05-08 with event-card/effect-cause payloads where applicable; the remaining "self-to-security" and security-trash entries are about moving the resolving object legally or authoring card-local bodies, not the observer timing tokens. Immediate may-attack / force-attack / cancel-attack / open-counter-window prompts are now covered by the Track D DSL verbs listed below.
+- Missing DSL/engine areas: broader union selection across hand/trash/breeding/source stacks with uniqueness/name-exclusion filters; play from King Drasil or other source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; card-specific post-Blast-DNA effect bodies after the covered field+hand-material Counter path (`BT17-078`, `BT20-045`, `BT20-060`, `BT20-076`, `BT20-081`, `EX6-011`, `EX6-029`); residual native `<Blast Digivolve>` helper APIs; Option battle-area carrier lifecycle for non-Delay options; security-trash self-dispatch; security search/play and self-to-security placement; security-removed card-local follow-up shapes beyond the now-wired battle/effect `OnOpponentSecurityRemoved` / `OnOwnSecurityRemoved` timing payloads; generalized source-list Partition lowering beyond authored card clauses; and unusual replacement/security-trash costs tied atomically to prevention. `when: on_place_security`, alias `when: on_added_to_security`, `when: on_discard_security`, and the printed-text alias `when: on_any_digimon_played` are now wired as of 2026-05-08 with event-card/effect-cause payloads where applicable; the remaining "self-to-security" and security-trash entries are about moving the resolving object legally or authoring card-local bodies, not the observer timing tokens. Immediate may-attack / force-attack / cancel-attack / open-counter-window prompts are now covered by the Track D DSL verbs listed below. **Track E (2026-05-08)** shipped engine substrate for "self-to-security" via `EffectContext::place_self_at_security` (Digimon flavor), `place_self_option_at_security` (Option flavor), and the security-stacked-card extraction helpers — the remaining card-side work is the DSL verbs that lower into them.
 - Workaround policy: no approximations were used for these blockers. If a printed clause required one of the missing primitives, the YAML either implemented an independent faithful slice such as a keyword/security play/simple trigger, or used a load-only gap stub.
 - Verification: targeted `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- <card_filter> --nocapture` passed for the final 25 filters, with one active load test and one ignored gap test per card.
 - First reported: 2026-05-05 Royal Knights full pool implementation pass.
@@ -505,8 +524,9 @@ Format per entry:
     optional: true
     process: [...]
   ```
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2a_triggered parse_clauses`.
 - Implementation: add `Timing::OnOpponentAttack` variant + serde wiring + `compile_timing` arm; the existing `lower_triggered.rs` already routes `EffectTiming::OnOpponentAttack`, so no new lowering code needed.
-- Gap kind: dsl, closed. AD1-012's Opp-Turn clause remains blocked by the defender-side effect DNA route into Omnimon Alter-S, not by this timing token.
+- Gap kind: dsl, closed. AD1-012's Opp-Turn clause remains blocked by the defender-side effect DNA route into Omnimon Alter-S (and the separate redirect-attack-target step), not by this timing token.
 - First reported: 2026-05-03 (AD1-012 batch-implement-cards-rust-dsl, DNA Omnimon Batch 1)
 
 ---
@@ -756,8 +776,9 @@ Format per entry:
 ## EX4-060 — Place self at bottom of own security stack face down  [G-PLACE-SELF-AT-SECURITY-BOTTOM]
 - Effect text: EX4-060 Omnimon Alter-S — "[All Turns] When this Digimon would leave the battle area other than by one of your effects, ... Then, place this Digimon at the bottom of your security stack face down."
 - Status: CLOSED for EX4-060 on 2026-05-08. The DSL now has `place_permanent_on_security_and_handle_replacement`, which can target `replacement_subject`, choose top/bottom/random security placement, preserve face-down placement, trash leftover sources, and mark the active replacement custom-handled. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex4_060` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- replacement`.
-- Landed DSL verb / step kind: `place_permanent_on_security_and_handle_replacement`, used from a `kind: replacement` clause whose target is `replacement_subject`.
-  - `place_self_as_delay_option: {}` — places an Option-card self into the battle area as a Delay permanent. Wrong destination zone (battle area, not security) and wrong subject scope (Option only).
+- Landed DSL verb / step kind: `place_permanent_on_security_and_handle_replacement`, used from a `kind: replacement` clause whose target is `replacement_subject`. Track E note: a sibling `EffectContext::place_self_at_security` (resolves `self.source_permanent` automatically) shipped on the same day for cards where the active resolver is itself the subject without needing an explicit binding; both helpers coexist.
+- Closest pre-existing primitives (none of which sufficed before the new verb landed):
+
   - `add_this_option_to_hand: {}` — routes an Option from security-resolution staging to hand. Wrong destination zone and wrong subject scope.
   - `place_permanent_bottom_security_and_cancel_replacement` — targets ANOTHER permanent (selected via a binding) and CANCELS the replacement. Wrong subject (binding-selected, not self) and wrong outcome (cancel vs proceed-with-reroute).
 - Engine substrate landed: `EffectContext::place_permanent_on_security_and_handle_current_replacement` delegates to `Game::place_permanent_on_security_without_leave_replacement`, which consumes the leaving permanent, consults `CannotAddSecurityByEffect`, places the top card into security, trashes leftover sources/linked cards, clears modifiers, and marks the replacement custom-handled. DCGO models the card-side shape via `IPutSecurityPermanent(card.PermanentOfThisCard(), CardEffectHashtable(activateClass), toTop: false).PutSecurity()`.
@@ -827,6 +848,10 @@ Format per entry:
 - First reported: 2026-05-03 (EX9-021 Omnimon Alter-S, batch-implement-cards-rust-dsl).
 
 ## EX9-021 — Place self at TOP of own security stack face-up  [G-PLACE-SELF-AT-SECURITY-TOP]
+- Status: ENGINE-DONE / DSL-PENDING (Track E 2026-05-08). Engine substrate `EffectContext::place_self_at_security(StackPosition::Top, true)` shipped — see `docs/RUST_ENGINE_API.md` Placement table and `cargo test … --test zone_manipulation -- place_self_at_security`. The DSL verb `place_self_at_security: { position: top, face: up }` is the remaining work. Like EX4-060, this card is also blocked on `G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES` for the head arm.
+
+[ORIGINAL ENTRY BELOW]
+
 - Effect text: EX9-021 Omnimon Alter-S — "[End of Attack] ... If this effect played, place this Digimon as your top security card." DCGO: `IPutSecurityPermanent(card.PermanentOfThisCard(), CardEffectHashtable, toTop: true).PutSecurity()` — places this permanent (top + sources) at the TOP of the controller's security stack (face-up; printed text does not specify face-down).
 - Status: OPEN (filed 2026-05-03 during EX9-021 batch-implement-cards-rust-dsl). Sibling of `G-PLACE-SELF-AT-SECURITY-BOTTOM` (EX4-060) — same engine substrate, different placement target (TOP vs bottom) and different trigger-clause kind (end-of-attack tail vs would-leave replacement).
 - Missing DSL verb / step kind / predicate: no `place_self_at_security_top: {}` step. Closest existing primitives are `place_self_as_delay_option` (places an Option-card self into the battle area as a Delay; wrong destination + Option-only), `add_this_option_to_hand` (routes Option to hand; wrong zone), and `place_permanent_bottom_security_and_cancel_replacement` (targets a binding-selected permanent and cancels the replacement; wrong subject + wrong outcome).

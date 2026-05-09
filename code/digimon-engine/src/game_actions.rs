@@ -2513,17 +2513,27 @@ impl Game {
             return None;
         };
         let top_handle = top.handle();
+        let top_owner = top.owner;
         let mut leaving_sources = sources.clone();
         leaving_sources.push(top.clone());
         self.apply_ace_overflow_for_sources(&leaving_sources);
-        self.player_mut(handle.player).hand.push(top);
+        // Owner-routed: top card returns to its owner's hand, not the
+        // controller's. Track E correctness rule. Identical when
+        // `top_owner == handle.player` (the common case today).
+        self.player_mut(top_owner).hand.push(top);
 
-        // Sources below the top go to trash and fire OnDigivolutionCardTrashed
-        // (digivolution stack sources only — not linked_cards which are Tamer
-        // equipment and separate semantic category).
+        // Sources below the top go to each source's owner's trash and fire
+        // OnDigivolutionCardTrashed (digivolution stack sources only — not
+        // linked_cards which are Tamer equipment and separate semantic
+        // category). Owner-routed.
         for card in sources {
             let source_card = card.handle();
-            self.player_mut(handle.player).trash.push(card);
+            // Owner-routed: each source returns to its OWN owner's trash,
+            // not the controller's (Track E correctness rule). The trigger
+            // attribution still uses `handle.player` (the host's controller)
+            // for event-source-player binding.
+            let owner = card.owner;
+            self.player_mut(owner).trash.push(card);
             self.fire_digivolution_card_trashed(
                 handle.player,
                 handle,
@@ -2534,7 +2544,9 @@ impl Game {
         }
         let had_linked = !perm.linked_cards.is_empty();
         for card in perm.linked_cards {
-            self.player_mut(handle.player).trash.push(card);
+            // Owner-routed: linked cards return to their own owner's trash.
+            let owner = card.owner;
+            self.player_mut(owner).trash.push(card);
         }
         // Phase 8 Task 4: fire OnLinkedCardTrashed if the returning host was
         // carrying any linked cards (they cannot ride the host back to hand).
@@ -2757,17 +2769,23 @@ impl Game {
             perm.card_sources.push(top);
             self.insert_stack_into_owners_decks(perm.card_sources, position);
         } else {
+            // Owner-routed: top card returns to its OWN owner's deck.
+            // Track E correctness rule. Identical to controller-routed
+            // when owner == controller (the common case today); diverges
+            // if a future control-transfer effect sets owner != controller.
+            let top_owner = top.owner;
             let host_card = top.handle();
-            self.insert_card_into_deck(player_id, top, position);
+            self.insert_card_into_deck(top_owner, top, position);
 
-            // Sources below the top go to trash and fire OnDigivolutionCardTrashed
-            // (digivolution stack sources only — not linked_cards which are Tamer
-            // equipment and separate semantic category).
+            // Sources below the top → each source's OWN owner's trash.
+            // Trigger uses Track A's fire_digivolution_card_trashed helper
+            // which carries the EventCause for downstream payload binding.
             for card in perm.card_sources {
                 let source_card = card.handle();
-                self.player_mut(player_id).trash.push(card);
+                let owner = card.owner;
+                self.player_mut(owner).trash.push(card);
                 self.fire_digivolution_card_trashed(
-                    player_id,
+                    handle.player,
                     handle,
                     host_card,
                     source_card,
@@ -2783,7 +2801,9 @@ impl Game {
 
         let had_linked = !perm.linked_cards.is_empty();
         for card in perm.linked_cards {
-            self.player_mut(player_id).trash.push(card);
+            // Owner-routed: linked cards return to their own owner's trash.
+            let owner = card.owner;
+            self.player_mut(owner).trash.push(card);
         }
         // Phase 8 Task 4: fire OnLinkedCardTrashed if the returning host was
         // carrying any linked cards.
@@ -4230,6 +4250,161 @@ impl Game {
         self.place_on_security_observed(player_id, source, position, face_up, player_id)
     }
 
+    /// Generalized "move this permanent into the security stack" primitive.
+    /// Routes the permanent's top card to `player_id`'s security at `position`
+    /// (face-up if `face_up`); routes sources-below-top to each source's
+    /// owner's trash, firing `OnDigivolutionCardTrashed` per source; routes
+    /// linked cards to the controller's trash, firing `OnLinkedCardTrashed`
+    /// once if any were present. Mirrors the source-disposition shape used by
+    /// `Game::return_to_deck` and `EffectContext::attach_tamer_to_digimon`.
+    ///
+    /// Gates on `CannotAddSecurityByEffect` (player-scoped, checked against
+    /// `observer_player`). Routes through `WhenWouldLeaveBattleArea` then
+    /// `WhenWouldPlaceInSecurity` replacements; bails (`false`) on any
+    /// non-`None` outcome or installed pending selection.
+    ///
+    /// Used by `EffectContext::place_self_at_security` (Track E) — printed
+    /// text "place this Digimon at the bottom of your security stack face
+    /// down" (EX4-060), "place this Digimon as your top security card"
+    /// (EX9-021), etc. DCGO `IPutSecurityPermanent` covers the same shape.
+    ///
+    /// **Engine divergence vs DCGO:** DCGO bundles the entire permanent
+    /// (top + sources + linked) under a single security slot. The Rust
+    /// engine's `Player.security: Vec<CardSource>` is flat (one card per
+    /// slot), so the bundle is unrepresentable. We route sources to trash
+    /// instead, matching the rules-default behavior for permanents leaving
+    /// the field to a non-stack destination. Documented in
+    /// `docs/RUST_PYTHON_PARITY.md` (Track E divergence note).
+    pub(crate) fn place_permanent_on_security_observed(
+        &mut self,
+        player_id: PlayerId,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+        observer_player: PlayerId,
+    ) -> bool {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        if self
+            .modifiers
+            .player_has(observer_player, ModifierType::CannotAddSecurityByEffect)
+        {
+            return false;
+        }
+
+        let Some(permanent) = self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+        else {
+            return false;
+        };
+        if permanent.card_sources.is_empty() {
+            return false;
+        }
+
+        let source_card = permanent.top_card().handle();
+        let cause = self.infer_effect_cause(player_id);
+        let leave_subject = ReplacementSubject::Permanent(target);
+        let leave_outcome = self.try_replace(
+            EffectTiming::WhenWouldLeaveBattleArea,
+            leave_subject,
+            cause,
+            Some(Zone::Security),
+        );
+        if self.pending_selection.is_some() || !matches!(leave_outcome, ReplacementOutcome::None) {
+            return false;
+        }
+
+        let place_subject = ReplacementSubject::Card(source_card, Zone::BattleArea);
+        let place_outcome = self.try_replace(
+            EffectTiming::WhenWouldPlaceInSecurity,
+            place_subject,
+            cause,
+            Some(Zone::Security),
+        );
+        if self.pending_selection.is_some() || !matches!(place_outcome, ReplacementOutcome::None) {
+            return false;
+        }
+
+        let mut permanent = self
+            .player_mut(target.player)
+            .battle_area
+            .remove(target.index as usize);
+
+        // Pop top card; if somehow empty (shouldn't happen — we checked
+        // above), bail without further state changes.
+        let Some(card) = permanent.card_sources.pop() else {
+            return false;
+        };
+
+        // Modifier cleanup BEFORE the source-trash dispatch — modifiers are
+        // keyed on `PermanentHandle`, which becomes invalid after `remove()`
+        // shifts indices. Mirrors `attach_tamer_to_digimon`.
+        self.modifiers.clear_permanent(target);
+        self.modifiers.expire_player_on_permanent_leave(target);
+
+        // Sources-below-top → each source's owner's trash. Per source: push,
+        // enqueue OnDigivolutionCardTrashed for each player, drain queue.
+        // Mirrors `EffectContext::attach_tamer_to_digimon`.
+        for source in permanent.card_sources.drain(..) {
+            let owner = source.owner;
+            self.player_mut(owner).trash.push(source);
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    EffectTiming::OnDigivolutionCardTrashed,
+                    TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                );
+            }
+            self.drain_effect_queue();
+        }
+
+        // Linked cards → controller's trash; fire OnLinkedCardTrashed once
+        // if any were present. Mirrors `attach_tamer_to_digimon`.
+        let had_linked = !permanent.linked_cards.is_empty();
+        for linked in permanent.linked_cards.drain(..) {
+            let owner = linked.owner;
+            self.player_mut(owner).trash.push(linked);
+        }
+        if had_linked {
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    EffectTiming::OnLinkedCardTrashed,
+                    TriggerSource::PlayerBattleArea(pid as crate::PlayerId),
+                );
+            }
+            self.drain_effect_queue();
+        }
+
+        // Place top card in security at the requested position.
+        let face_up_key = card.card_index;
+        match position {
+            crate::enums::StackPosition::Top => {
+                self.player_mut(player_id).security.push(card);
+            }
+            crate::enums::StackPosition::Bottom => {
+                self.player_mut(player_id).security.insert(0, card);
+            }
+            crate::enums::StackPosition::Random => {
+                use rand::Rng;
+                let sec_len = self.player(player_id).security.len();
+                let idx = if sec_len == 0 {
+                    0
+                } else {
+                    self.rng.gen_range(0..=sec_len)
+                };
+                self.player_mut(player_id).security.insert(idx, card);
+            }
+        }
+        if face_up {
+            self.player_mut(player_id)
+                .face_up_security
+                .insert(face_up_key);
+        }
+        true
+    }
+
     pub(crate) fn place_sourceless_permanent_on_security_bottom(
         &mut self,
         player_id: PlayerId,
@@ -4490,7 +4665,11 @@ impl Game {
 
         for card in permanent.card_sources {
             let source_card = card.handle();
-            self.player_mut(target.player).trash.push(card);
+            // Owner-routed (Track E correctness): each source returns to
+            // its OWN owner's trash. Identical to controller-routed when
+            // owner == controller (the common case).
+            let owner = card.owner;
+            self.player_mut(owner).trash.push(card);
             self.enqueue_triggered(
                 EffectTiming::OnDigivolutionCardTrashed,
                 TriggerSource::SourceTrashedFromStack {
@@ -4506,7 +4685,9 @@ impl Game {
 
         let had_linked = !permanent.linked_cards.is_empty();
         for linked in permanent.linked_cards {
-            self.player_mut(target.player).trash.push(linked);
+            // Owner-routed: linked cards return to their own owner's trash.
+            let owner = linked.owner;
+            self.player_mut(owner).trash.push(linked);
         }
         if had_linked {
             for pid in 0..self.players.len() {
