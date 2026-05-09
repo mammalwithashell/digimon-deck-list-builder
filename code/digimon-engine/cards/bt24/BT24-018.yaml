@@ -58,23 +58,27 @@ effects:
       - delete_permanent: { target: tgt }
 
   # Clause (g) — [All Turns][OPT] When own Reptile/Dragonkin would leave, pay cost
-  # "When any of your [Reptile] or [Dragonkin] trait Digimon would leave the
-  #  battle area, by deleting 1 of your opponent's lowest DP Digimon, they don't leave."
-  #
-  # Gaps:
-  #   G-OPT-TRIGGERED: OPT on would-replacement timings not yet supported declaratively.
-  #   G-EVENT-TARGET-OWNER: no predicate to filter leaving permanent by owner.
-  #
-  # Both gaps require the process to be handled entirely via raw_rust.
-  # The bt24_018_would_leave_replacement fn is responsible for:
-  #   - Checking subject belongs to THIS card's controller (G-EVENT-TARGET-OWNER)
-  #   - Checking subject has Reptile or Dragonkin trait
-  #   - OPT hash-check + lock (G-OPT-TRIGGERED)
-  #   - Verifying opponent has >= 1 Digimon (cost payable)
-  #   - Installing optional replacement accept/decline dialog
-  #   - On accept: selecting+deleting opponent's lowest DP Digimon
-  #   - Setting game.dsl_replacement_outcome = Cancelled so the subject stays
   - kind: replacement
     trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - any_of:
+            - trait_has: Reptile
+            - trait_has: Dragonkin
     process:
-      - raw_rust: { fn: bt24_018_would_leave_replacement }
+      - select_opponent_permanent:
+          bind_as: lowest_dp_cost
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte:
+                  aggregate:
+                    selector: lowest_dp
+                    scope: opponent
+          prompt: "Delete 1 of your opponent's lowest DP Digimon"
+      - delete_permanent: { target: lowest_dp_cost }
+      - cancel_replacement: {}

@@ -240,8 +240,9 @@ fn turn_player_bundle_resolves_before_opponent() {
     // then P1's single (auto-fire size-1).
     assert!(r.game.pending_selection.is_none());
     assert!(r.game.effect_queue.is_empty());
-    // P0: TEST-006 (+5) + TEST-008 (-3) = +2. P1: TEST-006 (+5). Total: +7.
-    assert_eq!(r.memory(), memory_before + 2 + 5);
+    // P0: TEST-006 (+5) + TEST-008 (-3) = +2. P1: TEST-006 gains for
+    // P1, moving the seesaw -5 from P0's turn-player perspective. Total: -3.
+    assert_eq!(r.memory(), memory_before + 2 - 5);
 }
 
 /// Mandatory + optional mixed for one controller → PASS is not offered

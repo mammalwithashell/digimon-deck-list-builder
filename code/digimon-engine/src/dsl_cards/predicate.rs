@@ -80,6 +80,11 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(name) = &pred.binding_exists {
+        if bindings.and_then(|b| b.get_ref(name)).is_none() {
+            return false;
+        }
+    }
     if let Some(player_ref) = pred.can_hatch {
         let can_any = resolve_predicate_players(player_ref, rctx)
             .into_iter()
@@ -539,6 +544,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
     // If any subject-only field is set, this subjectless eval can't satisfy it.
     pred.kind.is_none()
         && pred.level_eq.is_none()
+        && pred.level_eq_binding.is_none()
         && pred.level_lte.is_none()
         && pred.level_gte.is_none()
         && pred.level_matches_aggregate.is_none()
@@ -924,6 +930,14 @@ fn eval_card_fields(
     }
     if let Some(want) = pred.level_eq {
         if data.level != Some(want) {
+            return false;
+        }
+    }
+    if let Some(ref binding) = pred.level_eq_binding {
+        let Some(want) = bindings.and_then(|b| b.get_literal(binding)) else {
+            return false;
+        };
+        if data.level.map(i64::from) != Some(want) {
             return false;
         }
     }

@@ -13,12 +13,13 @@
 use std::sync::Arc;
 
 use digimon_dsl::compiled::{
-    CompiledBindingRef, CompiledFieldSelector, CompiledPlayerRef, CompiledPredicate, CompiledStep,
-    CompiledZone,
+    CompiledBindingRef, CompiledCountBound, CompiledFieldSelector, CompiledPlayerRef,
+    CompiledPredicate, CompiledStep, CompiledZone,
 };
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::predicate::{eval_predicate, eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::step::{
     drain_dsl_outer_tail, resolve_player, run_steps_with_runtime, StepRuntime,
@@ -324,19 +325,23 @@ pub fn try_install(
             prompt,
             optional_zero,
             distinct_by,
+            filter,
             ..
         } => {
             let target_player = resolve_player(ctx, *of);
-            let Some(candidate_count) = count_capped_candidate_count(ctx, target_player, *zone)
+            let max_value = resolve_count_bound(ctx, max, &bindings);
+            let Some(candidate_count) =
+                count_capped_candidate_count(ctx, target_player, *zone, filter, Some(&bindings))
             else {
                 return InstallResult::Continue;
             };
-            let completes_synchronously = candidate_count == 0;
+            let completes_synchronously = candidate_count == 0 || max_value == 0;
             install_select_count_capped_multi(
                 ctx,
                 *of,
                 *zone,
-                *max,
+                max_value,
+                filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional_zero,
@@ -432,6 +437,7 @@ pub fn try_install(
         }
         CompiledStep::SelectMaterial {
             of_permanent,
+            filter,
             bind_as,
             prompt,
             optional,
@@ -443,12 +449,13 @@ pub fn try_install(
                 // Missing binding or wrong type: silent no-op (2b/2c convention).
                 _ => return InstallResult::Continue,
             };
-            if !has_material_candidates(ctx, perm) {
+            if !has_material_candidates(ctx, perm, filter, Some(&bindings)) {
                 return InstallResult::Continue;
             }
             install_select_material(
                 ctx,
                 perm,
+                filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -606,12 +613,30 @@ fn has_own_source_candidates(ctx: &EffectContext<'_>) -> bool {
         .any(|perm| perm.card_sources.len() > 1)
 }
 
-fn has_material_candidates(ctx: &EffectContext<'_>, perm: PermanentHandle) -> bool {
+fn has_material_candidates(
+    ctx: &EffectContext<'_>,
+    perm: PermanentHandle,
+    filter: &CompiledPredicate,
+    bindings: Option<&Bindings>,
+) -> bool {
+    let read = ctx.as_read();
     ctx.game
         .player(perm.player)
         .battle_area
         .get(perm.index as usize)
-        .map(|p| p.card_sources.len() > 1)
+        .map(|p| {
+            p.card_sources
+                .iter()
+                .take(p.card_sources.len().saturating_sub(1))
+                .any(|card| {
+                    eval_predicate_with_bindings(
+                        filter,
+                        &read,
+                        PredicateSubject::Card(card.handle()),
+                        bindings,
+                    )
+                })
+        })
         .unwrap_or(false)
 }
 
@@ -635,14 +660,70 @@ fn has_own_breeding_candidate(ctx: &EffectContext<'_>) -> bool {
     ctx.game.player(ctx.player).breeding_area.is_some()
 }
 
+fn resolve_count_bound(
+    ctx: &EffectContext<'_>,
+    max: &CompiledCountBound,
+    bindings: &Bindings,
+) -> u8 {
+    let value = match max {
+        CompiledCountBound::Literal(n) => i32::from(*n),
+        CompiledCountBound::Formula(formula) => ctx
+            .source_permanent
+            .map(|target| {
+                formula_eval::evaluate_with_bindings(formula, ctx, target, Some(bindings))
+            })
+            .unwrap_or(0),
+    };
+    value.clamp(0, 10) as u8
+}
+
 fn count_capped_candidate_count(
     ctx: &EffectContext<'_>,
     of_player: u8,
     zone: CompiledZone,
+    filter: &CompiledPredicate,
+    bindings: Option<&Bindings>,
 ) -> Option<usize> {
     match zone {
-        CompiledZone::Hand => Some(ctx.game.player(of_player).hand.len()),
-        CompiledZone::Trash => Some(ctx.game.player(of_player).trash.len()),
+        CompiledZone::Hand => {
+            let read = ctx.as_read();
+            Some(
+                ctx.game
+                    .player(of_player)
+                    .hand
+                    .iter()
+                    .filter(|card| {
+                        eval_predicate_with_bindings(
+                            filter,
+                            &read,
+                            PredicateSubject::Card(card.handle()),
+                            bindings,
+                        )
+                    })
+                    .count(),
+            )
+        }
+        CompiledZone::Trash => {
+            let read = ctx.as_read();
+            Some(
+                ctx.game
+                    .player(of_player)
+                    .trash
+                    .iter()
+                    .filter(|card| {
+                        eval_predicate_with_bindings(
+                            filter,
+                            &read,
+                            PredicateSubject::Card(card.handle()),
+                            bindings,
+                        )
+                    })
+                    .count(),
+            )
+        }
+        CompiledZone::BattleArea => {
+            Some(collect_matching_permanents(ctx, of_player, filter, bindings).len())
+        }
         _ => None,
     }
 }
@@ -1058,6 +1139,7 @@ fn install_select_count_capped_multi(
     of: CompiledPlayerRef,
     zone: CompiledZone,
     max: u8,
+    filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
     optional_zero: bool,
@@ -1067,6 +1149,38 @@ fn install_select_count_capped_multi(
     runtime: StepRuntime,
 ) {
     let target_player = resolve_player(ctx, of);
+    if max == 0 {
+        let mut b = bindings.clone();
+        if let Some(name) = &bind_as {
+            match zone {
+                CompiledZone::BattleArea => b.insert_permanent_list(name, Vec::new()),
+                _ => b.insert_card_list(name, Vec::new()),
+            }
+        }
+        run_tail_preserving_trigger_context(
+            ctx,
+            ctx.game.current_trigger_context.clone(),
+            &tail,
+            &mut b,
+            &runtime,
+        );
+        return;
+    }
+    if matches!(zone, CompiledZone::BattleArea) {
+        install_select_count_capped_permanents(
+            ctx,
+            target_player,
+            max,
+            filter,
+            bind_as,
+            prompt,
+            optional_zero,
+            tail,
+            bindings,
+            runtime,
+        );
+        return;
+    }
     let engine_zone = match zone {
         CompiledZone::Hand => CountCappedZone::Hand,
         CompiledZone::Trash => CountCappedZone::Trash,
@@ -1077,6 +1191,11 @@ fn install_select_count_capped_multi(
     };
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
     ctx.select_count_capped_multi(
         target_player,
         engine_zone,
@@ -1084,7 +1203,21 @@ fn install_select_count_capped_multi(
         &prompt,
         optional_zero,
         distinct_by,
-        |_game, _card| true, // Phase 2b/2c precedent: accept-all filter.
+        move |game, card| {
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Card(card.handle()),
+                Some(&filter_bindings),
+            )
+        },
         move |cb_ctx, picks| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
@@ -1093,6 +1226,180 @@ fn install_select_count_capped_multi(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_select_count_capped_permanents(
+    ctx: &mut EffectContext<'_>,
+    target_player: u8,
+    max: u8,
+    filter: CompiledPredicate,
+    bind_as: Option<String>,
+    prompt: String,
+    optional_zero: bool,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    use crate::action::space::encode_attack;
+
+    let candidates: Vec<(u16, PermanentHandle)> =
+        collect_matching_permanents(ctx, target_player, &filter, Some(&bindings))
+            .into_iter()
+            .map(|handle| {
+                (
+                    encode_attack(handle.player as u16, handle.index as u16),
+                    handle,
+                )
+            })
+            .collect();
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    if candidates.is_empty() {
+        let mut b = bindings.clone();
+        if let Some(name) = &bind_as {
+            b.insert_permanent_list(name, Vec::new());
+        }
+        run_tail_preserving_trigger_context(ctx, trigger_context, &tail, &mut b, &runtime);
+        return;
+    }
+
+    let selecting_player = ctx.override_selecting_player().unwrap_or(ctx.player);
+    let controller = ctx.player;
+    let override_pin = ctx.override_selecting_player();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let previous_phase = ctx.game.current_phase;
+    let final_callback: Box<
+        dyn FnOnce(&mut crate::game::Game, Vec<PermanentHandle>) + Send + Sync,
+    > = Box::new(move |game, picks| {
+        let mut cb_ctx = EffectContext::new_with_source_kind_and_override(
+            game,
+            source_card,
+            source_permanent,
+            source_kind,
+            controller,
+            override_pin,
+        );
+        let mut b = bindings.clone();
+        if let Some(name) = &bind_as {
+            b.insert_permanent_list(name, picks);
+        }
+        run_tail_preserving_trigger_context(&mut cb_ctx, trigger_context, &tail, &mut b, &runtime);
+    });
+
+    install_count_capped_permanent_step(
+        ctx.game,
+        candidates,
+        Vec::new(),
+        max,
+        optional_zero,
+        prompt,
+        source_card,
+        source_permanent,
+        source_kind,
+        selecting_player,
+        previous_phase,
+        final_callback,
+    );
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_count_capped_permanent_step(
+    game: &mut crate::game::Game,
+    candidates: Vec<(u16, PermanentHandle)>,
+    accum: Vec<PermanentHandle>,
+    max: u8,
+    optional_zero: bool,
+    prompt: String,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    source_kind: crate::enums::EffectSourceKind,
+    selecting_player: u8,
+    previous_phase: GamePhase,
+    final_callback: Box<dyn FnOnce(&mut crate::game::Game, Vec<PermanentHandle>) + Send + Sync>,
+) {
+    use std::sync::{Arc, Mutex};
+
+    let picked = accum.len() as u8;
+    let is_optional = optional_zero || picked >= 1;
+    let valid_action_ids = candidates.iter().map(|(action, _)| *action).collect();
+    let shared_cb: Arc<
+        Mutex<Option<Box<dyn FnOnce(&mut crate::game::Game, Vec<PermanentHandle>) + Send + Sync>>>,
+    > = Arc::new(Mutex::new(Some(final_callback)));
+    let shared_cb_decline = Arc::clone(&shared_cb);
+    let accum_for_decline = accum.clone();
+
+    game.current_phase = GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::CountCappedMultiSelect { max, picked },
+        selecting_player,
+        previous_phase,
+        valid_action_ids,
+        is_optional,
+        prompt: prompt.clone(),
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        source_kind,
+        callback: Box::new(move |game, action_id| {
+            let Some((_, handle)) = candidates
+                .iter()
+                .find(|(candidate_action, _)| *candidate_action == action_id)
+                .copied()
+            else {
+                return;
+            };
+
+            let mut new_accum = accum;
+            new_accum.push(handle);
+            if new_accum.len() == max as usize {
+                if let Some(cb) = shared_cb.lock().unwrap().take() {
+                    cb(game, new_accum);
+                }
+                return;
+            }
+
+            let new_candidates: Vec<(u16, PermanentHandle)> = candidates
+                .into_iter()
+                .filter(|(candidate_action, _)| *candidate_action != action_id)
+                .collect();
+            if new_candidates.is_empty() {
+                if let Some(cb) = shared_cb.lock().unwrap().take() {
+                    cb(game, new_accum);
+                }
+                return;
+            }
+
+            let next_cb: Box<
+                dyn FnOnce(&mut crate::game::Game, Vec<PermanentHandle>) + Send + Sync,
+            > = Box::new(move |game, picks| {
+                if let Some(cb) = shared_cb.lock().unwrap().take() {
+                    cb(game, picks);
+                }
+            });
+            install_count_capped_permanent_step(
+                game,
+                new_candidates,
+                new_accum,
+                max,
+                optional_zero,
+                prompt,
+                source_card,
+                source_permanent,
+                source_kind,
+                selecting_player,
+                previous_phase,
+                next_cb,
+            );
+        }),
+        on_decline: Some(Box::new(move |game| {
+            if let Some(cb) = shared_cb_decline.lock().unwrap().take() {
+                cb(game, accum_for_decline);
+            }
+        })),
+    });
 }
 
 fn install_select_effect_choice(
@@ -1295,6 +1602,7 @@ fn install_select_security(
 fn install_select_material(
     ctx: &mut EffectContext<'_>,
     perm: PermanentHandle,
+    filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
@@ -1304,13 +1612,40 @@ fn install_select_material(
 ) {
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
     // Top-card exclusion is enforced by EffectContext::select_material itself
-    // (matches CountCappedZone::Material). Phase 2b accept-all filter applies.
+    // (matches CountCappedZone::Material).
     ctx.select_material(
         perm,
         &prompt,
         optional,
-        |_game, _src_idx| true,
+        move |game, src_idx| {
+            let Some(card) = game
+                .player(perm.player)
+                .battle_area
+                .get(perm.index as usize)
+                .and_then(|p| p.card_sources.get(src_idx))
+            else {
+                return false;
+            };
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Card(card.handle()),
+                Some(&filter_bindings),
+            )
+        },
         move |cb_ctx, src_idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {

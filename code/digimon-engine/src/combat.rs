@@ -26,6 +26,7 @@
 //! Vortex short-circuits directly from `Declared` to `Battle` after OnAttack
 //! — Vortex attacks are uninterruptible per Digimon TCG rules.
 
+use crate::card_source::CardHandle;
 use crate::enums::{CardKind, EffectTiming, GamePhase, Keyword, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
@@ -1510,6 +1511,7 @@ impl Game {
             evo_index_after_material,
             0,
             false,
+            false,
         );
         if merged.is_none() {
             let maybe_temp = self.player_mut(defender).battle_area.pop();
@@ -2826,6 +2828,11 @@ impl Game {
     /// `resolve_generic_selection`'s post-callback hook (calls
     /// `resume_pending_deletion`).
     fn commit_permanent_deletion(&mut self, handle: PermanentHandle) {
+        let deleted_top_card = self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .and_then(|permanent| permanent.card_sources.last().map(|card| card.handle()));
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnDeletion,
             crate::selection::TriggerSource::Permanent(handle),
@@ -2842,7 +2849,7 @@ impl Game {
                 self.pending_deletion_resume.is_none(),
                 "nested deferred deletion not supported (single-outstanding invariant)"
             );
-            self.pending_deletion_resume = Some(handle);
+            self.pending_deletion_resume = Some((handle, deleted_top_card));
             return;
         }
 
@@ -2862,6 +2869,19 @@ impl Game {
     /// (`commit_permanent_deletion_no_replace`) can share the same finalize
     /// step (linked-card cascade, post-deletion replays drain, OnAnyDeletion).
     pub(crate) fn finalize_permanent_deletion(&mut self, handle: PermanentHandle) {
+        let deleted_top_card = self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .and_then(|permanent| permanent.card_sources.last().map(|card| card.handle()));
+        self.finalize_permanent_deletion_with_event_card(handle, deleted_top_card);
+    }
+
+    pub(crate) fn finalize_permanent_deletion_with_event_card(
+        &mut self,
+        handle: PermanentHandle,
+        deleted_top_card: Option<CardHandle>,
+    ) {
         // Phase 8 Task 4: drain any linked cards BEFORE removing the
         // permanent so the OnLinkedCardTrashed observer sees the host still
         // in place (as required by the Appmon-trait card text). Each linked
@@ -2909,29 +2929,34 @@ impl Game {
         // Permanent may already have been removed by an OnDeletion effect
         // (self-sacrifice patterns). Check before deleting. Keep the deleted
         // top card as event context for the subsequent OnAnyDeletion broadcast.
-        let deleted_snapshot = self
+        let live_deleted_top_card = self
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)
-            .map(|permanent| {
-                let top = permanent.top_card();
-                crate::trigger_context::DeletedObjectSnapshot {
-                    former_controller: handle.player,
-                    top_card: top.handle(),
-                    card_kind: top.card_kind(&self.card_data),
-                    traits: top.traits(&self.card_data).to_vec(),
-                    level: top.level(&self.card_data),
-                    dp: self.effective_dp(handle),
-                    cause: self
-                        .current_deletion_event_cause_override
-                        .or_else(|| {
-                            self.current_deletion_cause
-                                .map(crate::trigger_context::EventCause::from)
-                        })
-                        .unwrap_or(crate::trigger_context::EventCause::Rule),
-                }
-            });
-        let deleted_top_card = deleted_snapshot.as_ref().map(|snapshot| snapshot.top_card);
+            .and_then(|permanent| permanent.card_sources.last().map(|card| card.handle()));
+        let snapshot_top_card = live_deleted_top_card.or(deleted_top_card);
+        let deleted_snapshot = snapshot_top_card.and_then(|top_card| {
+            let data = self.card_data_for_handle(top_card)?;
+            Some(crate::trigger_context::DeletedObjectSnapshot {
+                former_controller: handle.player,
+                top_card,
+                card_kind: data.card_kind,
+                traits: data.traits.clone(),
+                level: data.level,
+                dp: live_deleted_top_card.and_then(|_| self.effective_dp(handle)),
+                cause: self
+                    .current_deletion_event_cause_override
+                    .or_else(|| {
+                        self.current_deletion_cause
+                            .map(crate::trigger_context::EventCause::from)
+                    })
+                    .unwrap_or(crate::trigger_context::EventCause::Rule),
+            })
+        });
+        let event_deleted_top_card = deleted_snapshot
+            .as_ref()
+            .map(|snapshot| snapshot.top_card)
+            .or(deleted_top_card);
         if self
             .player(handle.player)
             .battle_area
@@ -2999,7 +3024,7 @@ impl Game {
         // security-check). The deleted permanent is already gone from
         // battle_area at this point, so scan live listeners while carrying the
         // deleted permanent/card as event context.
-        if let Some(card) = deleted_top_card {
+        if let Some(card) = event_deleted_top_card {
             let queue_start = self.effect_queue.len();
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnAnyDeletion,
@@ -3046,9 +3071,9 @@ impl Game {
     /// — the new selection drives the resume of its OWN drain through the
     /// effect queue, not through this hook.
     pub(crate) fn resume_pending_deletion(&mut self) {
-        let Some(handle) = self.pending_deletion_resume.take() else {
+        let Some((handle, deleted_top_card)) = self.pending_deletion_resume.take() else {
             return;
         };
-        self.finalize_permanent_deletion(handle);
+        self.finalize_permanent_deletion_with_event_card(handle, deleted_top_card);
     }
 }

@@ -474,7 +474,7 @@ impl<'a> EffectReadContext<'a> {
     /// `was_deleted_by_effect`, since they fire for `Battle` /
     /// `SecurityCheck` / `Cost` causes too.
     pub fn deletion_cause(&self) -> Option<crate::replacement::ReplacementCause> {
-        self.game.current_deletion_cause
+        observed_deletion_cause(self.game)
     }
 
     /// `true` when the current OnDeletion observer is firing because of an
@@ -558,6 +558,13 @@ fn event_dna_origin(game: &Game) -> Option<bool> {
         .unwrap_or(false);
     let scoped_origin = game.current_dna_origin.unwrap_or(false);
     Some(trigger_origin || scoped_origin)
+}
+
+fn observed_deletion_cause(game: &Game) -> Option<ReplacementCause> {
+    match game.current_deletion_event_cause_override {
+        Some(crate::trigger_context::EventCause::Overclock) => Some(ReplacementCause::Overclock),
+        _ => game.current_deletion_cause,
+    }
 }
 
 /// The context passed to every effect's `process` closure.
@@ -1144,7 +1151,7 @@ impl<'a> EffectContext<'a> {
     /// directly rather than via `was_deleted_by_effect`, since they fire for
     /// `Battle` / `SecurityCheck` / `Cost` causes too.
     pub fn deletion_cause(&self) -> Option<crate::replacement::ReplacementCause> {
-        self.game.current_deletion_cause
+        observed_deletion_cause(self.game)
     }
 
     /// See `EffectReadContext::was_deleted_by_effect`. Convenience for
@@ -1240,6 +1247,39 @@ impl<'a> EffectContext<'a> {
         {
             if self.game.parked_replacement.is_some() {
                 self.cancel_current_replacement();
+            }
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn place_permanent_on_security_and_handle_current_replacement(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        if self
+            .game
+            .modifiers
+            .player_has(self.player, ModifierType::CannotAddSecurityByEffect)
+        {
+            return false;
+        }
+        if self
+            .game
+            .place_permanent_on_security_without_leave_replacement(
+                player,
+                target,
+                position,
+                face_up,
+                self.player,
+            )
+        {
+            if self.game.parked_replacement.is_some() {
+                self.handle_replacement();
             }
             true
         } else {
@@ -2977,6 +3017,22 @@ impl<'a> EffectContext<'a> {
         )
     }
 
+    pub fn effect_initiated_digivolve_ignore_requirements(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+    ) -> bool {
+        self.game.effect_initiated_digivolve_ignore_requirements(
+            player,
+            hand_index,
+            target,
+            cost_delta,
+            PlaySource::ByEffect,
+        )
+    }
+
     pub fn effect_initiated_digivolve_with_provenance(
         &mut self,
         player: PlayerId,
@@ -3012,6 +3068,23 @@ impl<'a> EffectContext<'a> {
             ignore_color,
             PlaySource::ByEffect,
         )
+    }
+
+    pub fn effect_initiated_digivolve_from_source_ignore_requirements(
+        &mut self,
+        player: PlayerId,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+    ) -> bool {
+        self.game
+            .effect_initiated_digivolve_from_source_ignore_requirements(
+                player,
+                source,
+                target,
+                cost_delta,
+                PlaySource::ByEffect,
+            )
     }
 
     /// Merge two existing battle-area permanents into a single permanent
@@ -3324,6 +3397,28 @@ impl<'a> EffectContext<'a> {
         }
         self.game
             .place_on_security_observed(player, source, position, face_up, self.player)
+    }
+
+    /// Move a battle-area permanent to a player's security stack through the
+    /// normal leave-field replacement window. This is for effects that
+    /// initiate a new move to security, not replacement bodies already
+    /// handling an in-flight leave event.
+    pub fn place_permanent_on_security(
+        &mut self,
+        player: PlayerId,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+    ) -> bool {
+        if self
+            .game
+            .modifiers
+            .player_has(self.player, ModifierType::CannotAddSecurityByEffect)
+        {
+            return false;
+        }
+        self.game
+            .place_permanent_on_security(player, target, position, face_up, self.player)
     }
 
     /// Recover up to `count` cards from `player`'s deck to the top of security.

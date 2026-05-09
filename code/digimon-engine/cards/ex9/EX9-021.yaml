@@ -77,8 +77,8 @@
 # | DNA digivolve Lv.6 Blue + Lv.6 Red / Cost 0                        | IMPLEMENTED (alt_paths kind: dna_digivolve, stacks_unsuspended: true) |
 # | [When Digivolving] If DNA, opp effects don't affect self for turn  | BLOCKED — G-DSL-IS-DNA-DIGIVOLVING (no predicate AND no engine flag) |
 # | [When Digivolving] Then, delete all opp Digimon with highest level | IMPLEMENTED (for_each over level_matches_aggregate { selector: highest_level, of: opponent } + delete_permanent) |
-# | [End of Attack] May play 1 [Greymon|Ver.1] + 1 [Garurumon|Ver.2] from own digivolution cards free | BLOCKED — G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (sibling to EX4-060) |
-# | [End of Attack] If played, place self as TOP security card          | BLOCKED — G-PLACE-SELF-AT-SECURITY-TOP (sibling to G-PLACE-SELF-AT-SECURITY-BOTTOM EX4-060 — different placement target, same engine substrate gap) |
+# | [End of Attack] May play 1 [Greymon|Ver.1] + 1 [Garurumon|Ver.2] from own digivolution cards free | IMPLEMENTED (select_material + play_from_materials bind_as) |
+# | [End of Attack] If played, place self as TOP security card          | IMPLEMENTED (binding_exists gate + place_permanent_on_security top face-up) |
 #
 # ─── DSL/engine GAP — DNA-digivolving condition on triggered clauses ─────────
 #
@@ -141,69 +141,15 @@
 # predicate). First reported: 2026-05-03 (EX9-021 Omnimon Alter-S,
 # batch-implement-cards-rust-dsl).
 #
-# ─── DSL/engine GAP — Place self at TOP of own security stack ────────────────
+# ─── End-of-attack implementation note ───────────────────────────────────────
 #
-# [G-PLACE-SELF-AT-SECURITY-TOP] (NEW — sibling of G-PLACE-SELF-AT-SECURITY-BOTTOM
-# already filed for EX4-060). Same engine substrate is missing; only the
-# placement target (top vs bottom) and the trigger-clause kind (end-of-attack
-# tail, NOT a "would leave" replacement) differ.
-#
-# Printed text: "If this effect played, place this Digimon as your top
-# security card." DCGO models this with `IPutSecurityPermanent(card.
-# PermanentOfThisCard(), CardEffectHashtable, toTop: true).PutSecurity()`
-# — places THIS permanent (top + its sources) at the TOP of the controller's
-# security stack (face-up; printed text does not specify face-down here).
-#
-# Distinguishing factors vs G-PLACE-SELF-AT-SECURITY-BOTTOM (EX4-060):
-#   1. EX4-060 places at the BOTTOM (`toTop: false`) face-down inside a
-#      replacement-style "would leave" clause — the destination is a reroute
-#      of an in-flight leave.
-#   2. EX9-021 places at the TOP (`toTop: true`) inside a normal triggered
-#      [End of Attack] tail — the source IS still on the battle area at
-#      trigger fire-time and the placement INITIATES the leave (not a
-#      reroute). DCGO's gate `selectedCards.Count > 0 && selectedCards.Any
-#      (x => CardEffectCommons.IsExistOnBattleAreaDigimon(x))` reads as
-#      "if at least one of the played-from-stack cards is currently on the
-#      battle area" — i.e. the head arm produced a board-state effect.
-#
-# Both forms need the same underlying engine helper:
-# `EffectContext::place_self_at_security(top_or_bottom: SecurityPlacement,
-# face_orientation: SecurityFace)` that consumes the source permanent's top
-# card + sources, places the bundle at the specified end of the controller's
-# security stack with the specified orientation, fires `OnAddToSecurity`, and
-# updates `face_up_security` bookkeeping. The two existing inheritor cards
-# (EX4-060 bottom-face-down, EX9-021 top-face-up) cover both axes of the
-# helper, so the gap should be closed in one engine slice.
-#
-# Engine half remains the same as the EX4-060 entry: `place_security_bottom`
-# /  `place_security_top` are absent from `EffectContext`. The DSL half needs
-# a `place_self_at_security_top: {}` step (companion to the proposed
-# `place_self_at_security_bottom: {}`) — or a unified `place_self_at_security:
-# { position: top | bottom, face: up | down }` step.
-#
-# Suggested DSL syntax (option A — separate verbs, mirrors `position` axis):
-#   - place_self_at_security_top: {}           # face-up by default
-# Or (option B — unified):
-#   - place_self_at_security:
-#       position: top                          # top | bottom
-#       face: up                               # up | down (printed default
-#                                              # for top is up; for bottom is down)
-#
-# Workaround that would VIOLATE no-approximations: cancel the leave / keep
-# self in battle area; both produce the wrong board state. Per no-approximations
-# the entire [End of Attack] clause is OMITTED until G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES
-# AND G-PLACE-SELF-AT-SECURITY-TOP both close (the "If this effect played"
-# tail is gated on the head arm having executed at least one play, so neither
-# half can stand alone in a faithful encoding).
-#
-# Also blocks: any future "If Y, place this Digimon as your top security card"
-# or "place this card on top of your security stack face up" self-disposition
-# tail. DCGO grep for `IPutSecurityPermanent(card.PermanentOfThisCard(...
-# toTop: true)` returns multiple entries beyond EX9-021.
-#
-# Gap kind: hybrid (engine substrate + DSL verb). First reported: 2026-05-03
-# (EX9-021 Omnimon Alter-S, batch-implement-cards-rust-dsl). Sibling clause
-# tracked at G-PLACE-SELF-AT-SECURITY-BOTTOM (EX4-060).
+# The [End of Attack] clause is implemented through shared DSL primitives:
+# `select_material`, `play_from_materials.bind_as`, `binding_exists`, and
+# `place_permanent_on_security`. The final placement initiates a normal
+# leave-field move to Security, so it routes through `WhenWouldLeaveBattleArea`
+# before committing. EX4-060's bottom-security replacement still uses the
+# replacement-body-specific helper because it is already handling an in-flight
+# leave event.
 
 card: EX9-021
 name: "Omnimon Alter-S"
@@ -311,62 +257,63 @@ effects:
   # `expiry: end_of_opponents_turn` is DIFFERENT — DON'T copy that expiry here.
   # `end_of_turn` (current turn's end) is the correct expiry per DCGO.
 
-  # ─── BLOCKED Clause 3 — [End of Attack] play-2-from-stack + place self top ─
+  # ─── Clause 3 — [End of Attack] play-2-from-stack + place self top ───────
   #
-  # Printed: "[End of Attack] You may play 1 card with [Greymon] in its name
-  # or the [Ver.1] trait and 1 card with [Garurumon] in its name or the
-  # [Ver.2] trait from this Digimon's digivolution cards without paying the
-  # costs. If this effect played, place this Digimon as your top security
-  # card."
-  #
-  # BLOCKED on TWO gaps:
-  #   - G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (existing, surfaced by EX4-060
-  #     and BT22-015 Decode). No DSL bind/play step pair for "play a filtered
-  #     card from THIS permanent's digivolution stack without paying the
-  #     cost". The candidate root, the bind step
-  #     (`select_self_digivolution_source` does not exist), and the play step
-  #     (`play_from_own_digivolution_free` does not exist) are all absent.
-  #   - G-PLACE-SELF-AT-SECURITY-TOP (NEW — see header; sibling to
-  #     G-PLACE-SELF-AT-SECURITY-BOTTOM filed for EX4-060). Different
-  #     placement (TOP vs bottom; printed face-up vs face-down), same engine
-  #     substrate gap.
-  #
-  # The "If this effect played" tail in the printed text is GATED on the head
-  # arm having played at least one card (DCGO `selectedCards.Count > 0 &&
-  # selectedCards.Any(x => CardEffectCommons.IsExistOnBattleAreaDigimon(x))`).
-  # Without G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES the head can never run; the
-  # tail therefore can never be triggered faithfully — even if
-  # G-PLACE-SELF-AT-SECURITY-TOP were closed in isolation. So the entire
-  # clause is OMITTED.
-  #
-  # Authoring stub (commented; uncomment + adjust when both gaps close):
-  #
-  # - when: end_of_attack
-  #   optional: true
-  #   summary: "[End of Attack] May play 1 [Greymon|Ver.1] + 1 [Garurumon|Ver.2] from own digivolution cards free; if played, place self as top security card"
-  #   process:
-  #     - select_self_digivolution_source:                 # ← BLOCKED: G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES
-  #         bind_as: greymon_pick
-  #         filter:
-  #           all_of:
-  #             - kind: digimon
-  #             - any_of:
-  #                 - name_contains: "Greymon"
-  #                 - trait_has: "Ver.1"
-  #         prompt: "Select 1 card with [Greymon] in name or [Ver.1] trait from this Digimon's digivolution cards"
-  #     - play_from_own_digivolution_free: { source: greymon_pick }
-  #     - select_self_digivolution_source:                 # ← BLOCKED: G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES
-  #         bind_as: garu_pick
-  #         filter:
-  #           all_of:
-  #             - kind: digimon
-  #             - any_of:
-  #                 - name_contains: "Garurumon"
-  #                 - trait_has: "Ver.2"
-  #         prompt: "Select 1 card with [Garurumon] in name or [Ver.2] trait from this Digimon's digivolution cards"
-  #     - play_from_own_digivolution_free: { source: garu_pick }
-  #     - if:
-  #         condition:
-  #           binding_present: greymon_pick   # ← also depends on G-DSL-BIND-PRESENT (EX9-066) for the "If this effect played" gate
-  #         then:
-  #           - place_self_at_security_top: {}           # ← BLOCKED: G-PLACE-SELF-AT-SECURITY-TOP
+  # DCGO reference: optional ActivateClass, then mandatory source pick for the
+  # Greymon/Ver.1 lane and mandatory source pick for the Garurumon/Ver.2 lane.
+  # If at least one selected source was successfully played and remains a
+  # battle-area Digimon, DCGO places this permanent on top of security. We gate
+  # on the successful play bindings, which is the Rust DSL equivalent of the
+  # printed "If this effect played" condition.
+  - when: end_of_attack
+    summary: "[End of Attack] May play 1 [Greymon|Ver.1] + 1 [Garurumon|Ver.2] from own digivolution cards free; if played, place self as top security card"
+    process:
+      - select_effect_choice:
+          labels: ["Play sources", "Decline"]
+          bind_as: end_attack_choice
+          prompt: "Use [End of Attack] to play sources?"
+      - if:
+          condition:
+            equals: [end_attack_choice, 0]
+          then:
+            - select_material:
+                of_permanent: source
+                bind_as: greymon_pick
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_contains: "Greymon"
+                        - trait_has: "Ver.1"
+                prompt: "Select 1 [Greymon] or [Ver.1] source to play"
+            - play_from_materials:
+                target: source
+                source_index: greymon_pick
+                cost_delta: free
+                bind_as: greymon_played
+            - select_material:
+                of_permanent: source
+                bind_as: garurumon_pick
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_contains: "Garurumon"
+                        - trait_has: "Ver.2"
+                prompt: "Select 1 [Garurumon] or [Ver.2] source to play"
+            - play_from_materials:
+                target: source
+                source_index: garurumon_pick
+                cost_delta: free
+                bind_as: garurumon_played
+            - if:
+                condition:
+                  any_of:
+                    - binding_exists: greymon_played
+                    - binding_exists: garurumon_played
+                then:
+                  - place_permanent_on_security:
+                      of: you
+                      target: source
+                      position: top
+                      face_up: true

@@ -14,8 +14,8 @@
 //! - The [Hand][Main] activation needs a proven hand-action-mask precondition
 //!   over trash contents. Without that, the engine could expose a legal hand
 //!   effect when no [ShoeShoemon] exists in trash, so the slice stays ignored.
-//! - The inherited replacement does not currently dispatch from this card while
-//!   it is beneath a carrier, so those positive tests stay ignored.
+//! - The inherited replacement is implemented through the shared would-leave
+//!   replacement dispatcher, scanning this source beneath its carrier.
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
@@ -195,7 +195,6 @@ fn bt22_036_runtime_overclock_masks_only_token_or_other_puppet_costs() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-REPLACEMENT-DISPATCH — inherited replacement does not install from beneath the carrier"]
 fn bt22_036_inherited_replacement_deletes_token_to_prevent_opponent_effect_leave() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-036")
@@ -218,9 +217,17 @@ fn bt22_036_inherited_replacement_deletes_token_to_prevent_opponent_effect_leave
 
     let view = runner
         .pending_selection_view()
+        .expect("inherited leave-prevention should ask to accept");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    assert!(runner.pending_is_optional(), "replacement may be declined");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("accept inherited replacement");
+
+    let view = runner
+        .pending_selection_view()
         .expect("inherited leave-prevention should ask for a cost");
     assert_eq!(view.kind, SelectionKind::OwnField);
-    assert!(runner.pending_is_optional(), "replacement may be declined");
     assert_eq!(
         view.valid_action_ids.len(),
         1,
@@ -243,7 +250,6 @@ fn bt22_036_inherited_replacement_deletes_token_to_prevent_opponent_effect_leave
 }
 
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-REPLACEMENT-DISPATCH — inherited replacement does not install from beneath the carrier"]
 fn bt22_036_inherited_replacement_allows_other_puppet_but_not_self_or_non_puppet() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-036")
@@ -277,6 +283,14 @@ fn bt22_036_inherited_replacement_allows_other_puppet_but_not_self_or_non_puppet
     runner
         .game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("outer inherited replacement accept prompt");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("accept inherited replacement");
 
     let view = runner
         .pending_selection_view()

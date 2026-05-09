@@ -23,12 +23,13 @@ alt_paths:
               - color_is: red
     cost: 0
     stacks_unsuspended: true
+  - kind: blast_dna_digivolve
+    materials:
+      - { name_is: "Alphamon" }
+      - { name_is: "Ouryumon" }
+    cost: 0
 
 effects:
-  # [Hand][Counter] Blast DNA Digivolve ([Alphamon] + [Ouryumon]) is omitted:
-  # the action/mask contract does not yet expose a counter-window Blast DNA
-  # choice using one field Digimon plus one named card in hand.
-
   # [On Play][When Digivolving] 1 opponent Digimon gets -15000 DP until the
   # end of their turn. The DNA-origin tail (security trash + Recovery) is
   # omitted until the DNA-origin tail can sequence those security operations

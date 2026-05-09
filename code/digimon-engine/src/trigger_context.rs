@@ -38,6 +38,7 @@ impl From<crate::replacement::ReplacementCause> for EventCause {
             crate::replacement::ReplacementCause::OpponentEffect => EventCause::OpponentEffect,
             crate::replacement::ReplacementCause::SecurityCheck => EventCause::SecurityRemoval,
             crate::replacement::ReplacementCause::Cost => EventCause::Cost,
+            crate::replacement::ReplacementCause::Overclock => EventCause::Overclock,
         }
     }
 }

@@ -6,15 +6,13 @@
 //! - [On Play][When Digivolving] Draw 1, then choose an own [Royal Knight]/[CS]
 //!   Digimon to gain opponent-effect return-to-hand/deck protection.
 //!
-//! Gap-routed:
-//! - <Armor Purge> needs a deletion replacement that trashes this Digimon's top
-//!   card to cancel deletion.
-
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
     CompiledDeclarativeClause, CompiledPredicate, CompiledStep, CompiledTiming,
 };
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::replacement::ReplacementCause;
+use digimon_engine::selection::SelectionKind;
 
 fn runner() -> DebugRunner {
     DebugRunner::builder()
@@ -161,7 +159,41 @@ fn bt23_054_on_play_when_digivolving_draws_then_grants_return_protection() {
 }
 
 #[test]
-#[ignore = "pending: RK-G003 — Armor Purge top-card trash replacement that cancels deletion"]
 fn bt23_054_armor_purge_prevents_deletion_by_trashing_top_card() {
-    panic!("requires Armor Purge replacement support");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-054")
+        .expect("BT23-054 YAML loads")
+        .add_card(make_test_card("VEEMON", "Veemon"))
+        .start();
+    let magnamon = runner.place_stack(0, &["VEEMON", "BT23-054"]);
+
+    runner
+        .game
+        .delete_permanent_with_cause(magnamon, ReplacementCause::OpponentEffect);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Armor Purge accept prompt");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    assert!(view.is_optional, "Armor Purge can be declined");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("accept Armor Purge");
+    runner.auto_resolve().expect("finish Armor Purge");
+
+    assert_eq!(runner.battle_area_size(0), 1);
+    let remaining = runner.game.players[0].battle_area[0]
+        .top_card()
+        .card_id(&runner.game.card_data);
+    assert_eq!(
+        remaining, "VEEMON",
+        "Armor Purge trashes BT23-054 and promotes the next card"
+    );
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "BT23-054"),
+        "the purged top card is trashed as the cost"
+    );
 }

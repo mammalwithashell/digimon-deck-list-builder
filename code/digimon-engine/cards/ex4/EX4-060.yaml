@@ -80,131 +80,17 @@
 # | DNA digivolve Lv.6 Blue + Lv.6 Red / Cost 0                       | IMPLEMENTED (alt_paths kind: dna_digivolve) |
 # | [When Digivolving] Delete 1 opp Digimon DP <= 8000                | IMPLEMENTED (select_opponent_permanent dp_lte: 8000 + delete_permanent) |
 # | [When Digivolving] Return 1 opp Digimon Lv >= 6 to deck bottom    | IMPLEMENTED (select_opponent_permanent level_gte: 6 + return_to_deck position: bottom) |
-# | [All Turns] On leave-other-than-own-effect, play BlitzGreymon + CresGarurumon from own digivolution cards free | BLOCKED — G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES |
-# | [All Turns] Then, place this Digimon at the bottom of own security stack face down | BLOCKED — G-PLACE-SELF-AT-SECURITY-BOTTOM |
+# | [All Turns] On leave-other-than-own-effect, play BlitzGreymon + CresGarurumon from own digivolution cards free | IMPLEMENTED via select_material + play_from_materials |
+# | [All Turns] Then, place this Digimon at the bottom of own security stack face down | IMPLEMENTED via replacement security placement helper |
 #
 # ─── DSL-GAP — Play card from own digivolution sources [G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES] ─
-#
-# (NEW — same shape as G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES surfaced
-# by BT22-015's printed Decode clauses; restated here as a standalone gap
-# because EX4-060's "play 1 [BlitzGreymon] and 1 [CresGarurumon] from this
-# Digimon's digivolution cards" reaches the SAME engine primitive even
-# though it is not gated on the Decode keyword.)
-#
-# Printed text: "play 1 [BlitzGreymon] and 1 [CresGarurumon] from this
-# Digimon's digivolution cards without paying the costs."
-#
-# DCGO models this with a SelectCardEffect whose `customRootCardList` is
-# `card.PermanentOfThisCard().DigivolutionCards` — i.e. it picks a card
-# from THIS permanent's source stack, then PlayPermanentCards routes that
-# card from `Root.DigivolutionCards` into the controller's battle area.
-#
-# The DSL has no equivalent step. `select_hand` / `select_trash` /
-# `select_opponent_permanent` / `select_own_permanent` cover hand, trash,
-# and battle area; there is no `select_self_digivolution_source` /
-# `select_source_card` step that binds a card from THIS permanent's
-# digivolution stack and feeds it to a `play_*_free` step. Even if a
-# bind-step existed, the existing `play_from_hand_free` / `play_from_trash_free`
-# verbs require zone-specific HandIndex / TrashIndex bindings — there is
-# no `play_from_own_digivolution_free` step that consumes a source-stack
-# binding and routes the played card from the source stack.
-#
-# Closing this gap requires:
-#   A. New DSL bind step `select_self_digivolution_source` that binds a
-#      `(SourceIndex)` handle inside THIS permanent's digivolution stack,
-#      filtered by an inline `card_filter:` (kind/name/level/etc.).
-#   B. New DSL play step `play_from_own_digivolution_free` that consumes
-#      such a binding, removes the source from the stack, and plays it as
-#      a new Permanent with payCost: false.
-#   OR equivalently a single combined verb
-#   `play_from_own_digivolution_cards: { filter: ..., free: true,
-#    optional: false }` that fuses the two.
-#
-# Engine substrate likely needed: `EffectContext::play_from_own_digivolution_cards(
-#   source_perm: PermanentHandle, candidate_filter: ..., pay_cost: bool)` →
-# probably (a) walk the carrier's source stack to find candidates, (b)
-# install a SelectionKind variant that surfaces the source picks, (c) on
-# resolution remove the picked source from the stack and use the existing
-# play-as-new-permanent path with payCost overridden.
-#
-# Also blocks: BT22-015 Decode (Red/Black Lv.3) + Decode (Blue/Yellow Lv.3)
-# clauses — sibling gap surface (different trigger, same primitive needed).
-#
-# Until the gap closes the entire "play 1 [BlitzGreymon] and 1 [CresGarurumon]"
-# arm of [All Turns] is OMITTED. Per no-approximations the visible behavior is
-# faithful to the cause-IS-own-effect branch (where the outer trigger does
-# not fire at all). When the cause is opponent-effect / battle / security,
-# DCGO would offer the play-from-stack picks; today the YAML's outer
-# replacement clause itself is OMITTED entirely (the second BLOCKED gap
-# below makes it impossible to author the second arm meaningfully even if
-# this gap closed in isolation — see [G-PLACE-SELF-AT-SECURITY-BOTTOM]).
-#
-# ─── DSL-GAP — Place self at bottom of own security stack [G-PLACE-SELF-AT-SECURITY-BOTTOM] ─
-#
-# (NEW — sibling of the existing engine-side "Zone-manipulation: security
-# stack operations" gap in `docs/RUST_ENGINE_GAPS.md` which calls out
-# `place_security_bottom(player, card)` as missing. EX4-060 surfaces the
-# DSL half of that gap PLUS the "place SELF" specialisation.)
-#
-# Printed text: "Then, place this Digimon at the bottom of your security
-# stack face down." DCGO models this with `IPutSecurityPermanent(card,
-# CardEffectHashtable, toTop: false).PutSecurity()` — places THIS
-# permanent (top card + its sources) at the bottom of the controller's
-# security stack face-down.
-#
-# The DSL has no `place_self_at_security_bottom` step. Existing self-
-# disposition primitives:
-#   - `place_self_as_delay_option` → places an Option-card self into the
-#     battle area as a Delay permanent (BT17-095, P-035 idiom).
-#   - `add_this_option_to_hand` → routes an Option from security-resolution
-#     staging to hand.
-# Neither covers "this Digimon → my security bottom face-down".
-#
-# A related but distinct existing primitive is
-# `place_permanent_bottom_security_and_cancel_replacement` (used by
-# BT24-040), which targets ANOTHER permanent (selected via a binding) and
-# fires inside a replacement clause, cancelling the replacement so the
-# leave does NOT happen. EX4-060's printed text is the OPPOSITE: the leave
-# proceeds (the leaving Digimon arrives at the security bottom face-down
-# instead of the trash). DCGO does NOT cancel the WhenRemoveField event
-# (the IPutSecurityPermanent path uses `toTop: false` after the cards-from-
-# stack play resolves; the leaving permanent's destination is rerouted
-# from trash to bottom-security).
-#
-# Closing this gap requires:
-#   A. New DSL step `place_self_at_security_bottom: {}` that, when fired
-#      from a `kind: replacement` clause whose `replacement_subject` IS
-#      this permanent, reroutes the leaving permanent's destination from
-#      trash to the controller's security stack bottom face-down.
-#   B. Engine substrate: `EffectContext::place_self_at_security_bottom(
-#      &mut self)` that (a) consumes the leaving permanent (top + sources),
-#      (b) consults the player-scoped `CannotAddSecurityByEffect` modifier
-#      gate from the existing engine gap at docs/RUST_ENGINE_GAPS.md
-#      (when source_player != target_player), (c) places the bundle at the
-#      bottom of the controller's security stack face-down, (d) fires
-#      `OnAddToSecurity` if any such observer exists, (e) updates
-#      `face_up_security` bookkeeping (the placed bundle is face-down by
-#      printed text, so this slot stays unset).
-#   C. Replacement-outcome semantics: the leave proceeds (default Proceed),
-#      but with destination rerouted. Today's replacement clauses default
-#      to Proceed-with-trash; this needs a new Proceed-with-rerouted-zone
-#      outcome variant (or the step internally consumes the leave and
-#      routes the cards itself, in which case the outer replacement still
-#      "proceeds" but the cards are gone-to-security before trash).
-#
-# Until the gap closes the [All Turns] clause's tail "place this Digimon at
-# the bottom of your security stack face down" is unrepresentable. Combined
-# with G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (the head arm), the entire
-# [All Turns] clause is OMITTED from `effects:`. Per no-approximations no
-# stub is authored; tests for the [All Turns] clause are #[ignore]'d under
-# both gap tags.
-#
-# Also blocks: any future card whose printed text reads "place this Digimon
-# at the bottom of your security stack" or "place this card on top of your
-# security stack" as a self-disposition reroute. DCGO grep for
-# `IPutSecurityPermanent(card.PermanentOfThisCard()` returns multiple
-# entries beyond EX4-060 (notably various endgame-style "place-self-as-
-# security" recovery effects).
+# Closed 2026-05-08:
+#   - Source plays use sequential `select_material` + `play_from_materials`
+#     steps. Each pick is surfaced through `pending_selection`.
+#   - The self-security tail uses
+#     `place_permanent_on_security_and_handle_replacement` targeting
+#     `replacement_subject` with `position: bottom` and `face_up: false`.
+#   - Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex4_060`.
 
 card: EX4-060
 name: "Omnimon Alter-S"
@@ -280,7 +166,7 @@ effects:
           target: return_target
           position: bottom
 
-  # ─── BLOCKED Clause 2 — [All Turns] leave-other-than-own-effect ───────────
+  # ─── Clause 2 — [All Turns] leave-other-than-own-effect ───────────────────
   #
   # Printed: "[All Turns] When this Digimon would leave the battle area
   # other than by one of your effects, play 1 [BlitzGreymon] and 1
@@ -288,54 +174,45 @@ effects:
   # the costs. Then, place this Digimon at the bottom of your security
   # stack face down."
   #
-  # BLOCKED on TWO new gaps surfaced by this card:
-  #   - G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES: no DSL verb / step for "play
-  #     a named card from THIS permanent's digivolution cards without
-  #     paying the cost". The candidate root list (own digivolution
-  #     stack), the bind step (no `select_self_digivolution_source`
-  #     verb), and the play step (no `play_from_own_digivolution_free`)
-  #     are all absent. Sibling gap to BT22-015's
-  #     G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES.
-  #   - G-PLACE-SELF-AT-SECURITY-BOTTOM: no DSL verb / step for "place this
-  #     leaving Digimon at the bottom of own security stack face down" as
-  #     a self-disposition reroute on a replacement clause whose subject
-  #     IS this permanent. Sibling to the engine-gap "Zone-manipulation:
-  #     security stack operations" entry that covers `place_security_bottom`
-  #     for ANY card.
-  #
-  # Per no-approximations, the entire clause is OMITTED. The visible
-  # behavior is faithful to the cause-IS-own-effect branch (where the outer
-  # trigger does not fire at all per DCGO's `!IsByEffect(IsOwnerEffect)`
-  # gate). For all other leave causes (opp effect, battle, security check,
-  # cost), DCGO would fire the clause and reroute; today the YAML omits
-  # the entire clause. Tests for this clause are #[ignore]'d under both
-  # gap tags.
-  #
-  # Authoring stub (commented; uncomment + adjust when both gaps close):
-  #
-  # - kind: replacement
-  #   trigger: when_would_leave_battle_area
-  #   active_when:
-  #     all_of:
-  #       - replacement_subject_is_source: true   # ← needs the existing G-DSL-EVENT-TARGET-IS-SELF style predicate (filed for BT15-101) for the SELF-SUBJECT replacement form
-  #       - none_of:
-  #           - replacement_cause: own_effect
-  #   summary: "[All Turns] On leave-other-than-own-effect, play BlitzGreymon + CresGarurumon from own digivolution cards free; then place self at security bottom face down"
-  #   process:
-  #     - select_self_digivolution_source:                # ← BLOCKED: G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES
-  #         bind_as: blitz
-  #         filter:
-  #           all_of:
-  #             - kind: digimon
-  #             - name_contains: "BlitzGreymon"
-  #         prompt: "Select 1 [BlitzGreymon] from this Digimon's digivolution cards to play"
-  #     - play_from_own_digivolution_free: { source: blitz }
-  #     - select_self_digivolution_source:
-  #         bind_as: cres
-  #         filter:
-  #           all_of:
-  #             - kind: digimon
-  #             - name_contains: "CresGarurumon"
-  #         prompt: "Select 1 [CresGarurumon] from this Digimon's digivolution cards to play"
-  #     - play_from_own_digivolution_free: { source: cres }
-  #     - place_self_at_security_bottom: {}              # ← BLOCKED: G-PLACE-SELF-AT-SECURITY-BOTTOM
+  # Implemented 2026-05-08. DCGO EX4_060.cs selects BlitzGreymon, then
+  # CresGarurumon, from this permanent's DigivolutionCards and plays the
+  # selected cards free before `IPutSecurityPermanent(... toTop:false)`.
+  # The Rust DSL mirrors that with sequential `select_material` steps, then
+  # consumes the active replacement by placing `replacement_subject` at the
+  # bottom of security face-down.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    summary: "[All Turns] On leave-other-than-own-effect, play BlitzGreymon + CresGarurumon from own digivolution cards free; then place self at security bottom face down"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: blitz_source
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "BlitzGreymon"
+          prompt: "Select 1 [BlitzGreymon] from this Digimon's digivolution cards to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: blitz_source
+          cost_delta: free
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: cres_source
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "CresGarurumon"
+          prompt: "Select 1 [CresGarurumon] from this Digimon's digivolution cards to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: cres_source
+          cost_delta: free
+      - place_permanent_on_security_and_handle_replacement:
+          of: you
+          target: replacement_subject
+          position: bottom
+          face_up: false

@@ -59,7 +59,7 @@ Format per entry:
 ## Royal Knights full pool pass — residual reusable DSL/engine gaps  [RK-G005]
 - Status: PARTIAL pool pass completed on 2026-05-05. The Royal Knights resolver pool has 72 unique cards and now has 72 Rust DSL YAML entries. Fully unsupported clauses were left as explicit YAML comments plus ignored Rust tests instead of hidden approximations.
 - Newly routed or reaffirmed blocked cards/clauses: `BT13-019`, `BT13-030`, `BT13-075`, `BT13-087`, `BT13-102`, `BT13-111`, `BT13-112`, `BT15-092`, `BT17-077`, `BT19-093`, `BT20-017`, `BT20-021`, `BT20-045`, `BT20-056`, `BT22-025`, `BT22-041`, `BT22-052`, `BT23-013`, `BT23-035`, `BT23-047`, `BT23-057`, `BT23-072`, `EX8-073`, `EX10-068`, and `EX11-053`.
-- Missing DSL/engine areas: union selection across hand/trash/breeding/source zones; play from King Drasil or other source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; residual native `<Blast Digivolve>` / Blast DNA keyword parsing and raw helper APIs (EX6-011-style `blast_dna_digivolve` alt paths are now routed); Option battle-area carrier lifecycle for non-Delay options; security-trash self-dispatch; security search/play and self-to-security placement; security-removed card-local follow-up shapes beyond the now-wired battle/effect `OnOpponentSecurityRemoved` / `OnOwnSecurityRemoved` timing payloads; immediate may-attack/action prompts; Partition; and replacement/security-trash costs tied atomically to prevention. `when: on_place_security`, alias `when: on_added_to_security`, `when: on_discard_security`, and the printed-text alias `when: on_any_digimon_played` are now wired as of 2026-05-08 with event-card/effect-cause payloads where applicable; the remaining "self-to-security" and security-trash entries are about moving the resolving object legally or authoring card-local bodies, not the observer timing tokens.
+- Missing DSL/engine areas: broader union selection across hand/trash/breeding/source stacks with uniqueness/name-exclusion filters; play from King Drasil or other source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; residual native `<Blast Digivolve>` / Blast DNA keyword parsing and raw helper APIs (`blast_dna_digivolve` alt paths are routed for EX6-011, BT17-078, BT20-045, and BT20-060); Option battle-area carrier lifecycle for non-Delay options; security-trash self-dispatch; security search/play and self-to-security placement; security-removed card-local follow-up shapes beyond the now-wired battle/effect `OnOpponentSecurityRemoved` / `OnOwnSecurityRemoved` timing payloads; immediate may-attack/action prompts; generalized source-list Partition lowering beyond authored card clauses; and unusual replacement/security-trash costs tied atomically to prevention. `when: on_place_security`, alias `when: on_added_to_security`, `when: on_discard_security`, and the printed-text alias `when: on_any_digimon_played` are now wired as of 2026-05-08 with event-card/effect-cause payloads where applicable; the remaining "self-to-security" and security-trash entries are about moving the resolving object legally or authoring card-local bodies, not the observer timing tokens.
 - Workaround policy: no approximations were used for these blockers. If a printed clause required one of the missing primitives, the YAML either implemented an independent faithful slice such as a keyword/security play/simple trigger, or used a load-only gap stub.
 - Verification: targeted `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- <card_filter> --nocapture` passed for the final 25 filters, with one active load test and one ignored gap test per card.
 - First reported: 2026-05-05 Royal Knights full pool implementation pass.
@@ -114,7 +114,8 @@ Format per entry:
 - Effect text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, prevent it from leaving."
 - Status: PARTIALLY RESOLVED on 2026-05-03. Replacement clauses now preserve replacement subject/source/cause predicates through lowering, apply `active_when`, and can protect a different subject than the replacement source. This is verified for `BT24-040`/`BT24-101`-style TS protection and `BT17-097` Delay replacement continuation.
 - Updated 2026-05-06 (Track B): replacement timing vocabulary now includes named pre-move triggers `when_would_digivolve`, `when_would_play`, and `when_would_link`, mapping respectively to `EffectTiming::WhenPermanentWouldDigivolve`, `EffectTiming::WhenPermanentWouldPlay`, and `EffectTiming::WhenWouldLink`. Mandatory cancel dispatch is covered at the engine fire-sites; optional `Card`-subject accept/decline resume remains an engine follow-up before optional DSL card text should target these windows.
-- Remaining missing DSL verb / step kind / predicate: Puppet/token-specific cost bodies and card-specific EX9-032 / EX7-027 / BT22-036 production YAML/tests remain open until authored and verified.
+- Updated 2026-05-08 (Track B): inherited replacement dispatch now scans buried source effects, and the Puppet/token cost body is live for `BT22-036`, `EX11-022`, `EX9-032`, `EX7-027`, and `ST19-11`. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_036_inherited_replacement`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_022_inherited_leave_prevention`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_032_inherited_prevents`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex7_027_inherited`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- st19_11_inherited`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- replacement`.
+- Remaining missing DSL/card work: none for inherited Token/Puppet leave-prevention dispatch itself; adjacent active-effect gaps on those cards remain independently tracked.
 - Lowers to engine API: replacement evaluator context plus `EffectContext` replacement outcome setters such as `cancel_leave`.
 - Suggested DSL syntax:
   ```yaml
@@ -226,18 +227,19 @@ Format per entry:
 - First reported: 2026-04-28
 
 ## BT22-015 — count same-level pairs in own stack
-- Status: PARTIALLY RESOLVED for the reusable same-level source pair formula on 2026-05-02. `CompiledPerSelector::SameLevelPairsInSources` counts source cards below the top card by level and sums `count / 2` per level bucket. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- same_level_pair_count_formula_reads_source_stack_levels`.
+- Status: RESOLVED on 2026-05-07. `CompiledPerSelector::SameLevelPairsInSources` counts source cards below the top card by level and sums `count / 2` per level bucket; `select_count_capped_multi.max` now accepts `{ formula: ... }`; and the DSL wrapper supports `zone: battle_area` to bind a `PermanentList` for `per_selected`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- source_stack_aggregate_formula_reads_source_levels phase2d_select_count_capped_multi` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_015_when_digivolving_bottom_decks_n_opp_digimon_per_same_level_pair`.
 - Effect text: "[When Digivolving] For every 2 cards with the same level in this Digimon's digivolution cards, return 1 of your opponent's Digimon to the bottom of the deck."
-- Remaining DSL verb / step kind / predicate: repeat-count target selection derived from a formula is still open.
+- Former missing DSL verb / step kind / predicate: repeat-count target selection derived from a formula.
 - Lowers to engine API: stack inspection plus repeated `return_to_deck(..., DeckEnd::Bottom)` after each player-visible target selection.
-- Suggested DSL syntax: `formula: { aggregate: same_level_pairs, zone: self_sources }` feeding `repeat: <formula>` around a `select_opponent_permanent` + `return_to_deck_bottom` step.
+- DSL syntax: `select_count_capped_multi: { zone: battle_area, max: { formula: { base: 0, per: same_level_pairs_in_sources, delta: 1 } }, ... }` followed by `per_selected` over the bound permanent list.
 - First reported: 2026-04-28
 
 ## BT17-078 — bottom-deck all opponent Digimon sharing chosen level
+- Status: RESOLVED on 2026-05-07. The DSL now supports `bind_permanent_property` for selected permanent properties and `level_eq_binding` for later permanent/card predicates; BT17-078 uses this to bind the chosen opponent Digimon's level, for-each every opponent Digimon with that level, bottom-deck them, then surface the mandatory delete prompt. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- parse_bind_permanent_level_property_step bind_permanent_level_filters_for_each_same_level_permanents` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078`.
 - Effect text: "[On Play] [When Digivolving] ... place all of your opponent's Digimon with the same level as 1 of their Digimon at the bottom of the deck."
-- Missing DSL verb / step kind / predicate: Binding one selected opponent Digimon's level and applying a mass same-level filter to every opponent permanent. The DSL has selection and aggregate helpers, but lacks a reusable "bind selected property, then for-each matching permanents" pattern.
+- Former missing DSL verb / step kind / predicate: Binding one selected opponent Digimon's level and applying a mass same-level filter to every opponent permanent. Closed by `bind_permanent_property` plus `level_eq_binding`.
 - Lowers to engine API: select opponent permanent, read selected level, then call `return_to_deck(..., DeckEnd::Bottom)` for each opponent permanent whose top card has that level.
-- Suggested DSL syntax: `bind_selected: { name: chosen_level, selector: opponent_digimon, property: level }` followed by `for_each_opponent_permanent: { where: { level_eq: "$chosen_level" }, do: return_to_deck_bottom }`.
+- DSL syntax: `bind_permanent_property: { from: chosen_dig, property: level, bind_as: chosen_level }` followed by `for_each: { over: { level_eq_binding: chosen_level }, ... }`.
 - First reported: 2026-04-28
 ---
 
@@ -712,8 +714,8 @@ Format per entry:
 
 ## EX4-060 / BT22-015 — Play card from own digivolution sources  [G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES]
 - Effect text: EX4-060 Omnimon Alter-S — "[All Turns] When this Digimon would leave the battle area other than by one of your effects, play 1 [BlitzGreymon] and 1 [CresGarurumon] from this Digimon's digivolution cards without paying the costs." BT22-015 Omnimon — "<Decode (Red/Black Lv.3)> / <Decode (Blue/Yellow Lv.3)> (When this Digimon would leave the battle area other than in battle, you may play 1 [color] [level] Digimon card from its digivolution cards without paying the cost.)"
-- Status: OPEN (filed 2026-05-03 during EX4-060 batch-implement-cards-rust-dsl). Sibling of the BT22-015 Decode entry already documented inline in `code/digimon-engine/cards/bt22/BT22-015.yaml` as `G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES`. Restated here as a standalone reusable primitive — EX4-060 surfaces the SAME engine substrate without going through the Decode keyword, so the gap is naming-agnostic to Decode.
-- Missing DSL verb / step kind / predicate: no DSL bind step that selects a card from THIS permanent's digivolution stack with an inline `card_filter:` (kind / name / level / color), and no DSL play step that consumes such a binding and routes the played card from the source stack. `select_hand` / `select_trash` / `select_opponent_permanent` / `select_own_permanent` cover hand, trash, and battle area; there is no `select_self_digivolution_source` step. The play verbs `play_from_hand_free` / `play_from_trash_free` require zone-specific HandIndex / TrashIndex bindings — there is no `play_from_own_digivolution_free` step that consumes a source-stack binding.
+- Status: PARTIAL (filed 2026-05-03 during EX4-060 batch-implement-cards-rust-dsl; narrowed 2026-05-07; narrowed again 2026-05-08). BT22-015's Decode entry is closed through a color/level-gated `select_material` plus `play_from_materials` binding, with the original leave event proceeding. EX4-060 is closed by sequential `select_material` / `play_from_materials` steps plus `place_permanent_on_security_and_handle_replacement`. EX9-021's End of Attack source plays are closed through the same source-selection path plus `play_from_materials.bind_as`, `binding_exists`, and `place_permanent_on_security`; verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex4_060`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_021`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- play_from_materials`.
+- Remaining missing DSL verb / step kind: single-card and sequential named source plays can use `select_material` with an inline `filter:` and `play_from_materials` with the selected source binding. Remaining gaps are multi-source conveniences for "1 of each different name" / count-capped batches.
 - Engine substrate likely needed: `EffectContext::play_from_own_digivolution_cards(source_perm: PermanentHandle, candidate_filter: ..., pay_cost: bool)` that (a) walks the carrier's source stack to find candidates, (b) installs a `SelectionKind` variant surfacing the source picks, (c) on resolution removes the picked source from the stack and uses the existing play-as-new-permanent path with payCost overridden. DCGO models this via `SelectCardEffect.SetUp(customRootCardList: card.PermanentOfThisCard().DigivolutionCards, root: SelectCardEffect.Root.Custom, ...)` followed by `PlayPermanentCards(..., root: SelectCardEffect.Root.DigivolutionCards, payCost: false, activateETB: true)`.
 - Suggested DSL syntax (option A — split bind + play):
   ```yaml
@@ -727,20 +729,20 @@ Format per entry:
   - play_from_own_digivolution_free: { source: blitz }
   ```
   (Option B — combined: `play_from_own_digivolution_cards: { filter: ..., free: true, optional: false }` that fuses the two; loses the explicit selection-stage binding but matches the printed text more compactly.)
-- Workaround that would VIOLATE no-approximations: auto-pick the first matching source card and play it without surfacing the choice. Even when only 1 candidate exists this still leaks an action-selection that the RL action space should observe. Per no-approximations, the entire arm is OMITTED until the gap closes.
-- Also blocks: every printed-text use of "play X from this Digimon's digivolution cards" — examples include the BT22-015 Decode clauses (Red/Black + Blue/Yellow Lv.3), EX4-060's [All Turns] arm, and any future "stack reanimator" effects. DCGO grep for `customRootCardList: card.PermanentOfThisCard().DigivolutionCards` returns multiple entries beyond these.
-- Gap kind: dsl + engine. DSL needs the bind + play verbs; engine needs the new `EffectContext::play_from_own_digivolution_cards` substrate (zone-scoped selection + source-stack-rooted play path).
+- Workaround that would VIOLATE no-approximations: auto-pick the first matching source card and play it without surfacing the choice. Even when only 1 candidate exists this still leaks an action-selection that the RL action space should observe.
+- Also blocks: EX9-021's end-of-attack source plays, EX10-061 Apocalymon's multi-source play, and any future "stack reanimator" effects needing batch picks or distinct follow-up disposition. BT22-015 and EX4-060 no longer block here.
+- Gap kind: dsl + engine. Single selected-source substrate is present; multi-source authoring/evaluation remains open.
 - First reported: 2026-05-03 (EX4-060 Omnimon Alter-S, batch-implement-cards-rust-dsl). Sibling clause documented earlier under BT22-015 Decode.
 
 ## EX4-060 — Place self at bottom of own security stack face down  [G-PLACE-SELF-AT-SECURITY-BOTTOM]
 - Effect text: EX4-060 Omnimon Alter-S — "[All Turns] When this Digimon would leave the battle area other than by one of your effects, ... Then, place this Digimon at the bottom of your security stack face down."
-- Status: OPEN (filed 2026-05-03 during EX4-060 batch-implement-cards-rust-dsl). Sibling of the engine-side "Zone-manipulation: security stack operations" gap in `docs/RUST_ENGINE_GAPS.md` (line 262) which calls out `place_security_bottom(player, card)` as a missing `EffectContext` helper for ANY card. EX4-060 surfaces the SELF-DISPOSITION specialisation: the leaving permanent is the subject AND the destination card.
-- Missing DSL verb / step kind / predicate: no `place_self_at_security_bottom: {}` step that, when fired from a `kind: replacement` clause whose `replacement_subject` IS this permanent, reroutes the leaving permanent's destination from trash to the controller's security stack bottom face-down. The closest existing primitives are:
+- Status: CLOSED for EX4-060 on 2026-05-08. The DSL now has `place_permanent_on_security_and_handle_replacement`, which can target `replacement_subject`, choose top/bottom/random security placement, preserve face-down placement, trash leftover sources, and mark the active replacement custom-handled. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex4_060` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- replacement`.
+- Landed DSL verb / step kind: `place_permanent_on_security_and_handle_replacement`, used from a `kind: replacement` clause whose target is `replacement_subject`.
   - `place_self_as_delay_option: {}` — places an Option-card self into the battle area as a Delay permanent. Wrong destination zone (battle area, not security) and wrong subject scope (Option only).
   - `add_this_option_to_hand: {}` — routes an Option from security-resolution staging to hand. Wrong destination zone and wrong subject scope.
   - `place_permanent_bottom_security_and_cancel_replacement` — targets ANOTHER permanent (selected via a binding) and CANCELS the replacement. Wrong subject (binding-selected, not self) and wrong outcome (cancel vs proceed-with-reroute).
-- Engine substrate likely needed: `EffectContext::place_self_at_security_bottom(&mut self)` that (a) consumes the leaving permanent (top + sources), (b) consults the player-scoped `CannotAddSecurityByEffect` modifier from `docs/RUST_ENGINE_GAPS.md` (when source_player != target_player), (c) places the bundle at the bottom of the controller's security stack face-down, (d) fires `OnAddToSecurity` if any such observer exists, (e) updates `face_up_security` bookkeeping (the placed bundle is face-down, so the slot stays unset). DCGO models this via `IPutSecurityPermanent(card.PermanentOfThisCard(), CardEffectHashtable(activateClass), toTop: false).PutSecurity()`.
-- Replacement-outcome semantics: the leave PROCEEDS (default Proceed) but with destination rerouted. Today's replacement clauses default to Proceed-with-trash; this needs either a new Proceed-with-rerouted-zone outcome variant, OR the step internally consumes the leave and routes the cards itself (in which case the outer replacement still "proceeds" but the cards are gone-to-security before trash).
+- Engine substrate landed: `EffectContext::place_permanent_on_security_and_handle_current_replacement` delegates to `Game::place_permanent_on_security_without_leave_replacement`, which consumes the leaving permanent, consults `CannotAddSecurityByEffect`, places the top card into security, trashes leftover sources/linked cards, clears modifiers, and marks the replacement custom-handled. DCGO models the card-side shape via `IPutSecurityPermanent(card.PermanentOfThisCard(), CardEffectHashtable(activateClass), toTop: false).PutSecurity()`.
+- Replacement-outcome semantics: the step internally consumes the leave and routes the cards itself, then writes `CustomHandled` to the active replacement outcome.
 - Suggested DSL syntax:
   ```yaml
   - kind: replacement
@@ -752,11 +754,14 @@ Format per entry:
             - replacement_cause: own_effect
     process:
       # ... other steps ...
-      - place_self_at_security_bottom: {}
+      - place_permanent_on_security_and_handle_replacement:
+          target: replacement_subject
+          position: bottom
+          face_up: false
   ```
-- Workaround that would VIOLATE no-approximations: cancel the replacement and manually `place_self_as_delay_option` (wrong zone). Or fire `place_permanent_bottom_security_and_cancel_replacement` against the source-bound subject (still routes to TOP / cancels rather than proceeding). Both produce wrong observer fan-out and wrong end-state. Per no-approximations the entire clause is OMITTED until both this gap and `G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES` (the head arm of the same clause) close.
-- Also blocks: any future card whose printed text reads "place this Digimon at the bottom of your security stack" or "place this card on top of your security stack" as a self-disposition reroute. DCGO grep for `IPutSecurityPermanent(card.PermanentOfThisCard()` returns multiple entries beyond EX4-060 (notably various endgame "place-self-as-security" recovery effects).
-- Gap kind: dsl + engine. DSL needs the verb; engine needs the substrate (face-down placement + zone reroute on Proceed replacement outcome + CannotAddSecurityByEffect modifier check). Companion engine gap tracked in `docs/RUST_ENGINE_GAPS.md` under "Zone-manipulation: security stack operations" — the EX4-060 case is the SELF-subject specialisation, not addressed by the generic helper alone.
+- Workaround that would VIOLATE no-approximations: no longer needed for EX4-060.
+- Also blocks: no longer blocks EX4-060. Keep this entry as a reference for any future card that needs a different timing surface from a leave-replacement body.
+- Gap kind: dsl + engine, closed for the EX4-060 replacement-body form.
 - First reported: 2026-05-03 (EX4-060 Omnimon Alter-S, batch-implement-cards-rust-dsl)
 
 ## EX4-039 / EX4-038 — Event-target-not-source predicate for OnDigivolve  [G-EVENT-TARGET-NOT-SOURCE]
@@ -1341,8 +1346,8 @@ Format per entry:
 ## Royal Knights — Delay/keyword leave-prevention replacements  [RK-G003]
 
 - Effect text: `BT20-100` The Last Guardian: "[All Turns] When any of your Digimon with [Omnimon] in its name would leave the battle area, <Delay> ... 1 of those Digimon doesn't leave." `BT23-054` Magnamon: "<Armor Purge> (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)"
-- Missing DSL verb / step kind / predicate: reusable Delay replacement and Armor Purge keyword lowering that pay the printed cost, bind the replacement subject, and cancel the pending would-leave/deletion event without approximating the subject or cause.
-- Companion engine state: generic replacement lowering exists for some cancel flows, but Royal Knights needs option-as-Delay source costs and keyword-provided top-card trash costs that are not yet represented as reusable declarative keyword/replacement emitters.
+- Status: closed for the Track B consumers. BT20-100's option-as-Delay source cost is represented by the replacement lowering shape `delete_permanent: { target: source }` followed by `cancel_replacement: {}`; the lowering only cancels after the delayed option actually reaches trash. BT23-054 uses the Armor Purge keyword replacement, prompts accept/decline, and trashes the top source only on accept.
+- Companion engine state: Delay and Armor Purge both route through the shared replacement framework and existing pending-selection masks; no action-space expansion was required.
 - Suggested DSL syntax:
   ```yaml
   - kind: replacement
@@ -1360,8 +1365,8 @@ Format per entry:
   - kind: grant_keyword
     keyword: ArmorPurge
   ```
-- Gap kind: hybrid. The engine replacement framework handles cancellation, but DSL/keyword lowering needs reusable costed replacement emitters and subject filters for these printed shapes.
-- Workaround: None faithful. Auto-cancelling without the cost or omitting the replacement changes a player-visible prevention choice.
+- Gap kind: closed for `BT20-100` and `BT23-054`; future cards should file a new narrower gap only if their cost/filter shape cannot be expressed through `kind: replacement` or the Armor Purge keyword.
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_100_delay`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt23_054_armor_purge`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- replacement`.
 - First reported: 2026-05-05 (Royal Knights Batch 2: BT20-100, BT23-054).
 
 ---
@@ -1369,8 +1374,8 @@ Format per entry:
 ## Royal Knights — would-leave observer that plays from hand without cancelling  [RK-G004]
 
 - Effect text: `BT20-091` Cool Boy: "[Opponent's Turn] [Once Per Turn] When any of your Digimon with the [Royal Knight] trait would leave the battle area, you may play 1 [Omekamon] from your hand without paying the cost."
-- Missing DSL verb / step kind / predicate: a would-leave observer that sees the replacement subject and can run an optional hand play while allowing the original leave event to proceed.
-- Companion engine state: `kind: replacement` can observe would-leave events, but current authoring patterns are cancellation/prevention-centric. This card needs a non-cancelling reaction at the same timing with event subject filters, OPT accounting, and ordinary pending hand selection/play.
+- Status: narrowed/closed for `BT20-091`. A `kind: replacement` clause can intentionally leave the outcome unset, which runs the side-effect and then lets the original leave event proceed. The `select_hand` step is required (`optional: false`) so the replacement is not offered when no Omekamon can be played; optionality lives on the outer replacement prompt.
+- Companion engine state: `kind: replacement` observes would-leave events with event subject filters, OPT accounting, and ordinary pending hand selection/play. Non-cancelling subscribers are represented by replacement processes that do not call `cancel_replacement`, `redirect_replacement`, `substitute_replacement`, or `handle_replacement`.
 - Suggested DSL syntax:
   ```yaml
   - when: when_would_leave_battle_area
@@ -1387,8 +1392,8 @@ Format per entry:
           filter: { name_is: "Omekamon" }
       - play_from_hand_free: { of: you, hand_index: omekamon }
   ```
-- Gap kind: hybrid. Engine timing/context exists through replacement context, but DSL needs a first-class non-cancelling would-leave observer or a documented replacement form whose default outcome proceeds safely.
-- Workaround: None faithful. A cancellation replacement would prevent the leaving Digimon incorrectly; omitting the clause hides a legal optional response.
+- Gap kind: closed for the BT20-091 shape. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_091_opponent_turn_may_play_omekamon_when_royal_knight_would_leave bt20_091_decline_would_leave_response_proceeds_without_playing_omekamon bt20_091_no_omekamon_in_hand_does_not_offer_response`.
+- Workaround: no workaround needed for BT20-091; use the documented non-outcome replacement form.
 - First reported: 2026-05-05 (Royal Knights Batch 3: BT20-091).
 
 ---

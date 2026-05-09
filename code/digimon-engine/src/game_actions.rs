@@ -529,6 +529,7 @@ impl Game {
             card: target_card,
             effective_cost,
             origin,
+            effect_initiated: source == PlaySource::ByEffect,
         });
         let cause = match source {
             PlaySource::ByEffect => crate::replacement::ReplacementCause::OwnEffect,
@@ -561,7 +562,12 @@ impl Game {
             }
         }
 
-        self.commit_play_from_hand_card_no_replace(player_id, target_card, effective_cost)
+        self.commit_play_from_hand_card_no_replace(
+            player_id,
+            target_card,
+            effective_cost,
+            source == PlaySource::ByEffect,
+        )
             .map(PlayFromHandCostResult::Played)
             .unwrap_or(PlayFromHandCostResult::Failed)
     }
@@ -579,6 +585,7 @@ impl Game {
                     resume.player,
                     resume.card,
                     resume.effective_cost,
+                    resume.effect_initiated,
                 );
             }
             crate::replacement::ReplacementOutcome::Cancelled
@@ -645,6 +652,7 @@ impl Game {
         player_id: PlayerId,
         target_card: crate::card_source::CardHandle,
         effective_cost: u16,
+        effect_initiated: bool,
     ) -> Option<usize> {
         if self.player(player_id).battle_area.len() >= self.rules.field_slots as usize {
             return None;
@@ -684,7 +692,6 @@ impl Game {
         });
 
         self.fire_on_play(player_id, field_index);
-        let effect_initiated = source == PlaySource::ByEffect;
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnEnterFieldAnyone,
             crate::selection::TriggerSource::EnteredField {
@@ -881,13 +888,19 @@ impl Game {
             {
                 return OptionPlayResult::Invalid;
             }
-            let has_active_body = if self.in_counter_window {
-                crate::action::mask::option_has_active_counter_effect(card, self, player_id)
+            if self.in_counter_window {
+                if !crate::action::mask::option_has_active_counter_effect(card, self, player_id) {
+                    return OptionPlayResult::Invalid;
+                }
             } else {
-                crate::action::mask::option_has_active_main_effect(card, self, player_id)
-            };
-            if !has_active_body {
-                return OptionPlayResult::Invalid;
+                let authored_effects = self
+                    .effects_for_card(card.card_id(&self.card_data), card.handle())
+                    .unwrap_or_default();
+                if !authored_effects.is_empty()
+                    && !crate::action::mask::option_has_active_main_effect(card, self, player_id)
+                {
+                    return OptionPlayResult::Invalid;
+                }
             }
             if !crate::action::mask::option_use_requirement_or_color_available(
                 card, self, player_id,
@@ -4295,6 +4308,203 @@ impl Game {
         self.drain_effect_queue();
     }
 
+    pub(crate) fn place_permanent_on_security(
+        &mut self,
+        player_id: PlayerId,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+        observer_player: PlayerId,
+    ) -> bool {
+        use crate::enums::{EffectTiming, StackPosition, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        if self
+            .modifiers
+            .player_has(observer_player, ModifierType::CannotAddSecurityByEffect)
+        {
+            return false;
+        }
+
+        if self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .is_none()
+        {
+            return false;
+        }
+
+        let cause = self.infer_effect_cause(target.player);
+        let leave_outcome = self.try_replace(
+            EffectTiming::WhenWouldLeaveBattleArea,
+            ReplacementSubject::Permanent(target),
+            cause,
+            Some(Zone::Security),
+        );
+        if self.pending_selection.is_some() {
+            return false;
+        }
+        match leave_outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => return false,
+            ReplacementOutcome::Redirected(Zone::Security) => {}
+            ReplacementOutcome::Redirected(Zone::Trash) => {
+                self.delete_permanent_with_cause(target, cause);
+                return false;
+            }
+            ReplacementOutcome::Redirected(Zone::Hand) => {
+                return self.return_to_hand(target).is_some()
+            }
+            ReplacementOutcome::Redirected(Zone::Deck) => {
+                return self.return_to_deck(target, StackPosition::Bottom);
+            }
+            ReplacementOutcome::Redirected(other) => {
+                debug_assert!(
+                    false,
+                    "unexpected redirect destination for permanent-to-security: {:?}",
+                    other
+                );
+            }
+            ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)) => {
+                return self.place_permanent_on_security(
+                    player_id,
+                    other,
+                    position,
+                    face_up,
+                    observer_player,
+                );
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(
+                    false,
+                    "non-permanent substitute is unsupported for permanent-to-security"
+                );
+            }
+        }
+
+        self.place_permanent_on_security_without_leave_replacement(
+            player_id,
+            target,
+            position,
+            face_up,
+            observer_player,
+        )
+    }
+
+    pub(crate) fn place_permanent_on_security_without_leave_replacement(
+        &mut self,
+        player_id: PlayerId,
+        target: PermanentHandle,
+        position: crate::enums::StackPosition,
+        face_up: bool,
+        observer_player: PlayerId,
+    ) -> bool {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        if self
+            .modifiers
+            .player_has(observer_player, ModifierType::CannotAddSecurityByEffect)
+        {
+            return false;
+        }
+
+        let Some(permanent) = self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+        else {
+            return false;
+        };
+        let source_card = permanent.top_card().handle();
+        let cause = self.infer_effect_cause(player_id);
+        let place_subject = ReplacementSubject::Card(source_card, Zone::BattleArea);
+        let place_outcome = self.try_replace(
+            EffectTiming::WhenWouldPlaceInSecurity,
+            place_subject,
+            cause,
+            Some(Zone::Security),
+        );
+        if self.pending_selection.is_some() || !matches!(place_outcome, ReplacementOutcome::None) {
+            return false;
+        }
+
+        let mut permanent = self
+            .player_mut(target.player)
+            .battle_area
+            .remove(target.index as usize);
+        let Some(top) = permanent.card_sources.pop() else {
+            return false;
+        };
+        let top_handle = top.handle();
+        let face_up_key = top.card_index;
+
+        let mut leaving_sources = permanent.card_sources.clone();
+        leaving_sources.push(top.clone());
+        self.apply_ace_overflow_for_sources(&leaving_sources);
+
+        match position {
+            crate::enums::StackPosition::Top => {
+                self.player_mut(player_id).security.push(top);
+            }
+            crate::enums::StackPosition::Bottom => {
+                self.player_mut(player_id).security.insert(0, top);
+            }
+            crate::enums::StackPosition::Random => {
+                use rand::Rng;
+                let sec_len = self.player(player_id).security.len();
+                let idx = if sec_len == 0 {
+                    0
+                } else {
+                    self.rng.gen_range(0..=sec_len)
+                };
+                self.player_mut(player_id).security.insert(idx, top);
+            }
+        }
+
+        if face_up {
+            self.player_mut(player_id)
+                .face_up_security
+                .insert(face_up_key);
+        }
+
+        for card in permanent.card_sources {
+            let source_card = card.handle();
+            self.player_mut(target.player).trash.push(card);
+            self.enqueue_triggered(
+                EffectTiming::OnDigivolutionCardTrashed,
+                TriggerSource::SourceTrashedFromStack {
+                    player: target.player,
+                    host: target,
+                    host_card: top_handle,
+                    card: source_card,
+                    cause: crate::trigger_context::EventCause::SecurityPlacement,
+                },
+            );
+            self.drain_effect_queue();
+        }
+
+        let had_linked = !permanent.linked_cards.is_empty();
+        for linked in permanent.linked_cards {
+            self.player_mut(target.player).trash.push(linked);
+        }
+        if had_linked {
+            for pid in 0..self.players.len() {
+                self.enqueue_triggered(
+                    EffectTiming::OnLinkedCardTrashed,
+                    TriggerSource::PlayerBattleArea(pid as PlayerId),
+                );
+            }
+            self.drain_effect_queue();
+        }
+
+        self.modifiers.clear_permanent(target);
+        self.modifiers.expire_player_on_permanent_leave(target);
+        self.fire_on_place_security(player_id, observer_player, top_handle);
+        true
+    }
+
     pub(crate) fn place_on_security_observed(
         &mut self,
         player_id: PlayerId,
@@ -4479,12 +4689,32 @@ impl Game {
         ignore_color: bool,
         source: PlaySource,
     ) -> bool {
-        self.effect_initiated_digivolve_from_source(
+        self.effect_initiated_digivolve_from_source_inner(
             player_id,
             crate::enums::CardSourceRef::Hand(player_id, hand_index),
             target,
             cost_delta,
             ignore_color,
+            false,
+            source,
+        )
+    }
+
+    pub fn effect_initiated_digivolve_ignore_requirements(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+    ) -> bool {
+        self.effect_initiated_digivolve_from_source_inner(
+            player_id,
+            crate::enums::CardSourceRef::Hand(player_id, hand_index),
+            target,
+            cost_delta,
+            true,
+            true,
             source,
         )
     }
@@ -4499,6 +4729,46 @@ impl Game {
         target: PermanentHandle,
         cost_delta: crate::enums::CostDelta,
         ignore_color: bool,
+        source: PlaySource,
+    ) -> bool {
+        self.effect_initiated_digivolve_from_source_inner(
+            player_id,
+            source_ref,
+            target,
+            cost_delta,
+            ignore_color,
+            false,
+            source,
+        )
+    }
+
+    pub fn effect_initiated_digivolve_from_source_ignore_requirements(
+        &mut self,
+        player_id: PlayerId,
+        source_ref: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+    ) -> bool {
+        self.effect_initiated_digivolve_from_source_inner(
+            player_id,
+            source_ref,
+            target,
+            cost_delta,
+            true,
+            true,
+            source,
+        )
+    }
+
+    fn effect_initiated_digivolve_from_source_inner(
+        &mut self,
+        player_id: PlayerId,
+        source_ref: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        cost_delta: crate::enums::CostDelta,
+        ignore_color: bool,
+        ignore_requirements: bool,
         source: PlaySource,
     ) -> bool {
         if source == PlaySource::ByEffect
@@ -4544,21 +4814,24 @@ impl Game {
         };
 
         let evo_costs = &self.card_data[evo_card_data_index].evo_costs;
-        let matching_memory_cost = evo_costs
-            .iter()
-            .find(|ec| {
-                ec.level == base_level
-                    && (ignore_color
-                        || crate::action::mask::evo_color(ec.card_color)
-                            .map(|c| base_colors.contains(&c))
-                            .unwrap_or(false))
-            })
-            .map(|ec| ec.memory_cost)
-            .or_else(|| ignore_color.then_some(0));
+        let matching_memory_cost = if ignore_requirements {
+            Some(0)
+        } else {
+            evo_costs
+                .iter()
+                .find(|ec| {
+                    ec.level == base_level
+                        && (ignore_color
+                            || crate::action::mask::evo_color(ec.card_color)
+                                .map(|c| base_colors.contains(&c))
+                                .unwrap_or(false))
+                })
+                .map(|ec| ec.memory_cost)
+        };
         let Some(matching_memory_cost) = matching_memory_cost else {
             self.logger.log(&format!(
-                "[Rejected] effect_initiated_digivolve: no matching evo cost (base_level={}, ignore_color={})",
-                base_level, ignore_color
+                "[Rejected] effect_initiated_digivolve: no matching evo cost (base_level={}, ignore_color={}, ignore_requirements={})",
+                base_level, ignore_color, ignore_requirements
             ));
             return false;
         };

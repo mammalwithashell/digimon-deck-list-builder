@@ -81,7 +81,7 @@ Resolver-backed corrected batches on 2026-05-03:
 | `EX11-019` | implemented | explicit may-choice for On Deletion Familiar Token play; inherited Barrier | none identified in covered text |
 | `P-134` | implemented | On Play opponent Digimon Security Attack -1; inherited When Attacking -2000 DP | none identified in covered text |
 | `EX7-025` | partial | When Digivolving optional Arisa play from hand if you have 1 or fewer Tamers | `G-OPPONENT-SECURITY-DP-AURA` / `PUPPETS-G008` for inherited opponent security Digimon DP aura |
-| `EX7-027` | partial | Puppet Overclock; optional When Digivolving play level 3 Puppet from hand | inherited leave-prevention by deleting Token/other Puppet needs reusable replacement-cost body |
+| `EX7-027` | partial | Puppet Overclock; optional When Digivolving play level 3 Puppet from hand; inherited leave-prevention by deleting Token/other Puppet | adjacent active-effect gaps only |
 | `EX7-063` | partial | Start of Your Main Phase memory gain; Security play this Tamer without paying cost | Token/Puppet deletion observer with suspend-this-Tamer cost |
 | `EX11-021` | implemented | When Digivolving optional Mirai play from hand if you have 1 or fewer Tamers; inherited opponent-turn attack cancel by deleting this Digimon | none identified in covered text |
 | `ST19-01` | implemented | inherited When Attacking Draw 1 if another own Digimon exists; carrier exclusion; once-per-turn lockout | none identified in covered text |
@@ -90,7 +90,7 @@ Resolver-backed corrected batches on 2026-05-03:
 | `EX11-020` | partial | inherited opponent-turn attack cancel by deleting one other Digimon | `PUPPETS-G012` for On Deletion deletion-cause predicate |
 | `EX7-024` | partial | printed metadata and yellow Lv2 cost-0 digivolution path | `PUPPETS-G013` for source-scoped digivolve-into-trait cost reduction; `PUPPETS-G008` for inherited opponent security Digimon DP aura |
 | `ST19-08` | partial | Puppet/Token Overclock cost filter | `PUPPETS-G014` for filtered origin-preserving union-zone play; `PUPPETS-G008` for inherited opponent security Digimon DP aura |
-| `ST19-11` | partial | On Play/When Digivolving select 1 opponent Digimon and -3000 DP | `PUPPETS-G015` for the 3+ Digimon extra -3000 branch; inherited leave-prevention by deleting Token/other Puppet remains on the replacement-cost body tracked with `EX7-027` / `BT22-036` |
+| `ST19-11` | partial | On Play/When Digivolving select 1 opponent Digimon and -3000 DP; inherited leave-prevention by deleting Token/other Puppet | `PUPPETS-G015` for the 3+ Digimon extra -3000 branch |
 | `P-165` | partial | Security play-self; On Play/When Digivolving Familiar Token; inherited Barrier | `PUPPETS-G016` for "that token" provenance plus opponent-turn-end cleanup |
 | `EX7-030` | implemented | Puppet/Token Overclock; optional Start of Main/When Digivolving Familiar Token; When Attacking -6000 DP | none identified in covered text |
 | `EX11-024` | implemented | Alliance; Puppet/Token Overclock; optional Lv4-or-lower Puppet free-play; Familiar Tokens per opponent Digimon; count-scaled DP reduction | none identified in covered text |
@@ -98,8 +98,8 @@ Resolver-backed corrected batches on 2026-05-03:
 | `BT22-042` | partial | standard yellow Lv6 cost-4 digivolve; Puppet/Token Overclock; When Digivolving optional Lv4-or-lower Puppet free-play followed by mandatory count-scaled DP reduction; All Turns OPT other-Digimon-deleted refire of its When Digivolving effect | conditional Arisa+Chaperomon route needs `G-ALT-PATH-CONDITION` |
 | `EX9-032` | partial | printed metadata; yellow Lv5 and Puppet Lv5 digivolve paths | active delete-cost self-digivolve needs `PUPPETS-G018`; inherited leave-prevention by deleting Token/other Puppet needs `PUPPETS-G019` |
 | `EX9-033` | partial | yellow Lv5 and Puppet Lv5 digivolve paths; Alliance/Blocker aura for own Puppet Digimon and Tokens; End of Your Turn optional level 4 or lower Puppet play from trash | other-deletion lowest-level delete observer now needs card-local YAML/test adoption using the closed `PUPPETS-G011` payload |
-| `BT22-036` | partial | yellow Lv4 cost-3 digivolve path; Puppet/Token Overclock | Hand Main Arisa-gated ShoeShoemon trash-to-Shoemon source placement and hand-card digivolve needs `PUPPETS-G020`; inherited leave-prevention by deleting Token/other Puppet needs `PUPPETS-G019` |
-| `EX11-022` | partial | yellow Lv4 and Puppet Lv3 digivolve paths; Scapegoat replacement using another own Digimon | hand-or-trash Puppet DP<=4000 free-play needs `PUPPETS-G021`; effect-played cleanup needs `PUPPETS-G003`; inherited leave-prevention by deleting Token/other Puppet needs `PUPPETS-G019` |
+| `BT22-036` | partial | yellow Lv4 cost-3 digivolve path; Puppet/Token Overclock; inherited leave-prevention by deleting Token/other Puppet | Hand Main Arisa-gated ShoeShoemon trash-to-Shoemon source placement and hand-card digivolve needs `PUPPETS-G020` |
+| `EX11-022` | partial | yellow Lv4 and Puppet Lv3 digivolve paths; Scapegoat replacement using another own Digimon; inherited leave-prevention by deleting Token/other Puppet | hand-or-trash Puppet DP<=4000 free-play needs `PUPPETS-G021`; effect-played cleanup needs `PUPPETS-G003` |
 | `EX11-023` | partial | yellow Lv5 and Puppet Lv5 digivolve paths; Alliance; Scapegoat; mandatory lowest-level opponent Digimon delete on When Digivolving and End of Opponent's Turn | other-Digimon-deleted optional level 4 or lower Puppet trash play now needs card-local YAML/test adoption using the closed `PUPPETS-G011` payload |
 | `EX11-060` | implemented | start-of-turn memory setter; Token/Puppet deletion observer with visible suspend-this-Tamer Draw 1 branch; Overclock-only level 4 Puppet hand-play; Security play this Tamer without paying cost | none identified in covered text |
 | `EX11-061` | partial | Start of Your Main Phase memory gain; Security play this Tamer without paying cost | Puppet digivolve observer/effect-play branch needs `PUPPETS-G005`; exact turn-end cleanup needs `PUPPETS-G003` |
@@ -147,7 +147,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 | `PUPPETS-G016` | engine-gap | open | `P-165`, "that token" cleanup riders | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G017` | hybrid | partially resolved | `BT22-042` closed by outer-tail rewrap for nested selections; `LM-029`, `P-156`, and other optional sub-effect + mandatory "Then" tails still need card-shaped adoption | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G018` | hybrid | open | `EX9-032`, costed self-digivolve after deleting Token/Puppet cost body | `docs/RUST_ENGINE_GAPS.md` |
-| `PUPPETS-G019` | engine-gap / dsl-gap | open | `EX9-032`, `BT22-036`, `EX11-022`, inherited Token/Puppet leave-prevention replacements | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G019` | engine-gap / dsl-gap | partially resolved | `EX9-032`, `EX7-027`, `ST19-11`, inherited Token/Puppet leave-prevention replacements | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G020` | hybrid | open | `BT22-036`, hand-main Arisa-gated ShoeShoemon trash-to-Shoemon source placement and hand-card digivolve | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G021` | dsl-gap | open | `EX11-022`, hand-or-trash Puppet DP<=4000 free-play selection | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G022` | hybrid | closed | `EX11-060`, suspend-this-Tamer deletion observer with Overclock cause branch | `qa/dsl-vocab-gaps.md` |
@@ -363,13 +363,14 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G019: Inherited Token/Puppet Leave-Prevention Replacement Dispatch
 
 - **Type:** `engine-gap` / `dsl-gap`
-- **Status:** open
-- **Blocks:** inherited leave-prevention on `EX9-032`, `BT22-036`, `EX11-022`, `EX7-027`, and `ST19-11` style Puppet bodies.
+- **Status:** partially resolved
+- **Blocks:** remaining inherited leave-prevention migrations on `EX9-032`, `EX7-027`, and `ST19-11` style Puppet bodies.
 - **Effect text:** "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, prevent it from leaving."
-- **Why it matters:** The reusable replacement framework handles face-up replacement sources, but these Puppet cards need the inherited effect to dispatch from a buried source under the threatened stack, expose a player-visible cost selection, exclude the protected carrier/source from the cost, and cancel only the original leave event.
-- **Evidence:** Batch 5 tried the inherited replacement on `BT22-036` and `EX11-022`, then removed it after the positive tests failed to produce a pending selection from the inherited source. The ignored tests carry `G-INHERITED-REPLACEMENT-DISPATCH`.
+- **Why it matters:** These Puppet cards need the inherited effect to dispatch from a buried source under the threatened stack, expose a player-visible cost selection, exclude the protected carrier/source from the cost, and cancel only the original leave event.
+- **Track B update (2026-05-08):** Replacement candidate collection now scans inherited source effects under the threatened carrier. `BT22-036`, `EX11-022`, `EX9-032`, `EX7-027`, and `ST19-11` production YAML/tests cover the inherited accept prompt, Token/other-Puppet cost filters, own-effect rejection, and once-per-turn behavior where printed. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_036_inherited_replacement`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_022_inherited_leave_prevention`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_032_inherited_prevents`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex7_027_inherited`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- st19_11_inherited`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- replacement`.
+- **Remaining evidence:** No fixture remains blocked solely on inherited replacement dispatch; adjacent active-effect gaps may remain independent of inherited replacement behavior.
 - **First test:** Build a Puppet stack with one of these cards as a source and another own Familiar Token in battle. Attempt to remove the stack by an opponent effect, assert a pending replacement-cost selection appears, delete the Token, and assert the stack remains with once-per-turn accounting consumed.
-- **Implementation hint:** Extend leave-field replacement dispatch to scan inherited source effects under the threatened permanent, build `EffectContext` from the inherited source while keeping the replacement subject as the carrier, and keep Puppet/Token cost-body predicates binding-aware.
+- **Implementation hint:** Reuse the existing inherited replacement scanner and Puppet/Token cost-body predicate pattern from `BT22-036` / `EX11-022`.
 
 ### PUPPETS-G020: Hand-Main Trash-to-Source Hand-Card Digivolve Chain
 

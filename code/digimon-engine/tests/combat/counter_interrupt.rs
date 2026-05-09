@@ -199,8 +199,9 @@ fn counter_declared_stacks_card_and_fires_when_digivolving() {
         2,
         "blast card stacked on base — digivolution stack size = 2"
     );
-    // WhenDigivolving fired — pilot grants +1 memory.
-    assert_eq!(r.memory(), memory_before + 1);
+    // WhenDigivolving fired — pilot grants +1 memory to the defender,
+    // moving the seesaw toward player 1 during player 0's attack.
+    assert_eq!(r.memory(), memory_before - 1);
     // Attacker deleted by defender's stacked Digimon.
     assert_eq!(r.battle_area_size(0), 0);
 }

@@ -884,6 +884,120 @@ fn bt21_093_delete_highest_dp_opponent(_ctx: &mut EffectContext<'_>, _bindings: 
     // a raw_rust-driven selection installer.
 }
 
+/// BT13-040 Magnamon — would-leave observer tail.
+///
+/// Printed text: "When this Digimon would leave the battle area, <Draw 1>.
+/// Then, you may play 1 [Veemon] from your hand or this Digimon's digivolution
+/// cards without paying the cost."
+///
+/// This is intentionally a non-cancelling replacement-process step: the
+/// surrounding DSL replacement observer performs the draw, then this helper
+/// installs one optional pending selection containing both hand and material
+/// action IDs. No action-space expansion is needed; hand picks reuse
+/// `PLAY_HAND_START + index`, source picks reuse `SOURCE_SELECT_START +
+/// field * SOURCES_PER_FIELD + source_index`.
+fn bt13_040_may_play_veemon_from_hand_or_source(
+    ctx: &mut EffectContext<'_>,
+    _bindings: &mut Bindings,
+) {
+    use crate::action::space::{
+        encode_source_select, PLAY_HAND_END, PLAY_HAND_START, SOURCE_SELECT_END,
+        SOURCE_SELECT_START,
+    };
+    use crate::enums::{CostDelta, GamePhase};
+    use crate::selection::{PendingSelection, SelectionKind, UnionZoneSet};
+
+    let Some(source_permanent) = ctx.source_permanent else {
+        return;
+    };
+
+    let player = ctx.player;
+    let mut valid_action_ids = Vec::new();
+
+    for (idx, card) in ctx.game.player(player).hand.iter().enumerate() {
+        if idx >= crate::action::space::HAND_MAIN_LIMIT {
+            break;
+        }
+        if card
+            .card_names(&ctx.game.card_data)
+            .iter()
+            .any(|name| name.contains("Veemon"))
+        {
+            valid_action_ids.push(PLAY_HAND_START + idx as u16);
+        }
+    }
+
+    if let Some(perm) = ctx
+        .game
+        .player(source_permanent.player)
+        .battle_area
+        .get(source_permanent.index as usize)
+    {
+        let source_count = perm.card_sources.len().saturating_sub(1);
+        for source_index in 0..source_count.min(crate::action::space::SOURCES_PER_FIELD as usize) {
+            let source = &perm.card_sources[source_index];
+            if source
+                .card_names(&ctx.game.card_data)
+                .iter()
+                .any(|name| name.contains("Veemon"))
+            {
+                if let Some(action_id) =
+                    encode_source_select(source_permanent.index as u16, source_index as u16)
+                {
+                    valid_action_ids.push(action_id);
+                }
+            }
+        }
+    }
+
+    if valid_action_ids.is_empty() {
+        return;
+    }
+
+    let previous_phase = ctx.game.current_phase;
+    let selecting_player = ctx.override_selecting_player.unwrap_or(player);
+    let source_card = ctx.source_card;
+    let source_kind = ctx.source_kind;
+    let override_pin = ctx.override_selecting_player;
+    ctx.game.current_phase = GamePhase::SelectUnion;
+    ctx.game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::UnionZone {
+            zones: UnionZoneSet::HAND | UnionZoneSet::MATERIAL,
+        },
+        selecting_player,
+        previous_phase,
+        valid_action_ids,
+        is_optional: true,
+        prompt: "You may play 1 [Veemon] from hand or this Digimon's sources".to_string(),
+        effect_choices: None,
+        source_card,
+        source_permanent: Some(source_permanent),
+        source_kind,
+        callback: Box::new(move |game, action_id| {
+            let mut cb_ctx = EffectContext::new_with_source_kind_and_override(
+                game,
+                source_card,
+                Some(source_permanent),
+                source_kind,
+                player,
+                override_pin,
+            );
+            if (PLAY_HAND_START..PLAY_HAND_END).contains(&action_id) {
+                let hand_index = (action_id - PLAY_HAND_START) as usize;
+                let _ = cb_ctx.play_from_hand_free(player, hand_index);
+            } else if (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action_id) {
+                let (_, source_index) = crate::action::space::decode_source_select(action_id);
+                let _ = cb_ctx.play_from_materials(
+                    source_permanent,
+                    source_index as usize,
+                    CostDelta::Free,
+                );
+            }
+        }),
+        on_decline: None,
+    });
+}
+
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
     r.register_step(
@@ -935,6 +1049,10 @@ pub fn build_registry() -> EngineRawRustRegistry {
     r.register_step(
         "bt21_093_delete_highest_dp_opponent",
         bt21_093_delete_highest_dp_opponent,
+    );
+    r.register_step(
+        "bt13_040_may_play_veemon_from_hand_or_source",
+        bt13_040_may_play_veemon_from_hand_or_source,
     );
     r
 }

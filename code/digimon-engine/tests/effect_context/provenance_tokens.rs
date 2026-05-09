@@ -60,9 +60,16 @@ fn effect_play_provenance_token_survives_field_shift_and_zone_move() {
 
 #[test]
 fn effect_digivolve_provenance_token_resolves_to_new_top_card() {
+    let mut evo = digimon("EVO", 4);
+    evo.evo_costs.push(digimon_engine::card_data::EvoCost {
+        card_color: 0,
+        level: 3,
+        memory_cost: 0,
+    });
+
     let mut runner = DebugRunner::builder()
         .add_card(digimon("BASE", 3))
-        .add_card(digimon("EVO", 4))
+        .add_card(evo)
         .hand(0, &["EVO"])
         .memory(5)
         .start();

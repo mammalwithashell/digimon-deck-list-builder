@@ -2,6 +2,7 @@
 //! Printed text covered here: [On Deletion] you may play 1 Familiar Token.
 //! Inherited: <Barrier>.
 
+use digimon_engine::action::space::REPLACEMENT_ACCEPT;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::Keyword;
 use digimon_engine::replacement::ReplacementCause;
@@ -45,5 +46,72 @@ fn ex11_019_inherited_barrier_is_available_from_stack() {
     assert!(
         runner.game.has_keyword(carrier, Keyword::Barrier),
         "carrier inherits Barrier from EX11-019"
+    );
+}
+
+#[test]
+fn ex11_019_inherited_barrier_trashes_security_to_prevent_battle_deletion() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-019")
+        .expect("EX11-019 YAML loads")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("SEC", "SEC"))
+        .security(0, &["SEC", "SEC"])
+        .start();
+    let carrier = runner.place_stack(0, &["EX11-019", "CARRIER"]);
+
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::Battle);
+    let view = runner
+        .pending_selection_view()
+        .expect("inherited Barrier accept prompt");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    assert!(view.is_optional, "Barrier may be declined");
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept inherited Barrier");
+    runner.auto_resolve().expect("finish inherited Barrier");
+
+    assert_eq!(
+        runner.battle_area_size(0),
+        1,
+        "Barrier prevents the carrier's battle deletion"
+    );
+    assert_eq!(
+        runner.game.players[0].security.len(),
+        1,
+        "Barrier cost trashes top security"
+    );
+}
+
+#[test]
+fn ex11_019_inherited_barrier_ignores_effect_deletion() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-019")
+        .expect("EX11-019 YAML loads")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("SEC", "SEC"))
+        .security(0, &["SEC", "SEC"])
+        .start();
+    let carrier = runner.place_stack(0, &["EX11-019", "CARRIER"]);
+
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "Barrier only fires for battle deletion"
+    );
+    assert_eq!(
+        runner.battle_area_size(0),
+        0,
+        "effect deletion proceeds normally"
+    );
+    assert_eq!(
+        runner.game.players[0].security.len(),
+        2,
+        "non-battle deletion does not pay Barrier cost"
     );
 }

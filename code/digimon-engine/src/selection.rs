@@ -33,6 +33,8 @@ impl UnionZoneSet {
     pub const HAND: UnionZoneSet = UnionZoneSet(0b0001);
     /// The player's trash.
     pub const TRASH: UnionZoneSet = UnionZoneSet(0b0010);
+    /// Digivolution-source cards under the effect's source permanent.
+    pub const MATERIAL: UnionZoneSet = UnionZoneSet(0b0100);
 
     /// Returns `true` if the given zone bit is set.
     pub fn contains(self, other: UnionZoneSet) -> bool {

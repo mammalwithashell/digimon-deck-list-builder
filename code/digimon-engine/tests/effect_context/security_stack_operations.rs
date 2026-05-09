@@ -276,8 +276,8 @@ fn trash_top_security_fires_removed_cards_on_lose_security_once() {
     }
 
     assert_eq!(
-        runner.game.memory, 3,
-        "OnLoseSecurity (+2) and OnOpponentSecurityRemoved (+1) should each fire once"
+        runner.game.memory, -1,
+        "OnLoseSecurity for defender (+2) and OnOpponentSecurityRemoved for source player (+1) should each fire once"
     );
 }
 
@@ -580,7 +580,7 @@ fn add_top_security_to_hand_moves_top_card_and_fires_loss_observer() {
     );
     assert_eq!(
         runner.memory(),
-        1,
+        -1,
         "security removal observers fire for security-to-hand"
     );
 }

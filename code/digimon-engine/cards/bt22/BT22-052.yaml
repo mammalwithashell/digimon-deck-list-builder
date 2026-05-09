@@ -13,8 +13,14 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: green }
     cost: 4
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
 
 effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
   - when: [on_play, when_digivolving]
     optional: true
     summary: "[On Play][When Digivolving] Play 1 5000 DP or lower Digimon from hand; your level 3+ Digimon gain Blocker"
@@ -43,7 +49,18 @@ effects:
                 keyword: Blocker
                 expiry: end_of_opponents_turn
 
-# Stubbed:
-# - [Hand][Counter] Blast Digivolve is not modeled in this card entry.
-# - [All Turns][Once Per Turn] when another Digimon would leave battle area,
-#   gain 2 memory needs replacement/event observer for another permanent.
+  # [All Turns][Once Per Turn] When any of your other Digimon would leave the
+  # battle area, gain 2 memory. This is a non-cancelling would-leave
+  # subscriber: it runs the side effect and leaves the original move
+  # unmodified.
+  - kind: replacement
+    timing: when_would_leave_battle_area
+    once_per_turn: true
+    summary: "[All Turns][Once Per Turn] other own Digimon would leave -> gain 2 memory"
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - other: true
+    process:
+      - gain_memory: 2

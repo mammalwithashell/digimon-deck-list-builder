@@ -26,9 +26,8 @@
 //!
 //! # Omitted
 //!
-//! - Inherited leave-prevention is left as an ignored gap test: production DSL
-//!   lacks proven inherited-scope replacement coverage for this exact
-//!   Token/other-Puppet cost body.
+//! - Inherited leave-prevention uses the shared would-leave replacement
+//!   framework and the Token/other-Puppet cost body.
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledTiming,
@@ -283,7 +282,6 @@ fn ex9_032_does_not_prompt_without_legal_cost_body() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-PUPPET-TOKEN-COSTED-INHERITED-REPLACEMENT — inherited-scope replacement with Token/other-Puppet cost body needs production proof before enabling"]
 fn ex9_032_inherited_prevents_leaving_by_deleting_token_or_other_puppet() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX9-032")
@@ -298,6 +296,15 @@ fn ex9_032_inherited_prevents_leaving_by_deleting_token_or_other_puppet() {
     runner
         .game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+
+    let accept = runner
+        .pending_selection_view()
+        .expect("inherited replacement accept prompt");
+    assert_eq!(accept.kind, SelectionKind::Replacement);
+    assert!(accept.is_optional);
+    runner
+        .execute_action(0, accept.valid_action_ids[0])
+        .expect("accept inherited replacement");
 
     let view = runner
         .pending_selection_view()

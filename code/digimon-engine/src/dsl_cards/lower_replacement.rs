@@ -115,6 +115,37 @@ pub fn lower_with_raw(
             && replacement_process_has_payable_required_selection(&preflight_process, ctx, *subject)
     });
 
+    if DelaySelfCancelFlow::from_process(&process).is_some() {
+        builder = builder.replacement_process(move |rctx| {
+            if !source_is_delayed_option(rctx.effect) {
+                return;
+            }
+
+            let Some(source) = rctx.effect.source_permanent else {
+                return;
+            };
+            let Some(source_card) = rctx.effect.permanent_top_card_handle(source) else {
+                return;
+            };
+
+            let continuation = DelayCancelContinuation {
+                source_player: source.player,
+                source_card,
+            };
+
+            match rctx.effect.trash_delay_source_status() {
+                DelayCostStatus::Paid => {
+                    rctx.cancel();
+                }
+                DelayCostStatus::Pending => {
+                    arm_pending_delay_cancel_continuation(rctx.effect.game, continuation);
+                }
+                DelayCostStatus::Unpaid => {}
+            };
+        });
+        return Some(builder.build());
+    }
+
     if let Some(delay_flow) = DelayHandDigivolveFlow::from_process(&process) {
         builder = builder.replacement_process(move |rctx| {
             if !source_is_delayed_option(rctx.effect) {
@@ -243,7 +274,8 @@ fn process_places_permanent_in_security(process: &[CompiledStep]) -> bool {
 
 fn step_places_permanent_in_security(step: &CompiledStep) -> bool {
     match step {
-        CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement { .. } => true,
+        CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement { .. }
+        | CompiledStep::PlacePermanentOnSecurityAndHandleReplacement { .. } => true,
         CompiledStep::AsSelectingPlayer { body, .. }
         | CompiledStep::Optional(body)
         | CompiledStep::ScheduleDelayed { body, .. } => process_places_permanent_in_security(body),
@@ -287,48 +319,34 @@ fn required_selection_step_has_candidate(
         CompiledStep::SelectOwnPermanent {
             filter,
             selector,
-            optional,
             ..
-        } => {
-            *optional || has_matching_permanent(ctx, Some(ctx.player), filter, *selector, bindings)
-        }
+        } => has_matching_permanent(ctx, Some(ctx.player), filter, *selector, bindings),
         CompiledStep::SelectOpponentPermanent {
             filter,
             selector,
-            optional,
             ..
         } => {
             let opponent = ctx.game.next_clockwise(ctx.player);
-            *optional || has_matching_permanent(ctx, Some(opponent), filter, *selector, bindings)
+            has_matching_permanent(ctx, Some(opponent), filter, *selector, bindings)
         }
         CompiledStep::SelectAnyPermanent {
             filter,
             selector,
-            optional,
             ..
-        } => *optional || has_matching_permanent(ctx, None, filter, *selector, bindings),
-        CompiledStep::SelectHand {
-            of,
-            filter,
-            optional,
-            ..
-        } => *optional || has_matching_card_in_zone(ctx, *of, CompiledZone::Hand, filter, bindings),
+        } => has_matching_permanent(ctx, None, filter, *selector, bindings),
+        CompiledStep::SelectHand { of, filter, .. } => {
+            has_matching_card_in_zone(ctx, *of, CompiledZone::Hand, filter, bindings)
+        }
         CompiledStep::SelectTrash {
             of,
             filter,
-            optional,
             ..
-        } => {
-            *optional || has_matching_card_in_zone(ctx, *of, CompiledZone::Trash, filter, bindings)
-        }
-        CompiledStep::SelectSecurity { of, optional, .. } => {
-            *optional
-                || !ctx
-                    .game
-                    .player(resolve_player_ref(ctx, *of))
-                    .security
-                    .is_empty()
-        }
+        } => has_matching_card_in_zone(ctx, *of, CompiledZone::Trash, filter, bindings),
+        CompiledStep::SelectSecurity { of, .. } => !ctx
+            .game
+            .player(resolve_player_ref(ctx, *of))
+            .security
+            .is_empty(),
         CompiledStep::SelectCountCappedMulti {
             of,
             zone,
@@ -337,7 +355,7 @@ fn required_selection_step_has_candidate(
             ..
         } => {
             *optional_zero
-                || *max > 0
+                || !matches!(max, digimon_dsl::compiled::CompiledCountBound::Literal(0))
                     && match zone {
                         CompiledZone::Hand => !ctx
                             .game
@@ -354,13 +372,10 @@ fn required_selection_step_has_candidate(
         }
         CompiledStep::SelectMaterial {
             of_permanent,
-            optional,
+            filter,
             ..
-        } => {
-            *optional
-                || resolve_permanent_binding(of_permanent, bindings)
-                    .is_some_and(|perm| permanent_has_materials(ctx, perm))
-        }
+        } => resolve_permanent_binding(of_permanent, bindings)
+            .is_some_and(|perm| permanent_has_matching_materials(ctx, perm, filter, bindings)),
         CompiledStep::SelectOwnSources { min, max, .. } => {
             *min == 0 || (*max >= *min && has_own_source_candidates(ctx))
         }
@@ -375,23 +390,21 @@ fn required_selection_step_has_candidate(
         CompiledStep::SelectUnionZone {
             of,
             zones,
-            optional,
             ..
         } => {
-            *optional
-                || zones.iter().any(|zone| match zone {
-                    CompiledZone::Hand => !ctx
-                        .game
-                        .player(resolve_player_ref(ctx, *of))
-                        .hand
-                        .is_empty(),
-                    CompiledZone::Trash => !ctx
-                        .game
-                        .player(resolve_player_ref(ctx, *of))
-                        .trash
-                        .is_empty(),
-                    _ => false,
-                })
+            zones.iter().any(|zone| match zone {
+                CompiledZone::Hand => !ctx
+                    .game
+                    .player(resolve_player_ref(ctx, *of))
+                    .hand
+                    .is_empty(),
+                CompiledZone::Trash => !ctx
+                    .game
+                    .player(resolve_player_ref(ctx, *of))
+                    .trash
+                    .is_empty(),
+                _ => false,
+            })
         }
         CompiledStep::SelectOrderedPermutation { items, .. } => {
             resolve_card_list_binding(items, bindings).is_some_and(|items| !items.is_empty())
@@ -549,12 +562,29 @@ fn resolve_card_list_binding(
     }
 }
 
-fn permanent_has_materials(ctx: &EffectReadContext<'_>, perm: PermanentHandle) -> bool {
+fn permanent_has_matching_materials(
+    ctx: &EffectReadContext<'_>,
+    perm: PermanentHandle,
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+) -> bool {
     ctx.game
         .player(perm.player)
         .battle_area
         .get(perm.index as usize)
-        .is_some_and(|p| p.card_sources.len() > 1)
+        .is_some_and(|p| {
+            p.card_sources
+                .iter()
+                .take(p.card_sources.len().saturating_sub(1))
+                .any(|card| {
+                    eval_predicate_with_bindings(
+                        filter,
+                        ctx,
+                        PredicateSubject::Card(card.handle()),
+                        Some(bindings),
+                    )
+                })
+        })
 }
 
 fn has_own_source_candidates(ctx: &EffectReadContext<'_>) -> bool {
@@ -622,6 +652,14 @@ struct DelayHandDigivolveFlow {
     prompt: String,
 }
 
+struct DelaySelfCancelFlow;
+
+#[derive(Clone)]
+struct DelayCancelContinuation {
+    source_player: PlayerId,
+    source_card: CardHandle,
+}
+
 #[derive(Clone)]
 struct DelayCostContinuation {
     source_player: PlayerId,
@@ -631,6 +669,17 @@ struct DelayCostContinuation {
     player: PlayerId,
     prompt: String,
     filter: CompiledPredicate,
+}
+
+impl DelaySelfCancelFlow {
+    fn from_process(process: &[CompiledStep]) -> Option<Self> {
+        let [CompiledStep::DeletePermanent { target }, CompiledStep::CancelReplacement] = process
+        else {
+            return None;
+        };
+
+        matches!(target, CompiledBindingRef::Source).then_some(Self)
+    }
 }
 
 impl DelayHandDigivolveFlow {
@@ -832,6 +881,54 @@ fn arm_pending_delay_cost_continuation(game: &mut Game, continuation: DelayCostC
     }));
 
     game.pending_selection = Some(selection);
+}
+
+fn arm_pending_delay_cancel_continuation(game: &mut Game, continuation: DelayCancelContinuation) {
+    let Some(mut selection) = game.pending_selection.take() else {
+        continue_delay_cancel_after_selection(game, continuation);
+        return;
+    };
+
+    let original_callback = selection.callback;
+    let callback_continuation = continuation.clone();
+    selection.callback = Box::new(move |game, action_id| {
+        original_callback(game, action_id);
+        continue_delay_cancel_after_selection(game, callback_continuation);
+    });
+
+    let original_decline = selection.on_decline.take();
+    selection.on_decline = Some(Box::new(move |game| {
+        if let Some(original_decline) = original_decline {
+            original_decline(game);
+        }
+        continue_delay_cancel_after_selection(game, continuation);
+    }));
+
+    game.pending_selection = Some(selection);
+}
+
+fn continue_delay_cancel_after_selection(game: &mut Game, continuation: DelayCancelContinuation) {
+    if game.pending_selection.is_some() {
+        arm_pending_delay_cancel_continuation(game, continuation);
+        return;
+    }
+
+    let paid = {
+        let ctx = EffectContext::new(
+            game,
+            continuation.source_card,
+            None,
+            continuation.source_player,
+        );
+        ctx.delay_source_card_in_trash(continuation.source_player, continuation.source_card)
+    };
+    if !paid {
+        return;
+    }
+
+    if let Some(parked) = game.parked_replacement.as_mut() {
+        parked.outcome = crate::replacement::ReplacementOutcome::Cancelled;
+    }
 }
 
 fn continue_delay_cost_after_selection(game: &mut Game, continuation: DelayCostContinuation) {

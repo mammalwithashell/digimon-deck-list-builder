@@ -390,7 +390,8 @@ fn counter_hand_option_resolves_through_play_option_pipeline() {
     assert_eq!(*main_w.lock().unwrap(), 1, "OptionMain fired once");
     assert_eq!(r.hand_size(1), hand_before - 1, "card left hand");
     assert_eq!(r.trash_size(1), trash_before + 1, "card in trash");
-    // Counter body gained +3 memory (cost was zero).
+    // Counter body gained +3 memory for the defender; the Option pipeline's
+    // normal turn-end check then flips the raw memory counter.
     assert_eq!(r.memory(), memory_before + 3);
 }
 
@@ -483,8 +484,8 @@ fn counter_field_ability_fires_without_play_cost() {
     assert_eq!(*witness.lock().unwrap(), 1);
     assert_eq!(r.hand_size(1), hand_before, "no card consumed from hand");
     assert_eq!(r.trash_size(1), trash_before, "no card consumed to trash");
-    // Field counter body gained +2 memory.
-    assert_eq!(r.memory(), memory_before + 2);
+    // Field counter body gained +2 memory for the defender.
+    assert_eq!(r.memory(), memory_before - 2);
 }
 
 #[test]

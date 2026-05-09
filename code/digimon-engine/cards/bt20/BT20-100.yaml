@@ -33,9 +33,27 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
       - place_self_as_delay_option: {}
 
-  # The printed Delay replacement ("1 of those [Omnimon]-named Digimon doesn't
-  # leave") is omitted until the DSL can express a Delay option cancelling a
-  # cross-permanent would-leave event for the replacement subject.
+  # [All Turns] When any of your Digimon with [Omnimon] in its name would leave
+  # the battle area, <Delay>. 1 of those Digimon doesn't leave.
+  #
+  # DCGO (BT20_100.cs) pays the Delay cost first via
+  # DeletePeremanentAndProcessAccordingToResult(card.PermanentOfThisCard()).
+  # Only if that deletion succeeds does it mark the selected would-leave
+  # Omnimon as no longer leaving. The engine's replacement context is already
+  # per-threatened subject, so no extra "which one" selection is needed here.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - name_contains: "Omnimon"
+    summary: "[All Turns] Delay: when own Omnimon-name Digimon would leave, trash self to prevent that leave"
+    process:
+      - delete_permanent: { target: source }
+      - cancel_replacement: {}
 
   # Security Effect: may play [Omekamon] or [Cool Boy] from hand or trash free;
   # then place this card in the battle area. Branching mirrors existing union

@@ -22,14 +22,6 @@
 //! - [When Digivolving] mandatory select + suspend opp Digimon + +2000 DP self
 //!   with end_of_opponents_turn expiry (BT13-060 / BT24-101 pattern)
 //!
-//! # Known gaps and test status
-//!
-//! | Clause | Gap | Status |
-//! |--------|-----|--------|
-//! | Piercing keyword | G-DECLARATIVE-KEYWORD (compiled, not runtime-installed) | PARTIAL — structural test passes |
-//! | Armor Purge keyword | G-DECLARATIVE-KEYWORD (compiled, not runtime-installed) | PARTIAL — structural test passes |
-//! | [When Digivolving] suspend + DP buff | G-WHEN-DIGIVOLVING-DISPATCH (auto-dispatch not wired) | PARTIAL — behavioral tests use manual enqueue |
-//!
 //! # Build note
 //! `dsl_card("BT21-037")` requires build.rs to scan `cards/bt21/` (Phase 1c+).
 //! Tests below use `from_dsl_yaml(YAML)` with the YAML loaded via `include_str!`.
@@ -39,7 +31,8 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
-use digimon_engine::selection::TriggerSource;
+use digimon_engine::replacement::ReplacementCause;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 // ─── Inlined production YAML ──────────────────────────────────────────────────
 
@@ -389,12 +382,38 @@ fn bt21_037_when_digivolving_no_opp_digimon_no_selection_but_dp_fires() {
 
 // ─── §3 Armor Purge keyword — structural only (G-DECLARATIVE-KEYWORD) ────────
 
-/// ArmorPurge keyword grant compiles to a GrantKeyword declarative.
-/// Behavioral test (replacement fires + player prompted) is skipped pending
-/// G-DECLARATIVE-KEYWORD: EffectTiming::Declarative clauses are compiled but
-/// not installed at runtime.
 #[test]
-#[ignore = "pending: G-DECLARATIVE-KEYWORD — EffectTiming::Declarative not fired at runtime; ArmorPurge modifier not installed"]
 fn bt21_037_armor_purge_prevents_deletion_when_top_source_trashed() {
-    todo!("pending G-DECLARATIVE-KEYWORD: ArmorPurge replacement effect not installed at runtime")
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-037")
+        .expect("BT21-037 YAML loads")
+        .add_card(make_test_card("BASE", "Base"))
+        .start();
+    let lighdramon = runner.place_stack(0, &["BASE", "BT21-037"]);
+
+    runner
+        .game
+        .delete_permanent_with_cause(lighdramon, ReplacementCause::OpponentEffect);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Armor Purge accept prompt");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    assert!(view.is_optional);
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("accept Armor Purge");
+    runner.auto_resolve().expect("finish Armor Purge");
+
+    assert_eq!(runner.battle_area_size(0), 1);
+    assert_eq!(
+        runner.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BASE"
+    );
+    assert!(runner.game.players[0]
+        .trash
+        .iter()
+        .any(|card| card.card_id(&runner.game.card_data) == "BT21-037"));
 }
