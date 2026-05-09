@@ -5,7 +5,7 @@
 
 use std::collections::HashMap;
 
-use crate::enums::{EffectSourceKind, Expiry, Keyword, ModifierType, PlayerId};
+use crate::enums::{EffectSourceKind, EffectTiming, Expiry, Keyword, ModifierType, PlayerId};
 use crate::permanent::PermanentHandle;
 
 /// A single modifier entry.
@@ -29,6 +29,11 @@ pub struct ModifierEntry {
     pub replacement_condition: Option<crate::replacement::ReplacementConditionFn>,
     /// Optional source-kind/controller filter for CannotBeAffected-style gates.
     pub effect_immunity_filter: Option<EffectImmunityFilter>,
+    /// For `ModifierType::DisableEffect` entries — the specific
+    /// `EffectTiming` that is suppressed on this permanent. None for
+    /// every other variant. Read by the observer dispatch hook before
+    /// firing per-permanent observers (Track A's responsibility).
+    pub disable_effect_timing: Option<EffectTiming>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,6 +60,7 @@ impl std::fmt::Debug for ModifierEntry {
             .field("materialized_declarative", &self.materialized_declarative)
             .field("cause_filter", &self.cause_filter)
             .field("effect_immunity_filter", &self.effect_immunity_filter)
+            .field("disable_effect_timing", &self.disable_effect_timing)
             .finish_non_exhaustive()
     }
 }
@@ -72,6 +78,7 @@ impl ModifierEntry {
             cause_filter: None,
             replacement_condition: None,
             effect_immunity_filter: None,
+            disable_effect_timing: None,
         }
     }
 
@@ -92,6 +99,31 @@ impl ModifierEntry {
             cause_filter: None,
             replacement_condition: None,
             effect_immunity_filter: None,
+            disable_effect_timing: None,
+        }
+    }
+
+    /// Constructor for a `DisableEffect` entry that suppresses dispatch of
+    /// `timing` on this permanent. The dispatcher reads
+    /// `entry.disable_effect_timing` and skips per-permanent observers
+    /// whose `effect.timing == timing`. Other timings on the same
+    /// permanent are unaffected.
+    pub fn disable_effect(
+        timing: EffectTiming,
+        expiry: Expiry,
+        source_player: PlayerId,
+    ) -> Self {
+        Self {
+            modifier: ModifierType::DisableEffect,
+            value: 0,
+            expiry,
+            source_permanent: None,
+            source_player,
+            materialized_declarative: false,
+            cause_filter: None,
+            replacement_condition: None,
+            effect_immunity_filter: None,
+            disable_effect_timing: Some(timing),
         }
     }
 
@@ -113,6 +145,7 @@ impl ModifierEntry {
             cause_filter: default_passive_cause_filter(modifier),
             replacement_condition: None,
             effect_immunity_filter: None,
+            disable_effect_timing: None,
         }
     }
 
@@ -156,6 +189,14 @@ impl ModifierEntry {
                 source_kind: Some(source_kind),
                 controller: EffectControllerFilter::Any,
             })
+    }
+
+    /// Builder variant: attach a `disable_effect_timing` parameter for
+    /// `DisableEffect` entries. Calling this on a non-`DisableEffect`
+    /// modifier is meaningless and will be ignored by consult sites.
+    pub fn with_disable_effect_timing(mut self, timing: EffectTiming) -> Self {
+        self.disable_effect_timing = Some(timing);
+        self
     }
 }
 
@@ -463,6 +504,26 @@ impl ModifierRegistry {
             .unwrap_or(false)
     }
 
+    /// Whether dispatch of `timing` should be suppressed for `target`.
+    ///
+    /// True iff there is at least one `ModifierType::DisableEffect` entry on
+    /// `target` whose `disable_effect_timing == Some(timing)`. Read by
+    /// Track A's observer dispatch hook before firing per-permanent
+    /// observers — when this returns `true`, the dispatcher skips the
+    /// permanent's effects at that specific timing without disabling the
+    /// permanent's other effects.
+    pub fn is_timing_disabled(&self, target: PermanentHandle, timing: EffectTiming) -> bool {
+        self.permanent_modifiers
+            .get(&target)
+            .map(|entries| {
+                entries.iter().any(|e| {
+                    e.modifier == ModifierType::DisableEffect
+                        && e.disable_effect_timing == Some(timing)
+                })
+            })
+            .unwrap_or(false)
+    }
+
     /// Remove process-backed declarative materializations before a fresh tick.
     pub fn clear_materialized_declaratives(&mut self) {
         self.permanent_modifiers.retain(|_, entries| {
@@ -486,25 +547,25 @@ impl ModifierRegistry {
     }
 
     /// Expire modifiers at the end of a player's turn.
+    ///
+    /// - `Expiry::EndOfTurn` — removed unconditionally.
+    /// - `Expiry::EndOfOpponentsTurn` — removed when `source_player != ending_player`.
+    /// - `Expiry::EndOfYourTurn` — removed when `source_player == ending_player`
+    ///   (mirror of `EndOfOpponentsTurn`).
     pub fn expire_end_of_turn(&mut self, ending_player: u8) {
+        let is_dead = |expiry: Expiry, source_player: u8| -> bool {
+            match expiry {
+                Expiry::EndOfTurn => true,
+                Expiry::EndOfOpponentsTurn => source_player != ending_player,
+                Expiry::EndOfYourTurn => source_player == ending_player,
+                _ => false,
+            }
+        };
         for entries in self.permanent_modifiers.values_mut() {
-            entries.retain(|e| !matches!(e.expiry, Expiry::EndOfTurn));
+            entries.retain(|e| !is_dead(e.expiry, e.source_player));
         }
         for kws in self.permanent_keywords.values_mut() {
-            kws.retain(|entry| !matches!(entry.expiry, Expiry::EndOfTurn));
-        }
-        // EndOfOpponentsTurn: remove modifiers whose source_player != ending_player
-        for entries in self.permanent_modifiers.values_mut() {
-            entries.retain(|e| {
-                !(matches!(e.expiry, Expiry::EndOfOpponentsTurn)
-                    && e.source_player != ending_player)
-            });
-        }
-        for kws in self.permanent_keywords.values_mut() {
-            kws.retain(|entry| {
-                !(matches!(entry.expiry, Expiry::EndOfOpponentsTurn)
-                    && entry.source_player != ending_player)
-            });
+            kws.retain(|entry| !is_dead(entry.expiry, entry.source_player));
         }
     }
 
@@ -568,11 +629,14 @@ impl ModifierRegistry {
     /// - `Expiry::EndOfTurn` — always removed.
     /// - `Expiry::EndOfOpponentsTurn` — removed when `ending_player != entry.source_player`
     ///   (i.e. the turn ending is the opponent of whoever installed the modifier).
+    /// - `Expiry::EndOfYourTurn` — removed when `ending_player == entry.source_player`
+    ///   (mirror of `EndOfOpponentsTurn`).
     pub fn expire_player_end_of_turn(&mut self, ending_player: PlayerId) {
         for entries in self.player_modifiers.values_mut() {
             entries.retain(|e| match e.expiry {
                 Expiry::EndOfTurn => false,
                 Expiry::EndOfOpponentsTurn => e.source_player == ending_player,
+                Expiry::EndOfYourTurn => e.source_player != ending_player,
                 _ => true,
             });
         }
@@ -632,6 +696,122 @@ mod tests {
         );
         reg.expire_end_of_turn(0);
         assert_eq!(reg.sum(target, ModifierType::ChangeDp), 500);
+    }
+
+    #[test]
+    fn end_of_your_turn_expiry_mirrors_end_of_opponents_turn() {
+        // P0 installs both an `EndOfYourTurn` and an `EndOfOpponentsTurn`
+        // modifier. At end of P0's turn, only `EndOfYourTurn` should expire;
+        // at end of P1's turn, only `EndOfOpponentsTurn` should expire.
+        let mut reg = ModifierRegistry::new();
+        let target = h(0, 0);
+        reg.add(
+            target,
+            ModifierEntry::simple(ModifierType::ChangeDp, 100, Expiry::EndOfYourTurn, 0),
+        );
+        reg.add(
+            target,
+            ModifierEntry::simple(ModifierType::ChangeDp, 200, Expiry::EndOfOpponentsTurn, 0),
+        );
+
+        // End of P1's turn first: EndOfOpponentsTurn expires, EndOfYourTurn stays.
+        reg.expire_end_of_turn(1);
+        assert_eq!(
+            reg.sum(target, ModifierType::ChangeDp),
+            100,
+            "after opponent's turn end, only EndOfYourTurn entry should remain"
+        );
+
+        // End of P0's turn next: EndOfYourTurn expires.
+        reg.expire_end_of_turn(0);
+        assert_eq!(
+            reg.sum(target, ModifierType::ChangeDp),
+            0,
+            "after own turn end, EndOfYourTurn entry should expire"
+        );
+    }
+
+    #[test]
+    fn until_condition_and_once_used_persist_through_turn_ends() {
+        // Until the continuous controller and consumption tracker land,
+        // entries with these expiries are stored but never auto-removed
+        // by `expire_end_of_turn` / `expire_end_of_attack`. This test
+        // pins that contract so consuming tracks know the storage shape.
+        let mut reg = ModifierRegistry::new();
+        let target = h(0, 0);
+        reg.add(
+            target,
+            ModifierEntry::simple(ModifierType::ChangeDp, 100, Expiry::UntilCondition, 0),
+        );
+        reg.add(
+            target,
+            ModifierEntry::simple(ModifierType::ChangeDp, 50, Expiry::OnceUsed(1), 0),
+        );
+        reg.expire_end_of_turn(0);
+        reg.expire_end_of_turn(1);
+        reg.expire_end_of_attack();
+        assert_eq!(
+            reg.sum(target, ModifierType::ChangeDp),
+            150,
+            "UntilCondition + OnceUsed entries must persist through turn-end cycles"
+        );
+    }
+
+    #[test]
+    fn disable_effect_timing_query_is_per_timing() {
+        // A `DisableEffect{timing: WhenAttacking}` modifier on a permanent
+        // suppresses `WhenAttacking` only — `OnAttack` and other timings
+        // are not affected. Pins Track A's dispatch contract.
+        use crate::enums::EffectTiming;
+        let mut reg = ModifierRegistry::new();
+        let target = h(0, 0);
+        reg.add(
+            target,
+            ModifierEntry::disable_effect(EffectTiming::WhenAttacking, Expiry::EndOfTurn, 0),
+        );
+        assert!(reg.is_timing_disabled(target, EffectTiming::WhenAttacking));
+        assert!(!reg.is_timing_disabled(target, EffectTiming::OnAttack));
+        assert!(!reg.is_timing_disabled(target, EffectTiming::OnPlay));
+        // Untouched permanents see no suppression.
+        let other = h(1, 0);
+        assert!(!reg.is_timing_disabled(other, EffectTiming::WhenAttacking));
+    }
+
+    #[test]
+    fn disable_effect_query_ignores_other_modifier_types() {
+        // ChangeDp on a permanent must not be reported as timing-disabling.
+        use crate::enums::EffectTiming;
+        let mut reg = ModifierRegistry::new();
+        let target = h(0, 0);
+        reg.add(
+            target,
+            ModifierEntry::simple(ModifierType::ChangeDp, 1000, Expiry::EndOfTurn, 0),
+        );
+        assert!(!reg.is_timing_disabled(target, EffectTiming::WhenAttacking));
+    }
+
+    #[test]
+    fn end_of_your_turn_player_scoped() {
+        let mut reg = ModifierRegistry::new();
+        // Source player 1 installs a player-scoped modifier on player 0
+        // that expires at the end of P1's own turn.
+        reg.add_player_modifier(
+            0,
+            PlayerModifierEntry::simple(
+                ModifierType::CannotPlayDigimonByEffect,
+                0,
+                Expiry::EndOfYourTurn,
+                None,
+                1,
+            ),
+        );
+        // Player 0's turn ends — the modifier should still be active
+        // (P1 is the source, P1's turn hasn't ended yet).
+        reg.expire_player_end_of_turn(0);
+        assert!(reg.player_has(0, ModifierType::CannotPlayDigimonByEffect));
+        // Player 1's turn ends — the modifier should expire.
+        reg.expire_player_end_of_turn(1);
+        assert!(!reg.player_has(0, ModifierType::CannotPlayDigimonByEffect));
     }
 
     #[test]

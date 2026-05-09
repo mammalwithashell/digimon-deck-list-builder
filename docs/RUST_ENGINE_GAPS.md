@@ -509,6 +509,7 @@ Drasil while leaving no duplicate battle-area copy. Coverage:
 - **Suggested API shape:** Add `condition: Option<Box<dyn Fn(&EffectReadContext) -> bool>>` to `ModifierEntry`; or passive `Effect::declarative(card).modifier_when(type, value, condition)` builder that the affect-resolution code consults per query.
 - **Workaround:** Permanent grant over-applies when condition is false.
 - **Related:** Parity §4.7x.
+- **Updated 2026-05-06 (Track C taxonomy):** 🟡 PARTIAL — the `Expiry` enum now publishes `Expiry::UntilCondition`, `Expiry::OnceUsed(u32)`, and `Expiry::EndOfYourTurn`, with the corresponding DSL keys (`until_condition`, `end_of_your_turn`) round-tripping in `EXPIRY_TABLE` / `KNOWN_EXPIRY_KEYS`. `EndOfYourTurn` is fully enforced (mirror of `EndOfOpponentsTurn`). `UntilCondition` is reserved data only — entries persist through turn ends and the continuous controller wires up in a follow-up. `OnceUsed` likewise reserves the variant for consumer use. `ModifierEntry` already has a `replacement_condition` closure (Phase 7); `UntilCondition` re-uses that surface when the controller lands. Unit tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --lib modifiers -- end_of_your_turn until_condition_and_once_used --nocapture`.
 
 ### Player-scoped modifier registry (CannotPlayFromTrash, CannotPlayDigimonByEffect, OpponentCannotReduceDigivolveCost, IgnoreColorRequirement, MayAttackPlayerOnly, CannotReducePlayCost-bilateral, CannotAddSecurityByEffect)
 - **Severity:** 🔴 BLOCKING
@@ -523,6 +524,16 @@ Drasil while leaving no duplicate battle-area copy. Coverage:
 - **Suggested API shape:** Continue extending `ModifierRegistry` player-scoped entries and query helpers for the remaining variants, with shared `Expiry` handling and condition-aware lookup where printed text requires it. Effect-play helpers and masks should consult the same legality helpers to keep decode and masks synchronized.
 - **Workaround:** None — BLOCKED.
 - **Related:** Parity §4.2b (IgnoreColorRequirement), §4.7x (context-aware modifier queries).
+- **Updated 2026-05-06 (Track C taxonomy):** 🟡 PARTIAL — `ModifierType::MayAttackPlayerOnly` is now published as a player-scoped variant in `enums.rs` and exposed to DSL via `dsl_cards::modifier_map::lookup_modifier_type`. Combat-side enforcement (Track D's `combat::is_legal_attack_target`) is the remaining wire-up. Also published in this taxonomy round: `CannotMove`, `CannotSwitchAttackTarget`, `CannotBeRedirectedAsAttackTarget`, `CanAttackTargetDefendingPermanent`, `CannotAddMemory`, `CannotAddSecurity`, `ChangeEndTurnMinMemory`, `ImmuneFromDPMinus`, `ImmuneFromStackTrashing`, `DisableEffect` (with `disable_effect_timing` parameter on `ModifierEntry`), `TreatAsDigimon`, plus the DP/cost-scaling family (`ChangeCardDP`, `ChangeOriginDP`, `ChangeSAttack`, `ChangeLinkCost`, `ChangeLinkMax`, `ChangePermanentLevel`, `ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor`, `ChangeCardLevelForAssembly`, `ChangeCardNamesForDigiXros`). Per-variant consult sites are documented in `docs/RUST_ENGINE_API.md` § "Modifier consult-site checklist". Bilateral `CannotReducePlayCost`, `CannotPlayFromTrash`, and `OpponentCannotReduceDigivolveCost` remain BLOCKING — the current `CannotReducePlayCost` variant doesn't yet carry a self-only / opponent-only / both selector. Passing command(s): `cargo test --manifest-path code/digimon-engine/Cargo.toml --lib modifiers -- end_of_your_turn_player_scoped --nocapture`.
+- **Updated 2026-05-07 (Track D consult sites):** ✅ `MayAttackPlayerOnly` is enforced in `combat::begin_attack_impl` — Digimon-target attacks return `Invalid` while player-target attacks remain legal. `CannotSwitchAttackTarget` (attacker-side) and `CannotBeRedirectedAsAttackTarget` (candidate-side) are wired into both `try_enter_block` and the unified `apply_attack_target_substitution` API. Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat track_c_modifiers --nocapture` (5 tests).
+- **Updated 2026-05-08 (Track B/C consult site):** ✅ `CannotMove` is enforced in `Game::move_from_breeding` — the gate covers both the player-action breeding→battle move and `move_from_breeding_by_effect` (which delegates to the same helper). Modifier installers should target the canonical breeding handle (`{ player, index: BREEDING_TARGET }`); permanent-scoped storage is keyed by handle, so other-side `CannotMove` modifiers do not leak across players. Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cannot_move_breeding --nocapture` (4 tests).
+- **Updated 2026-05-08 (Track C/D gain & protection gates):** ✅ Three permanent-scoped consult sites now read their respective Track C variants:
+  - `CannotAddMemory` → `EffectContext::gain_memory` after the existing `CannotGainMemoryByEffect` / `CannotGainMemoryExceptFromTamers` checks. Scans the acting player's battle area for any permanent carrying the modifier.
+  - `CannotAddSecurity` → `EffectContext::place_on_security` after the existing `CannotAddSecurityByEffect` check. Same scan shape.
+  - `ImmuneFromStackTrashing` → `EffectContext::trash_top_source` reads the modifier on the host permanent before the stack-peel.
+  Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test track_c_gain_gates --nocapture` (6 tests covering positive + per-player-isolation cases for each variant). The DP/identity-scaling family remains on the punch list (Track H aura territory).
+- **Updated 2026-05-08 (Track D combat override):** ✅ `CanAttackTargetDefendingPermanent` is the affirmative inverse of `CannotAttackTarget` — when both modifiers are present on a target, the affirmative wins. Wired at every consult site that reads `CannotAttackTarget`: combat-side Raid retarget candidate filter (unsuspended + fallback passes), action decode validation, and three mask emission paths (standard, granted, per-attacker enumeration). Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test track_c_can_attack_override --nocapture` (3 tests covering baseline rejection + override + affirmative-alone no-op).
+- **Updated 2026-05-08 (Track C/D DP protection):** ✅ `ImmuneFromDPMinus` is enforced in `Game::effective_dp` — when the target carries the modifier, negative `ChangeDp` entries are filtered out before the sum; positive `ChangeDp` and the dynamic-aura bonus path remain untouched. The `effect_immunity_filter` field on the entry is reserved for a future opponent-only / source-kind refinement. Regression coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test track_c_immune_dp_minus --nocapture` (4 tests covering baseline negative + filtering + positive-still-applies + per-permanent isolation). Remaining unwired Track C variants either need a `ModifierEntry` payload extension (`ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor` need string/discriminant payloads) or a multi-call-site identity-helper refactor (`TreatAsDigimon`, `ChangePermanentLevel`, `ChangeCardDP`/`ChangeOriginDP`/`ChangeSAttack`); these are next-batch work.
 
 ### Option card play flow (resolve + trash vs. place-on-field; [Main]/[Security] activation) + Plug-In / Link mechanic + Security-effect return-to-hand / place-on-field
 - **Severity:** 🔴 BLOCKING
@@ -717,6 +728,8 @@ Drasil while leaving no duplicate battle-area copy. Coverage:
 
 **Updated 2026-05-03:** The permanent-scoped timing suppression path is implemented for `BT24-040`'s selected two-target `CannotSuspend` / `CannotActivateEffectsByTiming(WhenDigivolving)` lock. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_040 --nocapture`. Keep the broader gap open for other timings, aura-style suppression, and unvalidated cards such as `BT10-042` and `BT19-093`.
 
+**Updated 2026-05-06 (Track C taxonomy):** 🟡 PARTIAL closure — `ModifierType::DisableEffect` is now published as a generic permanent-scoped timing-suppression variant. The suppressed `EffectTiming` parameter rides on the entry as `ModifierEntry::disable_effect_timing: Option<EffectTiming>` (kept off the variant payload so `ModifierType` stays `Copy + Eq + Hash`). `ModifierRegistry::is_timing_disabled(target, timing)` is the read API; `effect_queue::permanent_activation_blocked_for_timing` consults it before dispatching per-permanent observers. Use `ModifierEntry::disable_effect(timing, expiry, source_player)` to install. Mirrors DCGO `DisableEffectClass.cs`. End-to-end coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test modifier_disable_effect --nocapture`. Cards still needing wire-up at their YAML / Rust scripts (BT10-042 Venusmon, BT19-093 Queen Device) should switch to this generic variant rather than the bespoke `CannotActivateEffectsByTiming(WhenDigivolving)` shape.
+
 ### Grant Security A. ±N modifier to a targeted permanent (parametric `SecurityAttackChange`)
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
@@ -805,14 +818,23 @@ Drasil while leaving no duplicate battle-area copy. Coverage:
 - **Workaround:** "None — BLOCKED." Raw `battle_area[i].card_sources.pop()` skips any `OnLeaveField` / inherited-stack recomputation and breaks the curated-API contract.
 - **Related:** "Zone-manipulation: security stack operations"; "Zone-manipulation: return-to-hand / return-to-deck / bounce self".
 
-### Fixed attack target — `CannotBeRedirectedAsAttackTarget` modifier
-- **Severity:** 🔴 BLOCKING
+### Fixed attack target — `CannotBeRedirectedAsAttackTarget` / `CannotSwitchAttackTarget` modifiers
+- **Severity:** ✅ RESOLVED across Block, Raid, and the unified substitution API (2026-05-07)
 - **Discovered in:** TS Olympos (2026-04-18)
 - **Card(s):** BT24-062 MasterBlimpmon (inherited "[Your Turn] This Digimon's attack target can't change.")
 - **Effect text:** "[Your Turn] This Digimon's attack target can't change."
-- **What's missing:** No `ModifierType` gates Block/Raid/Collision target-redirection per permanent. `try_enter_block` and Raid redirect paths unconditionally rewrite `effective_target`. Distinct from `CannotBeAffected` (suppresses effect-driven mutations, not combat-interrupt paths).
-- **Suggested API shape:** `ModifierType::AttackTargetCannotChange`. In `try_enter_block` / `try_enter_raid` / any `effective_target` mutation site, guard: `if modifiers.has_modifier(declared_target, ModifierType::AttackTargetCannotChange) { skip redirect }`. Expose via `ctx.add_modifier(target, ..., Expiry::EndOfTurn)`.
-- **Workaround:** "None — BLOCKED." No scripting-surface equivalent prevents Block/Raid redirect.
+- **Status:** Track C taxonomy publishes both modifiers (2026-05-06) and Track D wires the consult sites (2026-05-07):
+  - `CannotSwitchAttackTarget` on the attacker:
+    - `try_enter_block` early-returns (no Block window installs).
+    - `try_enter_raid_retarget` early-returns `Proceed` (Raid retarget selection is suppressed; the attack runs through to Battle against the now-invalid target, matching the no-Raid path).
+    - `apply_attack_target_substitution` is a no-op — covers the `WhenWouldBeAttackTarget` replacement path, Counter `redirect_attack`, and the script-facing helper.
+  - `CannotBeRedirectedAsAttackTarget` on a candidate:
+    - Filtered out of the Block candidate list.
+    - Filtered out of `raid_retarget_candidates` (both unsuspended and fallback passes), so a single-protected-candidate Raid fizzles cleanly.
+    - Rejected by `apply_attack_target_substitution` when it would become the new effective target.
+- **Regression coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat track_c_modifiers --nocapture` (8 tests covering Block + Raid + player-target paths).
+- **Remaining scope:** None for combat retarget paths. The script-facing `EffectContext::redirect_attack` helper inherits the gate via `apply_attack_target_substitution`. Future retarget mechanics introduced by new card text would need to read the same modifiers at their commit sites.
+- **Workaround:** No longer needed.
 - **Related:** "Raid target-switch interrupt (scripting-surface, not mask-only)"; RUST_PYTHON_PARITY §2.3.
 
 ### In-effect branch-choice selector (`select_effect_choice` / "choose one of N effects")

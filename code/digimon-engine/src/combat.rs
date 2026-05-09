@@ -150,14 +150,33 @@ pub enum AttackResult {
 
 impl Game {
     /// Compute a permanent's effective DP (base + modifier sum).
+    ///
+    /// Track C / D consult site (2026-05-08): if the target carries any
+    /// `ModifierType::ImmuneFromDPMinus` entry, negative `ChangeDp`
+    /// modifiers are filtered out before summing — the protection
+    /// narrows to DP-minus only, leaving positive `ChangeDp` and the
+    /// dynamic aura bonus untouched. `effect_immunity_filter` on the
+    /// `ImmuneFromDPMinus` entry is reserved for a future refinement
+    /// (opponent-only / source-kind filtering of the protected delta);
+    /// the unfiltered path is what the published variant currently
+    /// promises.
     pub fn effective_dp(&self, handle: PermanentHandle) -> Option<i32> {
         let perm = self
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)?;
         let base = perm.base_dp(&self.card_data)?;
-        let bonus =
-            self.modifiers.sum(handle, ModifierType::ChangeDp) + self.dynamic_dp_aura_bonus(handle);
+        let immune_to_dp_minus = self
+            .modifiers
+            .has(handle, ModifierType::ImmuneFromDPMinus);
+        let change_dp_sum: i32 = self
+            .modifiers
+            .get(handle, ModifierType::ChangeDp)
+            .iter()
+            .filter(|entry| !(immune_to_dp_minus && entry.value < 0))
+            .map(|entry| entry.value)
+            .sum();
+        let bonus = change_dp_sum + self.dynamic_dp_aura_bonus(handle);
         Some(base + bonus)
     }
 
@@ -363,10 +382,22 @@ impl Game {
             return AttackResult::Invalid;
         }
         // Target validation (Digimon must be a Digimon on field; Player target
-        // is legal unless the attacker is under a CannotAttackPlayer gate).
+        // is legal unless the attacker is under a CannotAttackPlayer gate;
+        // Digimon target is illegal when the attacker's controller is under a
+        // player-scoped MayAttackPlayerOnly gate).
         match target {
             AttackTarget::Digimon(d) => {
                 if !self.handle_valid(d) {
+                    return AttackResult::Invalid;
+                }
+                // Track C: `MayAttackPlayerOnly` (player-scoped) restricts the
+                // attacker's controller to attacking the opposing player only.
+                // Companion to permanent-scoped `CannotAttackPlayer`; reject
+                // Digimon targets when the modifier is active.
+                if self
+                    .modifiers
+                    .player_has(attacker.player, ModifierType::MayAttackPlayerOnly)
+                {
                     return AttackResult::Invalid;
                 }
             }
@@ -786,6 +817,30 @@ impl Game {
             return;
         }
         let attacker = pa.attacker;
+
+        // Track C: `CannotSwitchAttackTarget` on the attacker locks the
+        // target — silently drop the substitution. Covers both the
+        // dispatcher path (replacement-driven `Substituted` outcome) and
+        // the script-facing `EffectContext::redirect_attack` helper.
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CannotSwitchAttackTarget)
+        {
+            return;
+        }
+        // Track C: `CannotBeRedirectedAsAttackTarget` on the candidate new
+        // target prevents being chosen as the redirected target via this
+        // unified path. Player targets bypass — the modifier is permanent-
+        // scoped and only applies to Digimon-as-target.
+        if let AttackTarget::Digimon(h) = new_target {
+            if self
+                .modifiers
+                .has(h, ModifierType::CannotBeRedirectedAsAttackTarget)
+            {
+                return;
+            }
+        }
+
         pa.effective_target = new_target;
 
         self.fire_attack_target_change_observers(attacker);
@@ -1547,6 +1602,17 @@ impl Game {
         };
         let attacker = pa.attacker;
 
+        // Track C: `CannotSwitchAttackTarget` on the attacker locks the
+        // declared target — Block (and any redirect path that routes
+        // through here) is suppressed. Mirrors BT24-062 MasterBlimpmon's
+        // "[Your Turn] This Digimon's attack target can't change."
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CannotSwitchAttackTarget)
+        {
+            return false;
+        }
+
         // Self-block is not allowed — attacker cannot block their own
         // attack. Also rules out the edge case where attacker and blocker
         // would be the same permanent.
@@ -1583,6 +1649,18 @@ impl Game {
             // every opponent Digimon to "has Blocker" but does NOT
             // override a printed/modifier `CannotBlock` gate.
             if self.modifiers.has(h, ModifierType::CannotBlock) {
+                continue;
+            }
+            // Track C: `CannotBeRedirectedAsAttackTarget` on a candidate
+            // blocker prevents it from becoming the new attack target via
+            // the Block redirect path. Distinct from `CannotBlock`
+            // (which forbids declaring a block at all) — this modifier
+            // only protects the candidate from being chosen AS the new
+            // target, leaving its blocker semantics untouched.
+            if self
+                .modifiers
+                .has(h, ModifierType::CannotBeRedirectedAsAttackTarget)
+            {
                 continue;
             }
             // Blocker required UNLESS the attacker has Collision, which
@@ -1730,6 +1808,19 @@ impl Game {
         if !self.has_keyword(attacker, Keyword::Raid) {
             return RaidRetargetOutcome::Proceed;
         }
+        // Track C: `CannotSwitchAttackTarget` on the attacker suppresses
+        // Raid retarget. The attack proceeds with its (now-invalid)
+        // effective_target — `resolve_pending_battle` treats a deleted
+        // defender as a clean attacker-wins, matching the no-Raid path.
+        // Without this gate the engine would still install the mandatory
+        // retarget selection, then `apply_attack_target_substitution`
+        // would silently no-op when the user picks — confusing UX.
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CannotSwitchAttackTarget)
+        {
+            return RaidRetargetOutcome::Proceed;
+        }
 
         let candidates = self.raid_retarget_candidates(attacker);
         if candidates.is_empty() {
@@ -1753,6 +1844,10 @@ impl Game {
     /// - Must be in `OptionState::Standard` (excludes Delayed/Training/
     ///   Linked option permanents).
     /// - Must NOT carry `ModifierType::CannotAttackTarget` (Phase 6).
+    /// - Must NOT carry `ModifierType::CannotBeRedirectedAsAttackTarget`
+    ///   (Track C / 2026-05-07): a candidate protected from being
+    ///   chosen as the redirected target is filtered out before the
+    ///   selection installs, mirroring the Block candidate filter.
     ///
     /// Returns permanent indices on the opposing side (same ordering
     /// as battle_area).
@@ -1778,9 +1873,24 @@ impl Game {
                 player: opp_id,
                 index: j as u8,
             };
+            // Track C / D consult site (2026-05-08):
+            // `CanAttackTargetDefendingPermanent` is the affirmative
+            // override of `CannotAttackTarget` — when both are present
+            // on a candidate, the affirmative wins ("this Digimon CAN
+            // attack the otherwise-illegal target"). Read at every
+            // `CannotAttackTarget` consult site.
             if self
                 .modifiers
                 .has(t_handle, ModifierType::CannotAttackTarget)
+                && !self
+                    .modifiers
+                    .has(t_handle, ModifierType::CanAttackTargetDefendingPermanent)
+            {
+                continue;
+            }
+            if self
+                .modifiers
+                .has(t_handle, ModifierType::CannotBeRedirectedAsAttackTarget)
             {
                 continue;
             }
@@ -1816,9 +1926,21 @@ impl Game {
                 player: opp_id,
                 index: j as u8,
             };
+            // Track C / D consult site (2026-05-08):
+            // `CanAttackTargetDefendingPermanent` overrides
+            // `CannotAttackTarget` in the Raid fallback pass too.
             if self
                 .modifiers
                 .has(t_handle, ModifierType::CannotAttackTarget)
+                && !self
+                    .modifiers
+                    .has(t_handle, ModifierType::CanAttackTargetDefendingPermanent)
+            {
+                continue;
+            }
+            if self
+                .modifiers
+                .has(t_handle, ModifierType::CannotBeRedirectedAsAttackTarget)
             {
                 continue;
             }

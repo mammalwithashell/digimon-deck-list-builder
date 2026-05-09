@@ -957,72 +957,118 @@ fn predicate_uses_dp_aggregate(pred: &crate::predicate::PredicateSpec) -> bool {
 }
 
 fn is_known_modifier(name: &str) -> bool {
-    matches!(
-        name,
-        "ChangeDp"
-            | "ChangeBaseDp"
-            | "DpFloor"
-            | "DontHaveDp"
-            | "ChangePlayCost"
-            | "ChangeDigivolveCost"
-            | "CannotReduceCost"
-            | "CannotBeDestroyed"
-            | "CannotBeDestroyedByBattle"
-            | "CannotBeDestroyedByEffect"
-            | "CannotBeRemoved"
-            | "CannotAttack"
-            | "CannotAttackPlayer"
-            | "VortexCanAttackPlayer"
-            | "CanAttackUnsuspended"
-            | "CanAttackActivePlayer"
-            | "CannotAttackTarget"
-            | "CannotSuspend"
-            | "CannotUnsuspend"
-            | "CannotBeSelectedByEffect"
-            | "CannotBeAffected"
-            | "GrantBlocker"
-            | "GrantRush"
-            | "GrantJamming"
-            | "GrantPiercing"
-            | "GrantReboot"
-            | "GrantBlitz"
-            | "GrantAlliance"
-            | "GrantRaid"
-            | "GrantDecoy"
-            | "GrantVortex"
-            | "GrantOverclock"
-            | "MayAttack"
-            | "ForceAttack"
-            | "SecurityAttackChange"
-            | "CannotDigivolve"
-            | "ChangeColor"
-            | "AddColor"
-            | "ChangeLevel"
-            | "CannotReturnToHand"
-            | "CannotTrash"
-            | "CannotBlock"
-            | "CannotCounter"
-            | "DrawBlock"
-            | "MemoryBlock"
-            | "CannotPlayFromHand"
-            | "CannotPlayDigimonByEffect"
-            | "CannotPlayTamerByEffect"
-            | "CannotGainMemoryByEffect"
-            | "CannotGainMemoryExceptFromTamers"
-            | "CannotReducePlayCost"
-            | "CannotReduceDigivolveCost"
-            | "CannotActivateMainEffects"
-            | "CannotActivateWhenDigivolvingEffects"
-            | "CannotActivateWhenAttackingEffects"
-            | "CannotActivateSecurityEffects"
-            | "CannotDigivolveDigimonByEffect"
-            | "CannotDrawByEffect"
-            | "CannotAddSecurityByEffect"
-            | "CannotTrashOpponentSecurity"
-            | "CannotReduceOpponentSecurity"
-            | "IgnoreColorRequirement"
-    )
+    KNOWN_MODIFIER_KEYS.iter().any(|k| *k == name)
 }
+
+/// Every modifier name the validator accepts. Must stay in lockstep with
+/// `digimon_engine::dsl_cards::modifier_map::lookup_modifier_type`; the
+/// parity test `validator_keys_match_engine_table` in the engine's
+/// `modifier_map` module fails the build if the two diverge. Drift here
+/// means the validator wrongly rejects YAML the engine would handle, or
+/// vice-versa.
+pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
+    // DP / cost / metadata
+    "ChangeDp",
+    "ChangeBaseDp",
+    "DpFloor",
+    "DontHaveDp",
+    "ChangePlayCost",
+    "ChangeDigivolveCost",
+    "CannotReduceCost",
+    // Destruction / removal protection
+    "CannotBeDestroyed",
+    "CannotBeDestroyedByBattle",
+    "CannotBeDestroyedByEffect",
+    "CannotBeRemoved",
+    "CannotBeReturnedToDeck",
+    "CannotBeReturnedToHand",
+    "CannotBeTrashedByEffect",
+    "CannotBeDeDigivolved",
+    // Attack restrictions / grants
+    "CannotAttack",
+    "CannotAttackPlayer",
+    "VortexCanAttackPlayer",
+    "CanAttackUnsuspended",
+    "CanAttackActivePlayer",
+    "CannotAttackTarget",
+    // Suspend / select / affect
+    "CannotSuspend",
+    "CannotUnsuspend",
+    "CannotBeSelectedByEffect",
+    "CannotBeAffected",
+    // Granted keywords
+    "GrantBlocker",
+    "GrantRush",
+    "GrantJamming",
+    "GrantPiercing",
+    "GrantReboot",
+    "GrantBlitz",
+    "GrantAlliance",
+    "GrantRaid",
+    "GrantDecoy",
+    "GrantVortex",
+    "GrantOverclock",
+    // End-of-turn attack / security
+    "MayAttack",
+    "ForceAttack",
+    "SecurityAttackChange",
+    "ImmunityToOpponentEffects",
+    "DontBattleSecurityDigimon",
+    // Digivolution / color / level
+    "CannotDigivolve",
+    "ChangeColor",
+    "AddColor",
+    "ChangeLevel",
+    // Misc gates
+    "CannotReturnToHand",
+    "CannotTrash",
+    "CannotBlock",
+    "CannotCounter",
+    "DrawBlock",
+    "MemoryBlock",
+    "CannotPlayFromHand",
+    // Phase 6 player-scoped flood gates
+    "CannotPlayDigimonByEffect",
+    "CannotPlayTamerByEffect",
+    "CannotGainMemoryByEffect",
+    "CannotGainMemoryExceptFromTamers",
+    "CannotReducePlayCost",
+    "CannotReduceDigivolveCost",
+    "CannotActivateMainEffects",
+    "CannotActivateWhenDigivolvingEffects",
+    "CannotActivateWhenAttackingEffects",
+    "CannotActivateSecurityEffects",
+    "CannotDigivolveDigimonByEffect",
+    "CannotDrawByEffect",
+    "CannotAddSecurityByEffect",
+    "CannotTrashOpponentSecurity",
+    "CannotReduceOpponentSecurity",
+    "IgnoreColorRequirement",
+    // Track C taxonomy completion (2026-05-06)
+    "MayAttackPlayerOnly",
+    "CannotMove",
+    "CannotSwitchAttackTarget",
+    "CannotBeRedirectedAsAttackTarget",
+    "CanAttackTargetDefendingPermanent",
+    "CannotAddMemory",
+    "CannotAddSecurity",
+    "ChangeEndTurnMinMemory",
+    "ImmuneFromDPMinus",
+    "ImmuneFromStackTrashing",
+    "DisableEffect",
+    "TreatAsDigimon",
+    "ChangeCardDP",
+    "ChangeOriginDP",
+    "ChangeSAttack",
+    "ChangeLinkCost",
+    "ChangeLinkMax",
+    "ChangePermanentLevel",
+    "ChangeTraits",
+    "ChangeBaseCardName",
+    "ChangeBaseCardColor",
+    "ChangeCardLevelForAssembly",
+    "ChangeCardNamesForDigiXros",
+];
 
 fn is_permanent_activation_modifier(name: &str) -> bool {
     matches!(
@@ -1032,36 +1078,46 @@ fn is_permanent_activation_modifier(name: &str) -> bool {
 }
 
 fn is_known_keyword(name: &str) -> bool {
-    matches!(
-        name,
-        "Blocker"
-            | "SecurityAttackPlus"
-            | "SecurityAttackMinus"
-            | "Rush"
-            | "Jamming"
-            | "Piercing"
-            | "Reboot"
-            | "DeDigivolve"
-            | "DrawX"
-            | "Blitz"
-            | "Raid"
-            | "Alliance"
-            | "BlastDigivolve"
-            | "Save"
-            | "Fortitude"
-            | "Overclock"
-            | "Barrier"
-            | "Decoy"
-            | "Partition"
-            | "Vortex"
-            | "Collision"
-            | "Progress"
-            | "Evade"
-            | "MaterialSave"
-            | "DigiBurst"
-            | "Delay"
-    )
+    KNOWN_KEYWORD_KEYS.iter().any(|k| *k == name)
 }
+
+/// Every keyword name the validator accepts. Must stay in lockstep with
+/// `digimon_engine::dsl_cards::modifier_map::lookup_keyword`. `Delay` is
+/// validator-only — it's a clause-kind sigil rather than a runtime
+/// `Keyword` enum variant — so the engine-side parity test allowlists it.
+pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
+    "Blocker",
+    "SecurityAttackPlus",
+    "SecurityAttackMinus",
+    "Rush",
+    "Jamming",
+    "Piercing",
+    "Reboot",
+    "DeDigivolve",
+    "DrawX",
+    "Blitz",
+    "Raid",
+    "Alliance",
+    "BlastDigivolve",
+    "Save",
+    "Fortitude",
+    "Overclock",
+    "Barrier",
+    "Decoy",
+    "Partition",
+    "Vortex",
+    "Collision",
+    "Progress",
+    "Evade",
+    "MaterialSave",
+    "DigiBurst",
+    "Decode",
+    "ArmorPurge",
+    "Fragment",
+    // Validator-only sigil (engine side dispatches via clause kind, not a
+    // runtime `Keyword` variant). Allowlisted on the engine parity test.
+    "Delay",
+];
 
 /// Every snake_case expiry key the validator accepts. Must stay in lockstep
 /// with `digimon_engine::dsl_cards::expiry_map::all_engine_expiry_keys()`;
@@ -1071,9 +1127,11 @@ pub const KNOWN_EXPIRY_KEYS: &[&str] = &[
     "permanent",
     "end_of_turn",
     "end_of_opponents_turn",
+    "end_of_your_turn",
     "end_of_attack",
     "end_of_battle",
     "until_leave_field",
+    "until_condition",
 ];
 
 fn is_known_expiry(name: &str) -> bool {
