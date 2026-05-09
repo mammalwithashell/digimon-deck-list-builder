@@ -15,11 +15,18 @@
 //!   - Vortex short-circuits the block window
 //!   - wrong-player cannot resolve block selection
 
+use std::sync::{Arc, Mutex};
+
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::{encode_attack, PASS};
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword};
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, Keyword, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
+use digimon_engine::selection::AttackTarget;
+use digimon_engine::AttackTargetChangeReason;
 
 fn strong_digimon(card_id: &str, dp: i32) -> digimon_engine::card_data::CardData {
     digimon_engine::card_data::CardData {
@@ -52,6 +59,32 @@ fn runner_with_attacker_vs(defender_dp: i32, attacker_dp: i32) -> DebugRunner {
         .add_card(strong_digimon("DEF", defender_dp))
         .add_card(strong_digimon("BLK", 9000))
         .start()
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct TargetChangeSnapshot {
+    old_target: AttackTarget,
+    new_target: AttackTarget,
+    reason: AttackTargetChangeReason,
+}
+
+struct WitnessTargetChangePayload(Arc<Mutex<Vec<TargetChangeSnapshot>>>);
+impl CardEffect for WitnessTargetChangePayload {
+    fn effects(&self, c: CardHandle) -> Vec<Effect> {
+        let log = self.0.clone();
+        vec![Effect::on_attack_target_change(c)
+            .name("Witness block target change payload")
+            .process(move |ctx| {
+                if let Some(change) = ctx.attack_target_change() {
+                    log.lock().unwrap().push(TargetChangeSnapshot {
+                        old_target: change.old_target,
+                        new_target: change.new_target,
+                        reason: change.reason,
+                    });
+                }
+            })
+            .build()]
+    }
 }
 
 /// Baseline: attack against a defender with no Blocker keyword runs
@@ -167,6 +200,44 @@ fn block_declared_redirects_battle_to_blocker() {
     assert_eq!(r.battle_area_size(1), 2, "DEF and BLK both survive");
 }
 
+#[test]
+fn block_declared_payload_carries_old_new_and_blocker_reason() {
+    let payload_log: Arc<Mutex<Vec<TargetChangeSnapshot>>> = Arc::new(Mutex::new(Vec::new()));
+
+    let mut r = DebugRunner::builder()
+        .add_card(strong_digimon("ATK", 5000))
+        .add_card(strong_digimon("DEF", 3000))
+        .add_card(strong_digimon("BLK", 9000))
+        .add_card(strong_digimon("WITNESS", 1000))
+        .start();
+    r.register_effect(
+        "WITNESS",
+        Arc::new(WitnessTargetChangePayload(payload_log.clone())),
+    );
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    let _witness = r.place_on_field(0, "WITNESS", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+
+    r.attack_digimon(atk, def, false);
+    r.game
+        .resolve_selection(1, encode_attack(0, blk.index as u16))
+        .expect("declaring a valid blocker must succeed");
+
+    assert_eq!(
+        payload_log.lock().unwrap().as_slice(),
+        &[TargetChangeSnapshot {
+            old_target: AttackTarget::Digimon(def),
+            new_target: AttackTarget::Digimon(blk),
+            reason: AttackTargetChangeReason::Blocker,
+        }]
+    );
+}
+
 /// Player attack with a blocker → security loop does NOT run; the attack
 /// redirects to a Digimon battle against the blocker.
 #[test]
@@ -222,6 +293,82 @@ fn player_attack_declining_block_runs_security_loop() {
         r.security_count(1),
         sec_before - 1,
         "one security card revealed when block declined"
+    );
+}
+
+#[test]
+fn blocker_window_respects_attacker_cannot_switch_target() {
+    let mut r = DebugRunner::builder()
+        .add_card(strong_digimon("ATK", 9000))
+        .add_card(strong_digimon("BLK", 9000))
+        .add_card(strong_digimon("SEC", 1))
+        .security(1, &["SEC", "SEC", "SEC"])
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+    r.game.modifiers.add(
+        atk,
+        ModifierEntry::simple(
+            ModifierType::CanNotSwitchAttackTarget,
+            0,
+            Expiry::EndOfTurn,
+            0,
+        ),
+    );
+
+    let sec_before = r.security_count(1);
+    let result = r.attack_player(atk, 1, false);
+
+    assert_ne!(result, AttackResult::InProgress);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "Blocker retarget must not be offered when attacker cannot switch targets"
+    );
+    assert_eq!(
+        r.security_count(1),
+        sec_before - 1,
+        "attack should continue against the original player target"
+    );
+}
+
+#[test]
+fn blocker_window_respects_cannot_be_redirected_target_modifier() {
+    let mut r = DebugRunner::builder()
+        .add_card(strong_digimon("ATK", 9000))
+        .add_card(strong_digimon("BLK", 9000))
+        .add_card(strong_digimon("SEC", 1))
+        .security(1, &["SEC", "SEC", "SEC"])
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+    r.game.modifiers.add(
+        blk,
+        ModifierEntry::simple(
+            ModifierType::CannotBeRedirectedAsAttackTarget,
+            0,
+            Expiry::EndOfTurn,
+            1,
+        ),
+    );
+
+    let sec_before = r.security_count(1);
+    let result = r.attack_player(atk, 1, false);
+
+    assert_ne!(result, AttackResult::InProgress);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "fixed-target Blocker must not be a legal blocker candidate"
+    );
+    assert_eq!(
+        r.security_count(1),
+        sec_before - 1,
+        "attack should continue against the original player target"
     );
 }
 

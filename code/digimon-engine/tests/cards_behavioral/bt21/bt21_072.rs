@@ -20,7 +20,7 @@
 //! - H3: Piercing keyword grant (declarative)
 //! - H9: Raid keyword grant (declarative)
 //! - D4: Inherited self-aura [Your Turn] +2000 DP
-//! - BLOCKED (G-MAY-ATTACK-NOW): [When Digivolving] may attack without suspending
+//! - [When Digivolving] may attack without suspending
 //! - BLOCKED (G-AURA-DP-FORMULA): [All Turns] +1000 DP per digivolution card
 //!   (AuraBody.dp_modifier is Option<i32>; no formula/dynamic variant exists)
 //!
@@ -30,14 +30,19 @@
 //! |--------|-----|--------|
 //! | (1) <Raid> | none | PASS — structural + has_keyword |
 //! | (2) <Piercing> | none | PASS — structural + has_keyword |
-//! | (3) [When Digivolving] may attack without suspending | G-MAY-ATTACK-NOW | BLOCKED — #[ignore] |
+//! | (3) [When Digivolving] may attack without suspending | none | PASS — may_attack_now optional/without_suspending |
 //! | (4) [All Turns] +1000 DP per digivolution card | G-AURA-DP-FORMULA | BLOCKED — #[ignore] |
 //! | (5) Inherited [Your Turn] +2000 DP | G-INHERITED-DISPATCH (triggered only, declarative may be ok) | PASS — structural |
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
+};
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::Keyword;
+use digimon_engine::enums::{EffectTiming, Keyword};
+use digimon_engine::TriggerSource;
 
 #[path = "../../support/dsl_card_data.rs"]
 mod dsl_card_data;
@@ -58,11 +63,11 @@ fn arresterdramon_runner() -> DebugRunner {
 // Section 1 — Structural assertions
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// BT21-072 must have exactly two declarative GrantKeyword clauses (Raid, Piercing)
-/// and one declarative inherited Aura clause ([Your Turn] +2000 DP).
-/// [When Digivolving] and [All Turns] clauses are BLOCKED and omitted from YAML.
+/// BT21-072 must have two declarative GrantKeyword clauses (Raid, Piercing),
+/// one declarative inherited Aura clause ([Your Turn] +2000 DP), and one
+/// triggered [When Digivolving] may-attack clause.
 #[test]
-fn bt21_072_structural_three_declarative_clauses_total() {
+fn bt21_072_structural_three_declarative_clauses_and_one_triggered() {
     let runner = arresterdramon_runner();
     let compiled = runner
         .compiled_card("BT21-072")
@@ -80,8 +85,17 @@ fn bt21_072_structural_three_declarative_clauses_total() {
     assert_eq!(
         declaratives.len(),
         3,
-        "Expected 2 GrantKeyword + 1 Aura (inherited) = 3 declaratives; \
-         [WhenDigivolving] and [AllTurns] clauses are BLOCKED and omitted."
+        "Expected 2 GrantKeyword + 1 Aura (inherited) = 3 declaratives"
+    );
+
+    let triggered_count = compiled
+        .effects
+        .iter()
+        .filter(|c| matches!(c, CompiledClause::Triggered(_)))
+        .count();
+    assert_eq!(
+        triggered_count, 1,
+        "Expected one [When Digivolving] may_attack_now triggered clause"
     );
 }
 
@@ -155,24 +169,41 @@ fn bt21_072_structural_inherited_aura_your_turn_dp_2000() {
     );
 }
 
-/// No triggered clauses in the YAML (both [WhenDigivolving] and [AllTurns]
-/// clauses are BLOCKED and omitted pending gap closure).
+/// The [When Digivolving] triggered clause must lower to an optional
+/// may_attack_now step that skips the suspend cost.
 #[test]
-fn bt21_072_structural_no_triggered_clauses() {
+fn bt21_072_when_digivolving_clause_contains_unsuspended_may_attack_now() {
     let runner = arresterdramon_runner();
     let compiled = runner
         .compiled_card("BT21-072")
         .expect("BT21-072 compiled card present");
 
-    let triggered_count = compiled
+    let triggered = compiled
         .effects
         .iter()
-        .filter(|c| matches!(c, CompiledClause::Triggered(_)))
-        .count();
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t)
+                if matches!(t.scope, CompiledScope::FaceUp)
+                    && t.when.contains(&CompiledTiming::WhenDigivolving) =>
+            {
+                Some(t)
+            }
+            _ => None,
+        })
+        .expect("BT21-072 must have a face-up [When Digivolving] clause");
 
+    let may_attack = triggered.process.iter().find_map(|s| match s {
+        CompiledStep::MayAttackNow {
+            without_suspending,
+            optional,
+            ..
+        } => Some((*without_suspending, *optional)),
+        _ => None,
+    });
     assert_eq!(
-        triggered_count, 0,
-        "No triggered clauses expected: [WhenDigivolving] and [AllTurns] are BLOCKED"
+        may_attack,
+        Some((true, true)),
+        "[When Digivolving] must contain optional may_attack_now with without_suspending=true"
     );
 }
 
@@ -328,30 +359,63 @@ fn bt21_072_inherited_aura_contributes_zero_dp_opponents_turn() {
 // Section 4 — BLOCKED tests (pending gap closure)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// [When Digivolving] This Digimon may attack without suspending.
-///
-/// BLOCKED (G-MAY-ATTACK-NOW): No DSL verb or engine API for an in-effect
-/// optional unsuspended attack on self. The DCGO fires SelectAttackEffect
-/// with SetWithoutTap() and canAttack(withoutTap: true) inside an
-/// ActivateCoroutine — an in-effect attack flow not exposed via EffectContext.
-///
-/// When closed, the YAML clause should be:
-///   - when: when_digivolving
-///   - optional: true
-///   - process:
-///       - may_attack_now: { target: self }   # new DSL verb
-///
-/// Test plan when gap closes:
-///   1. Build a Lv4 + BT21-072 digivolve scenario.
-///   2. After when_digivolving fires, a pending_selection offering "attack now"
-///      or "skip" should install.
-///   3. Accept → Digimon attacks without being suspended (is_suspended: false
-///      and attack proceeds).
-///   4. Decline → no attack, Digimon remains unsuspended.
 #[test]
-#[ignore = "pending: G-MAY-ATTACK-NOW from qa/dsl-vocab-gaps.md"]
 fn bt21_072_when_digivolving_may_attack_without_suspending() {
-    let _ = arresterdramon_runner();
+    let mut security_card = make_test_card("SEC", "Security");
+    security_card.dp = Some(2000);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT21-072")
+        .expect("BT21-072 in embedded DSL pack")
+        .add_card(security_card)
+        .security(1, &["SEC"])
+        .memory(9)
+        .start();
+    runner.game.turn_count = 1;
+
+    let attacker = runner.place_on_field(0, "BT21-072", Some(0));
+    let security_before = runner.game.player(1).security.len();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(attacker),
+    );
+    runner.game.drain_effect_queue();
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("When Digivolving should install a may_attack_now prompt");
+    assert!(
+        pending.is_optional,
+        "printed 'may attack' must expose decline/PASS"
+    );
+    assert!(
+        build_action_mask(&runner.game, 0)[PASS as usize] > 0.0,
+        "optional may_attack_now prompt must expose PASS through the action mask"
+    );
+
+    let attack_player = encode_attack(attacker.index as u16, SECURITY_TARGET);
+    assert!(
+        pending.valid_action_ids.contains(&attack_player),
+        "BT21-072 should be able to choose the opponent player as the attack target"
+    );
+
+    runner
+        .game
+        .resolve_selection(0, attack_player)
+        .expect("resolve unsuspended effect-created attack");
+
+    assert_eq!(
+        runner.game.player(1).security.len(),
+        security_before - 1,
+        "effect-created attack should resolve the normal security flow"
+    );
+    assert!(
+        !runner.game.player(0).battle_area[attacker.index as usize].is_suspended,
+        "BT21-072 must remain unsuspended after attacking without suspending"
+    );
 }
 
 /// [All Turns] This Digimon gets +1000 DP for each of its digivolution cards.

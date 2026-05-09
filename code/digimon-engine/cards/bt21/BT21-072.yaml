@@ -22,9 +22,8 @@ alt_paths:
 # Clause 3: [When Digivolving] This Digimon may attack without suspending.
 # DCGO: ActivateClass(EffectTiming.OnEnterFieldAnyone), CanTriggerWhenDigivolving,
 #   SelectAttackEffect.SetWithoutTap(), canAttack(withoutTap: true).
-# BLOCKED (G-MAY-ATTACK-NOW): No DSL verb for an in-effect optional attack on self
-# without suspending. Engine lacks `EffectContext::may_attack_now(target)` and the
-# DSL lacks a corresponding step verb. Tracked in qa/dsl-vocab-gaps.md.
+# Rust maps this to the centralized effect-created attack flow via
+# `may_attack_now` with `without_suspending: true` and `optional: true`.
 #
 # Clause 4: [All Turns] This Digimon gets +1000 DP for each of its digivolution cards.
 # DCGO: CardEffectFactory.ChangeSelfDPStaticEffect(changeValue: 1000 * count(), ...) at
@@ -61,8 +60,14 @@ effects:
     summary: "<Piercing>"
 
   # ─── Clause 3: [When Digivolving] may attack without suspending ───────────
-  # BLOCKED: G-MAY-ATTACK-NOW — no DSL verb for in-effect unsuspended optional
-  # attack on self. Omit until qa/dsl-vocab-gaps.md G-MAY-ATTACK-NOW closes.
+  - when: when_digivolving
+    summary: "[When Digivolving] This Digimon may attack without suspending"
+    process:
+      - may_attack_now:
+          attacker: source
+          targets: any
+          without_suspending: true
+          optional: true
 
   # ─── Clause 4: [All Turns] +1000 DP per digivolution card ─────────────────
   # BLOCKED: G-AURA-DP-FORMULA — AuraBody.dp_modifier accepts only a static i32;

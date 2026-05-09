@@ -114,6 +114,14 @@ use crate::replacement::ReplacementSubject;
 /// returns a `Vec<Effect>` rather than `Option<Effect>`.
 pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect> {
     match keyword {
+        // Printed [Hand][Counter] <Blast Digivolve>: the Counter window scans
+        // hand-card effects for this marker and then validates the actual
+        // digivolution route against CardData. No process body is needed here.
+        Keyword::BlastDigivolve => vec![Effect::declarative(card)
+            .name("<Blast Digivolve>")
+            .blast_digivolve()
+            .build()],
+
         // Printed Barrier: "When this Digimon would be deleted, you may trash
         // the top card of your security stack. If you do, it isn't deleted."
         // DCGO `Barrier.cs` gates on `SecurityCards.Count >= 1` before the

@@ -201,6 +201,7 @@ pub struct CompiledPredicate {
     pub other: Option<bool>,
     pub of_permanent: Option<String>,
     pub not_in_binding: Option<String>,
+    pub binding_owner: Option<CompiledBindingOwnerPredicate>,
     pub source_is_tamer: Option<bool>,
     pub source_name_contains: Option<String>,
     pub source_permanent_trait_has: Option<String>,
@@ -217,6 +218,10 @@ pub struct CompiledPredicate {
     pub dna_origin: Option<bool>,
     pub event_target_kind: Option<CompiledCardKind>,
     pub event_target_trait_has: Option<String>,
+    pub event_target_is_player: Option<bool>,
+    pub event_target_was_self: Option<bool>,
+    pub attack_target_change_reason: Option<String>,
+    pub attacker_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
     pub event_card_name_contains: Option<String>,
     pub event_permanent_is_source: Option<bool>,
@@ -287,6 +292,12 @@ pub enum CompiledEventCause {
 pub enum CompiledBindingCompare {
     Binding(String),
     Literal(i64),
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledBindingOwnerPredicate {
+    pub binding: String,
+    pub of: CompiledPlayerRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -517,6 +528,7 @@ pub enum CompiledScope {
     Inherited,
     Both,
     Linked,
+    Security,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -598,6 +610,12 @@ pub enum CompiledFieldSelector {
 }
 
 // ── Steps ───────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct CompiledAttackCostUpgrade {
+    pub dp: i32,
+    pub security_attack: i32,
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum CompiledStep {
@@ -870,6 +888,7 @@ pub enum CompiledStep {
     },
     SelectOwnSources {
         target: Option<CompiledBindingRef>,
+        filter: CompiledPredicate,
         min: u8,
         max: u8,
         bind_as: Option<String>,
@@ -990,7 +1009,24 @@ pub enum CompiledStep {
         without_suspending: bool,
         optional: bool,
         prompt: Option<String>,
+        cost_upgrade: Option<CompiledAttackCostUpgrade>,
     },
+    ForceAttack {
+        attacker: CompiledBindingRef,
+        targets: CompiledAttackTargetSpec,
+        without_suspending: bool,
+        prompt: Option<String>,
+        cost_upgrade: Option<CompiledAttackCostUpgrade>,
+    },
+    RedirectAttackTarget {
+        new_target: Option<CompiledBindingRef>,
+        player: Option<CompiledPlayerRef>,
+        targets: CompiledAttackTargetSpec,
+        optional: bool,
+        prompt: Option<String>,
+    },
+    CancelAttack,
+    OpenCounterWindow,
     RefireEffect {
         source: CompiledBindingRef,
         timing: String,

@@ -27,7 +27,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | AD1-001 | Greymon | I | IMPLEMENTED | 18/19 | Cross-perm observer + free-digivolve from hand |
 | AD1-009 | BlitzGreymon | I | IMPLEMENTED | 19/20 | De-Digivolve 3 + immunity + EOT DNA |
 | AD1-010 | Garurumon | I | IMPLEMENTED | 13/14 | Draw + name observer |
-| AD1-012 | CresGarurumon | I | PARTIAL (hybrid) | 12/15 | Opp-Turn + inherited attack-target restriction BLOCKED |
+| AD1-012 | CresGarurumon | I | PARTIAL (hybrid) | 13/15 | Opp-Turn effect DNA route BLOCKED; inherited no-retarget live |
 | AD1-014 | MetalGarurumon | I | PARTIAL (hybrid) | 13/18 | Distinct-Tamer-colors formula BLOCKED |
 | AD1-025 | Omnimon | AE | AUDITED-DRIFT | 8/16 | raw_rust unregistered; missing All-Turns clause |
 | BT12-059 | Agumon | I | IMPLEMENTED | 12/12 | Reveal-buckets + self_digivolution_contains_name aura |
@@ -121,12 +121,12 @@ Pipeline: batch-implement-cards-rust-dsl
 - G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA (P-182) — broader scope than tamer-only variant
 - G-DYNAMIC-NAME-ALIAS-FROM-STACK (BT17-102) — declaratives derive name set from current materials
 - G-BIND-SELECTED-PROPERTY-FOR-EACH (BT17-078) — closed: `bind_permanent_property` + `level_eq_binding` cover the selected-level for-each pattern. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- parse_bind_permanent_level_property_step bind_permanent_level_filters_for_each_same_level_permanents` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078`.
-- G-BLAST-DNA-DIGIVOLVE (BT17-078) — closed for the BT17-078 card route: reusable `blast_dna_digivolve` alt-path and CounterTiming mixed field+hand material flow are wired and covered by BT17-078 + EX6-011.
+- G-BLAST-DNA-DIGIVOLVE (BT17-078) — resolved for field+hand Counter Blast DNA. `blast_dna_digivolve` carries exact printed materials; BT17-078 proves WarGreymon + MetalGarurumon and rejects broad Greymon/Garurumon names. Additional printed field+hand Blast DNA fixtures now cover BT20-045, BT20-076, BT20-081, EX6-011, and EX6-029. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078_counter_blast_dna`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_045_counter_blast_dna bt20_076_counter_blast_dna bt20_081_counter_blast_dna ex6_029_counter_blast_dna`.
 - G-DSL-UNION-PLAY-FREE (BT17-095) — `select_union_zone` binding doesn't feed `play_from_*_free`
 - G-DSL-DNA-FROM-HAND-PARTNER (BT17-095) — DNA digivolve where 2nd material lives in hand
 - G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH (EX5-015) — inherited replacement with trash-cost-then-cancel
 - G-MULTI-SELECT-OPP-PLAY-COST-SUM (EX4-073) — sibling of resolved DP-budget for play-cost
-- G-DSL-SELECT-OWN-SOURCES-FILTER (EX4-073) — `SelectOwnSourcesArgs` lacks `filter:` field
+- G-DSL-SELECT-OWN-SOURCES-FILTER (EX4-073) — resolved 2026-05-08; remaining EX4-073 blockers are play-cost aggregate/count-binding work.
 - G-PLAY-COST-AGGREGATE (EX4-073) — `lowest_play_cost` aggregate predicate
 - G-EVENT-CARD-TAMER-PLAY (AD1-010, EX9-012) — event_card population for tamer plays unconfirmed
 - G-DSL-EVENT-TARGET-IS-OTHER (EX4-003, EX4-039) — no `event_target_is_other` predicate
@@ -134,13 +134,13 @@ Pipeline: batch-implement-cards-rust-dsl
 - G-ALT-PATH-DIRECTION-INTO (ST20-10) — alt-path inverse: card grants itself ability to digivolve INTO X
 
 ### Engine gaps
-- G-MOD-CANNOT-CHANGE-ATTACK-TARGET (AD1-012) — `ModifierType::CannotChangeAttackTarget` missing
+- G-MOD-CANNOT-CHANGE-ATTACK-TARGET (AD1-012) — resolved 2026-05-08 via `ModifierType::CanNotSwitchAttackTarget` self inherited aura; covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ad1_012_inherited_blocks_attack_target_change_during_your_turn`
 - G-AURA-GRANTED-SECURITY-KEYWORD (BT5-093) — aura-granted SecurityAttackPlus not consumed by security loop
 - G-SECURITY-ZONE-AURA-SOURCE (ST20-15) — security-zone aura sources not iterated by Group 6 tick
 
 ### Hybrid gaps (engine+DSL)
-- G-DSL-ON-OPPONENT-ATTACK (AD1-012) — DSL Timing variant + engine has primitive
-- G-DSL-REDIRECT-ATTACK-TARGET (AD1-012) — DSL step verb + engine has redirect_attack
+- G-DSL-ON-OPPONENT-ATTACK (AD1-012) — resolved; remaining AD1-012 blocker is defender-side effect DNA into Omnimon Alter-S during the attack interrupt
+- G-DSL-REDIRECT-ATTACK-TARGET (AD1-012) — resolved; redirect step parses/lowers to `ctx.redirect_attack`
 - G-DSL-ON-ALLY-ATTACK-TIMING (BT21-102, BT23-096) — DSL Timing variant
 
 ## Test Suite Status

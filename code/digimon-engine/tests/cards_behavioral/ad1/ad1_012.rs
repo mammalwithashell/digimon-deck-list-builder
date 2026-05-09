@@ -27,9 +27,9 @@
 //! - select_own_permanent name_contains "Greymon" with is_suspended + other gating
 //! - alt_paths: Lv5 Blue cost 4 standard + Lv5 Garurumon-name OR ADVENTURE-trait cost 3
 //! - BLOCKED — [Opponent's Turn][OPT] DNA digivolve + redirect attack target
-//!   (DSL gap: on_opponent_attack timing, redirect_attack_target step verb)
-//! - BLOCKED — Inherited [Your Turn] attack target can't change
-//!   (engine gap: ModifierType::CannotChangeAttackTarget)
+//!   (remaining route: defender-side effect-initiated DNA into Omnimon Alter-S
+//!   from hand, then resume the same attack-interrupt clause)
+//! - Inherited [Your Turn] attack target can't change
 
 #![allow(dead_code, unused_imports)]
 
@@ -37,7 +37,11 @@ use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::PASS;
+use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::AttackTarget;
 
 use crate::dsl_card_data::{card_data_from_compiled, compiled};
 
@@ -80,6 +84,28 @@ fn high_level_opp() -> digimon_engine::card_data::CardData {
     card.dp = Some(11000);
     card.card_kind = digimon_engine::enums::CardKind::Digimon;
     card
+}
+
+fn digimon(id: &str, dp: i32) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.level = Some(6);
+    card.dp = Some(dp);
+    card.card_kind = digimon_engine::enums::CardKind::Digimon;
+    card
+}
+
+struct RedirectOnAttack(PermanentHandle);
+
+impl CardEffect for RedirectOnAttack {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let target = self.0;
+        vec![Effect::on_attack(card)
+            .name("AD1-012 test redirect attempt")
+            .process(move |ctx| {
+                let _ = ctx.redirect_attack(AttackTarget::Digimon(target));
+            })
+            .build()]
+    }
 }
 
 fn cresgarurumon_runner() -> DebugRunner {
@@ -453,15 +479,13 @@ fn ad1_012_opt_blocks_when_attacking_after_on_play_same_turn() {
 /// digivolve into [Omnimon Alter-S] in hand. Then, may change attack target.
 ///
 /// BLOCKED:
-///   - DSL gap: no `on_opponent_attack` Timing variant in `digimon-dsl/src/clause.rs`
-///     (engine has `EffectTiming::OnOpponentAttack` and `Effect::on_opponent_attack`,
-///     but the DSL lowering can't currently route to it).
-///   - DSL gap: no `redirect_attack_target` step verb in `digimon-dsl/src/step.rs`
-///     (engine has `EffectContext::redirect_attack`).
+///   - Remaining faithful route: effect-initiated DNA digivolve into a selected
+///     [Omnimon Alter-S] in hand from the defender-side attack observer, then
+///     resume the same attack-interrupt clause before optional redirect.
 #[test]
-#[ignore = "pending: dsl-vocab-gap on_opponent_attack timing + redirect_attack_target step (qa/dsl-vocab-gaps.md)"]
+#[ignore = "pending: defender-side effect-initiated DNA into Omnimon Alter-S during attack interrupt"]
 fn ad1_012_opponents_turn_dna_into_omnimon_alters_then_redirects() {
-    // Scaffolding (pending dsl-vocab gaps):
+    // Scaffolding (pending effect DNA route):
     //
     // 1. Place CresGarurumon + a Greymon-name + a Garurumon-name ally on P0's field.
     // 2. Place an Omnimon Alter-S in P0's hand (with dna_costs that match the pair).
@@ -474,22 +498,39 @@ fn ad1_012_opponents_turn_dna_into_omnimon_alters_then_redirects() {
 }
 
 /// Inherited [Your Turn] — "This Digimon's attack target can't change."
-///
-/// BLOCKED:
-///   - Engine gap: no `ModifierType::CannotChangeAttackTarget` in
-///     `code/digimon-engine/src/enums.rs`. The DCGO `CanNotSwitchAttackTargetClass`
-///     scope is `permanent == card.PermanentOfThisCard()` (this card only).
-///   - Without the modifier the inherited clause has no implementation target.
 #[test]
-#[ignore = "pending: engine-gap ModifierType::CannotChangeAttackTarget (qa/archetype-qa/engine-gaps.md)"]
 fn ad1_012_inherited_blocks_attack_target_change_during_your_turn() {
-    // Scaffolding (pending engine gap):
-    //
-    // 1. Place CresGarurumon (or any Digimon with CresGarurumon as a digivolution
-    //    source — the inherited fires from the source) on P0's field.
-    // 2. P0's turn — declare an attack from this Digimon on an opp Digimon.
-    // 3. Trigger any redirect attempt (Blocker, Raid retarget, etc.).
-    // 4. The redirect must be REJECTED (modifier blocks attack-target change).
-    // 5. On opponent's turn: the modifier is dormant — redirects work normally.
-    todo!("pending engine gap: ModifierType::CannotChangeAttackTarget")
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-012")
+        .expect("AD1-012 found in embedded DSL pack")
+        .add_card(digimon("AD1-012-HOST", 12000))
+        .add_card(digimon("AD1-012-DEF-A", 1000))
+        .add_card(digimon("AD1-012-DEF-B", 1000))
+        .start();
+
+    let attacker = runner.place_stack(0, &["AD1-012", "AD1-012-HOST"]);
+    let original_target = runner.place_on_field(1, "AD1-012-DEF-A", Some(0));
+    let redirect_target = runner.place_on_field(1, "AD1-012-DEF-B", Some(0));
+    runner.register_effect(
+        "AD1-012-HOST",
+        std::sync::Arc::new(RedirectOnAttack(redirect_target)),
+    );
+    runner.game.tick_declarative_effects();
+
+    runner.attack_digimon(attacker, original_target, false);
+
+    assert!(
+        runner.game.players[1]
+            .trash
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "AD1-012-DEF-A"),
+        "the original target should be battled and deleted"
+    );
+    assert!(
+        runner.game.players[1]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "AD1-012-DEF-B"),
+        "the redirect target should remain on the field"
+    );
 }

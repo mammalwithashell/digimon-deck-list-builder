@@ -24,11 +24,15 @@ alt_paths:
   # [Hand] [Counter] <Blast DNA Digivolve ([Durandamon] + [BryweLudramon])>.
   - kind: blast_dna_digivolve
     materials:
-      - { name_is: Durandamon }
-      - { name_is: BryweLudramon }
+      - { kind: digimon, name_is: "Durandamon" }
+      - { kind: digimon, name_is: "BryweLudramon" }
     cost: 0
+    stacks_unsuspended: true
 
 effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
   - kind: grant_keyword
     keyword: Raid
 
@@ -78,3 +82,7 @@ effects:
                 filter: { kind: digimon }
                 prompt: "Delete 1 of your opponent's Digimon"
             - delete_permanent: { target: delete_target }
+
+  # [Hand][Counter] Blast DNA Digivolve ([Durandamon] + [BryweLudramon]) is
+  # represented by the `blast_dna_digivolve` alt path plus the BlastDigivolve
+  # marker above.

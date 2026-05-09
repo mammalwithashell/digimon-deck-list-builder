@@ -28,7 +28,7 @@ High-frequency cards across those lists:
 | `ST22-13` | GrandGalemon | 46/54 | Fortitude, Vortex, suspend/DP, inherited unsuspend |
 | `EX8-074` | MedievalGallantmon | 38/54 | Alliance/Vortex, suspend-count deletion |
 | `BT20-085` | Shoto Kazama | 35/54 | self-return, free Shoto/Lv3 play, end-turn suspend/DP |
-| `BT24-047` | Kokatorimon | 35/54 | suspend and may-attack style pressure |
+| `BT24-047` | Kokatorimon | implemented Track D slice | suspend-result branch + result-bound may-attack covered; inherited battle-delete memory remains card-body follow-up |
 | `EX7-034` | GrandGalemon | 32/54 | Vortex, suspend/self-immunity |
 | `BT24-044` | Muchomon | 31/54 | suspend-then-search |
 | `EX7-032` | Galemon | 31/54 | Shoto free-play |
@@ -48,7 +48,7 @@ High-frequency cards across those lists:
 - `EX11-074` is explicitly a readiness slice, not a full implementation. `code/digimon-engine/cards/ex11/EX11-074.yaml` covers static `<Piercing>`, `<Vortex>`, `<Blocker>`, and a focused `battle:` path.
 - `code/digimon-engine/tests/cards_behavioral/ex11/ex11_074.rs` proves the `battle:` rule boundary: effect battle deletes through DP battle, does not trigger Piercing security checks, and does not leave `pending_attack`.
 - `EX7-074` and `EX8-074` have YAML plus behavioral tests, but their card files still document ignored or partial cases around Option/security integration, formula/selection details, and triggered once-per-turn behavior.
-- Most Zephagamon core cards are metadata-only for Rust execution today: `EX7-064`, `P-166`, `ST18-04`, `BT20-101`, `EX7-031`, `ST22-13`, `BT20-085`, `BT24-047`, `EX11-035`, `EX11-062`, `EX11-072`, `ST18-12`, and others have no production YAML under `code/digimon-engine/cards/`.
+- Most Zephagamon core cards are metadata-only for Rust execution today: `EX7-064`, `P-166`, `ST18-04`, `BT20-101`, `EX7-031`, `ST22-13`, `BT20-085`, `EX11-035`, `EX11-062`, `EX11-072`, `ST18-12`, and others have no production YAML under `code/digimon-engine/cards/`. `BT24-047` now has production YAML and focused Track D coverage for its suspend-result may-attack branch.
 
 ## Gap Summary
 
@@ -58,7 +58,7 @@ High-frequency cards across those lists:
 | `ZEPH-G002` | dsl-gap | open | `EX11-074`, `BT20-101`, `EX7-036`, `ST18-12`, `EX11-035` | `qa/dsl-vocab-gaps.md` |
 | `ZEPH-G003` | dsl-gap / engine-gap | open | `BT20-101`, `EX7-036`, `EX8-074`, `EX11-035` | `qa/dsl-vocab-gaps.md`, `docs/RUST_ENGINE_GAPS.md` |
 | `ZEPH-G004` | dsl-gap | open | `EX11-062` | `qa/dsl-vocab-gaps.md` |
-| `ZEPH-G005` | engine-gap / dsl-gap | open | `ST18-14`, `BT24-047`, related may-attack/redirect cards | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
+| `ZEPH-G005` | engine-gap / dsl-gap | partially resolved | `ST18-14` and `BT24-047` covered; related may-attack cards remain card-authored as encountered | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
 | `ZEPH-G006` | engine-gap / dsl-gap | partially resolved | `BT20-101`, other ACE/Counter cards | `docs/DCGO_KEYWORD_PARITY.md`, `docs/RUST_ENGINE_GAPS.md` |
 | `ZEPH-G007` | engine-gap / dsl-gap / test-gap | open | `EX11-072`, `LM-030`, `P-106`, `P-038`, `EX7-074` | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
 | `ZEPH-G008` | engine-gap / dsl-gap | open | `EX7-064`, `BT20-085`, `P-133`, `EX11-062`, `EX11-028` | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
@@ -80,13 +80,13 @@ High-frequency cards across those lists:
 ### ZEPH-G002: Result-Bound Branches for "If This Effect Suspended Your Digimon"
 
 - **Type:** `dsl-gap`
-- **Status:** open
-- **Blocks:** `EX11-074`, `EX7-034`, `BT24-044`, `BT24-047`, `ST18-10`, `BT20-085`, `EX11-026`, `EX11-035`, `ST18-12`, `BT20-101`.
+- **Status:** partially resolved
+- **Blocks:** `EX11-074`, `EX7-034`, `BT24-044`, `ST18-10`, `BT20-085`, `EX11-026`, `EX11-035`, `ST18-12`, `BT20-101`. `BT24-047` is covered for the unsuspended-target branch.
 - **Effect text examples:** "If this effect suspended your Digimon..." and "If this effect suspended your Digimon, this Digimon isn't affected..." / "return 1 of your opponent's suspended Digimon..."
 - **Why it matters:** The DSL can select and suspend, but Zephagamon cards repeatedly branch based on whether the suspend step actually suspended a friendly Digimon. This cannot be modeled by blindly executing the tail, because opponent/self target choice changes legal outcomes.
-- **Evidence:** `qa/dsl-vocab-gaps.md` records the `EX11-074` remaining gap for branching on "this effect suspended your Digimon"; `docs/RUST_ENGINE_GAPS.md` has the Zephagamon prep note from 2026-05-03.
+- **Evidence:** `binding_owner: { binding, of }` now supports the owner branch used by BT24-047 after an optional `select_any_permanent` choice. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- binding_owner_predicate_matches_bound_permanent_controller` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_047`. `EX11-074` and related cards still need richer mutation-result payloads where protection/already-suspended cases must be distinguished.
 - **First test:** For `EX11-074`, resolve the When Digivolving/When Attacking effect twice: once choosing an own Digimon and once choosing an opponent Digimon. Only the own-Digimon suspension should grant +6000 DP and opponent-effect immunity.
-- **Implementation hint:** Add a DSL result binding such as `suspend: { target: picked, bind_result_as: suspended_by_this_effect }`, then allow `if` conditions to test that binding and target controller.
+- **Implementation hint:** For BT24-047-style branches, bind the selected target and use `binding_owner`; for stricter "this mutation actually changed state" cards, add a DSL result binding such as `suspend: { target: picked, bind_result_as: suspended_by_this_effect }`, then allow `if` conditions to test that binding and target controller.
 
 ### ZEPH-G003: Suspended-Count and Formula-Driven Multi-Selection
 
@@ -113,13 +113,14 @@ High-frequency cards across those lists:
 ### ZEPH-G005: Attack Target Change and Immediate May-Attack Flow
 
 - **Type:** `engine-gap` / `dsl-gap`
-- **Status:** open
-- **Blocks:** `ST18-14`, `BT24-047`, and other Zephagamon cards that say a Digimon may attack as part of effect resolution.
+- **Status:** partially resolved by Track D. The shared `redirect_attack_target` and `may_attack_now` primitives exist; ST18-14 has a prompted retarget card-shaped fixture, and BT24-047 now has production YAML/tests for the suspend-result may-attack branch using `binding_owner`.
+- **Blocks:** Other Zephagamon cards that say a Digimon may attack as part of effect resolution remain card-authoring/verification work as encountered. `ST18-14` is no longer blocked by the retarget prompt primitive, and `BT24-047` is no longer blocked by the result-bound may-attack slice.
 - **Effect text examples:** `ST18-14`: "When one of your Digimon attacks your opponent's Digimon, by suspending this Tamer, you may change the attack target to another of your opponent's Digimon or the player." `BT24-047`: suspend/search tail that lets a selected Digimon attack.
 - **Why it matters:** These are player-visible combat decisions. Modeling target change as up-front attack targeting, or omitting a "may attack" tail, changes the action surface.
-- **Evidence:** `docs/RUST_ENGINE_GAPS.md` tracks Raid target-switch / effect-driven attack redirect. `qa/dsl-vocab-gaps.md` tracks `G-MAY-ATTACK-NOW` for immediate optional attacks inside effect resolution.
-- **First test:** Attack an opponent Digimon while `ST18-14` is unsuspended. The engine should offer the Tamer suspend cost, then a target-redirect selection that includes another opponent Digimon and the player, and should emit attack-target-change observers after the redirect.
-- **Implementation hint:** Add a combat interrupt primitive for redirecting an existing attack target and a separate `may_attack_now` effect step for effects that initiate a new attack.
+- **Evidence:** `docs/RUST_ENGINE_GAPS.md` tracks remaining card-specific Zephagamon work. Shared primitives are covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- redirect_attack_target`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- may_attack_now`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- binding_owner_predicate_matches_bound_permanent_controller`.
+- **First test:** Implemented for `ST18-14`: attack an opponent Digimon while Shoto is unsuspended; the engine offers the Tamer suspend cost, then a target-redirect selection that includes another opponent Digimon and the player while excluding the current target.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- redirect_attack_target_prompt_yaml_lowers_to_compiled_step`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- st18_14`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_047`.
+- **Implementation hint:** Remaining adjacent work is richer mutation-result payloads for protected/already-suspended edge cases; BT24-047 is covered by filtering the initial suspend choice to unsuspended Digimon and testing the selected permanent's owner via `binding_owner`.
 
 ### ZEPH-G006: Native `<Blast Digivolve>` Auto-Install for Printed ACE Cards
 
@@ -127,9 +128,9 @@ High-frequency cards across those lists:
 - **Status:** partially resolved
 - **Blocks:** `BT20-101` Zephagamon and other printed ACE/Counter cards when they are represented only by card metadata.
 - **Why it matters:** Rust has Counter-window substrate and `EffectBuilder::blast_digivolve()`, but printed keyword parsing alone does not currently make a metadata-only hand card a Counter candidate. Zephagamon ACE needs to appear in the defender's action mask during Counter timing without hand-authored hidden logic.
-- **Evidence:** `docs/DCGO_KEYWORD_PARITY.md` says `<Blast Digivolve>` parses as `Keyword::BlastDigivolve`, and the substrate exists, but native keyword-derived auto-install is missing. `BT20-101` also needs ACE Overflow metadata and stack-leave penalty coverage.
+- **Evidence:** `docs/DCGO_KEYWORD_PARITY.md` now records native `<Blast Digivolve>` auto-install via `Keyword::BlastDigivolve`, and the Counter substrate is live. `BT20-101` still needs production YAML/card-shaped tests for its other printed clauses and ACE Overflow behavior.
 - **First test:** During an opponent attack, put `BT20-101` in defender hand with a legal level 5/6 target in battle. The CounterTiming mask must expose the Blast Digivolve candidate, execute the free digivolve, fire When Digivolving, and preserve attack-state continuation.
-- **Implementation hint:** Bridge `Keyword::BlastDigivolve` from printed keyword parsing to a declarative effect that sets `.blast_digivolve()` or add DSL/card-data generation that emits the same flag for production YAML.
+- **Implementation update (2026-05-08):** `Keyword::BlastDigivolve` now auto-installs the same `.blast_digivolve()` Counter marker from `CardData`, so metadata-only hand cards become Counter candidates when they have a legal ordinary digivolution route. Focused coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- native_blast_digivolve_keyword_installs_counter_candidate`. `BT20-101` still needs production YAML/card-shaped tests for its other printed clauses and ACE Overflow behavior.
 
 ### ZEPH-G007: Option, Delay, Search, and Security Disposition Completeness
 
@@ -198,7 +199,7 @@ These items should remain card migration work unless they expose a new reusable 
 | `EX11-035` Zephagamon | Test unsuspend-then-suspend and formula DP cap play from hand. |
 | `EX11-062` Shoto Kazama | Test memory setter, effect-suspend observer, and conditional Vortex-to-player aura. |
 | `EX11-072` Unique Emblem: Guardian Vortex | Test option play from hand/trash, battle-area placement, event-gated Delay, and reduced-cost digivolve. |
-| `ST18-14` Shoto Kazama | Test attack-target redirect during an existing attack. |
+| `ST18-14` Shoto Kazama | Implemented 2026-05-08; production YAML and 3 focused redirect tests pass. |
 | `EX11-074` Vortexdramon | Expand beyond readiness slice to full suspend-result immunity and unsuspend-then-battle flow. |
 
 ## Cross-Archetype Spec Tags

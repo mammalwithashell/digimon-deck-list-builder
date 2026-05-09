@@ -28,13 +28,10 @@
 //! context. Clause 2 gates with `event_target_owner` + `event_target_trait_has`
 //! and applies the DP modifier to `target: event_target`.
 //!
-//! G-MAY-ATTACK-NOW [dsl+engine gap]:
+//! G-MAY-ATTACK-NOW [resolved for this card]:
 //!   The DCGO fires `SelectAttackEffect` mid-effect-resolution (immediate
-//!   optional attack). The Rust engine has no `EffectContext::may_attack_now`
-//!   primitive, and `ModifierType::MayAttack` targets the end-of-turn attack
-//!   window (Execute / Vortex), not an in-effect attack. The "it may attack"
-//!   sub-clause of Clause 2 is omitted pending this primitive being added.
-//!   Tests that assert the attack prompt installs are `#[ignore]`'d.
+//!   optional attack). Rust maps the "it may attack" rider to `may_attack_now`
+//!   on the `event_target`, exposing decline through the pending-selection mask.
 //!
 //! G-OPT-TRIGGERED [engine gap]:
 //!   OPT lockout on triggered clauses is not enforced through the queue drain.
@@ -43,7 +40,9 @@
 
 #![allow(dead_code, unused_imports)]
 
-use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::EffectTiming;
@@ -518,11 +517,75 @@ fn bt24_082_clause2_fires_only_for_reptile_dragonkin_digivolve() {
     );
 }
 
-/// Clause 2 IGNORED: "it may attack" — no may_attack_now primitive.
 #[test]
-#[ignore = "pending: G-MAY-ATTACK-NOW — no DSL verb or engine primitive for immediate optional attack within an effect"]
 fn bt24_082_clause2_may_attack_prompt_installs_after_dp_buff() {
-    unimplemented!("blocked on G-MAY-ATTACK-NOW");
+    let mut security_card = make_filler("SEC");
+    security_card.dp = Some(2000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT24-082 YAML parses")
+        .add_card(make_digimon_card("REPTILE-TARGET", 4000))
+        .add_card(security_card)
+        .security(1, &["SEC"])
+        .deck(0, &["SEC"])
+        .deck(1, &["SEC"])
+        .memory(10)
+        .start();
+    runner.game.turn_count = 1;
+
+    let tamer = runner.place_on_field(0, "BT24-082", Some(0));
+    let target = runner.place_on_field(0, "REPTILE-TARGET", Some(0));
+    let dp_before = runner
+        .effective_dp(target)
+        .expect("target has effective DP");
+    let security_before = runner.game.players[1].security.len();
+
+    enqueue_digivolve_event_for(&mut runner, target);
+
+    assert!(
+        runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "Owen should pay the suspend cost before offering the attack"
+    );
+    assert_eq!(
+        runner
+            .effective_dp(target)
+            .expect("target has effective DP"),
+        dp_before + 3000,
+        "DP modifier must apply before the may-attack prompt resolves"
+    );
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Clause 2 should install a may_attack_now prompt");
+    assert!(pending.is_optional, "printed 'may attack' must be optional");
+    assert!(
+        build_action_mask(&runner.game, 0)[PASS as usize] > 0.0,
+        "optional may_attack_now must expose PASS through the action mask"
+    );
+
+    let attack_player = encode_attack(target.index as u16, SECURITY_TARGET);
+    assert!(
+        pending.valid_action_ids.contains(&attack_player),
+        "newly digivolved Reptile/Dragonkin should be able to attack the opponent player"
+    );
+
+    runner
+        .game
+        .resolve_selection(0, attack_player)
+        .expect("resolve Owen-granted attack");
+
+    assert_eq!(
+        runner.game.players[1].security.len(),
+        security_before - 1,
+        "the effect-created attack should resolve the normal security flow"
+    );
+    assert!(
+        runner.game.players[0].battle_area[target.index as usize].is_suspended,
+        "BT24-082 does not say without suspending, so the attacker must pay the suspend cost"
+    );
 }
 
 /// Clause 2 IGNORED: OPT lockout test.

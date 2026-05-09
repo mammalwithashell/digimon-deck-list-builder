@@ -1,0 +1,30 @@
+card: BT20-081
+name: "Fenriloogamon: Takemikazuchi"
+kind: digimon
+level: 7
+color: [purple, yellow]
+cost: 9
+dp: 16000
+traits: [Dark Animal, X Antibody, SoC, SEEKERS]
+attribute: Virus
+ace_overflow: -5
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: purple }
+    cost: 6
+  - kind: blast_dna_digivolve
+    materials:
+      - { kind: digimon, name_is: "Fenriloogamon" }
+      - { kind: digimon, name_is: "Kazuchimon" }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
+# Stubbed:
+# - [On Play]/[When Digivolving] two -10000 DP targets and Tamer-source
+#   conditional delete.
+# - [When Attacking] trash top security to activate 1 When Digivolving effect.

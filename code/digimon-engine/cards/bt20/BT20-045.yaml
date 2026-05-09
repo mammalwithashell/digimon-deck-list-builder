@@ -15,11 +15,14 @@ alt_paths:
     cost: 5
   - kind: blast_dna_digivolve
     materials:
-      - { name_is: "Breakdramon" }
-      - { name_is: "Slayerdramon" }
+      - { kind: digimon, name_is: "Breakdramon" }
+      - { kind: digimon, name_is: "Slayerdramon" }
     cost: 0
+    stacks_unsuspended: true
 
 effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
   - kind: grant_keyword
     keyword: Raid
   - kind: grant_keyword

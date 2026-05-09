@@ -317,31 +317,23 @@ fn required_selection_step_has_candidate(
             )
         }
         CompiledStep::SelectOwnPermanent {
-            filter,
-            selector,
-            ..
+            filter, selector, ..
         } => has_matching_permanent(ctx, Some(ctx.player), filter, *selector, bindings),
         CompiledStep::SelectOpponentPermanent {
-            filter,
-            selector,
-            ..
+            filter, selector, ..
         } => {
             let opponent = ctx.game.next_clockwise(ctx.player);
             has_matching_permanent(ctx, Some(opponent), filter, *selector, bindings)
         }
         CompiledStep::SelectAnyPermanent {
-            filter,
-            selector,
-            ..
+            filter, selector, ..
         } => has_matching_permanent(ctx, None, filter, *selector, bindings),
         CompiledStep::SelectHand { of, filter, .. } => {
             has_matching_card_in_zone(ctx, *of, CompiledZone::Hand, filter, bindings)
         }
-        CompiledStep::SelectTrash {
-            of,
-            filter,
-            ..
-        } => has_matching_card_in_zone(ctx, *of, CompiledZone::Trash, filter, bindings),
+        CompiledStep::SelectTrash { of, filter, .. } => {
+            has_matching_card_in_zone(ctx, *of, CompiledZone::Trash, filter, bindings)
+        }
         CompiledStep::SelectSecurity { of, .. } => !ctx
             .game
             .player(resolve_player_ref(ctx, *of))
@@ -387,25 +379,19 @@ fn required_selection_step_has_candidate(
         CompiledStep::SelectOwnBreedingPermanent { .. } => {
             ctx.game.player(ctx.player).breeding_area.is_some()
         }
-        CompiledStep::SelectUnionZone {
-            of,
-            zones,
-            ..
-        } => {
-            zones.iter().any(|zone| match zone {
-                CompiledZone::Hand => !ctx
-                    .game
-                    .player(resolve_player_ref(ctx, *of))
-                    .hand
-                    .is_empty(),
-                CompiledZone::Trash => !ctx
-                    .game
-                    .player(resolve_player_ref(ctx, *of))
-                    .trash
-                    .is_empty(),
-                _ => false,
-            })
-        }
+        CompiledStep::SelectUnionZone { of, zones, .. } => zones.iter().any(|zone| match zone {
+            CompiledZone::Hand => !ctx
+                .game
+                .player(resolve_player_ref(ctx, *of))
+                .hand
+                .is_empty(),
+            CompiledZone::Trash => !ctx
+                .game
+                .player(resolve_player_ref(ctx, *of))
+                .trash
+                .is_empty(),
+            _ => false,
+        }),
         CompiledStep::SelectOrderedPermutation { items, .. } => {
             resolve_card_list_binding(items, bindings).is_some_and(|items| !items.is_empty())
         }

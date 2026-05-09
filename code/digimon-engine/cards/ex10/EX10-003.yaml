@@ -1,0 +1,27 @@
+card: EX10-003
+name: Tumblemon
+kind: digi_egg
+level: 2
+color: [black]
+traits: [Rock, LIBERATOR]
+
+effects:
+  - scope: inherited
+    when: on_opponent_attack
+    once_per_turn: true
+    active_when: { opponents_turn: true }
+    summary: "Opponent's Turn OPT: trash 3 Mineral/Rock sources from this Digimon to end the attack"
+    process:
+      - select_own_sources:
+          from: source
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          min: 3
+          max: 3
+          bind_as: cancel_sources
+          prompt: "Trash 3 Mineral/Rock sources from this Digimon to end the attack"
+          then:
+            - trash_selected_sources: { source_refs: cancel_sources }
+            - cancel_attack: {}

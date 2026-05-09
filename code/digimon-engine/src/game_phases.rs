@@ -257,6 +257,18 @@ impl Game {
                 EffectTiming::EndOfOpponentsTurn,
                 crate::selection::TriggerSource::PlayerBattleArea(opp),
             );
+            let security_cards: Vec<_> = self
+                .player(opp)
+                .security
+                .iter()
+                .map(|card| card.handle())
+                .collect();
+            for card in security_cards {
+                self.enqueue_triggered(
+                    EffectTiming::EndOfOpponentsTurn,
+                    crate::selection::TriggerSource::SecurityStackCard { player: opp, card },
+                );
+            }
         }
         self.drain_effect_queue();
 

@@ -39,6 +39,10 @@ pub fn lower(
         }
     }
 
+    if kw == Keyword::BlastDigivolve {
+        builder = builder.blast_digivolve();
+    }
+
     if matches!(scope, CompiledScope::Inherited) {
         builder = builder.inherited();
     }

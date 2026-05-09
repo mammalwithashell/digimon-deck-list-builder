@@ -12,6 +12,8 @@ use crate::dsl_cards::formula_eval;
 use crate::effect_context::EffectReadContext;
 use crate::enums::{CardColor, CardKind, PlayerId};
 use crate::permanent::PermanentHandle;
+use crate::selection::AttackTarget;
+use crate::trigger_context::AttackTargetChangeReason;
 
 /// The subject a predicate is applied to.
 #[derive(Debug, Clone, Copy)]
@@ -96,7 +98,12 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
-    if !eval_event_fields(pred, rctx) {
+    if let Some(want) = pred.dna_origin {
+        if rctx.dna_origin() != want {
+            return false;
+        }
+    }
+    if !eval_event_fields(pred, rctx, subject) {
         return false;
     }
     if !eval_replacement_fields(pred, rctx) {
@@ -175,6 +182,17 @@ pub fn eval_predicate_with_bindings(
     }
     if let Some(binding_name) = &pred.not_in_binding {
         if !subject_not_in_binding(subject, binding_name, bindings) {
+            return false;
+        }
+    }
+    if let Some(binding_owner) = &pred.binding_owner {
+        let Some(owner) = bindings
+            .and_then(|b| b.get_permanent(&binding_owner.binding))
+            .map(|handle| handle.player)
+        else {
+            return false;
+        };
+        if !player_ref_matches(binding_owner.of, owner, rctx) {
             return false;
         }
     }
@@ -584,7 +602,82 @@ fn subject_not_in_binding(
     }
 }
 
-fn eval_event_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_>) -> bool {
+fn eval_event_fields(
+    pred: &CompiledPredicate,
+    rctx: &EffectReadContext<'_>,
+    subject: PredicateSubject,
+) -> bool {
+    if let Some(ref want) = pred.attack_target_change_reason {
+        let Some(change) = rctx.attack_target_change() else {
+            return false;
+        };
+        if !attack_target_change_reason_matches(want, change.reason) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_target_is_player {
+        let is_player = if let Some(change) = rctx.attack_target_change() {
+            matches!(change.new_target, AttackTarget::Player(_))
+        } else if let Some(target) = rctx.attack_target() {
+            matches!(target, AttackTarget::Player(_))
+        } else {
+            return false;
+        };
+        if is_player != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_target_was_self {
+        let Some(change) = rctx.attack_target_change() else {
+            return false;
+        };
+        let source = match subject {
+            PredicateSubject::Permanent(handle) => Some(handle),
+            PredicateSubject::BreedingPermanent(player) => Some(PermanentHandle {
+                player,
+                index: crate::action::space::BREEDING_TARGET as u8,
+            }),
+            PredicateSubject::Card(_)
+            | PredicateSubject::RevealedCard(_)
+            | PredicateSubject::None => rctx
+                .game
+                .current_trigger_context
+                .as_ref()
+                .and_then(|trigger| trigger.target_permanent)
+                .or(rctx.source_permanent),
+        };
+        let was_self = matches!(
+            (change.old_target, source),
+            (AttackTarget::Digimon(old_target), Some(source)) if old_target == source
+        );
+        if was_self != want {
+            return false;
+        }
+    }
+    if let Some(ref trait_name) = pred.attacker_trait_has {
+        let Some(change) = rctx.attack_target_change() else {
+            return false;
+        };
+        let Some(card) = rctx
+            .game
+            .player(change.attacker.player)
+            .battle_area
+            .get(change.attacker.index as usize)
+            .map(|perm| perm.top_card().handle())
+        else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if !data
+            .traits
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case(trait_name))
+        {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_target_kind {
         if let Some(snapshot) = rctx
             .game
@@ -786,6 +879,25 @@ fn event_cause_matches(
     )
 }
 
+fn attack_target_change_reason_matches(want: &str, actual: AttackTargetChangeReason) -> bool {
+    let normalized = want
+        .chars()
+        .filter(|c| *c != '_' && *c != '-' && !c.is_whitespace())
+        .flat_map(|c| c.to_lowercase())
+        .collect::<String>();
+    match actual {
+        AttackTargetChangeReason::Raid => normalized == "raid",
+        AttackTargetChangeReason::Collision => normalized == "collision",
+        AttackTargetChangeReason::Blocker => normalized == "blocker" || normalized == "block",
+        AttackTargetChangeReason::EffectRedirect(_) => {
+            normalized == "effectredirect" || normalized == "redirect"
+        }
+        AttackTargetChangeReason::EffectForced => {
+            normalized == "effectforced" || normalized == "forced"
+        }
+    }
+}
+
 fn subject_or_source_permanent<'a>(
     subject: PredicateSubject,
     rctx: &'a EffectReadContext<'_>,
@@ -818,6 +930,12 @@ fn event_target_owner(rctx: &EffectReadContext<'_>) -> Option<PlayerId> {
     let trigger = rctx.game.current_trigger_context.as_ref()?;
     if let Some(snapshot) = trigger.deleted_object.as_ref() {
         return Some(snapshot.former_controller);
+    }
+    if let Some(change) = trigger.attack_target_change.as_ref() {
+        return match change.new_target {
+            AttackTarget::Digimon(handle) => Some(handle.player),
+            AttackTarget::Player(player) => Some(player),
+        };
     }
     if let Some(handle) = trigger.event_permanent {
         return Some(handle.player);
@@ -856,6 +974,17 @@ fn event_target_card(rctx: &EffectReadContext<'_>) -> Option<CardHandle> {
     let trigger = rctx.game.current_trigger_context.as_ref()?;
     if let Some(snapshot) = trigger.deleted_object.as_ref() {
         return Some(snapshot.top_card);
+    }
+    if let Some(change) = trigger.attack_target_change.as_ref() {
+        if let AttackTarget::Digimon(handle) = change.new_target {
+            return rctx
+                .game
+                .player(handle.player)
+                .battle_area
+                .get(handle.index as usize)
+                .map(|perm| perm.top_card().handle());
+        }
+        return None;
     }
     if let Some(handle) = trigger.event_permanent {
         if let Some(card) = live_event_permanent_card(rctx, handle, trigger.event_card) {

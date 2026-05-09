@@ -22,8 +22,8 @@
 //! Grants Piercing keyword + 4000 DP buff (end_of_turn expiry) to a selected
 //! own Digimon. Mandatory selection (canNoSelect: false in DCGO).
 //!
-//! Sub-clause "Then, this Digimon may attack." is BLOCKED by G-MAY-ATTACK-NOW.
-//! See qa/dsl-vocab-gaps.md. Omitted from YAML and tests until gap closes.
+//! Sub-clause "Then, this Digimon may attack." is implemented through
+//! `may_attack_now` on the source permanent.
 //!
 //! ## Clause 2 — [All Turns] deletion observer — raw_rust declarative
 //! The "when any of YOUR Paildramon or Dinobeemon would be deleted" clause is
@@ -57,7 +57,7 @@
 //! - D1 / Temporary +4000 DP buff (end_of_turn expiry)
 //! - G2-adjacent / DNA digivolve observer pattern (raw_rust declarative, PARTIAL)
 //! - H11 / Security A.+1 inherited keyword (G-DECLARATIVE-KEYWORD gap noted)
-//! - G-MAY-ATTACK-NOW blocked sub-clause (may-attack-now)
+//! - Effect-created `may_attack_now` sub-clause
 //! - G-EVENT-TARGET-OWNER blocked sub-clause (cross-permanent deletion observer)
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
@@ -68,6 +68,8 @@ mod dsl_card_data;
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, Keyword};
 use digimon_engine::permanent::PermanentHandle;
@@ -536,16 +538,86 @@ fn bt20_016_clause1_selection_is_mandatory() {
     );
 }
 
-// ─── Section 4: BLOCKED — may-attack-now sub-clause ─────────────────────────
+// ─── Section 4: may-attack-now sub-clause ───────────────────────────────────
 
 #[test]
-#[ignore = "pending: G-MAY-ATTACK-NOW — no DSL verb for optional mid-effect attack on a specific Digimon (qa/dsl-vocab-gaps.md)"]
-fn bt20_016_after_on_play_this_digimon_may_attack() {
-    // BLOCKED: card text says "Then, this Digimon may attack."
-    // No DSL verb (may_attack_now) or engine primitive exists for optional
-    // mid-effect attack on a specific Digimon. Omitted from YAML.
-    // See qa/dsl-vocab-gaps.md — G-MAY-ATTACK-NOW.
-    unimplemented!()
+fn bt20_016_after_when_digivolving_this_digimon_may_attack() {
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::TriggerSource;
+
+    let mut security_card = make_test_card("SEC", "Security");
+    security_card.dp = Some(2000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT20-016 YAML loads")
+        .add_card(ally_digimon())
+        .add_card(security_card)
+        .security(1, &["SEC"])
+        .memory(10)
+        .build();
+    runner.game.turn_count = 1;
+
+    let ally_h = runner.place_on_field(0, "ALLY-DIG", Some(0));
+    let pail_h = runner.place_on_field(0, "BT20-016", Some(0));
+    let security_before = runner.game.players[1].security.len();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(pail_h),
+    );
+    runner.game.drain_effect_queue();
+
+    let choose_ally = encode_attack(0, ally_h.index as u16);
+    let select = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("mandatory buff target selection should install");
+    assert!(
+        select.valid_action_ids.contains(&choose_ally),
+        "ally should be a legal Piercing/+4000 target"
+    );
+    runner
+        .game
+        .resolve_selection(0, choose_ally)
+        .expect("choose buff target");
+
+    assert!(
+        runner.game.modifiers.has_keyword(ally_h, Keyword::Piercing),
+        "selected ally should receive Piercing before the attack prompt"
+    );
+
+    let attack_player = encode_attack(pail_h.index as u16, SECURITY_TARGET);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("may_attack_now should install an attack prompt for BT20-016");
+    assert!(pending.is_optional, "printed 'may attack' must be optional");
+    assert!(
+        build_action_mask(&runner.game, 0)[PASS as usize] > 0.0,
+        "optional may_attack_now must expose PASS through the action mask"
+    );
+    assert!(
+        pending.valid_action_ids.contains(&attack_player),
+        "BT20-016 should be able to attack the opponent player"
+    );
+
+    runner
+        .game
+        .resolve_selection(0, attack_player)
+        .expect("resolve BT20-016 effect-created attack");
+
+    assert_eq!(
+        runner.game.players[1].security.len(),
+        security_before - 1,
+        "effect-created attack should resolve through the normal security flow"
+    );
+    assert!(
+        runner.game.players[0].battle_area[pail_h.index as usize].is_suspended,
+        "BT20-016 does not say without suspending, so the attack must suspend it"
+    );
 }
 
 // ─── Section 5: All Turns clause — structural (raw_rust) ─────────────────────

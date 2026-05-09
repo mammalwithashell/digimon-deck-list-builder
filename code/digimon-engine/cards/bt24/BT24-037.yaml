@@ -1,0 +1,81 @@
+card: BT24-037
+name: Silphymon
+kind: digimon
+level: 5
+color: [yellow, red]
+cost: 8
+dp: 8000
+traits: [Beastkin, Iliad, TS]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color: yellow }
+    cost: 4
+
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: TS }
+    cost: 3
+
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 4, color: yellow }
+      - level_eq: 4
+        any_of:
+          - color: red
+          - color: green
+    cost: 0
+
+effects:
+  # [On Play] [When Digivolving] 1 opponent Digimon gets -5000 DP for the turn.
+  # Then, 1 of your Digimon may attack. DCGO uses a SelectAttackEffect-style
+  # continuation; Rust exposes a PASS-able attacker selection and resumes the
+  # centralized attack flow after the attack closes.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] -5000 DP, then 1 own Digimon may attack"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: debuffed
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -5000 DP for the turn"
+      - add_dp_modifier:
+          target: debuffed
+          value: -5000
+          expiry: end_of_turn
+      - optional:
+          - select_own_permanent:
+              bind_as: attacker
+              filter: { kind: digimon }
+              prompt: "Select 1 of your Digimon that may attack"
+              optional: true
+          - may_attack_now:
+              attacker: attacker
+              targets: any
+              optional: true
+
+  # If DNA digivolving, 1 of your Digimon gains Security A. +1 and +5000 DP
+  # for the turn. This separate clause is gated by the DNA-origin event context.
+  - when: when_digivolving
+    summary: "If DNA digivolving, 1 own Digimon gains Security A. +1 and +5000 DP"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - dna_origin: true
+    process:
+      - select_own_permanent:
+          bind_as: boosted
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon gains Security A. +1 and +5000 DP for the turn"
+      - grant_keyword:
+          target: boosted
+          keyword: SecurityAttackPlus
+          value: 1
+          expiry: end_of_turn
+      - add_dp_modifier:
+          target: boosted
+          value: 5000
+          expiry: end_of_turn

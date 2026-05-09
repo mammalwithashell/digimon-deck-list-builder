@@ -1,10 +1,11 @@
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
 use digimon_engine::card_data::CardData;
-use digimon_engine::combat::{AttackInitiator, AttackOpen, TargetConstraint};
+use digimon_engine::combat::{AttackCostUpgrade, AttackInitiator, AttackOpen, TargetConstraint};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::{AttackTargetRestriction, EffectContext};
-use digimon_engine::enums::{CardColor, CardKind, GamePhase};
+use digimon_engine::enums::{CardColor, CardKind, Expiry, GamePhase, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::selection::{AttackTarget, SelectionKind};
 
 fn make_digimon(id: &str, dp: i32) -> CardData {
@@ -195,6 +196,7 @@ fn attack_open_entry_supports_effect_attacks_without_suspending() {
         suspend_attacker: false,
         target_constraint: TargetConstraint::Forced(AttackTarget::Player(p1)),
         allow_cancel: false,
+        cost_upgrade: None,
     });
 
     assert_ne!(result, digimon_engine::combat::AttackResult::Invalid);
@@ -202,6 +204,88 @@ fn attack_open_entry_supports_effect_attacks_without_suspending() {
     assert!(
         !r.game.player(p0).battle_area[attacker.index as usize].is_suspended,
         "central effect attack entry must honor suspend_attacker=false"
+    );
+}
+
+#[test]
+fn attack_open_cost_upgrade_applies_for_attack_only() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", 7000))
+        .add_card(make_digimon("SEC", 2000))
+        .security(1, &["SEC"])
+        .start();
+    let p0 = r.game.turn_player();
+    let p1 = 1 - p0;
+    let attacker = r.place_on_field(p0, "ATK", Some(0));
+    let source_card = r.top_card(attacker);
+
+    let result = r.game.begin_attack_open(AttackOpen {
+        attacker,
+        initiator: AttackInitiator::Effect {
+            source: Some(source_card),
+            optional: false,
+        },
+        suspend_attacker: false,
+        target_constraint: TargetConstraint::Forced(AttackTarget::Player(p1)),
+        allow_cancel: false,
+        cost_upgrade: Some(AttackCostUpgrade {
+            dp: 3000,
+            security_attack: 1,
+        }),
+    });
+
+    assert_ne!(result, digimon_engine::combat::AttackResult::Invalid);
+    assert_eq!(
+        r.game.modifiers.sum(attacker, ModifierType::ChangeDp),
+        0,
+        "cost-upgrade DP must expire at EndOfAttack"
+    );
+    assert_eq!(
+        r.game
+            .modifiers
+            .sum(attacker, ModifierType::SecurityAttackChange),
+        0,
+        "cost-upgrade security attack must expire at EndOfAttack"
+    );
+}
+
+#[test]
+fn cannot_attack_player_blocks_mask_and_shared_attack_entry() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", 7000))
+        .add_card(make_digimon("SEC", 2000))
+        .security(1, &["SEC"])
+        .start();
+    let p0 = r.game.turn_player();
+    let p1 = 1 - p0;
+    let attacker = r.place_on_field(p0, "ATK", Some(0));
+    let action = encode_attack(attacker.index as u16, SECURITY_TARGET);
+
+    assert_eq!(
+        build_action_mask(&r.game, p0)[action as usize],
+        1.0,
+        "baseline direct-player attack should be legal"
+    );
+
+    r.game.modifiers.add(
+        attacker,
+        ModifierEntry::simple(ModifierType::CannotAttackPlayer, 1, Expiry::EndOfTurn, p0),
+    );
+
+    assert_eq!(
+        build_action_mask(&r.game, p0)[action as usize],
+        0.0,
+        "CannotAttackPlayer must hide direct-player attacks from the mask"
+    );
+    assert_eq!(
+        r.game.attack_player(attacker, p1, false),
+        digimon_engine::combat::AttackResult::Invalid,
+        "the shared combat entry must also reject direct-player attacks"
+    );
+    assert!(r.game.pending_attack.is_none());
+    assert!(
+        !r.game.player(p0).battle_area[attacker.index as usize].is_suspended,
+        "rejected attacks must not pay the suspend cost"
     );
 }
 
@@ -231,7 +315,11 @@ fn force_opponent_attack_prompts_attacker_controller() {
         .expect("install forced opponent attack prompt");
     }
 
-    let pending = r.game.pending_selection.as_ref().expect("forced attack prompt");
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("forced attack prompt");
     assert_eq!(pending.selecting_player, p1);
     assert!(
         !pending.is_optional,

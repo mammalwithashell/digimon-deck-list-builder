@@ -29,5 +29,22 @@ effects:
           prompt: "Play 1 level 4 or lower Digimon from trash"
       - play_from_trash_free: { of: you, hand_index: trash_pick }
 
-  # BLOCKED: G-ATTACK-RETARGET — opponent-turn attack target switch to an own
-  # Royal Knight needs a pending-selection retarget primitive.
+  - when: on_opponent_attack
+    optional: true
+    once_per_turn: true
+    summary: "[Opponent's Turn][OPT] Switch attack target to 1 of your Royal Knight Digimon"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        trait_has: "Royal Knight"
+    process:
+      - select_own_permanent:
+          bind_as: redirect_target
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Royal Knight"
+          prompt: "Switch the attack target to 1 of your Royal Knight Digimon"
+      - redirect_attack_target: { new_target: redirect_target }

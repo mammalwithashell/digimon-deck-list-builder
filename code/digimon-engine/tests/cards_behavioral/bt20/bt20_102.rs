@@ -30,7 +30,7 @@
 //! | (b) Piercing declarative grant | G-DECLARATIVE-KEYWORD | compiled/structural only |
 //! | (c) Blocker declarative grant | G-DECLARATIVE-KEYWORD | compiled/structural only |
 //! | (d) [On Play][WD] boardwipe + return to deck | G-SELF-DIGIVOLUTION-CONTAINS-NAME + G-FOR-EACH-EXCLUDE-BINDING → raw_rust | PARTIAL |
-//! | (e) [EOT][OPT] Rush grant + attack without suspending | G-MAY-ATTACK-NOW: no force-attack DSL verb | Rush grant PASS, attack step #[ignore] |
+//! | (e) [EOT][OPT] Rush grant + attack without suspending | force_attack DSL + AttackOpen without_suspending | PASS |
 //! | (e-OPT) once-per-turn lockout | G-OPT-TRIGGERED: triggered OPT not enforced | #[ignore] |
 
 #![allow(dead_code, unused_imports)]
@@ -38,6 +38,7 @@
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
+use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::Keyword;
 use digimon_engine::permanent::PermanentHandle;
@@ -468,6 +469,7 @@ fn runner_with_omnimon_on_field() -> DebugRunner {
             1,
             &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
         )
+        .security(1, &["DECK-PAD", "DECK-PAD"])
         .start();
 
     runner.place_on_field(0, "BT20-102", None);
@@ -549,13 +551,27 @@ fn bt20_102_end_of_turn_rush_expires_end_of_turn() {
     // P0 ends their turn; EOT clause fires.
     runner.game.end_turn();
 
-    // Resolve selection: pick first valid action.
+    // Resolve selection: choose the ally, then attack security. The helper
+    // seeds opponent security so the game stays alive long enough to observe expiry.
+    let choose_ally = encode_attack(0, 1);
     if let Some(ref pending) = runner.game.pending_selection {
-        let action = pending.valid_action_ids[0];
+        assert!(pending.valid_action_ids.contains(&choose_ally));
         runner
             .game
-            .resolve_selection(0, action)
+            .resolve_selection(0, choose_ally)
             .expect("resolve EOT selection");
+    }
+
+    // The accepted BT20-102 trigger now immediately opens the mandatory
+    // attack-without-suspending target prompt. Finish that attack before
+    // advancing the turn for expiry checks.
+    let attack_player = encode_attack(1, SECURITY_TARGET);
+    if let Some(ref pending) = runner.game.pending_selection {
+        assert!(pending.valid_action_ids.contains(&attack_player));
+        runner
+            .game
+            .resolve_selection(0, attack_player)
+            .expect("resolve BT20-102 attack target");
     }
 
     // Rush is active for some own Digimon.
@@ -614,40 +630,64 @@ fn bt20_102_end_of_turn_no_selection_when_no_own_digimon() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 4 — "Attack without suspending" — BLOCKED (G-MAY-ATTACK-NOW)
+// Section 4 — "Attack without suspending"
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// BLOCKED: "attack without suspending" requires forcing an in-effect mandatory attack
-/// on a specific Digimon without the standard suspend cost. G-MAY-ATTACK-NOW tracks this.
-///
-/// The engine has ModifierType::MayAttack and ::ForceAttack but neither is registered
-/// in the DSL's lookup_modifier_type, and ForceAttack is not checked in the EOT attack
-/// window. A proper implementation requires:
-///   a. A new DSL verb `force_attack_now: { target: tgt, without_suspending: true }`, OR
-///   b. `MayAttack` registered in lookup_modifier_type + a new EOT-attack dispatch path.
+/// POSITIVE: After the optional EOT trigger is accepted and a Digimon is chosen,
+/// that Digimon must enter the normal attack target prompt without suspending.
 #[test]
-#[ignore = "pending: G-MAY-ATTACK-NOW — no DSL verb or engine primitive for in-effect mandatory attack without suspending on a specific Digimon"]
 fn bt20_102_end_of_turn_selected_digimon_attacks_without_suspending() {
     let mut runner = runner_with_omnimon_on_field();
+    let attacker = PermanentHandle {
+        player: 0,
+        index: 1,
+    };
+    let choose_ally = encode_attack(0, attacker.index as u16);
 
     runner.game.end_turn();
 
-    if let Some(ref pending) = runner.game.pending_selection {
-        let action = pending.valid_action_ids[0];
-        runner
-            .game
-            .resolve_selection(0, action)
-            .expect("resolve selection");
-    }
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("EOT choice should be pending");
+    assert!(
+        pending.valid_action_ids.contains(&choose_ally),
+        "ally Digimon should be a legal BT20-102 target"
+    );
+    runner
+        .game
+        .resolve_selection(0, choose_ally)
+        .expect("resolve BT20-102 selected Digimon");
 
-    // After resolving the Rush grant, the selected Digimon should immediately attack
-    // without the standard suspend step. This requires an EndOfTurnAction park state
-    // or a ForceAttack modifier that surfaces in the EOT action mask.
-    use digimon_engine::enums::GamePhase;
+    let attack_player = encode_attack(attacker.index as u16, SECURITY_TARGET);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("force_attack should install an attack-target prompt");
     assert_eq!(
-        runner.current_phase(),
-        GamePhase::EndOfTurnAction,
-        "game should park in EndOfTurnAction for the selected Digimon's mandatory attack"
+        pending.selecting_player, 0,
+        "chosen Digimon's controller should choose the attack target"
+    );
+    assert!(
+        !pending.is_optional,
+        "attack after accepting BT20-102's optional EOT trigger is mandatory"
+    );
+    assert!(
+        pending.valid_action_ids.contains(&attack_player),
+        "chosen Digimon should be able to attack the opponent player"
+    );
+
+    runner
+        .game
+        .resolve_selection(0, attack_player)
+        .expect("BT20-102 forced attack target resolves");
+
+    assert!(
+        !runner.game.players[attacker.player as usize].battle_area[attacker.index as usize]
+            .is_suspended,
+        "BT20-102's selected Digimon must remain unsuspended after attacking without suspending"
     );
 }
 

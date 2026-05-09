@@ -70,6 +70,7 @@ pub enum RunOutcome {
 #[derive(Clone, Debug)]
 pub struct StepRuntime {
     raw: Arc<EngineRawRustRegistry>,
+    dna_origin: Option<bool>,
 }
 
 impl Default for StepRuntime {
@@ -80,11 +81,19 @@ impl Default for StepRuntime {
 
 impl StepRuntime {
     pub fn new(raw: Arc<EngineRawRustRegistry>) -> Self {
-        Self { raw }
+        Self {
+            raw,
+            dna_origin: None,
+        }
     }
 
     pub fn raw(&self) -> &EngineRawRustRegistry {
         &self.raw
+    }
+
+    pub fn with_dna_origin(mut self, dna_origin: Option<bool>) -> Self {
+        self.dna_origin = dna_origin;
+        self
     }
 }
 
@@ -267,6 +276,22 @@ pub fn run_steps(
 }
 
 pub fn run_steps_with_runtime(
+    steps: &[CompiledStep],
+    ctx: &mut EffectContext<'_>,
+    bindings: &mut Bindings,
+    runtime: &StepRuntime,
+) -> RunOutcome {
+    if let Some(dna_origin) = runtime.dna_origin {
+        let prev = ctx.game.current_dna_origin;
+        ctx.game.current_dna_origin = Some(dna_origin);
+        let outcome = run_steps_with_runtime_inner(steps, ctx, bindings, runtime);
+        ctx.game.current_dna_origin = prev;
+        return outcome;
+    }
+    run_steps_with_runtime_inner(steps, ctx, bindings, runtime)
+}
+
+fn run_steps_with_runtime_inner(
     steps: &[CompiledStep],
     ctx: &mut EffectContext<'_>,
     bindings: &mut Bindings,

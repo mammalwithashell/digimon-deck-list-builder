@@ -47,8 +47,8 @@ Sister document to [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md) — that track
 | Save | Place self under own Tamer as bottom source, cancel deletion | ✅ | Auto-installed in Phase D 2026-04-25; optional `WhenWouldBeDeleted` replacement, Tamer pick + `ctx.place_card_under_permanent_bottom` + `ctx.cancel_leave`. See `keyword_effects.rs` and `tests/keyword_phase_d/save.rs`. |
 | Fortitude | Play self from trash free + unsuspended when self-stack deleted, if sources available | ✅ | Auto-installed in Phase D 2026-04-25; `OnDeletion` trigger with source-count gate, `ctx.play_from_trash_free_unsuspended`. See `keyword_effects.rs` and `tests/keyword_phase_d/fortitude.rs`. |
 | Decoy | Redirect deletion of any same-controller ally to self | ✅ | Auto-installed in Phase D 2026-04-25; `WhenWouldBeDeleted` subscription on ally deletions, `ctx.substitute_replacement`. See `keyword_effects.rs` and `tests/keyword_phase_d/decoy.rs`. |
-| Blast Digivolve | Counter-window digivolution from hand when an opponent attacks | 🔴 | Parsed as `Keyword::BlastDigivolve`; Rust counter substrate and `EffectBuilder::blast_digivolve()` exist, but printed `CardData::keywords` alone does not make the hand card a counter candidate. Needs keyword-derived auto-install or data-driven script generation. |
-| Blast DNA Digivolve | Counter-window DNA digivolution using one field Digimon plus one hand Digimon named by `BlastDNACondition` | ❌ | DCGO factory-only wrapper. Rust has partial regular DNA-selection scaffolding, but no `Keyword::BlastDNADigivolve`, parser arm, `BlastDNACondition` data import, or counter-window hand+field DNA executor. |
+| Blast Digivolve | Counter-window digivolution from hand when an opponent attacks | ✅ | `Keyword::BlastDigivolve` auto-installs a declarative `.blast_digivolve()` marker; the Counter window offers legal hand cards through pending selection. |
+| Blast DNA Digivolve | Counter-window DNA digivolution using one field Digimon plus one hand Digimon named by `BlastDNACondition` | ✅ | Represented as `Keyword::BlastDigivolve` plus a `blast_dna_digivolve` alt path. The Counter window offers result card, field material, and hand material selections; covered for known printed field+hand Blast DNA shapes. |
 | Arts Digivolve | Option-resolution digivolve from executing area onto own battle/breeding Digimon | ❌ | DCGO factory-only wrapper. Rust has no `Keyword::ArtsDigivolve` parser/enum path and no generic option-resolution helper that digivolves the executing Option card onto a selected permanent. |
 | MaterialSave(count) | Move up-to-N own stack sources under another permanent — `[Main]` active skill | ✅ | Auto-installed in Phase D 2026-04-25; `MainOnField` effect with gate (≥1 source + ≥1 own Tamer), own-Tamer pick then source-pick via `CountCappedZone::Material`, tuck via `ctx.place_card_under_permanent_bottom`. See `keyword_effects.rs` and `tests/keyword_phase_d/material_save.rs`. |
 | MindLink | Attach Tamer card to a Digimon with empty Tamer slot | ✅ | Auto-installed in Phase F 2026-04-25; `MainOnField` Tamer skill picks an own non-Tamer non-token Digimon with no non-face-down Tamer source and tucks self underneath via `attach_tamer_to_digimon`. New `face_down: bool` field on `CardSource` honors DCGO's `IsFlipped` filter. See `keyword_effects.rs::Keyword::MindLink` arm and `tests/keyword_phase_f/mind_link.rs`. RULES_CONTEXT 16-27. |
@@ -103,22 +103,36 @@ The gate's predicate is exactly DCGO's: target is the current Progress
 attacker AND source is the opposite player. No hostility classification,
 no sign check.
 
-### Blast Digivolve — parser exists, native keyword is not consumed
+### Blast Digivolve / Blast DNA Digivolve — Track D resolved for Counter flow
 
-Re-audited 2026-04-26 against DCGO `BlastDigivolution.cs` and Rust `combat.rs`.
+Re-audited 2026-05-08 against DCGO `BlastDigivolution.cs`,
+`SelectBurstDigivolutionEffect.cs`, and Rust `combat.rs`.
 
 DCGO installs `BlastDigivolveEffect` from the factory wrapper. It triggers on an opponent permanent attack, checks that the card is in hand, selects one own battle-area Digimon that the hand card can digivolve onto, ignores memory payment, and then plays the card onto that permanent with ETB/WhenDigivolving effects enabled.
 
-Rust has the counter-window substrate: `try_enter_counter()` scans defender hand cards for effects with `blast_digivolve == true`, emits a `(hand_index, field_index)` candidate for each valid `can_digivolve` target, and `execute_blast_digivolve()` moves the card from hand onto the chosen permanent and fires `WhenDigivolving`. The missing bridge is native printed-keyword consumption: `parse_printed_keywords()` produces `Keyword::BlastDigivolve`, but `keyword_to_auto_effect()` does not synthesize an `Effect::declarative(card).blast_digivolve()` arm. Therefore hand-authored scripts work, but a card whose only representation is printed `<Blast Digivolve>` in `CardData::keywords` will not be offered in the Counter window.
+Rust now consumes the native printed keyword through
+`keyword_to_auto_effect(Keyword::BlastDigivolve)`, which synthesizes the same
+declarative `.blast_digivolve()` marker that hand-authored scripts used. The
+Counter window scans those markers, validates the actual digivolution route, and
+parks each player-visible choice in `pending_selection`.
 
-The next fix is small if normal Blast cards can be represented by existing evo costs: add a `Keyword::BlastDigivolve` auto-effect that returns a declarative effect with `.blast_digivolve()`, then cover it with a parsing-to-counter-window regression test.
+Blast DNA has no distinct Rust keyword enum variant; it is represented by the
+printed `BlastDigivolve` marker plus a DSL `alt_paths: kind:
+blast_dna_digivolve` route carrying the printed material predicates. The
+executor follows the DCGO selection shape: choose the hand result card, choose
+the field material, choose the named hand material, stack both materials under
+the result, and resume the attack flow with DNA-origin context preserved.
+Coverage includes BT17-078, BT20-045, BT20-060, BT20-076, BT20-081, EX6-011,
+and EX6-029.
 
 ### Factory-only keyword wrappers — 2026-04-26 audit
 
 The previous tracker focused on `CardEffectCommons/KeyWordEffects/*.cs` and stated that Phase F closed all DCGO keyword gaps. That is accurate only for the 28 shared behavior classes. DCGO also has 31 factory wrappers. `Blast Digivolve` has parser + execution substrate but no native auto-install, and three additional factory-only keyword surfaces still lack native Rust keyword parity:
 
 - `ArtsDigivolve.cs`: option-resolution path for `<Arts Digivolve>`. It selects one own battle-area or breeding-area Digimon, then digivolves the executing Option card onto it. Rust currently has no enum/parser surface for this keyword and no generic helper equivalent to DCGO `DigivolveIntoExcecutingAreaCard`.
-- `BlastDNADigivolution.cs`: counter-window DNA path. It chooses one named field Digimon plus one named hand Digimon, materializes the hand source, then performs Jogress/DNA play for the blast card. Rust has regular DNA scaffolding comments/stubs, but not this counter-window hand+field DNA keyword.
+- `BlastDNADigivolution.cs`: resolved for the known printed field-material +
+  hand-material Counter path via `blast_dna_digivolve` alt paths. Remaining work
+  is card-specific post-DNA bodies, not the Counter selection substrate.
 - `Link.cs`: active link action from hand or battle area into `ILinkCard`. Rust does have Link option mechanics (`EffectBuilder::link`, host selection, `OptionState::Linked`, sideways `.linked()` inheritance, `OnLink`, and linked-card trash cascade), but no native `Keyword::Link` and no data import equivalent to DCGO `card.linkCondition`. Current Rust parity is script-level only.
 
 ### Save / MaterialSave name collision
@@ -169,10 +183,10 @@ Ordered by archetype relevance to the alpha scope (Royal Knights, Jesmon GX, Roc
 
 Ranked by remaining native-keyword blast radius after the 2026-04-26 re-audit:
 
-1. **Blast Digivolve native auto-install** — substrate already exists and tests cover script-driven blast; bridge `Keyword::BlastDigivolve` to `.blast_digivolve()` so printed keywords work without hand-authored script flags.
+1. ~~**Blast Digivolve native auto-install**~~ — ✅ resolved Track D 2026-05-08. `Keyword::BlastDigivolve` synthesizes `.blast_digivolve()` and the Counter window consumes it.
 2. **Link native data/parsing bridge** — Rust option-flow substrate is strong, but parity needs card data for link cost/host filters plus either `Keyword::Link` or a non-keyword card-data field that auto-installs `.link(cost, filter)`.
 3. **Arts Digivolve option-resolution helper** — requires a generic "digivolve executing Option card onto selected battle/breeding Digimon" primitive and parser/enum recognition.
-4. **Blast DNA Digivolve** — largest remaining factory-only gap; depends on real DNA/Jogress execution plus counter-window hand+field material selection.
+4. ~~**Blast DNA Digivolve**~~ — ✅ resolved Track D 2026-05-08 for known printed field-material + hand-material Counter routes; remaining work is card-specific post-DNA bodies.
 5. ~~**Progress semantics fix**~~ — ✅ resolved Phase A + B. Selection-filter exclusion + opponent-mutation-site gating both landed.
 6. ~~**Fragment(N) / ArmorPurge / Partition wire-up**~~ — ✅ resolved Phase D 2026-04-25.
 7. ~~**Save / Decoy / Fortitude / MaterialSave(N)**~~ — ✅ resolved Phase D 2026-04-25.

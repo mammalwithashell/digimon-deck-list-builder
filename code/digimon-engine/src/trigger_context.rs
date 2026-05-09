@@ -1,6 +1,25 @@
 use crate::card_source::CardHandle;
 use crate::enums::{CardKind, PlayerId, Zone};
 use crate::permanent::PermanentHandle;
+use crate::selection::AttackTarget;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AttackTargetChangeReason {
+    Raid,
+    Collision,
+    Blocker,
+    EffectRedirect(Option<CardHandle>),
+    EffectForced,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct AttackTargetChange {
+    pub attacker: PermanentHandle,
+    pub old_target: AttackTarget,
+    pub new_target: AttackTarget,
+    pub reason: AttackTargetChangeReason,
+    pub controller: PlayerId,
+}
 
 /// Stable token for effect-created objects or effect-initiated transitions.
 /// Downstream cleanup/suppression should key off this token rather than a
@@ -103,6 +122,7 @@ pub struct TriggerContext {
     pub event_host_card: Option<CardHandle>,
     pub event_host_permanent: Option<PermanentHandle>,
     pub affected_player: Option<PlayerId>,
+    pub attack_target_change: Option<AttackTargetChange>,
     pub source_player: Option<PlayerId>,
     pub cause: Option<EventCause>,
     pub source_effect: Option<EffectAttribution>,

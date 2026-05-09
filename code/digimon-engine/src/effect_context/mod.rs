@@ -21,7 +21,7 @@ pub use selections::{
 pub use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef};
 
 use crate::action::mask::effect_attack_target_action_ids;
-use crate::action::space::{decode_attack, SECURITY_TARGET};
+use crate::action::space::{decode_attack, encode_attack, SECURITY_TARGET};
 use crate::card_data::CardData;
 use crate::card_source::CardHandle;
 use crate::combat::{AttackError, AttackInitiator, AttackOpen, AttackResult, TargetConstraint};
@@ -397,6 +397,17 @@ impl<'a> EffectReadContext<'a> {
 
     pub fn event_dna_origin(&self) -> Option<bool> {
         event_dna_origin(self.game)
+    }
+
+    pub fn attack_target_change(&self) -> Option<crate::trigger_context::AttackTargetChange> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.attack_target_change)
+    }
+
+    pub fn dna_origin(&self) -> bool {
+        self.game.current_dna_origin.unwrap_or(false)
     }
 
     pub fn source_kind(&self) -> EffectSourceKind {
@@ -1070,6 +1081,13 @@ impl<'a> EffectContext<'a> {
 
     pub fn event_dna_origin(&self) -> Option<bool> {
         self.as_read().event_dna_origin()
+    }
+
+    pub fn attack_target_change(&self) -> Option<crate::trigger_context::AttackTargetChange> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.attack_target_change)
     }
 
     pub fn source_kind(&self) -> EffectSourceKind {
@@ -2219,10 +2237,27 @@ impl<'a> EffectContext<'a> {
     /// if security is empty, the battle area is full, or the play was
     /// gated by a flood-gate.
     pub fn play_from_security(&mut self, player: PlayerId) -> Option<PermanentHandle> {
-        // Pop the top of security. Empty stack → nothing to do.
-        let card = match self.game.player_mut(player).security.pop() {
-            Some(c) => c,
-            None => return None,
+        let security_index = self
+            .game
+            .player(player)
+            .security
+            .iter()
+            .position(|card| card.handle() == self.source_card)
+            .or_else(|| self.game.player(player).security.len().checked_sub(1))?;
+        self.play_from_security_index(player, security_index)
+    }
+
+    fn play_from_security_index(
+        &mut self,
+        player: PlayerId,
+        security_index: usize,
+    ) -> Option<PermanentHandle> {
+        let card = {
+            let player_state = self.game.player_mut(player);
+            if security_index >= player_state.security.len() {
+                return None;
+            }
+            player_state.security.remove(security_index)
         };
 
         // `face_up_security` is keyed by card_index — clear it whether or
@@ -2269,7 +2304,9 @@ impl<'a> EffectContext<'a> {
                 // consumed by the abortive play attempt. Matches the
                 // tradeoff `play_from_hand_with_cost` makes elsewhere on
                 // gated rollbacks.
-                self.game.player_mut(player).security.push(card);
+                let player_state = self.game.player_mut(player);
+                let restore_at = security_index.min(player_state.security.len());
+                player_state.security.insert(restore_at, card);
                 None
             }
         }
@@ -3512,7 +3549,119 @@ impl<'a> EffectContext<'a> {
         let attacker = pa.attacker;
         self.game
             .validate_attack_redirect_target(attacker, new_target)?;
-        self.game.apply_attack_target_substitution(new_target);
+        self.game.apply_attack_target_substitution_with_reason(
+            new_target,
+            crate::trigger_context::AttackTargetChangeReason::EffectRedirect(Some(
+                self.source_card,
+            )),
+        );
+        Ok(())
+    }
+
+    pub fn select_redirect_attack_target(
+        &mut self,
+        targets: AttackTargetRestriction,
+        optional: bool,
+        prompt: &str,
+    ) -> Result<(), crate::combat::AttackError> {
+        use crate::combat::AttackError;
+        let Some(pa) = self.game.pending_attack.as_ref() else {
+            return Err(AttackError::NoActiveAttack);
+        };
+        let attacker = pa.attacker;
+        let current_target = pa.effective_target;
+        let opponent = self.game.next_clockwise(attacker.player);
+        let mut valid_action_ids = Vec::new();
+
+        if matches!(
+            targets,
+            AttackTargetRestriction::Any | AttackTargetRestriction::PlayerOnly
+        ) {
+            let target = AttackTarget::Player(opponent);
+            if target != current_target
+                && self
+                    .game
+                    .validate_attack_redirect_target(attacker, target)
+                    .is_ok()
+            {
+                valid_action_ids.push(encode_attack(attacker.index as u16, SECURITY_TARGET));
+            }
+        }
+
+        if matches!(
+            targets,
+            AttackTargetRestriction::Any | AttackTargetRestriction::DigimonOnly
+        ) {
+            for index in 0..self.game.player(opponent).battle_area.len() {
+                let target = AttackTarget::Digimon(PermanentHandle {
+                    player: opponent,
+                    index: index as u8,
+                });
+                if target != current_target
+                    && self
+                        .game
+                        .validate_attack_redirect_target(attacker, target)
+                        .is_ok()
+                {
+                    valid_action_ids.push(encode_attack(attacker.index as u16, index as u16));
+                }
+            }
+        }
+
+        if valid_action_ids.is_empty() {
+            return Ok(());
+        }
+
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let previous_phase = self.game.current_phase;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
+
+        self.game.current_phase = GamePhase::SelectTarget;
+        self.game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Target,
+            selecting_player,
+            previous_phase,
+            valid_action_ids,
+            is_optional: optional,
+            prompt: prompt.to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent,
+            source_kind,
+            callback: Box::new(move |game, action_id| {
+                let (decoded_attacker, decoded_target) = decode_attack(action_id);
+                if decoded_attacker as u8 != attacker.index {
+                    return;
+                }
+                let opponent = game.next_clockwise(attacker.player);
+                let target = if decoded_target == SECURITY_TARGET {
+                    AttackTarget::Player(opponent)
+                } else {
+                    AttackTarget::Digimon(PermanentHandle {
+                        player: opponent,
+                        index: decoded_target as u8,
+                    })
+                };
+                if game
+                    .validate_attack_redirect_target(attacker, target)
+                    .is_ok()
+                {
+                    game.apply_attack_target_substitution_with_reason(
+                        target,
+                        crate::trigger_context::AttackTargetChangeReason::EffectRedirect(Some(
+                            source_card,
+                        )),
+                    );
+                }
+            }),
+            on_decline: if optional {
+                Some(Box::new(|_game: &mut Game| {}) as DeclineCallback)
+            } else {
+                None
+            },
+        });
         Ok(())
     }
 
@@ -3531,16 +3680,15 @@ impl<'a> EffectContext<'a> {
     /// observable only via the `OnAttackTargetChange` observer that
     /// already fired.
     pub fn cancel_attack(&mut self) -> Result<(), crate::combat::AttackError> {
-        use crate::combat::AttackError;
-        let Some(pa) = self.game.pending_attack.as_mut() else {
-            return Err(AttackError::NoActiveAttack);
-        };
-        pa.cancelled = true;
-        Ok(())
+        self.game.cancel_pending_attack_from_effect_checked()
     }
 
     pub fn cancel_pending_attack(&mut self) {
         self.game.cancel_pending_attack_from_effect();
+    }
+
+    pub fn open_counter_window(&mut self) -> Result<bool, crate::combat::AttackError> {
+        self.game.open_counter_window_from_effect_checked()
     }
 
     pub fn battle_digimon(
@@ -3568,6 +3716,25 @@ impl<'a> EffectContext<'a> {
         without_suspending: bool,
         optional: bool,
         prompt: &str,
+    ) -> Result<(), AttackError> {
+        self.may_attack_now_optional_with_upgrade(
+            attacker,
+            targets,
+            without_suspending,
+            optional,
+            prompt,
+            None,
+        )
+    }
+
+    pub fn may_attack_now_optional_with_upgrade(
+        &mut self,
+        attacker: PermanentHandle,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        optional: bool,
+        prompt: &str,
+        cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
     ) -> Result<(), AttackError> {
         let valid_action_ids =
             effect_attack_target_action_ids(self.game, attacker, targets, without_suspending);
@@ -3616,6 +3783,7 @@ impl<'a> EffectContext<'a> {
                     suspend_attacker: !without_suspending,
                     target_constraint: TargetConstraint::Forced(target),
                     allow_cancel: optional,
+                    cost_upgrade,
                 });
             }),
             on_decline: if optional {
@@ -3634,10 +3802,27 @@ impl<'a> EffectContext<'a> {
         without_suspending: bool,
         prompt: &str,
     ) -> Result<(), AttackError> {
+        self.force_opponent_attack_with_upgrade(attacker, targets, without_suspending, prompt, None)
+    }
+
+    pub fn force_opponent_attack_with_upgrade(
+        &mut self,
+        attacker: PermanentHandle,
+        targets: AttackTargetRestriction,
+        without_suspending: bool,
+        prompt: &str,
+        cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
+    ) -> Result<(), AttackError> {
         let previous_override = self.override_selecting_player;
         self.override_selecting_player = Some(attacker.player);
-        let result =
-            self.may_attack_now_optional(attacker, targets, without_suspending, false, prompt);
+        let result = self.may_attack_now_optional_with_upgrade(
+            attacker,
+            targets,
+            without_suspending,
+            false,
+            prompt,
+            cost_upgrade,
+        );
         self.override_selecting_player = previous_override;
         result
     }

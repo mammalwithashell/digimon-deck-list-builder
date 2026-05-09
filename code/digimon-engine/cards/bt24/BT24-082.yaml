@@ -32,11 +32,9 @@ traits: [LIBERATOR]
 # event_target/event_card, so the trait filter and "that Digimon" target are
 # modelled directly.
 #
-# G-MAY-ATTACK-NOW [hybrid gap]:
-#   "Then, it may attack" — no DSL verb or engine primitive for an immediate
-#   optional attack within effect resolution. ModifierType::MayAttack targets
-#   the EOT execute window, not an in-effect attack. This sub-clause is omitted.
-#   See qa/dsl-vocab-gaps.md.
+# "Then, it may attack" maps to `may_attack_now` on the digivolved
+# event_target. Printed text does not say "without suspending", so the attack
+# pays the normal suspend cost if accepted.
 #
 # ─── Security clause ─────────────────────────────────────────────────────────
 #
@@ -95,7 +93,10 @@ effects:
           target: event_target
           value: 3000
           expiry: end_of_turn
-      # "Then, it may attack." — omitted (G-MAY-ATTACK-NOW gap).
+      - may_attack_now:
+          attacker: event_target
+          targets: any
+          optional: true
 
   # ─── Security clause ────────────────────────────────────────────────────────
   - when: on_security

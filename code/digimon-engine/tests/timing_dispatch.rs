@@ -383,15 +383,11 @@ fn start_of_your_main_phase_fans_out_to_battle_and_breeding_once_each() {
         .start();
     r.register_effect(
         "BATTLE-MAIN",
-        Arc::new(MainPhaseObserverRecorder {
-            seen: seen.clone(),
-        }),
+        Arc::new(MainPhaseObserverRecorder { seen: seen.clone() }),
     );
     r.register_effect(
         "BREED-MAIN",
-        Arc::new(MainPhaseObserverRecorder {
-            seen: seen.clone(),
-        }),
+        Arc::new(MainPhaseObserverRecorder { seen: seen.clone() }),
     );
 
     let battle = r.place_on_field(0, "BATTLE-MAIN", Some(0));
@@ -2563,7 +2559,8 @@ impl CardEffect for PlaceSecurityPayloadObs {
                     ctx.event_source_player(),
                     ctx.event_cause(),
                     ctx.event_card(),
-                    ctx.event_source_effect().and_then(|effect| effect.source_card),
+                    ctx.event_source_effect()
+                        .and_then(|effect| effect.source_card),
                     ctx.event_selected_results().len(),
                     ctx.event_moved_card_sets()
                         .first()

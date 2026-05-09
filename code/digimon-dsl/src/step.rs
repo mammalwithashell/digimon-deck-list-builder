@@ -163,6 +163,10 @@ pub enum StepSpec {
     // Combat / replacement process outcomes
     Battle(BattleArgs),
     MayAttackNow(MayAttackNowArgs),
+    ForceAttack(ForceAttackArgs),
+    RedirectAttackTarget(RedirectAttackTargetArgs),
+    CancelAttack(EmptyArgs),
+    OpenCounterWindow(EmptyArgs),
     RefireEffect(RefireEffectArgs),
     EndAttack(bool),
     CancelReplacement(EmptyArgs),
@@ -296,6 +300,10 @@ impl Serialize for StepSpec {
             // Combat / replacement process outcomes
             StepSpec::Battle(v) => kv!(s, "battle", v),
             StepSpec::MayAttackNow(v) => kv!(s, "may_attack_now", v),
+            StepSpec::ForceAttack(v) => kv!(s, "force_attack", v),
+            StepSpec::RedirectAttackTarget(v) => kv!(s, "redirect_attack_target", v),
+            StepSpec::CancelAttack(v) => kv!(s, "cancel_attack", v),
+            StepSpec::OpenCounterWindow(v) => kv!(s, "open_counter_window", v),
             StepSpec::RefireEffect(v) => kv!(s, "refire_effect", v),
             StepSpec::EndAttack(v) => kv!(s, "end_attack", v),
             StepSpec::CancelReplacement(v) => kv!(s, "cancel_replacement", v),
@@ -453,6 +461,10 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Combat / replacement process outcomes
             "battle" => StepSpec::Battle(map.next_value()?),
             "may_attack_now" => StepSpec::MayAttackNow(map.next_value()?),
+            "force_attack" => StepSpec::ForceAttack(map.next_value()?),
+            "redirect_attack_target" => StepSpec::RedirectAttackTarget(map.next_value()?),
+            "cancel_attack" => StepSpec::CancelAttack(map.next_value()?),
+            "open_counter_window" => StepSpec::OpenCounterWindow(map.next_value()?),
             "refire_effect" => StepSpec::RefireEffect(map.next_value()?),
             "end_attack" => StepSpec::EndAttack(map.next_value()?),
             "cancel_replacement" => StepSpec::CancelReplacement(map.next_value()?),
@@ -549,6 +561,10 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "optional",
                         "battle",
                         "may_attack_now",
+                        "force_attack",
+                        "redirect_attack_target",
+                        "cancel_attack",
+                        "open_counter_window",
                         "refire_effect",
                         "end_attack",
                         "cancel_replacement",
@@ -658,6 +674,15 @@ pub struct BattleArgs {
     pub defender: BindingRef,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]
+#[serde(deny_unknown_fields)]
+pub struct AttackCostUpgradeArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dp: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub security_attack: Option<i32>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct MayAttackNowArgs {
@@ -666,6 +691,37 @@ pub struct MayAttackNowArgs {
     pub targets: AttackTargetSpec,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub without_suspending: bool,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_upgrade: Option<AttackCostUpgradeArgs>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ForceAttackArgs {
+    pub attacker: BindingRef,
+    #[serde(default)]
+    pub targets: AttackTargetSpec,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub without_suspending: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_upgrade: Option<AttackCostUpgradeArgs>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]
+#[serde(deny_unknown_fields)]
+pub struct RedirectAttackTargetArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub new_target: Option<BindingRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub player: Option<PlayerRef>,
+    #[serde(default)]
+    pub targets: AttackTargetSpec,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1095,6 +1151,10 @@ fn default_select_sources_prompt() -> String {
 pub struct SelectOwnSourcesArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target: Option<BindingRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub from: Option<BindingRef>,
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
     pub min: u8,
     pub max: u8,
     #[serde(default, skip_serializing_if = "Option::is_none")]

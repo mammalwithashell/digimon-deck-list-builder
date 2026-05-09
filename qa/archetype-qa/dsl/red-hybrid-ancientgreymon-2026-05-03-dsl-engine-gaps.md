@@ -119,25 +119,26 @@ The deck's core gameplay is Tamer-based Hybrid evolution, recursive Tamer play, 
 
 - **Type:** `engine-gap`, `dsl-gap`
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md`; `qa/dsl-vocab-gaps.md`
-- **Blocks Red Hybrid cards:** `BT18-088`, `BT21-072`, `BT18-018`, `BT7-016`
+- **Status:** partially resolved. BT21-072's self may-attack-without-suspending route is implemented and tested; player-only inherited end-turn attack variants remain to be card-authored/verified.
+- **Blocks Red Hybrid cards:** `BT18-088`, `BT18-018`, `BT7-016`; BT21-072 no longer blocks on this primitive.
 - **Cross-archetype value:** Any "this Digimon may attack", "may attack a player", or "attack without suspending" effect.
 - **Printed shape:** "[End of Your Turn] [Once Per Turn] This Digimon with the [Hybrid] or [Ten Warriors] trait may attack a player."
-- **Missing capability:** Attack prompts installed by effects must reuse combat target legality and action masks while restricting allowed targets by the effect text. Red Hybrid includes player-only inherited attacks and may-attack-now variants.
+- **Implemented capability:** Attack prompts installed by effects can reuse combat target legality and action masks while restricting allowed targets by the effect text. Red Hybrid still needs player-only inherited attack card coverage.
 - **Why it matters:** End-turn attacks often happen after memory has passed. Ordinary main-phase attack masks do not capture this effect-specific attack permission, and auto-attacking hides a choice.
-- **First test:** A Digimon with `BT18-088` as a source reaches end of turn while having Hybrid/Ten Warriors trait. The pending selection exposes PASS plus player attack actions only, resolves through normal combat, and consumes the once-per-turn source effect.
+- **Evidence / first remaining test:** BT21-072 is covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt21_072_when_digivolving_may_attack_without_suspending`. A Digimon with `BT18-088` as a source should still be tested at end of turn while having Hybrid/Ten Warriors trait, exposing PASS plus player attack actions only.
 - **Implementation hint:** `code/digimon-engine/src/combat.rs`, `code/digimon-engine/src/action/`, `code/digimon-engine/src/effect_context/`, and DSL steps such as `may_attack_now` / `may_attack_player`.
 
 ### RH-08: Raid target switching and attack-target-change event payloads
 
-- **Type:** `engine-gap`, `dsl-gap`
+- **Type:** `card-yaml/test-gap`
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md`
 - **Blocks Red Hybrid cards:** `BT17-012`, `BT21-072`
 - **Cross-archetype value:** Raid decks, Collision/Raid interaction, and cards that observe or prevent attack target changes.
 - **Printed shape:** `<Raid>` switches an attack target to one of the opponent's unsuspended Digimon with the highest DP.
-- **Missing capability:** Native keyword parsing exists for Raid, but Red Hybrid needs verified target-switch interrupt behavior and any resulting attack-target-change event payloads that other effects can observe or block.
+- **Status:** The reusable combat primitive is closed. Raid now opens a printed optional `PendingSelection` after declaration, before later interrupt windows; selecting a new target fires `OnAttackTargetChange` with a Raid payload, and PASS keeps the original target.
 - **Why it matters:** BurningGreymon uses Raid as a main combat pressure tool. If Raid is parsed but does not install the target-switch choice, gameplay diverges materially.
-- **First test:** `BT17-012` attacks a player while the opponent has two unsuspended Digimon tied for highest DP. The mask exposes legal Raid target choices, updates the attack target if selected, and leaves the original player attack if declined.
-- **Implementation hint:** `code/digimon-engine/src/combat.rs`, `code/digimon-engine/src/enums.rs`, `code/digimon-engine/src/action/`, and target-change trigger context.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- raid_retarget`.
+- **Next card test:** `BT17-012` attacks a player while the opponent has two unsuspended Digimon tied for highest DP. The pending Raid prompt should expose those choices, update the attack target if selected, and leave the original player attack if declined.
 
 ### RH-09: Security-removed inherited observers that play cards
 
@@ -192,7 +193,7 @@ Task 10 production-authoring audit update (2026-05-03): `BT17-009` is now implem
 | `BT17-011`, `P-029` | Warp bridge YAML missing; depends on `RH-02` and `RH-03` | Effect digivolve into AncientGreymon, ignore requirements where printed, scheduled self-delete. |
 | `BT17-094` | Option YAML missing; depends on `RH-04` and `RH-10` | Conditional color bypass, trash-to-hand, reduced-cost play from hand, security free Tamer play plus add self to hand. |
 | `BT16-082`, `P-123` | `BT16-082` production YAML is a stale placeholder; `P-123` missing | Breeding-to-battle observer, reveal/add, optional hatch tail. |
-| `BT21-013`, `BT21-072`, `BT8-097`, `EX8-074`, `P-035` | Production YAML exists but should be revalidated against newer primitives | Replace comments/workarounds with behavioral coverage or mark exact remaining sub-gaps. |
+| `BT21-013`, `BT21-072`, `BT8-097`, `EX8-074`, `P-035` | Production YAML exists; BT21-072 revalidated for Track D may-attack-without-suspending | Replace remaining comments/workarounds with behavioral coverage or mark exact remaining sub-gaps. |
 | `_examples/BT14-009`, `_examples/BT18-102` | Example-only specs | Promote to production only when the printed behavior is fully covered by tests. |
 
 ## Cross-Archetype Spec Compile Notes
