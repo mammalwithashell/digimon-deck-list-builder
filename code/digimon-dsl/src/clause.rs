@@ -141,6 +141,7 @@ pub enum ClauseScope {
     Inherited,
     Both,
     Linked,
+    Security,
 }
 
 impl ClauseScope {

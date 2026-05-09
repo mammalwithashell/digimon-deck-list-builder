@@ -348,9 +348,7 @@ fn bt24_018_decline_replacement_digimon_leaves_normally() {
         .game
         .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
 
-    let view = runner
-        .pending_selection_view()
-        .expect("replacement prompt");
+    let view = runner.pending_selection_view().expect("replacement prompt");
     assert_eq!(view.kind, SelectionKind::Replacement);
     runner.execute_action(0, PASS).expect("decline replacement");
     runner.auto_resolve().expect("finish decline");

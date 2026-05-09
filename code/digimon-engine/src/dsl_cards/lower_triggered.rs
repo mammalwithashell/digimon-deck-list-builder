@@ -4,7 +4,7 @@
 use std::sync::Arc;
 
 use digimon_dsl::compiled::{
-    CompiledPredicate, CompiledScope, CompiledStep, CompiledTriggeredClause,
+    CompiledCardKind, CompiledPredicate, CompiledScope, CompiledStep, CompiledTriggeredClause,
 };
 
 use crate::card_source::CardHandle;
@@ -35,11 +35,34 @@ pub fn lower_with_raw_and_option_use_requirement(
     raw: Arc<EngineRawRustRegistry>,
     option_use_requirement: Option<Arc<CompiledPredicate>>,
 ) -> Vec<Effect> {
+    lower_with_raw_and_option_use_requirement_for_kind(
+        card,
+        clause,
+        raw,
+        option_use_requirement,
+        None,
+    )
+}
+
+pub fn lower_with_raw_and_option_use_requirement_for_kind(
+    card: CardHandle,
+    clause: &CompiledTriggeredClause,
+    raw: Arc<EngineRawRustRegistry>,
+    option_use_requirement: Option<Arc<CompiledPredicate>>,
+    card_kind: Option<CompiledCardKind>,
+) -> Vec<Effect> {
     let mut out = Vec::new();
     for t in &clause.when {
-        let Some(engine_timing) = compiled_timing_to_engine(*t) else {
+        let Some(mut engine_timing) = compiled_timing_to_engine(*t) else {
             continue;
         };
+        if matches!(
+            card_kind,
+            Some(CompiledCardKind::Option | CompiledCardKind::Dual)
+        ) && engine_timing == EffectTiming::MainFromHand
+        {
+            engine_timing = EffectTiming::OptionMain;
+        }
 
         let process_steps = Arc::new(clause.process.clone());
         let active_when = clause.active_when.clone().map(Arc::new);
@@ -57,6 +80,9 @@ pub fn lower_with_raw_and_option_use_requirement(
         }
         if matches!(scope, CompiledScope::Linked) {
             builder = builder.linked();
+        }
+        if matches!(scope, CompiledScope::Security) {
+            builder = builder.security_zone();
         }
         if let Some(s) = summary {
             builder = builder.name(&s);
@@ -113,7 +139,8 @@ pub fn lower_with_raw_and_option_use_requirement(
             // a selection step if one is encountered — installing the tail
             // as the selection's resolve callback so it continues once the
             // player picks a target.
-            let runtime = StepRuntime::new(raw_for_process.clone());
+            let runtime = StepRuntime::new(raw_for_process.clone())
+                .with_dna_origin(ctx.game.current_dna_origin);
             run_steps_with_runtime(process_steps.as_slice(), ctx, &mut bindings, &runtime);
         });
 

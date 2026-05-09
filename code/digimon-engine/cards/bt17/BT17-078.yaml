@@ -59,8 +59,11 @@ ace_overflow: -5
 #   Garurumon name family. The Blast DNA path uses the specific WarGreymon /
 #   MetalGarurumon names.
 #
-# 3) Blast DNA Digivolve ([Hand][Counter], cost 0,
-#    materials: WarGreymon + MetalGarurumon), matching DCGO's OnCounterTiming
+# 3) Blast DNA Digivolve ([Hand][Counter], cost 0, materials:
+#    WarGreymon + MetalGarurumon). This is intentionally separate from the
+#    regular DNA path because the printed Counter marker names specific
+#    materials while the normal DNA path accepts the broader Greymon/Garurumon
+#    families. This matches DCGO's OnCounterTiming
 #    `BlastDNADigivolveEffect(card, [WarGreymon, MetalGarurumon])` emitter.
 alt_paths:
   - kind: digivolve
@@ -76,12 +79,16 @@ alt_paths:
 
   - kind: blast_dna_digivolve
     materials:
-      - { name_is: "WarGreymon" }
-      - { name_is: "MetalGarurumon" }
+      - { kind: digimon, name_is: "WarGreymon" }
+      - { kind: digimon, name_is: "MetalGarurumon" }
     cost: 0
     stacks_unsuspended: true
 
 effects:
+  # ─── [Hand][Counter] <Blast DNA Digivolve> marker ──────────────────────────
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
   # ─── Clause 1 — <Raid> (face-up declarative) ─────────────────────────────────
   # "When this Digimon attacks, you may switch the target of attack to 1 of your
   #  opponent's unsuspended Digimon with the highest DP."

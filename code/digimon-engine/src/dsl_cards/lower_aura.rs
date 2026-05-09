@@ -88,6 +88,26 @@ pub fn lower(
     let gk = grant_keyword.and_then(|g| lookup_keyword(&g.keyword, g.value));
     let modifier = modifier.as_deref().and_then(lookup_modifier_type);
 
+    if is_self_aura && target_player.is_none() {
+        builder = builder
+            .materializes_declarative_state()
+            .process(move |ctx| {
+                let Some(handle) = ctx.source_permanent else {
+                    return;
+                };
+                if let Some(dp) = dp {
+                    ctx.add_declarative_dp_modifier(handle, dp, Expiry::Permanent);
+                }
+                if let Some(kw) = gk {
+                    ctx.grant_declarative_keyword(handle, kw, Expiry::Permanent);
+                }
+                if let Some(modifier) = modifier {
+                    ctx.add_declarative_modifier(handle, modifier, 0, Expiry::Permanent);
+                }
+            });
+        return Some(builder.build());
+    }
+
     if let Some(formula) = dp_formula {
         builder = builder.dp_modifier_fn(dynamic_formula_fn(
             formula,

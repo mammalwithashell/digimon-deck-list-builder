@@ -97,6 +97,8 @@ pub struct PredicateSpec {
     pub of_permanent: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub not_in_binding: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding_owner: Option<BindingOwnerPredicate>,
 
     // Leaf — source-relative
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -141,6 +143,14 @@ pub struct PredicateSpec {
     pub event_permanent_is_source: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_is_effect_initiated: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_is_player: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_was_self: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attack_target_change_reason: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub attacker_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -205,6 +215,19 @@ pub struct PredicateSpec {
     #[serde(flatten)]
     #[schemars(skip)]
     pub extra: IndexMap<String, serde_yml::Value>,
+}
+
+impl PredicateSpec {
+    pub fn is_empty(&self) -> bool {
+        self == &Self::default()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BindingOwnerPredicate {
+    pub binding: String,
+    pub of: PlayerRef,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]

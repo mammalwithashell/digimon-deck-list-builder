@@ -630,6 +630,10 @@ impl EffectBuilder {
         self.inner.security = true;
         self
     }
+    pub fn security_zone(mut self) -> Self {
+        self.inner.security = true;
+        self
+    }
     fn declarative_flag(mut self) -> Self {
         self.inner.declarative = true;
         self

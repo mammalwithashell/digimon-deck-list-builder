@@ -83,7 +83,9 @@ fn st12_12_decoy_red_black_substitutes_self_for_ally_deletion() {
     runner
         .game
         .delete_permanent_with_cause(red_ally, ReplacementCause::OpponentEffect);
-    let view = runner.pending_selection_view().expect("Decoy accept prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("Decoy accept prompt");
     assert_eq!(view.kind, SelectionKind::Replacement);
     assert!(view.is_optional, "Decoy can be declined");
     runner

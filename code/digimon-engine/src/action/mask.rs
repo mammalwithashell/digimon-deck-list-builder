@@ -902,9 +902,10 @@ pub(crate) fn effect_attack_target_action_ids(
             if game
                 .modifiers
                 .has(target_handle, ModifierType::CannotAttackTarget)
-                && !game
-                    .modifiers
-                    .has(target_handle, ModifierType::CanAttackTargetDefendingPermanent)
+                && !game.modifiers.has(
+                    target_handle,
+                    ModifierType::CanAttackTargetDefendingPermanent,
+                )
             {
                 continue;
             }

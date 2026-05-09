@@ -57,13 +57,12 @@ fn bt22_052_other_digimon_would_leave_gains_memory_and_event_proceeds() {
         .expect("resolve non-cancelling would-leave subscriber");
 
     assert_eq!(
-        runner.memory(), 2,
+        runner.memory(),
+        2,
         "Leopardmon gains 2 memory when another Digimon would leave"
     );
     assert!(
-        runner
-            .game
-            .players[0]
+        runner.game.players[0]
             .battle_area
             .iter()
             .all(|p| p.top_card().card_id(&runner.game.card_data) != "ALLY-A"),
@@ -73,11 +72,10 @@ fn bt22_052_other_digimon_would_leave_gains_memory_and_event_proceeds() {
     runner
         .game
         .delete_permanent_with_cause(ally_b, ReplacementCause::OpponentEffect);
-    runner
-        .auto_resolve()
-        .expect("resolve second leave attempt");
+    runner.auto_resolve().expect("resolve second leave attempt");
     assert_eq!(
-        runner.memory(), 2,
+        runner.memory(),
+        2,
         "the once-per-turn subscriber does not gain memory twice"
     );
 }

@@ -8,7 +8,8 @@ use digimon_engine::enums::{
     StackPosition,
 };
 use digimon_engine::permanent::{Permanent, PermanentHandle};
-use digimon_engine::selection::{OptionPlayResult, TriggerSource};
+use digimon_engine::selection::{AttackTarget, OptionPlayResult, TriggerSource};
+use digimon_engine::AttackTargetChangeReason;
 use std::sync::Arc;
 
 fn digimon_card(id: &str, name: &str, traits: &[&str], dp: i32) -> CardData {
@@ -59,6 +60,30 @@ fn option_card(card_id: &str, name: &str, traits: &[&str]) -> CardData {
         ace_overflow: None,
         digixros_aliases: Vec::new(),
     }
+}
+
+fn enqueue_attack_target_changed(
+    runner: &mut DebugRunner,
+    attacker: PermanentHandle,
+    old_target: AttackTarget,
+    new_target: AttackTarget,
+    reason: AttackTargetChangeReason,
+) {
+    let card = runner.game.players[attacker.player as usize].battle_area[attacker.index as usize]
+        .top_card()
+        .handle();
+    runner.game.enqueue_triggered(
+        EffectTiming::OnAttackTargetChange,
+        TriggerSource::AttackTargetChanged {
+            player: attacker.player,
+            attacker,
+            card,
+            old_target,
+            new_target,
+            reason,
+        },
+    );
+    runner.game.drain_effect_queue();
 }
 
 struct DelayOptionNoop;
@@ -281,6 +306,273 @@ effects:
             .contains(&revealed.0),
         "event_card binding should let the observer mark the revealed card face-up"
     );
+}
+
+#[test]
+fn attack_target_change_reason_predicate_matches_payload_reason() {
+    let yaml = r#"
+card: DSL-ATC-REASON
+name: Attack Target Change Reason
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_attack_target_change
+    condition: { attack_target_change_reason: blocker }
+    process:
+      - gain_memory: 2
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("ATK", "Attacker", &[], 4000))
+        .add_card(digimon_card("OLD", "Old Target", &[], 2000))
+        .add_card(digimon_card("NEW", "New Target", &[], 2000))
+        .build();
+    let _observer = runner.place_on_field(0, "DSL-ATC-REASON", None);
+    let attacker = runner.place_on_field(0, "ATK", None);
+    let old_target = runner.place_on_field(1, "OLD", None);
+    let new_target = runner.place_on_field(1, "NEW", None);
+
+    enqueue_attack_target_changed(
+        &mut runner,
+        attacker,
+        AttackTarget::Digimon(old_target),
+        AttackTarget::Digimon(new_target),
+        AttackTargetChangeReason::Raid,
+    );
+    assert_eq!(
+        runner.memory(),
+        0,
+        "nonmatching reason must not pass the predicate"
+    );
+
+    enqueue_attack_target_changed(
+        &mut runner,
+        attacker,
+        AttackTarget::Digimon(old_target),
+        AttackTarget::Digimon(new_target),
+        AttackTargetChangeReason::Blocker,
+    );
+    assert_eq!(runner.memory(), 2);
+}
+
+#[test]
+fn attack_target_change_event_target_owner_and_trait_use_new_target() {
+    let yaml = r#"
+card: DSL-ATC-NEW-TARGET
+name: Attack Target Change New Target
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_attack_target_change
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_trait_has: Rock
+    process:
+      - gain_memory: 3
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("ATK", "Attacker", &[], 4000))
+        .add_card(digimon_card("OLD", "Old Target", &["Plant"], 2000))
+        .add_card(digimon_card("NEW", "New Target", &["Rock"], 2000))
+        .build();
+    let _observer = runner.place_on_field(0, "DSL-ATC-NEW-TARGET", None);
+    let attacker = runner.place_on_field(0, "ATK", None);
+    let old_target = runner.place_on_field(1, "OLD", None);
+    let new_target = runner.place_on_field(1, "NEW", None);
+
+    enqueue_attack_target_changed(
+        &mut runner,
+        attacker,
+        AttackTarget::Digimon(old_target),
+        AttackTarget::Digimon(new_target),
+        AttackTargetChangeReason::EffectRedirect(None),
+    );
+
+    assert_eq!(
+        runner.memory(),
+        3,
+        "event_target_owner/trait should inspect the new attack target, not the attacker"
+    );
+}
+
+#[test]
+fn attack_target_change_event_target_is_player_predicate_matches_new_player_target() {
+    let yaml = r#"
+card: DSL-ATC-PLAYER
+name: Attack Target Change Player
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_attack_target_change
+    condition: { event_target_is_player: true }
+    process:
+      - gain_memory: 4
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("ATK", "Attacker", &[], 4000))
+        .add_card(digimon_card("OLD", "Old Target", &[], 2000))
+        .add_card(digimon_card("NEW", "New Target", &[], 2000))
+        .build();
+    let _observer = runner.place_on_field(0, "DSL-ATC-PLAYER", None);
+    let attacker = runner.place_on_field(0, "ATK", None);
+    let old_target = runner.place_on_field(1, "OLD", None);
+    let new_target = runner.place_on_field(1, "NEW", None);
+
+    enqueue_attack_target_changed(
+        &mut runner,
+        attacker,
+        AttackTarget::Digimon(old_target),
+        AttackTarget::Digimon(new_target),
+        AttackTargetChangeReason::EffectRedirect(None),
+    );
+    assert_eq!(
+        runner.memory(),
+        0,
+        "Digimon new target must not satisfy event_target_is_player"
+    );
+
+    enqueue_attack_target_changed(
+        &mut runner,
+        attacker,
+        AttackTarget::Digimon(old_target),
+        AttackTarget::Player(1),
+        AttackTargetChangeReason::EffectRedirect(None),
+    );
+    assert_eq!(runner.memory(), 4);
+}
+
+#[test]
+fn attack_target_change_event_target_was_self_matches_old_target_source() {
+    let yaml = r#"
+card: DSL-ATC-WAS-SELF
+name: Attack Target Was Self
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_attack_target_change
+    condition: { event_target_was_self: true }
+    process:
+      - gain_memory: 5
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card("ATK", "Attacker", &[], 4000))
+        .add_card(digimon_card("OLD", "Old Target", &[], 2000))
+        .add_card(digimon_card("NEW", "New Target", &[], 2000))
+        .build();
+    let attacker = runner.place_on_field(0, "ATK", None);
+    let observer = runner.place_on_field(0, "DSL-ATC-WAS-SELF", None);
+    let other_old_target = runner.place_on_field(1, "OLD", None);
+    let new_target = runner.place_on_field(1, "NEW", None);
+
+    enqueue_attack_target_changed(
+        &mut runner,
+        attacker,
+        AttackTarget::Digimon(other_old_target),
+        AttackTarget::Digimon(new_target),
+        AttackTargetChangeReason::EffectRedirect(None),
+    );
+    assert_eq!(
+        runner.memory(),
+        0,
+        "a different old target must not satisfy event_target_was_self"
+    );
+
+    enqueue_attack_target_changed(
+        &mut runner,
+        attacker,
+        AttackTarget::Digimon(observer),
+        AttackTarget::Digimon(new_target),
+        AttackTargetChangeReason::EffectRedirect(None),
+    );
+
+    assert_eq!(
+        runner.memory(),
+        5,
+        "the observer on the old target should satisfy event_target_was_self"
+    );
+}
+
+#[test]
+fn attack_target_change_attacker_trait_predicate_matches_payload_attacker() {
+    let yaml = r#"
+card: DSL-ATC-ATTACKER-TRAIT
+name: Attack Target Change Attacker Trait
+kind: digimon
+level: 3
+color: [red]
+cost: 0
+dp: 2000
+effects:
+  - when: on_attack_target_change
+    condition: { attacker_trait_has: Reptile }
+    process:
+      - gain_memory: 6
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(digimon_card(
+            "ATK-DRAGON",
+            "Dragon Attacker",
+            &["Dragon"],
+            4000,
+        ))
+        .add_card(digimon_card(
+            "ATK-REPTILE",
+            "Reptile Attacker",
+            &["Reptile"],
+            4000,
+        ))
+        .add_card(digimon_card("OLD", "Old Target", &[], 2000))
+        .add_card(digimon_card("NEW", "New Target", &[], 2000))
+        .build();
+    let _observer = runner.place_on_field(0, "DSL-ATC-ATTACKER-TRAIT", None);
+    let dragon_attacker = runner.place_on_field(0, "ATK-DRAGON", None);
+    let reptile_attacker = runner.place_on_field(0, "ATK-REPTILE", None);
+    let old_target = runner.place_on_field(1, "OLD", None);
+    let new_target = runner.place_on_field(1, "NEW", None);
+
+    enqueue_attack_target_changed(
+        &mut runner,
+        dragon_attacker,
+        AttackTarget::Digimon(old_target),
+        AttackTarget::Digimon(new_target),
+        AttackTargetChangeReason::EffectRedirect(None),
+    );
+    assert_eq!(
+        runner.memory(),
+        0,
+        "a nonmatching attacker trait must not pass attacker_trait_has"
+    );
+
+    enqueue_attack_target_changed(
+        &mut runner,
+        reptile_attacker,
+        AttackTarget::Digimon(old_target),
+        AttackTarget::Digimon(new_target),
+        AttackTargetChangeReason::EffectRedirect(None),
+    );
+    assert_eq!(runner.memory(), 6);
 }
 
 #[test]
@@ -547,7 +839,9 @@ effects:
 
     let effect_card = runner.game.players[0].hand[0].handle();
     assert_eq!(
-        runner.game.play_card_from_effect_without_cost(0, effect_card),
+        runner
+            .game
+            .play_card_from_effect_without_cost(0, effect_card),
         Some(PermanentHandle {
             player: 0,
             index: 2,

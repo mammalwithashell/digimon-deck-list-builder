@@ -15,7 +15,9 @@
 
 use std::sync::{Arc, Mutex};
 
-use digimon_engine::action::space::{encode_attack, encode_digivolve, PLAY_HAND_START};
+use digimon_engine::action::space::{
+    encode_attack, encode_digivolve, DNA_DIGIVOLVE_START, PLAY_HAND_START,
+};
 use digimon_engine::card_data::{CardData, DnaCost, DnaRequirement, EvoCost};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::AttackResult;
@@ -569,9 +571,19 @@ fn counter_blast_dna_uses_field_material_plus_named_hand_material() {
         .as_ref()
         .expect("Counter window installs Blast DNA field-material selection");
     assert_eq!(sel.selecting_player, 1);
-    assert!(sel.valid_action_ids.contains(&encode_digivolve(0, 0)));
+    assert!(sel.valid_action_ids.contains(&DNA_DIGIVOLVE_START));
 
-    r.game.decode_action(encode_digivolve(0, 0), 1);
+    r.game.decode_action(DNA_DIGIVOLVE_START, 1);
+
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Blast DNA installs field-material selection");
+    assert_eq!(sel.selecting_player, 1);
+    assert_eq!(sel.valid_action_ids, vec![0]);
+
+    r.game.decode_action(0, 1);
 
     let sel = r
         .game
@@ -637,7 +649,7 @@ alt_paths:
         .pending_selection
         .as_ref()
         .expect("Counter window must see DSL blast_dna_digivolve alt path");
-    assert!(sel.valid_action_ids.contains(&encode_digivolve(0, 0)));
+    assert!(sel.valid_action_ids.contains(&DNA_DIGIVOLVE_START));
 }
 
 #[test]

@@ -184,10 +184,7 @@ fn bt16_028_all_turns_observer_clause_has_effect_initiated_gate() {
             _ => None,
         })
         .expect("all-turns effect-play/digivolve observer must be authored");
-    let condition = observer
-        .condition
-        .as_ref()
-        .expect("observer must be gated");
+    let condition = observer.condition.as_ref().expect("observer must be gated");
     assert!(
         condition
             .all_of

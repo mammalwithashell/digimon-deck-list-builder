@@ -15,16 +15,25 @@
 
 use std::sync::{Arc, Mutex};
 
+use digimon_engine::action::space::encode_attack;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::{AttackError, AttackResult};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect, EffectBuilder};
-use digimon_engine::enums::EffectTiming;
+use digimon_engine::enums::{EffectTiming, Expiry, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::AttackTarget;
+use digimon_engine::AttackTargetChangeReason;
 
 fn card(id: &str) -> digimon_engine::CardData {
     make_test_card(id, id)
+}
+
+fn card_with_dp(id: &str, dp: i32) -> digimon_engine::CardData {
+    let mut c = card(id);
+    c.dp = Some(dp);
+    c
 }
 
 // ─── Effect scaffolds ──────────────────────────────────────────────────
@@ -52,6 +61,26 @@ impl CardEffect for CancelOnAttack {
             .name("Cancel from OnAttack")
             .process(move |ctx| {
                 let _ = ctx.cancel_attack();
+            })
+            .build()]
+    }
+}
+
+/// CounterEffect closure that tries to cancel the in-flight attack and records
+/// whether combat accepted or rejected the late cancellation.
+struct CancelFromCounter {
+    slot: Arc<Mutex<Option<Result<(), AttackError>>>>,
+}
+impl CardEffect for CancelFromCounter {
+    fn effects(&self, c: CardHandle) -> Vec<Effect> {
+        let slot = self.slot.clone();
+        vec![Effect::on_play(c)
+            .name("Late counter cancel")
+            .counter()
+            .timing(EffectTiming::CounterEffect)
+            .process(move |ctx| {
+                let result = ctx.cancel_attack();
+                *slot.lock().unwrap() = Some(result);
             })
             .build()]
     }
@@ -109,6 +138,36 @@ impl CardEffect for WitnessTargetChange {
             .process(move |ctx| {
                 if let Some(pa) = ctx.game.pending_attack.as_ref() {
                     log.lock().unwrap().push(pa.effective_target);
+                }
+            })
+            .build()]
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct TargetChangeSnapshot {
+    attacker: PermanentHandle,
+    old_target: AttackTarget,
+    new_target: AttackTarget,
+    reason: AttackTargetChangeReason,
+    controller: u8,
+}
+
+struct WitnessTargetChangePayload(Arc<Mutex<Vec<TargetChangeSnapshot>>>);
+impl CardEffect for WitnessTargetChangePayload {
+    fn effects(&self, c: CardHandle) -> Vec<Effect> {
+        let log = self.0.clone();
+        vec![Effect::on_attack_target_change(c)
+            .name("Witness target change payload")
+            .process(move |ctx| {
+                if let Some(change) = ctx.attack_target_change() {
+                    log.lock().unwrap().push(TargetChangeSnapshot {
+                        attacker: change.attacker,
+                        old_target: change.old_target,
+                        new_target: change.new_target,
+                        reason: change.reason,
+                        controller: change.controller,
+                    });
                 }
             })
             .build()]
@@ -193,6 +252,46 @@ fn ctx_redirect_attack_rewrites_effective_target_and_fires_observer() {
             .any(|t| matches!(t, AttackTarget::Digimon(h) if *h == redir)),
         "witness must see effective_target == REDIR post-redirect (saw {:?})",
         log
+    );
+}
+
+#[test]
+fn ctx_redirect_attack_payload_carries_old_new_reason_and_controller() {
+    let payload_log: Arc<Mutex<Vec<TargetChangeSnapshot>>> = Arc::new(Mutex::new(Vec::new()));
+
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("DEF"))
+        .add_card(card("REDIR"))
+        .add_card(card("WITNESS"))
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    let redir = r.place_on_field(1, "REDIR", Some(0));
+    let source_card = r.game.players[0].battle_area[atk.index as usize]
+        .top_card()
+        .handle();
+
+    r.register_effect("ATK", Arc::new(RedirectOnAttack(redir)));
+    r.register_effect(
+        "WITNESS",
+        Arc::new(WitnessTargetChangePayload(payload_log.clone())),
+    );
+    let _witness = r.place_on_field(1, "WITNESS", Some(0));
+
+    let _result = r.attack_digimon(atk, def, false);
+
+    assert_eq!(
+        payload_log.lock().unwrap().as_slice(),
+        &[TargetChangeSnapshot {
+            attacker: atk,
+            old_target: AttackTarget::Digimon(def),
+            new_target: AttackTarget::Digimon(redir),
+            reason: AttackTargetChangeReason::EffectRedirect(Some(source_card)),
+            controller: 0,
+        }],
+        "OnAttackTargetChange should expose its structured payload"
     );
 }
 
@@ -312,6 +411,102 @@ fn ctx_redirect_attack_validates_target_legality() {
     );
 }
 
+#[test]
+fn ctx_redirect_attack_honors_fixed_target_modifiers() {
+    let slot: Arc<Mutex<Option<Result<(), AttackError>>>> = Arc::new(Mutex::new(None));
+    let witness_log: Arc<Mutex<Vec<AttackTarget>>> = Arc::new(Mutex::new(Vec::new()));
+
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("DEF"))
+        .add_card(card("FIXED"))
+        .add_card(card("WITNESS"))
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    let fixed = r.place_on_field(1, "FIXED", Some(0));
+    r.game.modifiers.add(
+        fixed,
+        ModifierEntry::simple(
+            ModifierType::CannotBeRedirectedAsAttackTarget,
+            0,
+            Expiry::EndOfTurn,
+            0,
+        ),
+    );
+
+    r.register_effect(
+        "ATK",
+        Arc::new(RedirectRecordingErr {
+            target: AttackTarget::Digimon(fixed),
+            slot: slot.clone(),
+        }),
+    );
+    r.register_effect(
+        "WITNESS",
+        Arc::new(WitnessTargetChange(witness_log.clone())),
+    );
+    let _witness = r.place_on_field(0, "WITNESS", Some(0));
+
+    let _result = r.attack_digimon(atk, def, false);
+
+    let recorded = slot.lock().unwrap().take().expect("redirect result");
+    assert_eq!(recorded, Err(AttackError::InvalidTarget));
+    assert!(
+        witness_log.lock().unwrap().is_empty(),
+        "rejected redirect must not fire OnAttackTargetChange"
+    );
+}
+
+#[test]
+fn ctx_redirect_attack_honors_cannot_switch_attacker_modifier() {
+    let slot: Arc<Mutex<Option<Result<(), AttackError>>>> = Arc::new(Mutex::new(None));
+    let witness_log: Arc<Mutex<Vec<AttackTarget>>> = Arc::new(Mutex::new(Vec::new()));
+
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("DEF"))
+        .add_card(card("REDIR"))
+        .add_card(card("WITNESS"))
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    let redir = r.place_on_field(1, "REDIR", Some(0));
+    r.game.modifiers.add(
+        atk,
+        ModifierEntry::simple(
+            ModifierType::CanNotSwitchAttackTarget,
+            0,
+            Expiry::EndOfTurn,
+            0,
+        ),
+    );
+
+    r.register_effect(
+        "ATK",
+        Arc::new(RedirectRecordingErr {
+            target: AttackTarget::Digimon(redir),
+            slot: slot.clone(),
+        }),
+    );
+    r.register_effect(
+        "WITNESS",
+        Arc::new(WitnessTargetChange(witness_log.clone())),
+    );
+    let _witness = r.place_on_field(0, "WITNESS", Some(0));
+
+    let _result = r.attack_digimon(atk, def, false);
+
+    let recorded = slot.lock().unwrap().take().expect("redirect result");
+    assert_eq!(recorded, Err(AttackError::InvalidTarget));
+    assert!(
+        witness_log.lock().unwrap().is_empty(),
+        "rejected redirect must not fire OnAttackTargetChange"
+    );
+}
+
 /// Test 4: `ctx.redirect_attack` called when no attack is in flight
 /// returns `AttackError::NoActiveAttack`. Exercised by invoking from an
 /// `OnPlay` closure (play-from-hand, no attack).
@@ -403,5 +598,50 @@ fn ctx_cancel_attack_memory_rollback() {
         mem_before,
         "OnAttack memory gain must NOT apply when WhenWouldAttack cancels \
          before observers fire (memory stays at pre-declaration value)"
+    );
+}
+
+#[test]
+fn ctx_cancel_attack_rejected_after_counter_window_opens() {
+    let slot: Arc<Mutex<Option<Result<(), AttackError>>>> = Arc::new(Mutex::new(None));
+
+    let mut r = DebugRunner::builder()
+        .add_card(card_with_dp("ATK", 5000))
+        .add_card(card_with_dp("COUNTER_DEF", 2000))
+        .start();
+    r.register_effect(
+        "COUNTER_DEF",
+        Arc::new(CancelFromCounter { slot: slot.clone() }),
+    );
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "COUNTER_DEF", Some(0));
+
+    let result = r.attack_digimon(atk, def, false);
+    assert_eq!(result, AttackResult::InProgress);
+
+    r.game
+        .resolve_selection(1, encode_attack(0, def.index as u16))
+        .expect("defender resolves field Counter ability");
+
+    let recorded = slot.lock().unwrap().take().expect("counter cancel result");
+    assert_eq!(
+        recorded,
+        Err(AttackError::InvalidPhase),
+        "Counter-window cancellation must be rejected"
+    );
+    assert!(
+        r.game.pending_attack.is_none(),
+        "attack should continue to normal cleanup after rejected cancel"
+    );
+    assert_eq!(
+        r.battle_area_size(1),
+        0,
+        "defender should be deleted by normal battle when late cancel is rejected"
+    );
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "attacker survives the normal battle"
     );
 }

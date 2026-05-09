@@ -1,0 +1,31 @@
+card: EX6-029
+name: Mastemon
+kind: digimon
+level: 6
+color: [yellow, purple]
+cost: 7
+dp: 12000
+traits: [Angel]
+attribute: Vaccine
+ace_overflow: -4
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: blast_dna_digivolve
+    materials:
+      - { kind: digimon, name_is: "Angewomon" }
+      - { kind: digimon, name_is: "LadyDevimon" }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
+# Stubbed:
+# - [On Play]/[When Digivolving] optional level 5 or lower Angel/Archangel/
+#   Fallen Angel play from hand or trash.
+# - DNA-origin tail: place 1 other Digimon at bottom security, then trash
+#   opponent security down to 4.

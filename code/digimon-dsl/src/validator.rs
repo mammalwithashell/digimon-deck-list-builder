@@ -1048,6 +1048,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "MayAttackPlayerOnly",
     "CannotMove",
     "CannotSwitchAttackTarget",
+    "CanNotSwitchAttackTarget",
     "CannotBeRedirectedAsAttackTarget",
     "CanAttackTargetDefendingPermanent",
     "CannotAddMemory",

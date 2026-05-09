@@ -32,10 +32,9 @@ effects:
   #   - ChangeDigimonDP(4000, UntilEachTurnEnd)
   # Then SelectAttackEffect (canNoSelect: true — optional attack) on THIS Digimon.
   #
-  # "Then, this Digimon may attack." — BLOCKED: G-MAY-ATTACK-NOW
-  # No DSL verb or engine primitive for optional mid-effect attack on a specific
-  # Digimon. The DCGO fires SelectAttackEffect (canNoSelect: true) within the
-  # coroutine. Omitted until gap closes. See qa/dsl-vocab-gaps.md.
+  # "Then, this Digimon may attack." — effect-created optional attack on the
+  # source permanent. The DCGO fires SelectAttackEffect (canNoSelect: true)
+  # within the coroutine; Rust routes that through may_attack_now.
   - when: [on_play, when_digivolving]
     summary: "1 of your Digimon gains Piercing and +4000 DP for the turn"
     condition:
@@ -56,9 +55,10 @@ effects:
           target: tgt
           value: 4000
           expiry: end_of_turn
-      # "Then, this Digimon may attack."
-      # BLOCKED: G-MAY-ATTACK-NOW — no DSL verb for optional mid-effect attack.
-      # See qa/dsl-vocab-gaps.md.
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: true
 
   # ─── Clause 2 ────────────────────────────────────────────────────────────────
   # [All Turns] When any of your [Paildramon] or [Dinobeemon] would be deleted,

@@ -27,16 +27,18 @@
 //! - H13: ACE (ace_overflow: -4)
 //! - D1-adjacent: De-Digivolve 3 (select + de_digivolve step, mandatory)
 //! - E2-adjacent: optional End-of-Turn clause
-//! - PARTIAL: may-attack-now sub-clause omitted (G-MAY-ATTACK-NOW gap)
+//! - G-MAY-ATTACK-NOW: post-DNA optional may-attack-now sub-clause
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
+    CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::EffectTiming;
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{decode_attack, encode_attack, PASS, SECURITY_TARGET};
+use digimon_engine::debug_runner::{make_test_card, make_test_dna_card, DebugRunner};
+use digimon_engine::enums::{CardColor, EffectTiming};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
@@ -446,14 +448,163 @@ fn ex9_013_ace_overflow_is_negative_four() {
     assert_eq!(compiled.ace_overflow, Some(-4));
 }
 
-// ─── Section 6: BLOCKED — may-attack-now sub-clause ─────────────────────────
+// ─── Section 6: may-attack-now sub-clause ───────────────────────────────────
 
 #[test]
-#[ignore = "pending: G-MAY-ATTACK-NOW — no DSL verb for optional mid-effect attack on a specific Digimon (qa/dsl-vocab-gaps.md)"]
+fn ex9_013_eot_clause_contains_post_dna_may_attack_now() {
+    let compiled = compiled_ex9_013();
+    let triggered = compiled
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::EndOfYourTurn) => {
+                Some(t)
+            }
+            _ => None,
+        })
+        .expect("EX9-013 must have an EndOfYourTurn clause");
+
+    let has_may_attack = triggered.process.iter().any(|step| match step {
+        CompiledStep::MayAttackNow { optional, .. } => *optional,
+        CompiledStep::Optional(body) => body
+            .iter()
+            .any(|inner| matches!(inner, CompiledStep::MayAttackNow { optional: true, .. })),
+        _ => false,
+    });
+
+    assert!(
+        has_may_attack,
+        "EOT clause must contain the printed post-DNA '1 of your Digimon may attack' step"
+    );
+}
+
+#[test]
 fn ex9_013_eot_after_dna_one_digimon_may_attack() {
-    // BLOCKED: card text says "Then, 1 of your Digimon may attack."
-    // after the DNA digivolve step. No DSL verb (may_attack_now) or engine
-    // primitive (EffectContext::may_attack_now) exists yet.
-    // See qa/dsl-vocab-gaps.md entry G-MAY-ATTACK-NOW.
-    unimplemented!()
+    let mut omni = make_test_dna_card("TST-OMNI", "Omnimon Alter-S", 6, 6, 0);
+    omni.level = Some(7);
+    omni.dp = Some(15000);
+
+    let mut blue_lv6 = make_test_card("BLUE-LV6", "BlueLv6");
+    blue_lv6.level = Some(6);
+    blue_lv6.dp = Some(6000);
+    blue_lv6.colors = vec![CardColor::Blue];
+
+    let mut security_card = make_test_card("SEC", "Security");
+    security_card.dp = Some(2000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX9-013 YAML loads")
+        .add_card(omni)
+        .add_card(blue_lv6)
+        .add_card(security_card)
+        .hand(0, &["TST-OMNI"])
+        .security(1, &["SEC"])
+        .memory(10)
+        .start();
+    runner.game.turn_count = 1;
+
+    let blitz = runner.place_on_field(0, "EX9-013", None);
+    let blue = runner.place_on_field(0, "BLUE-LV6", None);
+    let security_before = runner.game.player(1).security.len();
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(blitz));
+    runner.game.drain_effect_queue();
+
+    let hand = runner
+        .pending_selection_view()
+        .expect("EOT clause should select Omnimon Alter-S from hand");
+    assert_eq!(hand.kind, SelectionKind::Hand);
+    runner
+        .game
+        .resolve_selection(hand.selecting_player, hand.valid_action_ids[0])
+        .expect("hand selection resolves");
+
+    let first_dna = runner
+        .pending_selection_view()
+        .expect("first DNA material selection should install");
+    assert_eq!(first_dna.kind, SelectionKind::Target);
+    let blitz_pick = first_dna
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|action| *action == encode_attack(blitz.player as u16, blitz.index as u16))
+        .expect("BlitzGreymon should be selectable as the first DNA material");
+    runner
+        .game
+        .resolve_selection(first_dna.selecting_player, blitz_pick)
+        .expect("first DNA material resolves");
+
+    let second_dna = runner
+        .pending_selection_view()
+        .expect("second DNA material selection should install");
+    assert_eq!(second_dna.kind, SelectionKind::Target);
+    let blue_pick = second_dna
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|action| *action == encode_attack(blue.player as u16, blue.index as u16))
+        .expect("Blue Lv6 should be selectable as the second DNA material");
+    runner
+        .game
+        .resolve_selection(second_dna.selecting_player, blue_pick)
+        .expect("second DNA material resolves");
+
+    let choose_attacker = runner
+        .pending_selection_view()
+        .expect("post-DNA '1 of your Digimon may attack' should select an attacker");
+    assert_eq!(choose_attacker.kind, SelectionKind::OwnField);
+    assert!(
+        choose_attacker.is_optional,
+        "printed post-DNA 'may attack' should expose a decline before commitment"
+    );
+    assert!(
+        build_action_mask(&runner.game, 0)[PASS as usize] > 0.0,
+        "optional attacker selection must expose PASS through the action mask"
+    );
+    let attacker_action = choose_attacker.valid_action_ids[0];
+    runner
+        .game
+        .resolve_selection(choose_attacker.selecting_player, attacker_action)
+        .expect("attacker selection resolves");
+
+    let attack_prompt = runner
+        .pending_selection_view()
+        .expect("selected Digimon should open the normal attack target prompt");
+    assert!(
+        attack_prompt.is_optional,
+        "may_attack_now must keep PASS legal at the attack target prompt"
+    );
+    assert!(
+        build_action_mask(&runner.game, 0)[PASS as usize] > 0.0,
+        "optional attack target prompt must expose PASS through the action mask"
+    );
+    let attack_player = attack_prompt
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|action| {
+            let (_, target) = decode_attack(*action);
+            target == SECURITY_TARGET
+        })
+        .expect("normal attack flow should allow choosing the opponent player");
+    runner
+        .game
+        .resolve_selection(attack_prompt.selecting_player, attack_player)
+        .expect("effect-created attack resolves");
+
+    assert_eq!(
+        runner.game.player(1).security.len(),
+        security_before - 1,
+        "post-DNA effect-created attack should use the normal security flow"
+    );
+    assert!(
+        runner.game.player(0).battle_area.iter().any(|p| {
+            runner.game.card_data[p.top_card().data_index].card_name == "Omnimon Alter-S"
+                && p.is_suspended
+        }),
+        "the chosen post-DNA attacker should pay the normal suspend cost"
+    );
 }

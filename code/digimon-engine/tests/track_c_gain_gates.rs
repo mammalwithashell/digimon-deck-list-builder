@@ -38,11 +38,8 @@ fn runner_with_carrier_on_field() -> (DebugRunner, PermanentHandle) {
     (r, carrier)
 }
 
-fn enter_effect_scope<F>(
-    r: &mut DebugRunner,
-    actor: PermanentHandle,
-    body: F,
-) where
+fn enter_effect_scope<F>(r: &mut DebugRunner, actor: PermanentHandle, body: F)
+where
     F: FnOnce(&mut digimon_engine::effect_context::EffectContext<'_>),
 {
     let card = r.game.players[actor.player as usize].battle_area[actor.index as usize]

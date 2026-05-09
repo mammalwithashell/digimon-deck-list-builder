@@ -51,19 +51,20 @@ alt_paths:
 #[test]
 fn parse_blast_dna_digivolve() {
     let yaml = r#"
-card: EX6-011
-name: RagnaLoardmon
+card: BT17-078
+name: Omnimon
 kind: digimon
 level: 7
-color: [red, black]
+color: [white]
 cost: 9
 dp: 15000
 alt_paths:
   - kind: blast_dna_digivolve
     materials:
-      - { name_is: Durandamon }
-      - { name_is: BryweLudramon }
+      - { kind: digimon, name_is: WarGreymon }
+      - { kind: digimon, name_is: MetalGarurumon }
     cost: 0
+    stacks_unsuspended: true
 "#;
     let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
     let ap = &spec.alt_paths[0];
@@ -71,12 +72,14 @@ alt_paths:
     assert_eq!(ap.materials.len(), 2);
     assert_eq!(
         ap.materials[0].inline_filter.name_is.as_deref(),
-        Some("Durandamon")
+        Some("WarGreymon")
     );
     assert_eq!(
         ap.materials[1].inline_filter.name_is.as_deref(),
-        Some("BryweLudramon")
+        Some("MetalGarurumon")
     );
+    assert_eq!(ap.cost, Some(CostSpec::Literal(0)));
+    assert_eq!(ap.stacks_unsuspended, true);
 }
 
 #[test]

@@ -114,7 +114,7 @@ Plus a small assortment of cross-batch fixes (binding-keyword bug `target: sourc
 | G-ATK-TRAIT-FILTER | `attacker_trait_has` predicate on `on_attack_target_change` clauses | BT21-025 |
 | G-ALT-PATH-CONDITION | `AltPathSpec` missing `condition: Option<PredicateSpec>` field | BT24-016 |
 | ~~G-PLAY-COST-LTE~~ | RESOLVED for select_hand/select_trash card filters; older card notes may still need migration | P-189 |
-| G-MAY-ATTACK-NOW | No DSL verb for mid-effect optional/forced attack on a specific permanent | BT24-082, BT21-081 |
+| ~~G-MAY-ATTACK-NOW~~ | RESOLVED 2026-05-08 for mid-effect optional/forced attack prompts (`may_attack_now`, `force_attack`) | BT24-082, BT21-081 |
 | G-ZONE-TRASH-TO-DECK | No DSL verb for "return trash card to bottom of deck" | BT24-017 |
 | G-TRASH-SELECTED-SECURITY | No verb to trash a non-top selected security card | BT24-018 |
 | G-DSL-LINK-VERB | No DSL clause/step for link card mechanic | ST22-08 |

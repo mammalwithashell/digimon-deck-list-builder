@@ -1,0 +1,55 @@
+card: BT24-047
+name: Kokatorimon
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 4000
+traits: [Giant Bird]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color: green }
+    cost: 2
+
+effects:
+  # [On Play] [When Digivolving] You may suspend 1 Digimon. If this effect
+  # suspended your Digimon, 1 of your Digimon with [Avian] or [Bird] in any
+  # of its traits or the [Vortex Warriors] trait unsuspends. If this effect
+  # unsuspended, that Digimon may attack.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] May suspend; if yours, unsuspend eligible Digimon and it may attack"
+    process:
+      - select_any_permanent:
+          bind_as: suspended
+          filter: { kind: digimon, is_unsuspended: true }
+          prompt: "You may suspend 1 Digimon"
+          optional: true
+      - suspend: { target: suspended }
+      - if:
+          condition:
+            binding_owner: { binding: suspended, of: you }
+          then:
+            - select_own_permanent:
+                bind_as: unsuspended
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - is_suspended: true
+                    - any_of:
+                        - trait_has: Avian
+                        - trait_has: Bird
+                        - trait_has: Vortex Warriors
+                prompt: "Unsuspend 1 Avian, Bird or Vortex Warriors Digimon"
+            - unsuspend: { target: unsuspended }
+            - may_attack_now:
+                attacker: unsuspended
+                targets: any
+                optional: true
+
+  # [All Turns] [Once Per Turn] When this Digimon deletes your opponent's
+  # Digimon in battle, gain 1 memory. End-of-battle deletion payloads do not
+  # yet expose the deleting attacker/defender pair to inherited DSL predicates,
+  # so this inherited clause remains tracked as card-body follow-up rather
+  # than hidden approximation.

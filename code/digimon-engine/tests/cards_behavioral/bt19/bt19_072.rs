@@ -4,7 +4,12 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
     CompiledPredicate, CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::space::encode_attack;
+use digimon_engine::combat::{AttackInitiator, AttackOpen, TargetConstraint};
+use digimon_engine::debug_runner::make_test_card;
 use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::enums::CardKind;
+use digimon_engine::selection::{AttackTarget, SelectionKind};
 
 fn runner() -> DebugRunner {
     DebugRunner::builder()
@@ -93,7 +98,82 @@ fn bt19_072_on_play_when_digivolving_selects_level_four_or_lower_digimon_from_tr
 }
 
 #[test]
-#[ignore = "pending: G-ATTACK-RETARGET — switch attack target to own Royal Knight"]
 fn bt19_072_opponents_turn_switches_attack_target_to_royal_knight() {
-    panic!("requires attack retarget pending-selection support");
+    let mut attacker_card = make_test_card("ATK", "Attacker");
+    attacker_card.card_kind = CardKind::Digimon;
+    attacker_card.dp = Some(12000);
+
+    let mut royal_card = make_test_card("RK-TARGET", "Royal Knight Target");
+    royal_card.card_kind = CardKind::Digimon;
+    royal_card.dp = Some(3000);
+    royal_card.traits = vec!["Royal Knight".to_string()];
+
+    let mut security_card = make_test_card("SEC", "Security");
+    security_card.dp = Some(2000);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT19-072")
+        .expect("BT19-072 YAML loads")
+        .add_card(attacker_card)
+        .add_card(royal_card)
+        .add_card(security_card)
+        .security(0, &["SEC"])
+        .memory(10)
+        .start();
+    runner.game.turn_count = 1;
+
+    let _lord = runner.place_on_field(0, "BT19-072", Some(0));
+    let royal = runner.place_on_field(0, "RK-TARGET", Some(0));
+    let attacker = runner.place_on_field(1, "ATK", Some(0));
+    let security_before = runner.game.players[0].security.len();
+
+    runner.game.begin_attack_open(AttackOpen {
+        attacker,
+        initiator: AttackInitiator::Effect {
+            source: None,
+            optional: false,
+        },
+        suspend_attacker: false,
+        target_constraint: TargetConstraint::Forced(AttackTarget::Player(0)),
+        allow_cancel: false,
+        cost_upgrade: None,
+    });
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("LordKnightmon should prompt for an own Royal Knight retarget");
+    assert_eq!(
+        pending.kind,
+        SelectionKind::OwnField,
+        "retarget choice should select one of your Royal Knight Digimon"
+    );
+    assert_eq!(
+        pending.selecting_player, 0,
+        "defending controller should choose the retarget"
+    );
+
+    let choose_royal = encode_attack(0, royal.index as u16);
+    assert!(
+        pending.valid_action_ids.contains(&choose_royal),
+        "Royal Knight Digimon should be a legal retarget"
+    );
+    runner
+        .game
+        .resolve_selection(0, choose_royal)
+        .expect("resolve Royal Knight retarget");
+
+    assert_eq!(
+        runner.game.players[0].security.len(),
+        security_before,
+        "redirected attack must not check security"
+    );
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .all(|perm| perm.top_card().card_id(&runner.game.card_data) != "RK-TARGET"),
+        "the selected Royal Knight should take the redirected battle"
+    );
 }

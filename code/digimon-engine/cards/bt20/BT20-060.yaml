@@ -15,27 +15,27 @@ alt_paths:
     cost: 6
   - kind: dna_digivolve
     materials:
-      - { level_eq: 6, color_is: black }
-      - all_of:
-          - level_eq: 6
-          - any_of:
-              - color_is: yellow
-              - color_is: red
+      - { name_contains: "Alphamon" }
+      - { name_contains: "Ouryumon" }
     cost: 0
     stacks_unsuspended: true
   - kind: blast_dna_digivolve
     materials:
-      - { name_is: "Alphamon" }
-      - { name_is: "Ouryumon" }
+      - { kind: digimon, name_is: "Alphamon" }
+      - { kind: digimon, name_is: "Ouryumon" }
     cost: 0
+    stacks_unsuspended: true
 
 effects:
+  # [Hand][Counter] Blast DNA Digivolve ([Alphamon] + [Ouryumon]).
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
   # [On Play][When Digivolving] 1 opponent Digimon gets -15000 DP until the
-  # end of their turn. The DNA-origin tail (security trash + Recovery) is
-  # omitted until the DNA-origin tail can sequence those security operations
-  # faithfully from this shared On Play/When Digivolving trigger.
+  # end of their turn. Then, if DNA digivolving, trash the opponent's top
+  # security card and Recovery +1 (Deck).
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] 1 opponent Digimon gets -15000 DP until the end of their turn"
+    summary: "[On Play][When Digivolving] 1 opponent Digimon gets -15000 DP until the end of their turn; if DNA digivolving, trash 1 security and recover"
     process:
       - select_opponent_permanent:
           bind_as: dp_target
@@ -45,6 +45,11 @@ effects:
           target: dp_target
           value: -15000
           expiry: end_of_opponents_turn
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - trash_top_security: { of: opponent }
+            - recover: { of: you, count: 1 }
 
   # [All Turns][OPT] security stacks removed -> gain 3 memory is omitted:
   # no faithful reusable security-removed observer is available for this batch.

@@ -47,7 +47,10 @@ fn effect_play_provenance_token_survives_field_shift_and_zone_move() {
         player: 0,
         index: 1,
     };
-    let moved = runner.game.return_to_hand(shifted).expect("returns top card");
+    let moved = runner
+        .game
+        .return_to_hand(shifted)
+        .expect("returns top card");
     assert_eq!(
         runner.game.resolve_provenance_token(token),
         Some(EventSubject::Card {

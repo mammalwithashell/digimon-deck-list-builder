@@ -80,4 +80,4 @@ pub use selection::{
 };
 pub use tensor::{build_tensor, TENSOR_SIZE};
 pub use token_registry::{TokenDef, TokenRegistry};
-pub use trigger_context::TriggerContext;
+pub use trigger_context::{AttackTargetChange, AttackTargetChangeReason, TriggerContext};

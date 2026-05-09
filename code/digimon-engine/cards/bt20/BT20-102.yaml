@@ -104,14 +104,9 @@ effects:
   #   - SelectAttackEffect.SetWithoutTap() — mandatory attack without suspending
   #
   # "You may" in printed text → optional: true (DCGO: isOptional=true).
-  # Rush keyword grant is expressible in DSL; "attack without suspending" is BLOCKED:
-  #
-  # GAP G-MAY-ATTACK-NOW [hybrid — already tracked in qa/dsl-vocab-gaps.md]:
-  #   No DSL verb or engine primitive for an immediate in-effect mandatory attack on
-  #   a specific Digimon without suspending. `ModifierType::MayAttack` and
-  #   `::ForceAttack` are not registered in `lookup_modifier_type`. Even if registered,
-  #   they target the EOT execute window — not the mid-effect-resolution attack flow
-  #   that DCGO fires via `SelectAttackEffect.SetCanNotSelectNotAttack + SetWithoutTap`.
+  # After the trigger is accepted and a Digimon is selected, the attack is mandatory:
+  # DCGO uses SelectAttackEffect.SetCanNotSelectNotAttack() + SetWithoutTap().
+  # Rust expresses that as force_attack with without_suspending routed through AttackOpen.
   #
   # GAP G-OPT-TRIGGERED [already tracked]:
   #   `once_per_turn: true` on triggered clauses compiles to `Effect::max_per_turn=1`
@@ -120,7 +115,7 @@ effects:
   - when: end_of_your_turn
     once_per_turn: true
     optional: true
-    summary: "[EOT][OPT] 1 of your Digimon gains Rush for the turn; attack without suspending (attack step pending G-MAY-ATTACK-NOW)"
+    summary: "[EOT][OPT] 1 of your Digimon gains Rush for the turn; attack without suspending"
     process:
       - select_own_permanent:
           bind_as: tgt
@@ -131,6 +126,7 @@ effects:
           target: tgt
           keyword: Rush
           expiry: end_of_turn
-      # "and attack without suspending" — BLOCKED: G-MAY-ATTACK-NOW
-      # When this gap closes, add:
-      #   - force_attack_now: { target: tgt, without_suspending: true }
+      - force_attack:
+          attacker: tgt
+          targets: any
+          without_suspending: true

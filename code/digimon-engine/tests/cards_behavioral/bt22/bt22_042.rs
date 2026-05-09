@@ -215,7 +215,11 @@ fn bt22_042_when_digivolving_plays_puppet_then_debuffs_by_own_digimon_count() {
     if runner.game.current_phase == digimon_engine::enums::GamePhase::EndOfTurnAction {
         runner.game.pass_end_of_turn_action();
     }
-    assert_eq!(runner.turn_player(), 1, "first turn rotation reaches the opponent");
+    assert_eq!(
+        runner.turn_player(),
+        1,
+        "first turn rotation reaches the opponent"
+    );
     assert_eq!(
         runner.dp_of(target),
         Some(8000),
@@ -225,7 +229,11 @@ fn bt22_042_when_digivolving_plays_puppet_then_debuffs_by_own_digimon_count() {
     if runner.game.current_phase == digimon_engine::enums::GamePhase::EndOfTurnAction {
         runner.game.pass_end_of_turn_action();
     }
-    assert_eq!(runner.turn_player(), 0, "second turn rotation returns to Nyabootmon's controller");
+    assert_eq!(
+        runner.turn_player(),
+        0,
+        "second turn rotation returns to Nyabootmon's controller"
+    );
     assert_eq!(
         runner.dp_of(target),
         Some(14000),

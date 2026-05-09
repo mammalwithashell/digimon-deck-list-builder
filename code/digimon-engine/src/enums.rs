@@ -512,6 +512,8 @@ pub enum ModifierType {
     CanAttackUnsuspended,
     CanAttackActivePlayer,
     CannotAttackTarget,
+    CannotBeRedirectedAsAttackTarget,
+    CanNotSwitchAttackTarget,
 
     // Suspend
     CannotSuspend,
@@ -614,11 +616,6 @@ pub enum ModifierType {
     /// switched mid-attack (Block / Raid / Counter retarget all skip).
     /// Consult site: `combat::redirect_attack_target` (Track D).
     CannotSwitchAttackTarget,
-    /// Permanent-scoped: this defender cannot be redirected TO as an
-    /// attack target by Block / Raid / retarget rider. Consult site:
-    /// retarget candidate filter in `try_enter_block` and the Raid post-
-    /// block rider (Track D).
-    CannotBeRedirectedAsAttackTarget,
     /// Permanent-scoped affirmative inverse of `CannotAttackTarget` —
     /// "this Digimon CAN attack the otherwise-illegal defending permanent
     /// (e.g. an unsuspended Digimon)". Stack-overrides the negative.
@@ -679,7 +676,6 @@ pub enum ModifierType {
     // Variants published here so the aura system can deliver them; many
     // overlap with existing `ChangeDp` / `ChangeBaseDp` / `ChangePlayCost`
     // but have narrower printed-text semantics that auras need to express.
-
     /// Like `ChangeDp` but applies to the topmost card's printed DP
     /// rather than the live permanent's DP — used by "this card's DP
     /// becomes X" effects that ignore stack DP.

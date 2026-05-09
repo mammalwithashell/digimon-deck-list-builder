@@ -108,11 +108,7 @@ impl ModifierEntry {
     /// `entry.disable_effect_timing` and skips per-permanent observers
     /// whose `effect.timing == timing`. Other timings on the same
     /// permanent are unaffected.
-    pub fn disable_effect(
-        timing: EffectTiming,
-        expiry: Expiry,
-        source_player: PlayerId,
-    ) -> Self {
+    pub fn disable_effect(timing: EffectTiming, expiry: Expiry, source_player: PlayerId) -> Self {
         Self {
             modifier: ModifierType::DisableEffect,
             value: 0,

@@ -100,9 +100,7 @@ fn cannot_move_on_opposing_breeding_does_not_block_own_move() {
     // The modifier is permanent-scoped and keyed by handle. A
     // CannotMove installed on the OPPOSING player's breeding handle
     // must not affect P0's move.
-    let mut r = DebugRunner::builder()
-        .add_card(lv3_digimon("EGG3"))
-        .start();
+    let mut r = DebugRunner::builder().add_card(lv3_digimon("EGG3")).start();
     r.place_in_breeding(0, "EGG3");
 
     r.game.modifiers.add(

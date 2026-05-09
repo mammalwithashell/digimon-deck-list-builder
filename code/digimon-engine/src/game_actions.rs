@@ -584,8 +584,8 @@ impl Game {
             effective_cost,
             source == PlaySource::ByEffect,
         )
-            .map(PlayFromHandCostResult::Played)
-            .unwrap_or(PlayFromHandCostResult::Failed)
+        .map(PlayFromHandCostResult::Played)
+        .unwrap_or(PlayFromHandCostResult::Failed)
     }
 
     pub(crate) fn commit_pending_would_play(
@@ -1221,6 +1221,7 @@ impl Game {
                 is_turn_player,
                 card_id: card_id.to_string(),
                 allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
             });
         }
     }
@@ -1302,6 +1303,7 @@ impl Game {
                 is_turn_player,
                 card_id: card_id.to_string(),
                 allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
             });
         }
     }
@@ -1341,6 +1343,7 @@ impl Game {
                 is_turn_player,
                 card_id: card_id.to_string(),
                 allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
             });
         }
     }
@@ -4767,13 +4770,7 @@ impl Game {
         source: PlaySource,
     ) -> bool {
         self.effect_initiated_digivolve_from_source_inner(
-            player_id,
-            source_ref,
-            target,
-            cost_delta,
-            true,
-            true,
-            source,
+            player_id, source_ref, target, cost_delta, true, true, source,
         )
     }
 

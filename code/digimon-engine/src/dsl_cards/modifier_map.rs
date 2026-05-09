@@ -25,6 +25,8 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CanAttackUnsuspended" => ModifierType::CanAttackUnsuspended,
         "CanAttackActivePlayer" => ModifierType::CanAttackActivePlayer,
         "CannotAttackTarget" => ModifierType::CannotAttackTarget,
+        "CannotBeRedirectedAsAttackTarget" => ModifierType::CannotBeRedirectedAsAttackTarget,
+        "CanNotSwitchAttackTarget" => ModifierType::CanNotSwitchAttackTarget,
         "CannotSuspend" => ModifierType::CannotSuspend,
         "CannotUnsuspend" => ModifierType::CannotUnsuspend,
         "CannotBeSelectedByEffect" => ModifierType::CannotBeSelectedByEffect,
@@ -78,7 +80,6 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "MayAttackPlayerOnly" => ModifierType::MayAttackPlayerOnly,
         "CannotMove" => ModifierType::CannotMove,
         "CannotSwitchAttackTarget" => ModifierType::CannotSwitchAttackTarget,
-        "CannotBeRedirectedAsAttackTarget" => ModifierType::CannotBeRedirectedAsAttackTarget,
         "CanAttackTargetDefendingPermanent" => ModifierType::CanAttackTargetDefendingPermanent,
         "CannotAddMemory" => ModifierType::CannotAddMemory,
         "CannotAddSecurity" => ModifierType::CannotAddSecurity,
@@ -181,6 +182,7 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::MayAttackPlayerOnly
         | ModifierType::CannotMove
         | ModifierType::CannotSwitchAttackTarget
+        | ModifierType::CanNotSwitchAttackTarget
         | ModifierType::CannotBeRedirectedAsAttackTarget
         | ModifierType::CanAttackTargetDefendingPermanent
         | ModifierType::CannotAddMemory
@@ -285,6 +287,7 @@ mod tests {
             ModifierType::MayAttackPlayerOnly,
             ModifierType::CannotMove,
             ModifierType::CannotSwitchAttackTarget,
+            ModifierType::CanNotSwitchAttackTarget,
             ModifierType::CannotBeRedirectedAsAttackTarget,
             ModifierType::CanAttackTargetDefendingPermanent,
             ModifierType::CannotAddMemory,

@@ -1,0 +1,30 @@
+card: BT20-076
+name: "Imperialdramon: Dragon Mode"
+kind: digimon
+level: 6
+color: [purple, red]
+cost: 7
+dp: 12000
+traits: [Ancient Dragon]
+attribute: Virus
+ace_overflow: -4
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+  - kind: blast_dna_digivolve
+    materials:
+      - { kind: digimon, name_is: "DinoBeemon" }
+      - { kind: digimon, name_is: "Paildramon" }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
+# Stubbed:
+# - [On Play]/[When Digivolving] delete 1 11000 DP or less Digimon.
+# - DNA-origin tail: may digivolve into [Imperialdramon: Fighter Mode] from
+#   hand or trash for free.

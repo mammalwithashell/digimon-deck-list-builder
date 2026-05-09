@@ -43,13 +43,14 @@ These cards need production YAML and card-specific tests, but should not become 
 ### G-ASL-02: Effect-initiated immediate and forced attacks
 
 - **Type:** hybrid `engine-gap` / `dsl-gap`
-- **Blocks:** `EX9-013`, `EX10-008`, `EX5-048`
+- **Status:** reusable primitive resolved for EX9-013 and cost-upgraded attack openings as of 2026-05-08; still relevant to EX10-008 / EX5-048 card authoring.
+- **Formerly blocked:** `EX9-013`, `EX10-008`, `EX5-048`
 - **Cross-archetype value:** DNA Omnimon, BG Imperial, Vortex-style cards, and forced-attack enablers all need effect-generated attacks that reuse normal combat legality while preserving optionality or mandatory timing.
 - **Printed behavior examples:** `EX9-013` lets one of your Digimon attack after its end-turn DNA process. `EX10-008` and `EX5-048` can cause an opponent's Digimon to attack at start of main phase.
-- **Missing capability:** An effect-resolution attack step that can be optional or mandatory, can target "this Digimon", one selected own Digimon, or an affected opponent Digimon, and uses the normal attack target/action mask machinery.
+- **Implemented capability:** `may_attack_now` and `force_attack` cover effect-resolution attacks that can be optional or mandatory, can target "this Digimon", one selected own Digimon, or an affected opponent Digimon, and use the normal attack target/action mask machinery. The optional `cost_upgrade: { dp, security_attack }` payload now applies attack-only DP/security riders through `AttackOpen` and tears them down at `EndOfAttack`.
 - **Why it matters:** Omitting the attack loses printed payoff; auto-attacking hides legal choices and can choose the wrong target.
 - **Spec should cover:** PASS/decline for optional attacks, mandatory prompt behavior, attacker scoping, target legality reuse, memory/turn-state legality, suspended/can-attack checks, and interactions with "can't attack" modifiers.
-- **First test:** Resolve an `EX9-013`-shaped effect after DNA digivolution and assert the action mask exposes PASS plus legal attack actions for eligible own Digimon only.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_013_eot_clause_contains_post_dna_may_attack_now ex9_013_eot_after_dna_one_digimon_may_attack`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- attack_open_cost_upgrade_applies_for_attack_only`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- may_attack_now_cost_upgrade_yaml_lowers_to_compiled_step`.
 - **Likely files:** `code/digimon-engine/src/action/`, `code/digimon-engine/src/combat.rs`, `code/digimon-engine/src/effect_context/`, `code/digimon-dsl/src/step.rs`, `code/digimon-engine/tests/dsl/`.
 
 ### G-ASL-03: Attack-target-change observer and Collision/Raid event fan-out
@@ -142,7 +143,7 @@ When compiling the next shared DSL/engine spec, do not include "missing Alter-S 
 
 Recommended ordering:
 
-1. `G-ASL-02` effect-initiated immediate and forced attacks, because it is already blocking `EX9-013` ignored tests and overlaps BG Imperial/DNA Omnimon.
+1. `G-ASL-02` effect-initiated immediate and forced attacks is no longer blocking `EX9-013`; use the covered primitive when authoring EX10-008 / EX5-048 forced-attack cards.
 2. `G-ASL-01` source-stack play and self-to-security replacement, because it unlocks the Alter-S Lv.7 payoff identity and overlaps Decode/Partition-style replacement work.
 3. `G-ASL-04` face-down source representation, because it affects hidden state and may require observation/privacy review before card authoring scales.
 4. `G-ASL-03` attack-target-change observer fan-out, because it should be centralized before adding Collision/Raid-heavy cards.

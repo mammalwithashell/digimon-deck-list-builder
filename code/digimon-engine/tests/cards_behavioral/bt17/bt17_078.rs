@@ -46,14 +46,17 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause,
     CompiledPredicate, CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
-use digimon_engine::action::space::{encode_digivolve, PASS, PLAY_HAND_START};
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::{DNA_DIGIVOLVE_START, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::enums::{CardKind, CostDelta, EffectTiming, Keyword, PlayerId};
+use digimon_engine::enums::{
+    CardColor, CardKind, CostDelta, EffectTiming, GamePhase, Keyword, PlayerId,
+};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 use std::sync::{Arc, Mutex};
@@ -240,7 +243,12 @@ fn bt17_078_when_digivolving_dna_reads_dna_origin_payload() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("BT17-078 YAML loads")
-        .add_card(make_named_digimon("BT17-GREY-LV6", "Greymon source", 6, 11000))
+        .add_card(make_named_digimon(
+            "BT17-GREY-LV6",
+            "Greymon source",
+            6,
+            11000,
+        ))
         .add_card(make_named_digimon(
             "BT17-GARU-LV6",
             "Garurumon source",
@@ -287,7 +295,12 @@ fn bt17_078_when_digivolving_standard_does_not_read_dna_origin() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("BT17-078 YAML loads")
-        .add_card(make_named_digimon("BT17-BASE-LV6", "Red level 6 base", 6, 11000))
+        .add_card(make_named_digimon(
+            "BT17-BASE-LV6",
+            "Red level 6 base",
+            6,
+            11000,
+        ))
         .hand(0, &["BT17-078"])
         .memory(5)
         .start();
@@ -321,6 +334,7 @@ fn bt17_078_when_digivolving_standard_does_not_read_dna_origin() {
 }
 
 /// Blast DNA alt-path: [Hand][Counter] WarGreymon + MetalGarurumon, cost 0.
+/// Distinct from the regular DNA path's broader Greymon/Garurumon name family.
 #[test]
 fn bt17_078_has_blast_dna_digivolve_alt_path_wargreymon_metalgarurumon() {
     let c = compiled_bt17_078();
@@ -341,6 +355,106 @@ fn bt17_078_has_blast_dna_digivolve_alt_path_wargreymon_metalgarurumon() {
         "BT17-078 must have a Blast DNA Digivolve alt-path with materials \
          [WarGreymon] + [MetalGarurumon] firing from hand at counter timing"
     );
+}
+
+#[test]
+fn bt17_078_counter_blast_dna_uses_exact_wargreymon_and_metalgarurumon() {
+    let mut wargreymon = make_named_digimon("BT17-WARGREYMON", "WarGreymon", 6, 12000);
+    wargreymon.colors = vec![CardColor::Red];
+    let mut metalgarurumon = make_named_digimon("BT17-METALGARURUMON", "MetalGarurumon", 6, 12000);
+    metalgarurumon.colors = vec![CardColor::Blue];
+    let mut attacker = make_named_digimon("BT17-ATTACKER", "Attacker", 6, 17000);
+    attacker.colors = vec![CardColor::Red];
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-078 YAML loads")
+        .add_card(wargreymon)
+        .add_card(metalgarurumon)
+        .add_card(attacker)
+        .hand(1, &["BT17-078", "BT17-METALGARURUMON"])
+        .start();
+
+    let attacking = runner.place_on_field(0, "BT17-ATTACKER", Some(0));
+    let wargrey = runner.place_on_field(1, "BT17-WARGREYMON", Some(0));
+
+    let result = runner.attack_digimon(attacking, wargrey, false);
+    assert_eq!(result, digimon_engine::combat::AttackResult::InProgress);
+    assert_eq!(runner.current_phase(), GamePhase::CounterTiming);
+
+    let prompt = runner
+        .pending_selection()
+        .expect("Counter window should offer BT17-078 Blast DNA");
+    assert!(prompt.valid_action_ids.contains(&DNA_DIGIVOLVE_START));
+    let mask = build_action_mask(&runner.game, 1);
+    assert_eq!(mask[DNA_DIGIVOLVE_START as usize], 1.0);
+
+    runner
+        .execute_action(1, DNA_DIGIVOLVE_START)
+        .expect("choose BT17-078 for Counter Blast DNA");
+    assert_eq!(runner.current_phase(), GamePhase::SelectMaterial);
+    assert_eq!(
+        runner
+            .pending_selection()
+            .expect("field material prompt")
+            .valid_action_ids,
+        vec![0]
+    );
+
+    runner
+        .execute_action(1, 0)
+        .expect("choose WarGreymon as field material");
+    assert_eq!(
+        runner
+            .pending_selection()
+            .expect("hand material prompt")
+            .valid_action_ids,
+        vec![PLAY_HAND_START + 1]
+    );
+    runner
+        .execute_action(1, PLAY_HAND_START + 1)
+        .expect("choose MetalGarurumon as hand material");
+
+    let evolved = &runner.game.players[1].battle_area[0];
+    assert_eq!(
+        evolved.top_card().card_id(&runner.game.card_data),
+        "BT17-078"
+    );
+    assert!(evolved
+        .card_sources
+        .iter()
+        .any(|card| card.card_id(&runner.game.card_data) == "BT17-METALGARURUMON"));
+    assert_eq!(runner.hand_size(1), 0);
+}
+
+#[test]
+fn bt17_078_counter_blast_dna_rejects_broad_greymon_garurumon_names() {
+    let mut greymon = make_named_digimon("BT17-GREYMON", "Greymon", 6, 8000);
+    greymon.colors = vec![CardColor::Red];
+    let mut garurumon = make_named_digimon("BT17-GARURUMON", "Garurumon", 6, 8000);
+    garurumon.colors = vec![CardColor::Blue];
+    let mut attacker = make_named_digimon("BT17-ATTACKER", "Attacker", 6, 17000);
+    attacker.colors = vec![CardColor::Red];
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-078 YAML loads")
+        .add_card(greymon)
+        .add_card(garurumon)
+        .add_card(attacker)
+        .hand(1, &["BT17-078", "BT17-GARURUMON"])
+        .start();
+
+    let attacking = runner.place_on_field(0, "BT17-ATTACKER", Some(0));
+    let greymon = runner.place_on_field(1, "BT17-GREYMON", Some(0));
+
+    let result = runner.attack_digimon(attacking, greymon, false);
+    assert_ne!(
+        runner.current_phase(),
+        GamePhase::CounterTiming,
+        "printed Blast DNA marker requires exact WarGreymon + MetalGarurumon, not broad normal DNA names"
+    );
+    assert_ne!(result, digimon_engine::combat::AttackResult::Invalid);
 }
 
 /// Face-up Raid grant_keyword clause must be present.
@@ -487,14 +601,24 @@ fn bt17_078_counter_blast_dna_uses_wargreymon_and_metalgarurumon() {
         .expect("Blast DNA CounterTiming selection must be installed");
     assert_eq!(selection.selecting_player, 1);
     assert!(
-        selection.valid_action_ids.contains(&encode_digivolve(0, 0)),
-        "field WarGreymon must be selectable as the first Blast DNA material: {:?}",
+        selection.valid_action_ids.contains(&DNA_DIGIVOLVE_START),
+        "BT17-078 must be selectable as the Counter Blast DNA result card: {:?}",
         selection.valid_action_ids
     );
 
     runner
         .game
-        .resolve_selection(1, encode_digivolve(0, 0))
+        .resolve_selection(1, DNA_DIGIVOLVE_START)
+        .expect("select BT17-078 as Counter Blast DNA result");
+    let selection = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Blast DNA field-material selection must be installed");
+    assert_eq!(selection.valid_action_ids, vec![0]);
+    runner
+        .game
+        .resolve_selection(1, 0)
         .expect("select field WarGreymon");
     let selection = runner
         .game
@@ -560,7 +684,11 @@ fn bt17_078_blast_dna_bottom_decks_same_level_then_prompts_delete() {
 
     runner
         .game
-        .resolve_selection(1, encode_digivolve(0, 0))
+        .resolve_selection(1, DNA_DIGIVOLVE_START)
+        .expect("select BT17-078 as Counter Blast DNA result");
+    runner
+        .game
+        .resolve_selection(1, 0)
         .expect("select field WarGreymon");
     runner
         .game

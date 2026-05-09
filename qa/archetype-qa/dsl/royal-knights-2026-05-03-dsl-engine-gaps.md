@@ -29,16 +29,16 @@ The current `Royal Knights` deck-library entry has 51 decklists. These cards rec
 | `BT13-007` King Drasil_7D6 | Core breeding engine | example YAML only | Start-main breeding trigger still needs breeding-source dispatch. |
 | `BT20-100` The Last Guardian | Core Delay/prevention option | production YAML implemented for Track B slice | Search, option placement, Security hand/trash branch, and Delay Omnimon-name leave-prevention implemented. |
 | `BT20-091` Cool Boy | Core tamer draw/memory and Omekamon play | production YAML implemented for Track B slice | RK play/digivolve suspend-cost draw+memory, opponent-turn non-cancelling Omekamon would-leave response, and Security play implemented. |
-| `BT20-102` Omnimon (X Antibody) | Core finisher | production YAML partial | Boardwipe uses raw Rust; end-turn attack without suspending is blocked. |
+| `BT20-102` Omnimon (X Antibody) | Core finisher | production YAML partial | Boardwipe uses raw Rust; end-turn attack without suspending now routes through `force_attack` + `without_suspending`. |
 | `BT20-083` Omekamon | Core bridge/blocker | production YAML partial | Blocker and low-security free Omnimon X digivolve implemented; breeding-source and material-play behavior still blocked. |
 | `BT23-054` Magnamon | Core RK body | production YAML partial | Blocker, draw, selected return protection, and Armor Purge replacement implemented; broadened non-Track-B coverage still pending. |
 | `BT13-112` Omnimon | Core payoff | production YAML gap stub | Plays one each different-name RK from King Drasil sources and suppresses On Play. |
 | `BT20-017` Jesmon | Core body/token pressure | production YAML gap stub | Needs token creation plus immediate may-attack/action flow. |
-| `BT20-060` Alphamon: Ouryuken | Core/near-core ACE | production YAML partial | ACE metadata, routes, DP reduction, and Counter Blast DNA implemented; DNA-origin security trash/recovery tail and security-removed card-local observer remain. |
+| `BT20-060` Alphamon: Ouryuken | Core/near-core ACE | production YAML partial | ACE metadata, routes, DP reduction, Counter Blast DNA field+hand material flow, and DNA-origin security trash + Recovery rider implemented; global security-removed memory observer remains blocked. |
 | `BT13-110` Royal Knights of the Purge | Core Delay option | production YAML partial | Draw and option placement implemented; King Drasil source placement/play blocked by `RK-G001`. |
 | `BT23-035` Dynasmon | Common RK body | production YAML partial | Barrier and security-trash -6000 DP slice implemented; security-removed timing payload is wired, but the recovery branch still needs card-local authoring/tests. |
 | `BT23-072` King Drasil_7D6 | Common support | production YAML gap stub | Hand main bottom-source placement; grants Rush/Raid/Reboot/Blocker. |
-| `BT19-072` LordKnightmon | Common RK body | production YAML partial | Trash play of level 4 or lower Digimon implemented; attack retarget blocked. |
+| `BT19-072` LordKnightmon | Common RK body | production YAML implemented slice | Trash play of level 4 or lower Digimon implemented; opponent-turn Royal Knight attack retarget implemented 2026-05-08. |
 
 ## 2026-05-05 Batch 1 Implementation Notes
 
@@ -66,13 +66,14 @@ Implemented / audited in these batches:
 
 | Card | Status | Implemented slice | Stubbed gap |
 |---|---|---|---|
-| `BT20-060` Alphamon: Ouryuken | `PARTIAL` | Printed metadata, ACE Overflow -5, standard Black Lv.6 route, Black + Yellow/Red Lv.6 DNA route, [On Play]/[When Digivolving] selected -15000 DP modifier, and Counter Blast DNA using Alphamon + Ouryumon. | DNA-origin security trash/recovery tail and global security-removed memory observer. |
 | `BT20-100` The Last Guardian | `IMPLEMENTED` for current DSL surface | [Main] dual-bucket reveal/search, bottom remainder, place self as Delay option; [All Turns] Delay trash-self prevention for own Omnimon-name would-leave; [Security] explicit hand/trash branch for optional Omekamon/Cool Boy play, then place self. | Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_100_delay`. |
 | `BT23-054` Magnamon | `PARTIAL` | Blocker; standard and CS/Veemon digivolve routes; Draw 1 plus selected Royal Knight/CS return-to-hand/deck protection; Armor Purge top-source replacement. | Remaining follow-ups are card-specific protection breadth/tests, not `RK-G003`. |
 | `BT23-058` Craniamon | `PARTIAL` | Reboot, Blocker, standard/CS digivolve routes, optional suspend-self replacement preventing one own Digimon/Tamer from leaving by opponent effects. | Self-scoped `on_suspend` predicate plus aggregate lowest play-cost delete-all. |
 | `BT13-110` Royal Knights of the Purge | `PARTIAL` | [Main] Draw 1 then place self in battle area; [Security] place self in battle area. | `RK-G001`: hand-to-King-Drasil source placement and Delay play from breeding sources with On Play suppression/Rush. |
 | `BT20-091` Cool Boy | `IMPLEMENTED` for current DSL surface | Your-turn Royal Knight play/digivolve observer with suspend self, Draw 1, gain 1 memory; opponent-turn Royal Knight would-leave response optionally plays Omekamon and proceeds with the leave; [Security] play self. | Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_091_opponent_turn_may_play_omekamon_when_royal_knight_would_leave bt20_091_decline_would_leave_response_proceeds_without_playing_omekamon bt20_091_no_omekamon_in_hand_does_not_offer_response`. |
 | `BT19-072` LordKnightmon | `PARTIAL` | [On Play]/[When Digivolving] optional level 4 or lower Digimon play from trash. | `G-ATTACK-RETARGET`: opponent-turn attack target switch to own Royal Knight. |
+| `BT20-060` Alphamon: Ouryuken | `PARTIAL` | Printed metadata, ACE Overflow -5, standard Black Lv.6 route, Black + Yellow/Red Lv.6 DNA route, [On Play]/[When Digivolving] selected -15000 DP modifier, Counter Blast DNA field+hand material flow, and DNA-origin security trash/recovery tail. | Global security-removed memory observer. |
+| `BT19-072` LordKnightmon | `IMPLEMENTED` | [On Play]/[When Digivolving] optional level 4 or lower Digimon play from trash; [Opponent's Turn][OPT] attack target switch to own Royal Knight via `on_opponent_attack` + `redirect_attack_target`. | none for Track D retarget slice. |
 
 Regression files:
 
@@ -82,6 +83,7 @@ Regression files:
 - `code/digimon-engine/tests/cards_behavioral/bt23/bt23_058.rs`
 - `code/digimon-engine/tests/cards_behavioral/bt13/bt13_110.rs`
 - `code/digimon-engine/tests/cards_behavioral/bt20/bt20_091.rs`
+- `code/digimon-engine/tests/cards_behavioral/bt19/bt19_072.rs` (`cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt19_072_opponents_turn_switches_attack_target_to_royal_knight`)
 - `code/digimon-engine/tests/cards_behavioral/bt19/bt19_072.rs`
 
 ## 2026-05-05 Batch 4-15 Implementation Notes
@@ -109,7 +111,7 @@ Implemented / audited in these batches:
 | `BT20-017` Jesmon | `BLOCKED` | Load-only gap stub. | Atho/Rene/Por token registration; other-Digimon-played delete/may-attack observer. |
 | `BT20-021` Jesmon GX | `BLOCKED` | ACE metadata and standard route. | Union hand/trash source cost; source-DP compare; unsuspend; source-count security trash. |
 | `BT20-045` Examon | `PARTIAL` | ACE metadata; Raid, Piercing, Blocker, Evade; Counter Blast DNA using Breakdramon + Slayerdramon. | DNA-gated highest-DP bottom-deck sweep; any-Digimon-suspend observer. |
-| `BT20-056` Alphamon | `PARTIAL` | Barrier; [On Play]/[When Digivolving] Recovery +1. | During-attack breeding digivolve; inherited replacement; security-removed card-local observer test. |
+| `BT20-056` Alphamon | `PARTIAL` | Barrier; [On Play]/[When Digivolving] Recovery +1. | During-attack breeding digivolve; security-removed observer; inherited replacement. |
 | `BT22-025` UlforceVeedramon | `PARTIAL` | ACE metadata; [When Attacking][OPT] unsuspend self. | Blast Digivolve; modal lowest-level bottom-deck or blue Tamer play. |
 | `BT22-041` Kentaurosmon | `PARTIAL` | Blocker, Barrier, optional yellow hand-to-top-security. | Total-security play-cost reduction; self-suspend security-trash unsuspend cost. |
 | `BT22-052` Leopardmon | `PARTIAL` | ACE metadata; optional 5000 DP-or-lower hand play; own level 3+ Blocker grant; Blast Digivolve marker and other-Digimon would-leave memory observer. | Remaining gaps are outside the Track B replacement/Counter marker slice. |
@@ -169,7 +171,8 @@ Regression files were added under:
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` (`Force-follow-up-attack / "may attack without suspending" script helpers`)
 - **Blocks:** `BT20-102` end-of-turn clause; `BT20-017` Jesmon tail; `BT13-112` and `BT13-110` Rush payoff patterns after playing Royal Knights.
 - **Why it matters:** These effects grant a player-visible attack decision. Granting only Rush or auto-attacking would change the action surface.
-- **Evidence:** `code/digimon-engine/cards/bt20/BT20-102.yaml` explicitly leaves `force_attack_now` commented out under `G-MAY-ATTACK-NOW`; `docs/RUST_ENGINE_GAPS.md` marks the reusable primitive blocking.
+- **Evidence:** `code/digimon-engine/cards/bt20/BT20-102.yaml` now lowers the printed Rush + attack-without-suspending clause to `force_attack` with `without_suspending: true`, matching DCGO's optional trigger followed by `SelectAttackEffect.SetCanNotSelectNotAttack() + SetWithoutTap()`.
+- **Status update (2026-05-08):** Partially closed for `BT20-102`. DSL has `force_attack` / `may_attack_now` immediate attack steps with `without_suspending`, and the BT20-102 card-shaped behavior now proves the selected Digimon opens a mandatory attack prompt and remains unsuspended after attacking. Remaining Royal Knights follow-up attack cards still need their own YAML/test migration. Proof: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_102`.
 - **First test:** Resolve `BT20-102` end-of-turn effect, choose a Digimon, and assert the next pending action allows that Digimon to attack without suspending, with pass/decline behavior matching printed optionality.
 - **Implementation hint:** Add a script primitive such as `force_follow_up_attack` or `may_attack_now` plus an attack flag for `without_suspending`, reusing existing pending attack/action-mask machinery.
 
@@ -197,14 +200,13 @@ Regression files were added under:
 
 ### Raid Target-Switch Timing
 
-- **Gap:** Raid is still not fully represented as a mid-attack optional target-switch timing.
-- **Type:** `engine-gap`
+- **Gap:** Closed for the reusable mid-attack Raid primitive; remaining work is card authoring where Raid is granted dynamically.
+- **Type:** `card-yaml/test-gap`
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` (`Raid target-switch interrupt`)
 - **Blocks:** `BT20-102`, `BT23-072` granted Raid, and any other Royal Knight tech with printed Raid.
 - **Why it matters:** Mask-time targeting is not equivalent to "when this Digimon attacks, you may switch the target". The player must be able to attack security first and then decide whether to Raid.
-- **Evidence:** `docs/RUST_ENGINE_GAPS.md` documents Raid as mask-only and lacking an attack-state interrupt.
-- **First test:** Attack security with a Digimon that has Raid while the opponent has an eligible unsuspended highest-DP Digimon; assert a pending optional switch appears before counter/block/security flow continues.
-- **Implementation hint:** Add a `RaidOpen` attack state before later combat interrupts and dispatch `OnAttackTargetChange` after any switch.
+- **Evidence:** `RaidOpen` now sits before Alliance/Counter/Block, offers an optional switch when the opponent has unsuspended highest-DP Digimon, and dispatches `OnAttackTargetChange` with `reason = Raid`. Proof: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- raid_retarget`.
+- **Next card test:** Add card-shaped coverage when a Royal Knight card grants Raid dynamically, such as BT23-072's played-Digimon keyword package after its played-Digimon observer gap closes.
 
 ### Aggregate-Sum Multi-Select
 
@@ -244,7 +246,7 @@ These items should not be promoted to generic gaps until a failing test proves a
 | `BT23-054` Magnamon | Armor Purge is implemented; broaden behavioral runtime tests for return-to-hand/deck protection. |
 | `BT13-112` Omnimon | Fill payoff stub after source multi-select/play support; test On Play suppression and Rush grant. |
 | `BT20-017` Jesmon | Fill token/observer stub after token registration and may-attack flow; test token creation, other-Digimon-play observer, delete target, and may-attack tail. |
-| `BT20-060` Alphamon: Ouryuken | Counter Blast DNA action path is implemented; add DNA-gated security trash/recovery and security-removed memory. |
+| `BT20-060` Alphamon: Ouryuken | Add security-removed memory observer after the global security-removed fan-out gap closes. Counter Blast DNA and DNA-gated security trash/recovery are now covered by `bt20_060_hand_counter_blast_dna_uses_alphamon_and_ouryumon` and `bt20_060_dna_origin_trashes_security_and_recovers`. |
 | `BT23-035` Dynasmon | Add security-removed recovery branch after observer gap; broaden runtime test for security-trash cost debuff. |
 | `BT23-072` King Drasil_7D6 | Fill support stub after hand-main source placement and breeding/inherited fan-out support; test granted keyword package. |
 | `BT13-110` Royal Knights of the Purge | Add source selection from King Drasil, On Play suppression, and Rush grant after `RK-G001`. |

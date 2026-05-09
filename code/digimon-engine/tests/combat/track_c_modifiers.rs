@@ -402,4 +402,3 @@ fn cannot_be_redirected_does_not_filter_other_block_candidates() {
     assert!(sel.is_optional);
     let _ = PASS;
 }
-

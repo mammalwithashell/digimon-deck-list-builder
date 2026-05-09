@@ -53,7 +53,16 @@ fn add_breeding_source(r: &mut DebugRunner, player: u8, card_id: &str) -> CardHa
 }
 
 struct Bt20_083BreedingFanoutWitness {
-    seen: Arc<Mutex<Vec<(Option<u8>, Option<u8>, Option<EventCause>, Option<PermanentHandle>)>>>,
+    seen: Arc<
+        Mutex<
+            Vec<(
+                Option<u8>,
+                Option<u8>,
+                Option<EventCause>,
+                Option<PermanentHandle>,
+            )>,
+        >,
+    >,
 }
 
 impl CardEffect for Bt20_083BreedingFanoutWitness {

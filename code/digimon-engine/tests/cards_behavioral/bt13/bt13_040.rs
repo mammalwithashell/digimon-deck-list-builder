@@ -41,9 +41,7 @@ fn bt13_040_when_leaving_draws_and_may_play_veemon_from_hand_or_source() {
         .expect("Magnamon should offer a play-from-hand/source choice after drawing");
     assert!(pending.is_optional, "the Veemon play is optional");
     assert!(
-        pending
-            .valid_action_ids
-            .contains(&(PLAY_HAND_START + 0)),
+        pending.valid_action_ids.contains(&(PLAY_HAND_START + 0)),
         "Veemon already in hand should be a legal pick"
     );
     let source_action = encode_source_select(0, 0).expect("source action id");
@@ -62,18 +60,14 @@ fn bt13_040_when_leaving_draws_and_may_play_veemon_from_hand_or_source() {
         "source choice should resolve the full would-leave observer"
     );
     assert!(
-        runner
-            .game
-            .players[0]
+        runner.game.players[0]
             .battle_area
             .iter()
             .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "BT12-021"),
         "selected source Veemon should be played"
     );
     assert!(
-        runner
-            .game
-            .players[0]
+        runner.game.players[0]
             .trash
             .iter()
             .any(|card| card.card_id(&runner.game.card_data) == "BT13-040"),

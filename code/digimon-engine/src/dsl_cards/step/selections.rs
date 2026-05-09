@@ -25,7 +25,7 @@ use crate::dsl_cards::step::{
     drain_dsl_outer_tail, resolve_player, run_steps_with_runtime, StepRuntime,
 };
 use crate::effect_context::{
-    CountCappedZone, DistinctByMode, EffectContext, RevealBucketSelection,
+    CountCappedZone, DistinctByMode, EffectContext, EffectReadContext, RevealBucketSelection,
 };
 use crate::enums::GamePhase;
 use crate::permanent::PermanentHandle;
@@ -467,6 +467,7 @@ pub fn try_install(
         }
         CompiledStep::SelectOwnSources {
             target,
+            filter,
             min,
             max,
             bind_as,
@@ -480,6 +481,7 @@ pub fn try_install(
             inner_tail.extend_from_slice(tail);
             install_select_own_sources(
                 ctx,
+                filter.clone(),
                 *min,
                 *max,
                 target.clone(),
@@ -1668,6 +1670,7 @@ fn install_select_material(
 
 fn install_select_own_sources(
     ctx: &mut EffectContext<'_>,
+    filter: CompiledPredicate,
     min: u8,
     max: u8,
     target: Option<CompiledBindingRef>,
@@ -1691,17 +1694,35 @@ fn install_select_own_sources(
                 _ => None,
             });
     let target_resolution_failed = target.is_some() && target_permanent.is_none();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
     ctx.select_own_sources(
         &prompt,
         min,
         max,
-        move |_game, source| {
+        move |game, source| {
             if target_resolution_failed {
                 return false;
             }
-            target_permanent
-                .map(|handle| source.permanent == handle)
-                .unwrap_or(true)
+            if target_permanent.is_some_and(|handle| source.permanent != handle) {
+                return false;
+            }
+            let read = EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read,
+                PredicateSubject::Card(source.card),
+                Some(&filter_bindings),
+            )
         },
         move |cb_ctx, source_refs| {
             let mut b = bindings.clone();
