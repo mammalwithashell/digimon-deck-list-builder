@@ -695,6 +695,15 @@ fn validate_step(
             );
         }
         StepSpec::SelectCountCappedMulti(args) => {
+            if let crate::step::CountBound::Formula { formula } = &args.max {
+                validate_formula(
+                    formula,
+                    &format!("{prefix}.max.formula"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
             validate_predicate(
                 &args.filter,
                 &format!("{prefix}.filter"),

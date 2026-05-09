@@ -166,6 +166,42 @@ fn when_would_place_in_security_emits_replacement_effect() {
     assert!(effects[0].replacement_process.is_some());
 }
 
+#[test]
+fn when_would_digivolve_emits_named_premove_replacement_effect() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_replacement(
+        "when_would_digivolve",
+        CompiledScope::FaceUp,
+    )));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects.len(), 1);
+    assert_eq!(effects[0].timing, EffectTiming::WhenPermanentWouldDigivolve);
+    assert!(effects[0].replacement_process.is_some());
+}
+
+#[test]
+fn when_would_play_emits_named_premove_replacement_effect() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_replacement(
+        "when_would_play",
+        CompiledScope::FaceUp,
+    )));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects.len(), 1);
+    assert_eq!(effects[0].timing, EffectTiming::WhenPermanentWouldPlay);
+    assert!(effects[0].replacement_process.is_some());
+}
+
+#[test]
+fn when_would_link_emits_named_premove_replacement_effect() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_replacement(
+        "when_would_link",
+        CompiledScope::FaceUp,
+    )));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects.len(), 1);
+    assert_eq!(effects[0].timing, EffectTiming::WhenWouldLink);
+    assert!(effects[0].replacement_process.is_some());
+}
+
 // ── Scope: Inherited sets the inherited flag ──────────────────────────────────
 
 #[test]
@@ -215,7 +251,7 @@ fn unknown_trigger_string_produces_no_effect() {
 // ── trigger_map lookup directly ──────────────────────────────────────────────
 
 #[test]
-fn trigger_map_covers_all_nine_known_triggers() {
+fn trigger_map_covers_all_known_triggers() {
     use digimon_engine::dsl_cards::trigger_map::lookup_replacement_trigger;
     let known = [
         ("when_would_be_deleted", EffectTiming::WhenWouldBeDeleted),
@@ -245,6 +281,12 @@ fn trigger_map_covers_all_nine_known_triggers() {
             "when_would_place_in_security",
             EffectTiming::WhenWouldPlaceInSecurity,
         ),
+        (
+            "when_would_digivolve",
+            EffectTiming::WhenPermanentWouldDigivolve,
+        ),
+        ("when_would_play", EffectTiming::WhenPermanentWouldPlay),
+        ("when_would_link", EffectTiming::WhenWouldLink),
     ];
     for (name, expected) in &known {
         assert_eq!(

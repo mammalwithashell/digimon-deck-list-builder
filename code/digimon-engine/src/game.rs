@@ -87,6 +87,44 @@ pub(crate) struct DelayedOptionLifecycleResume {
     pub(crate) skip_key: Option<(PlayerId, u16)>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PendingWouldPlayResume {
+    pub(crate) player: PlayerId,
+    pub(crate) card: crate::card_source::CardHandle,
+    pub(crate) effective_cost: u16,
+    pub(crate) origin: PendingWouldPlayOrigin,
+    pub(crate) effect_initiated: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PendingWouldPlayOrigin {
+    Hand,
+    Trash {
+        index: usize,
+    },
+    SecurityTop {
+        was_face_up: bool,
+    },
+    Source {
+        permanent: PermanentHandle,
+        source_index: usize,
+    },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PendingWouldLinkResume {
+    pub(crate) host: PermanentHandle,
+    pub(crate) card: crate::card_source::CardHandle,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PendingWouldDigivolveResume {
+    pub(crate) player: PlayerId,
+    pub(crate) permanent: PermanentHandle,
+    pub(crate) card: crate::card_source::CardHandle,
+    pub(crate) effective_cost: u16,
+}
+
 /// The core game state. Drives the turn state machine.
 ///
 /// `impl Game` blocks for this struct are spread across three files for
@@ -237,6 +275,18 @@ pub struct Game {
     /// on decline. See `replacement::try_replace_impl`.
     #[doc(hidden)]
     pub replacement_pending_outcome: Option<crate::replacement::ReplacementOutcome>,
+    /// Fire-site continuation for optional `WhenPermanentWouldPlay`
+    /// replacements whose subject is a card in hand.
+    #[doc(hidden)]
+    pub(crate) pending_would_play_resume: Option<PendingWouldPlayResume>,
+    /// Fire-site continuation for optional `WhenWouldLink` replacements whose
+    /// subject is the pending Link Option card.
+    #[doc(hidden)]
+    pub(crate) pending_would_link_resume: Option<PendingWouldLinkResume>,
+    /// Fire-site continuation for optional `WhenPermanentWouldDigivolve`
+    /// replacements whose subject is the permanent about to digivolve.
+    #[doc(hidden)]
+    pub(crate) pending_would_digivolve_resume: Option<PendingWouldDigivolveResume>,
 
     /// Spec §7.5 once-per-event guard. Records `(timing, subject)` pairs that
     /// have already fired within the current `try_replace` call chain so a
@@ -373,7 +423,10 @@ pub struct Game {
     /// `WhenWouldBeDeleted` replacement parking via `parked_replacement`
     /// runs strictly before any `OnDeletion` handler can fire and park here.
     #[doc(hidden)]
-    pub(crate) pending_deletion_resume: Option<crate::permanent::PermanentHandle>,
+    pub(crate) pending_deletion_resume: Option<(
+        crate::permanent::PermanentHandle,
+        Option<crate::card_source::CardHandle>,
+    )>,
 
     /// Phase D Task 8 — deferred replays from a just-deleted permanent's
     /// trash residency. Set during `OnDeletion` (carrier still on field) by
@@ -615,6 +668,9 @@ impl Game {
             event_seq: 0,
             replacement_depth: 0,
             replacement_pending_outcome: None,
+            pending_would_play_resume: None,
+            pending_would_link_resume: None,
+            pending_would_digivolve_resume: None,
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
             effect_source_player: None,
@@ -2160,19 +2216,62 @@ impl Game {
         // but is only hit once per effect query, and `effects_for_card` is
         // typically called at state-change fire-sites, not in the mask hot
         // loop — so the cost is acceptable for v1.
-        let auto_effects: Vec<crate::effect::Effect> = self
+        let mut auto_effects: Vec<crate::effect::Effect> = self
             .card_data
             .iter()
             .find(|cd| cd.card_id == card_id)
             .map(|cd| {
-                cd.keywords
+                let mut effects: Vec<crate::effect::Effect> = cd
+                    .keywords
                     .iter()
                     .flat_map(|kw| {
                         crate::cards::keyword_effects::keyword_to_auto_effect(*kw, handle)
                     })
-                    .collect()
+                    .collect();
+
+                if self.card_handle_is_under_top(handle) {
+                    for kw in inherited_keywords(cd) {
+                        effects.extend(
+                            crate::cards::keyword_effects::keyword_to_auto_effect(kw, handle)
+                                .into_iter()
+                                .map(|mut effect| {
+                                    effect.inherited = true;
+                                    effect
+                                }),
+                        );
+                    }
+                }
+
+                effects
             })
             .unwrap_or_default();
+
+        // Declarative `grant_keyword` clauses are semantically equivalent to
+        // printed keywords for keyword lookups. If the granted keyword carries
+        // replacement behavior (Barrier, Armor Purge, Scapegoat, etc.), also
+        // synthesize the keyword's auto-effect so inherited keyword grants can
+        // participate in replacement scans. Conditional grants are omitted
+        // here for now because `ConditionFn` is boxed and not cloneable; those
+        // cards should lower an explicit conditional replacement until the
+        // condition-composition surface is added.
+        if let Some(es) = registry_effects.as_ref() {
+            for grant in es {
+                let Some(kw) = grant.granted_keyword else {
+                    continue;
+                };
+                if !grant.declarative || grant.condition.is_some() {
+                    continue;
+                }
+                auto_effects.extend(
+                    crate::cards::keyword_effects::keyword_to_auto_effect(kw, handle)
+                        .into_iter()
+                        .map(|mut effect| {
+                            effect.inherited = grant.inherited;
+                            effect
+                        }),
+                );
+            }
+        }
 
         match (registry_effects, auto_effects.is_empty()) {
             (Some(mut es), false) => {
@@ -2183,6 +2282,28 @@ impl Game {
             (None, false) => Some(auto_effects),
             (None, true) => None,
         }
+    }
+
+    fn card_handle_is_under_top(&self, handle: crate::card_source::CardHandle) -> bool {
+        for player in &self.players {
+            for permanent in &player.battle_area {
+                let stack_len = permanent.card_sources.len();
+                for (source_index, source) in permanent.card_sources.iter().enumerate() {
+                    if source.handle() == handle {
+                        return source_index + 1 < stack_len;
+                    }
+                }
+            }
+            if let Some(permanent) = &player.breeding_area {
+                let stack_len = permanent.card_sources.len();
+                for (source_index, source) in permanent.card_sources.iter().enumerate() {
+                    if source.handle() == handle {
+                        return source_index + 1 < stack_len;
+                    }
+                }
+            }
+        }
+        false
     }
 
     /// Resolve a `CardHandle` (card_index) to its `CardKind` by scanning all

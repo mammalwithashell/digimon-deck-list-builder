@@ -270,6 +270,12 @@ pub enum EffectTiming {
     WhenWouldLoseSecurity,
     WhenWouldDraw,
     WhenWouldPlaceInSecurity,
+    /// Fires before a permanent digivolves into another card.
+    WhenPermanentWouldDigivolve,
+    /// Fires before a permanent enters play.
+    WhenPermanentWouldPlay,
+    /// Fires before a Plug-In/Link option attaches to a carrier.
+    WhenWouldLink,
     // Reserved — Phase 9 wires dispatch.
     WhenWouldAttack,
     WhenWouldBeAttackTarget,

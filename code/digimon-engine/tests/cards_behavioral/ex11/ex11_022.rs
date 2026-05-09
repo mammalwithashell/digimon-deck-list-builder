@@ -215,7 +215,6 @@ fn ex11_022_scape_goat_is_not_offered_for_own_effect_deletion() {
 }
 
 #[test]
-#[ignore = "pending: G-INHERITED-REPLACEMENT-DISPATCH — inherited replacement does not install from beneath the carrier"]
 fn ex11_022_inherited_leave_prevention_uses_token_or_other_puppet_and_is_once_per_turn() {
     let mut runner = load_runner();
     let carrier = runner.place_stack(0, &["EX11-022", "CARRIER"]);

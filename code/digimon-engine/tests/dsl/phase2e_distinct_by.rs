@@ -43,7 +43,7 @@ fn distinct_by_card_number_filters_duplicates_after_pick() {
     let steps = vec![CompiledStep::SelectCountCappedMulti {
         of: CompiledPlayerRef::Opponent,
         zone: CompiledZone::Trash,
-        max: 3,
+        max: digimon_dsl::compiled::CompiledCountBound::Literal(3),
         filter: CompiledPredicate::default(),
         bind_as: Some("picks".to_string()),
         prompt: "Pick distinct".to_string(),

@@ -1,5 +1,7 @@
 use digimon_engine::dsl::spec::CardSpec;
-use digimon_engine::dsl::step::{BindingRef, ModifierTarget, RawRustStep, StepSpec};
+use digimon_engine::dsl::step::{
+    BindPermanentProperty, BindingRef, ModifierTarget, PermanentProperty, RawRustStep, StepSpec,
+};
 
 fn parse_single_step(yaml_body: &str) -> StepSpec {
     let yaml = format!(
@@ -113,6 +115,25 @@ fn parse_delete_permanent_with_binding_ref() {
             assert_eq!(d.target, BindingRef::Named("tgt".to_string()));
         }
         _ => panic!("expected DeletePermanent"),
+    }
+}
+
+#[test]
+fn parse_bind_permanent_level_property_step() {
+    let step = parse_single_step(
+        "bind_permanent_property: { from: chosen, property: level, bind_as: chosen_level }",
+    );
+    match step {
+        StepSpec::BindPermanentProperty(BindPermanentProperty {
+            from,
+            property,
+            bind_as,
+        }) => {
+            assert_eq!(from, BindingRef::Named("chosen".to_string()));
+            assert_eq!(property, PermanentProperty::Level);
+            assert_eq!(bind_as, "chosen_level");
+        }
+        _ => panic!("expected BindPermanentProperty"),
     }
 }
 

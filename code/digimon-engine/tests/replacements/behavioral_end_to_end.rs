@@ -32,15 +32,15 @@ fn card_with_keywords(id: &str, keywords: Vec<Keyword>) -> digimon_engine::CardD
 /// higher-DP opponent. Battle resolution fires `WhenWouldBeDeleted` with
 /// cause=Battle; the defender's printed `<Barrier>` installs an optional
 /// `PendingSelection::Replacement`. On accept, the Barrier process trashes
-/// the top of the defender's deck and cancels the deletion; the defender
+/// the top of the defender's security and cancels the deletion; the defender
 /// stays on the field and `OnDeletion` observers do NOT fire.
 ///
 /// Verifies:
 /// - PendingSelection::Replacement installs with `REPLACEMENT_ACCEPT` in
 ///   `valid_action_ids` (optional-replacement contract).
-/// - Accept path trashes exactly one card from the top of the owner's deck.
+/// - Accept path trashes exactly one card from the top of the owner's security.
 /// - The defender is still on the field (battle-deletion prevented).
-/// - Deck -= 1 and trash += 1 end state.
+/// - Security -= 1 and trash += 1 end state.
 #[test]
 fn ts_olympos_cherubimon_barrier_battle_end_to_end() {
     // Attacker on P1 — high DP, plain card with no replacements.
@@ -54,17 +54,17 @@ fn ts_olympos_cherubimon_barrier_battle_end_to_end() {
 
     let mut r = DebugRunner::builder()
         .add_card(attacker_card)
-        .add_card(make_test_card("FILLER", "Filler"))
+        .add_card(make_test_card("SEC", "Security"))
         .add_card(cherubimon)
-        .deck(0, &["FILLER"; 5])
+        .security(0, &["SEC", "SEC"])
         .start();
 
     let attacker = r.place_on_field(1, "BIG_ATTACKER", Some(0));
     let defender = r.place_on_field(0, "CHERUBIMON", Some(0));
 
-    let deck_before = r.game.player(0).deck.len();
+    let security_before = r.game.player(0).security.len();
     let trash_before = r.game.player(0).trash.len();
-    assert_eq!(deck_before, 5);
+    assert_eq!(security_before, 2);
     assert_eq!(trash_before, 0);
     assert_eq!(r.battle_area_size(0), 1);
     assert_eq!(r.battle_area_size(1), 1);
@@ -104,11 +104,11 @@ fn ts_olympos_cherubimon_barrier_battle_end_to_end() {
         1,
         "Cherubimon survives — Barrier cancels the battle-deletion"
     );
-    // 2. Owner's deck lost exactly one card to the Barrier cost.
+    // 2. Owner's security lost exactly one card to the Barrier cost.
     assert_eq!(
-        r.game.player(0).deck.len(),
-        deck_before - 1,
-        "Barrier should trash one card from the top of the owner's deck"
+        r.game.player(0).security.len(),
+        security_before - 1,
+        "Barrier should trash one card from the top of the owner's security"
     );
     assert_eq!(
         r.game.player(0).trash.len(),

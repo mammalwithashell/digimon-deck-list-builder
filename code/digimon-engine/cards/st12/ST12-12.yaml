@@ -26,7 +26,31 @@ effects:
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       - draw: { of: you, count: 2 }
 
-  # Omitted:
   # [All Turns] While you have a Huckmon or Royal Knight, this Digimon gains
-  # Decoy (Red/Black). This needs conditional keyword aura lowering that can
-  # express Decoy's protected color set.
+  # <Decoy (Red/Black)>: when another red or black Digimon would be deleted
+  # by an opponent's effect, delete this Digimon instead to prevent that
+  # deletion. Lowered as the exact replacement shape so the color parameter
+  # is enforced at candidate collection.
+  - kind: replacement
+    timing: when_would_be_deleted
+    optional: true
+    summary: "[All Turns] Conditional Decoy (Red/Black)"
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - replacement_cause: opponent_effect
+        - kind: digimon
+        - other: true
+        - any_of:
+            - color_is: red
+            - color_is: black
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            any_of:
+              - name_contains: "Huckmon"
+              - trait_has: "Royal Knight"
+    process:
+      - substitute_replacement:
+          subject: source

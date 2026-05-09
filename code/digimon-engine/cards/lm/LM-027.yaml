@@ -123,21 +123,24 @@ effects:
           prompt: "Choose 1 of your red Digimon to digivolve"
       # Step 2: choose the digivolve target from hand.
       # DCGO: DigivolveIntoHandOrTrashCard(isHand: true) — hand only.
-      - select_hand:
-          of: you
-          bind_as: evo
-          filter:
-            all_of:
-              - kind: digimon
-              - color_is: red
-          prompt: "Choose a red Digimon card to digivolve into"
-      # Step 3: execute effect-initiated digivolve with cost -3.
-      # DCGO: reduceCost: 3, payCost: true, ignore_requirements: false.
-      - effect_initiated_digivolve:
-          target: target
-          from_hand: evo
-          cost: { reduce: 3 }
-          ignore_requirements: false
+      - if:
+          condition: { binding_exists: target }
+          then:
+            - select_hand:
+                of: you
+                bind_as: evo
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - color_is: red
+                prompt: "Choose a red Digimon card to digivolve into"
+            # Step 3: execute effect-initiated digivolve with cost -3.
+            # DCGO: reduceCost: 3, payCost: true, ignore_requirements: false.
+            - effect_initiated_digivolve:
+                target: target
+                from_hand: evo
+                cost: { reduce: 3 }
+                ignore_requirements: false
 
   # ─── Clause B: [Start of Your Turn] Delay — BLOCKED (G-DELAY-START-OF-TURN) ─
   # Structural raw_rust no-op placeholder preserving clause index 1 for

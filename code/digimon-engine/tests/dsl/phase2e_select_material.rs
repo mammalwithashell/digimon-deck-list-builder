@@ -2,12 +2,20 @@
 //! existing binding_ref machinery, installs a parking material-pick
 //! selection, and binds the picked source as a CardHandle.
 
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledPredicate, CompiledStep};
+use digimon_dsl::compiled::{CompiledBindingRef, CompiledColor, CompiledPredicate, CompiledStep};
+use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::run_steps;
 use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::CardColor;
+
+fn colored_level_card(card_id: &str, color: CardColor, level: u8) -> CardData {
+    let mut card = make_test_card_with_level(card_id, card_id, level);
+    card.colors = vec![color];
+    card
+}
 
 #[test]
 fn select_material_binds_picked_source_handle() {
@@ -92,6 +100,54 @@ fn select_material_binds_picked_source_handle() {
 
     assert!(runner.game.pending_selection.is_none());
     assert_eq!(runner.game.memory, memory_before + 1);
+}
+
+#[test]
+fn select_material_filter_narrows_by_source_card_fields() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "SRC"))
+        .add_card(make_test_card("STACK", "STACK"))
+        .add_card(colored_level_card("RED-L3", CardColor::Red, 3))
+        .add_card(colored_level_card("GREEN-L3", CardColor::Green, 3))
+        .add_card(colored_level_card("RED-L4", CardColor::Red, 4))
+        .hand(0, &["SRC"])
+        .build();
+
+    runner.place_stack(0, &["RED-L3", "GREEN-L3", "RED-L4", "STACK"]);
+
+    let perm_handle = runner.perm_handle(0, 0);
+    let src_card = runner.game.players[0].hand[0].handle();
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("target", perm_handle);
+
+    let steps = vec![CompiledStep::SelectMaterial {
+        of_permanent: CompiledBindingRef::Named("target".to_string()),
+        filter: CompiledPredicate {
+            level_eq: Some(3),
+            color_is: Some(CompiledColor::Red),
+            ..CompiledPredicate::default()
+        },
+        bind_as: Some("mat".to_string()),
+        prompt: "Pick a red level 3 material".to_string(),
+        prompt_key: None,
+        optional: false,
+    }];
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings);
+    }
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("select_material must install a pending selection");
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        1,
+        "only the Red Lv.3 source should pass the material filter"
+    );
 }
 
 #[test]

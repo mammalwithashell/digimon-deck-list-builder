@@ -26,8 +26,8 @@ effects:
   - kind: grant_keyword
     keyword: Blocker
 
-  # Armor Purge is omitted: it requires a deletion replacement that trashes
-  # this permanent's top card to cancel the deletion.
+  - kind: grant_keyword
+    keyword: ArmorPurge
 
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Draw 1; 1 Royal Knight/CS Digimon cannot be returned by opponent effects"

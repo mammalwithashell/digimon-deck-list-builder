@@ -186,7 +186,7 @@ See §5 for `ModifierType` and `Expiry` values.
 Inside an `OnDeletion` (or `OnAnyDeletion`) observer body, the cause of the deletion currently being drained is exposed on the context. Outside such a body all three accessors return `None` / `false`. Phase B §B5.
 
 ```rust
-ctx.deletion_cause() -> Option<ReplacementCause>   // raw cause: Battle / OwnEffect / OpponentEffect / SecurityCheck / Cost
+ctx.deletion_cause() -> Option<ReplacementCause>   // raw cause: Battle / OwnEffect / OpponentEffect / SecurityCheck / Cost / Overclock
 ctx.was_deleted_by_effect() -> bool                 // matches OwnEffect | OpponentEffect
 ctx.was_deleted_by_opponent() -> bool               // matches OpponentEffect
 ```
@@ -1115,13 +1115,13 @@ if ctx.game.modifiers.player_has(target, ModifierType::CannotGainMemoryExceptFro
 
 ## Phase 7 — Would-Replacement Timings
 
-Phase 7 adds a first-class **replacement-effect layer** to the engine. Replacement effects intercept an impending state change (deletion, return-to-hand, return-to-deck, trash-by-effect, de-digivolve, draw, security-placement, security-loss) **before** it commits and either cancel it, redirect it, substitute the affected subject, or fully handle it in-process.
+Phase 7 adds a first-class **replacement-effect layer** to the engine. Replacement effects intercept an impending state change (deletion, return-to-hand, return-to-deck, trash-by-effect, de-digivolve, draw, security-placement, security-loss, play, digivolve, or link) **before** it commits and either cancel it, redirect it, substitute the affected subject, or fully handle it in-process.
 
 Unlike observer timings (`OnDeletion`, `OnReturn`, …) which fire *after* the event, `Would*` timings fire *before* and can mutate the outcome. This makes printed keywords like `<Barrier>`, `<Evade>`, and `<Decode>` faithful to their printed rules — Barrier is not an auto-selection that trashes the top of deck; it's an *optional* replacement that surfaces as a `PendingSelection::Replacement` with both accept and decline in the mask, so the RL action space can learn the decision (working rule 17).
 
 ### `EffectTiming::Would*` variants
 
-Nine variants dispatch today:
+Replacement timings dispatch today:
 
 | Variant | Fires at | Default destination | Notes |
 |---------|----------|--------------------|-------|
@@ -1133,7 +1133,10 @@ Nine variants dispatch today:
 | `WhenWouldBeDeDigivolved` | `de_digivolve` | — | `CannotBeDeDigivolved` cancels; `Substituted(other)` re-targets. |
 | `WhenWouldDraw` | `EffectContext::draw` | — | `CannotDrawByEffect` interaction orthogonal (Phase 6 flood gate). |
 | `WhenWouldPlaceInSecurity` | Effect-driven `place_on_security` | `Zone::Security` | Redirect-to-trash or reorder. |
-| `WhenWouldLoseSecurity` | Security-pop during attack | — | Fires before `SecuritySkill` drains. |
+| `WhenWouldLoseSecurity` | Security-pop during attack | — | Fires before the security card is removed/revealed, so Counter Blast / damage-replacement cards can act before the loss commits. This is narrower than generic leave-field replacement: the subject is the defending player/security loss, not the revealed card. |
+| `WhenPermanentWouldDigivolve` | `digivolve_from_hand` after legality/cost calculation, before memory payment and stack mutation | `Zone::BattleArea` | Subject is the permanent that would become the new stack. |
+| `WhenPermanentWouldPlay` | `play_from_hand_with_cost` after legality/cost calculation, before memory payment and hand removal | `Zone::BattleArea` | Subject is `ReplacementSubject::Card(card, Zone::Hand)`. |
+| `WhenWouldLink` | Link host-selection resolution, before the pending Option enters `host.linked_cards` | `Zone::BattleArea` | Subject is the linker card, represented as `ReplacementSubject::Card(card, Zone::Reveal)` while parked in `pending_option`. |
 
 Two variants are reserved for Phase 9 (combat-interrupt completion) and do not dispatch yet: `WhenWouldAttack`, `WhenWouldBeAttackTarget`.
 
@@ -1162,9 +1165,13 @@ Mutating helpers (mutually exclusive — call exactly one):
 
 Read-only context fields are always available through `rctx.effect.*` (the underlying `EffectContext`) and `rctx.cause` / `rctx.subject` / `rctx.original_destination`.
 
+Candidate collection walks each battle-area permanent's full digivolution stack. Top-card effects are eligible when `effect.inherited == false`; buried source effects are eligible when `effect.inherited == true`. For inherited replacements, `EffectContext::source_card` is the buried source card, `EffectContext::source_permanent` is the carrier permanent, and `ReplacementContext::subject` is still the threatened subject. This preserves source-card attribution while keeping the carrier as the object that would leave.
+
+Track B card-shaped coverage now includes native/inherited Barrier, Armor Purge, color-gated Decoy, Decode/material play, non-cancelling would-leave observers, Delay-as-prevention, inherited Token/Puppet prevention, named play/digivolve/link windows, and Counter Blast DNA security-damage replacement. All player choices are surfaced through `PendingSelection`; accept/decline/cost selections reuse existing action ranges.
+
 ### `ReplacementCause`
 
-Five variants, **derived at the fire-site** (not threaded through card scripts):
+Six variants, **derived at the fire-site** (not threaded through card scripts):
 
 ```rust
 pub enum ReplacementCause {
@@ -1173,6 +1180,7 @@ pub enum ReplacementCause {
     OpponentEffect,   // The other player's effect caused it
     SecurityCheck,    // Security-reveal or SecuritySkill-driven
     Cost,             // Cost-payment trash/suspend (rare)
+    Overclock,        // <Overclock> sacrifice deletion
 }
 ```
 
@@ -1287,7 +1295,7 @@ impl CardEffect for MyBarrier {
 ### Phase 7 v1 constraints
 
 1. **Partition / ArmorPurge / Fragment(N)** — resolved in Phase D (2026-04-25); all seven alpha-tier selection-bearing keywords now auto-install. See the "Selection-bearing keyword authoring pattern" section for the template.
-2. **Optional replacements for `Card` / `Player` subjects** silently no-op on the commit path — the `commit_deferred_outcome` helper is Permanent-only in v1, guarded by `debug_assert!`. This is unreachable today; documented to flag it if a future fire-site ships a Card/Player optional replacement.
+2. **Optional replacements for `Card` / `Player` subjects** still need fire-site-specific resume support unless the subject is handled by an existing parked flow. The generic `commit_deferred_outcome` helper is Permanent-only in v1, guarded by `debug_assert!`. The named pre-play and pre-link windows currently have mandatory-cancel coverage; optional accept/decline semantics for those `Card` subjects require a follow-up resume slot before real optional card text should target them.
 3. **Multi-replacement `TriggerOrder` prompts** are not emitted when both sides have >1 candidates. v1 runs candidates in collection order (own-first, opp-second) and the last non-None outcome wins.
 4. **`ACTION_SPACE_SIZE` unchanged at 2168.** `REPLACEMENT_ACCEPT` reuses the existing `EffectChoice` action range (specifically the HAND_EFFECT slot 59) and `PASS` (62) serves as decline, so no tensor/mask regression.
 5. **Spec §7.5 once-per-event guard** (Task 7): a `(timing, subject)` pair that already fired in the current call chain is skipped on re-entry. During a callback-commit continuation (`in_replacement_commit`) the guard strengthens to "any prior fire for this subject blocks" — preventing a redirect route from re-prompting for a different Would* timing on the same subject (e.g. Decode's deck→hand redirect must not cascade into a second hand-timing prompt).
@@ -1516,6 +1524,8 @@ vec![
 
 - **Standard disposal** fires `WhenWouldBeTrashed` with `ReplacementCause::Cost`. Optional replacements (e.g. a `CannotBeTrashedByEffect` passive on the Option itself — unlikely, but possible) fire normally.
 - **Delay expiration** fires `WhenWouldLeaveBattleArea` (super-timing) + `WhenWouldBeDeleted` just like a Digimon's battle death.
+- **Delay replacement self-costs** in DSL use the process shape `delete_permanent: { target: source }` followed by `cancel_replacement: {}`. Replacement lowering treats that exact shape as a cost-aware Delay prevention: it only cancels the threatened leave event after the source Delay option actually reaches trash, and it waits for any pending replacement prompt on the Delay cost before deciding. BT20-100 The Last Guardian pins this contract.
+- **Non-cancelling would-leave subscribers** use the same `kind: replacement` timing but leave the replacement outcome unset. The process may park normal selections and run side-effects; after the callback resolves, the original leave event proceeds. BT20-091 Cool Boy pins this shape for "play Omekamon, but the Royal Knight still leaves." Do not call any replacement outcome setter for proceed-after observers.
 - **Plug-In detach on host deletion** — when the host leaves the field, each linked card trashes. V1 does **not** fire `WhenWouldBeTrashed` in the cascade (too recursive during host deletion). This is a known limitation; see constraints below.
 - **Training expiration** fires `OnTrainingTrash` as the specific observer, then routes through `delete_permanent_with_cause(Cost)` which dispatches the standard `WhenWouldLeaveBattleArea` / `WhenWouldBeDeleted` replacement windows.
 
@@ -2216,6 +2226,33 @@ Use a field selection `selector` when card text restricts the target to the lowe
 
 Selectors are applied after predicate filtering and at selection install time. Ties remain legal choices; if no filtered candidate has effective DP, no pending selection is installed.
 
+### DSL Permanent Property Bindings
+
+Use `bind_permanent_property` when text chooses one permanent and later compares other objects to a property of that chosen permanent:
+
+```yaml
+- select_opponent_permanent:
+    bind_as: chosen_dig
+    filter: { kind: digimon }
+- bind_permanent_property:
+    from: chosen_dig
+    property: level
+    bind_as: chosen_level
+- for_each:
+    over:
+      of: opponent
+      zone: [battle_area]
+      kind: digimon
+      level_eq_binding: chosen_level
+    bind_as: returnee
+    body:
+      - return_to_deck:
+          target: returnee
+          position: bottom
+```
+
+`property: level` reads the selected permanent's current top-card level at process time and stores it as a literal binding. `level_eq_binding` compares a later predicate subject's level to that bound value. This is the canonical shape for "choose 1, affect all with the same level" text such as BT17-078.
+
 ---
 
 ## 14. Zone Manipulation (Phase 2)
@@ -2663,7 +2700,7 @@ Commits: `67e0afa4`..`65f0b3a6` (8 commits). Full suite: **495 passing** (+32 fr
 pub fn select_union_zone<F, C>(
     &mut self,
     of_player: PlayerId,
-    zones: UnionZoneSet,      // bitset: UnionZoneSet::HAND | UnionZoneSet::TRASH
+    zones: UnionZoneSet,      // bitset: UnionZoneSet::HAND | UnionZoneSet::TRASH | UnionZoneSet::MATERIAL
     prompt: &str,
     is_optional: bool,
     filter: F,
@@ -2674,7 +2711,7 @@ where
     C: FnOnce(&mut EffectContext<'_>, CardHandle) + Send + Sync + 'static,
 ```
 
-**Semantics.** Installs a single `PendingSelection` that lets the active player choose one card from the player's hand, trash, or both (per the `zones` bitset). The selection reuses existing action ranges — hand picks map to `PLAY_HAND_START + i`, trash picks map to `TRASH_EFFECT_START + i` — so no new action range is needed. The resolver classifies the incoming `action_id` by range and reconstructs the `CardHandle` from the appropriate zone. The callback receives a zone-agnostic `CardHandle`, so call-sites do not need to branch on the source zone.
+**Semantics.** Installs a single `PendingSelection` that lets the active player choose one card from the player's hand, trash, materials, or a combination of those zones (per the `zones` bitset). The selection reuses existing action ranges — hand picks map to `PLAY_HAND_START + i`, trash picks map to `TRASH_EFFECT_START + i`, and material picks map to `SOURCE_SELECT_START + field * SOURCES_PER_FIELD + source_index` — so no new action range is needed. The resolver classifies the incoming `action_id` by range and reconstructs the `CardHandle` from the appropriate zone. The callback receives a zone-agnostic `CardHandle`, so call-sites do not need to branch on the source zone.
 
 **Filter signature difference vs `select_hand`/`select_trash`.** The filter here is `Fn(&Game, &CardSource) -> bool` — zone-agnostic. `select_hand` and `select_trash` take `Fn(&Game, usize) -> bool` (index-based). This lets cross-zone predicates (e.g. "any Digimon with level ≥ 5") be expressed without duplicating logic.
 
@@ -2799,12 +2836,12 @@ ctx.place_remainder_on_deck(p, StackPosition::Bottom);
 ### `select_count_capped_multi`
 
 ```rust
-pub enum CountCappedZone { Hand, Trash }
+pub enum CountCappedZone { Hand, Trash, Material(PermanentHandle) }
 
 pub fn select_count_capped_multi<F, C>(
     &mut self,
     of_player: PlayerId,
-    zone: CountCappedZone,    // Hand or Trash
+    zone: CountCappedZone,    // Hand, Trash, or a permanent's sources
     max: u8,                  // upper bound; debug_assert!(max <= 10)
     prompt: &str,
     is_optional_zero: bool,   // true → player may pick 0; PASS available from first step
@@ -2816,11 +2853,13 @@ where
     C: FnOnce(&mut EffectContext<'_>, Vec<CardHandle>) + Send + Sync + 'static,
 ```
 
-**Semantics.** Lets the player pick up to `max` items from a single zone, one pick at a time. Each step uses `GamePhase::SelectBudgeted` / `SelectionKind::CountCappedMultiSelect { max, picked }`. Toggle actions reuse the existing zone range (`PLAY_HAND_START + i` for hand, `TRASH_EFFECT_START + i` for trash). The PASS action (id 62) is the early-commit sentinel; once submitted, the final callback fires with the accumulated `Vec<CardHandle>`.
+**Semantics.** Lets the player pick up to `max` items from a single zone, one pick at a time. Each step uses `GamePhase::SelectBudgeted` / `SelectionKind::CountCappedMultiSelect { max, picked }`. Toggle actions reuse the existing zone range (`PLAY_HAND_START + i` for hand, `TRASH_EFFECT_START + i` for trash, `SOURCE_SELECT_START + ...` for material/source picks). The PASS action (id 62) is the early-commit sentinel; once submitted, the final callback fires with the accumulated `Vec<CardHandle>`.
 
 PASS availability is gated: available when `is_optional_zero || picked >= 1`. Reaching `picked == max` auto-commits (no extra PASS required — the last pick itself finalizes).
 
 **Empty filter.** If no cards pass the filter at install time, the callback fires immediately with an empty `Vec`.
+
+**DSL wrapper.** `select_count_capped_multi` accepts `max` as either a literal integer or `{ formula: <FormulaSpec> }`; formula bounds are evaluated against the resolving source permanent and clamped to the existing count-capped selection limit. In addition to card zones, the DSL wrapper supports `zone: battle_area`, which presents matching permanents through the same `SelectionKind::CountCappedMultiSelect` flow and binds a `PermanentList` for `per_selected`. This is used by BT22-015's same-level-pair source-stack count.
 
 **Python parity.** Python has no clean count-capped multi-select primitive; some Python scripts (e.g. Baalmon) auto-mill N cards without offering a selection, violating the no-approximations policy. Rust must NOT copy this pattern — this helper mandates explicit per-pick actions.
 
@@ -2854,6 +2893,57 @@ Effect::on_play(card)
 
 ---
 
+### `select_material` + `play_from_materials`
+
+**DSL wrapper.** `select_material` selects one card from a permanent's digivolution sources, excluding the top card, and binds the picked source as a `CardHandle`. Its `filter` predicate is evaluated against the source card itself, so card fields such as `kind`, `level_eq`, `color_is`, `trait_has`, and `name_contains` narrow the legal source actions before the prompt is shown. If no source matches a required selection, the step no-ops and the remaining process tail continues.
+
+`play_from_materials.source_index` accepts either a literal material index or a binding produced by `select_material`. When given a selected source-card binding, the runtime resolves that `CardHandle` back to the current material index, removes that source from the stack, and plays it through the normal permanent-play path. The optional `bind_as` field records the newly played `PermanentHandle` only when the play succeeds; predicates can then use `binding_exists: <name>` for printed "if this effect played" tails. This is the audited shape for BT22-015's color-gated Decode clauses and EX9-021's End of Attack source-play clause.
+
+```yaml
+- play_from_materials:
+    target: source
+    source_index: greymon_pick
+    cost_delta: free
+    bind_as: greymon_played
+- if:
+    condition:
+      binding_exists: greymon_played
+    then:
+      # follow-up that only happens if the source was actually played
+```
+
+### `place_permanent_on_security`
+
+**DSL wrapper.** Normal effect bodies can initiate a move from the battle area to security:
+
+```yaml
+- place_permanent_on_security:
+    of: you
+    target: source
+    position: top
+    face_up: true
+```
+
+This route first fires `WhenWouldLeaveBattleArea` for the target permanent with destination `Security`, then uses the shared permanent-to-security commit path. It is for effects that create a new move, such as EX9-021's "place this Digimon as your top security card." Replacement bodies that are already handling a leave event must use `place_permanent_on_security_and_handle_replacement` instead.
+
+### `place_permanent_on_security_and_handle_replacement`
+
+**DSL wrapper.** Replacement processes can place a battle-area permanent into security and consume the active leave event:
+
+```yaml
+- place_permanent_on_security_and_handle_replacement:
+    of: you
+    target: replacement_subject
+    position: bottom
+    face_up: false
+```
+
+The runtime removes the target permanent without reopening the leave-field replacement window, places its top card into the chosen player's security at `top`, `bottom`, or `random`, applies `face_up_security` bookkeeping, trashes remaining digivolution sources with `OnDigivolutionCardTrashed` dispatch, trashes linked cards with `OnLinkedCardTrashed`, clears permanent-scoped modifiers, and marks the current replacement `CustomHandled`.
+
+This is the audited shape for EX4-060's DCGO-style `IPutSecurityPermanent(... toTop:false)` tail after sequential source plays.
+
+---
+
 ### `as_selecting_player` builder
 
 ```rust
@@ -2882,7 +2972,7 @@ pub struct EffectContextSelectorScope<'a, 'g> {
 | `select_count_capped_multi` | Up-to-N multi-pick with opponent as chooser |
 | `select_ordered_permutation` | Permutation ordered by the opponent |
 
-**Not forwarded:** `select_material`, `select_reveal`, `select_security` — these are rarely opponent-driven and have no audited card pattern requiring them; defer until a real card demands it.
+**Not forwarded:** `select_material`, `select_reveal`, `select_security` — these remain source-controller selections in the audited card patterns so far; add opponent-forwarding only when a printed card requires it.
 
 **Python parity.** Python has no analog. No Python script calls `request_selection(..., selecting_player=opponent, ...)`. The `selecting_player` field exists on Rust's `PendingSelection` and the mask layer already routes on it. `as_selecting_player` is net-new Rust capability with no Python precedent.
 

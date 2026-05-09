@@ -27,6 +27,7 @@ pub enum ReplacementCause {
     OpponentEffect,
     SecurityCheck,
     Cost,
+    Overclock,
 }
 
 /// What's about to happen — a permanent leaving the field, a card being
@@ -360,72 +361,78 @@ fn collect_candidates(
         let Some(perm) = player.battle_area.get(h.index as usize) else {
             return;
         };
-        let top = perm.top_card();
-        let card_id = top.card_id(&game.card_data).to_string();
-        let source_card = top.handle();
+        let stack_size = perm.card_sources.len();
+        for (source_index, source) in perm.card_sources.iter().enumerate() {
+            let inherited_source = source_index + 1 < stack_size;
+            let card_id = source.card_id(&game.card_data).to_string();
+            let source_card = source.handle();
 
-        let Some(effects) = game.effects_for_card(&card_id, source_card) else {
-            return;
-        };
+            let Some(effects) = game.effects_for_card(&card_id, source_card) else {
+                continue;
+            };
 
-        for (slot, effect) in effects.iter().enumerate() {
-            if effect.timing != timing {
-                continue;
-            }
-            if effect.replacement_process.is_none() {
-                // Would-timed effect with no replacement_process is a
-                // structural gap; skip silently for now (card registry
-                // authors are expected to always attach one).
-                continue;
-            }
-            if effect.max_per_turn > 0 {
-                let Some(activation_count) =
-                    source_permanent_activation_count(game, h, source_card, slot as u8)
-                else {
-                    continue;
-                };
-                if activation_count >= effect.max_per_turn {
+            for (slot, effect) in effects.iter().enumerate() {
+                if effect.inherited != inherited_source {
                     continue;
                 }
-            }
-            if let Some(cond) = &effect.condition {
-                let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
-                    .with_replacement_context(
-                        cause,
-                        replacement_source_controller,
-                        replacement_subject_controller,
-                    );
-                if !cond(&ctx) {
+                if effect.timing != timing {
                     continue;
                 }
-            }
-            // Phase F Task 1: cause-aware candidate filter for WhenWouldBe*
-            // timings. Runs AFTER `condition`. Used by `<Scapegoat>` to drop
-            // the candidate before the outer accept dialog parks on
-            // `ReplacementCause::OwnEffect` (RULES_CONTEXT 16-31) and on the
-            // no-substitute case (DCGO `HasMatchConditionPermanent`).
-            if let Some(rcond) = &effect.replacement_condition {
-                let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
-                    .with_replacement_context(
-                        cause,
-                        replacement_source_controller,
-                        replacement_subject_controller,
-                    );
-                if !rcond(&ctx, &subject) {
+                if effect.replacement_process.is_none() {
+                    // Would-timed effect with no replacement_process is a
+                    // structural gap; skip silently for now (card registry
+                    // authors are expected to always attach one).
                     continue;
                 }
+                if effect.max_per_turn > 0 {
+                    let Some(activation_count) =
+                        source_permanent_activation_count(game, h, source_card, slot as u8)
+                    else {
+                        continue;
+                    };
+                    if activation_count >= effect.max_per_turn {
+                        continue;
+                    }
+                }
+                if let Some(cond) = &effect.condition {
+                    let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
+                        .with_replacement_context(
+                            cause,
+                            replacement_source_controller,
+                            replacement_subject_controller,
+                        );
+                    if !cond(&ctx) {
+                        continue;
+                    }
+                }
+                // Phase F Task 1: cause-aware candidate filter for WhenWouldBe*
+                // timings. Runs AFTER `condition`. Used by `<Scapegoat>` to drop
+                // the candidate before the outer accept dialog parks on
+                // `ReplacementCause::OwnEffect` (RULES_CONTEXT 16-31) and on the
+                // no-substitute case (DCGO `HasMatchConditionPermanent`).
+                if let Some(rcond) = &effect.replacement_condition {
+                    let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
+                        .with_replacement_context(
+                            cause,
+                            replacement_source_controller,
+                            replacement_subject_controller,
+                        );
+                    if !rcond(&ctx, &subject) {
+                        continue;
+                    }
+                }
+                out.push(Candidate {
+                    source_card,
+                    source_permanent: Some(h),
+                    source_controller: h.player,
+                    is_mandatory: !effect.optional,
+                    effect_name: effect.name.clone(),
+                    kind: CandidateKind::EffectClosure {
+                        card_id: card_id.clone(),
+                        effect_slot: slot as u8,
+                    },
+                });
             }
-            out.push(Candidate {
-                source_card,
-                source_permanent: Some(h),
-                source_controller: h.player,
-                is_mandatory: !effect.optional,
-                effect_name: effect.name.clone(),
-                kind: CandidateKind::EffectClosure {
-                    card_id: card_id.clone(),
-                    effect_slot: slot as u8,
-                },
-            });
         }
     };
 
@@ -1105,6 +1112,58 @@ fn commit_deferred_outcome(
         return;
     }
 
+    if original_destination == Some(Zone::BattleArea) {
+        match subject {
+            ReplacementSubject::Card(card, Zone::Hand)
+                if game
+                    .pending_would_play_resume
+                    .as_ref()
+                    .is_some_and(|resume| resume.card == card) =>
+            {
+                game.commit_pending_would_play(outcome);
+                game.replacement_pending_outcome = None;
+                return;
+            }
+            ReplacementSubject::Card(card, Zone::Reveal)
+                if game
+                    .pending_would_link_resume
+                    .as_ref()
+                    .is_some_and(|resume| resume.card == card) =>
+            {
+                game.commit_pending_would_link(outcome);
+                game.replacement_pending_outcome = None;
+                return;
+            }
+            ReplacementSubject::Permanent(perm)
+                if game
+                    .pending_would_digivolve_resume
+                    .as_ref()
+                    .is_some_and(|resume| resume.permanent == perm) =>
+            {
+                game.commit_pending_would_digivolve(outcome);
+                game.replacement_pending_outcome = None;
+                return;
+            }
+            _ => {}
+        }
+    }
+
+    if original_destination == Some(Zone::Trash) {
+        if let ReplacementSubject::Card(card, Zone::Security) = subject {
+            if game.security_resolution.as_ref().is_some_and(|state| {
+                state.revealed_card == card
+                    && game
+                        .pending_security
+                        .as_ref()
+                        .is_some_and(|pending| pending.card.handle() == card)
+            }) {
+                game.commit_pending_security_loss_replacement(outcome);
+                game.replacement_pending_outcome = None;
+                return;
+            }
+        }
+    }
+
     let perm = match subject {
         ReplacementSubject::Permanent(h) => h,
         other => {
@@ -1213,6 +1272,11 @@ fn commit_permanent_deletion_no_replace(game: &mut crate::game::Game, handle: Pe
     use crate::enums::EffectTiming;
     use crate::selection::TriggerSource;
 
+    let deleted_top_card = game
+        .player(handle.player)
+        .battle_area
+        .get(handle.index as usize)
+        .and_then(|permanent| permanent.card_sources.last().map(|card| card.handle()));
     game.enqueue_triggered(EffectTiming::OnDeletion, TriggerSource::Permanent(handle));
     game.drain_effect_queue();
 
@@ -1241,7 +1305,7 @@ fn commit_permanent_deletion_no_replace(game: &mut crate::game::Game, handle: Pe
             game.pending_deletion_resume.is_none(),
             "nested deferred deletion not supported (single-outstanding invariant)"
         );
-        game.pending_deletion_resume = Some(handle);
+        game.pending_deletion_resume = Some((handle, deleted_top_card));
         return;
     }
 

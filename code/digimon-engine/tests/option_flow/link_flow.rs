@@ -11,6 +11,7 @@
 use std::sync::{Arc, Mutex};
 
 use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::DslCardEffect;
@@ -61,6 +62,33 @@ impl CardEffect for LinkNoEligibleHosts {
             .name("Link no eligible")
             .link(0, |_ctx, _host| false)
             .process(|_| {})
+            .build()]
+    }
+}
+
+/// Mandatory cancel replacement for the named pre-link window.
+struct CancelWouldLink;
+impl CardEffect for CancelWouldLink {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::when_would_link(card)
+            .name("Cancel link")
+            .replacement_process(|rctx| {
+                rctx.cancel();
+            })
+            .build()]
+    }
+}
+
+/// Optional cancel replacement for the named pre-link window.
+struct OptionalCancelWouldLink;
+impl CardEffect for OptionalCancelWouldLink {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::when_would_link(card)
+            .name("Optional cancel link")
+            .optional()
+            .replacement_process(|rctx| {
+                rctx.cancel();
+            })
             .build()]
     }
 }
@@ -207,6 +235,110 @@ fn link_attaches_to_chosen_host() {
     );
     assert_eq!(r.trash_size(0), 0, "linked card does NOT trash");
     assert_eq!(r.hand_size(0), 0);
+}
+
+/// Resolving the host-selection prompt fires `WhenWouldLink` before the
+/// pending Option attaches. A cancel replacement leaves the host unlinked and
+/// trashes the pending Option.
+#[test]
+fn when_would_link_cancel_prevents_attach() {
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("LINK-CARD", 0, CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["LINK-CARD"])
+        .memory(0)
+        .start();
+    r.register_effect("LINK-CARD", Arc::new(LinkAnyHost));
+    r.register_effect("HOST", Arc::new(CancelWouldLink));
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    let _ = r.game.play_option_from_hand(0, 0);
+    let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, action_id);
+
+    assert!(r.game.pending_option.is_none(), "pending option cleared");
+    assert!(r.game.pending_selection.is_none());
+    assert!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .is_empty(),
+        "cancelled link does not attach"
+    );
+    assert_eq!(r.trash_size(0), 1, "cancelled pending option is trashed");
+}
+
+#[test]
+fn optional_when_would_link_accept_prevents_attach() {
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("LINK-CARD", 0, CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["LINK-CARD"])
+        .memory(0)
+        .start();
+    r.register_effect("LINK-CARD", Arc::new(LinkAnyHost));
+    r.register_effect("HOST", Arc::new(OptionalCancelWouldLink));
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    let _ = r.game.play_option_from_hand(0, 0);
+    let host_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, host_action);
+
+    assert!(
+        r.game.pending_selection.is_some(),
+        "host selection should park replacement prompt"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept optional link replacement");
+
+    assert!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .is_empty(),
+        "accepted cancel does not attach"
+    );
+    assert_eq!(r.trash_size(0), 1, "cancelled pending option is trashed");
+    assert!(r.game.pending_option.is_none());
+    assert!(r.game.pending_selection.is_none());
+}
+
+#[test]
+fn optional_when_would_link_decline_resumes_attach() {
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("LINK-CARD", 0, CardColor::Red))
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .hand(0, &["LINK-CARD"])
+        .memory(0)
+        .start();
+    r.register_effect("LINK-CARD", Arc::new(LinkAnyHost));
+    r.register_effect("HOST", Arc::new(OptionalCancelWouldLink));
+    let host = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    let _ = r.game.play_option_from_hand(0, 0);
+    let host_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, host_action);
+
+    assert!(
+        r.game.pending_selection.is_some(),
+        "host selection should park replacement prompt"
+    );
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline optional link replacement");
+
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "decline resumes attach"
+    );
+    assert_eq!(r.trash_size(0), 0, "linked card does not trash");
+    assert!(r.game.pending_option.is_none());
+    assert!(r.game.pending_selection.is_none());
 }
 
 /// Test 3: with no eligible hosts, the Link Option silently trashes — no
