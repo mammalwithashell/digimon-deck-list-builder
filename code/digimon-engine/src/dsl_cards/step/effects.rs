@@ -2,6 +2,7 @@ use digimon_dsl::compiled::{CompiledBindingRef, CompiledStep};
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
+use crate::effect::TimingFilter;
 use crate::effect_context::EffectContext;
 use crate::permanent::PermanentHandle;
 
@@ -34,7 +35,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
     };
 
     if let Some(source) = resolve_permanent_ref(source, ctx, bindings) {
-        let _ = ctx.refire_effect_from_permanent(source, timing, *optional);
+        if timing == "on_play_or_when_digivolving" {
+            let _ = ctx.refire_target_effect(source, TimingFilter::Either, ctx.player, false);
+        } else {
+            let _ = ctx.refire_effect_from_permanent(source, timing, *optional);
+        }
     }
     true
 }

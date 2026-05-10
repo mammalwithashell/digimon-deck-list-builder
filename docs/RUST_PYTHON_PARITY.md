@@ -1102,6 +1102,24 @@ native-printed AND modifier-granted Raid. No parity gap.
 
 ---
 
+## 16. Refire attribution (Track K, 2026-05-10)
+
+### 16.1 ⚪ Permanent-target refire source-card attribution
+
+Rust `EffectContext::refire_effect_from_permanent` now routes through the
+same permanent-target refire path as `refire_target_effect`. For cross-stack
+callers, the refired effect's lookup identity remains the target's effect
+slot, while `EffectContext::source_card` / source kind are attributed to the
+grantor and `source_permanent` carries the target. Existing self-refire users
+are observationally unchanged because grantor and target are the same card.
+
+This is Rust-leading by design for BT24-102 Homeros's "activate 1 [On Play]
+or [When Digivolving] effect" shape and intentionally does not dispatch fake
+`OnAnyDigimonPlayed` or `OnDigivolve` events. The Python legacy engine has no
+equivalent Homeros cross-card primitive.
+
+---
+
 ## Phase 3 residue (callers still on Python engine)
 
 These imports survived the Phase 3 cutover because the Rust counterpart

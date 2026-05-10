@@ -105,6 +105,9 @@ impl Game {
             source_card: effect.source_card,
             source_permanent: Some(effect.source),
             source_kind: effect.source_kind,
+            attribution_source_card: effect.attribution_source_card,
+            attribution_source_kind: effect.attribution_source_kind,
+            bypass_once_per_turn: effect.bypass_once_per_turn,
             controller: effect.controller,
             timing: effect.timing,
             trigger_context: None,
@@ -493,6 +496,9 @@ impl Game {
                 source_card,
                 source_permanent: None,
                 source_kind,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
                 controller,
                 timing,
                 trigger_context: trigger_context.clone(),
@@ -549,6 +555,9 @@ impl Game {
                     source_card,
                     source_permanent: None,
                     source_kind,
+                    attribution_source_card: None,
+                    attribution_source_kind: None,
+                    bypass_once_per_turn: false,
                     controller,
                     timing,
                     trigger_context: trigger_context.clone(),
@@ -1048,6 +1057,9 @@ impl Game {
                 source_card,
                 source_permanent: Some(handle),
                 source_kind,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
                 controller: handle.player,
                 timing: EffectTiming::DelayEffect,
                 trigger_context: Some(trigger_context.clone()),
@@ -1134,6 +1146,9 @@ impl Game {
                 source_card,
                 source_permanent: None,
                 source_kind,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
                 controller: defender,
                 timing,
                 trigger_context: trigger_context.clone(),
@@ -1188,6 +1203,9 @@ impl Game {
                 source_card: card,
                 source_permanent: None,
                 source_kind,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
                 controller: player,
                 timing,
                 trigger_context: trigger_context.clone(),
@@ -1266,6 +1284,9 @@ impl Game {
                     source_card,
                     source_permanent: Some(handle),
                     source_kind: top_source_kind,
+                    attribution_source_card: None,
+                    attribution_source_kind: None,
+                    bypass_once_per_turn: false,
                     controller: handle.player,
                     timing,
                     trigger_context: trigger_context.clone(),
@@ -1317,6 +1338,9 @@ impl Game {
                     source_card: linked_source,
                     source_permanent: Some(handle),
                     source_kind: linked_source_kind,
+                    attribution_source_card: None,
+                    attribution_source_kind: None,
+                    bypass_once_per_turn: false,
                     controller: handle.player,
                     timing,
                     trigger_context: trigger_context.clone(),
@@ -1403,6 +1427,9 @@ impl Game {
                         source_card: training_source,
                         source_permanent: Some(handle),
                         source_kind: training_source_kind,
+                        attribution_source_card: None,
+                        attribution_source_kind: None,
+                        bypass_once_per_turn: false,
                         controller: handle.player,
                         timing,
                         trigger_context: trigger_context.clone(),
@@ -1453,6 +1480,9 @@ impl Game {
                     source_card: inherited_source,
                     source_permanent: Some(handle),
                     source_kind: inherited_source_kind,
+                    attribution_source_card: None,
+                    attribution_source_kind: None,
+                    bypass_once_per_turn: false,
                     controller: handle.player,
                     timing,
                     trigger_context: trigger_context.clone(),
@@ -1498,6 +1528,9 @@ impl Game {
                     source_card,
                     source_permanent: Some(handle),
                     source_kind,
+                    attribution_source_card: None,
+                    attribution_source_kind: None,
+                    bypass_once_per_turn: false,
                     controller: handle.player,
                     timing,
                     trigger_context: trigger_context.clone(),
@@ -1540,6 +1573,9 @@ impl Game {
                     source_card: inherited_source,
                     source_permanent: Some(handle),
                     source_kind: inherited_source_kind,
+                    attribution_source_card: None,
+                    attribution_source_kind: None,
+                    bypass_once_per_turn: false,
                     controller: handle.player,
                     timing,
                     trigger_context: trigger_context.clone(),
@@ -1587,8 +1623,9 @@ impl Game {
         let prev_effect_source_permanent = self.effect_source_permanent;
         let prev_trigger_context = self.current_trigger_context.clone();
         let prev_dna_origin = self.current_dna_origin;
+        let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
         self.effect_source_player = Some(qe.controller);
-        self.effect_source_card = Some(qe.source_card);
+        self.effect_source_card = Some(attribution_source_card);
         self.effect_source_permanent = qe.source_permanent;
         self.current_trigger_context = qe.trigger_context.clone();
         if qe.dna_origin_context.is_some() {
@@ -1604,6 +1641,8 @@ impl Game {
     }
 
     fn run_queued_effect_inner(&mut self, qe: QueuedEffect) {
+        let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
+        let attribution_source_kind = qe.attribution_source_kind.unwrap_or(qe.source_kind);
         let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
             return;
         };
@@ -1615,7 +1654,7 @@ impl Game {
             return;
         }
 
-        if effect.max_per_turn > 0 {
+        if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let Some(activation_count) = self.source_permanent_activation_count(
                     perm_handle,
@@ -1642,9 +1681,9 @@ impl Game {
             if let Some(cond) = &effect.condition {
                 let ctx = EffectContext::new_with_source_kind(
                     self,
-                    qe.source_card,
+                    attribution_source_card,
                     qe.source_permanent,
-                    qe.source_kind,
+                    attribution_source_kind,
                     qe.controller,
                 );
                 if !cond(&ctx.as_read()) {
@@ -1663,9 +1702,9 @@ impl Game {
         if let Some(pay_cost) = &effect.pay_cost_fn {
             let mut ctx = EffectContext::new_with_source_kind(
                 self,
-                qe.source_card,
+                qe.attribution_source_card.unwrap_or(qe.source_card),
                 qe.source_permanent,
-                qe.source_kind,
+                qe.attribution_source_kind.unwrap_or(qe.source_kind),
                 qe.controller,
             );
             if !pay_cost(&mut ctx) {
@@ -1700,7 +1739,7 @@ impl Game {
             return;
         }
 
-        if effect.max_per_turn > 0 {
+        if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let Some(activation_count) = self.source_permanent_activation_count(
                     perm_handle,
@@ -1723,9 +1762,9 @@ impl Game {
         if let Some(process) = &effect.process {
             let mut ctx = EffectContext::new_with_source_kind(
                 self,
-                qe.source_card,
+                qe.attribution_source_card.unwrap_or(qe.source_card),
                 qe.source_permanent,
-                qe.source_kind,
+                qe.attribution_source_kind.unwrap_or(qe.source_kind),
                 qe.controller,
             );
             process(&mut ctx);
@@ -1937,8 +1976,9 @@ impl Game {
         let prev_effect_source_card = self.effect_source_card;
         let prev_effect_source_permanent = self.effect_source_permanent;
         let prev_trigger_context = self.current_trigger_context.clone();
+        let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
         self.effect_source_player = Some(qe.controller);
-        self.effect_source_card = Some(qe.source_card);
+        self.effect_source_card = Some(attribution_source_card);
         self.effect_source_permanent = qe.source_permanent;
         self.current_trigger_context = qe.trigger_context.clone();
         let event_delay_source = self.event_gated_delay_source(&qe);

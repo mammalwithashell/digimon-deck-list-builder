@@ -64,10 +64,38 @@ pub struct ReFireableEffect {
     pub source_card: CardHandle,
     pub source: PermanentHandle,
     pub source_kind: crate::enums::EffectSourceKind,
+    pub attribution_source_card: Option<CardHandle>,
+    pub attribution_source_kind: Option<crate::enums::EffectSourceKind>,
+    pub bypass_once_per_turn: bool,
     pub controller: crate::enums::PlayerId,
     pub card_id: String,
     pub timing: EffectTiming,
     pub timing_key: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimingFilter {
+    OnPlay,
+    WhenDigivolving,
+    Either,
+}
+
+impl TimingFilter {
+    pub fn from_timing_key(key: &str) -> Option<Self> {
+        match key {
+            "on_play" => Some(Self::OnPlay),
+            "when_digivolving" => Some(Self::WhenDigivolving),
+            _ => None,
+        }
+    }
+
+    pub fn timing_keys(self) -> &'static [&'static str] {
+        match self {
+            Self::OnPlay => &["on_play"],
+            Self::WhenDigivolving => &["when_digivolving"],
+            Self::Either => &["on_play", "when_digivolving"],
+        }
+    }
 }
 
 #[derive(Clone)]
@@ -271,8 +299,10 @@ impl Effect {
     }
 
     pub fn can_be_refired(&self) -> bool {
-        matches!(self.timing, EffectTiming::WhenDigivolving)
-            && self.when_digivolving
+        matches!(
+            self.timing,
+            EffectTiming::OnPlay | EffectTiming::WhenDigivolving
+        ) && (self.on_play || self.when_digivolving)
             && !self.inherited
             && !self.security
             && !self.declarative
@@ -999,6 +1029,9 @@ pub fn enumerate_refireable_effects(
             source_card,
             source,
             source_kind,
+            attribution_source_card: None,
+            attribution_source_kind: None,
+            bypass_once_per_turn: false,
             controller: source.player,
             card_id: card_id.clone(),
             timing: effect.timing,

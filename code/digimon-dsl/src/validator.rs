@@ -508,14 +508,24 @@ fn validate_step(
         }
         StepSpec::RefireEffect(args) => {
             validate_binding_ref(&args.source, &format!("{prefix}.source"), card_id, errors);
-            if args.timing != "when_digivolving" {
+            if !matches!(
+                args.timing.as_str(),
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+            ) {
                 errors.push(ValidationError {
                     card_id: card_id.into(),
                     path: format!("{prefix}.timing"),
                     message: format!(
-                        "refire_effect only supports timing: when_digivolving, got {}",
+                        "refire_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
                         args.timing
                     ),
+                });
+            }
+            if args.timing == "on_play_or_when_digivolving" && args.optional {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.optional"),
+                    message: "refire_effect optional: true is not supported with timing: on_play_or_when_digivolving; put optionality on the target selection or containing clause".to_string(),
                 });
             }
         }
