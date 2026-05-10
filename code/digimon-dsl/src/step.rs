@@ -139,6 +139,11 @@ pub enum StepSpec {
     AddPlayerModifier(AddPlayerModifierArgs),
     GrantKeyword(GrantKeywordArgs),
     GrantEffectImmunity(GrantEffectImmunityArgs),
+    /// Track H §3 — install a granted triggered effect on each
+    /// permanent matching `target`. The granted body fires on the
+    /// carrier's matching `timing` (DCGO `AddSkillClass.cs` analog).
+    /// EX1-068 Ice Wall! is the canonical fixture.
+    GrantTriggeredEffect(GrantTriggeredEffectArgs),
 
     // Selection
     SelectOwnPermanent(SelectFieldArgs),
@@ -296,6 +301,7 @@ impl Serialize for StepSpec {
             StepSpec::AddModifier(v) => kv!(s, "add_modifier", v),
             StepSpec::AddPlayerModifier(v) => kv!(s, "add_player_modifier", v),
             StepSpec::GrantKeyword(v) => kv!(s, "grant_keyword", v),
+            StepSpec::GrantTriggeredEffect(v) => kv!(s, "grant_triggered_effect", v),
             StepSpec::GrantEffectImmunity(v) => kv!(s, "grant_effect_immunity", v),
             // Selection
             StepSpec::SelectOwnPermanent(v) => kv!(s, "select_own_permanent", v),
@@ -474,6 +480,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_modifier" => StepSpec::AddModifier(map.next_value()?),
             "add_player_modifier" => StepSpec::AddPlayerModifier(map.next_value()?),
             "grant_keyword" => StepSpec::GrantKeyword(map.next_value()?),
+            "grant_triggered_effect" => {
+                StepSpec::GrantTriggeredEffect(map.next_value()?)
+            }
             "grant_effect_immunity" => StepSpec::GrantEffectImmunity(map.next_value()?),
 
             // Selection
@@ -1164,6 +1173,41 @@ pub struct GrantKeywordArgs {
     pub expiry: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value: Option<i32>,
+}
+
+/// Arguments for the Track H §3 `grant_triggered_effect` step. Walks
+/// battle areas for `target` matches and installs a granted-triggered-
+/// effect entry on each, whose body executes `body` (a step list) when
+/// the carrier's matching `timing` event drains. DCGO reference:
+/// `AddSkillClass.cs` — grantor publishes a per-timing closure that
+/// returns granted effects; here we install once per match instead of
+/// re-evaluating per fire (acceptable for printed-text fidelity since
+/// most cards install at a specific event then leave the carrier set
+/// frozen until expiry).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GrantTriggeredEffectArgs {
+    /// Predicate selecting which permanents receive the granted body.
+    /// Walks both players' battle areas; combine `owner: opponent` /
+    /// `owner: you` with kind/trait/level filters as needed.
+    pub target: PredicateSpec,
+    /// The carrier-side timing that triggers the granted body. String
+    /// form (snake_case) matching the engine's `EffectTiming` map —
+    /// e.g. `when_attacking`, `on_deletion`, `on_suspend`,
+    /// `on_play`, `on_digivolve`.
+    pub timing: String,
+    /// String form (snake_case) matching the engine's `Expiry` map —
+    /// e.g. `permanent`, `end_of_turn`, `end_of_opponents_turn`,
+    /// `end_of_opponents_next_turn`. EX1-068 Ice Wall! uses
+    /// `end_of_opponents_next_turn`.
+    pub expiry: String,
+    /// Step list executed when the granted body fires. Runs with
+    /// `EffectContext::source_card` = grantor (DCGO
+    /// `EffectSourceCard`) and `source_permanent` = carrier (DCGO
+    /// `EffectSourcePermanent`). v1: bodies are non-selection — they
+    /// run inline after the printed-observer queue drains. Selection-
+    /// driving bodies are tracked as a separate gap.
+    pub body: Vec<StepSpec>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]

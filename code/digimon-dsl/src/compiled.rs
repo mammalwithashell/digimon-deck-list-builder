@@ -424,9 +424,19 @@ pub enum CompiledDeclarativeClause {
         target_player: Option<CompiledPlayerRef>,
         dp_modifier: Option<i32>,
         dp_modifier_fn: Option<CompiledFormula>,
+        /// Flat `Security A. ±N` grant. Track H §1.
+        /// Lowers to `ModifierType::SecurityAttackChange` with the literal
+        /// delta as `value`; the security-resolution loop reads the sum
+        /// at consult time (`combat.rs:2326`).
+        security_attack: Option<i32>,
         security_attack_fn: Option<CompiledFormula>,
         grant_keyword: Option<CompiledGrantKeywordValue>,
         modifier: Option<String>,
+        /// Track H §4 — install-once continuous gate. When present, the
+        /// lowered `Effect` installs its modifier(s) with
+        /// `Expiry::UntilCondition` carrying this predicate. Eviction is
+        /// final per PR #458 (`false → true` does not re-install).
+        while_condition: Option<CompiledPredicate>,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -877,6 +887,14 @@ pub enum CompiledStep {
         source_kind: CompiledEffectSourceKind,
         source_controller: CompiledEffectController,
         expiry: String,
+    },
+    /// Track H §3 — install a granted triggered effect on each
+    /// permanent matching `target`. DCGO `AddSkillClass.cs` analog.
+    GrantTriggeredEffect {
+        target: CompiledPredicate,
+        timing: String,
+        expiry: String,
+        body: Vec<CompiledStep>,
     },
     SelectOwnPermanent {
         filter: CompiledPredicate,

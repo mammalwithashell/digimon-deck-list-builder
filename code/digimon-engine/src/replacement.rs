@@ -1277,6 +1277,9 @@ fn commit_permanent_deletion_no_replace(game: &mut crate::game::Game, handle: Pe
         .battle_area
         .get(handle.index as usize)
         .and_then(|permanent| permanent.card_sources.last().map(|card| card.handle()));
+    // Track H §3: enqueue_from_permanent records granted-triggered fires
+    // into `pending_granted_fires`; drain_effect_queue flushes them after
+    // the printed-observer drain settles.
     game.enqueue_triggered(EffectTiming::OnDeletion, TriggerSource::Permanent(handle));
     game.drain_effect_queue();
 

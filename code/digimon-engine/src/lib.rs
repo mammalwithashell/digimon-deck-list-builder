@@ -3,6 +3,7 @@ pub mod serialization;
 pub use digimon_dsl as dsl;
 
 pub mod action;
+pub mod aura;
 pub mod card_data;
 pub mod card_registry;
 pub mod card_source;

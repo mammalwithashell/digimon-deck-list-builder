@@ -1243,6 +1243,7 @@ impl Game {
                 card_id: card_id.to_string(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
             });
         }
     }
@@ -1330,6 +1331,7 @@ impl Game {
                 card_id: card_id.to_string(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
             });
         }
     }
@@ -1373,6 +1375,7 @@ impl Game {
                 card_id: card_id.to_string(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
             });
         }
     }
@@ -2613,7 +2616,7 @@ impl Game {
             self.drain_effect_queue();
         }
 
-        self.modifiers.clear_permanent(handle);
+        self.clear_permanent_full(handle);
         // Phase 6: expire any player-scoped modifiers sourced from this permanent.
         self.modifiers.expire_player_on_permanent_leave(handle);
         self.mark_until_condition_dirty();
@@ -2874,7 +2877,7 @@ impl Game {
             self.drain_effect_queue();
         }
 
-        self.modifiers.clear_permanent(handle);
+        self.clear_permanent_full(handle);
         // Phase 6: expire any player-scoped modifiers sourced from this permanent.
         self.modifiers.expire_player_on_permanent_leave(handle);
         true
@@ -4404,7 +4407,7 @@ impl Game {
         // Modifier cleanup BEFORE the source-trash dispatch — modifiers are
         // keyed on `PermanentHandle`, which becomes invalid after `remove()`
         // shifts indices. Mirrors `attach_tamer_to_digimon`.
-        self.modifiers.clear_permanent(target);
+        self.clear_permanent_full(target);
         self.modifiers.expire_player_on_permanent_leave(target);
 
         // Sources-below-top → each source's owner's trash. Per source: push,
@@ -4526,7 +4529,7 @@ impl Game {
             return false;
         };
 
-        self.modifiers.clear_permanent(target);
+        self.clear_permanent_full(target);
         self.modifiers.expire_player_on_permanent_leave(target);
 
         let had_linked = !permanent.linked_cards.is_empty();
@@ -4763,7 +4766,7 @@ impl Game {
             self.drain_effect_queue();
         }
 
-        self.modifiers.clear_permanent(target);
+        self.clear_permanent_full(target);
         self.modifiers.expire_player_on_permanent_leave(target);
         self.fire_on_place_security(player_id, observer_player, top_handle);
         true

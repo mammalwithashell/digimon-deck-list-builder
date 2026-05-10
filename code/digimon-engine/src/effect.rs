@@ -840,6 +840,29 @@ impl EffectBuilder {
         self
     }
 
+    /// Track H Phase 4k — enter the typed aura builder (returns
+    /// [`crate::aura::AuraBuilder`]). Use for raw_rust card scripts
+    /// that author auras programmatically; YAML-authored cards keep
+    /// using the field-slot DSL (`kind: aura` body).
+    ///
+    /// Example:
+    /// ```ignore
+    /// Effect::declarative(card)
+    ///     .name("All your Holy Digimon gain +1000 DP")
+    ///     .aura()
+    ///         .scope(AuraScope::Player(controller))
+    ///         .target_filter(|rctx, h| {
+    ///             // ... per-permanent filter
+    ///             true
+    ///         })
+    ///         .grants(AuraGrant::Dp { value: 1000, base: false, origin: false })
+    ///         .duration(Expiry::EndOfYourTurn)
+    ///     .build()
+    /// ```
+    pub fn aura(self) -> crate::aura::AuraBuilder {
+        crate::aura::AuraBuilder::new(self)
+    }
+
     pub fn overclock_with_cost_filter<F>(mut self, filter: F) -> Self
     where
         F: Fn(&EffectReadContext, PermanentHandle) -> bool + Send + Sync + 'static,

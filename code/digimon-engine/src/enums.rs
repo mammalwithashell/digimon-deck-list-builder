@@ -767,6 +767,16 @@ pub enum Expiry {
     EndOfTurn,
     EndOfOpponentsTurn,
     EndOfYourTurn,
+    /// Track H §3 — printed text "until the end of their next turn"
+    /// (EX1-068 Ice Wall!, AD1-014 MetalGarurumon). The entry persists
+    /// through the upcoming end-of-source's-turn AND end-of-opponent's-turn,
+    /// then expires at the SECOND end-of-opponent's-turn after install.
+    /// Tracked via a `pending_skips` counter on `ModifierEntry`.
+    EndOfOpponentsNextTurn,
+    /// Symmetric mirror — "until the end of your next turn." Used for
+    /// effects on the source's own side that span across the upcoming
+    /// opponent's turn AND the source's own next turn.
+    EndOfYourNextTurn,
     EndOfAttack,
     EndOfBattle,
     UntilLeaveField,

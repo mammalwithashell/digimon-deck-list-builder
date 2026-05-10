@@ -117,6 +117,7 @@ impl Game {
             card_id: effect.card_id,
             allow_below_top_liveness: false,
             dna_origin_context: None,
+            granted_effect_id: None,
         }
     }
 
@@ -508,6 +509,7 @@ impl Game {
                 card_id: card_id.clone(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
             });
         }
     }
@@ -567,6 +569,7 @@ impl Game {
                     card_id: card_id.clone(),
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
+                    granted_effect_id: None,
                 });
             }
         }
@@ -586,6 +589,14 @@ impl Game {
                 return;
             }
             if self.effect_queue.is_empty() {
+                // Track H §3 Phase 4i superseded the prior inline-fire
+                // flush: granted-triggered-effect entries now ride the
+                // standard `QueuedEffect` queue via `granted_effect_id`
+                // so they compose with selections, max-per-turn, etc.
+                // The `pending_granted_fires` Vec is no longer driven
+                // by enqueue_from_permanent; left in place as a no-op
+                // (and remains usable by raw_rust callers of
+                // `Game::fire_granted_triggered_effects`).
                 self.effect_chain_depth = 0;
                 self.reevaluate_until_condition_modifiers_if_dirty();
                 return;
@@ -1069,6 +1080,7 @@ impl Game {
                 card_id: card_id.clone(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
             });
         }
     }
@@ -1158,6 +1170,7 @@ impl Game {
                 card_id: card_id.clone(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
             });
         }
     }
@@ -1215,6 +1228,7 @@ impl Game {
                 card_id: card_id.clone(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
             });
         }
     }
@@ -1235,6 +1249,43 @@ impl Game {
         handle: PermanentHandle,
         trigger_context: Option<TriggerContext>,
     ) {
+        // Track H §3 Phase 4i — push granted-triggered-effect entries
+        // as QueuedEffect with `granted_effect_id` set. The drainer
+        // recognizes these and fetches the body from
+        // `Game::granted_effect_bodies` at fire time. Selection-driving
+        // bodies park on `pending_selection` like printed effects;
+        // inline-fire (Phase 4b) is now redundant for queue-routed
+        // entries but kept as a fallback via `pending_granted_fires`.
+        let granted_entries = self
+            .modifiers
+            .granted_triggered_for_timing_with_ids(handle, timing);
+        let tp_for_granted = self.turn_player();
+        for (body_id, source_card, source_player) in granted_entries {
+            self.effect_queue.push_back(QueuedEffect {
+                source_card,
+                source_permanent: Some(handle),
+                source_kind: source_kind_for_card_kind(
+                    self.player(handle.player)
+                        .battle_area
+                        .get(handle.index as usize)
+                        .map(|p| p.top_card().card_kind(&self.card_data))
+                        .unwrap_or(crate::enums::CardKind::Digimon),
+                ),
+                controller: source_player,
+                timing,
+                trigger_context: trigger_context.clone(),
+                effect_slot: 0,
+                is_optional: false,
+                is_turn_player: source_player == tp_for_granted,
+                card_id: String::new(),
+                allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
+                granted_effect_id: Some(body_id),
+            });
+        }
         let Some(perm) = self
             .players
             .get(handle.player as usize)
@@ -1296,6 +1347,7 @@ impl Game {
                     card_id: card_id.clone(),
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
+                    granted_effect_id: None,
                 });
             }
         }
@@ -1350,6 +1402,7 @@ impl Game {
                     card_id: linked_card_id.clone(),
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
+                    granted_effect_id: None,
                 });
             }
         }
@@ -1439,6 +1492,7 @@ impl Game {
                         card_id: training_card_id.clone(),
                         allow_below_top_liveness: false,
                         dna_origin_context: self.current_dna_origin,
+                        granted_effect_id: None,
                     });
                 }
             }
@@ -1492,6 +1546,7 @@ impl Game {
                     card_id: source_card_id.clone(),
                     allow_below_top_liveness: true,
                     dna_origin_context: self.current_dna_origin,
+                    granted_effect_id: None,
                 });
             }
         }
@@ -1503,6 +1558,39 @@ impl Game {
         handle: PermanentHandle,
         trigger_context: Option<TriggerContext>,
     ) {
+        // Track H §3 Phase 4i — same queue-based granted dispatch as
+        // `enqueue_from_permanent`; breeding-area carriers are valid
+        // grant targets via the breeding permanent's handle.
+        let granted_entries = self
+            .modifiers
+            .granted_triggered_for_timing_with_ids(handle, timing);
+        let tp_for_granted = self.turn_player();
+        for (body_id, source_card, source_player) in granted_entries {
+            let source_kind = self
+                .player(handle.player)
+                .breeding_area
+                .as_ref()
+                .map(|p| source_kind_for_card_kind(p.top_card().card_kind(&self.card_data)))
+                .unwrap_or(crate::enums::EffectSourceKind::Digimon);
+            self.effect_queue.push_back(QueuedEffect {
+                source_card,
+                source_permanent: Some(handle),
+                source_kind,
+                controller: source_player,
+                timing,
+                trigger_context: trigger_context.clone(),
+                effect_slot: 0,
+                is_optional: false,
+                is_turn_player: source_player == tp_for_granted,
+                card_id: String::new(),
+                allow_below_top_liveness: false,
+                dna_origin_context: self.current_dna_origin,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
+                granted_effect_id: Some(body_id),
+            });
+        }
         let Some(perm) = self
             .players
             .get(handle.player as usize)
@@ -1540,6 +1628,7 @@ impl Game {
                     card_id: card_id.clone(),
                     allow_below_top_liveness: false,
                     dna_origin_context: self.current_dna_origin,
+                    granted_effect_id: None,
                 });
             }
         }
@@ -1585,6 +1674,7 @@ impl Game {
                     card_id: source_card_id.clone(),
                     allow_below_top_liveness: true,
                     dna_origin_context: self.current_dna_origin,
+                    granted_effect_id: None,
                 });
             }
         }
@@ -1641,6 +1731,31 @@ impl Game {
     }
 
     fn run_queued_effect_inner(&mut self, qe: QueuedEffect) {
+        // Track H §3 Phase 4i — granted-triggered-effect branch.
+        // Granted bodies are inline closures with no Effect metadata
+        // (no condition, pay_cost, optional, max_per_turn). We fetch
+        // the body from `granted_effect_bodies` and invoke directly.
+        // Selection-driving bodies that install a `PendingSelection`
+        // park correctly — the standard selection resume path picks
+        // them back up because the queue stays alive.
+        if let Some(body_id) = qe.granted_effect_id {
+            let body = self.granted_effect_bodies.get(body_id).cloned();
+            let Some(body) = body else {
+                return;
+            };
+            let mut ctx = EffectContext::new_with_source_kind(
+                self,
+                qe.source_card,
+                qe.source_permanent,
+                qe.source_kind,
+                qe.controller,
+            );
+            body(&mut ctx);
+            return;
+        }
+        // Track K cross-card refire support (from main): attribution
+        // source falls back to the queued effect's primary source when
+        // not overridden.
         let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
         let attribution_source_kind = qe.attribution_source_kind.unwrap_or(qe.source_kind);
         let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {

@@ -1,0 +1,69 @@
+card: BT21-095
+name: Wind Guardians
+kind: option
+color: [green]
+cost: 2
+traits: [WG]
+
+# Printed:
+#   While you have no face-up security cards, you can ignore this card's color requirements.
+#   [Security] [All Turns] All of your [WG] trait Digimon gain ＜Vortex＞ (At the end of your
+#     turn, this Digimon may attack an opponent's Digimon. With this effect, it can attack
+#     the turn it was played.).
+#   [Main] Add your bottom security card to the hand. Then, place this card face up as the
+#     bottom security card.
+# Inherited:
+#   Security Effect [Security] You may play 1 level 5 or lower Digimon with the [WG] trait
+#   from your hand without paying the cost.
+#
+# DCGO reference: DCGO/Assets/Scripts/CardEffect/BT21/Blue/BT21_095.cs
+#   - `IgnoreColorConditionClass` (timing=None) — IgnoreColorRequirement gated on
+#     `card.Owner.SecurityCards.Count(cs => !cs.IsFlipped) == 0`.
+#   - `AddSkillClass` (timing=None) — for each [WG]-trait permanent on owner's field,
+#     grant a Vortex effect for OnEndTurn timing. Walks battle area at consult time
+#     (lazy-filter) via `IsExistInSecurity(card, false)` + `PermanentCondition`.
+#   - `OptionSkill` — replace bottom security with this card.
+#   - `SecuritySkill` — play 1 level≤5 [WG] from hand without paying cost.
+
+effects:
+  # ─── [Security] [All Turns] aura — Track H §5 fixture ───────────────────
+  #
+  # Lowers via the security-zone aura tick path. While this card is face-up
+  # in its owner's security stack, every face-up tick walks the field and
+  # grants <Vortex> to each [WG]-trait Digimon on the owner's side.
+  #
+  # End behavior matches DCGO BT21_095.cs:
+  #   - Face-DOWN security source does NOT fire (gated on
+  #     `face_up_security` membership).
+  #   - Source leaving security (face-down flip / trash / Recovery) evicts
+  #     the grant on the next tick (materialized-declarative clear+re-install
+  #     model).
+  #   - New [WG] field entries pick up the grant on next tick (lazy-filter
+  #     end behavior).
+  #   - Owner-scoped target filter (`owner: you`) excludes opp-side [WG]
+  #     Digimon.
+  #
+  # The DCGO `AddSkillClass` shape grants a triggered OnEndTurn effect that
+  # presents the Vortex selection. This Rust path grants the printed
+  # `<Vortex>` keyword directly; the engine's existing Vortex consult site
+  # (`game_phases.rs:360` — `has_keyword(handle, Keyword::Vortex)`) drives
+  # the same end behavior at end-of-turn, so the modeling difference is
+  # invisible from outside.
+  - kind: aura
+    scope: security
+    target: { owner: you, kind: digimon, trait: WG }
+    grant_keyword: { keyword: Vortex }
+
+  # ─── Omitted clauses ────────────────────────────────────────────────────
+  #
+  # The "ignore color requirements while no face-up security" clause is
+  # tracked under the existing IgnoreColorRequirement player-scoped gap
+  # (RUST_ENGINE_GAPS.md "Player-scoped modifier registry"), with the
+  # board-state condition variant a separate sub-gap.
+  #
+  # The [Main] effect (replace-bottom-security-with-self) and
+  # [Security] inherited trigger (play 1 level≤5 [WG] from hand
+  # without paying cost) are independent of Track H and not authored
+  # in this fixture. Adding them requires the play-self-into-security
+  # zone-movement verb and the play-from-hand-without-cost effect step,
+  # both pre-existing engine primitives but separately scoped.
