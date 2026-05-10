@@ -3170,6 +3170,26 @@ The runtime removes the target permanent without reopening the leave-field repla
 
 This is the audited shape for EX4-060's DCGO-style `IPutSecurityPermanent(... toTop:false)` tail after sequential source plays.
 
+### Track E zone-movement DSL verbs
+
+These YAML verbs lower directly to the Track E engine helpers; they do not
+expand the action space or tensor contracts. Parse/compile coverage lives in
+`code/digimon-dsl/tests/parse_zone_movement_steps.rs`; engine lowering coverage
+lives in `code/digimon-engine/tests/dsl/zone_movement_verbs.rs`.
+
+| YAML verb | Parameters | Engine helper / call site |
+|---|---|---|
+| `bounce_self` | `{}` | `EffectContext::bounce_self()` |
+| `place_self_at_security` | `position: top|bottom|random`, `face: up|down` | `EffectContext::place_self_at_security(position, face_up)` |
+| `place_self_option_at_security` | `position: top|bottom|random`, `face: up|down` | `EffectContext::place_self_option_at_security(position, face_up)` |
+| `place_permanent_on_security_observed` | `of`, `target`, `position`, `face`, `include_sources` | `Game::place_permanent_on_security_observed(...)` when `include_sources: true`; otherwise the normal `EffectContext::place_permanent_on_security(...)` path |
+| `security_place_stacked_card` | `carrier`, `source` or `source_index_from_top`, `of`, `position`, `face` | `EffectContext::security_place_stacked_card(...)` |
+| `security_place_top_stacked_card` | `carrier`, `of`, `position`, `face` | `EffectContext::security_place_top_stacked_card(...)` |
+| `return_all_trash_to_deck_bottom` | `of` | `EffectContext::return_all_trash_to_deck_bottom(player)` |
+| `trash_top_n_digivolution_cards_of_each` | `of`, `n` formula | `EffectContext::trash_top_n_digivolution_cards_of_each(target_player, n)` |
+| `trash_opponent_hand_to_count` | `opponent`, `target_count` formula | `EffectContext::trash_opponent_hand_to_count(opponent, target_count)` |
+| `search_own_security_stack` | `filter`, `prompt`, optional `bind_as`, `optional`, `on_select`, optional `on_no_match` | `EffectContext::search_own_security_stack(...)`; `bind_as` exposes the selected security card handle to `on_select` |
+
 ---
 
 ### `as_selecting_player` builder

@@ -110,7 +110,7 @@ Resolver-backed corrected batches on 2026-05-03:
 | `LM-054` | partial | color-bypass use requirement; Main reveal-top-2 yellow/black search; inherited Security reveal/search plus battle-area placement; scheduled Delay yellow/black hand digivolve cost -2 | standard Delay main-phase activation remains under `PUPPETS-G009` |
 | `BT13-101` | partial | optional On Play PawnChessmon-named hand free-play; Security play self | All Turns 2-color black/yellow play observer needs event-card exact color/count predicates and visible source-bound suspend-cost preflight under `PUPPETS-G023` |
 | `BT16-055` | partial | black Lv3 and Pulsemon digivolve paths; <=3 security Blocker/Reboot grant branch | >=3 security narrow protection and inherited text-contains-Pulsemon aura need `PUPPETS-G024` and `PUPPETS-G025` |
-| `BT20-084` | partial | Sistermon Ciel cost-1 digivolve; On Play/When Digivolving CannotSuspend target; trash-resident optional free digivolve from trash | top-stack-card-to-security movement needs `PUPPETS-G027` |
+| `BT20-084` | partial | Sistermon Ciel cost-1 digivolve; On Play/When Digivolving CannotSuspend target; trash-resident optional free digivolve from trash; End of All Turns top stacked card to security via Track E | remaining partial status is card-local coverage, not `PUPPETS-G027` |
 | `BT22-088` | partial | Security play self | Start of Main return-this-Tamer optional cost and Token/Puppet played observer need `PUPPETS-G028` and `PUPPETS-G005` |
 | `BT23-077` | implemented | Blocker; On Play delete opponent Digimon with play cost 4 or less; self-suspend De-Digivolve observer gated by `event_permanent_is_source` | none identified in covered text |
 | `BT5-033` | implemented | yellow Lv2 digivolve path; opponent-turn digivolution cost-reduction floodgate | none identified in covered text |
@@ -155,7 +155,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 | `PUPPETS-G024` | engine-gap / dsl-gap | open | `BT16-055`, narrow protection from opponent DP reduction and De-Digivolve | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G025` | dsl-gap | open | `BT16-055`, inherited carrier rules-text-contains-Pulsemon DP aura | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G026` | hybrid | closed | `BT20-084`, trash-resident observer and effect digivolve from trash into a field Sistermon Ciel | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
-| `PUPPETS-G027` | engine-gap / dsl-gap | open | `BT20-084`, move top stacked card to top security at End of All Turns | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G027` | engine-gap / dsl-gap | closed | `BT20-084`, move top stacked card to top security at End of All Turns | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G028` | hybrid | open | `BT22-088`, optional triggered return-this-Tamer-to-deck cost before chained free-play branches | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G029` | dsl-gap | closed | `BT23-077`, self-scoped OnSuspend observer predicate | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G030` | engine-gap / dsl-gap | open | `BT5-106`, Security play from trash while suppressing played Digimon On Play effects | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
@@ -449,13 +449,11 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G027: Move Top Stacked Card to Top Security
 
 - **Type:** `engine-gap` / `dsl-gap`
-- **Status:** open
+- **Status:** closed 2026-05-09 by Track E DSL closure.
 - **Blocks:** `BT20-084` Sistermon Ciel (Awakened).
 - **Effect text:** "[End of All Turns] Place this Digimon's top stacked card as the top security card."
-- **Why it matters:** The effect extracts the top card of the Digimon's stack and places it on security. If that top card is also the active top card, the engine must keep the remaining permanent state legal or remove an empty battle-area object without firing unrelated deletion hooks.
-- **Evidence:** This is a sibling/extension of the reusable `pop_top_source`/stack-to-security gap in `docs/RUST_ENGINE_GAPS.md`, but `BT20-084` needs the active top stacked card rather than a selected digivolution source.
-- **First test:** Resolve End of All Turns with `BT20-084` on a stack and assert the top stacked card moves to top security while the battle-area stack remains legal.
-- **Implementation hint:** Add a curated stack-extraction API for top stacked cards, then route the returned card through the security-top placement primitive with correct ownership and cleanup semantics.
+- **Resolution:** YAML can now use `security_place_top_stacked_card: { carrier, of, position, face }`, lowering to `EffectContext::security_place_top_stacked_card`. `BT20-084.yaml` uses the verb from its End of All Turns clause.
+- **Evidence:** `cargo test --manifest-path code/digimon-dsl/Cargo.toml --test parse_zone_movement_steps`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl zone_movement_verbs`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt20_084_end_of_all_turns`.
 
 ### PUPPETS-G028: Optional Triggered Return-Self Cost Before Chained Free-Play Branches
 

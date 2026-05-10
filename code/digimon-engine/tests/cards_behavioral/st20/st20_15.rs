@@ -37,13 +37,8 @@
 //!   verification.
 //!
 //! - **[Main] Add top security to hand → place self as top security
-//!   face-up** — BLOCKED on G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION
-//!   (sibling of the existing G-PLACE-SELF-AT-SECURITY-TOP for Digimon
-//!   permanents). The HEAD step `add_top_security_to_hand` was RESOLVED
-//!   2026-05-03; the TAIL step has no verb / engine substrate for an
-//!   Option-card subject. Per no-approximations the entire clause is
-//!   OMITTED rather than fire only the head (which would leave the gate
-//!   permanently open and consume the Option for a half-effect).
+//!   face-up** — IMPLEMENTED via Track E
+//!   `place_self_option_at_security: { position: top, face: up }`.
 //!
 //! - **[Security] (inherited) optional play 1 Tamer from hand free** —
 //!   IMPLEMENTED. Standard `select_hand { kind: tamer }` →
@@ -67,8 +62,8 @@
 //!    dispatch. No clause authored.
 //!
 //! 2. **[Main] Add top security; then place self at security top face up**
-//!    — OMITTED. DSL/engine gap G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION
-//!    blocks the printed "Then" tail. No clause authored.
+//!    — IMPLEMENTED. The body is `add_top_security_to_hand` followed by
+//!    `place_self_option_at_security`.
 //!
 //! 3. **[Security] (inherited) optional play 1 Tamer free** — IMPLEMENTED.
 //!    `select_hand { kind: tamer }` filter matches DCGO `cardSource.IsTamer`;
@@ -159,16 +154,15 @@ fn st20_15_is_option_cost_2_with_adventure_trait() {
     );
 }
 
-/// ST20-15 has TWO clauses (per the BLOCKED gaps — only flood_gate + inherited
-/// security clause are authored):
+/// ST20-15 has THREE clauses:
 ///   [0] flood_gate (declarative, IgnoreColorRequirement)
-///   [1] inherited on_security (triggered, scope: Inherited)
+///   [1] main_from_hand (triggered, add top security then place self option)
+///   [2] inherited on_security (triggered, scope: Inherited)
 ///
-/// The [Security][All Turns] DP aura (G-SECURITY-ZONE-AURA-SOURCE) and [Main]
-/// add-then-place-self (G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION) clauses
-/// are OMITTED — they would expand this list to 4 once the gaps close.
+/// The [Security][All Turns] DP aura (G-SECURITY-ZONE-AURA-SOURCE) is still
+/// omitted.
 #[test]
-fn st20_15_has_two_clauses_in_expected_order_due_to_blocked_gaps() {
+fn st20_15_has_three_clauses_in_expected_order() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -181,10 +175,9 @@ fn st20_15_has_two_clauses_in_expected_order_due_to_blocked_gaps() {
     let card = runner.compiled_card(CARD_ID).expect("ST20-15 compiled");
     assert_eq!(
         card.effects.len(),
-        2,
-        "expected 2 clauses (flood_gate + inherited on_security); the [Security][All Turns] DP \
-         aura and [Main] body are OMITTED under G-SECURITY-ZONE-AURA-SOURCE and \
-         G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION respectively. Got {}",
+        3,
+        "expected 3 clauses (flood_gate + main_from_hand + inherited on_security); \
+         the [Security][All Turns] DP aura remains omitted under G-SECURITY-ZONE-AURA-SOURCE. Got {}",
         card.effects.len()
     );
 }
@@ -216,11 +209,10 @@ fn st20_15_clause_0_is_flood_gate_with_ignore_color_modifier() {
     );
 }
 
-/// Clause 1: inherited scope, OnSecurity timing, optional (DCGO `canNoSelect:
-/// true` / printed "You may"). Body must contain a `select_hand` step (Tamer
-/// filter) followed by `play_from_hand_free`.
+/// Clause 1: main_from_hand timing. Body must add the top security card to hand
+/// and then place the resolving Option card as top face-up security.
 #[test]
-fn st20_15_clause_1_inherited_security_optional_select_tamer_play_free() {
+fn st20_15_clause_1_main_adds_top_security_then_places_self_option() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -234,19 +226,57 @@ fn st20_15_clause_1_inherited_security_optional_select_tamer_play_free() {
 
     match &card.effects[1] {
         CompiledClause::Triggered(t) => {
+            assert!(
+                t.when.contains(&CompiledTiming::MainFromHand),
+                "clause 1 must fire from hand as an Option [Main] effect; got {:?}",
+                t.when
+            );
+            assert!(!t.optional, "printed [Main] text is mandatory after play");
+            assert!(matches!(
+                t.process.as_slice(),
+                [
+                    CompiledStep::AddTopSecurityToHand { of },
+                    CompiledStep::PlaceSelfOptionAtSecurity { position, face_up }
+                ] if *of == digimon_dsl::compiled::CompiledPlayerRef::You
+                    && *position == digimon_dsl::compiled::CompiledStackPosition::Top
+                    && *face_up
+            ));
+        }
+        other => panic!("clause 1 must be Triggered(main_from_hand); got {other:?}"),
+    }
+}
+
+/// Clause 2: inherited scope, OnSecurity timing, optional (DCGO `canNoSelect:
+/// true` / printed "You may"). Body must contain a `select_hand` step (Tamer
+/// filter) followed by `play_from_hand_free`.
+#[test]
+fn st20_15_clause_2_inherited_security_optional_select_tamer_play_free() {
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"])
+        .memory(0)
+        .start();
+
+    let card = runner.compiled_card(CARD_ID).expect("ST20-15 compiled");
+
+    match &card.effects[2] {
+        CompiledClause::Triggered(t) => {
             assert_eq!(
                 t.scope,
                 CompiledScope::Inherited,
-                "clause 1 must have Inherited scope (printed inherited [Security])"
+                "clause 2 must have Inherited scope (printed inherited [Security])"
             );
             assert!(
                 t.when.contains(&CompiledTiming::OnSecurity),
-                "clause 1 must fire at OnSecurity; got {:?}",
+                "clause 2 must fire at OnSecurity; got {:?}",
                 t.when
             );
             assert!(
                 t.optional,
-                "clause 1 outer trigger MUST be optional (printed 'You may'; DCGO `canNoSelect: true`)"
+                "clause 2 outer trigger MUST be optional (printed 'You may'; DCGO `canNoSelect: true`)"
             );
             // Body: select_hand + play_from_hand_free.
             let has_select_hand = t
@@ -259,17 +289,17 @@ fn st20_15_clause_1_inherited_security_optional_select_tamer_play_free() {
                 .any(|s| matches!(s, CompiledStep::PlayFromHandFree { .. }));
             assert!(
                 has_select_hand,
-                "clause 1 body must contain a SelectHand step; got {:?}",
+                "clause 2 body must contain a SelectHand step; got {:?}",
                 t.process
             );
             assert!(
                 has_play_free,
-                "clause 1 body must contain a PlayFromHandFree step; got {:?}",
+                "clause 2 body must contain a PlayFromHandFree step; got {:?}",
                 t.process
             );
         }
         other => panic!(
-            "clause 1 must be Triggered(inherited on_security); got {:?}",
+            "clause 2 must be Triggered(inherited on_security); got {:?}",
             other
         ),
     }
@@ -308,38 +338,6 @@ fn st20_15_no_aura_clause_blocked_by_security_zone_aura_source() {
     );
 }
 
-/// Negative-shape: NO `main_from_hand` triggered clause should appear (the
-/// [Main] body is OMITTED under G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION).
-/// When the gap closes a separate commit will add the [Main] clause AND
-/// remove this assertion.
-#[test]
-fn st20_15_no_main_from_hand_clause_blocked_by_place_self_security_top_option() {
-    let runner = DebugRunner::builder()
-        .from_dsl_yaml(YAML)
-        .expect("parses")
-        .add_card(filler("FILL"))
-        .hand(0, &[CARD_ID])
-        .deck(0, &["FILL"])
-        .memory(0)
-        .start();
-
-    let card = runner.compiled_card(CARD_ID).expect("ST20-15 compiled");
-
-    let main_count = card
-        .effects
-        .iter()
-        .filter(|c| match c {
-            CompiledClause::Triggered(t) => t.when.contains(&CompiledTiming::MainFromHand),
-            _ => false,
-        })
-        .count();
-    assert_eq!(
-        main_count, 0,
-        "expected 0 main_from_hand clauses while G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION \
-         is OPEN; got {main_count}"
-    );
-}
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 2 — BLOCKED behavioral assertions (each #[ignore]'d under its gap)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -368,7 +366,7 @@ fn st20_15_color_bypass_active_when_no_island_in_own_security() {
 fn st20_15_color_bypass_inactive_when_island_face_up_in_own_security() {
     // When the gap closes:
     // 1. Put a face-up [Island of Adventure] in P0's security (via
-    //    place_self_at_security_top from a previous activation).
+    //    place_self_option_at_security from a previous activation).
     // 2. Assert that the play_option_from_hand action for ST20-15 is NOT
     //    legal in the action mask (color req re-asserted).
     panic!("BLOCKED — see gap header in YAML");
@@ -413,30 +411,61 @@ fn st20_15_security_aura_inactive_when_self_face_down() {
     panic!("BLOCKED — see gap header in YAML");
 }
 
-/// G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION: [Main] activation must
-/// remove the controller's top security card to hand AND place ST20-15 face
-/// up as the new top security card.
+/// [Main] activation removes the controller's top security card to hand AND
+/// places ST20-15 face up as the new top security card.
 #[test]
-#[ignore = "G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION: no DSL/engine substrate for face-up self-place at security top for Option cards"]
 fn st20_15_main_swaps_top_security_with_self_face_up() {
-    // When the gap closes:
-    // 1. Put ST20-15 in P0's hand. Put a known FILL card on top of P0's
-    //    security stack.
-    // 2. Activate the [Main] effect via `activate_hand_main(0, 0)` (or
-    //    play_option_from_hand once the color-bypass gap also closes).
-    // 3. Assert that FILL is now in P0's hand and ST20-15 is the top
-    //    security card of P0, face-up.
-    panic!("BLOCKED — see gap header in YAML");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(filler("SEC-BOTTOM"))
+        .add_card(filler("SEC-TOP"))
+        .add_card(make_lv3_digimon("WHITE-DGM", "White Digimon"))
+        .hand(0, &[CARD_ID])
+        .security(0, &["SEC-BOTTOM", "SEC-TOP"])
+        .memory(10)
+        .start();
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    runner.place_on_field(0, "WHITE-DGM", Some(0));
+
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert_ne!(
+        result,
+        digimon_engine::selection::OptionPlayResult::Invalid,
+        "ST20-15 should be playable for this fixture"
+    );
+
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|card| card.card_id(&runner.game.card_data) == "SEC-TOP"),
+        "the previous top security card must move to hand"
+    );
+    let top_security = runner.game.players[0]
+        .security
+        .last()
+        .expect("new top security");
+    assert_eq!(
+        top_security.card_id(&runner.game.card_data),
+        CARD_ID,
+        "ST20-15 must become the new top security card"
+    );
+    assert!(
+        runner.game.players[0]
+            .face_up_security
+            .contains(&top_security.card_index),
+        "ST20-15 must be placed face-up"
+    );
 }
 
-/// G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION: after [Main] resolves, the
-/// face-up [Island of Adventure] in own security MUST close the color-bypass
-/// gate (Clause 0) so subsequent ST20-15 plays from hand again require a
-/// matching color source on field.
+/// After [Main] resolves, the face-up [Island of Adventure] in own security
+/// should close the color-bypass gate (Clause 0), but the predicate leaf for
+/// "face-up named security card" is still missing.
 #[test]
-#[ignore = "G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION + G-PRED-NO-FACE-UP-SECURITY-NAMED"]
+#[ignore = "G-PRED-NO-FACE-UP-SECURITY-NAMED: no DSL leaf for face-up named-security predicate"]
 fn st20_15_main_followup_closes_color_bypass_gate() {
-    // When BOTH gaps close:
+    // When the predicate gap closes:
     // 1. Activate [Main] once — places ST20-15 face-up in P0's security.
     // 2. Put a SECOND ST20-15 in P0's hand.
     // 3. Assert that play_option_from_hand for the second copy is NOT legal

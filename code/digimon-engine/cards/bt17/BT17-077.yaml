@@ -46,7 +46,9 @@
 #
 #   Clause 1a: "Trash all digivolution cards of all of your opponent's Digimon."
 #   BLOCKED: G-ASL-07 (qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md)
-#             AND G-DSL-TRASH-TOP-N-DIGI-CARDS (qa/dsl-vocab-gaps.md).
+#             for the "all sources" shape. Track E closed the bounded
+#             `trash_top_n_digivolution_cards_of_each` verb, but this card needs
+#             "all" rather than a literal count.
 #   The DSL has no `for_each_opponent_digimon: { trash_all_sources }` verb.
 #   Trashing ALL sources of EACH opponent Digimon (not just one) requires:
 #     (a) iteration over all opponent permanents (for_each could serve), AND
@@ -57,12 +59,11 @@
 #
 #   Clause 1b: "Return all cards from your or your opponent's trash to the bottom
 #   of the deck."
-#   BLOCKED: G-ASL-07. No DSL verb for bulk trash→deck-bottom movement. Requires:
+#   PARTIALLY UNBLOCKED: Track E landed `return_all_trash_to_deck_bottom`.
+#   Still blocked on G-ASL-07's player-choice/result-binding pieces. Requires:
 #     (a) player selects "your trash" vs "opponent's trash" (DCGO: BoolSelection),
 #     (b) move every card in the chosen trash zone to its owner's deck bottom.
-#   The `return_to_deck` step targets a single bound permanent, not an entire zone.
-#   A new `return_all_trash_to_deck_bottom` step (or parametric zone iterator) is
-#   needed. Suggested DSL syntax when the gap closes:
+#   Suggested DSL syntax once the choice binding closes:
 #     - select_effect_choice:
 #         bind_as: whose_trash
 #         labels: ["Your Trash", "Opponent's Trash"]
@@ -70,9 +71,9 @@
 #     - if:
 #         condition: { equals: [whose_trash, 0] }
 #         then:
-#           - return_all_trash_to_deck_bottom: { of: you }   # ← BLOCKED: verb missing
+#           - return_all_trash_to_deck_bottom: { of: you }
 #         else:
-#           - return_all_trash_to_deck_bottom: { of: opponent }   # ← BLOCKED: verb missing
+#           - return_all_trash_to_deck_bottom: { of: opponent }
 #
 #   Clause 1c: "If this effect returned a white level 7 card, gain 3 memory."
 #   BLOCKED: G-ASL-07. No DSL support for "if a moved card had property X, gain Y".
@@ -166,7 +167,9 @@ effects:
   #
   # BLOCKED: G-ASL-07 (hybrid engine-gap + dsl-gap, filed 2026-05-03 in
   #   qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md).
-  #   Also cross-refs G-DSL-TRASH-TOP-N-DIGI-CARDS (qa/dsl-vocab-gaps.md).
+  #   Track E closed the reusable bounded top-N source trash and bulk
+  #   trash-to-deck-bottom verbs; the remaining blockers are the "all sources"
+  #   variant, player choice over whose trash, and moved-card result predicate.
   #
   # The three sub-clauses (1a: mass trash sources, 1b: return chosen trash to
   # deck bottom, 1c: conditional memory if white Lv7 returned) all depend on
@@ -178,7 +181,7 @@ effects:
   #   summary: "[On Play][When Digivolving] Trash all opp digi sources; return all trash to deck bottom; +3 memory if white Lv7 returned"
   #   process:
   #     # Step 1a — Trash all digivolution cards of each opponent Digimon.
-  #     # BLOCKED: G-ASL-07 / G-DSL-TRASH-TOP-N-DIGI-CARDS
+  #     # BLOCKED: G-ASL-07 all-sources variant
   #     # When gap closes, add:
   #     #   - for_each_opponent_permanent:
   #     #       filter: { kind: digimon }
@@ -187,8 +190,7 @@ effects:
   #     #         - trash_all_digivolution_cards: { target: opp_dig }
   #     #
   #     # Step 1b — Player chooses whose trash to return; return all cards.
-  #     # BLOCKED: G-ASL-07 (return_all_trash_to_deck_bottom verb missing)
-  #     # When gap closes, add:
+  #     # PARTIAL: return_all_trash_to_deck_bottom exists; choice binding missing.
   #     #   - select_effect_choice:
   #     #       bind_as: whose_trash
   #     #       labels: ["Your Trash", "Opponent's Trash"]

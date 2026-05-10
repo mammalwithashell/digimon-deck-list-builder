@@ -4,24 +4,27 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
-## Track E (2026-05-08) — engine helpers shipped, DSL verbs pending
+## Track E (2026-05-08) — engine helpers shipped, DSL verbs landed
 
-Track E shipped 8 zone-movement helpers + the owner-routing fix at the engine layer. The DSL verbs that lower printed text into these helpers are pending — each verb is a small parser/lowering change, but together they're the bottleneck for several BLOCKED card YAMLs. Verbs to add (with their target `EffectContext` method):
+Track E shipped 8 zone-movement helpers + the owner-routing fix at the engine layer. The ten deferred DSL verbs now parse, validate, compile, and lower into the corresponding helpers. Evidence:
+
+- `cargo test --manifest-path code/digimon-dsl/Cargo.toml --test parse_zone_movement_steps`
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl zone_movement_verbs`
 
 | DSL verb | Engine target | Card driver |
 |---|---|---|
-| `place_self_at_security: { position, face }` | `place_self_at_security` / `place_self_at_security_and_cancel_current_replacement` | EX9-021 (top, face-up), EX4-060 (bottom, face-down) |
+| `place_self_at_security: { position, face }` | `place_self_at_security` | EX9-021 (top, face-up), EX4-060-style self placement |
 | `place_self_option_at_security: { position, face }` | `place_self_option_at_security` | ST20-15 (top, face-up Option flavor) |
-| `bounce_self: {}` | `bounce_self` | BT24-012 Dimetromon |
-| `security_place_top_stacked_card: { target_player, position, face }` | `security_place_top_stacked_card` | Puppets G027 |
-| `security_place_stacked_card: { source: <BindingRef>, target_player, position, face }` | `security_place_stacked_card` (full form, source picked by `select_own_sources`) | follow-up Puppets / Mineral cards |
-| `return_all_trash_to_deck_bottom: { whose }` | `return_all_trash_to_deck_bottom` (with player-choice wrapper) | BT17-077 Imperialdramon: Paladin Mode |
-| `trash_top_n_digivolution_cards: { of, n, filter }` | `trash_top_n_digivolution_cards_of_each` | BT12-028 |
-| `trash_opponent_hand_to_count: { count }` | `trash_opponent_hand_to_count` | BT19-075 MoonMillenniummon |
-| `search_own_security_stack: { filter, prompt }` | `search_own_security_stack` | TS Olympos cards |
+| `bounce_self: {}` | `bounce_self` | BT24-012 Dimetromon self-bounce cost shapes |
+| `security_place_top_stacked_card: { carrier, of, position, face }` | `security_place_top_stacked_card` | Puppets G027 |
+| `security_place_stacked_card: { carrier, source/source_index_from_top, of, position, face }` | `security_place_stacked_card` | follow-up Puppets / Mineral cards |
+| `return_all_trash_to_deck_bottom: { of }` | `return_all_trash_to_deck_bottom` | BT17-077 Imperialdramon: Paladin Mode |
+| `trash_top_n_digivolution_cards_of_each: { of, n }` | `trash_top_n_digivolution_cards_of_each` | BT12-028 |
+| `trash_opponent_hand_to_count: { opponent, target_count }` | `trash_opponent_hand_to_count` | BT19-075 MoonMillenniummon |
+| `search_own_security_stack: { filter, prompt, bind_as, on_select, on_no_match }` | `search_own_security_stack` | TS Olympos cards |
 | `scheduled_delayed_return: { subject, destination, position, fire_at }` | `schedule_delayed` (substrate already exists) | BG Imperial G-BG-02 |
 
-Engine helpers covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test zone_manipulation`. Each verb still needs (a) a YAML schema entry in `code/digimon-dsl/src/spec/step.rs`, (b) a `CompiledStep` variant, (c) lowering in `code/digimon-engine/src/dsl_cards/step/`, and (d) a per-verb DSL test in `code/digimon-engine/tests/dsl/`.
+The remaining Track E item in this table is unrelated to the ten deferred zone-movement verbs: `scheduled_delayed_return` is still a separate BG Imperial delayed-return shape.
 
 Format per entry:
 
@@ -78,7 +81,7 @@ Format per entry:
 ## Royal Knights full pool pass — residual reusable DSL/engine gaps  [RK-G005]
 - Status: PARTIAL pool pass completed on 2026-05-05. The Royal Knights resolver pool has 72 unique cards and now has 72 Rust DSL YAML entries. Fully unsupported clauses were left as explicit YAML comments plus ignored Rust tests instead of hidden approximations.
 - Newly routed or reaffirmed blocked cards/clauses: `BT13-019`, `BT13-030`, `BT13-075`, `BT13-087`, `BT13-102`, `BT13-111`, `BT13-112`, `BT15-092`, `BT17-077`, `BT19-093`, `BT20-017`, `BT20-021`, `BT20-045`, `BT20-056`, `BT22-025`, `BT22-041`, `BT22-052`, `BT23-013`, `BT23-035`, `BT23-047`, `BT23-057`, `BT23-072`, `EX8-073`, `EX10-068`, and `EX11-053`.
-- Missing DSL/engine areas: broader union selection across hand/trash/breeding/source stacks with uniqueness/name-exclusion filters; play from King Drasil or other source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; card-specific post-Blast-DNA effect bodies after the covered field+hand-material Counter path (`BT17-078`, `BT20-045`, `BT20-060`, `BT20-076`, `BT20-081`, `EX6-011`, `EX6-029`); residual native `<Blast Digivolve>` helper APIs; Option battle-area carrier lifecycle for non-Delay options; security-trash self-dispatch; security search/play and self-to-security placement; security-removed card-local follow-up shapes beyond the now-wired battle/effect `OnOpponentSecurityRemoved` / `OnOwnSecurityRemoved` timing payloads; generalized source-list Partition lowering beyond authored card clauses; and unusual replacement/security-trash costs tied atomically to prevention. `when: on_place_security`, alias `when: on_added_to_security`, `when: on_discard_security`, and the printed-text alias `when: on_any_digimon_played` are now wired as of 2026-05-08 with event-card/effect-cause payloads where applicable; the remaining "self-to-security" and security-trash entries are about moving the resolving object legally or authoring card-local bodies, not the observer timing tokens. Immediate may-attack / force-attack / cancel-attack / open-counter-window prompts are now covered by the Track D DSL verbs listed below. **Track E (2026-05-08)** shipped engine substrate for "self-to-security" via `EffectContext::place_self_at_security` (Digimon flavor), `place_self_option_at_security` (Option flavor), and the security-stacked-card extraction helpers — the remaining card-side work is the DSL verbs that lower into them.
+- Missing DSL/engine areas: broader union selection across hand/trash/breeding/source stacks with uniqueness/name-exclusion filters; play from King Drasil or other source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; card-specific post-Blast-DNA effect bodies after the covered field+hand-material Counter path (`BT17-078`, `BT20-045`, `BT20-060`, `BT20-076`, `BT20-081`, `EX6-011`, `EX6-029`); residual native `<Blast Digivolve>` helper APIs; Option battle-area carrier lifecycle for non-Delay options; security-trash self-dispatch; security search/play card-local follow-up bodies; security-removed card-local follow-up shapes beyond the now-wired battle/effect `OnOpponentSecurityRemoved` / `OnOwnSecurityRemoved` timing payloads; generalized source-list Partition lowering beyond authored card clauses; and unusual replacement/security-trash costs tied atomically to prevention. `when: on_place_security`, alias `when: on_added_to_security`, `when: on_discard_security`, and the printed-text alias `when: on_any_digimon_played` are now wired as of 2026-05-08 with event-card/effect-cause payloads where applicable. Immediate may-attack / force-attack / cancel-attack / open-counter-window prompts are now covered by the Track D DSL verbs listed below. **Track E (2026-05-09)** shipped DSL verbs for self-to-security, Option-self-to-security, stacked-card-to-security, bulk trash/deck movement, forced hand reduction, self-bounce, permanent-to-security observed movement, and security-stack search; remaining card-side work is called out under the narrower per-card gaps below.
 - Workaround policy: no approximations were used for these blockers. If a printed clause required one of the missing primitives, the YAML either implemented an independent faithful slice such as a keyword/security play/simple trigger, or used a load-only gap stub.
 - Verification: targeted `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- <card_filter> --nocapture` passed for the final 25 filters, with one active load test and one ignored gap test per card.
 - First reported: 2026-05-05 Royal Knights full pool implementation pass.
@@ -825,7 +828,7 @@ Format per entry:
 ## EX9-021 — `is_dna_digivolving` predicate on triggered clauses  [G-DSL-IS-DNA-DIGIVOLVING]
 - Effect text: EX9-021 Omnimon Alter-S — "[When Digivolving] **If DNA digivolving**, your opponent's effects don't affect this Digimon for the turn. Then, delete all of their Digimon with the highest level." DCGO splits the body on `CardEffectCommons.IsJogress(_hashtable)` — a per-trigger hashtable flag set when the digivolve was a DNA / jogress path.
 - Status: RESOLVED 2026-05-08 for the reusable event predicate under the engine/DSL spelling `dna_origin: true` / `false`. `TriggerSource::Digivolved` now carries `dna_origin`, `TriggerContext` stores it, `EffectReadContext` / `EffectContext` expose `event_dna_origin()`, and DNA digivolve drains set the bit for `WhenDigivolving`, `OnDnaDigivolve`, and global `OnDigivolve`. Effect-initiated DNA additionally sets `effect_initiated` on the global payload, so `event_is_effect_initiated` composes with `dna_origin`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase3_dna_digivolve_triggers` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078_when_digivolving`.
-- Remaining limits: EX9-021 and BT17-078 still have card-local body gaps (`G-PLACE-SELF-AT-SECURITY-TOP`, `G-BIND-SELECTED-PROPERTY-FOR-EACH`, etc.), and BT16-085 still needs `G-SELECT-OPPONENT-SOURCES` for the DNA trash rider. Do not keep `G-DSL-IS-DNA-DIGIVOLVING` as the blocker for new authoring; use `dna_origin`.
+- Remaining limits: EX9-021 and BT17-078 still have card-local body gaps (`G-BIND-SELECTED-PROPERTY-FOR-EACH`, additional authored bodies, etc.), and BT16-085 still needs `G-SELECT-OPPONENT-SOURCES` for the DNA trash rider. Do not keep `G-DSL-IS-DNA-DIGIVOLVING` or the now-closed reusable self-to-security verb as the blocker for new authoring; use `dna_origin` plus the Track E zone-movement verbs.
 - Missing DSL verb / step kind / predicate: `PredicateSpec` exposes no `is_dna_digivolving: bool` leaf, and the `condition:` shape on a triggered clause has no equivalent. There is also no clause-level `if:` form (matches in `process:` body) that can branch on the DNA-vs-standard digivolve origin.
 - Engine substrate also missing: `TriggerSource::Digivolved { player, permanent, card }` (`code/digimon-engine/src/selection.rs:352`) has NO `via_dna` / `from_dna_pair` flag. The DNA digivolve action path (`Game::initiate_dna_digivolve` etc.) does not currently enqueue a distinct trigger source for the DNA case. The dispatch code that lifts `Digivolved { ... }` into `TriggerContext` (`effect_queue.rs` around line 479) builds a context with `event_permanent` / `event_card` / `source_player` but no DNA discriminator.
 - Lowers to engine API: needs (a) `via_dna: bool` (or `dna_pair: Option<(CardHandle, CardHandle)>`) field on `TriggerSource::Digivolved`, populated from the DNA-digivolve action handler; (b) surfacing on `TriggerContext` so DSL predicates can read it; (c) DSL `is_dna_digivolving: Option<bool>` leaf on `PredicateSpec` + `CompiledPredicate` with an evaluator that consults the trigger context flag (false at non-trigger-time, same convention as `event_target_owner`).
@@ -848,14 +851,14 @@ Format per entry:
 - First reported: 2026-05-03 (EX9-021 Omnimon Alter-S, batch-implement-cards-rust-dsl).
 
 ## EX9-021 — Place self at TOP of own security stack face-up  [G-PLACE-SELF-AT-SECURITY-TOP]
-- Status: ENGINE-DONE / DSL-PENDING (Track E 2026-05-08). Engine substrate `EffectContext::place_self_at_security(StackPosition::Top, true)` shipped — see `docs/RUST_ENGINE_API.md` Placement table and `cargo test … --test zone_manipulation -- place_self_at_security`. The DSL verb `place_self_at_security: { position: top, face: up }` is the remaining work. Like EX4-060, this card is also blocked on `G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES` for the head arm.
+- Status: CLOSED for the reusable Track E DSL verb on 2026-05-09. YAML can now use `place_self_at_security: { position: top, face: up }`, lowering to `EffectContext::place_self_at_security`. EX9-021's production fixture currently uses the explicit binding form `place_permanent_on_security` because its "if this effect played" tail is already bound to the source permanent; the reusable self verb is covered by `parse_zone_movement_steps` and `zone_movement_verbs`.
 
 [ORIGINAL ENTRY BELOW]
 
 - Effect text: EX9-021 Omnimon Alter-S — "[End of Attack] ... If this effect played, place this Digimon as your top security card." DCGO: `IPutSecurityPermanent(card.PermanentOfThisCard(), CardEffectHashtable, toTop: true).PutSecurity()` — places this permanent (top + sources) at the TOP of the controller's security stack (face-up; printed text does not specify face-down).
-- Status: OPEN (filed 2026-05-03 during EX9-021 batch-implement-cards-rust-dsl). Sibling of `G-PLACE-SELF-AT-SECURITY-BOTTOM` (EX4-060) — same engine substrate, different placement target (TOP vs bottom) and different trigger-clause kind (end-of-attack tail vs would-leave replacement).
-- Missing DSL verb / step kind / predicate: no `place_self_at_security_top: {}` step. Closest existing primitives are `place_self_as_delay_option` (places an Option-card self into the battle area as a Delay; wrong destination + Option-only), `add_this_option_to_hand` (routes Option to hand; wrong zone), and `place_permanent_bottom_security_and_cancel_replacement` (targets a binding-selected permanent and cancels the replacement; wrong subject + wrong outcome).
-- Engine substrate likely needed: `EffectContext::place_self_at_security(top_or_bottom: SecurityPlacement, face_orientation: SecurityFace)` that consumes the source permanent's top card + sources, places the bundle at the specified end of the controller's security stack with the specified orientation, fires `OnAddToSecurity`, and updates `face_up_security` bookkeeping. EX4-060 (bottom face-down) and EX9-021 (top face-up) cover both axes of the helper, so this gap should be closed in one engine slice alongside `G-PLACE-SELF-AT-SECURITY-BOTTOM`.
+- Status: CLOSED for reusable DSL/security-placement vocabulary; original notes retained for provenance.
+- Landed DSL verb / step kind: `place_self_at_security: { position: top|bottom|random, face: up|down }`.
+- Engine substrate landed: `EffectContext::place_self_at_security(StackPosition, face_up)`.
 - Suggested DSL syntax (option A — separate verbs):
   ```yaml
   - place_self_at_security_top: {}           # face-up by default
@@ -867,9 +870,9 @@ Format per entry:
       face: up                               # up | down (printed default
                                              # for top is up; for bottom is down)
   ```
-- Workaround that would VIOLATE no-approximations: cancel the leave / keep self in battle area; both produce the wrong board state. Per no-approximations the entire [End of Attack] clause is OMITTED until both `G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES` (the head arm) AND this gap close (the "If this effect played" tail is gated on the head arm having executed at least one play, so neither half can stand alone in a faithful encoding).
-- Also blocks: any future "place this Digimon as your top security card" or "place this card on top of your security stack face up" self-disposition tail. DCGO grep for `IPutSecurityPermanent(card.PermanentOfThisCard(...toTop: true)` returns multiple entries beyond EX9-021. Companion engine gap tracked in `docs/RUST_ENGINE_GAPS.md` under "Zone-manipulation: security stack operations" — a unified helper covering both top/bottom placements would close both DSL gaps simultaneously.
-- Gap kind: hybrid (engine substrate + DSL verb). Test `ex9_021_end_of_attack_plays_two_from_stack_then_places_self_top_security` is `#[ignore]`'d under this gap tag (combined with `G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES`).
+- Workaround that would VIOLATE no-approximations: no longer needed for the reusable security-placement verb.
+- Also blocks: no longer blocks future self-to-security placement syntax. Card-local source-play/result gates should be tracked separately.
+- Gap kind: closed for the Track E verb.
 - First reported: 2026-05-03 (EX9-021 Omnimon Alter-S, batch-implement-cards-rust-dsl). Sibling clause tracked at `G-PLACE-SELF-AT-SECURITY-BOTTOM` (EX4-060).
 
 ## ST20-10 — Inverse alt-path direction: "this card may digivolve INTO X"  [G-ALT-PATH-DIRECTION-INTO]
@@ -981,8 +984,7 @@ Format per entry:
 ## BT20-084 — trash-resident effect digivolve and stacked-card-to-security  [PUPPETS-G026/PUPPETS-G027]
 
 - Effect text: "[Trash] [All Turns] When any of your Digimon are played, 1 of your [Sistermon Ciel]s may digivolve into this card without paying the cost." / "[End of All Turns] Place this Digimon's top stacked card as the top security card."
-- Status 2026-05-06: `PUPPETS-G026` closed. DSL `when: on_ally_played` now lowers to `EffectTiming::OnAllyPlayed`, trash-resident observers fan out from allied play events, and `effect_initiated_digivolve` can consume `source: self` from trash for BT20-084's optional target choice.
-- Still missing DSL verb / step kind / predicate: curated top-stacked-card extraction and security-top placement for `PUPPETS-G027`.
+- Status 2026-05-09: `PUPPETS-G026` and the reusable `PUPPETS-G027` Track E verb are closed. DSL `when: on_ally_played` covers the trash-resident observer, and `security_place_top_stacked_card` now places the card below the visible top into security.
 - Implemented trash-observer DSL syntax:
   ```yaml
   - when: on_ally_played
@@ -998,13 +1000,16 @@ Format per entry:
           cost: free
           ignore_requirements: true
   ```
-- Remaining suggested DSL syntax:
+- Landed stacked-card DSL syntax:
   ```yaml
-
-  - place_top_stacked_card_as_security_top: { of: you }
+  - security_place_top_stacked_card:
+      carrier: source
+      of: you
+      position: top
+      face: up
   ```
-- Gap kind: hybrid, partially closed. Trash observer/source move is implemented; stack/security movement remains blocked.
-- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_084`.
+- Gap kind: closed for the reusable top-stacked-card security movement. Future variants that select an arbitrary source use `security_place_stacked_card`.
+- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt20_084_end_of_all_turns`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl zone_movement_verbs`.
 - First reported: 2026-05-04 (Puppets resolver Batch 8, BT20-084)
 
 ---
@@ -1209,11 +1214,11 @@ Format per entry:
 
 - Effect text: "Trash the top 3 digivolution cards of all of your opponent's Digimon." (BT12-028 clause 0a).
 - Card first discovered in: BT12-028 Paildramon. Sibling to G-ASL-07 (BT17-077 all-source mass trash).
-- Missing DSL verb / step kind / predicate: `trash_top_n_digivolution_cards: { target: <handle>, count: N }` — removes N source cards from BELOW the top card of a permanent (keeping the Digimon on the field), firing `OnDigivolutionCardTrashed` per source. Distinct from `de_digivolve` (removes top card → demotes Digimon) and `trash_top_source` (removes the active Digimon card itself).
-- Lowers to engine API: `EffectContext::trash_top_n_digivolution_sources(target, count)` — NEW primitive needed; engine substrate currently lacks a "remove sources from below the top" operation.
-- Suggested DSL syntax: `trash_top_n_digivolution_cards: { target: opp_digimon, count: 3 }`.
-- Gap kind: hybrid (DSL verb + engine primitive both missing).
-- Workaround: clause omitted from runtime; structural tests pass.
+- Status: CLOSED for the reusable Track E DSL verb on 2026-05-09. YAML can now use `trash_top_n_digivolution_cards_of_each: { of: opponent, n: 3 }`, which lowers to `EffectContext::trash_top_n_digivolution_cards_of_each`. Evidence: `cargo test --manifest-path code/digimon-dsl/Cargo.toml --test parse_zone_movement_steps`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl zone_movement_verbs`.
+- Landed DSL verb / step kind: `trash_top_n_digivolution_cards_of_each: { of: opponent, n: 3 }`.
+- Lowers to engine API: `EffectContext::trash_top_n_digivolution_cards_of_each(target_player, n)`.
+- Gap kind: closed for the bounded top-N-each reusable primitive. BT17-077's "all sources" text remains a separate G-ASL-07 card-local/generalization gap.
+- Workaround: no longer needed for bounded top-N source trash; BT12-028 remains load-only until its DNA-gated follow-up can ship with the full printed clause.
 - First reported: 2026-05-04 (BT12-028 batch-implement-cards-rust-dsl).
 
 ---
@@ -1337,8 +1342,9 @@ Format per entry:
 
 - Effect text: "Then, return all cards from your or your opponent's trash to the bottom of the deck." (BT17-077 Clause 1b).
 - Card first discovered in: BT17-077 Imperialdramon: Paladin Mode.
-- Missing DSL verb / step kind / predicate: `return_all_trash_to_deck_bottom: { of: <player_ref> }` — moves every card currently in the specified player's trash zone to the bottom of their deck. Requires: (a) a zone-bulk-move primitive in the engine, (b) a DSL step that accepts `of: you` or `of: opponent`, and (c) owner routing (each card returns to its own deck bottom, not the controller's).
-- Lowers to engine API: `EffectContext::return_all_trash_to_deck_bottom(player)` — NEW primitive; the engine currently has no "drain entire zone" bulk-move.
+- Status: PARTIALLY CLOSED on 2026-05-09 for the reusable bulk-zone DSL verb. YAML can now call `return_all_trash_to_deck_bottom: { of: you|opponent }`, and owner-routing is covered by `zone_movement_verbs::bulk_trash_and_hand_reduction_verbs_call_helpers`. The remaining printed-card gap is the player-choice branch for "your or your opponent's trash" and the returned-card result predicate for the memory rider.
+- Landed DSL verb / step kind: `return_all_trash_to_deck_bottom: { of: <player_ref> }` — moves every card currently in the specified player's trash zone to the bottom of its owner's deck.
+- Lowers to engine API: `EffectContext::return_all_trash_to_deck_bottom(player)`.
 - Companion gap: the printed text says "your or your opponent's trash" — the choice of whose trash is returned is a player decision (DCGO: `BoolSelection`). This requires either `select_effect_choice` (choose 0 or 1) + `if` conditional wiring the correct `of:` player, or a single parametric verb `return_all_trash_to_deck_bottom: { of: chosen_player }` where `chosen_player` is a binding. Neither is currently in the DSL.
 - Suggested DSL syntax:
   ```yaml
@@ -1353,9 +1359,9 @@ Format per entry:
       else:
         - return_all_trash_to_deck_bottom: { of: opponent }  # ← new verb
   ```
-- Gap kind: hybrid (engine bulk-move primitive + DSL verb + owner-routing semantics all missing).
+- Gap kind: partially closed. Engine bulk-move, DSL verb, and owner routing are closed; player-choice binding and returned-card result predicates remain open for BT17-077's full printed clause.
 - Workaround: Clause 1b (and the dependent Clause 1c memory rider) are omitted from BT17-077.yaml pending G-ASL-07 closure. Behavioral tests #[ignore]'d.
-- Cross-ref: G-ASL-07 (qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md) tracks the broader mass-cleanup-and-trash-return family. G-DSL-TRASH-TOP-N-DIGI-CARDS (above) blocks Clause 1a (the mass-source-trash step that precedes this).
+- Cross-ref: G-ASL-07 (qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md) tracks the remaining all-source/player-choice/result-predicate family.
 - First reported: 2026-05-04 (BT17-077 batch-implement-cards-rust-dsl).
 
 ---

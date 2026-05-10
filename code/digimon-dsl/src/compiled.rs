@@ -777,6 +777,15 @@ pub enum CompiledStep {
     TrashTopSecurityAndCancelReplacement {
         of: CompiledPlayerRef,
     },
+    BounceSelf,
+    PlaceSelfAtSecurity {
+        position: CompiledStackPosition,
+        face_up: bool,
+    },
+    PlaceSelfOptionAtSecurity {
+        position: CompiledStackPosition,
+        face_up: bool,
+    },
     PlacePermanentBottomSecurityAndCancelReplacement {
         of: CompiledPlayerRef,
         target: CompiledBindingRef,
@@ -792,6 +801,46 @@ pub enum CompiledStep {
         target: CompiledBindingRef,
         position: CompiledStackPosition,
         face_up: bool,
+    },
+    PlacePermanentOnSecurityObserved {
+        of: CompiledPlayerRef,
+        target: CompiledBindingRef,
+        position: CompiledStackPosition,
+        face_up: bool,
+        include_sources: bool,
+    },
+    SecurityPlaceStackedCard {
+        carrier: CompiledBindingRef,
+        source: Option<CompiledBindingRef>,
+        source_index_from_top: Option<u8>,
+        of: CompiledPlayerRef,
+        position: CompiledStackPosition,
+        face_up: bool,
+    },
+    SecurityPlaceTopStackedCard {
+        carrier: CompiledBindingRef,
+        of: CompiledPlayerRef,
+        position: CompiledStackPosition,
+        face_up: bool,
+    },
+    ReturnAllTrashToDeckBottom {
+        of: CompiledPlayerRef,
+    },
+    TrashTopNDigivolutionCardsOfEach {
+        of: CompiledPlayerRef,
+        n: CompiledFormula,
+    },
+    TrashOpponentHandToCount {
+        opponent: CompiledPlayerRef,
+        target_count: CompiledFormula,
+    },
+    SearchOwnSecurityStack {
+        filter: Box<CompiledPredicate>,
+        prompt: String,
+        bind_as: Option<String>,
+        optional: bool,
+        on_select: Vec<CompiledStep>,
+        on_no_match: Option<Vec<CompiledStep>>,
     },
     Recover {
         of: CompiledPlayerRef,

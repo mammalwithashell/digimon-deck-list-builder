@@ -379,7 +379,7 @@ pub fn run_step_with_runtime(
     if draw::try_run(step, ctx) {
         return;
     }
-    if zone_moves::try_run(step, ctx, bindings) {
+    if zone_moves::try_run(step, ctx, bindings, runtime) {
         return;
     }
     if permanent_mutations::try_run(step, ctx, bindings) {

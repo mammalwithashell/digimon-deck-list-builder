@@ -71,8 +71,8 @@
 # |------------------------------------------------------------------|--------|
 # | Color bypass while NO face-up [Island of Adventure] in security  | PARTIAL — see G-PRED-NO-FACE-UP-SECURITY-NAMED |
 # | [Security][All Turns] +2000 DP to own Lv3+ Digimon (security src)| BLOCKED — security-zone aura source (engine-gaps.md L294) — see G-SECURITY-ZONE-AURA-SOURCE |
-# | [Main] Add top security card to hand                              | RESOLVED — `add_top_security_to_hand` (P-137 sibling) |
-# | [Main] "Then, place this card face up as the top security card"   | BLOCKED — see G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION |
+# | [Main] Add top security card to hand                              | IMPLEMENTED — `add_top_security_to_hand` |
+# | [Main] "Then, place this card face up as the top security card"   | IMPLEMENTED — `place_self_option_at_security` |
 # | [Security] (inherited) optional play 1 Tamer from hand free       | IMPLEMENTED |
 #
 # ─── DSL-GAP — Predicate "no face-up security card with name X" [G-PRED-NO-FACE-UP-SECURITY-NAMED] ──
@@ -140,7 +140,7 @@
 # DCGO grep for `SecurityCards.Any(... IsFlipped ...)` returns multiple
 # entries (mirror cards in companion sets / Adventure-trait family).
 #
-# ─── DSL-GAP — Place self at TOP of own security stack face-up (Option flavor) [G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION] ──
+# ─── Track E closure — Place self at TOP of own security stack face-up (Option flavor) ──
 #
 # Printed text: "Then, place this card face up as the top security card."
 # DCGO performs this inside `ReplaceTopSecurityWithFaceUpOptionMainEffect`
@@ -148,10 +148,10 @@
 # (or equivalent face-up placement) AFTER the head step removed the
 # previous top security card to hand.
 #
-# This is the SAME engine substrate as the existing
-# `G-PLACE-SELF-AT-SECURITY-TOP` gap (filed 2026-05-03 for EX9-021 Omnimon
-# Alter-S) and `G-PLACE-SELF-AT-SECURITY-BOTTOM` (EX4-060), with two
-# important differences:
+# Track E landed the exact Option-card flavor as
+# `place_self_option_at_security: { position: top, face: up }`, which consumes
+# the in-flight Option from `pending_option` so normal Option disposal does not
+# also trash it.
 #
 #   (a) ST20-15 is an OPTION card (`kind: option`), not a Digimon
 #       Permanent. EX9-021 / EX4-060 surface the gap for a leaving /
@@ -167,42 +167,9 @@
 #       for top placements). So ST20-15 + EX9-021 cover the (top, face-up)
 #       axis; EX4-060 covers (bottom, face-down).
 #
-# Closing this gap requires the same engine helper proposed at
-# G-PLACE-SELF-AT-SECURITY-TOP / G-PLACE-SELF-AT-SECURITY-BOTTOM —
-# `EffectContext::place_self_at_security(top_or_bottom, face_orientation)`
-# — extended to accept an Option card from MainEffectDrain (no source
-# stack required; the "self" card is the Option being played). The DSL
-# verb `place_self_at_security_top: { face: up }` (or unified `place_self_at_security: { position: top, face: up }`)
-# would handle both Digimon-permanent and Option-card subjects.
-#
-# Workaround that would VIOLATE no-approximations: omit the trailing
-# "Then, place this card face up as the top security card" — the Option
-# would resolve to trash by the default OptionState resolution, never
-# joining security. This DROPS the printed effect entirely (no "Island
-# of Adventure" in security → the color-bypass gate above ALWAYS opens,
-# breaking Block 1's gating semantics). Unfaithful both forward and
-# backward.
-#
-# Per no-approximations the [Main] body's TAIL ("Then, place this card
-# face up...") is OMITTED, and consequently the entire [Main] clause is
-# OMITTED rather than fire only the head ("Add your top security card to
-# the hand"). Authoring only the head would:
-#   - lose the printed conjunction ("Then,") which DCGO models as a
-#     single atomic factory call;
-#   - leave the controller having paid the Option cost (2 memory) for a
-#     security-rotation that is half-printed (the new top is gone, but
-#     the Option that was supposed to refill it lands in trash);
-#   - permanently keep Block 1's color-bypass gate OPEN even after the
-#     intended placing turn (since no Island of Adventure ever lands in
-#     own security).
-# All three are unfaithful. Tests for the [Main] clause are #[ignore]'d
-# under both this gap and (defensively) G-PRED-NO-FACE-UP-SECURITY-NAMED.
-#
-# Also blocks: any future "place this card as your top / bottom security
-# card face up / face down" clause whose subject is the Option card being
-# PLAYED (not a leaving Digimon Permanent). DCGO grep for the
-# `ReplaceTopSecurityWith*` factory family returns a handful of Option
-# cards across recent sets that share the same shape.
+# Verification for the reusable verb lives in
+# `code/digimon-engine/tests/dsl/zone_movement_verbs.rs`; this card fixture
+# proves the production YAML uses the same printed two-step body.
 #
 # ─── ENGINE-GAP — [Security][All Turns] aura with security-zone source [G-SECURITY-ZONE-AURA-SOURCE] ──
 #
@@ -309,32 +276,15 @@ effects:
   #   dp_modifier: 2000
   #   summary: "[Security][All Turns] Own Lv3+ Digimon get +2000 DP"
 
-  # ─── BLOCKED Clause 2: [Main] Add top security to hand; then place self at security top face up ─
-  #
-  # Printed: "[Main] Add your top security card to the hand. Then, place
-  # this card face up as the top security card."
-  #
-  # BLOCKED — G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION. The HEAD step
-  # (`add_top_security_to_hand`) was RESOLVED 2026-05-03 and is available
-  # as a native DSL verb. The TAIL step ("place this card face up as the
-  # top security card") has no DSL verb / engine substrate for an OPTION
-  # card subject — the existing G-PLACE-SELF-AT-SECURITY-TOP gap (EX9-021)
-  # covers the Digimon-permanent flavor; ST20-15 surfaces the Option-card
-  # specialization. See header docs for full gap analysis.
-  #
-  # Per no-approximations the entire clause is OMITTED. Authoring partially
-  # (head only) would (a) drop the printed conjunction, (b) leak the played
-  # Option to trash with no rotation back into security, and (c)
-  # permanently keep the Clause 0 color-bypass gate OPEN.
-  #
-  # Authoring stub (commented; uncomment when the gap closes):
-  #
-  # - when: main_from_hand
-  #   optional: false
-  #   summary: "[Main] Add top security to hand; then place self face up as top security"
-  #   process:
-  #     - add_top_security_to_hand: { of: you }
-  #     - place_self_at_security_top: { face: up }     # ← BLOCKED: G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION
+  # ─── Clause 2: [Main] Add top security to hand; then place self at security top face up ─
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Add top security to hand; then place self face up as top security"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - place_self_option_at_security:
+          position: top
+          face: up
 
   # ─── Clause 3: [Security] (inherited) optional play 1 Tamer from hand free ────
   #
