@@ -75,71 +75,17 @@
 # | Standard digivolve Lv.6 Blue / Cost 5                              | IMPLEMENTED (alt_paths kind: digivolve, color_is: blue) |
 # | Alt-source Lv.6 [DM] trait / Cost 5 (printed in xros_req)          | IMPLEMENTED (alt_paths kind: digivolve, trait_has: DM) |
 # | DNA digivolve Lv.6 Blue + Lv.6 Red / Cost 0                        | IMPLEMENTED (alt_paths kind: dna_digivolve, stacks_unsuspended: true) |
-# | [When Digivolving] If DNA, opp effects don't affect self for turn  | BLOCKED — G-DSL-IS-DNA-DIGIVOLVING (no predicate AND no engine flag) |
+# | [When Digivolving] If DNA, opp effects do not affect self for the turn | IMPLEMENTED (dna_origin-gated grant_effect_immunity) |
 # | [When Digivolving] Then, delete all opp Digimon with highest level | IMPLEMENTED (for_each over level_matches_aggregate { selector: highest_level, of: opponent } + delete_permanent) |
 # | [End of Attack] May play 1 [Greymon|Ver.1] + 1 [Garurumon|Ver.2] from own digivolution cards free | IMPLEMENTED (select_material + play_from_materials bind_as) |
 # | [End of Attack] If played, place self as TOP security card          | IMPLEMENTED (binding_exists gate + place_permanent_on_security top face-up) |
 #
-# ─── DSL/engine GAP — DNA-digivolving condition on triggered clauses ─────────
+# ─── DNA-origin adoption note ────────────────────────────────────────────────
 #
-# [G-DSL-IS-DNA-DIGIVOLVING] (NEW — surfaced by EX9-021 [When Digivolving]
-# inner gate "If DNA digivolving").
-#
-# Printed text: "[When Digivolving] **If DNA digivolving**, your opponent's
-# effects don't affect this Digimon for the turn. Then, delete all of their
-# Digimon with the highest level."
-#
-# DCGO models this via `CardEffectCommons.IsJogress(_hashtable)` — a per-
-# trigger hashtable flag set when the digivolve was a DNA / jogress path
-# (the AddJogressConditionClass route). EX9-021's [When Digivolving] body
-# splits on this flag so the immunity arm is DNA-only and the delete arm
-# unconditional.
-#
-# DSL: `PredicateSpec` exposes no `is_dna_digivolving: bool` leaf, and the
-# `condition:` shape on a triggered clause has no equivalent. There is also
-# no clause-level `if:` form (matches in `process:` body) that can branch on
-# the DNA-vs-standard digivolve origin.
-#
-# Engine: `TriggerSource::Digivolved { player, permanent, card }` (selection.rs
-# line 352) has NO `via_dna` / `from_dna_pair` flag. The DNA digivolve action
-# path (Game::initiate_dna_digivolve etc.) does not currently enqueue a
-# distinct trigger source for the DNA case. The dispatch code that lifts
-# `Digivolved { ... }` into `TriggerContext` (effect_queue.rs around line
-# 479) builds a context with `event_permanent` / `event_card` / `source_player`
-# but no DNA discriminator.
-#
-# Closing this gap requires:
-#   A. Engine: add a `via_dna: bool` (or `dna_pair: Option<(CardHandle,
-#      CardHandle)>`) field to `TriggerSource::Digivolved`. Populate it from
-#      the DNA-digivolve action handler. Surface it on `TriggerContext` so
-#      DSL predicates can read it.
-#   B. DSL: add `is_dna_digivolving: Option<bool>` leaf to `PredicateSpec` +
-#      `CompiledPredicate`. Evaluator returns the trigger context flag when
-#      present (false otherwise — non-trigger-time evaluation reads false,
-#      same convention as `event_target_owner`).
-#   C. (Optional but symmetric): expose `is_standard_digivolving` as the dual
-#      so authors can express "[If standard digivolving]"-style clauses.
-#
-# Workaround that would VIOLATE no-approximations:
-#   - Always grant the immunity (over-fires when the digivolve was standard).
-#   - Never grant the immunity (under-fires when the digivolve was DNA — the
-#     printed protection is lost).
-# Both are unfaithful. Per no-approximations the DNA-gated immunity arm is
-# OMITTED entirely. The unconditional delete-highest arm IS implemented (it
-# fires regardless of the DNA gate).
-#
-# Also blocks: any future card with "[When Digivolving] If DNA digivolving,
-# X" or "[When Digivolving] If you DNA digivolved, X" style printed text.
-# DCGO grep for `IsJogress(` returns multiple cards across sets (notably
-# Omnimon-family / DNA-archetype cards). Sibling form to AD1-001's
-# trash-recursion split already addressed by `dna_origin: true` predicate
-# context (filed when the trash-recursion gap was opened — sibling but
-# distinct primitive, since `dna_origin` reads card-data origin metadata
-# rather than per-trigger event metadata).
-#
-# Gap kind: hybrid (engine TriggerSource needs the flag; DSL needs the
-# predicate). First reported: 2026-05-03 (EX9-021 Omnimon Alter-S,
-# batch-implement-cards-rust-dsl).
+# The reusable `dna_origin: true` predicate is now available for
+# [When Digivolving] clauses. EX9-021 uses it only on the immunity arm so the
+# unconditional delete-highest arm still fires for standard and DNA
+# digivolution.
 #
 # ─── End-of-attack implementation note ───────────────────────────────────────
 #
@@ -182,7 +128,35 @@ alt_paths:
     stacks_unsuspended: true
 
 effects:
-  # ─── Clause 1 — [When Digivolving] delete-highest (unconditional half) ─────
+  # ─── Clause 1 — [When Digivolving] DNA-only opponent-effect immunity ──────
+  #
+  # Printed: "[When Digivolving] If DNA digivolving, your opponent's effects
+  # don't affect this Digimon for the turn."
+  #
+  # `dna_origin: true` is scoped from the DNA digivolve trigger drain. The
+  # DSL immunity step is source-kind scoped, so this installs one modifier each
+  # for opponent Digimon, Tamer, and Option effects through end of turn.
+  - when: when_digivolving
+    condition: { dna_origin: true }
+    summary: "[When Digivolving] DNA-only: self ignores opponent effects for the turn"
+    process:
+      - grant_effect_immunity:
+          target: self
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: tamer
+          source_controller: opponent
+          expiry: end_of_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: option
+          source_controller: opponent
+          expiry: end_of_turn
+
+  # ─── Clause 2 — [When Digivolving] delete-highest (unconditional half) ─────
   #
   # Printed: "[When Digivolving] If DNA digivolving, your opponent's effects
   # don't affect this Digimon for the turn. Then, delete all of their
@@ -195,9 +169,8 @@ effects:
   # Source priority: printed grammar + DCGO sequencing both align — the
   # delete is unconditional.
   #
-  # Per the BLOCKED gap [G-DSL-IS-DNA-DIGIVOLVING] documented in the header,
-  # the DNA-only immunity arm is OMITTED entirely. The unconditional
-  # delete-highest arm IS implemented.
+  # The DNA-only immunity arm is a separate preceding clause. The unconditional
+  # delete-highest arm remains implemented here.
   #
   # Body: `for_each` over `level_matches_aggregate { selector: highest_level,
   # of: opponent }` + delete_permanent. The aggregate selector is wired
@@ -210,7 +183,7 @@ effects:
   # DCGO's `if (card.Owner.Enemy.GetBattleAreaDigimons().Count > 0)` gate at
   # line 187 (well, here the gate is on the loop being non-empty — same effect).
   - when: when_digivolving
-    summary: "[When Digivolving] Delete all opp Digimon with highest level (unconditional half; DNA-only immunity arm BLOCKED on G-DSL-IS-DNA-DIGIVOLVING)"
+    summary: "[When Digivolving] Delete all opp Digimon with highest level (unconditional half)"
     process:
       - for_each:
           over:
@@ -223,39 +196,6 @@ effects:
           bind_as: victim
           body:
             - delete_permanent: { target: victim }
-
-  # ─── BLOCKED Clause 2 — [When Digivolving] DNA-only opp-effect immunity ────
-  #
-  # Printed: "[When Digivolving] If DNA digivolving, your opponent's effects
-  # don't affect this Digimon for the turn."
-  #
-  # BLOCKED on G-DSL-IS-DNA-DIGIVOLVING (NEW — see header). Both the engine
-  # `TriggerSource::Digivolved` and the DSL `PredicateSpec` lack a flag/leaf
-  # for "did this digivolve happen via the DNA pair path?".
-  #
-  # Per no-approximations the entire arm is OMITTED. The visible behavior is
-  # faithful to the standard-digivolve case (DCGO does not grant immunity
-  # there); for the DNA-pair case the printed protection is missed. When the
-  # gap closes the body will be:
-  #
-  # - when: when_digivolving
-  #   condition:
-  #     is_dna_digivolving: true               # ← BLOCKED leaf
-  #   summary: "[When Digivolving] DNA-only: self ignores opp effects this turn"
-  #   process:
-  #     - grant_effect_immunity:
-  #         target: source                     # the carrier permanent
-  #         source_kind: any                   # printed "your opponent's effects"
-  #                                            # has no card-kind restriction
-  #         source_controller: opponent
-  #         expiry: end_of_turn                # printed "for the turn"
-  #
-  # DCGO sets the immunity via `selectedPermanent.UntilEachTurnEndEffects.Add`
-  # which expires at the end of the CURRENT turn (EachTurnEnd, not OwnerTurnEnd
-  # — the immunity covers BOTH players' actions for the rest of the turn this
-  # digivolve happens on). The sister card AD1-009's
-  # `expiry: end_of_opponents_turn` is DIFFERENT — DON'T copy that expiry here.
-  # `end_of_turn` (current turn's end) is the correct expiry per DCGO.
 
   # ─── Clause 3 — [End of Attack] play-2-from-stack + place self top ───────
   #

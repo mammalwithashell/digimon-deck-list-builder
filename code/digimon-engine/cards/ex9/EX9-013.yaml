@@ -2,17 +2,18 @@ card: EX9-013
 name: BlitzGreymon
 kind: digimon
 level: 6
-color: [red, white]
+color: [red, black]
 cost: 7
 dp: 12000
 traits: [Cyborg, DM, Ver.1]
+attribute: Virus
 ace_overflow: -4
 
 # Standard digivolution: Lv5 Red / Cost 4
 # Alt-digivolve (xros_req): Lv5 with [Greymon] in name or [DM] trait / Cost 3
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 5 }
+    from: { level_eq: 5, color_is: red }
     cost: 4
 
   - kind: digivolve
@@ -22,6 +23,10 @@ alt_paths:
         - { level_eq: 5, trait_has: DM }
     cost: 3
     ignore_requirements: true
+
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
 
 effects:
   # ─── Declarative keywords ────────────────────────────────────────────────────

@@ -638,9 +638,8 @@ pub fn parse_printed_keywords(
                 let rest = rest.trim();
                 let mask = if rest.is_empty() {
                     0u8
-                } else if let Some(inside) = rest
-                    .strip_prefix('(')
-                    .and_then(|s| s.strip_suffix(')'))
+                } else if let Some(inside) =
+                    rest.strip_prefix('(').and_then(|s| s.strip_suffix(')'))
                 {
                     decoy_color_mask_from_paren(inside)
                 } else {

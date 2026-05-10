@@ -28,9 +28,9 @@ This document distills the Alter-S Ladder readiness assessment into reusable DSL
 
 `blocked`
 
-The refreshed `Alter-S Ladder` pool has one exact DigiLab decklist. Only 3 of 17 unique card IDs are currently reported as implemented by `digimon_engine.load_implemented_card_ids()`: `BT16-082`, `EX10-010`, and `EX9-013`. Those three are partial, with ignored tests still covering no-op raw Rust bodies, omitted printed clauses, and missing effect-initiated attack/immunity support.
+The refreshed `Alter-S Ladder` pool has one exact DigiLab decklist. After the 2026-05-10 implementation pass, 10 of 17 unique card IDs have Rust YAML/tests in the active lane (`BT16-082`, `BT17-077`, `BT5-112`, `EX10-002`, `EX10-010`, `EX4-060`, `EX9-013`, `EX9-021`, `P-101`, `P-128`). The archetype remains blocked on reusable primitives for the seven remaining no-YAML/full-fidelity blockers.
 
-The reusable blockers cluster around source-stack play, effect-generated attacks, target-change observers, face-down sources, multi-zone reveal/selection workflows, and conditional immunity. These are broader than Alter-S and should be compiled as shared engine/DSL primitives before the archetype is called playable.
+The reusable blockers now cluster around face-down sources, binding-relative play-cost filters, source-to-hand costs, granted future attacks / source-name predicates, reveal-to-play, replacement-triggered DNA, and Paladin-style mass cleanup. These are broader than Alter-S and should be compiled as shared engine/DSL primitives before the archetype is called playable.
 
 ## Card Authoring Backlog, Not Cross-Archetype Gaps
 
@@ -38,11 +38,11 @@ These cards need production YAML and card-specific tests, but should not become 
 
 | Area | Alter-S Ladder cards | Required local work |
 |---|---|---|
-| Existing partial cards | `BT16-082`, `EX10-010`, `EX9-013` | Replace no-op/partial bodies, unignore card tests, and use existing predicates where now supported. |
-| Egg and lower-level setup | `EX10-002`, `BT16-082`, `P-101`, `EX9-068`, `P-128` | Author draw/discard, search, played-Digimon observer, memory setter, and inherited/tamer effects. |
-| Lv.5/Lv.6 shell | `EX10-008`, `EX9-011`, `EX10-010`, `EX9-013`, `EX9-020`, `EX5-048` | Author Collision, forced attack, face-down source, De-Digivolve, bottom-deck, leave-field replacement, and ACE tests. |
-| Lv.7 payoff and tech | `EX4-060`, `EX9-021`, `BT5-087`, `BT5-112`, `BT17-077` | Author source-stack play, security placement, mass deletion/bottom-deck, trash play, security play, and mass cleanup tests. |
-| Option package | `BT15-096`, `BT5-087` source-cost clauses | Author reveal/add/trash ordering, Delay play reduction, source-return costs, and up-to-N trash play choices. |
+| Existing partial cards | `EX10-010`, `BT17-077` | `EX10-010` still needs continuous source-scoped immunity; `BT17-077` still needs main cleanup primitives. |
+| Egg and lower-level setup | `EX9-068` | `EX10-002`, `P-101`, and `P-128` were authored on 2026-05-10; `EX9-068` waits on face-down source support. |
+| Lv.5/Lv.6 shell | `EX10-008`, `EX9-011`, `EX9-020`, `EX5-048` | Author Collision/forced future attack, face-down source, bottom-deck, replacement DNA, and reveal-to-play once primitives exist. |
+| Lv.7 payoff and tech | `BT5-087`, `BT17-077` | `EX4-060`, `EX9-021`, and `BT5-112` are covered; `BT5-087` waits on source-to-hand cost and `BT17-077` waits on mass cleanup. |
+| Option package | `BT15-096`, `BT5-087` source-cost clauses | `BT15-096` has ignored red tests under `G-PLAY-COST-LTE-BINDING`; `BT5-087` waits on source-return costs. |
 
 ## Remaining Reusable Gap Candidates
 
@@ -74,10 +74,11 @@ These cards need production YAML and card-specific tests, but should not become 
 ### G-ASL-03: Attack-target-change observer and Collision/Raid event fan-out
 
 - **Type:** hybrid `engine-gap` / `dsl-gap`
-- **Blocks:** `EX10-002`, `EX10-008`
+- **Blocks:** `EX10-008`
 - **Cross-archetype value:** Collision, Raid, Block, and other target-substitution effects need stable event context so inherited and face-up observers can react to "when an attack target is switched".
 - **Printed behavior examples:** `EX10-002` draws when an attack target is switched. `EX10-008` has inherited removal tied to the attack target being switched to an opponent's Digimon.
-- **Missing capability:** A normalized `attack_target_changed` event emitted for all target-change paths, including granted Collision/Raid-style paths, with old target, new target, attacker, controller, and reason context available to DSL predicates.
+- **Status:** `EX10-002` is implemented with `on_attack_target_change` as of 2026-05-10. Remaining blocker is the `EX10-008` inherited predicate shape, especially `source_name_contains` runtime evaluation and target-change provenance for granted Collision-style paths.
+- **Missing capability:** A normalized `attack_target_changed` event emitted for all target-change paths, including granted Collision/Raid-style paths, with old target, new target, attacker, controller, reason context, and source-name predicates available to DSL predicates.
 - **Why it matters:** If each target-switch mechanic handles observers separately, inherited effects will miss legal triggers or double-trigger depending on the path.
 - **Spec should cover:** event payload, once-per-switch fan-out, inherited observer timing, granted keyword provenance, target predicates, and interaction with blocker/redirect effects.
 - **First test:** Give an attacker an inherited `EX10-008` effect, switch its attack target to an opponent Digimon through a Collision-like path, and assert the inherited security trash effect sees exactly one target-change event.
@@ -98,7 +99,7 @@ These cards need production YAML and card-specific tests, but should not become 
 ### G-ASL-05: Reveal multi-pick with mixed destinations and ordered remainder
 
 - **Type:** `dsl-gap`
-- **Blocks:** `BT16-082`, `BT15-096`
+- **Blocks:** `BT15-096` main clause authoring once the Delay blocker is closed
 - **Cross-archetype value:** Searchers, Trainings, Memory Boosts, and many options reveal cards, choose multiple categories for different destinations, then place the rest on top or bottom in a defined order.
 - **Printed behavior examples:** `BT16-082` reveals 3, adds a Digimon/Tamer, then bottoms the rest. `BT15-096` reveals 5, adds one Machine/Cyborg, trashes one Machine/Cyborg, then returns the rest to the top of the deck.
 - **Missing capability:** A reusable reveal workflow with multiple pick clauses, mixed destination routing, optional/mandatory category constraints, and ordered remainder placement.
@@ -110,10 +111,11 @@ These cards need production YAML and card-specific tests, but should not become 
 ### G-ASL-06: Conditional/source-scoped effect immunity
 
 - **Type:** hybrid `engine-gap` / `dsl-gap`
-- **Blocks:** `EX10-010`, `EX9-021`
+- **Blocks:** `EX10-010`
 - **Cross-archetype value:** ACE, DNA, and boss Digimon often gain immunity from specific opponent effect sources, sometimes only if they have named or trait sources.
 - **Printed behavior examples:** `EX10-010` gains immunity from opponent Digimon effects while its source condition is met. `EX9-021` gains opponent-effect immunity for the turn after DNA digivolving.
-- **Missing capability:** Scriptable `CannotBeAffected`/effect-immunity modifiers with controller, source kind, source-card, duration, and condition filters, enforced before opponent effects mutate protected permanents.
+- **Status:** `EX9-021`'s duration-bound DNA-origin immunity is implemented as of 2026-05-10. Remaining blocker is `EX10-010`'s continuous source-condition immunity from opponent Digimon effects while a condition over its sources is true.
+- **Missing capability:** Scriptable continuous `CannotBeAffected`/effect-immunity modifiers with controller, source kind, source-card, duration, and condition filters, enforced before opponent effects mutate protected permanents.
 - **Why it matters:** A decorative immunity status that does not gate deletion, bottom-decking, DP reduction, source trashing, or bounce effects is not rules-complete.
 - **Spec should cover:** immunity source taxonomy, continuous vs duration-bound checks, source-condition reevaluation, replacement interaction order, and behavioral tests for every affected movement/removal class introduced in the same spec.
 - **First test:** Give `EX10-010` its source-condition immunity, resolve an opponent Digimon deletion effect and an opponent option deletion effect, and assert only the Digimon-source effect is blocked.
@@ -134,9 +136,10 @@ These cards need production YAML and card-specific tests, but should not become 
 ### G-ASL-08: Union-zone and up-to-N play selectors with cost/color filters
 
 - **Type:** `dsl-gap`
-- **Blocks:** `BT5-087`, `BT15-096`, `BT5-112`
+- **Blocks:** `BT5-087`; `BT15-096` is now more precisely blocked by binding-relative play-cost predicates
 - **Cross-archetype value:** Security and option effects frequently play cards from hand/trash/security/reveal zones with cost, color, level, and count filters.
-- **Printed behavior examples:** `BT5-087` may play up to two black/purple Digimon cards with play cost 8 or less from trash. `BT15-096` Delay plays a Lv.5+ Machine/Cyborg with a cost reduction. `BT5-112` plays itself from security and deletes an opponent Digimon.
+- **Printed behavior examples:** `BT5-087` may play up to two black/purple Digimon cards with play cost 8 or less from trash. `BT5-112` plays itself from security and deletes an opponent Digimon.
+- **Status:** `BT5-112` is implemented as of 2026-05-10.
 - **Missing capability:** A DSL selector/action workflow for up-to-N candidates across one or more zones, where each candidate preserves its origin zone and applies zone-specific movement/play semantics.
 - **Why it matters:** Separate prompts for each zone or each copy can change the printed choice set and make PASS/partial-pick behavior incorrect.
 - **Spec should cover:** candidate identity with zone, up-to-N partial completion, PASS/done actions, cost/color/level predicates, play-with-cost-reduction hooks, and security-origin movement.

@@ -46,11 +46,6 @@ effects:
   #
   # Mandatory (DCGO: canNoSelect: false in SetUpActivateClass SharedActivateCoroutine).
   # Target: opponent Digimon OR Tamer with play cost ≤ 7.
-  #
-  # KNOWN GAP G-PLAY-COST-LTE: `play_cost_lte` is not a valid predicate in
-  # PredicateSpec (digimon-dsl/src/predicate.rs). The cost filter cannot be expressed
-  # and is therefore OMITTED. The selection prompt will allow any opponent Digimon or
-  # Tamer to be selected (over-permissive). This is tracked in qa/dsl-vocab-gaps.md.
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete 1 opponent Digimon or Tamer (play cost ≤7)"
     process:
@@ -60,7 +55,7 @@ effects:
             any_of:
               - kind: digimon
               - kind: tamer
-          # G-PLAY-COST-LTE: play_cost_lte: 7 omitted — predicate not yet in DSL
+            play_cost_lte: 7
           prompt: "Delete an opponent's Digimon or Tamer (play cost 7 or lower)"
       - delete_permanent: { target: tgt }
 

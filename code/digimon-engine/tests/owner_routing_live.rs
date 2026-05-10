@@ -64,7 +64,11 @@ fn transfer_control_preserves_top_card_owner() {
     let h0 = r.place_on_field(0, "ALPHA", Some(0));
     let pre_top_owner = {
         let g = r.game_mut();
-        g.player(0).battle_area[0].card_sources.last().unwrap().owner
+        g.player(0).battle_area[0]
+            .card_sources
+            .last()
+            .unwrap()
+            .owner
     };
     assert_eq!(pre_top_owner, 0);
 
@@ -221,7 +225,11 @@ fn effect_return_to_deck_top_routes_top_card_to_owners_deck_top() {
         p0_deck_before + 1,
         "owner's deck grew by 1 (Top position)"
     );
-    assert_eq!(r.deck_size(1), p1_deck_before, "controller's deck unchanged");
+    assert_eq!(
+        r.deck_size(1),
+        p1_deck_before,
+        "controller's deck unchanged"
+    );
     let top_owner = {
         let g = r.game_mut();
         g.player(0).deck.last().unwrap().owner
@@ -315,7 +323,12 @@ fn effect_bounce_self_routes_to_owner_when_source_was_transferred() {
             .last()
             .unwrap()
             .handle();
-        let mut ctx = EffectContext::new(r.game_mut(), card_handle, Some(h), /* effect_player */ 1);
+        let mut ctx = EffectContext::new(
+            r.game_mut(),
+            card_handle,
+            Some(h),
+            /* effect_player */ 1,
+        );
         ctx.bounce_self()
     };
     assert!(returned.is_some(), "bounce_self must succeed");
@@ -494,7 +507,13 @@ fn security_place_stacked_card_preserves_source_owner_after_control_transfer() {
     let ok = {
         let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), Some(h1), 1);
         // Move BASE (the bottom source) into P1's security top.
-        ctx.security_place_stacked_card(h1, base_handle, /* target */ 1, StackPosition::Top, false)
+        ctx.security_place_stacked_card(
+            h1,
+            base_handle,
+            /* target */ 1,
+            StackPosition::Top,
+            false,
+        )
     };
     assert!(ok, "security_place_stacked_card must succeed");
 

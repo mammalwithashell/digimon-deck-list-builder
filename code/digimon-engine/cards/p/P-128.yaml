@@ -1,0 +1,63 @@
+card: P-128
+name: Cody Hida
+kind: tamer
+color: [black]
+cost: 3
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        trait_has: Free
+    summary: "[Start of Your Main Phase] If you have a Digimon with the [Free] trait, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  - when: on_play
+    summary: "[On Play] Choose: play Armadillomon from hand free, or digivolve one of your Digimon into Ankylomon in hand free"
+    process:
+      - select_effect_choice:
+          labels: ["Play Armadillomon", "Digivolve into Ankylomon"]
+          bind_as: mode
+          prompt: "Choose 1 effect"
+      - if:
+          condition: { equals: [mode, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: armadillomon
+                optional: true
+                filter:
+                  kind: digimon
+                  name_is: Armadillomon
+                prompt: "You may play 1 Armadillomon from your hand"
+            - play_from_hand_free: { of: you, hand_index: armadillomon }
+      - if:
+          condition: { equals: [mode, 1] }
+          then:
+            - select_own_permanent:
+                bind_as: base
+                optional: true
+                filter:
+                  kind: digimon
+                prompt: "Choose 1 of your Digimon to digivolve"
+            - select_hand:
+                of: you
+                bind_as: ankylomon
+                filter:
+                  kind: digimon
+                  name_is: Ankylomon
+                prompt: "Choose Ankylomon in your hand"
+            - effect_initiated_digivolve:
+                target: base
+                from_hand: ankylomon
+                cost: 0
+                ignore_requirements: false
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
