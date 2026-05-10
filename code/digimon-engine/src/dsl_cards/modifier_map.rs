@@ -70,8 +70,10 @@ pub fn lookup_modifier_type(name: &str) -> Option<ModifierType> {
         "CannotDigivolveDigimonByEffect" => ModifierType::CannotDigivolveDigimonByEffect,
         "CannotGainMemoryByEffect" => ModifierType::CannotGainMemoryByEffect,
         "CannotGainMemoryExceptFromTamers" => ModifierType::CannotGainMemoryExceptFromTamers,
+        "CannotPlayFromTrash" => ModifierType::CannotPlayFromTrash,
         "CannotReducePlayCost" => ModifierType::CannotReducePlayCost,
         "CannotReduceDigivolveCost" => ModifierType::CannotReduceDigivolveCost,
+        "OpponentCannotReduceDigivolveCost" => ModifierType::OpponentCannotReduceDigivolveCost,
         "CannotDrawByEffect" => ModifierType::CannotDrawByEffect,
         "CannotAddSecurityByEffect" => ModifierType::CannotAddSecurityByEffect,
         "CannotTrashOpponentSecurity" => ModifierType::CannotTrashOpponentSecurity,
@@ -167,8 +169,10 @@ const fn _modifier_variant_exhaustiveness_check(m: ModifierType) {
         | ModifierType::CannotPlayTamerByEffect
         | ModifierType::CannotGainMemoryByEffect
         | ModifierType::CannotGainMemoryExceptFromTamers
+        | ModifierType::CannotPlayFromTrash
         | ModifierType::CannotReducePlayCost
         | ModifierType::CannotReduceDigivolveCost
+        | ModifierType::OpponentCannotReduceDigivolveCost
         | ModifierType::CannotActivateMainEffects
         | ModifierType::CannotActivateWhenDigivolvingEffects
         | ModifierType::CannotActivateWhenAttackingEffects
@@ -272,8 +276,10 @@ mod tests {
             ModifierType::CannotPlayTamerByEffect,
             ModifierType::CannotGainMemoryByEffect,
             ModifierType::CannotGainMemoryExceptFromTamers,
+            ModifierType::CannotPlayFromTrash,
             ModifierType::CannotReducePlayCost,
             ModifierType::CannotReduceDigivolveCost,
+            ModifierType::OpponentCannotReduceDigivolveCost,
             ModifierType::CannotActivateMainEffects,
             ModifierType::CannotActivateWhenDigivolvingEffects,
             ModifierType::CannotActivateWhenAttackingEffects,

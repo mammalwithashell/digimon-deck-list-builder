@@ -26,5 +26,6 @@ mod rush_exemption;
 mod scenarios;
 mod security_attack_keyword;
 mod security_effects;
+mod track_c_deferred_modifiers;
 mod track_c_modifiers;
 mod would_attack_replacements;

@@ -199,6 +199,14 @@ pub enum AttackResult {
 }
 
 impl Game {
+    pub fn permanent_is_digimon_for_rules(&self, handle: PermanentHandle) -> bool {
+        self.player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|perm| perm.is_digimon_for_rules(&self.card_data, &self.modifiers, handle))
+            .unwrap_or(false)
+    }
+
     /// Compute a permanent's effective DP (base + modifier sum).
     ///
     /// Track C / D consult site (2026-05-08): if the target carries any
@@ -215,7 +223,7 @@ impl Game {
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)?;
-        let base = perm.base_dp(&self.card_data)?;
+        let base = perm.base_dp_for_rules(&self.card_data, &self.modifiers, handle)?;
         let immune_to_dp_minus = self.modifiers.has(handle, ModifierType::ImmuneFromDPMinus);
         let change_dp_sum: i32 = self
             .modifiers
@@ -272,7 +280,7 @@ impl Game {
             Some(p) => p,
             None => return false,
         };
-        if !perm.is_digimon(&self.card_data) {
+        if !perm.is_digimon_for_rules(&self.card_data, &self.modifiers, handle) {
             return false;
         }
         if perm.is_suspended {
@@ -301,7 +309,7 @@ impl Game {
             Some(p) => p,
             None => return false,
         };
-        if !perm.is_digimon(&self.card_data) {
+        if !perm.is_digimon_for_rules(&self.card_data, &self.modifiers, handle) {
             return false;
         }
         // "Without suspending" bypasses only the suspend cost/unsuspended
@@ -1130,7 +1138,7 @@ impl Game {
             if perm.is_suspended {
                 continue;
             }
-            if !perm.is_digimon(&self.card_data) {
+            if !self.permanent_is_digimon_for_rules(h) {
                 continue;
             }
             if !self.has_keyword(h, Keyword::Alliance) {
@@ -1304,8 +1312,7 @@ impl Game {
                             player: defender_player,
                             index: f_idx as u8,
                         };
-                        let perm = &self.player(defender_player).battle_area[f_idx];
-                        if !perm.is_digimon(&self.card_data) {
+                        if !self.permanent_is_digimon_for_rules(handle) {
                             continue;
                         }
                         let card = &self.player(defender_player).hand[h_idx];
@@ -1353,7 +1360,11 @@ impl Game {
             if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
                 continue;
             }
-            if !perm.is_digimon(&self.card_data) {
+            let handle = PermanentHandle {
+                player: defender_player,
+                index: f_idx as u8,
+            };
+            if !self.permanent_is_digimon_for_rules(handle) {
                 continue;
             }
             let top = perm.top_card();
@@ -1749,7 +1760,7 @@ impl Game {
             if perm.is_suspended {
                 continue;
             }
-            if !perm.is_digimon(&self.card_data) {
+            if !self.permanent_is_digimon_for_rules(h) {
                 continue;
             }
             // `CannotBlock` (Phase 6 restriction) short-circuits
@@ -1901,6 +1912,12 @@ impl Game {
         if !self.has_keyword(attacker, Keyword::Raid) {
             return false;
         }
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CannotSwitchAttackTarget)
+        {
+            return false;
+        }
 
         let candidates = self.raid_switch_candidates(attacker, pa.effective_target);
         if candidates.is_empty() {
@@ -1937,7 +1954,7 @@ impl Game {
             if !matches!(target.option_state, crate::permanent::OptionState::Standard) {
                 continue;
             }
-            if !target.is_digimon(&self.card_data) || target.is_suspended {
+            if !self.permanent_is_digimon_for_rules(handle) || target.is_suspended {
                 continue;
             }
             if self
@@ -2118,13 +2135,13 @@ impl Game {
             if !matches!(t.option_state, crate::permanent::OptionState::Standard) {
                 continue;
             }
-            if !t.is_digimon(&self.card_data) {
-                continue;
-            }
             let t_handle = PermanentHandle {
                 player: opp_id,
                 index: j as u8,
             };
+            if !self.permanent_is_digimon_for_rules(t_handle) {
+                continue;
+            }
             if self
                 .validate_attack_redirect_target(attacker, AttackTarget::Digimon(t_handle))
                 .is_err()
@@ -2156,13 +2173,13 @@ impl Game {
             if !matches!(t.option_state, crate::permanent::OptionState::Standard) {
                 continue;
             }
-            if !t.is_digimon(&self.card_data) {
-                continue;
-            }
             let t_handle = PermanentHandle {
                 player: opp_id,
                 index: j as u8,
             };
+            if !self.permanent_is_digimon_for_rules(t_handle) {
+                continue;
+            }
             if self
                 .validate_attack_redirect_target(attacker, AttackTarget::Digimon(t_handle))
                 .is_err()
@@ -2304,11 +2321,27 @@ impl Game {
         let sa_modifier = self
             .modifiers
             .sum(attacker, ModifierType::SecurityAttackChange);
+        let change_s_attack: i32 = self
+            .modifiers
+            .get(attacker, ModifierType::ChangeSAttack)
+            .into_iter()
+            .map(|entry| match &entry.payload {
+                crate::modifiers::ModifierPayload::SecurityAttack { delta, invert } => {
+                    if *invert {
+                        -*delta
+                    } else {
+                        *delta
+                    }
+                }
+                crate::modifiers::ModifierPayload::None => entry.value,
+                _ => 0,
+            })
+            .sum();
         let sa_keyword = self.security_attack_keyword_bonus(attacker);
         let base_checks = self
             .dynamic_security_attack_aura_bonus(attacker)
             .unwrap_or(1);
-        let checks = (base_checks + sa_modifier + sa_keyword).max(0) as u8;
+        let checks = (base_checks + sa_modifier + change_s_attack + sa_keyword).max(0) as u8;
         if checks == 0 {
             return AttackResult::SecurityCheckSurvived;
         }
@@ -2818,7 +2851,7 @@ impl Game {
                 // Training Options: they live on battle_area but are not
                 // attackable. Linked (Task 4) is attached sideways to its
                 // host and doesn't occupy a standalone permanent slot.
-                p.is_digimon(&self.card_data)
+                self.permanent_is_digimon_for_rules(handle)
                     && matches!(p.option_state, crate::permanent::OptionState::Standard)
             })
             .unwrap_or(false)
@@ -2830,7 +2863,7 @@ impl Game {
             .get(handle.index as usize)
             .map(|p| {
                 p.is_attacking
-                    && p.is_digimon(&self.card_data)
+                    && self.permanent_is_digimon_for_rules(handle)
                     && matches!(p.option_state, crate::permanent::OptionState::Standard)
             })
             .unwrap_or(false)

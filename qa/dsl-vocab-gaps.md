@@ -4,6 +4,41 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+## Track C modifier payload YAML shape (2026-05-09) — rich payload parser pending
+
+The Rust engine now has typed `ModifierPayload` storage and consult sites for
+the deferred Track C identity/metadata modifiers:
+`ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor`,
+`ChangeCardNamesForDigiXros`, `TreatAsDigimon`, `ChangePermanentLevel`,
+`ChangeCardDP`, `ChangeOriginDP`, `ChangeSAttack`,
+`ChangeEndTurnMinMemory`, `ChangeLinkCost`, and `ChangeLinkMax`. The scalar
+`add_modifier` / `add_player_modifier` DSL slots can still install variants
+that are representable as `value: i32`, and the modifier-name tables include
+`CannotPlayFromTrash` and `OpponentCannotReduceDigivolveCost`.
+
+Remaining DSL work: add a structured payload schema for list/string/profile
+modifiers, e.g.:
+
+```yaml
+- add_modifier:
+    target: source
+    modifier: ChangeTraits
+    payload: { add: [Holy], replace: false }
+    expiry: until_leave_field
+- add_modifier:
+    target: source
+    modifier: TreatAsDigimon
+    payload:
+      level: 4
+      colors: [Yellow]
+      traits: [Holy]
+      dp: 5000
+    expiry: until_leave_field
+```
+
+Until that parser lands, cards needing string/list/profile payloads should use
+`raw_rust` install hooks rather than hidden scalar encodings.
+
 ## Track E (2026-05-08) — engine helpers shipped, DSL verbs pending
 
 Track E shipped 8 zone-movement helpers + the owner-routing fix at the engine layer. The DSL verbs that lower printed text into these helpers are pending — each verb is a small parser/lowering change, but together they're the bottleneck for several BLOCKED card YAMLs. Verbs to add (with their target `EffectContext` method):

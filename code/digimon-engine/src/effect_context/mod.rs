@@ -1343,8 +1343,13 @@ impl<'a> EffectContext<'a> {
             return false;
         };
         let owner = handle.player;
-        self.game
-            .place_permanent_on_security_observed(owner, handle, position, face_up, self.player)
+        self.game.place_permanent_on_security_observed(
+            owner,
+            handle,
+            position,
+            face_up,
+            self.player,
+        )
     }
 
     /// (Track E) Replacement-aware sibling of `place_self_at_security`. When
@@ -3768,11 +3773,7 @@ impl<'a> EffectContext<'a> {
     /// hand size meets the target. Most printed cards are forgiving here —
     /// "until they have N" cards typically allow the opponent to control
     /// the cadence as long as the floor is reached.
-    pub fn trash_opponent_hand_to_count(
-        &mut self,
-        opponent: PlayerId,
-        target_count: u8,
-    ) -> bool {
+    pub fn trash_opponent_hand_to_count(&mut self, opponent: PlayerId, target_count: u8) -> bool {
         let current = self.game.player(opponent).hand.len();
         let target = target_count as usize;
         if current <= target {
@@ -3780,30 +3781,31 @@ impl<'a> EffectContext<'a> {
         }
         let to_trash = (current - target).min(u8::MAX as usize) as u8;
 
-        self.as_selecting_player(opponent).select_count_capped_multi(
-            opponent,
-            CountCappedZone::Hand,
-            to_trash,
-            "Choose cards to trash from your hand",
-            /* is_optional_zero */ false,
-            /* distinct_by */ None,
-            /* filter */ |_g, _c| true,
-            move |ctx, picks| {
-                // Trash each chosen card by stable handle. Hand indices
-                // shift after each trash, so re-resolve per pick.
-                for card_handle in picks {
-                    let idx = ctx
-                        .game
-                        .player(opponent)
-                        .hand
-                        .iter()
-                        .position(|c| c.handle() == card_handle);
-                    if let Some(i) = idx {
-                        ctx.trash_from_hand_by_index(opponent, i);
+        self.as_selecting_player(opponent)
+            .select_count_capped_multi(
+                opponent,
+                CountCappedZone::Hand,
+                to_trash,
+                "Choose cards to trash from your hand",
+                /* is_optional_zero */ false,
+                /* distinct_by */ None,
+                /* filter */ |_g, _c| true,
+                move |ctx, picks| {
+                    // Trash each chosen card by stable handle. Hand indices
+                    // shift after each trash, so re-resolve per pick.
+                    for card_handle in picks {
+                        let idx = ctx
+                            .game
+                            .player(opponent)
+                            .hand
+                            .iter()
+                            .position(|c| c.handle() == card_handle);
+                        if let Some(i) = idx {
+                            ctx.trash_from_hand_by_index(opponent, i);
+                        }
                     }
-                }
-            },
-        );
+                },
+            );
         true
     }
 
@@ -3878,11 +3880,7 @@ impl<'a> EffectContext<'a> {
                     .player(target_player)
                     .battle_area
                     .get(handle.index as usize)
-                    .map(|p| {
-                        p.card_sources
-                            .iter()
-                            .any(|c| c.handle() == source_card)
-                    })
+                    .map(|p| p.card_sources.iter().any(|c| c.handle() == source_card))
                     .unwrap_or(false);
                 if !still_present {
                     continue;

@@ -535,6 +535,31 @@ OnceUsed(u32)         # the value is the limit; consume_use(...) advances a per-
                       # taxonomy publication.
 ```
 
+`ModifierEntry` now carries both the legacy scalar `value: i32` and a typed
+`payload: ModifierPayload`. Scalar-only scripts may keep using `value`; new
+identity and metadata modifiers should use the typed payload so string/list
+parameters are not smuggled through ad hoc encodings. Debug builds reject
+mismatched `(ModifierType, ModifierPayload)` pairs at install time. Debug
+builds also reject `Expiry::UntilCondition` installs until the continuous
+controller exists; release builds permit the install and emit a warning.
+
+Payload variants currently consumed by consult sites:
+
+| Payload | Modifier variants |
+|---|---|
+| `Traits { add, replace }` | `ChangeTraits` |
+| `Name { value, base }` | `ChangeBaseCardName` |
+| `Colors { value, base }` | `ChangeBaseCardColor` |
+| `DigiXrosNames { aliases }` | `ChangeCardNamesForDigiXros` |
+| `Dp { value, base, origin }` | `ChangeCardDP`, `ChangeOriginDP` |
+| `SecurityAttack { delta, invert }` | `ChangeSAttack`, `SecurityAttackChange` |
+| `EndTurnMinMemory { value }` | `ChangeEndTurnMinMemory` |
+| `LinkCost { delta }` | `ChangeLinkCost` |
+| `LinkMax { delta }` | `ChangeLinkMax` |
+| `LevelForAssembly { value }` | storage only until assembly selection lands |
+| `SynthIdentity { kind, level, colors, traits, dp }` | `TreatAsDigimon` |
+| `LevelOverride { value, delta }` | `ChangePermanentLevel` |
+
 ### `ModifierType` (partial — see `enums.rs` for full list)
 
 - DP: `ChangeDp`, `ChangeBaseDp`, `DpFloor`, `DontHaveDp`, `ChangeCardDP`, `ChangeOriginDP`, `ChangeSAttack`
@@ -564,9 +589,10 @@ storage entry, lifecycle, and DSL string published.
 |---|---|---|
 | `CannotPlayDigimonByEffect` | player | `play_from_hand_with_cost`, `play_from_trash_with_cost` (Digimon-kind plays via `PlaySource::ByEffect`) |
 | `CannotPlayTamerByEffect` | player | same set, Tamer-kind only |
-| `CannotPlayFromTrash` | player | every play helper that names trash as source |
-| `CannotReducePlayCost` | player | `BeforePayCost` cost-reduction enumeration |
+| `CannotPlayFromTrash` | player | `play_from_trash_with_cost` and `play_option_from_trash` |
+| `CannotReducePlayCost` | player | `BeforePayCost` cost-reduction enumeration; currently bilateral across players |
 | `CannotReduceDigivolveCost` | player | `BeforePayCost` enumeration for digivolve cost paths |
+| `OpponentCannotReduceDigivolveCost` | player | `BeforePayCost` digivolve reduction enumeration for the opponent of the modifier owner |
 | `CannotAddSecurityByEffect` | player | `Game::add_security_by_effect` |
 | `CannotGainMemoryByEffect` | player | `Game::adjust_memory_by_effect` |
 | `MayAttackPlayerOnly` | player | `combat::is_legal_attack_target` (Track D) |
@@ -583,17 +609,26 @@ storage entry, lifecycle, and DSL string published.
 | `CanAttackTargetDefendingPermanent` | permanent | `combat::is_legal_attack_target` — overrides negative gates (Track D) |
 | `CannotAddMemory` | permanent | `Game::adjust_memory_by_effect` |
 | `CannotAddSecurity` | permanent | `Game::add_security_by_effect` |
-| `ChangeEndTurnMinMemory` | permanent / player | `Game::end_turn` memory-floor logic (Track D / E) |
+| `ChangeEndTurnMinMemory` | permanent / player | `Game::rotate_turn_player` clamps the ending player's memory before sign flip |
 | `ImmuneFromDPMinus` | permanent | `Permanent::dp_modifier_apply` for negative DP modifiers |
 | `ImmuneFromStackTrashing` | permanent | source-trash mutation (the inherited stack-peel path) |
 | `CannotBeAffected` | permanent | already wired via `effect_immunity_filter`; honors source-kind + controller filter |
 | `DisableEffect` | permanent | `effect_queue::permanent_activation_blocked_for_timing` reads `entry.disable_effect_timing` and skips dispatch for that timing only |
 | `GrantCollision` (via `Keyword::Collision`) | permanent | `combat::try_enter_block` reads `has_keyword(Collision)` — already wired |
 | `VortexCanAttackPlayer` | permanent | attack target legality check (Track D) |
-| `TreatAsDigimon` | permanent | `Permanent::is_digimon_for_rules` predicate consumed by attack legality and archetype counts |
-| `ChangeDp` / `ChangeBaseDp` / `ChangeCardDP` / `ChangeOriginDP` | permanent / aura | `Permanent::dp()` calculation site |
-| `ChangePlayCost` / `ChangeDigivolveCost` / `ChangeLinkCost` / `ChangeLinkMax` | permanent / aura | the corresponding cost-calc helper |
-| `ChangePermanentLevel` / `ChangeTraits` / `ChangeBaseCardName` / `ChangeBaseCardColor` | permanent / aura | per-attribute getter on `Permanent` |
+| `TreatAsDigimon` | permanent | `Permanent::synth_identity` / `Game::permanent_is_digimon_for_rules`; consumed by attack legality, action masks, Link host selection, and normal digivolve route checks |
+| `ChangeDp` / `ChangeBaseDp` / `ChangeCardDP` / `ChangeOriginDP` | permanent / aura | `Game::effective_dp` uses `Permanent::base_dp_for_rules`; direct printed reads intentionally bypass this when card text asks for unmodified printed/origin DP |
+| `ChangeSAttack` | permanent | player security-check count calculation alongside `SecurityAttackChange` and keyword bonuses |
+| `ChangeLinkCost` / `ChangeLinkMax` | permanent / aura | Link Option cost calculation and host candidate max-link gate |
+| `ChangePermanentLevel` / `ChangeTraits` / `ChangeBaseCardName` / `ChangeBaseCardColor` | permanent / aura | `Permanent::synth_identity` and per-attribute `*_for_rules` helpers |
+| `ChangeCardNamesForDigiXros` | permanent | `Game::permanent_can_satisfy_digixros_name` |
+| `ChangeCardLevelForAssembly` | permanent | deferred: cast-time assembly selection is not yet present; payload storage is guarded and documented only |
+
+Identity bypass rule: use `Permanent::synth_identity` or a `*_for_rules`
+helper for live legality, target predicates, masks, combat, and digivolution
+requirements. Use direct `CardSource` / `CardData` reads only for text that
+explicitly says "printed", "original", source-zone cards not on the field, or
+static metadata such as deck construction/search over non-permanent zones.
 
 Source-scoped semantics (modifiers that apply only to opponent-cause
 moves, e.g. Rocks BT18-064) are expressed today via the `cause_filter`

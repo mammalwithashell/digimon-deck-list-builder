@@ -91,7 +91,10 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                         .iter()
                         .find_map(|effect| effect.link_cost)
                         .unwrap_or(0);
-                    cost += link_cost as i16;
+                    let modified_link_cost = (link_cost as i32
+                        + game.modifiers.link_cost_delta_for_player(player_id))
+                    .max(0) as i16;
+                    cost += modified_link_cost;
                 }
                 // Memory check: card is affordable if memory - cost >= memory_min
                 if (game.memory - cost) < game.rules.memory_range.0 {
@@ -167,13 +170,13 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     let mut best: Option<i32> = None;
                     for j in 0..max_opp {
                         let t = &opp.battle_area[j];
-                        if t.is_suspended || !t.is_digimon(&game.card_data) {
-                            continue;
-                        }
                         let t_handle = PermanentHandle {
                             player: opp_id,
                             index: j as u8,
                         };
+                        if t.is_suspended || !game.permanent_is_digimon_for_rules(t_handle) {
+                            continue;
+                        }
                         if let Some(dp) = game.effective_dp(t_handle) {
                             best = Some(best.map_or(dp, |b| b.max(dp)));
                         }
@@ -184,14 +187,14 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 };
 
                 for j in 0..max_opp {
-                    let target = &opp.battle_area[j];
-                    if !target.is_digimon(&game.card_data) {
-                        continue;
-                    }
                     let t_handle = PermanentHandle {
                         player: opp_id,
                         index: j as u8,
                     };
+                    let target = &opp.battle_area[j];
+                    if !game.permanent_is_digimon_for_rules(t_handle) {
+                        continue;
+                    }
                     // §4.7a CANNOT_ATTACK_TARGET — suppress this target if
                     // it carries the modifier. Per-attacker discriminant
                     // from Python is §4.7x. Track C / D (2026-05-08):
@@ -560,14 +563,13 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     mask[encode_attack(i as u16, SECURITY_TARGET) as usize] = 1.0;
                 }
                 for j in 0..max_opp {
-                    let target = &opp.battle_area[j];
-                    if !target.is_digimon(&game.card_data) {
-                        continue;
-                    }
                     let t_handle = PermanentHandle {
                         player: opp_id,
                         index: j as u8,
                     };
+                    if !game.permanent_is_digimon_for_rules(t_handle) {
+                        continue;
+                    }
                     // §4.7a CANNOT_ATTACK_TARGET — suppress attacks against
                     // a target carrying the modifier, regardless of which
                     // keyword granted the attack. Track C / D (2026-05-08):
@@ -870,13 +872,13 @@ pub(crate) fn effect_attack_target_action_ids(
             let mut best: Option<i32> = None;
             for j in 0..max_opp {
                 let target = &game.player(opponent).battle_area[j];
-                if target.is_suspended || !target.is_digimon(&game.card_data) {
-                    continue;
-                }
                 let target_handle = PermanentHandle {
                     player: opponent,
                     index: j as u8,
                 };
+                if target.is_suspended || !game.permanent_is_digimon_for_rules(target_handle) {
+                    continue;
+                }
                 if let Some(dp) = game.effective_dp(target_handle) {
                     best = Some(best.map_or(dp, |b| b.max(dp)));
                 }
@@ -887,14 +889,14 @@ pub(crate) fn effect_attack_target_action_ids(
         };
 
         for j in 0..max_opp {
-            let target = &game.player(opponent).battle_area[j];
-            if !target.is_digimon(&game.card_data) {
-                continue;
-            }
             let target_handle = PermanentHandle {
                 player: opponent,
                 index: j as u8,
             };
+            let target = &game.player(opponent).battle_area[j];
+            if !game.permanent_is_digimon_for_rules(target_handle) {
+                continue;
+            }
             // Track C / D consult site (2026-05-08):
             // `CanAttackTargetDefendingPermanent` is the affirmative
             // override of `CannotAttackTarget` at the granted-attack
@@ -1030,13 +1032,13 @@ fn apply_force_attack_mask_replacement(
             let mut best: Option<i32> = None;
             for j in 0..max_opp {
                 let t = &opp.battle_area[j];
-                if t.is_suspended || !t.is_digimon(&game.card_data) {
-                    continue;
-                }
                 let t_handle = PermanentHandle {
                     player: opp_id,
                     index: j as u8,
                 };
+                if t.is_suspended || !game.permanent_is_digimon_for_rules(t_handle) {
+                    continue;
+                }
                 if let Some(dp) = game.effective_dp(t_handle) {
                     best = Some(best.map_or(dp, |b| b.max(dp)));
                 }
@@ -1047,14 +1049,14 @@ fn apply_force_attack_mask_replacement(
         };
 
         for j in 0..max_opp {
-            let target = &opp.battle_area[j];
-            if !target.is_digimon(&game.card_data) {
-                continue;
-            }
             let t_handle = PermanentHandle {
                 player: opp_id,
                 index: j as u8,
             };
+            let target = &opp.battle_area[j];
+            if !game.permanent_is_digimon_for_rules(t_handle) {
+                continue;
+            }
             if game
                 .modifiers
                 .has(t_handle, ModifierType::CannotAttackTarget)

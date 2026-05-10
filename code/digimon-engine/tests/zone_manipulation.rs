@@ -1286,11 +1286,7 @@ fn bounce_self_on_play_returns_card_to_hand() {
         0,
         "card bounced off the field by its own OnPlay"
     );
-    assert_eq!(
-        r.hand_size(0),
-        1,
-        "card returned to its owner's hand"
-    );
+    assert_eq!(r.hand_size(0), 1, "card returned to its owner's hand");
     let card_id = {
         let g = r.game_mut();
         g.player(0).hand[0].card_id(&g.card_data).to_string()
@@ -1312,7 +1308,12 @@ fn bounce_self_with_no_source_permanent_returns_none() {
         let g = r.game_mut();
         g.player(0).hand[0].handle()
     };
-    let mut ctx = EffectContext::new(r.game_mut(), card_handle, /* source_permanent */ None, 0);
+    let mut ctx = EffectContext::new(
+        r.game_mut(),
+        card_handle,
+        /* source_permanent */ None,
+        0,
+    );
     let result = ctx.bounce_self();
     assert!(
         result.is_none(),
@@ -1374,14 +1375,20 @@ fn place_self_at_security_top_face_up_moves_card_to_top_of_security() {
             .card_id(&g.card_data)
             .to_string()
     };
-    assert_eq!(top_id, "PSAS_TFU", "the moved card sits at the top of security");
+    assert_eq!(
+        top_id, "PSAS_TFU",
+        "the moved card sits at the top of security"
+    );
     // face_up_security tracking: the placed card's card_index is in the set.
     let placed_key = {
         let g = r.game_mut();
         g.player(0).security.last().unwrap().card_index
     };
     assert!(
-        r.game_mut().player(0).face_up_security.contains(&placed_key),
+        r.game_mut()
+            .player(0)
+            .face_up_security
+            .contains(&placed_key),
         "face_up_security records the face-up placement"
     );
 }
@@ -1422,9 +1429,21 @@ fn place_self_at_security_bottom_face_down_routes_sources_to_trash() {
     let handle = {
         let g = r.game_mut();
         let turn = g.turn_count;
-        let u1 = g.card_data.iter().position(|c| c.card_id == "UNDER1").unwrap();
-        let u2 = g.card_data.iter().position(|c| c.card_id == "UNDER2").unwrap();
-        let top = g.card_data.iter().position(|c| c.card_id == "PSAS_BFD").unwrap();
+        let u1 = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER1")
+            .unwrap();
+        let u2 = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER2")
+            .unwrap();
+        let top = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "PSAS_BFD")
+            .unwrap();
         let i1 = g.next_card_index();
         let i2 = g.next_card_index();
         let it = g.next_card_index();
@@ -1450,17 +1469,12 @@ fn place_self_at_security_bottom_face_down_routes_sources_to_trash() {
     // permanent's own effect resolving with source_permanent set.
     {
         use digimon_engine::effect_context::EffectContext;
-        let mut ctx =
-            EffectContext::new(r.game_mut(), top_card_handle, Some(handle), 0);
+        let mut ctx = EffectContext::new(r.game_mut(), top_card_handle, Some(handle), 0);
         let ok = ctx.place_self_at_security(StackPosition::Bottom, /* face_up = */ false);
         assert!(ok, "place_self_at_security should succeed");
     }
 
-    assert_eq!(
-        r.battle_area_size(0),
-        0,
-        "permanent gone from battle area"
-    );
+    assert_eq!(r.battle_area_size(0), 0, "permanent gone from battle area");
     // Security: started with 2 fillers; bottom is now the moved top card.
     assert_eq!(r.security_count(0), 3, "security grew by exactly 1");
     let bottom_id = {
@@ -1500,7 +1514,10 @@ fn place_self_at_security_bottom_face_down_routes_sources_to_trash() {
         g.player(0).security.first().unwrap().card_index
     };
     assert!(
-        !r.game_mut().player(0).face_up_security.contains(&placed_key),
+        !r.game_mut()
+            .player(0)
+            .face_up_security
+            .contains(&placed_key),
         "face-down placement leaves face_up_security unset"
     );
 }
@@ -1607,7 +1624,10 @@ fn place_self_option_at_security_top_face_up_routes_option_to_security() {
         g.player(0).security.last().unwrap().card_index
     };
     assert!(
-        r.game_mut().player(0).face_up_security.contains(&placed_key),
+        r.game_mut()
+            .player(0)
+            .face_up_security
+            .contains(&placed_key),
         "face_up_security records the face-up placement"
     );
     assert!(
@@ -1655,9 +1675,21 @@ fn security_place_top_stacked_card_extracts_source_and_places_on_security() {
     let handle = {
         let g = r.game_mut();
         let turn = g.turn_count;
-        let bot_data = g.card_data.iter().position(|c| c.card_id == "BOTTOM").unwrap();
-        let under_data = g.card_data.iter().position(|c| c.card_id == "UNDER").unwrap();
-        let top_data = g.card_data.iter().position(|c| c.card_id == "CARRIER").unwrap();
+        let bot_data = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BOTTOM")
+            .unwrap();
+        let under_data = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "UNDER")
+            .unwrap();
+        let top_data = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "CARRIER")
+            .unwrap();
         let i_bot = g.next_card_index();
         let i_under = g.next_card_index();
         let i_top = g.next_card_index();
@@ -1705,7 +1737,10 @@ fn security_place_top_stacked_card_extracts_source_and_places_on_security() {
             .card_id(&g.card_data)
             .to_string()
     };
-    assert_eq!(placed_id, "UNDER", "the extracted source moved to security top");
+    assert_eq!(
+        placed_id, "UNDER",
+        "the extracted source moved to security top"
+    );
 }
 
 /// `security_place_top_stacked_card` returns `false` when the carrier has
@@ -1720,7 +1755,11 @@ fn security_place_top_stacked_card_returns_false_with_single_source() {
     let handle = {
         let g = r.game_mut();
         let turn = g.turn_count;
-        let data_idx = g.card_data.iter().position(|c| c.card_id == "LONE").unwrap();
+        let data_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "LONE")
+            .unwrap();
         let idx = g.next_card_index();
         let card = digimon_engine::card_source::CardSource::new(data_idx, 0, idx);
         let perm = digimon_engine::permanent::Permanent::new(card, turn);
@@ -1903,7 +1942,11 @@ fn trash_top_n_digivolution_cards_of_each_peels_one_source_per_perm() {
                     data_idx, 1, next_idx,
                 ));
             }
-            let top_idx = g.card_data.iter().position(|c| c.card_id == *top_id).unwrap();
+            let top_idx = g
+                .card_data
+                .iter()
+                .position(|c| c.card_id == *top_id)
+                .unwrap();
             let next_idx = g.next_card_index();
             let top = digimon_engine::card_source::CardSource::new(top_idx, 1, next_idx);
             let mut perm = if let Some(first_under) = sources.into_iter().next() {
@@ -1917,7 +1960,11 @@ fn trash_top_n_digivolution_cards_of_each_peels_one_source_per_perm() {
                         .unwrap();
                     let ix = g.next_card_index();
                     p.card_sources
-                        .push(digimon_engine::card_source::CardSource::new(under_a_idx, 1, ix));
+                        .push(digimon_engine::card_source::CardSource::new(
+                            under_a_idx,
+                            1,
+                            ix,
+                        ));
                 }
                 p.card_sources.push(top);
                 p
@@ -2009,11 +2056,7 @@ fn return_all_trash_to_deck_bottom_drains_trash_to_owners_deck() {
 
     assert_eq!(handles.len(), 3, "all 3 cards moved");
     assert_eq!(r.trash_size(0), 0, "trash drained");
-    assert_eq!(
-        r.deck_size(0),
-        p0_deck_before + 3,
-        "deck grew by exactly 3"
-    );
+    assert_eq!(r.deck_size(0), p0_deck_before + 3, "deck grew by exactly 3");
     // Bottom of deck is at index 0; after `insert(0, card)` for T1 then T2 then T3,
     // T3 is at index 0, T2 at index 1, T1 at index 2 — i.e. T3 is the deck bottom,
     // T1 is closest to the top among the inserted set.
@@ -2035,8 +2078,16 @@ fn return_all_trash_to_deck_bottom_routes_each_card_to_its_owner() {
     // Seed player 1's trash with one card owned by player 0 and one by player 1.
     {
         let g = r.game_mut();
-        let a_idx = g.card_data.iter().position(|c| c.card_id == "OWNED_BY_A").unwrap();
-        let b_idx = g.card_data.iter().position(|c| c.card_id == "OWNED_BY_B").unwrap();
+        let a_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "OWNED_BY_A")
+            .unwrap();
+        let b_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "OWNED_BY_B")
+            .unwrap();
         let i_a = g.next_card_index();
         let i_b = g.next_card_index();
         let card_a = digimon_engine::card_source::CardSource::new(a_idx, /* owner */ 0, i_a);
@@ -2176,7 +2227,12 @@ fn place_self_at_security_with_no_source_permanent_returns_false() {
         let g = r.game_mut();
         g.player(0).hand[0].handle()
     };
-    let mut ctx = EffectContext::new(r.game_mut(), card_handle, /* source_permanent */ None, 0);
+    let mut ctx = EffectContext::new(
+        r.game_mut(),
+        card_handle,
+        /* source_permanent */ None,
+        0,
+    );
     let result = ctx.place_self_at_security(StackPosition::Top, true);
     assert!(
         !result,
