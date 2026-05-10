@@ -406,7 +406,7 @@ fn save_under_decoy_decline_defers_via_no_replace_path() {
             effect_text: String::new(),
             inherited_text: String::new(),
             security_text: String::new(),
-            keywords: vec![Keyword::Decoy, Keyword::Save],
+            keywords: vec![Keyword::Decoy(0), Keyword::Save],
             dual: None,
             effect_class_name: id.replace('-', "_"),
             index: 0,

@@ -41,7 +41,7 @@ fn decoy_card(id: &str) -> CardData {
         security_text: String::new(),
         // Printed-only Decoy: the auto-install MUST be the sole source of
         // behavior. No hand-rolled CardEffect is registered.
-        keywords: vec![Keyword::Decoy],
+        keywords: vec![Keyword::Decoy(0)],
         dual: None,
         effect_class_name: id.replace('-', "_"),
         index: 0,
@@ -281,5 +281,195 @@ fn decoy_does_not_protect_opponents_permanent() {
             .top_card()
             .card_id(&r.game.card_data),
         "DECOY",
+    );
+}
+
+// ─── Test 5: color-filter — Decoy (Black) protects only Black allies ────────
+
+/// Track G addition: `Keyword::Decoy(u8)` carries a CardColor bitmask.
+/// A printed `<Decoy (Black)>` carrier (mask = 0x20, bit 5) substitutes
+/// only for ALLY Digimon whose colors include Black. A non-Black ally is
+/// rejected by the color-filter inside the body — the optional dialog may
+/// still appear (filtering happens in the body, not the condition), but on
+/// accept the body falls through and the original deletion proceeds.
+#[test]
+fn decoy_color_filter_rejects_non_matching_ally() {
+    let mut decoy = decoy_card("DECOY-BLACK");
+    // 0x20 = bit 5 = CardColor::Black filter.
+    decoy.keywords = vec![Keyword::Decoy(0b0010_0000)];
+
+    let red_ally = {
+        let mut c = plain_digimon("RED-ALLY");
+        c.colors = vec![CardColor::Red];
+        c
+    };
+
+    let mut r = DebugRunner::builder()
+        .add_card(decoy)
+        .add_card(red_ally)
+        .start();
+
+    let _decoy = r.place_on_field(0, "DECOY-BLACK", None);
+    let red = r.place_on_field(0, "RED-ALLY", None);
+
+    r.game.delete_permanent_with_effects(red);
+
+    // Optional outer accept dialog may still install (filter is in body).
+    if r.game.pending_selection.is_some() {
+        r.game
+            .resolve_selection(0, REPLACEMENT_ACCEPT)
+            .expect("spurious outer accept (color-filter rejects in body)");
+    }
+
+    // Red ally was deleted normally; Decoy survived because the color
+    // filter rejected the substitution.
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        1,
+        "Decoy survives — color filter rejected the Red ally"
+    );
+    assert_eq!(
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "DECOY-BLACK",
+        "Decoy carrier survived"
+    );
+    assert!(
+        r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "RED-ALLY"),
+        "Red ally landed in trash via normal deletion"
+    );
+}
+
+// ─── Test 6: color-filter — Decoy (Black) accepts a matching Black ally ─────
+
+/// Mirror of Test 5: same Decoy(Black) carrier, but the ally is Black.
+/// The substitution is permitted: ally survives, Decoy dies in its place.
+#[test]
+fn decoy_color_filter_accepts_matching_ally() {
+    let mut decoy = decoy_card("DECOY-BLACK");
+    decoy.keywords = vec![Keyword::Decoy(0b0010_0000)]; // Black bit
+
+    let black_ally = {
+        let mut c = plain_digimon("BLACK-ALLY");
+        c.colors = vec![CardColor::Black];
+        c
+    };
+
+    let mut r = DebugRunner::builder()
+        .add_card(decoy)
+        .add_card(black_ally)
+        .start();
+
+    let _decoy = r.place_on_field(0, "DECOY-BLACK", None);
+    let black = r.place_on_field(0, "BLACK-ALLY", None);
+
+    r.game.delete_permanent_with_effects(black);
+
+    {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("Decoy outer accept dialog parked for color-matching ally");
+        assert!(pending.is_optional);
+    }
+
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Decoy substitute (color match)");
+
+    // Black ally survived; Decoy was substituted and deleted in its place.
+    assert_eq!(r.game.players[0].battle_area.len(), 1);
+    assert_eq!(
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "BLACK-ALLY",
+        "Black ally survived; Decoy substituted"
+    );
+    assert!(
+        r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "DECOY-BLACK"),
+        "Decoy carrier landed in trash via the substituted deletion"
+    );
+}
+
+// ─── Test 7: multi-color filter — Decoy (Red/Black) accepts both ────────────
+
+/// `Decoy(0x21)` (Red bit + Black bit) accepts any ally whose colors
+/// include Red OR Black. Verifies the OR semantics of the bitmask.
+#[test]
+fn decoy_multi_color_filter_matches_any_in_set() {
+    let mut decoy = decoy_card("DECOY-RB");
+    // 0b0010_0001 = Red (bit 0) | Black (bit 5).
+    decoy.keywords = vec![Keyword::Decoy(0b0010_0001)];
+
+    let yellow_ally = {
+        let mut c = plain_digimon("YELLOW-ALLY");
+        c.colors = vec![CardColor::Yellow];
+        c
+    };
+    let red_ally = {
+        let mut c = plain_digimon("RED-ALLY");
+        c.colors = vec![CardColor::Red];
+        c
+    };
+
+    let mut r = DebugRunner::builder()
+        .add_card(decoy)
+        .add_card(yellow_ally)
+        .add_card(red_ally)
+        .start();
+
+    let _decoy = r.place_on_field(0, "DECOY-RB", None);
+    let yellow = r.place_on_field(0, "YELLOW-ALLY", None);
+
+    // Yellow is NOT in the Red/Black filter — Decoy should reject.
+    r.game.delete_permanent_with_effects(yellow);
+    if r.game.pending_selection.is_some() {
+        r.game
+            .resolve_selection(0, REPLACEMENT_ACCEPT)
+            .expect("spurious accept on color-mismatch");
+    }
+    assert!(
+        r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "YELLOW-ALLY"),
+        "Yellow ally rejected by Red/Black filter — deleted normally"
+    );
+
+    // Now place a Red ally — should be accepted.
+    let red = r.place_on_field(0, "RED-ALLY", None);
+    r.game.delete_permanent_with_effects(red);
+    {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("Red ally is in the Red/Black filter — outer dialog parked");
+        assert!(pending.is_optional);
+    }
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Decoy substitute for Red ally");
+
+    // Red ally survived; Decoy was substituted.
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        1,
+        "Red ally survives; Decoy substituted"
+    );
+    assert_eq!(
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "RED-ALLY",
     );
 }

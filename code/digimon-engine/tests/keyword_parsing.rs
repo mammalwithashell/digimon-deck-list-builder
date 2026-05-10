@@ -321,7 +321,7 @@ fn parser_decode_before_decoy() {
     use digimon_engine::enums::Keyword;
     let kws = parse_printed_keywords("＜Decode＞", "", "");
     assert!(kws.contains(&Keyword::Decode));
-    assert!(!kws.contains(&Keyword::Decoy));
+    assert!(!kws.contains(&Keyword::Decoy(0)));
 }
 
 #[test]
@@ -552,4 +552,81 @@ fn parser_material_save_no_alias_to_save() {
         !kws.contains(&Keyword::Save),
         "must not alias MaterialSave -> Save"
     );
+}
+
+// ─── Decoy color-filter parsing (Track G close) ─────────────────────────────
+
+/// Bare `<Decoy>` parses to `Decoy(0)` (no color filter — matches all
+/// ally Digimon, identical to the prior un-parameterised behavior).
+#[test]
+fn parser_decoy_bare_form_is_zero_mask() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords("\u{ff1c}Decoy\u{ff1e}", "", "");
+    assert_eq!(kws, vec![Keyword::Decoy(0)]);
+}
+
+/// `<Decoy (Black)>` parses to a single-bit mask. Black = CardColor::Black =
+/// index 5 → bit 5 = 0b00100000 = 0x20.
+#[test]
+fn parser_decoy_single_color_filter() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords(
+        "\u{ff1c}Decoy (Black)\u{ff1e} (When your other Black Digimon ...)",
+        "",
+        "",
+    );
+    assert_eq!(kws, vec![Keyword::Decoy(0b0010_0000)]);
+}
+
+/// `<Decoy (Red/Black)>` parses to a two-bit mask. Red=0 (bit 0), Black=5
+/// (bit 5) → 0b00100001 = 0x21.
+#[test]
+fn parser_decoy_multi_color_filter() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords(
+        "\u{ff1c}Decoy (Red/Black)\u{ff1e}",
+        "",
+        "",
+    );
+    assert_eq!(kws, vec![Keyword::Decoy(0b0010_0001)]);
+}
+
+/// `<Decoy (Black/White)>` — Black=5 (bit 5), White=4 (bit 4) → 0b00110000.
+#[test]
+fn parser_decoy_black_white_filter() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords(
+        "\u{ff1c}Decoy (Black/White)\u{ff1e}",
+        "",
+        "",
+    );
+    assert_eq!(kws, vec![Keyword::Decoy(0b0011_0000)]);
+}
+
+/// Trait-form filter `<Decoy ([Bagra Army] trait)>` parses to `Decoy(0)` —
+/// the parser drops the trait filter; cards using trait filters require a
+/// hand-rolled `CardEffect` override (documented gap in
+/// `RUST_ENGINE_GAPS.md`).
+#[test]
+fn parser_decoy_trait_filter_drops_to_zero_mask() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords(
+        "\u{ff1c}Decoy ([Bagra Army] trait)\u{ff1e}",
+        "",
+        "",
+    );
+    assert_eq!(kws, vec![Keyword::Decoy(0)]);
+}
+
+/// `<Decoy ([Deva] or [Four Sovereigns] trait)>` — multi-trait OR form,
+/// also drops to `Decoy(0)` per the parser's trait-filter handling.
+#[test]
+fn parser_decoy_multi_trait_filter_drops_to_zero_mask() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords(
+        "\u{ff1c}Decoy ([Deva] or [Four Sovereigns] trait)\u{ff1e}",
+        "",
+        "",
+    );
+    assert_eq!(kws, vec![Keyword::Decoy(0)]);
 }

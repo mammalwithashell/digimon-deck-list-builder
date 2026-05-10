@@ -1,5 +1,6 @@
 mod armor_purge;
 mod decoy;
+mod evade;
 mod fortitude;
 mod fragment_n;
 mod helpers;

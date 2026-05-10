@@ -440,6 +440,42 @@ fn parse_bracketed_names(text: &str) -> Vec<String> {
     aliases
 }
 
+/// Convert the inside of a `<Decoy (...)>` parenthetical into a CardColor
+/// bitmask. Color names are split on `/`. A trait-form parenthetical such
+/// as `[Bagra Army] trait` returns `0` (no color filter — caller must
+/// override the auto-install for trait-filter cards). Unknown color names
+/// are silently dropped.
+///
+/// Bit layout matches `CardColor as u8`: Red=0, Blue=1, Yellow=2, Green=3,
+/// White=4, Black=5, Purple=6.
+fn decoy_color_mask_from_paren(inside: &str) -> u8 {
+    let inside = inside.trim();
+    // Trait-form filter (`[Trait] trait` / `[Trait] or [Trait] trait`):
+    // present a square bracket — drop to 0 (no color filter). Hand-rolled
+    // overrides apply trait filtering per-card.
+    if inside.contains('[') {
+        return 0;
+    }
+    let mut mask: u8 = 0;
+    for token in inside.split('/') {
+        let t = token.trim();
+        let bit = match t {
+            "Red" => Some(0u8),
+            "Blue" => Some(1),
+            "Yellow" => Some(2),
+            "Green" => Some(3),
+            "White" => Some(4),
+            "Black" => Some(5),
+            "Purple" => Some(6),
+            _ => None,
+        };
+        if let Some(b) = bit {
+            mask |= 1u8 << b;
+        }
+    }
+    mask
+}
+
 /// Extract printed keywords from a card's text fields.
 ///
 /// Keywords appear in card text as `＜Keyword＞` (full-width angle
@@ -497,7 +533,11 @@ pub fn parse_printed_keywords(
                 ("Barrier", Keyword::Barrier),
                 ("Evade", Keyword::Evade),
                 ("Decode", Keyword::Decode),
-                ("Decoy", Keyword::Decoy),
+                // Decoy is parametric (`<Decoy>` / `<Decoy (Black)>` /
+                // `<Decoy (Red/Black)>` / `<Decoy ([Bagra Army] trait)>`).
+                // Handled below the prefix table so the color-filter bitmask
+                // is extracted from the parenthetical. A bare `<Decoy>`
+                // resolves to `Keyword::Decoy(0)` (no filter).
                 ("Partition", Keyword::Partition),
                 ("Vortex", Keyword::Vortex),
                 ("Collision", Keyword::Collision),
@@ -577,6 +617,37 @@ pub fn parse_printed_keywords(
                 if let Ok(n) = n_str.parse::<u8>() {
                     push_unique(Keyword::DigiBurst(n), &mut found);
                 }
+                continue;
+            }
+
+            // Parametric: Decoy / Decoy (Color1/Color2/...) /
+            // Decoy ([TraitName] trait). Printed forms in cards.json:
+            //   ＜Decoy＞                          → Keyword::Decoy(0)
+            //   ＜Decoy (Black)＞                  → Keyword::Decoy(0x20) (bit 5)
+            //   ＜Decoy (Red/Black)＞              → Keyword::Decoy(0x21) (bits 0,5)
+            //   ＜Decoy (Black/White)＞            → Keyword::Decoy(0x30) (bits 4,5)
+            //   ＜Decoy ([Bagra Army] trait)＞     → Keyword::Decoy(0)
+            //   ＜Decoy ([X Antibody] trait)＞     → Keyword::Decoy(0)
+            //
+            // Trait filters are NOT encoded — the parser drops them. Cards
+            // with trait-filtered Decoy must override via a hand-rolled
+            // `CardEffect` (existing precedent). See `enums.rs::Keyword::Decoy`
+            // doc comment and `RUST_ENGINE_GAPS.md` "Decoy color-filter
+            // parameterisation" follow-up entry.
+            if let Some(rest) = trimmed.strip_prefix("Decoy") {
+                let rest = rest.trim();
+                let mask = if rest.is_empty() {
+                    0u8
+                } else if let Some(inside) = rest
+                    .strip_prefix('(')
+                    .and_then(|s| s.strip_suffix(')'))
+                {
+                    decoy_color_mask_from_paren(inside)
+                } else {
+                    // Unrecognised tail; treat as bare `<Decoy>` for safety.
+                    0u8
+                };
+                push_unique(Keyword::Decoy(mask), &mut found);
                 continue;
             }
 
