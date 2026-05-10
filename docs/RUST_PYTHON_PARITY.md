@@ -697,6 +697,32 @@ Rust's `PendingSelection` struct does not (no equivalent field). When this
 field would be non-null in Python, Rust simply omits it — net result on
 the wire is the absence of the key.
 
+### Curated `CardData` exposure across consumer surfaces (audited 2026-05-10)
+
+The Rust `CardData` struct (`code/digimon-engine/src/card_data.rs`) is the
+canonical card-metadata shape. Consumers expose intentionally narrowed
+subsets — adding a field to `CardData` does **not** automatically propagate.
+Audit performed after PR #457 flagged a Tauri build break from
+`ace_overflow` / `digixros_aliases` (added in PRs #413 / #455) not being
+mirrored on the desktop builder.
+
+| Consumer | Surface | New-field policy |
+|---|---|---|
+| Tauri DTO | `code/src-tauri/src/engine_commands.rs::CardDto` | All `CardData` fields the desktop UI may render. `ace_overflow` and `digixros_aliases` exposed as of 2026-05-10. `card_dto` exhaustively destructures `CardData`, so the next field addition trips a compile error here. |
+| PyO3 binding | `code/digimon-engine-py/src/lib.rs::PyCard` | Curated subset by design. `ace_overflow` / `digixros_aliases` deliberately not exposed — no Python caller currently reads them. Add `#[pyo3(get)]` accessors on demand when a Python consumer needs them. |
+| Frontend types | `code/frontend/src/types/{game,cards}.ts` | Hosted-API path consumes `to_ui_json` (state-shape, not `CardData`-shape). Desktop frontend consumes the Tauri DTO via `invoke()` with looser typing — extra fields on `CardDto` are ignored, not rejected. |
+| State filter | `code/server/state_filter.py` | Operates on `to_ui_json` output, not `CardData`. Card metadata flows in through hand/permanent shapes that already filter sensitive identity for opponents (`handIds`, `handCards` redaction per Working Rule 14). |
+| RL env / observation tensor | `code/digimon_gym/digimon_gym.py`, engine tensor encoding | Tensor encodes a fixed feature schema; `ace_overflow` / `digixros_aliases` are not encoded. Adding them is a separate spec change (Working Rule 4). |
+
+The structural drift detector for the Tauri layer is the exhaustive
+destructure of `CardData` inside `card_dto`. The engine-side analog is
+Rust's struct-literal exhaustiveness (which is what caught PR #457's
+build break — by definition, every `CardData { ... }` constructor must
+list every field). Construction-time drift detection is therefore
+already free; consumption-time drift detection requires the explicit
+destructure pattern. New consumers reading `CardData` should follow the
+`card_dto` pattern.
+
 ---
 
 ## 8. Test strategy
