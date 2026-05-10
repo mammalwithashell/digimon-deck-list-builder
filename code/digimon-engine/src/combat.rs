@@ -3370,7 +3370,7 @@ impl Game {
         }
         // Clear any modifiers on the handle (by index), even if the permanent
         // was already gone — modifiers live in a separate registry.
-        self.modifiers.clear_permanent(handle);
+        self.clear_permanent_full(handle);
         // Phase 6: expire any player-scoped modifiers sourced from this permanent.
         self.modifiers.expire_player_on_permanent_leave(handle);
         self.mark_until_condition_dirty();

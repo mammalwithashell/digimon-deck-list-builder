@@ -1045,6 +1045,35 @@ impl ModifierRegistry {
         }
     }
 
+    /// Track H Phase 4k cleanup helper — collect body_ids of granted-
+    /// triggered entries that WOULD be evicted at the upcoming
+    /// `expire_end_of_turn(ending_player)` call. Caller (`Game`) prunes
+    /// the body registry against this list to avoid leaking closure
+    /// bodies.
+    pub fn collect_expiring_granted_body_ids(&self, ending_player: u8) -> Vec<u64> {
+        let relevant = |expiry: Expiry, source_player: u8| -> bool {
+            match expiry {
+                Expiry::EndOfTurn => true,
+                Expiry::EndOfOpponentsTurn | Expiry::EndOfOpponentsNextTurn => {
+                    source_player != ending_player
+                }
+                Expiry::EndOfYourTurn | Expiry::EndOfYourNextTurn => {
+                    source_player == ending_player
+                }
+                _ => false,
+            }
+        };
+        let mut ids = Vec::new();
+        for entries in self.granted_triggered.values() {
+            for e in entries {
+                if relevant(e.expiry, e.source_player) {
+                    ids.push(e.body_id);
+                }
+            }
+        }
+        ids
+    }
+
     /// Expire modifiers at the end of an attack.
     pub fn expire_end_of_attack(&mut self) {
         for entries in self.permanent_modifiers.values_mut() {

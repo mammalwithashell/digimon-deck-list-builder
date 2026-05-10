@@ -252,7 +252,17 @@ impl Game {
         self.revealed_cards.clear();
 
         // Expire end-of-turn modifiers/keywords for the ending player's turn.
+        // Track H Phase 4k: collect body_ids from granted-triggered entries
+        // that the expire pass will drop, then prune the corresponding
+        // closure bodies from `Game::granted_effect_bodies` to keep the
+        // registry from leaking after turn-bound grants expire.
+        let dropped_body_ids = self
+            .modifiers
+            .collect_expiring_granted_body_ids(ending_player);
         self.modifiers.expire_end_of_turn(ending_player);
+        for id in dropped_body_ids {
+            self.granted_effect_bodies.remove(id);
+        }
         // Phase 6: expire player-scoped flood-gate modifiers.
         self.modifiers.expire_player_end_of_turn(ending_player);
         self.mark_until_condition_dirty();

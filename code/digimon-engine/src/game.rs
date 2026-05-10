@@ -2071,6 +2071,25 @@ impl Game {
         }
     }
 
+    /// Track H Phase 4k — clear all per-permanent state when a
+    /// permanent leaves the field, AND prune the corresponding
+    /// granted-triggered-effect body registry entries. Wraps the
+    /// narrower `ModifierRegistry::clear_permanent` so call sites
+    /// don't have to remember the body-registry cleanup separately.
+    /// Returns the count of body-registry entries removed (mostly for
+    /// tests / instrumentation).
+    pub fn clear_permanent_full(&mut self, handle: crate::permanent::PermanentHandle) -> usize {
+        let body_ids = self.modifiers.drain_granted_triggered_ids_on_carrier(handle);
+        self.modifiers.clear_permanent(handle);
+        let mut removed = 0usize;
+        for id in body_ids {
+            if self.granted_effect_bodies.remove(id).is_some() {
+                removed += 1;
+            }
+        }
+        removed
+    }
+
     /// Track H §3 — fire all granted triggered effects on `carrier`
     /// whose registered timing matches `timing`. Each body runs
     /// inline with `EffectContext::source_card` set to the grantor

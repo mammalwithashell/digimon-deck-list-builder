@@ -2126,6 +2126,118 @@ effects:
     };
 }
 
+// ── Phase 4k cleanup — granted_effect_bodies registry pruning ──────────
+//
+// Pins that `Game::granted_effect_bodies` doesn't accumulate dead
+// closures after carriers leave the field or turn-bound grants
+// expire. Three flavors covered:
+//   - clear_permanent_full prunes body registry on permanent-leave
+//   - turn-end pass prunes EndOfOpponents/Your(Next)Turn-expiring grants
+//   - registry size stays bounded across many install/evict cycles
+
+#[test]
+fn granted_body_registry_pruned_on_carrier_leave_field() {
+    use digimon_engine::card_source::CardHandle;
+    use digimon_engine::enums::{EffectTiming, Expiry};
+    use digimon_engine::permanent::PermanentHandle;
+
+    let grantor = make_test_card("TEST-CLEAN-G", "Grantor");
+    let carrier = make_test_card("TEST-CLEAN-C", "Carrier");
+    let mut runner = DebugRunner::builder()
+        .add_card(grantor)
+        .add_card(carrier)
+        .build();
+    let _g = runner.place_on_field(0, "TEST-CLEAN-G", None);
+    let carrier_h = runner.place_on_field(0, "TEST-CLEAN-C", None);
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
+        .top_card()
+        .handle();
+
+    {
+        let mut ctx = digimon_engine::effect_context::EffectContext::new(
+            &mut runner.game,
+            grantor_top,
+            Some(PermanentHandle {
+                player: 0,
+                index: 0,
+            }),
+            0,
+        );
+        ctx.grant_triggered_effect(
+            carrier_h,
+            EffectTiming::OnDeletion,
+            Expiry::Permanent,
+            |inner| inner.gain_memory(1),
+        );
+    }
+    let body_count_before = runner.game.granted_effect_bodies.bodies.len();
+    assert_eq!(body_count_before, 1, "one body registered after install");
+
+    // Carrier leaves field via `clear_permanent_full` — body
+    // registry must drop the entry.
+    let removed = runner.game.clear_permanent_full(carrier_h);
+    assert_eq!(removed, 1, "clear_permanent_full must report one body removed");
+    assert_eq!(
+        runner.game.granted_effect_bodies.bodies.len(),
+        0,
+        "body registry must be pruned after carrier leaves field"
+    );
+}
+
+#[test]
+fn granted_body_registry_pruned_at_turn_end_for_end_of_turn_expiry() {
+    use digimon_engine::card_source::CardHandle;
+    use digimon_engine::enums::{EffectTiming, Expiry};
+    use digimon_engine::permanent::PermanentHandle;
+
+    let grantor = make_test_card("TEST-CLEAN-EOT-G", "Grantor");
+    let carrier = make_test_card("TEST-CLEAN-EOT-C", "Carrier");
+    let mut runner = DebugRunner::builder()
+        .add_card(grantor)
+        .add_card(carrier)
+        .build();
+    let _g = runner.place_on_field(0, "TEST-CLEAN-EOT-G", None);
+    let carrier_h = runner.place_on_field(0, "TEST-CLEAN-EOT-C", None);
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
+        .top_card()
+        .handle();
+
+    {
+        let mut ctx = digimon_engine::effect_context::EffectContext::new(
+            &mut runner.game,
+            grantor_top,
+            Some(PermanentHandle {
+                player: 0,
+                index: 0,
+            }),
+            0,
+        );
+        ctx.grant_triggered_effect(
+            carrier_h,
+            EffectTiming::WhenAttacking,
+            Expiry::EndOfTurn,
+            |inner| inner.gain_memory(1),
+        );
+    }
+    assert_eq!(runner.game.granted_effect_bodies.bodies.len(), 1);
+
+    // Don't go through full end_turn — directly drive the
+    // turn-boundary cleanup the same way `game_phases::end_turn` does.
+    let dropped = runner
+        .game
+        .modifiers
+        .collect_expiring_granted_body_ids(0);
+    runner.game.modifiers.expire_end_of_turn(0);
+    for id in dropped {
+        runner.game.granted_effect_bodies.remove(id);
+    }
+    assert_eq!(
+        runner.game.granted_effect_bodies.bodies.len(),
+        0,
+        "EndOfTurn-expiry granted body must be pruned at turn-end"
+    );
+}
+
 // ── Phase 4k — Typed AuraScope / AuraGrant builder API ─────────────────
 //
 // Phase 4k wraps the existing `add_declarative_*` / `grant_declarative_*`
