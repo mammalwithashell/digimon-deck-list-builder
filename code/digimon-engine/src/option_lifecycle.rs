@@ -51,6 +51,11 @@ pub enum OptionTrashCause {
 
 impl Game {
     /// Query a standalone field Option's explicit lifecycle state.
+    ///
+    /// Returns `None` for linked Plug-In Options represented by
+    /// `OptionState::Linked`, because this standalone storage shape does not
+    /// carry the precise link slot. Callers that need linked Plug-In lifecycle
+    /// details must use `linked_plug_in_field_state`.
     pub fn option_field_state(&self, option: PermanentHandle) -> Option<OptionFieldState> {
         let perm = self
             .player(option.player)
@@ -66,10 +71,7 @@ impl Game {
                 Some(OptionFieldState::OrphanedPlugIn { last_carrier_owner })
             }
             OptionState::Training { .. } => Some(OptionFieldState::OrdinaryFieldOption),
-            OptionState::Linked { host } => Some(OptionFieldState::LinkedPlugIn {
-                carrier: host,
-                link_index: 0,
-            }),
+            OptionState::Linked { .. } => None,
             OptionState::Standard => {
                 let card = perm.top_card();
                 if card.is_option_card_for_search(&self.card_data) {
@@ -96,6 +98,20 @@ impl Game {
             carrier,
             link_index,
         })
+    }
+
+    fn can_insert_plug_in_at(&self, carrier: PermanentHandle, link_index: u8) -> bool {
+        let Some(host) = self
+            .player(carrier.player)
+            .battle_area
+            .get(carrier.index as usize)
+        else {
+            return false;
+        };
+        let insert_at = link_index as usize;
+        let link_max =
+            (5 + self.modifiers.link_max_delta(carrier)).clamp(0, u8::MAX as i32) as usize;
+        insert_at <= host.linked_cards.len() && host.linked_cards.len() < link_max
     }
 
     /// Install an Option as a Delay field permanent.
@@ -172,6 +188,9 @@ impl Game {
         carrier: PermanentHandle,
         link_index: u8,
     ) -> bool {
+        if !self.can_insert_plug_in_at(carrier, link_index) {
+            return false;
+        }
         let Some(host) = self
             .player_mut(carrier.player)
             .battle_area
@@ -180,9 +199,6 @@ impl Game {
             return false;
         };
         let insert_at = link_index as usize;
-        if insert_at > host.linked_cards.len() {
-            return false;
-        }
         let placed_card = card.handle();
         host.linked_cards.insert(insert_at, card);
         self.enqueue_triggered(
@@ -266,17 +282,30 @@ impl Game {
         if !matches!(perm.option_state, OptionState::OrphanedPlugIn { .. }) {
             return false;
         }
+        if perm.card_sources.len() != 1 {
+            return false;
+        }
+        if option_handle == new_carrier {
+            return false;
+        }
         if option_handle.player == new_carrier.player && option_handle.index < new_carrier.index {
             new_carrier.index = new_carrier.index.saturating_sub(1);
+        }
+        if !self.can_insert_plug_in_at(new_carrier, link_index) {
+            return false;
         }
         let permanent = self
             .player_mut(option_handle.player)
             .battle_area
             .remove(option_handle.index as usize);
-        let Some(card) = permanent.card_sources.into_iter().next() else {
-            return false;
-        };
-        self.install_field_option_as_plug_in(card, new_carrier, link_index)
+        let card = permanent
+            .card_sources
+            .into_iter()
+            .next()
+            .expect("validated orphaned Plug-In must have one source");
+        let installed = self.install_field_option_as_plug_in(card, new_carrier, link_index);
+        debug_assert!(installed, "validated Plug-In relink must install");
+        installed
     }
 
     /// Trash a standalone field Option and dispatch `OnOptionTrashed`.
