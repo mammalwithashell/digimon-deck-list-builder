@@ -276,15 +276,21 @@ impl DebugRunner {
         // Post-conditions: every CardSource.owner is exactly what it was
         // before the move.
         {
-            let perm = &self.game.players[to_player as usize].battle_area
-                [new_handle.index as usize];
+            let perm =
+                &self.game.players[to_player as usize].battle_area[new_handle.index as usize];
             assert_eq!(
-                perm.card_sources.iter().map(|c| c.owner).collect::<Vec<_>>(),
+                perm.card_sources
+                    .iter()
+                    .map(|c| c.owner)
+                    .collect::<Vec<_>>(),
                 pre_owners,
                 "transfer_control must preserve every source's CardSource.owner"
             );
             assert_eq!(
-                perm.linked_cards.iter().map(|c| c.owner).collect::<Vec<_>>(),
+                perm.linked_cards
+                    .iter()
+                    .map(|c| c.owner)
+                    .collect::<Vec<_>>(),
                 pre_linked_owners,
                 "transfer_control must preserve every linked card's CardSource.owner"
             );

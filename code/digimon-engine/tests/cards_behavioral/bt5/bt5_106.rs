@@ -236,7 +236,10 @@ fn bt5_106_main_with_no_own_digimon_short_circuits_without_panic() {
     assert_eq!(runner.battle_area_size(0), 0);
 
     let fired = runner.game.activate_hand_main(0, 0);
-    assert!(fired, "[Main] still fires; the optional inner step is what's empty");
+    assert!(
+        fired,
+        "[Main] still fires; the optional inner step is what's empty"
+    );
 
     // Selection should not park (no targets to pick from).
     assert!(

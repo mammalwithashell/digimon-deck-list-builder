@@ -22,9 +22,32 @@ Date: 2026-05-03
 
 ## Verdict
 
-**Blocked.** The refreshed `Alter-S Ladder` deck pool has only one exact `Alter-S Ladder` decklist, from DigiLab. The deck contains 17 unique card IDs, but only 3 are currently reported by `digimon_engine.load_implemented_card_ids()`: `BT16-082`, `EX10-010`, and `EX9-013`. Those three are partial: targeted `cards_behavioral` tests pass for implemented slices, but 15 tests remain ignored for card-body placeholders or omitted printed clauses.
+**Blocked, but substantially advanced by the 2026-05-10 implementation pass.** The refreshed `Alter-S Ladder` deck pool has only one exact `Alter-S Ladder` decklist, from DigiLab. The deck contains 17 unique card IDs. As of the 2026-05-10 pass, 10 have Rust YAML/tests in the active lane: `BT16-082`, `BT17-077`, `BT5-112`, `EX10-002`, `EX10-010`, `EX4-060`, `EX9-013`, `EX9-021`, `P-101`, and `P-128`.
 
-Do not claim this archetype is playable in Rust yet. The blockers are mostly authored-card coverage plus a few reusable engine/DSL gaps around source-stack play, effect-initiated attacks, security placement, and effect immunity.
+Do not claim this archetype is playable in Rust yet. The remaining blockers are reusable engine/DSL gaps around face-down sources, source-to-hand costs, binding-relative play-cost filters, granted future attacks / source-name predicates, reveal-to-play, replacement-triggered DNA, and Paladin-style mass cleanup.
+
+## 2026-05-10 Implementation Update
+
+Implemented or audited forward:
+
+- `P-101`: full YAML plus 5 behavioral tests for active draw/discard and inherited Lv3 deletion.
+- `BT5-112`: full YAML plus 7 behavioral tests for security play, Tamer deletion, and Digimon deletion.
+- `EX10-002`: inherited attack-target-change draw YAML plus 5 passing tests; shared triggered OPT enforcement remains ignored under `G-OPT-TRIGGERED`.
+- `P-128`: full YAML plus 10 behavioral tests for start-main memory, modal On Play, free play/digivolve, decline paths, and security play.
+- `EX10-010`: target filter now enforces `play_cost_lte: 7`; source-scoped continuous immunity remains a separate blocker.
+- `EX9-021`: DNA-origin immunity now implemented with opponent-source effect immunity for the turn, alongside the existing highest-level delete and end-of-attack source play/security placement.
+- `EX9-013`: metadata/route drift fixed to red/black Virus, standard Lv5 red cost 4, plus explicit Blast Digivolve alt-path marker.
+- `BT17-077`: metadata drift fixed to white/blue; main cleanup clauses remain blocked.
+
+Blocked with tests or assessment evidence:
+
+- `BT15-096`: 6 card-shaped tests added and ignored under `G-PLAY-COST-LTE-BINDING`; Delay needs `play_cost_lte` relative to the selected source Digimon's play cost.
+- `EX10-008`: full card blocked on inherited `source_name_contains` target-change predicate evaluation and granted future start-main attack behavior.
+- `EX5-048`: full card blocked on play-from-reveal and granted future start-main attack behavior.
+- `EX9-011` / `EX9-068`: blocked on face-down source placement/state and related predicates/formulas.
+- `EX9-020`: blocked on replacement-triggered effect DNA using the in-flight leaving Lv6.
+- `BT5-087`: full card blocked on returning a Lv6 source to hand as an attack cost.
+- `BT17-077`: full main clause blocked on all-source mass trash, player choice over whose trash to return, and returned-card result predicates.
 
 ## Data Refresh Notes
 
@@ -60,17 +83,21 @@ Do not claim this archetype is playable in Rust yet. The blockers are mostly aut
 
 | Card | Required behavior | Status | Evidence | Gap / next step |
 |---|---|---|---|---|
-| `BT16-082` Ukkomon | On move from breeding: reveal 3, add Digimon/Tamer, bottom rest, may hatch | dsl-gap | `code/digimon-engine/cards/bt16/BT16-082.yaml`; `code/digimon-engine/tests/cards_behavioral/bt16/bt16_082.rs` | Replace raw-rust no-op body with real reveal/select/hatch process; unignore behavioral tests. |
-| `EX10-010` BlackWarGreymon | Blast/Raid/Reboot/Blocker; delete cost <=7 Digimon/Tamer; conditional +3000 DP and opponent-Digimon-effect immunity | dsl-gap / engine-gap | `code/digimon-engine/cards/ex10/EX10-010.yaml`; `code/digimon-engine/tests/cards_behavioral/ex10/ex10_010.rs` | Add `play_cost_lte: 7` to YAML now that predicate support exists; implement/wire source-kind effect immunity for the conditional aura. |
-| `EX9-013` BlitzGreymon | Blast/Alliance/Blocker; De-Digivolve 3; end-turn optional DNA into Omnimon Alter-S, then optional attack | implemented slice | `code/digimon-engine/cards/ex9/EX9-013.yaml`; `code/digimon-engine/tests/cards_behavioral/ex9/ex9_013.rs` | Track D may-attack step implemented 2026-05-08; remaining Alter-S Ladder blockers are elsewhere in the pool. |
+| `BT16-082` Ukkomon | On move from breeding: reveal 3, add Digimon/Tamer, bottom rest, may hatch | implemented | `code/digimon-engine/cards/bt16/BT16-082.yaml`; `code/digimon-engine/tests/cards_behavioral/bt16/bt16_082.rs` | Card behavior implemented; BT16-specific OPT lockout/reset coverage remains ignored as shared triggered OPT work. |
+| `EX10-010` BlackWarGreymon | Blast/Raid/Reboot/Blocker; delete cost <=7 Digimon/Tamer; conditional +3000 DP and opponent-Digimon-effect immunity | partial | `code/digimon-engine/cards/ex10/EX10-010.yaml`; `code/digimon-engine/tests/cards_behavioral/ex10/ex10_010.rs` | `play_cost_lte: 7` fixed 2026-05-10; continuous source-scoped immunity remains blocked. |
+| `EX9-013` BlitzGreymon | Blast/Alliance/Blocker; De-Digivolve 3; end-turn optional DNA into Omnimon Alter-S, then optional attack | implemented | `code/digimon-engine/cards/ex9/EX9-013.yaml`; `code/digimon-engine/tests/cards_behavioral/ex9/ex9_013.rs` | Metadata/route drift fixed 2026-05-10. |
 | `EX10-008` MetalGreymon | Grant Collision and forced start-main attack to opponent Digimon; inherited target-change security trash | engine-gap | no YAML under `code/digimon-engine/cards/`; printed text in `data/cards.json` | Need granted Collision/forced attack effect coverage plus inherited attack-target-change observer. |
 | `EX9-011` MetalGreymon | Cost reduction by trashing hand card; tuck trash card face down; delete DP budget scaling with face-down sources | dsl-gap | no YAML | Author card after validating face-down source representation and DP-budget formula/count support. |
 | `EX9-020` CresGarurumon | Bottom-deck Lv5 or lower; when any Lv6 would leave by opponent effect, play a Lv6 source instead | engine-gap | no YAML | Needs leave-field replacement scoped to any own Lv6 and source-stack play. |
-| `EX4-060` Omnimon Alter-S | Delete small Digimon and bottom-deck Lv6+; when leaving, play BlitzGreymon + CresGarurumon sources and place self bottom security | engine-gap | no YAML; `docs/RUST_ENGINE_GAPS.md` tracks source-stack play and security-stack placement | Implement source-stack pair selection/play and bottom-security placement without auto-picks. |
-| `EX9-021` Omnimon Alter-S | DNA immunity, delete all highest-level opponent Digimon, end-of-attack play two named/trait sources and place self top security | engine-gap | no YAML | Needs DNA-origin conditional immunity, highest-level group deletion, source-stack play, and top-security placement. |
+| `EX4-060` Omnimon Alter-S | Delete small Digimon and bottom-deck Lv6+; when leaving, play BlitzGreymon + CresGarurumon sources and place self bottom security | implemented | `code/digimon-engine/cards/ex4/EX4-060.yaml`; `code/digimon-engine/tests/cards_behavioral/ex4/ex4_060.rs` | Source-stack play and bottom-security replacement are covered for this card. |
+| `EX9-021` Omnimon Alter-S | DNA immunity, delete all highest-level opponent Digimon, end-of-attack play two named/trait sources and place self top security | implemented | `code/digimon-engine/cards/ex9/EX9-021.yaml`; `code/digimon-engine/tests/cards_behavioral/ex9/ex9_021.rs` | DNA-origin immunity adopted 2026-05-10. |
 | `BT5-087` Omnimon Zwart | Mill 3, may play up to two cost <=8 black/purple Digimon from trash; source-to-hand cost then delete unsuspended cost <=12 | dsl-gap | no YAML | Author up-to-two trash play and source-return cost tests. |
-| `BT15-096` Supreme Connection! | Reveal 5, add one Machine/Cyborg and trash one, return rest on top; Delay play Lv5+ Machine/Cyborg with cost -3 | dsl-gap | no YAML; Delay primitives recently resolved in `docs/RUST_ENGINE_GAPS.md` | Author reveal multi-choice/order and delayed play-cost reduction tests. |
-| Other techs (`EX10-002`, `P-101`, `EX9-068`, `P-128`, `EX5-048`, `BT5-112`, `BT17-077`) | Draw/discard costs, played-Digimon observers, forced attacks, security play, mass trash/deck returns | dsl-gap / engine-gap | no YAML for these IDs | Batch author after core Lv5/Lv6/Lv7 shell gaps are closed. |
+| `BT15-096` Supreme Connection! | Reveal 3, add one Machine/Cyborg and trash one, return rest on top; Delay play hand Digimon with cost <= selected source play cost, reduced by 3 | dsl-gap | `code/digimon-engine/tests/cards_behavioral/bt15/bt15_096.rs` | Blocked on `G-PLAY-COST-LTE-BINDING`; tests are present and ignored. |
+| `EX10-002` Koromon | Inherited attack-target-change draw | implemented | `code/digimon-engine/cards/ex10/EX10-002.yaml`; `code/digimon-engine/tests/cards_behavioral/ex10/ex10_002.rs` | Shared triggered OPT enforcement remains ignored under `G-OPT-TRIGGERED`. |
+| `P-101` Raremon | Draw/discard and inherited Lv3 deletion | implemented | `code/digimon-engine/cards/p/P-101.yaml`; `code/digimon-engine/tests/cards_behavioral/p/p_101.rs` | Full card covered. |
+| `P-128` Cody Hida | Free-trait memory, modal On Play, security play | implemented | `code/digimon-engine/cards/p/P-128.yaml`; `code/digimon-engine/tests/cards_behavioral/p/p_128.rs` | Full card covered. |
+| `BT5-112` Omnimon Zwart Defeat | Security play, when-digivolving Tamer deletion, on-deletion Digimon deletion | implemented | `code/digimon-engine/cards/bt5/BT5-112.yaml`; `code/digimon-engine/tests/cards_behavioral/bt5/bt5_112.rs` | Full card covered. |
+| `EX9-068`, `EX5-048` | Played-Digimon observer/source tuck; forced attack plus reveal play | engine-gap / dsl-gap | no YAML for these IDs | `EX9-068` waits on face-down source support; `EX5-048` waits on play-from-reveal and granted future attack support. |
 
 ## First Tests To Add
 
@@ -82,5 +109,11 @@ Do not claim this archetype is playable in Rust yet. The blockers are mostly aut
 
 ## Verification
 
-- `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- ex9_013 ex10_010 bt16_082`
-  - Result: 40 passed, 15 ignored, 0 failed.
+- 2026-05-10 targeted pass:
+  - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral ex10_010_on_play_filter_excludes_cost_above_7_target` → 1 passed.
+  - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral ex9_021` → 15 passed.
+  - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral p_101` → 5 passed.
+  - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt5_112` → 7 passed.
+  - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral ex10_002` → 5 passed, 1 ignored.
+  - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral p_128` → 10 passed.
+  - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt15_096` → 6 ignored under `G-PLAY-COST-LTE-BINDING`.

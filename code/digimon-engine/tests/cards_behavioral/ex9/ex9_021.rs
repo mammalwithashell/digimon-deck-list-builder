@@ -30,15 +30,12 @@
 //!   of: opponent }` (BT9-112 idiom for for-each-with-predicate-filter +
 //!   AD1-012 / BT22-026 idiom for the level aggregate selector).
 //!
-//! # Known engine/DSL gaps blocking parts of this card
+//! # Current card-local adoption note
 //!
-//! - **EX9-021 card-local DNA immunity adoption**: the reusable
-//!   `dna_origin: true` payload is now available, but this YAML still omits
-//!   the DNA-only opponent-effect immunity arm per no-approximations. The
-//!   unconditional delete-highest arm IS implemented (printed grammar +
-//!   DCGO sequencing both confirm the delete fires regardless of the DNA
-//!   gate). Behavioral tests for the DNA-only immunity arm stay ignored until
-//!   that card-local body is authored.
+//! - The reusable `dna_origin: true` payload is available and EX9-021 must use
+//!   it for the DNA-only opponent-effect immunity arm. The
+//!   unconditional delete-highest arm remains separate and still fires
+//!   regardless of the DNA gate.
 //!
 //! The [End of Attack] source-play and top-security tail are implemented via
 //! `select_material`, `play_from_materials.bind_as`, `binding_exists`, and
@@ -47,12 +44,14 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPath, CompiledAltPathKind, CompiledClause, CompiledCost, CompiledScope,
+    CompiledAltPath, CompiledAltPathKind, CompiledBindingRef, CompiledClause, CompiledCost,
+    CompiledEffectController, CompiledEffectSourceKind, CompiledScope, CompiledStep,
     CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming, PlayerId};
+use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::{CardColor, CardKind, EffectSourceKind, EffectTiming, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
@@ -75,6 +74,15 @@ fn make_named_source(id: &str, name: &str, traits: &[&str]) -> CardData {
     card.level = Some(6);
     card.dp = Some(11000);
     card.traits = traits.iter().map(|t| t.to_string()).collect();
+    card
+}
+
+fn make_colored_lv6(id: &str, color: CardColor) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(6);
+    card.dp = Some(11000);
+    card.colors = vec![color];
     card
 }
 
@@ -180,12 +188,11 @@ fn ex9_021_has_dna_digivolve_lv6_blue_red_cost0_unsuspended() {
     );
 }
 
-/// Two face-up triggered clauses are present: the unconditional
-/// delete-highest [When Digivolving] arm and the explicit-choice
-/// [End of Attack] source-play / top-security arm. The DNA-only immunity
-/// arm remains omitted per no-approximations.
+/// Three face-up triggered clauses are present: the unconditional
+/// delete-highest [When Digivolving] arm, the DNA-only immunity arm, and the
+/// explicit-choice [End of Attack] source-play / top-security arm.
 #[test]
-fn ex9_021_has_two_face_up_triggered_clauses() {
+fn ex9_021_has_three_face_up_triggered_clauses() {
     let compiled = compiled_ex9_021();
     let face_up_triggered = compiled
         .effects
@@ -193,9 +200,8 @@ fn ex9_021_has_two_face_up_triggered_clauses() {
         .filter(|c| matches!(c, CompiledClause::Triggered(t) if matches!(t.scope, CompiledScope::FaceUp)))
         .count();
     assert_eq!(
-        face_up_triggered, 2,
-        "EX9-021 must have 2 face-up triggered clauses: delete-highest and End of Attack. \
-         DNA-immunity remains BLOCKED."
+        face_up_triggered, 3,
+        "EX9-021 must have 3 face-up triggered clauses: delete-highest, DNA-immunity, and End of Attack."
     );
 }
 
@@ -208,7 +214,9 @@ fn ex9_021_when_digivolving_delete_clause_shape() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenDigivolving) => {
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::WhenDigivolving) && t.condition.is_none() =>
+            {
                 Some(t)
             }
             _ => None,
@@ -220,9 +228,58 @@ fn ex9_021_when_digivolving_delete_clause_shape() {
         "delete-highest is unconditional (no 'may')"
     );
     assert!(!clause.once_per_turn, "no [Once Per Turn] on this clause");
-    // The DNA-only immunity is BLOCKED → the delete clause should NOT carry
-    // an `is_dna_digivolving: true` condition (would block the delete arm
-    // unfaithfully).
+    assert!(
+        clause.condition.is_none(),
+        "delete-highest remains unconditional; only the immunity clause is DNA-gated"
+    );
+}
+
+#[test]
+fn ex9_021_when_digivolving_dna_immunity_clause_shape() {
+    let compiled = compiled_ex9_021();
+    let clause = compiled
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::WhenDigivolving)
+                    && t.condition
+                        .as_ref()
+                        .and_then(|condition| condition.dna_origin)
+                        == Some(true) =>
+            {
+                Some(t)
+            }
+            _ => None,
+        })
+        .expect("must have a DNA-origin-gated [WhenDigivolving] immunity clause");
+    assert_eq!(clause.scope, CompiledScope::FaceUp);
+    assert!(
+        !clause.optional,
+        "DNA-origin immunity is mandatory when the gate is satisfied"
+    );
+    assert_eq!(clause.process.len(), 3);
+    let expected = [
+        CompiledEffectSourceKind::Digimon,
+        CompiledEffectSourceKind::Tamer,
+        CompiledEffectSourceKind::Option,
+    ];
+    for (step, expected_kind) in clause.process.iter().zip(expected) {
+        match step {
+            CompiledStep::GrantEffectImmunity {
+                target,
+                source_kind,
+                source_controller,
+                expiry,
+            } => {
+                assert_eq!(target, &CompiledBindingRef::SelfRef);
+                assert_eq!(source_kind, &expected_kind);
+                assert_eq!(source_controller, &CompiledEffectController::Opponent);
+                assert_eq!(expiry, "end_of_turn");
+            }
+            other => panic!("expected grant_effect_immunity step, got {other:?}"),
+        }
+    }
 }
 
 // ─── Section 2: Behavioral — [When Digivolving] delete-highest ──────────────
@@ -239,6 +296,7 @@ fn ex9_021_when_digivolving_no_opp_digimon_silent_noop() {
         TriggerSource::Permanent(perm),
     );
     runner.game.drain_effect_queue();
+    runner.auto_resolve().expect("trigger order resolves");
 
     assert!(
         runner.pending_selection().is_none(),
@@ -330,37 +388,96 @@ fn ex9_021_when_digivolving_ties_capture_full_set() {
     );
 }
 
-// ─── Section 3: BLOCKED test stubs (#[ignore]'d under tracked gap tags) ─────
+// ─── Section 3: Behavioral — [When Digivolving] DNA-only immunity ───────────
 
-/// BLOCKED — EX9-021 card-local DNA immunity adoption.
-///
 /// Printed: "[When Digivolving] If DNA digivolving, your opponent's effects
-/// don't affect this Digimon for the turn." When this card is DNA-digivolved
-/// into via the printed Lv.6 Blue + Lv.6 Red pair, the carrier permanent
-/// must gain effect immunity vs opponent-controlled card sources, expiring
-/// at the end of the current turn. Opponent's normal-digivolve / standard
-/// triggers must NOT grant this immunity (printed gate).
+/// don't affect this Digimon for the turn." When this card
+/// is DNA-digivolved via the printed Lv.6 Blue + Lv.6 Red pair, the carrier
+/// permanent must gain effect immunity vs opponent-controlled card-effect
+/// sources, expiring at end of turn.
 #[test]
-#[ignore = "pending: EX9-021 card-local DNA immunity adoption now that dna_origin payload exists"]
 fn ex9_021_when_digivolving_dna_path_grants_self_opp_effect_immunity() {
-    // Setup would: DNA-digivolve EX9-021 from a Lv.6 Blue + Lv.6 Red pair on
-    // own field, then assert that the resulting Omnimon Alter-S permanent
-    // carries an effect-immunity modifier scoped to opponent-source effects
-    // until end of turn. The test is unwritable today because the DSL has no
-    // is_dna_digivolving predicate AND the engine TriggerSource lacks the
-    // dna-pair flag.
-    unreachable!("unblock: add via_dna to TriggerSource::Digivolved + is_dna_digivolving DSL leaf");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX9-021 YAML loads")
+        .add_card(make_colored_lv6("BLUE-LV6", CardColor::Blue))
+        .add_card(make_colored_lv6("RED-LV6", CardColor::Red))
+        .hand(0, &["EX9-021"])
+        .memory(10)
+        .start();
+
+    let blue = runner.place_on_field(0, "BLUE-LV6", None);
+    let red = runner.place_on_field(0, "RED-LV6", None);
+    let hand_card = runner.game.player(0).hand[0].handle();
+    let evolved = {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card, None, 0);
+        ctx.effect_initiated_dna_digivolve(blue, red, hand_card, 0, true)
+            .expect("EX9-021 should DNA digivolve from Lv.6 Blue + Lv.6 Red")
+    };
+    runner.auto_resolve().expect("DNA trigger order resolves");
+
+    assert!(
+        runner
+            .game
+            .permanent_is_unaffected_by_effect(evolved, 1, EffectSourceKind::Digimon),
+        "DNA-origin EX9-021 should be immune to opponent Digimon effects"
+    );
+    assert!(
+        runner
+            .game
+            .permanent_is_unaffected_by_effect(evolved, 1, EffectSourceKind::Option),
+        "DNA-origin EX9-021 should be immune to opponent Option effects"
+    );
+    assert!(
+        runner
+            .game
+            .permanent_is_unaffected_by_effect(evolved, 1, EffectSourceKind::Tamer),
+        "DNA-origin EX9-021 should be immune to opponent Tamer effects"
+    );
+    assert!(
+        !runner
+            .game
+            .permanent_is_unaffected_by_effect(evolved, 0, EffectSourceKind::Digimon),
+        "DNA-origin EX9-021 should not be immune to its controller's Digimon effects"
+    );
 }
 
-/// BLOCKED — EX9-021 card-local DNA immunity adoption (negative test).
-///
 /// When EX9-021 is reached via standard digivolve (Lv.6 Blue / Cost 5) NOT
 /// via the DNA-pair path, the printed "If DNA digivolving" gate fails, and
 /// the opp-effect immunity must NOT be granted.
 #[test]
-#[ignore = "pending: EX9-021 card-local DNA immunity adoption; immunity must NOT install on standard digivolve path"]
 fn ex9_021_when_digivolving_standard_path_does_not_grant_immunity() {
-    unreachable!("unblock: same gap as above");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX9-021 YAML loads")
+        .memory(10)
+        .start();
+
+    let perm = runner.place_on_field(0, "EX9-021", None);
+    let card = runner.game.players[0].battle_area[perm.index as usize]
+        .top_card()
+        .handle();
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Digivolved {
+            player: 0,
+            permanent: perm,
+            card,
+            effect_initiated: false,
+            dna_origin: false,
+        },
+    );
+    runner.game.drain_effect_queue();
+    runner
+        .auto_resolve()
+        .expect("standard trigger order resolves");
+
+    assert!(
+        !runner
+            .game
+            .permanent_is_unaffected_by_effect(perm, 1, EffectSourceKind::Digimon),
+        "standard-digivolved EX9-021 must not receive DNA-only immunity"
+    );
 }
 
 /// Printed: "[End of Attack] You may play 1 card with [Greymon] in its name

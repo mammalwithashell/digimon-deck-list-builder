@@ -655,9 +655,10 @@ Format per entry:
 - Gap kind: resolved DSL timing surface. Card-local YAML can now use the faithful timing token instead of the `when_attacking` workaround.
 - First reported: 2026-05-03 (BT21-102 Tai Kamiya, batch-implement-cards-rust-dsl)
 
-## BT21-102 — `play_cost_lte` formula-valued variant
+## BT21-102 / BT15-096 — `play_cost_lte` formula-valued / binding-relative variant
 - Effect text: BT21-102 Tai Kamiya — "[Main] [Once Per Turn] You may play 1 [ADVENTURE] or [Hero] trait card with a play cost of 2 or less from your hand without paying the cost. For each of your Tamers' colors, add 1 to this effect's play cost maximum."
-- Missing DSL verb / step kind / predicate: `PredicateSpec::play_cost_lte` is `Option<i32>` (literal only — `code/digimon-dsl/src/predicate.rs` line 59). It cannot accept a formula expression so dynamic play-cost ceilings ("cost ≤ 2 + N") cannot be expressed in selection filters. Closely related to existing G-PLAY-COST-LTE entry but for the formula-valued variant rather than the literal predicate.
+- Effect text: BT15-096 Supreme Connection! — "[Delay] 1 of your Digimon with the [Machine] or [Cyborg] trait may play 1 Digimon card with a play cost less than or equal to that Digimon's play cost from your hand with the play cost reduced by 3."
+- Missing DSL verb / step kind / predicate: `PredicateSpec::play_cost_lte` is `Option<i32>` (literal only — `code/digimon-dsl/src/predicate.rs` line 59). It cannot accept a formula expression or binding-relative expression, so dynamic play-cost ceilings ("cost ≤ 2 + N" or "hand card cost ≤ selected source Digimon play cost") cannot be expressed in selection filters. Closely related to existing G-PLAY-COST-LTE entry but for the formula-valued/binding-valued variant rather than the literal predicate.
 - Lowers to engine API: `card.play_cost <= rctx.eval_formula(formula)` — engine already has formula evaluation and per-card play_cost reads.
 - Suggested DSL syntax:
   ```yaml
@@ -672,9 +673,16 @@ Format per entry:
             filter: { kind: tamer }
         delta: 0
   ```
+- Suggested binding-relative syntax:
+  ```yaml
+  filter:
+    play_cost_lte:
+      binding_play_cost: source_digimon
+  ```
 - Implementation: change `PredicateSpec::play_cost_lte` to a sum type accepting either `i32` (literal) or `{ formula: FormulaSpec }`; thread compiled formula through `eval_card_fields`.
-- Gap kind: dsl. Companion to G-DSL-DISTINCT-TAMER-COLORS-FORMULA — both must close together to faithfully implement BT21-102's [Main] OPT clause.
-- First reported: 2026-05-03 (BT21-102 Tai Kamiya, batch-implement-cards-rust-dsl)
+- Implementation addendum for BT15-096: the same sum type needs a binding-relative variant that resolves a previously selected permanent/card binding and compares candidates against that binding's printed play cost during `select_hand` mask construction.
+- Gap kind: dsl. Companion to G-DSL-DISTINCT-TAMER-COLORS-FORMULA for BT21-102; independently blocks BT15-096's Delay clause.
+- First reported: 2026-05-03 (BT21-102 Tai Kamiya, batch-implement-cards-rust-dsl). Binding-relative variant reaffirmed 2026-05-10 (BT15-096 Supreme Connection!, Alter-S Ladder batch).
 
 ## EX9-066 — Binding-presence predicate (`binding_present`/`binding_absent`)  [G-DSL-BIND-PRESENT]
 - Effect text: EX9-066 Tai Kamiya & Matt Ishida — "[On Play] You may return 1 Digimon card with [Greymon], [Garurumon] or [Omnimon] in its name from your trash to the hand. If this effect didn't return, ＜Draw 1＞." Also EX11-074 — "[When Digivolving] [When Attacking] You may suspend 1 Digimon. If this effect suspended your Digimon, ..."

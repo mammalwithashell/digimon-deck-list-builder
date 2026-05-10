@@ -1,0 +1,70 @@
+card: P-101
+name: Raremon
+kind: digimon
+level: 4
+color: [purple, white]
+cost: 4
+dp: 4000
+traits: [Undead]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "By trashing 1 card in hand, Draw 2"
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand] }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter: {}
+          prompt: "Trash 1 card from your hand"
+      - if:
+          condition: { binding_exists: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+
+  - scope: inherited
+    when: when_attacking
+    optional: true
+    summary: "[Inherited][When Attacking] By trashing 1 card in hand, delete 1 opponent level 3 Digimon"
+    condition:
+      all_of:
+        - count_gte:
+            filter: { of: you, zone: [hand] }
+            n: 1
+        - count_gte:
+            filter:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+              level_eq: 3
+            n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          filter: {}
+          prompt: "Trash 1 card from your hand"
+      - if:
+          condition: { binding_exists: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - select_opponent_permanent:
+                bind_as: target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_eq: 3
+                prompt: "Delete 1 opponent level 3 Digimon"
+            - delete_permanent: { target: target }

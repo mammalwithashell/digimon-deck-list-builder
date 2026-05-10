@@ -619,7 +619,14 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         // precedent; trait id is not stored in the keyword variant to keep
         // `Keyword: Copy`).
         Keyword::Decoy(color_mask) => vec![Effect::when_would_be_deleted(card)
-            .name(if color_mask == 0 { "<Decoy>".to_string() } else { format!("<Decoy ({color_mask:#04x})>") }.as_str())
+            .name(
+                if color_mask == 0 {
+                    "<Decoy>".to_string()
+                } else {
+                    format!("<Decoy ({color_mask:#04x})>")
+                }
+                .as_str(),
+            )
             .optional()
             .replacement_process(move |rctx| {
                 // Self-scope guard: never substitute self for self
@@ -657,11 +664,8 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 // rules-facing colors must overlap the bitmask. Bit `n` set
                 // ⇒ color index `n` (CardColor as u8) is eligible.
                 if color_mask != 0 {
-                    let subject_colors = subject_perm.colors_for_rules(
-                        &game.card_data,
-                        &game.modifiers,
-                        subject,
-                    );
+                    let subject_colors =
+                        subject_perm.colors_for_rules(&game.card_data, &game.modifiers, subject);
                     let any_match = subject_colors
                         .iter()
                         .any(|c| (color_mask & (1u8 << (*c as u8))) != 0);

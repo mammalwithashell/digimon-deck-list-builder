@@ -1,5 +1,5 @@
-# BT17-077 Imperialdramon: Paladin Mode — Digimon, Lv.7, Blue, DP 16000, Cost 9.
-# Traits: Free, Mythical Dragon.
+# BT17-077 Imperialdramon: Paladin Mode — Digimon, Lv.7, White/Blue, DP 16000, Cost 9.
+# Traits: Ancient Holy Warrior.
 # Evo: Lv.6 Blue / Cost 6 (standard, per cards.json evo_costs).
 #
 # Printed card text (data/cards.json, authoritative):
@@ -98,25 +98,11 @@
 # Clause 3 — Inherited Ace Overflow <-5>
 #   IMPLEMENTABLE via top-level `ace_overflow: -5` field.
 #
-# ─── Color note ───────────────────────────────────────────────────────────────
-# cards.json lists Colors: ['black', 'blue']. DCGO places the script under
-# White/. The printed card text and Paladin Mode lore are white. cards.json
-# color data may be incomplete/incorrect for this archetype. YAML uses
-# the DCGO + printed card canonical colors (white) to match engine behavior,
-# but to avoid breaking pack loading we record the cards.json colors until a
-# data correction is filed. Tracking note: resolve via card_overrides.json when
-# confirmed.
-#
-# ─── Trait note ──────────────────────────────────────────────────────────────
-# scout block (type_eng): ['Ancient Holy Warrior']. Prompt says "Free + Mythical
-# Dragon" per archetype family. cards.json is authoritative; recording both for
-# reference.
-
 card: BT17-077
 name: "Imperialdramon: Paladin Mode"
 kind: digimon
 level: 7
-color: [black, blue]
+color: [white, blue]
 cost: 9
 dp: 16000
 traits: [Ancient Holy Warrior]

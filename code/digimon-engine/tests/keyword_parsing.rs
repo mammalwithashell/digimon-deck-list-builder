@@ -583,11 +583,7 @@ fn parser_decoy_single_color_filter() {
 #[test]
 fn parser_decoy_multi_color_filter() {
     use digimon_engine::enums::Keyword;
-    let kws = parse_printed_keywords(
-        "\u{ff1c}Decoy (Red/Black)\u{ff1e}",
-        "",
-        "",
-    );
+    let kws = parse_printed_keywords("\u{ff1c}Decoy (Red/Black)\u{ff1e}", "", "");
     assert_eq!(kws, vec![Keyword::Decoy(0b0010_0001)]);
 }
 
@@ -595,11 +591,7 @@ fn parser_decoy_multi_color_filter() {
 #[test]
 fn parser_decoy_black_white_filter() {
     use digimon_engine::enums::Keyword;
-    let kws = parse_printed_keywords(
-        "\u{ff1c}Decoy (Black/White)\u{ff1e}",
-        "",
-        "",
-    );
+    let kws = parse_printed_keywords("\u{ff1c}Decoy (Black/White)\u{ff1e}", "", "");
     assert_eq!(kws, vec![Keyword::Decoy(0b0011_0000)]);
 }
 
@@ -610,11 +602,7 @@ fn parser_decoy_black_white_filter() {
 #[test]
 fn parser_decoy_trait_filter_drops_to_zero_mask() {
     use digimon_engine::enums::Keyword;
-    let kws = parse_printed_keywords(
-        "\u{ff1c}Decoy ([Bagra Army] trait)\u{ff1e}",
-        "",
-        "",
-    );
+    let kws = parse_printed_keywords("\u{ff1c}Decoy ([Bagra Army] trait)\u{ff1e}", "", "");
     assert_eq!(kws, vec![Keyword::Decoy(0)]);
 }
 

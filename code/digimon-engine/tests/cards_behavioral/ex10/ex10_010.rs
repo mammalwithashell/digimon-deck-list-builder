@@ -613,7 +613,6 @@ fn ex10_010_dp_aura_does_not_apply_when_opp_digimon_below_13000_dp() {
 }
 
 #[test]
-#[ignore = "audit finding A1: YAML omits play_cost_lte: 7 even though predicate now exists"]
 fn ex10_010_on_play_filter_excludes_cost_above_7_target() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX10-010")
