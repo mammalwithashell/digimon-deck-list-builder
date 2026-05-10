@@ -24,7 +24,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT16-028 | Imperialdramon: Dragon Mode | PARTIAL | hybrid | CannotUnsuspend ships; alt-cost branch + effect-initiated trigger blocked |
 | BT16-040 | Wormmon | PARTIAL | dsl | Effect-initiated digivolve from trash chain blocked |
 | BT16-085 | Davis Motomiya & Ken Ichijoji | PARTIAL | engine | Free-play ships; delayed return + DNA trash blocked (3 new gaps) |
-| BT17-077 | Imperialdramon: Paladin Mode | PARTIAL | hybrid | Blast Digivolve + ACE -5 + WhenAttacking ship; OnPlay mass trash blocked |
+| BT17-077 | Imperialdramon: Paladin Mode | PARTIAL | hybrid | Blast Digivolve + ACE -5 + WhenAttacking ship; Track E return-all-trash verb landed; OnPlay all-source trash / player-choice / returned-card rider still blocked |
 | BT17-097 | Return to the Primogenitor | PARTIAL | dsl | Replaced fixture; Delay replacement + Security ship; effect-initiated digivolve blocked |
 | BT20-020 | Imperialdramon: Fighter Mode | PARTIAL | dsl | Raid + Piercing + WhenDigivolving ship; security-loss DP-LTE-source blocked |
 | BT21-037 | Lighdramon | PARTIAL | engine | G-DECLARATIVE-KEYWORD blocks runtime keyword install |
@@ -51,12 +51,12 @@ Cumulative across all batches; see `qa/dsl-vocab-gaps.md` and `qa/archetype-qa/e
 - G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET (BT16-040, LM-030)
 - G-PRED-STACK-SIZE-LTE-SOURCE (BT16-027, BT16-025)
 - G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME (BT16-027, BT12-028)
-- G-DSL-TRASH-TOP-N-DIGI-CARDS (BT12-028, BT17-077)
+- G-DSL-TRASH-TOP-N-DIGI-CARDS (BT12-028) — closed 2026-05-09 as `trash_top_n_digivolution_cards_of_each`; BT17-077 still needs all-source mass trash under G-ASL-07.
 - G-DSL-IF-NO-TARGET (BT16-025, BT16-028)
 - G-IS-EFFECT-INITIATED (BT16-028)
 - G-FORMULA-SOURCE-DP (BT20-020)
 - G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME (BT12-031)
-- G-RETURN-ALL-TRASH-TO-DECK-BOTTOM (BT17-077)
+- G-RETURN-ALL-TRASH-TO-DECK-BOTTOM (BT17-077) — partially closed 2026-05-09 as `return_all_trash_to_deck_bottom: { of }`; BT17-077 still needs the printed "your or your opponent's trash" player-choice branch.
 - G-ANY-RETURNED-CARD-PREDICATE (BT17-077)
 - G-COST-REDUCE-ALLY-DIGIVOLVE (BT3-103)
 - G-COST-REDUCE-NEXT-SINGLE-FIRE (BT3-103)
@@ -73,7 +73,7 @@ Cumulative across all batches; see `qa/dsl-vocab-gaps.md` and `qa/archetype-qa/e
 - G-DECLARATIVE-KEYWORD (Phase 3 → BT21-037)
 - G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (EX4-060/BT22-015 → ST9-06)
 - G-DSL-IS-DNA-DIGIVOLVING (DNA Omnimon → BT12-028, BT16-085) — RESOLVED 2026-05-08 as `dna_origin: true`; BT16-085 still needs opponent-source selection for its DNA rider
-- G-ASL-07 (BT17-077 mass trash, sibling of G-DSL-TRASH-TOP-N-DIGI-CARDS)
+- G-ASL-07 (BT17-077 all-source mass trash; bounded top-N sibling closed by Track E)
 - G-DELAY-START-OF-TURN, G-PRED-DP-LTE, G-ZONE-TRASH-TO-DECK, G-OPTIONAL-SELECTION-CONTINUE-TAIL (LM-027/LM-029 → LM-030)
 
 ## Test Coverage Totals

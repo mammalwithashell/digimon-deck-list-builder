@@ -14,11 +14,8 @@
 //!   with `CannotSuspend` expiring at the end of the opponent's turn.
 //! - Trash-resident [All Turns] observer that exposes the optional choice to
 //!   digivolve a field [Sistermon Ciel] into this exact trash card for free.
-//!
-//! Known gaps:
-//! - PUPPETS-G027: end-of-all-turns top-stack-card to security movement needs a
-//!   faithful stack extraction to security-top primitive that does not leave an
-//!   invalid empty permanent when the top card is the only card in the stack.
+//! - End-of-all-turns movement of the top stacked card into security via the
+//!   Track E `security_place_top_stacked_card` DSL verb.
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
@@ -60,8 +57,8 @@ fn bt20_084_has_printed_stats_alt_path_and_supported_shared_lock_clause() {
 
     assert_eq!(
         compiled.effects.len(),
-        2,
-        "trash observer and shared lock clauses should both compile"
+        3,
+        "trash observer, shared lock, and end-of-all-turns stacked-card clauses should compile"
     );
     let trash_clause = compiled
         .effects
@@ -127,6 +124,28 @@ fn bt20_084_has_printed_stats_alt_path_and_supported_shared_lock_clause() {
             "target filter must accept opponent Digimon or Tamers"
         );
     }
+
+    let stacked_to_security = compiled
+        .effects
+        .iter()
+        .find_map(|effect| match effect {
+            CompiledClause::Triggered(clause)
+                if clause.when.contains(&CompiledTiming::EndOfYourTurn)
+                    && clause.when.contains(&CompiledTiming::EndOfOpponentsTurn) =>
+            {
+                Some(clause)
+            }
+            _ => None,
+        })
+        .expect("end-of-all-turns top-stacked-card-to-security clause");
+    assert!(matches!(
+        stacked_to_security.process.as_slice(),
+        [CompiledStep::SecurityPlaceTopStackedCard { carrier, of, position, face_up }]
+            if *carrier == digimon_dsl::compiled::CompiledBindingRef::Source
+                && *of == digimon_dsl::compiled::CompiledPlayerRef::You
+                && *position == digimon_dsl::compiled::CompiledStackPosition::Top
+                && *face_up
+    ));
 }
 
 #[test]
@@ -240,9 +259,43 @@ fn bt20_084_trash_observer_may_digivolve_sistermon_ciel_for_free_when_your_digim
 }
 
 #[test]
-#[ignore = "pending: PUPPETS-G027 — end-of-all-turns top-stack-card to top security needs faithful stack movement and empty-permanent cleanup"]
 fn bt20_084_end_of_all_turns_places_top_stacked_card_as_top_security() {
-    todo!("place BT20-084 on a stack, end either player's turn, assert the top stack card moves to your top security and the battle-area stack remains legal");
+    let mut runner = bt20_084_runner().start();
+    let carrier = runner.place_stack(0, &["SISTERMON-CIEL-BASE", "BT20-084"]);
+    let moved_card =
+        runner.game.players[0].battle_area[carrier.index as usize].card_sources[0].handle();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.game.players[0]
+            .security
+            .last()
+            .expect("security top")
+            .handle(),
+        moved_card,
+        "top stacked card below BT20-084 should become top security"
+    );
+    assert!(
+        runner.game.players[0]
+            .face_up_security
+            .contains(&moved_card.0),
+        "BT20-084 places the stacked card face-up"
+    );
+    let remaining_stack = &runner.game.players[0].battle_area[carrier.index as usize].card_sources;
+    assert_eq!(
+        remaining_stack.len(),
+        1,
+        "carrier must remain legal with its visible BT20-084 top card"
+    );
+    assert_eq!(
+        remaining_stack[0].card_id(&runner.game.card_data),
+        "BT20-084"
+    );
 }
 
 fn bt20_084_runner() -> DebugRunnerBuilder {

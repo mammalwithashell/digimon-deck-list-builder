@@ -612,6 +612,68 @@ fn validate_step(
                 });
             }
         }
+        StepSpec::PlacePermanentOnSecurityObserved(args) => {
+            validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
+        }
+        StepSpec::SecurityPlaceStackedCard(args) => {
+            validate_binding_ref(&args.carrier, &format!("{prefix}.carrier"), card_id, errors);
+            if args.source.is_none() && args.source_index_from_top.is_none() {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: prefix.into(),
+                    message: "security_place_stacked_card requires source or source_index_from_top"
+                        .into(),
+                });
+            }
+            if let Some(source) = &args.source {
+                validate_binding_ref(source, &format!("{prefix}.source"), card_id, errors);
+            }
+        }
+        StepSpec::SecurityPlaceTopStackedCard(args) => {
+            validate_binding_ref(&args.carrier, &format!("{prefix}.carrier"), card_id, errors);
+        }
+        StepSpec::TrashTopNDigivolutionCardsOfEach(args) => {
+            validate_formula(&args.n, &format!("{prefix}.n"), card_id, ctx, errors);
+        }
+        StepSpec::TrashOpponentHandToCount(args) => {
+            validate_formula(
+                &args.target_count,
+                &format!("{prefix}.target_count"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
+        StepSpec::SearchOwnSecurityStack(args) => {
+            validate_predicate(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                ctx,
+                errors,
+            );
+            if args.on_select.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.on_select"),
+                    message: "search_own_security_stack requires a non-empty on_select body".into(),
+                });
+            }
+            for (k, s) in args.on_select.iter().enumerate() {
+                validate_step(s, &format!("{prefix}.on_select[{k}]"), card_id, ctx, errors);
+            }
+            if let Some(no_match) = &args.on_no_match {
+                for (k, s) in no_match.iter().enumerate() {
+                    validate_step(
+                        s,
+                        &format!("{prefix}.on_no_match[{k}]"),
+                        card_id,
+                        ctx,
+                        errors,
+                    );
+                }
+            }
+        }
         StepSpec::SelectOwnPermanent(args) | StepSpec::SelectOpponentPermanent(args) => {
             validate_predicate(
                 &args.filter,

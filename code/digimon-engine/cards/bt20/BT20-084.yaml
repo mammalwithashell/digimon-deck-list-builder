@@ -49,3 +49,12 @@ effects:
           modifier: CannotSuspend
           value: 1
           expiry: end_of_opponents_turn
+
+  - when: [end_of_your_turn, end_of_opponents_turn]
+    summary: "[End of All Turns] Place this Digimon's top stacked card as your top security card"
+    process:
+      - security_place_top_stacked_card:
+          carrier: source
+          of: you
+          position: top
+          face: up

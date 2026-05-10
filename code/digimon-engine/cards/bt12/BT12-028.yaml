@@ -26,11 +26,10 @@ traits: [Dragonkin]
 # ─── Implementation status ───────────────────────────────────────────────────
 #
 # Clause 0a ([When Digivolving] trash top 3 divi-cards from all opp Digimon):
-#   BLOCKED on G-DSL-TRASH-TOP-N-DIGI-CARDS (qa/dsl-vocab-gaps.md).
-#   No DSL step trashes N source cards from *below* the top card of a target
-#   permanent while keeping the top card on the field. `trash_top_source`
-#   removes the actual top card; `de_digivolve` also pops the top card. Both
-#   produce wrong board state. Omitted per no-approximations.
+#   DSL VERB AVAILABLE as of 2026-05-09 via Track E
+#   `trash_top_n_digivolution_cards_of_each`, but this card remains a
+#   structural fixture until its DNA-origin follow-up and inherited predicate
+#   gaps are resolved together.
 #
 # Clause 0b ([When Digivolving] DNA sub-condition → CannotAttack):
 #   BLOCKED on G-DSL-IS-DNA-DIGIVOLVING (qa/dsl-vocab-gaps.md).
@@ -61,34 +60,19 @@ alt_paths:
     cost: 0
 
 effects:
-  # ─── ALL CLAUSES BLOCKED — no process body authored ──────────────────────
+  # ─── ALL RUNTIME CLAUSES STILL HELD AS CARD-LOCAL FOLLOW-UP WORK ────────
   #
-  # ─── Clause 0a — [When Digivolving] trash top 3 divi-cards (BLOCKED) ─────
+  # Clause 0a can now be expressed by the Track E verb:
   #
-  # Printed text:
-  #   "Trash the top 3 digivolution cards of all of your opponent's Digimon."
-  #
-  # DCGO: foreach (Permanent p in Enemy.GetBattleAreaDigimons())
-  #           TrashDigivolutionCardsFromTopOrBottom(p, trashCount: 3, isFromTop: true, ...)
-  #
-  # Intended DSL form (once G-DSL-TRASH-TOP-N-DIGI-CARDS closes):
   #   - when: when_digivolving
   #     process:
-  #       - for_each:
-  #           over:
-  #             of: opponent
-  #             zone: [battle_area]
-  #             kind: digimon
-  #           bind_as: opp_digi
-  #           body:
-  #             - trash_top_n_digivolution_cards:  # ← verb does not exist yet
-  #                 target: opp_digi
-  #                 count: 3
+  #       - trash_top_n_digivolution_cards_of_each:
+  #           of: opponent
+  #           n: 3
   #
-  # BLOCKED: no DSL step trashes N source cards from below the top card.
-  # `trash_top_source` removes card_sources.last() (the active Digimon card).
-  # `de_digivolve` also pops the top card (changing the active Digimon).
-  # Both produce incorrect board state. See G-DSL-TRASH-TOP-N-DIGI-CARDS.
+  # The active card fixture stays load-only until the DNA-origin follow-up
+  # and inherited carrier-name/trait predicate gaps are closed for the card
+  # as a whole.
   #
   # ─── Clause 0b — [When Digivolving] DNA sub-condition (BLOCKED) ──────────
   #

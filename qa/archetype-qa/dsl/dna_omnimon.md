@@ -68,7 +68,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | EX4-003 | Tsunomon | I | PARTIAL (hybrid) | 9/12 | DigiEgg G-INHERITED-DISPATCH + NEW G-DSL-EVENT-TARGET-IS-OTHER |
 | EX4-038 | Agumon | I | IMPLEMENTED | 12/14 | select_reveal_buckets + place_remainder top |
 | EX4-039 | Gabumon | I | IMPLEMENTED | 11/13 | Sister to EX4-038 |
-| EX4-060 | Omnimon Alter-S | I | PARTIAL (dsl) | 11/14 | [All Turns] BLOCKED on NEW G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES + G-PLACE-SELF-AT-SECURITY-BOTTOM |
+| EX4-060 | Omnimon Alter-S | I | PARTIAL (dsl) | 11/14 | [All Turns] sequential source plays + bottom-security replacement disposition are covered; remaining work is card-local source-play/generalization adoption |
 | EX4-061 | Matt/Tai Tamer | I | IMPLEMENTED | 21/24 | 21 pass / 3 ignored on G-COUNT-AGGREGATE etc. |
 | EX4-073 | Omnimon Alter-B | I | PARTIAL (dsl) | 6/13 | NEW G-MULTI-SELECT-OPP-PLAY-COST-SUM + G-DSL-SELECT-OWN-SOURCES-FILTER + G-PLAY-COST-AGGREGATE |
 | EX5-015 | Gabumon (X Antibody) | I | PARTIAL (dsl) | 10/14 | Inherited replacement BLOCKED on NEW G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH |
@@ -84,7 +84,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | ST2-13 | Hammer Spark | AE | AUDITED-OK | 14/14 | Trivial Option |
 | ST20-10 | Agumon | I | PARTIAL (dsl) | 8/13 | Warp-into-WarGreymon BLOCKED on NEW G-ALT-PATH-DIRECTION-INTO |
 | ST20-11 | WarGreymon | I | PARTIAL (dsl) | 8/15 | Tamer-color immunity BLOCKED on G-DSL-DISTINCT-TAMER-COLORS-FORMULA |
-| ST20-15 | Island of Adventure | I | PARTIAL (dsl) | 7/14 | Security-aura + main-shuffle BLOCKED on NEW G-PRED-NO-FACE-UP-SECURITY-NAMED + G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION |
+| ST20-15 | Island of Adventure | I | PARTIAL (dsl) | 7/14 | Main security swap now uses `place_self_option_at_security`; security-aura gate still blocked on NEW G-PRED-NO-FACE-UP-SECURITY-NAMED + G-SECURITY-ZONE-AURA-SOURCE |
 
 (Mode legend: I = IMPLEMENT, AE = AUDIT (existing _examples YAML), AP = AUDIT (existing production-path YAML))
 
@@ -111,9 +111,9 @@ Pipeline: batch-implement-cards-rust-dsl
 - G-DSL-HAS-ON-DELETION-EFFECT (EX1-021) — no predicate to filter permanents by [On Deletion] presence
 - G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT (EX1-068) — DSL only exposes static grants
 - G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (EX4-060, EX9-021) — narrowed 2026-05-08: BT22-015 single selected-source Decode, EX4-060 sequential named source plays, and EX9-021 End of Attack sequential source plays are closed; batch / different-name variants remain open.
-- G-PLACE-SELF-AT-SECURITY-BOTTOM (EX4-060) — face-down self-disposition
-- G-PLACE-SELF-AT-SECURITY-TOP (EX9-021) — closed 2026-05-08 via `place_permanent_on_security`; verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_021`
-- G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION (ST20-15) — Option-card variant
+- G-PLACE-SELF-AT-SECURITY-BOTTOM (EX4-060) — closed for reusable Track E DSL as `place_self_at_security: { position: bottom, face: down }`; EX4-060's replacement-body fixture continues to use the explicit replacement-aware placement path.
+- G-PLACE-SELF-AT-SECURITY-TOP (EX9-021) — closed 2026-05-09 for reusable Track E DSL via `place_self_at_security: { position: top, face: up }`; EX9-021's production card still uses its already-bound explicit placement tail.
+- G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION (ST20-15) — closed 2026-05-09 via `place_self_option_at_security: { position: top, face: up }`; remaining ST20-15 blockers are the face-up-security-name predicate and security-zone aura source.
 - G-DSL-IS-DNA-DIGIVOLVING (EX9-021) — RESOLVED 2026-05-08 as `dna_origin: true`; remaining EX9-021 blockers are card-local body/disposition gaps.
 - G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (BT22-015) — closed 2026-05-07 via color/level-gated `select_material` plus `play_from_materials`; verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_015_decode`
 - G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET (BT22-015) — closed 2026-05-07 via formula-bound `select_count_capped_multi` plus battle-area permanent-list picks. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_015_when_digivolving_bottom_decks_n_opp_digimon_per_same_level_pair`.

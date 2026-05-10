@@ -1,0 +1,39 @@
+card: BT19-075
+name: MoonMillenniummon
+kind: digimon
+level: 7
+color: [purple]
+cost: 15
+dp: 15000
+traits: [Wicked God]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: purple }
+    cost: 5
+
+# Printed text:
+# [On Play] [When Digivolving] Your opponent trashes cards in their hand until
+# they have 5 left. For every 2 cards trashed by this effect, delete 1 of your
+# opponent's Tamers.
+# [All Turns] When this Digimon would leave the battle area, by deleting 1 of
+# your Digimon with the [Composite] trait Digimon, it doesn't leave.
+# [All Turns] [Once Per Turn] When other Digimon or Tamers are deleted, trash
+# your opponent's top security card.
+#
+# Track E slice: the forced opponent hand-reduction verb is now native YAML.
+# Remaining card-local gaps:
+# - Tamer deletion rider needs a result count binding ("cards trashed by this effect").
+# - Leave replacement needs Composite self-side delete cost plus replacement cancel.
+# - Deleted observer body needs broad OnAnyDeletion fan-out/card-local tests.
+
+effects:
+  # Track E verb now available for the first printed sentence:
+  #
+  # - when: [on_play, when_digivolving]
+  #   process:
+  #     - trash_opponent_hand_to_count:
+  #         opponent: opponent
+  #         target_count: 5
+  #
+  # Kept load-only until the "for every 2 cards trashed by this effect"
+  # result binding and Tamer-deletion rider can land with this clause.

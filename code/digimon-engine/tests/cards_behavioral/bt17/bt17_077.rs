@@ -28,17 +28,14 @@
 //!
 //! - **G-ASL-07** (qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md):
 //!   Mass source cleanup and bottom-deck returns from trash. Three sub-clauses
-//!   of Clause 1 all depend on unrealized zone-iteration primitives:
+//!   of Clause 1 still need card-local wiring around the landed Track E verbs:
 //!     1a. "Trash all digivolution cards of all opponent Digimon" — needs
-//!         `for_each_opponent_permanent + trash_all_digivolution_cards`.
-//!     1b. "Return all cards from chosen trash to deck bottom" — needs
-//!         `return_all_trash_to_deck_bottom`.
+//!         an all-sources variant rather than bounded top-N.
+//!     1b. "Return all cards from chosen trash to deck bottom" — the
+//!         `return_all_trash_to_deck_bottom` verb exists, but the player-choice
+//!         binding over whose trash remains open.
 //!     1c. "If returned white Lv7 card, gain 3 memory" — needs
 //!         `any_returned_card` predicate on moved-card result.
-//!
-//! - **G-DSL-TRASH-TOP-N-DIGI-CARDS** (qa/dsl-vocab-gaps.md):
-//!   Sibling gap blocking bulk source trash (`trash_top_n_digivolution_cards`
-//!   step + engine primitive).
 //!
 //! # Patterns exercised
 //! - H12 Blast Digivolve (single-card hand-counter, `burst_digivolve` alt-path)
@@ -332,8 +329,7 @@ fn bt17_077_when_attacking_clause_condition_gates_on_opp_digimon_no_digi_cards()
 #[test]
 #[ignore = "pending: G-ASL-07 (qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md) \
             -- Clause 1 (mass trash sources + return trash to deck + conditional memory) \
-            is a commented stub in BT17-077.yaml until the gap closes. \
-            Also cross-refs G-DSL-TRASH-TOP-N-DIGI-CARDS (qa/dsl-vocab-gaps.md)."]
+            is a commented stub in BT17-077.yaml until the remaining choice/result gaps close."]
 fn bt17_077_has_on_play_when_digivolving_clause() {
     let c = compiled_bt17_077();
     let has_clause = c
@@ -480,8 +476,7 @@ fn bt17_077_when_attacking_skips_when_no_opp_digimon() {
 
 /// BLOCKED: On Play — trashes all opp digi sources (Clause 1a).
 #[test]
-#[ignore = "pending: G-ASL-07 -- Clause 1a stub; `trash_all_digivolution_cards` verb missing \
-            from DSL (qa/dsl-vocab-gaps.md G-DSL-TRASH-TOP-N-DIGI-CARDS)"]
+#[ignore = "pending: G-ASL-07 -- Clause 1a still needs an all-sources variant; bounded Track E trash_top_n_digivolution_cards_of_each is landed"]
 fn bt17_077_on_play_trashes_all_opp_digimon_sources() {
     let mut runner = paladin_runner();
 
@@ -529,8 +524,7 @@ fn bt17_077_on_play_trashes_all_opp_digimon_sources() {
 
 /// BLOCKED: On Play — player chooses whose trash to return (Clause 1b).
 #[test]
-#[ignore = "pending: G-ASL-07 -- Clause 1b requires `return_all_trash_to_deck_bottom` verb; \
-            also needs player choice prompt between your/opponent's trash"]
+#[ignore = "pending: G-ASL-07 -- Clause 1b has return_all_trash_to_deck_bottom, but still needs player choice prompt between your/opponent's trash"]
 fn bt17_077_on_play_prompts_player_to_choose_whose_trash_to_return() {
     let mut runner = paladin_runner();
 

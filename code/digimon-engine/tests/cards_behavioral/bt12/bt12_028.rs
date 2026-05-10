@@ -22,7 +22,9 @@
 //!
 //! # Clause coverage
 //! - Clause 0a ([When Digivolving] trash top 3 from all opp Digimon):
-//!     BLOCKED G-DSL-TRASH-TOP-N-DIGI-CARDS (qa/dsl-vocab-gaps.md)
+//!     REUSABLE VERB LANDED — `trash_top_n_digivolution_cards_of_each`; the
+//!     card remains load-only until the DNA follow-up and inherited predicate
+//!     blockers are wired into the full clause.
 //! - Clause 0b ([When Digivolving] DNA → CannotAttack 2 targets):
 //!     BLOCKED G-DSL-IS-DNA-DIGIVOLVING (qa/dsl-vocab-gaps.md)
 //! - Clause 1  ([Inherited][End of Attack] gain memory if carrier name/trait):
@@ -30,7 +32,7 @@
 //!
 //! # Patterns covered
 //! - G2: DNA digivolve alt-path (dna_digivolve with two materials)
-//! - for_each over opponent Digimon (intended; blocked on G-DSL-TRASH-TOP-N-DIGI-CARDS)
+//! - Track E reusable source-trashing verb is covered by the DSL zone-movement tests.
 //! - Inherited End of Attack conditional memory gain (blocked on G-DSL-SOURCE-NAME-CONTAINS)
 
 use digimon_dsl::compiled::{CompiledAltPathKind, CompiledScope, CompiledTiming};
@@ -71,33 +73,23 @@ fn bt12_028_has_dna_digivolve_alt_path() {
 }
 
 #[test]
-fn bt12_028_has_no_effects_due_to_all_clauses_blocked() {
-    // All three clauses are blocked on DSL gaps; the YAML authors no effect
-    // entries. The compiled card should have zero triggered/declarative clauses.
+fn bt12_028_notes_native_trash_top_n_verb_but_keeps_runtime_clauses_blocked() {
     let runner = paildramon();
     let compiled = runner.compiled_card("BT12-028").expect("BT12-028 compiled");
-
     assert_eq!(
         compiled.effects.len(),
         0,
-        "BT12-028 has no effect entries — all clauses blocked on DSL gaps"
+        "BT12-028 remains load-only until card-local DNA and inherited predicate gaps close"
     );
 }
 
-// ─── §2 Behavioral — Clause 0a: trash top 3 divi-cards (BLOCKED) ──────────
+// ─── §2 Behavioral — Clause 0a: trash top 3 divi-cards (deferred card wiring) ─
 
-/// BLOCKED on G-DSL-TRASH-TOP-N-DIGI-CARDS.
+/// The reusable Track E verb has landed; this card-local body is still deferred
+/// until the following DNA-gated CannotAttack branch can be authored alongside it.
 ///
-/// No DSL step trashes N source cards from *below* the top card of a target
-/// permanent. The intended primitive would be `trash_top_n_digivolution_cards`
-/// which removes up to N cards from `card_sources[..len-1]` (below the top),
-/// keeping the active Digimon card on the field.
-///
-/// `trash_top_source` removes `card_sources.last()` (the top card itself),
-/// de-activating the Digimon. `de_digivolve` similarly pops the top card.
-/// Both are wrong for "Trash the top 3 digivolution cards" semantics.
 #[test]
-#[ignore = "pending: G-DSL-TRASH-TOP-N-DIGI-CARDS from qa/dsl-vocab-gaps.md — no DSL verb trashes N source cards from below the top card while keeping the Digimon on the field"]
+#[ignore = "pending: BT12-028 card-local wiring after G-DSL-IS-DNA-DIGIVOLVING / CannotAttack follow-up; reusable trash_top_n_digivolution_cards_of_each verb is landed"]
 fn bt12_028_when_digivolving_trashes_top_3_source_cards_from_each_opponent_digimon() {
     // Intended test body (once gap closes):
     //
@@ -112,7 +104,7 @@ fn bt12_028_when_digivolving_trashes_top_3_source_cards_from_each_opponent_digim
 }
 
 #[test]
-#[ignore = "pending: G-DSL-TRASH-TOP-N-DIGI-CARDS from qa/dsl-vocab-gaps.md — fires OnDigivolutionCardTrashed per source removed"]
+#[ignore = "pending: BT12-028 card-local wiring after DNA follow-up; reusable Track E source-trash verb fires OnDigivolutionCardTrashed in zone_movement_verbs coverage"]
 fn bt12_028_when_digivolving_fires_on_digivolution_card_trashed_per_source() {
     // Intended: each of the 3 trashed sources fires OnDigivolutionCardTrashed.
     // For an opponent Digimon with 3+ divi cards, exactly 3 events must fire.

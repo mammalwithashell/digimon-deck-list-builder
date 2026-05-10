@@ -1570,6 +1570,15 @@ fn compile_step(
                 of: compile_player_ref(a.of),
             }
         }
+        S::BounceSelf(_) => CompiledStep::BounceSelf,
+        S::PlaceSelfAtSecurity(a) => CompiledStep::PlaceSelfAtSecurity {
+            position: compile_stack_position(a.position),
+            face_up: a.face.is_up(),
+        },
+        S::PlaceSelfOptionAtSecurity(a) => CompiledStep::PlaceSelfOptionAtSecurity {
+            position: compile_stack_position(a.position),
+            face_up: a.face.is_up(),
+        },
         S::PlacePermanentBottomSecurityAndCancelReplacement(a) => {
             CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement {
                 of: compile_player_ref(a.of),
@@ -1590,6 +1599,79 @@ fn compile_step(
                 face_up: a.face_up,
             }
         }
+        S::PlacePermanentOnSecurityObserved(a) => CompiledStep::PlacePermanentOnSecurityObserved {
+            of: compile_player_ref(a.of),
+            target: compile_binding_ref(&a.target),
+            position: compile_stack_position(a.position),
+            face_up: a.face.is_up(),
+            include_sources: a.include_sources,
+        },
+        S::SecurityPlaceStackedCard(a) => {
+            if a.source.is_none() && a.source_index_from_top.is_none() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.security_place_stacked_card"),
+                    message: "security_place_stacked_card requires source or source_index_from_top"
+                        .to_string(),
+                });
+            }
+            CompiledStep::SecurityPlaceStackedCard {
+                carrier: compile_binding_ref(&a.carrier),
+                source: a.source.as_ref().map(compile_binding_ref),
+                source_index_from_top: a.source_index_from_top,
+                of: compile_player_ref(a.of),
+                position: compile_stack_position(a.position),
+                face_up: a.face.is_up(),
+            }
+        }
+        S::SecurityPlaceTopStackedCard(a) => CompiledStep::SecurityPlaceTopStackedCard {
+            carrier: compile_binding_ref(&a.carrier),
+            of: compile_player_ref(a.of),
+            position: compile_stack_position(a.position),
+            face_up: a.face.is_up(),
+        },
+        S::ReturnAllTrashToDeckBottom(a) => CompiledStep::ReturnAllTrashToDeckBottom {
+            of: compile_player_ref(a.of),
+        },
+        S::TrashTopNDigivolutionCardsOfEach(a) => CompiledStep::TrashTopNDigivolutionCardsOfEach {
+            of: compile_player_ref(a.of),
+            n: compile_formula(&a.n, &format!("{prefix}.n"), card_id, errors),
+        },
+        S::TrashOpponentHandToCount(a) => CompiledStep::TrashOpponentHandToCount {
+            opponent: compile_player_ref(a.opponent),
+            target_count: compile_formula(
+                &a.target_count,
+                &format!("{prefix}.target_count"),
+                card_id,
+                errors,
+            ),
+        },
+        S::SearchOwnSecurityStack(a) => CompiledStep::SearchOwnSecurityStack {
+            filter: Box::new(compile_predicate(
+                &a.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                errors,
+            )),
+            prompt: a.prompt.clone(),
+            bind_as: a.bind_as.clone(),
+            optional: a.optional,
+            on_select: a
+                .on_select
+                .iter()
+                .enumerate()
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.on_select[{i}]"), card_id, errors))
+                .collect(),
+            on_no_match: a.on_no_match.as_ref().map(|steps| {
+                steps
+                    .iter()
+                    .enumerate()
+                    .map(|(i, s)| {
+                        compile_step(s, &format!("{prefix}.on_no_match[{i}]"), card_id, errors)
+                    })
+                    .collect()
+            }),
+        },
         S::Recover(a) => CompiledStep::Recover {
             of: compile_player_ref(a.of),
             count: a.count,

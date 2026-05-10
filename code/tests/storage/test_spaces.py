@@ -8,9 +8,9 @@ import boto3
 import pytest
 from botocore.client import Config as BotocoreConfig
 from botocore.exceptions import ClientError
-from moto import mock_aws
 
 from server.storage import spaces
+from tests.moto_compat import mock_aws
 
 # ---------------------------------------------------------------------------
 # Constants shared by all tests

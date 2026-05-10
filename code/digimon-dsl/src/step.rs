@@ -117,9 +117,19 @@ pub enum StepSpec {
     // Security
     TrashTopSecurity(PlayerArg),
     TrashTopSecurityAndCancelReplacement(PlayerArg),
+    BounceSelf(EmptyArgs),
+    PlaceSelfAtSecurity(SelfSecurityPlacementArgs),
+    PlaceSelfOptionAtSecurity(SelfSecurityPlacementArgs),
     PlacePermanentBottomSecurityAndCancelReplacement(PlacePermanentSecurityReplacementArgs),
     PlacePermanentOnSecurity(PlacePermanentOnSecurityReplacementArgs),
     PlacePermanentOnSecurityAndHandleReplacement(PlacePermanentOnSecurityReplacementArgs),
+    PlacePermanentOnSecurityObserved(PlacePermanentOnSecurityObservedArgs),
+    SecurityPlaceStackedCard(SecurityPlaceStackedCardArgs),
+    SecurityPlaceTopStackedCard(SecurityPlaceTopStackedCardArgs),
+    ReturnAllTrashToDeckBottom(PlayerArg),
+    TrashTopNDigivolutionCardsOfEach(TrashTopNDigivolutionCardsOfEachArgs),
+    TrashOpponentHandToCount(TrashOpponentHandToCountArgs),
+    SearchOwnSecurityStack(SearchOwnSecurityStackArgs),
     Recover(DrawArgs),
     MarkSecurityFaceUp(MarkSecurityArgs),
 
@@ -248,6 +258,11 @@ impl Serialize for StepSpec {
             StepSpec::TrashTopSecurityAndCancelReplacement(v) => {
                 kv!(s, "trash_top_security_and_cancel_replacement", v)
             }
+            StepSpec::BounceSelf(v) => kv!(s, "bounce_self", v),
+            StepSpec::PlaceSelfAtSecurity(v) => kv!(s, "place_self_at_security", v),
+            StepSpec::PlaceSelfOptionAtSecurity(v) => {
+                kv!(s, "place_self_option_at_security", v)
+            }
             StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(v) => {
                 kv!(
                     s,
@@ -259,6 +274,21 @@ impl Serialize for StepSpec {
             StepSpec::PlacePermanentOnSecurityAndHandleReplacement(v) => {
                 kv!(s, "place_permanent_on_security_and_handle_replacement", v)
             }
+            StepSpec::PlacePermanentOnSecurityObserved(v) => {
+                kv!(s, "place_permanent_on_security_observed", v)
+            }
+            StepSpec::SecurityPlaceStackedCard(v) => kv!(s, "security_place_stacked_card", v),
+            StepSpec::SecurityPlaceTopStackedCard(v) => {
+                kv!(s, "security_place_top_stacked_card", v)
+            }
+            StepSpec::ReturnAllTrashToDeckBottom(v) => {
+                kv!(s, "return_all_trash_to_deck_bottom", v)
+            }
+            StepSpec::TrashTopNDigivolutionCardsOfEach(v) => {
+                kv!(s, "trash_top_n_digivolution_cards_of_each", v)
+            }
+            StepSpec::TrashOpponentHandToCount(v) => kv!(s, "trash_opponent_hand_to_count", v),
+            StepSpec::SearchOwnSecurityStack(v) => kv!(s, "search_own_security_stack", v),
             StepSpec::Recover(v) => kv!(s, "recover", v),
             StepSpec::MarkSecurityFaceUp(v) => kv!(s, "mark_security_face_up", v),
             // Modifiers
@@ -409,6 +439,11 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_top_security_and_cancel_replacement" => {
                 StepSpec::TrashTopSecurityAndCancelReplacement(map.next_value()?)
             }
+            "bounce_self" => StepSpec::BounceSelf(map.next_value()?),
+            "place_self_at_security" => StepSpec::PlaceSelfAtSecurity(map.next_value()?),
+            "place_self_option_at_security" => {
+                StepSpec::PlaceSelfOptionAtSecurity(map.next_value()?)
+            }
             "place_permanent_bottom_security_and_cancel_replacement" => {
                 StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(map.next_value()?)
             }
@@ -416,6 +451,21 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_permanent_on_security_and_handle_replacement" => {
                 StepSpec::PlacePermanentOnSecurityAndHandleReplacement(map.next_value()?)
             }
+            "place_permanent_on_security_observed" => {
+                StepSpec::PlacePermanentOnSecurityObserved(map.next_value()?)
+            }
+            "security_place_stacked_card" => StepSpec::SecurityPlaceStackedCard(map.next_value()?),
+            "security_place_top_stacked_card" => {
+                StepSpec::SecurityPlaceTopStackedCard(map.next_value()?)
+            }
+            "return_all_trash_to_deck_bottom" => {
+                StepSpec::ReturnAllTrashToDeckBottom(map.next_value()?)
+            }
+            "trash_top_n_digivolution_cards_of_each" => {
+                StepSpec::TrashTopNDigivolutionCardsOfEach(map.next_value()?)
+            }
+            "trash_opponent_hand_to_count" => StepSpec::TrashOpponentHandToCount(map.next_value()?),
+            "search_own_security_stack" => StepSpec::SearchOwnSecurityStack(map.next_value()?),
             "recover" => StepSpec::Recover(map.next_value()?),
             "mark_security_face_up" => StepSpec::MarkSecurityFaceUp(map.next_value()?),
 
@@ -524,9 +574,19 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "effect_initiated_dna_digivolve",
                         "trash_top_security",
                         "trash_top_security_and_cancel_replacement",
+                        "bounce_self",
+                        "place_self_at_security",
+                        "place_self_option_at_security",
                         "place_permanent_bottom_security_and_cancel_replacement",
                         "place_permanent_on_security",
                         "place_permanent_on_security_and_handle_replacement",
+                        "place_permanent_on_security_observed",
+                        "security_place_stacked_card",
+                        "security_place_top_stacked_card",
+                        "return_all_trash_to_deck_bottom",
+                        "trash_top_n_digivolution_cards_of_each",
+                        "trash_opponent_hand_to_count",
+                        "search_own_security_stack",
                         "recover",
                         "mark_security_face_up",
                         "add_dp_modifier",
@@ -806,6 +866,26 @@ pub enum StackPosition {
     Random,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SecurityFace {
+    Up,
+    Down,
+}
+
+impl SecurityFace {
+    pub fn is_up(self) -> bool {
+        matches!(self, Self::Up)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelfSecurityPlacementArgs {
+    pub position: StackPosition,
+    pub face: SecurityFace,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct RevealArgs {
@@ -861,6 +941,76 @@ pub struct PlacePermanentOnSecurityReplacementArgs {
     pub position: StackPosition,
     #[serde(default)]
     pub face_up: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlacePermanentOnSecurityObservedArgs {
+    #[serde(default = "default_player_ref_you")]
+    pub of: PlayerRef,
+    pub target: BindingRef,
+    pub position: StackPosition,
+    pub face: SecurityFace,
+    #[serde(default)]
+    pub include_sources: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SecurityPlaceStackedCardArgs {
+    pub carrier: BindingRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source: Option<BindingRef>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub source_index_from_top: Option<u8>,
+    #[serde(default = "default_player_ref_you", alias = "target_player")]
+    pub of: PlayerRef,
+    pub position: StackPosition,
+    pub face: SecurityFace,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SecurityPlaceTopStackedCardArgs {
+    pub carrier: BindingRef,
+    #[serde(default = "default_player_ref_you", alias = "target_player")]
+    pub of: PlayerRef,
+    pub position: StackPosition,
+    pub face: SecurityFace,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashTopNDigivolutionCardsOfEachArgs {
+    #[serde(alias = "target_player")]
+    pub of: PlayerRef,
+    pub n: crate::formula::FormulaSpec,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashOpponentHandToCountArgs {
+    pub opponent: PlayerRef,
+    pub target_count: crate::formula::FormulaSpec,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SearchOwnSecurityStackArgs {
+    pub filter: PredicateSpec,
+    #[serde(default = "default_search_own_security_prompt")]
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+    pub on_select: Vec<StepSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub on_no_match: Option<Vec<StepSpec>>,
+}
+
+fn default_search_own_security_prompt() -> String {
+    "Choose a card in your security".to_string()
 }
 
 fn default_player_ref_you() -> PlayerRef {

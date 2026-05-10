@@ -10,7 +10,6 @@ import boto3
 import pytest
 from botocore.client import Config as BotocoreConfig
 from httpx import ASGITransport, AsyncClient
-from moto import mock_aws
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -18,6 +17,7 @@ from server.db.auth import ROLE_ADMIN, assign_role_to_user
 from server.db.database import get_db
 from server.db.models import AppRelease, AppReleaseArtifact, Base, User
 from server.storage import spaces
+from tests.moto_compat import mock_aws
 
 # ---------------------------------------------------------------------------
 # Moto / Spaces constants (mirror test_admin_models.py)

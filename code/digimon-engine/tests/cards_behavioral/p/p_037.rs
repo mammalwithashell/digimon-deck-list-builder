@@ -345,8 +345,11 @@ fn p_037_delay_activation_gains_2_memory_when_played_as_delay_option() {
 
     assert_eq!(
         runner.game.play_option_from_hand(0, 0),
-        OptionPlayResult::Trashed
+        OptionPlayResult::Pending
     );
+    runner
+        .auto_resolve()
+        .expect("resolve P-037 reveal selection and delay placement");
     assert!(
         runner
             .game

@@ -15,6 +15,23 @@ fn main() {
     println!("cargo:rerun-if-changed=cards");
     println!("cargo:rerun-if-changed=build.rs");
 
+    let manifest_path =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("windows-test-as-invoker.manifest");
+    println!("cargo:rerun-if-changed={}", manifest_path.display());
+    if std::env::var("CARGO_CFG_TARGET_OS").as_deref() == Ok("windows")
+        && std::env::var("CARGO_CFG_TARGET_ENV").as_deref() == Ok("msvc")
+    {
+        // Windows UAC heuristically treats test binaries with names such as
+        // `timing_dispatch` as installer/patcher executables unless they
+        // carry an explicit execution level. Embed a neutral test manifest so
+        // `cargo test` can run all integration binaries from a normal shell.
+        println!("cargo:rustc-link-arg-tests=/MANIFEST:EMBED");
+        println!(
+            "cargo:rustc-link-arg-tests=/MANIFESTINPUT:{}",
+            manifest_path.display()
+        );
+    }
+
     let cards_root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("cards");
     let out_dir = PathBuf::from(std::env::var_os("OUT_DIR").expect("OUT_DIR set by cargo"));
     let pack_path = out_dir.join("cards.pack");
