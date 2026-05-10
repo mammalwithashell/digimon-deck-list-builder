@@ -116,3 +116,4 @@ mod selection_dp_extrema;
 mod source_stack_aggregates;
 mod standalone_declaratives_exit;
 mod validator;
+mod zone_movement_verbs;

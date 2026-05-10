@@ -2,13 +2,17 @@
 //! `AddToHandFromDeck`, `AddToHandFromTrash`, and the reveal-pool / security-mark
 //! family added in Task 5.
 
-use digimon_dsl::compiled::{CompiledStep, CompiledZone};
+use digimon_dsl::compiled::{CompiledFormula, CompiledPredicate, CompiledStep, CompiledZone};
+use std::sync::Arc;
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
-use crate::dsl_cards::step::resolve_player;
-use crate::effect_context::EffectContext;
+use crate::dsl_cards::formula_eval;
+use crate::dsl_cards::predicate::{eval_predicate_with_bindings, PredicateSubject};
+use crate::dsl_cards::step::{resolve_player, run_steps_with_runtime, StepRuntime};
+use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{GamePhase, PlayerId};
+use crate::permanent::PermanentHandle;
 use crate::selection::{PendingSelection, SelectionKind};
 
 fn singleton_card(resolved: ResolvedBinding) -> Option<crate::card_source::CardHandle> {
@@ -75,8 +79,27 @@ fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_play
 ///
 /// Changed in Task 5: third parameter is now `&mut Bindings` so that
 /// `RevealTopDeck` can produce a named binding for the revealed card.
-pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut Bindings) -> bool {
+pub fn try_run(
+    step: &CompiledStep,
+    ctx: &mut EffectContext<'_>,
+    bindings: &mut Bindings,
+    runtime: &StepRuntime,
+) -> bool {
     match step {
+        CompiledStep::BounceSelf => {
+            let _ = ctx.bounce_self();
+            true
+        }
+        CompiledStep::PlaceSelfAtSecurity { position, face_up } => {
+            let position = super::map_stack_position(*position);
+            let _ = ctx.place_self_at_security(position, *face_up);
+            true
+        }
+        CompiledStep::PlaceSelfOptionAtSecurity { position, face_up } => {
+            let position = super::map_stack_position(*position);
+            let _ = ctx.place_self_option_at_security(position, *face_up);
+            true
+        }
         CompiledStep::AddToHandFromTrash { of, card } => {
             let Some(resolved) = resolve_binding_ref(card, ctx, bindings) else {
                 return true;
@@ -274,7 +297,222 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::PlacePermanentOnSecurityObserved {
+            of,
+            target,
+            position,
+            face_up,
+            include_sources,
+        } => {
+            let player = resolve_player(ctx, *of);
+            if let Some(ResolvedBinding::Permanent(handle)) =
+                resolve_binding_ref(target, ctx, bindings)
+            {
+                let position = super::map_stack_position(*position);
+                if *include_sources {
+                    let _ = ctx.game.place_permanent_on_security_observed(
+                        player, handle, position, *face_up, ctx.player,
+                    );
+                } else {
+                    let _ = ctx.place_permanent_on_security(player, handle, position, *face_up);
+                }
+            }
+            true
+        }
+        CompiledStep::SecurityPlaceStackedCard {
+            carrier,
+            source,
+            source_index_from_top,
+            of,
+            position,
+            face_up,
+        } => {
+            let target_player = resolve_player(ctx, *of);
+            let position = super::map_stack_position(*position);
+            let Some(ResolvedBinding::Permanent(carrier)) =
+                resolve_binding_ref(carrier, ctx, bindings)
+            else {
+                return true;
+            };
+            let source_card = source
+                .as_ref()
+                .and_then(|source| match resolve_binding_ref(source, ctx, bindings) {
+                    Some(ResolvedBinding::Card(card)) => Some(card),
+                    _ => None,
+                })
+                .or_else(|| source_index_from_top.and_then(|i| source_from_top(ctx, carrier, i)));
+            if let Some(source_card) = source_card {
+                let _ = ctx.security_place_stacked_card(
+                    carrier,
+                    source_card,
+                    target_player,
+                    position,
+                    *face_up,
+                );
+            }
+            true
+        }
+        CompiledStep::SecurityPlaceTopStackedCard {
+            carrier,
+            of,
+            position,
+            face_up,
+        } => {
+            let target_player = resolve_player(ctx, *of);
+            if let Some(ResolvedBinding::Permanent(carrier)) =
+                resolve_binding_ref(carrier, ctx, bindings)
+            {
+                let position = super::map_stack_position(*position);
+                let _ =
+                    ctx.security_place_top_stacked_card(carrier, target_player, position, *face_up);
+            }
+            true
+        }
+        CompiledStep::ReturnAllTrashToDeckBottom { of } => {
+            let player = resolve_player(ctx, *of);
+            let _ = ctx.return_all_trash_to_deck_bottom(player);
+            true
+        }
+        CompiledStep::TrashTopNDigivolutionCardsOfEach { of, n } => {
+            let player = resolve_player(ctx, *of);
+            let n = formula_to_u8(n, ctx, bindings);
+            let _ = ctx.trash_top_n_digivolution_cards_of_each(player, n);
+            true
+        }
+        CompiledStep::TrashOpponentHandToCount {
+            opponent,
+            target_count,
+        } => {
+            let opponent = resolve_player(ctx, *opponent);
+            let target_count = formula_to_u8(target_count, ctx, bindings);
+            let _ = ctx.trash_opponent_hand_to_count(opponent, target_count);
+            true
+        }
+        CompiledStep::SearchOwnSecurityStack {
+            filter,
+            prompt,
+            bind_as,
+            optional,
+            on_select,
+            on_no_match,
+        } => {
+            install_search_own_security_stack(
+                ctx,
+                bindings,
+                runtime,
+                filter,
+                prompt,
+                bind_as.clone(),
+                *optional,
+                on_select.clone(),
+                on_no_match.clone(),
+            );
+            true
+        }
 
         _ => false,
     }
+}
+
+fn source_from_top(
+    ctx: &EffectContext<'_>,
+    carrier: PermanentHandle,
+    index_from_top: u8,
+) -> Option<crate::card_source::CardHandle> {
+    let perm = ctx
+        .game
+        .player(carrier.player)
+        .battle_area
+        .get(carrier.index as usize)?;
+    let top_stacked_offset = 2usize + index_from_top as usize;
+    let idx = perm.card_sources.len().checked_sub(top_stacked_offset)?;
+    Some(perm.card_sources[idx].handle())
+}
+
+fn formula_to_u8(formula: &CompiledFormula, ctx: &EffectContext<'_>, bindings: &Bindings) -> u8 {
+    let target = ctx.source_permanent.unwrap_or(PermanentHandle {
+        player: ctx.player,
+        index: 0,
+    });
+    formula_eval::evaluate_with_bindings(formula, ctx, target, Some(bindings))
+        .clamp(0, u8::MAX as i32) as u8
+}
+
+fn security_matches(
+    filter: &CompiledPredicate,
+    game: &crate::game::Game,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    player: PlayerId,
+    card: crate::card_source::CardHandle,
+    bindings: &Bindings,
+) -> bool {
+    let read = EffectReadContext::new(game, source_card, source_permanent, player);
+    eval_predicate_with_bindings(filter, &read, PredicateSubject::Card(card), Some(bindings))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_search_own_security_stack(
+    ctx: &mut EffectContext<'_>,
+    bindings: &mut Bindings,
+    runtime: &StepRuntime,
+    filter: &CompiledPredicate,
+    prompt: &str,
+    bind_as: Option<String>,
+    optional: bool,
+    on_select: Vec<CompiledStep>,
+    on_no_match: Option<Vec<CompiledStep>>,
+) {
+    let player = ctx.player;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let filter_for_precheck = filter.clone();
+    let has_match = ctx.game.player(player).security.iter().any(|card| {
+        security_matches(
+            &filter_for_precheck,
+            ctx.game,
+            source_card,
+            source_permanent,
+            player,
+            card.handle(),
+            bindings,
+        )
+    });
+
+    if !has_match {
+        if let Some(no_match) = on_no_match {
+            run_steps_with_runtime(&no_match, ctx, bindings, runtime);
+        }
+        return;
+    }
+
+    let filter_for_select = filter.clone();
+    let filter_bindings = bindings.clone();
+    let tail = Arc::new(on_select);
+    let runtime = runtime.clone();
+    let callback_bindings = bindings.clone();
+    ctx.search_own_security_stack(
+        prompt,
+        optional,
+        move |game, card| {
+            security_matches(
+                &filter_for_select,
+                game,
+                source_card,
+                source_permanent,
+                player,
+                card.handle(),
+                &filter_bindings,
+            )
+        },
+        move |cb_ctx, idx| {
+            let mut b = callback_bindings.clone();
+            if let Some(name) = &bind_as {
+                if let Some(card) = cb_ctx.game.player(player).security.get(idx) {
+                    b.insert_card(name, card.handle());
+                }
+            }
+            run_steps_with_runtime(&tail, cb_ctx, &mut b, &runtime);
+        },
+    );
 }
