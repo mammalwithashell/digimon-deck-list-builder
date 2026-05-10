@@ -927,6 +927,108 @@ Runner methods:
 
 ---
 
+## 8a. Testing patterns — cleanup discipline (2026-05-10)
+
+Three patterns to maintain cross-track health as the engine scales.
+Each has a worked example in the engine's own tests; reach for these
+on the corresponding situations.
+
+### Owner-routing live-coverage harness
+
+When a Track lands a fix that depends on `CardSource.owner` routing
+(e.g. PR #453's `return_to_hand` / `return_to_deck` owner consult),
+the fix may be **dormant** — no card mechanic produces
+`owner != controller` today, so the routing path has no live
+coverage by default.
+
+The fix needs an end-to-end test that exercises the routing through a
+real `EffectContext` call, not a direct mutation. Use the synthetic
+`DebugRunner::transfer_control` helper to seed the
+`owner != controller` shape:
+
+```rust
+let h = r.place_on_field(0, "OWNED_BY_P0", Some(0));
+let h_transferred = r.transfer_control(h, /* to */ 1);
+// h_transferred.player == 1 (controller)
+// top.owner == 0 (preserved)
+let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, 1);
+let returned = ctx.return_to_hand(h_transferred);
+assert!(r.hand_size(0) == p0_hand_before + 1); // owner-routed
+```
+
+Worked example: [code/digimon-engine/tests/owner_routing_live.rs](../code/digimon-engine/tests/owner_routing_live.rs).
+The helper is gated behind `#[cfg(any(test, feature = "test-helpers"))]`
+so production code can't accidentally invoke it. When a real
+control-transfer card lands, mark the helper deprecated and migrate
+the harness to use the real card.
+
+**When to apply:** every Track that touches owner / controller
+distinction must add the corresponding live-coverage test in the same
+PR. The class of bug being guarded against is "the fix lands but no
+card flow exercises it; the fix breaks silently months later."
+
+### Tracker-hygiene sweep cadence
+
+Every 5–10 PRs, cross-reference per-archetype gap rollups
+(`qa/archetype-qa/dsl/*.md`, `qa/archetype-qa/engine-gaps.md`)
+against landed PR bodies. PR-body-vs-tracker drift compounds: agents
+authoring cards consult the rollups to decide which mechanics need
+`raw_rust` vs. YAML, and stale rollups produce wrong-shape PRs.
+
+Build the closure index from the PR bodies (which list what landed
+and what was deferred), then walk each tracker entry. For each:
+- Closed by a PR → mark closed with the closing PR + the test
+  command.
+- Workaround now expressible in YAML (because the verb landed) →
+  demote the `raw_rust` carve-out note.
+- Open and current → leave open with a brief currency note.
+- Tracker claim disagrees with engine state → high-value finding;
+  flag for follow-up rather than silently "fixing" by editing.
+
+The sweep is annotation-only — no engine code changes. If you find a
+primitive the tracker says is missing AND it's actually missing,
+that's a separate gap-filing PR.
+
+Worked example: pre-scaling cleanup batch §2, with sweep markers
+landed across `qa/archetype-qa/engine-gaps.md`,
+`qa/archetype-qa/dsl/*.md` (19 rollups), `qa/dsl-vocab-gaps.md`,
+`docs/RUST_ENGINE_GAPS.md`, and `docs/RUST_PYTHON_PARITY.md`.
+
+### Failure-mode audit pattern
+
+When a regression-fix PR lands surgical fixes for a cluster of
+failing tests (e.g. PR #456's 67 fixes targeting reveal-and-bottom,
+Delay-option placement, `CannotPlayDigimonByEffect` floodgate,
+scheduled-effect queue, pure memory ±N, effect-driven play), add
+2–3 **adjacent** edge-case tests for each cluster. The surgical fix
+proves the failing tests pass; the adjacent tests guard against
+"regression fixed by accident" — the same code path is exercised at
+slightly different state, and the audit catches failure modes that
+happened not to fail in the original reds.
+
+Examples (all landed in pre-scaling cleanup §3):
+- Floodgate cluster (`CannotPlayDigimonByEffect`): natural plays
+  from hand bypass the gate (it's effect-only); modifier clears at
+  exactly the opp-turn-end boundary.
+- Scheduled-effect cluster: two `gain → schedule` plays in same
+  turn produce two schedules, both drain at EOT; schedule does NOT
+  fire at end of opponent's turn.
+- Pure memory ±N cluster: gain at upper clamp clamps to
+  `rules.memory_range.1`; gain blocked by permanent-scoped
+  `CannotAddMemory`; gain blocked by player-scoped
+  `CannotGainMemoryByEffect`.
+
+**When to apply:** any regression-fix PR that lands ≥10 surgical
+fixes warrants a follow-up audit. Adjacent tests landed under the
+same fixture file as the original (`bt8_097.rs`, etc.) keep test
+discoverability tight.
+
+If an adjacent test fails on landing, that's a real regression — file
+as a bug-fix follow-up; do NOT patch inline as part of the audit.
+Surgical fixes preserve commit-history clarity.
+
+---
+
 ## Phase 5 — Cost-Reduction Builder Hooks
 
 Added in Phase 5 to support closure-valued dynamic cost reduction and a synchronous pay-cost gate on triggered effects. These unblock ~50 cards across Rocks, Dark Masters, and TS Olympos whose cost-reduction predicates read live game state (trash count, trait presence, field state) and cannot be expressed as static `.cost_reduction(n)` values.
@@ -1462,7 +1564,8 @@ Options are *ephemeral*: they do not normally live on the field. The exceptions 
 The resolver's default Plug-In carrier capacity is 5 linked cards plus any
 `ChangeLinkMax` modifier delta, clamped at zero. This matches the linked-card
 tensor capacity and keeps multiple Plug-Ins independently visible unless a
-modifier narrows the host.
+modifier narrows the host. Lifecycle entry points that insert or re-link a
+Plug-In enforce this same capacity before mutating the carrier.
 
 ### Shape types added in Task 1
 
@@ -1548,14 +1651,18 @@ move an Option into or out of persistent lifecycle state:
 |-------------|-----|
 | `Game::install_field_option_as_delay(card, controller, placed_turn)` | Places a resolving Option as a Delay permanent, dispatches `OnOptionPlaced`, and exposes `OptionFieldState::Delay`. Same-turn activation is false by default because `can_activate_this_turn` is derived from `turn_count > placed_turn`. |
 | `Game::install_field_option_as_ordinary(card, controller)` | Places a non-Delay, non-Plug-In field Option and exposes `OrdinaryFieldOption`. |
-| `Game::install_field_option_as_plug_in(card, carrier, link_index)` | Inserts a Plug-In into `carrier.linked_cards`, dispatches `OnOptionPlaced`, then dispatches `OnLink`. |
+| `Game::install_field_option_as_plug_in(card, carrier, link_index)` | Inserts a Plug-In into `carrier.linked_cards` only if `link_index` is in range and the carrier is below `5 + ChangeLinkMax`; dispatches `OnOptionPlaced`, then dispatches `OnLink`. |
 | `Game::orphan_linked_plug_in(carrier, link_index, last_carrier_owner)` | Removes a linked Plug-In from a carrier and parks it as `OrphanedPlugIn` on its owner's battle area. |
 | `Game::orphan_plug_in(option_handle, last_carrier_owner)` | Marks an existing standalone Option permanent as orphaned. |
-| `Game::relink_plug_in(option_handle, new_carrier, link_index)` | Consumes an orphaned Plug-In permanent and links it to a new carrier. |
+| `Game::relink_plug_in(option_handle, new_carrier, link_index)` | Consumes a single-source orphaned Plug-In permanent and links it to a new carrier after validating the target slot and capacity. Invalid re-link attempts leave the orphan in place. |
 | `Game::trash_field_option(option_handle, cause)` | Trashes a standalone field Option and dispatches `OnOptionTrashed` with `event_card`, `event_cause`, `moved_card_sets`, and `option_last_field_state()`. |
 
 These helpers are the observer-safe mutation surface for the explicit lifecycle
 taxonomy. Do not edit `Permanent.option_state` directly in card code.
+`Game::option_field_state` is for standalone field Options; it returns `None`
+for `OptionState::Linked` because that storage shape does not carry a precise
+slot. Use `Game::linked_plug_in_field_state(carrier, link_index)` when reading
+linked Plug-In state.
 
 ### DUAL cards and Arts Digivolve
 
@@ -2153,6 +2260,34 @@ When implementing a card that needs one of these, log the gap and pick a safe fa
 
 For a comprehensive Rust ↔ Python divergence catalog with severity and fix order,
 see [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md).
+
+### Cross-boundary shape drift — detection pattern
+
+When a consumer (Tauri DTO, PyO3 binding, frontend type) mirrors a subset
+of an engine struct like `CardData` or `Permanent`, adding a field to the
+engine can leave the consumer silently behind. PR #457 surfaced this for
+`CardData::ace_overflow` / `digixros_aliases` — the engine grew the
+fields, the desktop builder didn't, and `cargo build --manifest-path
+code/src-tauri/Cargo.toml` failed at the construction site.
+
+Two patterns make drift detection free:
+
+1. **Construction-time** — `CardData { ... }` literals must list every
+   field; Rust's struct-literal exhaustiveness is the check. **Do not**
+   add `Default` to `CardData` / `Permanent` / `SynthIdentity` to make
+   construction easier on consumers — `Default` masks drift.
+2. **Consumption-time** — destructure the engine struct exhaustively at
+   the read site. `card_dto` in `code/src-tauri/src/engine_commands.rs`
+   uses this pattern: `let CardData { card_id, card_name, ..., ace_overflow,
+   dual: _, digixros_aliases } = ...;` (no `..` rest-pattern). New fields
+   then trip a compile error at the consumer site, forcing a deliberate
+   choice (expose or drop).
+
+PyO3's `PyCard` is intentionally a curated subset; it omits drift
+detection because adding `CardData` fields is **not** automatically
+caller-visible from Python. When a Python caller needs a new field,
+add a `#[pyo3(get)]` accessor — don't expand the curated subset
+preemptively.
 
 ---
 

@@ -208,6 +208,157 @@ impl DebugRunner {
         handle
     }
 
+    /// Test-only: simulates a control-transfer effect by relocating an
+    /// existing permanent from `from.player`'s battle area to
+    /// `to_player`'s battle area while preserving every `CardSource.owner`
+    /// in the stack. The engine has no control-transfer mechanic today
+    /// (no card prints one); this helper exists to seed the
+    /// `owner != controller` shape so Track E owner-routing fixes
+    /// (PR #453) have live coverage exercising every consuming helper
+    /// through a real card flow.
+    ///
+    /// Returns the new `PermanentHandle` (in `to_player`'s battle area).
+    /// Panics if `from` doesn't point at a real permanent.
+    ///
+    /// Removed once a real control-transfer card lands. See
+    /// `tests/owner_routing_live.rs` for the live-coverage harness that
+    /// consumes this helper.
+    #[cfg(any(test, feature = "test-helpers"))]
+    pub fn transfer_control(
+        &mut self,
+        from: PermanentHandle,
+        to_player: PlayerId,
+    ) -> PermanentHandle {
+        assert!(
+            (from.player as usize) < self.game.players.len(),
+            "transfer_control: from.player out of range"
+        );
+        assert!(
+            (to_player as usize) < self.game.players.len(),
+            "transfer_control: to_player out of range"
+        );
+        assert_ne!(
+            from.player, to_player,
+            "transfer_control: from and to are the same player — no transfer needed"
+        );
+        let permanent = {
+            let from_area = &mut self.game.players[from.player as usize].battle_area;
+            assert!(
+                (from.index as usize) < from_area.len(),
+                "transfer_control: from.index out of range"
+            );
+            from_area.remove(from.index as usize)
+        };
+
+        // Snapshot owners BEFORE the move so the post-condition assertion
+        // proves the helper itself does not touch CardSource.owner.
+        let pre_owners: Vec<crate::enums::PlayerId> =
+            permanent.card_sources.iter().map(|c| c.owner).collect();
+        let pre_linked_owners: Vec<crate::enums::PlayerId> =
+            permanent.linked_cards.iter().map(|c| c.owner).collect();
+
+        // Re-key any modifiers attached to the old handle to point at the
+        // new (controller-side) handle. Track E ownership invariants live in
+        // CardSource.owner; modifiers track the *controller* via
+        // PermanentHandle, so they have to follow the controller move.
+        // This is the same shape `Game::return_to_hand` uses internally
+        // (clear modifiers when the permanent leaves) — here we re-attach
+        // since the permanent stays on the field, just on the other side.
+        self.game.modifiers.clear_permanent(from);
+
+        let to_area = &mut self.game.players[to_player as usize].battle_area;
+        to_area.push(permanent);
+        let new_handle = PermanentHandle {
+            player: to_player,
+            index: (to_area.len() - 1) as u8,
+        };
+
+        // Post-conditions: every CardSource.owner is exactly what it was
+        // before the move.
+        {
+            let perm = &self.game.players[to_player as usize].battle_area
+                [new_handle.index as usize];
+            assert_eq!(
+                perm.card_sources.iter().map(|c| c.owner).collect::<Vec<_>>(),
+                pre_owners,
+                "transfer_control must preserve every source's CardSource.owner"
+            );
+            assert_eq!(
+                perm.linked_cards.iter().map(|c| c.owner).collect::<Vec<_>>(),
+                pre_linked_owners,
+                "transfer_control must preserve every linked card's CardSource.owner"
+            );
+        }
+
+        new_handle
+    }
+
+    /// Test-only: push an owned-by-`owner` source into `host`'s
+    /// digivolution stack just below the top. Companion to `push_source`,
+    /// which always sets owner = host.player. Used by `transfer_control`
+    /// tests to construct multi-owner stacks (e.g. P0 owns the top card,
+    /// P1 owns a digivolution source) so source-trash routing can be
+    /// validated under the no-approximations policy.
+    #[cfg(any(test, feature = "test-helpers"))]
+    pub fn push_source_owned(
+        &mut self,
+        host: PermanentHandle,
+        card_id: &str,
+        owner: PlayerId,
+    ) -> CardHandle {
+        let data_idx = self
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == card_id)
+            .unwrap_or_else(|| panic!("push_source_owned: unknown card_id {}", card_id));
+        let next_idx = self.game.next_card_index();
+        let card = CardSource::new(data_idx, owner, next_idx);
+        let handle = card.handle();
+        let permanent = self
+            .game
+            .player_mut(host.player)
+            .battle_area
+            .get_mut(host.index as usize)
+            .expect("push_source_owned: host permanent not found");
+        let top = permanent
+            .card_sources
+            .pop()
+            .expect("push_source_owned: host top card exists");
+        permanent.card_sources.push(card);
+        permanent.card_sources.push(top);
+        handle
+    }
+
+    /// Test-only: append an owned-by-`owner` linked card onto `host`.
+    /// Used by `transfer_control` tests to validate that linked cards on
+    /// a transferred host route to each linked card's own owner.
+    #[cfg(any(test, feature = "test-helpers"))]
+    pub fn push_linked_owned(
+        &mut self,
+        host: PermanentHandle,
+        card_id: &str,
+        owner: PlayerId,
+    ) -> CardHandle {
+        let data_idx = self
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == card_id)
+            .unwrap_or_else(|| panic!("push_linked_owned: unknown card_id {}", card_id));
+        let next_idx = self.game.next_card_index();
+        let card = CardSource::new(data_idx, owner, next_idx);
+        let handle = card.handle();
+        let permanent = self
+            .game
+            .player_mut(host.player)
+            .battle_area
+            .get_mut(host.index as usize)
+            .expect("push_linked_owned: host permanent not found");
+        permanent.linked_cards.push(card);
+        handle
+    }
+
     pub fn run_inherited_security_effect<F>(
         &mut self,
         host: PermanentHandle,

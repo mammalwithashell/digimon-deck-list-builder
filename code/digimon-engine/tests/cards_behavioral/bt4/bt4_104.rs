@@ -125,6 +125,88 @@ fn bt4_104_main_trashes_exactly_top_own_security_and_gains_2_memory() {
     );
 }
 
+// ─── Failure-mode audit (PR #456 cluster 3e — pure memory ±N) ──────────────
+
+/// **Adjacent edge-case (cluster 3e):** BT4-104 trashes top security, then
+/// gains 2 memory. With memory at 9, the gain raises to 10 (no clamp). With
+/// memory already at 10 (the upper clamp), the trash still happens but the
+/// gain MUST clamp at 10. Verifies `gain_memory_for_player` clamps even when
+/// invoked after an unrelated step.
+#[test]
+fn bt4_104_main_gain_clamps_at_memory_range_upper_bound() {
+    let mut runner = blinding_ray();
+    runner.game.memory = 9; // gain of 2 would otherwise push to 11.
+    let security_before = runner.security_count(0);
+
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired);
+    runner.auto_resolve().expect("no selections expected");
+
+    assert_eq!(
+        runner.security_count(0),
+        security_before - 1,
+        "security trash still happens regardless of memory clamp"
+    );
+    assert_eq!(
+        runner.memory(),
+        10,
+        "memory clamps at upper bound (rules.memory_range.1 = 10)"
+    );
+}
+
+/// **Adjacent edge-case (cluster 3e):** BT4-104 with `CannotAddMemory` on
+/// the activator's own battle-area permanent. The [Main] still trashes top
+/// security (the modifier doesn't gate that step), but the +2 memory gain
+/// must be suppressed by the modifier. Tests Track C consult-site
+/// thoroughness across mixed-step Option bodies.
+#[test]
+fn bt4_104_main_gain_suppressed_by_cannot_add_memory_but_security_trash_still_fires() {
+    use digimon_engine::card_data::CardData;
+    use digimon_engine::enums::{CardKind, Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+
+    fn anchor() -> CardData {
+        let mut c = make_test_card("ANCHOR", "Anchor");
+        c.card_kind = CardKind::Digimon;
+        c.dp = Some(3000);
+        c.level = Some(3);
+        c
+    }
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT4-104")
+        .expect("BT4-104 YAML present")
+        .add_card(make_test_card("SEC-BOTTOM", "Security Bottom"))
+        .add_card(make_test_card("SEC-TOP", "Security Top"))
+        .add_card(anchor())
+        .hand(0, &["BT4-104"])
+        .security(0, &["SEC-BOTTOM", "SEC-TOP"])
+        .memory(3)
+        .start();
+
+    let perm = runner.place_on_field(0, "ANCHOR", Some(0));
+    runner.game.modifiers.add(
+        perm,
+        ModifierEntry::simple(ModifierType::CannotAddMemory, 0, Expiry::EndOfTurn, 0),
+    );
+    let memory_before = runner.memory();
+    let security_before = runner.security_count(0);
+
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired);
+    runner.auto_resolve().expect("no selections expected");
+
+    assert_eq!(
+        runner.security_count(0),
+        security_before - 1,
+        "security trash step is unaffected by CannotAddMemory"
+    );
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "the +2 gain is suppressed; memory unchanged"
+    );
+}
+
 #[test]
 fn bt4_104_main_with_empty_security_still_gains_2_memory() {
     let mut runner = DebugRunner::builder()

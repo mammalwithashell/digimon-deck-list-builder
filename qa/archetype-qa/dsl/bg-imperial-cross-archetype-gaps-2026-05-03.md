@@ -1,5 +1,23 @@
 # BG Imperial Cross-Archetype DSL / Engine Gap Source
 
+> **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
+> #449–#458. Track E DSL verbs landed (PR #454) so `raw_rust` carve-outs
+> for the ten zone-movement verbs in `qa/dsl-vocab-gaps.md` are now
+> expressible in YAML. Track C deferred modifier variants landed (PR
+> #455) with typed `ModifierPayload`; identity overlays / DigiXros
+> aliases / Security Attack / EndTurn min memory / Link cost+max are
+> wired but a structured DSL payload schema is still pending. Track G
+> keyword library closed (PR #457) — Evade printed-semantics fix,
+> Decoy color-filter via `Keyword::Decoy(u8)`, Progress card-shape
+> backfill. `Expiry::UntilCondition` runtime controller landed (PR
+> #458). For the canonical engine-side closures consult
+> [docs/RUST_ENGINE_GAPS.md](../../../docs/RUST_ENGINE_GAPS.md);
+> per-archetype `raw_rust` carve-out audit lives in
+> [qa/dsl-vocab-gaps.md](../../dsl-vocab-gaps.md). See
+> `.claude/plans/pre-scaling-cleanup-batch.md` §2 for the closure-
+> index narrative.
+
+
 Date: 2026-05-03
 
 Assessment source: `data/deck_library.json` archetype `BG Imperial`, using the two DigimonMeta 1st-place lists dated 2026-01-25 and 2026-02-14. This document distills the BG Imperial readiness assessment into reusable DSL/engine work items that can feed a later cross-archetype implementation spec.
