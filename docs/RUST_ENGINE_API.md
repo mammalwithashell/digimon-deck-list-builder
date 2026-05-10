@@ -883,6 +883,108 @@ Runner methods:
 
 ---
 
+## 8a. Testing patterns — cleanup discipline (2026-05-10)
+
+Three patterns to maintain cross-track health as the engine scales.
+Each has a worked example in the engine's own tests; reach for these
+on the corresponding situations.
+
+### Owner-routing live-coverage harness
+
+When a Track lands a fix that depends on `CardSource.owner` routing
+(e.g. PR #453's `return_to_hand` / `return_to_deck` owner consult),
+the fix may be **dormant** — no card mechanic produces
+`owner != controller` today, so the routing path has no live
+coverage by default.
+
+The fix needs an end-to-end test that exercises the routing through a
+real `EffectContext` call, not a direct mutation. Use the synthetic
+`DebugRunner::transfer_control` helper to seed the
+`owner != controller` shape:
+
+```rust
+let h = r.place_on_field(0, "OWNED_BY_P0", Some(0));
+let h_transferred = r.transfer_control(h, /* to */ 1);
+// h_transferred.player == 1 (controller)
+// top.owner == 0 (preserved)
+let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, 1);
+let returned = ctx.return_to_hand(h_transferred);
+assert!(r.hand_size(0) == p0_hand_before + 1); // owner-routed
+```
+
+Worked example: [code/digimon-engine/tests/owner_routing_live.rs](../code/digimon-engine/tests/owner_routing_live.rs).
+The helper is gated behind `#[cfg(any(test, feature = "test-helpers"))]`
+so production code can't accidentally invoke it. When a real
+control-transfer card lands, mark the helper deprecated and migrate
+the harness to use the real card.
+
+**When to apply:** every Track that touches owner / controller
+distinction must add the corresponding live-coverage test in the same
+PR. The class of bug being guarded against is "the fix lands but no
+card flow exercises it; the fix breaks silently months later."
+
+### Tracker-hygiene sweep cadence
+
+Every 5–10 PRs, cross-reference per-archetype gap rollups
+(`qa/archetype-qa/dsl/*.md`, `qa/archetype-qa/engine-gaps.md`)
+against landed PR bodies. PR-body-vs-tracker drift compounds: agents
+authoring cards consult the rollups to decide which mechanics need
+`raw_rust` vs. YAML, and stale rollups produce wrong-shape PRs.
+
+Build the closure index from the PR bodies (which list what landed
+and what was deferred), then walk each tracker entry. For each:
+- Closed by a PR → mark closed with the closing PR + the test
+  command.
+- Workaround now expressible in YAML (because the verb landed) →
+  demote the `raw_rust` carve-out note.
+- Open and current → leave open with a brief currency note.
+- Tracker claim disagrees with engine state → high-value finding;
+  flag for follow-up rather than silently "fixing" by editing.
+
+The sweep is annotation-only — no engine code changes. If you find a
+primitive the tracker says is missing AND it's actually missing,
+that's a separate gap-filing PR.
+
+Worked example: pre-scaling cleanup batch §2, with sweep markers
+landed across `qa/archetype-qa/engine-gaps.md`,
+`qa/archetype-qa/dsl/*.md` (19 rollups), `qa/dsl-vocab-gaps.md`,
+`docs/RUST_ENGINE_GAPS.md`, and `docs/RUST_PYTHON_PARITY.md`.
+
+### Failure-mode audit pattern
+
+When a regression-fix PR lands surgical fixes for a cluster of
+failing tests (e.g. PR #456's 67 fixes targeting reveal-and-bottom,
+Delay-option placement, `CannotPlayDigimonByEffect` floodgate,
+scheduled-effect queue, pure memory ±N, effect-driven play), add
+2–3 **adjacent** edge-case tests for each cluster. The surgical fix
+proves the failing tests pass; the adjacent tests guard against
+"regression fixed by accident" — the same code path is exercised at
+slightly different state, and the audit catches failure modes that
+happened not to fail in the original reds.
+
+Examples (all landed in pre-scaling cleanup §3):
+- Floodgate cluster (`CannotPlayDigimonByEffect`): natural plays
+  from hand bypass the gate (it's effect-only); modifier clears at
+  exactly the opp-turn-end boundary.
+- Scheduled-effect cluster: two `gain → schedule` plays in same
+  turn produce two schedules, both drain at EOT; schedule does NOT
+  fire at end of opponent's turn.
+- Pure memory ±N cluster: gain at upper clamp clamps to
+  `rules.memory_range.1`; gain blocked by permanent-scoped
+  `CannotAddMemory`; gain blocked by player-scoped
+  `CannotGainMemoryByEffect`.
+
+**When to apply:** any regression-fix PR that lands ≥10 surgical
+fixes warrants a follow-up audit. Adjacent tests landed under the
+same fixture file as the original (`bt8_097.rs`, etc.) keep test
+discoverability tight.
+
+If an adjacent test fails on landing, that's a real regression — file
+as a bug-fix follow-up; do NOT patch inline as part of the audit.
+Surgical fixes preserve commit-history clarity.
+
+---
+
 ## Phase 5 — Cost-Reduction Builder Hooks
 
 Added in Phase 5 to support closure-valued dynamic cost reduction and a synchronous pay-cost gate on triggered effects. These unblock ~50 cards across Rocks, Dark Masters, and TS Olympos whose cost-reduction predicates read live game state (trash count, trait presence, field state) and cannot be expressed as static `.cost_reduction(n)` values.

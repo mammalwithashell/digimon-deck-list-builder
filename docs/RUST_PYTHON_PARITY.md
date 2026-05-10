@@ -15,6 +15,21 @@
 
 Each entry cites the canonical source lines so divergences can be rechecked after either engine evolves.
 
+> **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
+> #449–#458. The Rust engine added Track A `ProvenanceToken` (PR #451),
+> Track B replacement framework (PR #449), Track C modifier taxonomy +
+> typed `ModifierPayload` (PRs #452, #455), Track D centralized attack
+> flow (PR #450), Track E zone-movement helpers + owner-routing fix
+> (PR #453), Track E DSL verbs (PR #454), Track G keyword library
+> close (PR #457), and the `Expiry::UntilCondition` continuous
+> controller (PR #458). The PyO3 binding surface
+> (`code/digimon-engine-py`) preserves the Python 1/2 ↔ Rust 0/1
+> player-ID convention; no parity entries were affected by this batch
+> (no Python-side card-script changes; the Python engine is sunset
+> reference). The pre-scaling cleanup batch (§2) added owner-routing
+> live coverage in `tests/owner_routing_live.rs`; that test exercises
+> Rust-only zone helpers and does not interact with the Python engine.
+
 ---
 
 ## 1. Core game flow
