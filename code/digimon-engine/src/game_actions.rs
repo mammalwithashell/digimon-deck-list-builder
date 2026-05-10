@@ -1240,6 +1240,7 @@ impl Game {
                 card_id: card_id.to_string(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
             });
         }
     }
@@ -1324,6 +1325,7 @@ impl Game {
                 card_id: card_id.to_string(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
             });
         }
     }
@@ -1364,6 +1366,7 @@ impl Game {
                 card_id: card_id.to_string(),
                 allow_below_top_liveness: false,
                 dna_origin_context: self.current_dna_origin,
+                granted_effect_id: None,
             });
         }
     }

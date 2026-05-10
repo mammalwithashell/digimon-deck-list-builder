@@ -8,6 +8,7 @@ pub mod combat;
 pub mod control_flow;
 pub mod draw;
 pub mod effects;
+pub mod grant_triggered;
 pub mod iteration;
 pub mod memory;
 pub mod modifiers;
@@ -386,6 +387,9 @@ pub fn run_step_with_runtime(
         return;
     }
     if modifiers::try_run(step, ctx, bindings, runtime) {
+        return;
+    }
+    if grant_triggered::try_run(step, ctx, bindings) {
         return;
     }
     if play_digivolve::try_run(step, ctx, bindings) {

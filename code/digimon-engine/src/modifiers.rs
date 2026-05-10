@@ -109,6 +109,14 @@ pub struct ModifierEntry {
     /// every other variant. Read by the observer dispatch hook before
     /// firing per-permanent observers (Track A's responsibility).
     pub disable_effect_timing: Option<EffectTiming>,
+    /// Track H Phase 4 (mid-opp-turn `*NextTurn` semantics) —
+    /// number of relevant turn-end firings to skip before the entry
+    /// becomes eligible for `EndOfOpponentsNextTurn`/`EndOfYourNextTurn`
+    /// expiry. Default 0 (immediate). Install with 1 when the install
+    /// happens DURING the target-turn-player's turn — the current
+    /// turn-end then counts as the "skip", and the NEXT firing
+    /// expires.
+    pub pending_skips: u8,
     #[doc(hidden)]
     pub install_order: u64,
 }
@@ -161,6 +169,7 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             disable_effect_timing: None,
+            pending_skips: 0,
             install_order: 0,
         }
     }
@@ -185,6 +194,7 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             disable_effect_timing: None,
+            pending_skips: 0,
             install_order: 0,
         }
     }
@@ -208,6 +218,7 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             disable_effect_timing: Some(timing),
+            pending_skips: 0,
             install_order: 0,
         }
     }
@@ -233,6 +244,7 @@ impl ModifierEntry {
             until_condition: None,
             effect_immunity_filter: None,
             disable_effect_timing: None,
+            pending_skips: 0,
             install_order: 0,
         }
     }
@@ -252,6 +264,16 @@ impl ModifierEntry {
 
     pub fn with_until_condition(mut self, cond: UntilConditionFn) -> Self {
         self.until_condition = Some(cond);
+        self
+    }
+
+    /// Phase 4 — set `pending_skips` for `*NextTurn` expiry semantics.
+    /// When installing during the same player's turn whose end would
+    /// otherwise immediately expire the entry, pass 1 to skip that
+    /// firing and expire on the NEXT one. Defaults to 0 (immediate
+    /// expiry on the first matching turn-end).
+    pub fn with_pending_skips(mut self, skips: u8) -> Self {
+        self.pending_skips = skips;
         self
     }
 
@@ -536,13 +558,37 @@ fn guard_install(
     );
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone)]
 struct KeywordEntry {
     keyword: Keyword,
     expiry: Expiry,
     source_player: u8,
     source_permanent: Option<PermanentHandle>,
     materialized_declarative: bool,
+    /// Track H §4 — install-once continuous gate for keyword grants.
+    /// When `Expiry::UntilCondition`, the controller evaluates this
+    /// predicate after mutation events and evicts the entry on
+    /// false; printed-semantics rule (`false → true` does NOT
+    /// re-install) holds. Mirrors `ModifierEntry.until_condition`.
+    until_condition: Option<UntilConditionFn>,
+    /// Globally-monotone install order shared with `ModifierEntry`
+    /// and `PlayerModifierEntry` so the UntilCondition controller can
+    /// FIFO-evict across all three stores via a single counter.
+    install_order: u64,
+}
+
+impl std::fmt::Debug for KeywordEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KeywordEntry")
+            .field("keyword", &self.keyword)
+            .field("expiry", &self.expiry)
+            .field("source_player", &self.source_player)
+            .field("source_permanent", &self.source_permanent)
+            .field("materialized_declarative", &self.materialized_declarative)
+            .field("has_until_condition", &self.until_condition.is_some())
+            .field("install_order", &self.install_order)
+            .finish()
+    }
 }
 
 impl KeywordEntry {
@@ -553,6 +599,8 @@ impl KeywordEntry {
             source_player,
             source_permanent: None,
             materialized_declarative: false,
+            until_condition: None,
+            install_order: 0,
         }
     }
 
@@ -568,7 +616,84 @@ impl KeywordEntry {
             source_player,
             source_permanent,
             materialized_declarative: true,
+            until_condition: None,
+            install_order: 0,
         }
+    }
+}
+
+/// Closure body for a granted triggered effect — runs at the carrier's
+/// matching timing with `EffectContext` set up so the carrier is the
+/// `source_permanent` and the grantor's card is `source_card`. Track H §3.
+pub type GrantedEffectBody = std::sync::Arc<
+    dyn Fn(&mut crate::effect_context::EffectContext<'_>) + Send + Sync + 'static,
+>;
+
+/// Phase 4i — `Debug`-friendly wrapper around the granted-effect body
+/// registry. The body closures are `Arc<dyn Fn ...>` which don't
+/// implement `Debug`; the wrapper hides them behind a count.
+#[derive(Default)]
+pub struct GrantedEffectBodyRegistry {
+    pub bodies: std::collections::HashMap<u64, GrantedEffectBody>,
+}
+
+impl std::fmt::Debug for GrantedEffectBodyRegistry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GrantedEffectBodyRegistry")
+            .field("count", &self.bodies.len())
+            .finish()
+    }
+}
+
+impl GrantedEffectBodyRegistry {
+    pub fn insert(&mut self, id: u64, body: GrantedEffectBody) {
+        self.bodies.insert(id, body);
+    }
+    pub fn get(&self, id: u64) -> Option<&GrantedEffectBody> {
+        self.bodies.get(&id)
+    }
+    pub fn remove(&mut self, id: u64) -> Option<GrantedEffectBody> {
+        self.bodies.remove(&id)
+    }
+}
+
+/// A triggered effect granted onto a carrier permanent by some grantor
+/// (Track H §3 — DCGO `AddSkillClass.cs` analog). The body fires when the
+/// carrier's matching `timing` event drains. Cleanup happens via the
+/// existing `clear_permanent` path when the carrier leaves the field, or
+/// via `expire_end_of_turn` when the entry's `expiry` ticks out.
+pub struct GrantedTriggeredEffect {
+    /// Timing on the CARRIER that triggers this granted body. v1 dispatch
+    /// hook is wired through `enqueue_from_permanent` /
+    /// `enqueue_from_breeding_permanent` (Phase 4b) — covers ALL
+    /// EffectTiming variants automatically via `pending_granted_fires`.
+    pub timing: crate::enums::EffectTiming,
+    /// Grantor card identity — surfaces as `EffectContext::source_card`
+    /// inside the body, mirroring DCGO `EffectSourceCard`.
+    pub source_card: crate::card_source::CardHandle,
+    /// Player who installed the grant — controls expiry behavior and
+    /// shows up as `EffectContext::player`.
+    pub source_player: PlayerId,
+    pub expiry: crate::enums::Expiry,
+    /// Phase 4i — body id into `Game::granted_effect_bodies`. v1 keeps
+    /// the body `Arc` here as well (for direct inline-fire compat)
+    /// AND stores it in the registry under this id (for queue-based
+    /// dispatch through `QueuedEffect::granted_effect_id`). When the
+    /// entry is evicted (clear_permanent / expire_end_of_turn) the
+    /// registry entry must also be removed to avoid leaks.
+    pub body_id: u64,
+    pub body: GrantedEffectBody,
+}
+
+impl std::fmt::Debug for GrantedTriggeredEffect {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GrantedTriggeredEffect")
+            .field("timing", &self.timing)
+            .field("source_card", &self.source_card)
+            .field("source_player", &self.source_player)
+            .field("expiry", &self.expiry)
+            .field("body_id", &self.body_id)
+            .finish_non_exhaustive()
     }
 }
 
@@ -581,6 +706,13 @@ pub struct ModifierRegistry {
     permanent_keywords: HashMap<PermanentHandle, Vec<KeywordEntry>>,
     /// Player-scoped modifiers (Phase 6 flood gates).
     player_modifiers: HashMap<PlayerId, Vec<PlayerModifierEntry>>,
+    /// Track H §3 — granted triggered effects keyed by carrier
+    /// permanent. DCGO `AddSkillClass.cs` analog: the grantor publishes
+    /// a closure body and a target carrier; the body fires when the
+    /// carrier's matching `timing` drains. v1 dispatch covers
+    /// `OnDeletion`; additional timings extend the hook in
+    /// `Game::fire_granted_triggered_effects` without schema changes.
+    granted_triggered: HashMap<PermanentHandle, Vec<GrantedTriggeredEffect>>,
     next_install_order: u64,
 }
 
@@ -613,10 +745,36 @@ impl ModifierRegistry {
         expiry: Expiry,
         source_player: u8,
     ) {
+        self.next_install_order = self.next_install_order.saturating_add(1);
+        let mut entry = KeywordEntry::simple(keyword, expiry, source_player);
+        entry.install_order = self.next_install_order;
         self.permanent_keywords
             .entry(target)
             .or_default()
-            .push(KeywordEntry::simple(keyword, expiry, source_player));
+            .push(entry);
+    }
+
+    /// Track H §4 — grant a keyword scoped to `Expiry::UntilCondition`
+    /// with a runtime predicate. The UntilCondition controller (PR
+    /// #458) evicts the entry on the first `predicate → false` after
+    /// install; the printed-semantics rule holds (no re-install when
+    /// the predicate flips back to true). Mirrors
+    /// `add_modifier_with_until_condition` for keyword grants.
+    pub fn grant_keyword_with_until_condition(
+        &mut self,
+        target: PermanentHandle,
+        keyword: Keyword,
+        predicate: UntilConditionFn,
+        source_player: u8,
+    ) {
+        self.next_install_order = self.next_install_order.saturating_add(1);
+        let mut entry = KeywordEntry::simple(keyword, Expiry::UntilCondition, source_player);
+        entry.install_order = self.next_install_order;
+        entry.until_condition = Some(predicate);
+        self.permanent_keywords
+            .entry(target)
+            .or_default()
+            .push(entry);
     }
 
     pub fn grant_declarative_keyword(
@@ -746,6 +904,77 @@ impl ModifierRegistry {
     pub fn clear_permanent(&mut self, target: PermanentHandle) {
         self.permanent_modifiers.remove(&target);
         self.permanent_keywords.remove(&target);
+        self.granted_triggered.remove(&target);
+    }
+
+    /// Track H §3 — install a granted triggered effect on `carrier`.
+    /// The body fires when the carrier's matching `timing` drains.
+    pub fn add_granted_triggered(
+        &mut self,
+        carrier: PermanentHandle,
+        entry: GrantedTriggeredEffect,
+    ) {
+        self.granted_triggered
+            .entry(carrier)
+            .or_default()
+            .push(entry);
+    }
+
+    /// Track H §3 — fetch granted triggered effects on `carrier` whose
+    /// timing matches `timing`. Returns clones of the body closures
+    /// alongside attribution so the dispatcher can build an
+    /// `EffectContext` per fire without holding a registry borrow.
+    pub fn granted_triggered_for_timing(
+        &self,
+        carrier: PermanentHandle,
+        timing: crate::enums::EffectTiming,
+    ) -> Vec<(
+        crate::card_source::CardHandle,
+        PlayerId,
+        GrantedEffectBody,
+    )> {
+        self.granted_triggered
+            .get(&carrier)
+            .map(|entries| {
+                entries
+                    .iter()
+                    .filter(|e| e.timing == timing)
+                    .map(|e| (e.source_card, e.source_player, e.body.clone()))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Phase 4i variant — returns body_id alongside attribution. Used by
+    /// the queue-based dispatcher to construct a `QueuedEffect` with
+    /// `granted_effect_id` set so the drainer fetches the body from
+    /// `Game::granted_effect_bodies` at fire time.
+    pub fn granted_triggered_for_timing_with_ids(
+        &self,
+        carrier: PermanentHandle,
+        timing: crate::enums::EffectTiming,
+    ) -> Vec<(u64, crate::card_source::CardHandle, PlayerId)> {
+        self.granted_triggered
+            .get(&carrier)
+            .map(|entries| {
+                entries
+                    .iter()
+                    .filter(|e| e.timing == timing)
+                    .map(|e| (e.body_id, e.source_card, e.source_player))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    /// Phase 4i — collect body ids that should be reaped from the
+    /// game-level body registry when a permanent's granted entries are
+    /// cleared (via `clear_permanent`). Returns the ids; the caller
+    /// removes the entries from the registry.
+    pub fn drain_granted_triggered_ids_on_carrier(&self, carrier: PermanentHandle) -> Vec<u64> {
+        self.granted_triggered
+            .get(&carrier)
+            .map(|entries| entries.iter().map(|e| e.body_id).collect())
+            .unwrap_or_default()
     }
 
     /// Expire modifiers at the end of a player's turn.
@@ -754,20 +983,65 @@ impl ModifierRegistry {
     /// - `Expiry::EndOfOpponentsTurn` — removed when `source_player != ending_player`.
     /// - `Expiry::EndOfYourTurn` — removed when `source_player == ending_player`
     ///   (mirror of `EndOfOpponentsTurn`).
+    /// - `Expiry::EndOfOpponentsNextTurn` — Track H §3 (EX1-068 family).
+    ///   v1 aliased to `EndOfOpponentsTurn` semantics: removed on the next
+    ///   opp-turn-end after install. This matches printed-text behavior
+    ///   for installs on source's own turn (the common case — `[Main]`
+    ///   effects, `WhenDigivolving`, etc.). For installs DURING opp's
+    ///   turn, the printed text "until end of their NEXT turn" should
+    ///   skip the current opp-turn-end; v1 doesn't track that nuance —
+    ///   would require a per-entry `pending_skips` counter set at install
+    ///   time. Tracked as follow-up.
+    /// - `Expiry::EndOfYourNextTurn` — symmetric mirror, aliased to
+    ///   `EndOfYourTurn` semantics with the same v1 caveat.
     pub fn expire_end_of_turn(&mut self, ending_player: u8) {
-        let is_dead = |expiry: Expiry, source_player: u8| -> bool {
+        // Phase 4: split is_dead from skip-tracking. For `*NextTurn`
+        // variants, the first relevant turn-end decrements pending_skips
+        // (or expires immediately if 0); subsequent firings expire.
+        // This matches printed "until end of their NEXT turn" — mid-
+        // opp-turn installs with pending_skips=1 skip the current
+        // opp-turn-end, expire on the next.
+        let relevant = |expiry: Expiry, source_player: u8| -> bool {
             match expiry {
                 Expiry::EndOfTurn => true,
-                Expiry::EndOfOpponentsTurn => source_player != ending_player,
-                Expiry::EndOfYourTurn => source_player == ending_player,
+                Expiry::EndOfOpponentsTurn | Expiry::EndOfOpponentsNextTurn => {
+                    source_player != ending_player
+                }
+                Expiry::EndOfYourTurn | Expiry::EndOfYourNextTurn => {
+                    source_player == ending_player
+                }
                 _ => false,
             }
         };
+        let is_next_turn_variant = |expiry: Expiry| -> bool {
+            matches!(
+                expiry,
+                Expiry::EndOfOpponentsNextTurn | Expiry::EndOfYourNextTurn
+            )
+        };
         for entries in self.permanent_modifiers.values_mut() {
-            entries.retain(|e| !is_dead(e.expiry, e.source_player));
+            entries.retain_mut(|e| {
+                if !relevant(e.expiry, e.source_player) {
+                    return true;
+                }
+                if is_next_turn_variant(e.expiry) && e.pending_skips > 0 {
+                    e.pending_skips -= 1;
+                    return true;
+                }
+                false
+            });
         }
+        // KeywordEntry/GrantedTriggeredEffect don't (yet) carry
+        // pending_skips; alias to standard EndOf*Turn semantics. This
+        // is the same behavior they had pre-Phase-4 — printed-text
+        // fidelity is preserved for source-turn installs (the common
+        // case); the edge-case mid-opp-turn install is only nuanced
+        // for ModifierEntry today.
         for kws in self.permanent_keywords.values_mut() {
-            kws.retain(|entry| !is_dead(entry.expiry, entry.source_player));
+            kws.retain(|entry| !relevant(entry.expiry, entry.source_player));
+        }
+        for entries in self.granted_triggered.values_mut() {
+            entries.retain(|e| !relevant(e.expiry, e.source_player));
         }
     }
 
@@ -920,8 +1194,12 @@ impl ModifierRegistry {
         for entries in self.player_modifiers.values_mut() {
             entries.retain(|e| match e.expiry {
                 Expiry::EndOfTurn => false,
-                Expiry::EndOfOpponentsTurn => e.source_player == ending_player,
-                Expiry::EndOfYourTurn => e.source_player != ending_player,
+                Expiry::EndOfOpponentsTurn | Expiry::EndOfOpponentsNextTurn => {
+                    e.source_player == ending_player
+                }
+                Expiry::EndOfYourTurn | Expiry::EndOfYourNextTurn => {
+                    e.source_player != ending_player
+                }
                 _ => true,
             });
         }
@@ -953,6 +1231,18 @@ impl ModifierRegistry {
                 }
             }
         }
+        // Track H §4 — keyword entries with UntilCondition expiry are
+        // also driven by the controller. Subject is the target
+        // permanent (keywords are permanent-scoped). Install-order is
+        // shared with the modifier counter so FIFO ordering across
+        // both stores is correct.
+        for (target, entries) in &self.permanent_keywords {
+            for entry in entries {
+                if matches!(entry.expiry, Expiry::UntilCondition) {
+                    out.push((entry.install_order, ModifierSubject::Permanent(*target)));
+                }
+            }
+        }
         out.sort_by_key(|(order, _)| *order);
         out
     }
@@ -964,13 +1254,30 @@ impl ModifierRegistry {
         game: &crate::game::Game,
     ) -> Option<bool> {
         match subject {
-            ModifierSubject::Permanent(target) => self
-                .permanent_modifiers
-                .get(&target)?
-                .iter()
-                .find(|entry| entry.install_order == install_order)
-                .and_then(|entry| entry.until_condition.as_ref())
-                .map(|pred| pred(game, subject)),
+            ModifierSubject::Permanent(target) => {
+                if let Some(entries) = self.permanent_modifiers.get(&target) {
+                    if let Some(entry) =
+                        entries.iter().find(|e| e.install_order == install_order)
+                    {
+                        return entry
+                            .until_condition
+                            .as_ref()
+                            .map(|pred| pred(game, subject));
+                    }
+                }
+                // Track H §4 — keyword-grant fallback.
+                if let Some(entries) = self.permanent_keywords.get(&target) {
+                    if let Some(entry) =
+                        entries.iter().find(|e| e.install_order == install_order)
+                    {
+                        return entry
+                            .until_condition
+                            .as_ref()
+                            .map(|pred| pred(game, subject));
+                    }
+                }
+                None
+            }
             ModifierSubject::Player(player) => self
                 .player_modifiers
                 .get(&player)?
@@ -988,14 +1295,26 @@ impl ModifierRegistry {
     ) -> bool {
         match subject {
             ModifierSubject::Permanent(target) => {
-                let Some(entries) = self.permanent_modifiers.get_mut(&target) else {
+                if let Some(entries) = self.permanent_modifiers.get_mut(&target) {
+                    let before = entries.len();
+                    entries.retain(|entry| entry.install_order != install_order);
+                    let removed = entries.len() != before;
+                    if entries.is_empty() {
+                        self.permanent_modifiers.remove(&target);
+                    }
+                    if removed {
+                        return true;
+                    }
+                }
+                // Track H §4 — keyword-grant fallback.
+                let Some(entries) = self.permanent_keywords.get_mut(&target) else {
                     return false;
                 };
                 let before = entries.len();
                 entries.retain(|entry| entry.install_order != install_order);
                 let removed = entries.len() != before;
                 if entries.is_empty() {
-                    self.permanent_modifiers.remove(&target);
+                    self.permanent_keywords.remove(&target);
                 }
                 removed
             }

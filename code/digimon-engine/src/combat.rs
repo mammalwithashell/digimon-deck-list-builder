@@ -3226,6 +3226,9 @@ impl Game {
             .battle_area
             .get(handle.index as usize)
             .and_then(|permanent| permanent.card_sources.last().map(|card| card.handle()));
+        // Track H §3: granted OnDeletion bodies fire via the centralized
+        // drain-hook in `drain_effect_queue` (recorded by
+        // enqueue_from_permanent into `pending_granted_fires`).
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnDeletion,
             crate::selection::TriggerSource::Permanent(handle),

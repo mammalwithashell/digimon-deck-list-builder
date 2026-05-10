@@ -197,6 +197,25 @@ pub struct Game {
     /// Populated by `enqueue_triggered` and drained by `drain_effect_queue`.
     /// Empty until the drainer lands (PR2).
     pub effect_queue: EffectQueue,
+    /// Track H §3 — pending granted-triggered-effect fires queued by
+    /// `enqueue_from_permanent` and `enqueue_from_breeding_permanent`.
+    /// `drain_effect_queue` flushes this queue AFTER its main loop
+    /// settles (printed observers fire first, granted bodies second —
+    /// matches DCGO's "appended to effect list" semantic for granted
+    /// effects). Each granted body runs inline; if it enqueues further
+    /// triggered effects, the drain loop re-runs.
+    pub pending_granted_fires: Vec<(crate::permanent::PermanentHandle, crate::enums::EffectTiming)>,
+    /// Track H §3 Phase 4i — registry of granted-triggered-effect
+    /// bodies indexed by id. Bodies are allocated an id at install
+    /// time (`grant_triggered_effect`) and referenced from
+    /// `QueuedEffect::granted_effect_id` so the drainer can fetch and
+    /// run them without a card_id+effect_slot lookup. Selection-
+    /// driving bodies park on `pending_selection` like printed effects;
+    /// the resume hook re-fetches the body via id.
+    pub granted_effect_bodies: crate::modifiers::GrantedEffectBodyRegistry,
+    /// Counter for allocating fresh granted-effect ids. Monotonic
+    /// across the game's lifetime; never reused.
+    pub next_granted_effect_id: u64,
     /// Queued triggered effect parked while its `pay_cost_fn` resolves a
     /// player selection. Resumed by `resolve_selection` before ordinary queue
     /// draining continues.
@@ -658,6 +677,9 @@ impl Game {
             revealed_cards: Vec::new(),
             pending_selection: None,
             effect_queue: EffectQueue::new(),
+            pending_granted_fires: Vec::new(),
+            granted_effect_bodies: crate::modifiers::GrantedEffectBodyRegistry::default(),
+            next_granted_effect_id: 0,
             pending_pay_cost_effect: None,
             pending_pay_cost_stack: Vec::new(),
             pending_attack: None,
@@ -1987,6 +2009,31 @@ impl Game {
                     false,
                 ));
             }
+
+            // Track H §5 — security-zone-sourced auras. Face-up security
+            // cards can carry `kind: aura, scope: security` declarative
+            // clauses that grant DP/keyword/modifier to filter-matched
+            // battle-area permanents while the source remains face-up in
+            // the security stack. Source-permanent is `None` because
+            // security entries have no battle-area handle; the install
+            // closures still target battle-area handles for the matches.
+            // Cleanup is automatic — each tick clears materialized
+            // declaratives, then re-installs from active sources, so a
+            // card leaving security simply stops re-installing on the
+            // next tick. Mirrors DCGO `BT21_095.cs:CanUseCondition` →
+            // `IsExistInSecurity(card, false)`.
+            for card in &player.security {
+                if !player.face_up_security.contains(&card.card_index) {
+                    continue;
+                }
+                sources.push((
+                    card.card_id(&self.card_data).to_string(),
+                    card.handle(),
+                    None,
+                    player_id,
+                    false,
+                ));
+            }
         }
 
         for (card_id, source_card, source_permanent, controller, inherited_source) in sources {
@@ -2021,6 +2068,37 @@ impl Game {
                     process(&mut ctx);
                 }
             }
+        }
+    }
+
+    /// Track H §3 — fire all granted triggered effects on `carrier`
+    /// whose registered timing matches `timing`. Each body runs
+    /// inline with `EffectContext::source_card` set to the grantor
+    /// (mirroring DCGO `EffectSourceCard`) and `source_permanent` set
+    /// to the carrier (mirroring DCGO `EffectSourcePermanent`).
+    ///
+    /// Inline-fire model (v1): the body runs synchronously, before
+    /// `drain_effect_queue` resolves the rest of the trigger fan-out.
+    /// Suitable for grants that mutate state without prompting (memory
+    /// gain, modifier installs, etc.). Selection-driving granted
+    /// bodies are not yet supported — they belong on the standard
+    /// queue/drain path, which is a follow-up.
+    pub fn fire_granted_triggered_effects(
+        &mut self,
+        carrier: crate::permanent::PermanentHandle,
+        timing: crate::enums::EffectTiming,
+    ) {
+        let entries = self
+            .modifiers
+            .granted_triggered_for_timing(carrier, timing);
+        for (source_card, source_player, body) in entries {
+            let mut ctx = crate::effect_context::EffectContext::new(
+                self,
+                source_card,
+                Some(carrier),
+                source_player,
+            );
+            body(&mut ctx);
         }
     }
 

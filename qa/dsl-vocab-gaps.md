@@ -1529,3 +1529,430 @@ Format per entry:
         - may_attack_now: { attacker: suspended, targets: any, optional: true }
   ```
 - Remaining adjacent result-binding gaps: steps that must distinguish whether a mutation actually changed state when the target was already suspended/unsuspended or protected still need a richer `bind_result_as`/`binding_present` style result payload. BT24-047 avoids that by filtering the initial target to `is_unsuspended: true`.
+
+## Track H §1 — Aura `security_attack: i32` flat slot (2026-05-10) — RESOLVED
+
+The DSL `kind: aura` body now accepts a typed `security_attack: i32` field
+alongside the pre-existing dynamic `security_attack_fn`. It lowers to a
+`ModifierType::SecurityAttackChange` modifier carrying the literal delta
+on each match, read at the security-resolution consult site
+(`combat.rs:2326`). Negative deltas flow through unchanged; the combat
+clamp at `combat.rs:2347` (max 0) governs the floor.
+
+```yaml
+# all your Olympos XII Digimon get <Security A. +1>
+effects:
+  - kind: aura
+    target: { owner: you, trait: "Olympos XII" }
+    security_attack: 1
+```
+
+Self, filter, and cross-side variants all land through the same path —
+authors do not need to drop into raw_rust or formula DSL for flat ±N
+grants. The dynamic `security_attack_fn` slot remains for cards whose
+delta depends on board state.
+
+Coverage:
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- aura_self_grants_flat_security_attack_plus_one aura_filter_grants_flat_security_attack_to_all_olympos_xii_digimon aura_filter_grants_flat_security_attack_minus_one_via_negative_delta`
+
+## Track H §4 — Aura `while_condition` install-once continuous gate (2026-05-10) — PARTIAL
+
+The DSL `kind: aura` body now accepts a `while_condition: <predicate>`
+field that lowers to `Expiry::UntilCondition` on the installed
+modifier. The UntilCondition controller (PR #458) handles eviction;
+per the printed-semantics rule, `false → true` does NOT re-install.
+
+```yaml
+# this Digimon gains <Vortex>-can-attack-player while opponent has no
+# unsuspended Digimon (canonical ZEPH-G004 fixture; uses
+# memory_gte: 0 in v1 because VortexCanAttackPlayer's consult site is
+# itself a separate gap)
+effects:
+  - kind: aura
+    dp_modifier: 1000
+    while_condition:
+      count_lte:
+        n: 0
+        filter:
+          owner: opponent
+          kind: digimon
+          is_unsuspended: true
+```
+
+Distinct from `active_when` (per-tick re-evaluation, symmetric).
+`while_condition` installs ONCE at OnPlay or OnDigivolve, the
+controller evicts on predicate-false, and the install does NOT
+re-fire. DCGO reference: `Vortex.cs:PermanentHasVortexCanAttackPlayers`
+implements the lazy-filter pattern via `CanUse(null)` at attack-target
+time; the Rust path achieves identical end behavior via
+mutation-event-driven eviction.
+
+**v1 supports**: self-aura with `dp_modifier`, `security_attack`, or
+named `modifier` grants. Combine freely; all install with
+`Expiry::UntilCondition` carrying the same compiled predicate.
+
+**v1 does NOT support yet**:
+- Filter-aura + `while_condition` — install-once would miss future
+  permanents joining the filter set. Needs the lazy-filter shape
+  from spec §2 (consult-time filter evaluation rather than
+  install-time enumeration).
+- Keyword-grant + `while_condition` — `KeywordEntry` lacks an
+  `until_condition` field; the keyword registry needs the same
+  extension `ModifierEntry` already has.
+- Player-scoped (`target_player`) + `while_condition` — same
+  install-once vs. lazy-filter design choice.
+
+New raw_rust API:
+- `EffectContext::add_modifier_with_until_condition(target, modifier, value, predicate_arc)`
+  — typed wrapper that honors the `can_affect_permanent` guard, used by
+  both lower_aura's while_condition path and any raw_rust card script
+  that needs to install a controller-evicted modifier directly.
+
+Coverage:
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- while_condition`
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat until_condition_controller`
+
+## Track H §5 — Security-zone-sourced auras (2026-05-10) — PARTIAL
+
+The DSL `kind: aura, scope: security` clause now lowers correctly. The
+engine's `tick_declarative_effects` iterates face-up cards in each
+player's security stack (gated on `player.face_up_security`); the
+existing filter-aura process closure runs with `source_permanent =
+None` and installs DP / keyword / security-attack / named-modifier
+grants on field-side matches.
+
+```yaml
+# BT21-095-style: while this Option is face-up in security, all your
+# [WG] Digimon gain Vortex.
+card: BT21-095
+name: Wind Guardians
+kind: option
+color: [green]
+cost: 2
+traits: [WG]
+effects:
+  - kind: aura
+    scope: security
+    target: { owner: you, kind: digimon, trait: WG }
+    grant_keyword: { keyword: Vortex }
+```
+
+End behavior matches DCGO `BT21_095.cs:CanUseCondition →
+IsExistInSecurity(card, false)`:
+- Face-down security sources do NOT fire.
+- Source leaving security evicts the grant on next tick (no explicit
+  OnLoseSecurity wiring needed — the materialized-declarative
+  clear+re-install pattern handles it).
+- New field entries pick up the grant on next tick (lazy-filter end
+  behavior via the existing per-tick scan).
+- Owner-scoped target filters work (your-side vs. opponent-side
+  matches).
+
+Outstanding: tensor/mask paths that pre-compute aura state from
+sources directly (rather than reading modifier registry) still need a
+`SecuritySource` enumeration. For raw_rust card scripts that need to
+read their own security-zone position, the `EffectContext` source
+discriminator is still `source_permanent: Option<PermanentHandle>` +
+`source_card: CardHandle`; promoting to a typed `SecuritySource
+{ player, security_index, card_index }` is a follow-up.
+
+Coverage:
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- security_zone_aura`
+
+## Track H §3 — Granted triggered ability (2026-05-10) — PARTIAL
+
+The engine primitive landed for the canonical OnDeletion case (DCGO
+`AddSkillClass.cs` analog). Raw_rust card scripts can now grant a
+closure-bodied triggered effect to a target permanent:
+
+```rust
+// Inside an effect's process closure, with `ctx: &mut EffectContext`:
+ctx.grant_triggered_effect(
+    carrier_handle,
+    EffectTiming::OnDeletion,
+    Expiry::Permanent,           // or EndOfTurn / EndOfYourTurn / etc.
+    move |inner| {
+        // Body fires when carrier is deleted, with:
+        //   inner.source_card       == grantor card  (DCGO EffectSourceCard)
+        //   inner.source_permanent  == carrier       (DCGO EffectSourcePermanent)
+        //   inner.player            == grantor's controller
+        inner.gain_memory(2);
+    },
+);
+```
+
+End behavior pinned by tests:
+- Grantor installs grant on carrier; pre-deletion the body has not
+  fired; deleting the carrier fires the body with carrier+source
+  attribution preserved.
+- `clear_permanent` evicts on carrier-leave (covers paths that bypass
+  OnDeletion such as return-to-hand).
+- `expire_end_of_turn` evicts time-bound grants per the same
+  `source_player`-keyed rules as ModifierEntry.
+
+DSL surface: not yet wired. A future `kind: grant_triggered` clause
+would lower to this engine primitive. For now, granted triggered
+abilities require raw_rust authoring.
+
+Limitations of v1:
+- **Timing coverage**: dispatch hook calls
+  `fire_granted_triggered_effects(handle, timing)` only at the two
+  OnDeletion firing sites. Other timings (OnAttack, OnSuspend, OnPlay,
+  OnEnterFieldAnyone, etc.) install fine but never fire — extend each
+  timing's canonical firing site as it comes online.
+- **No selection support**: bodies fire inline, before the standard
+  drain. A body that calls `ctx.install_pending_selection(...)` won't
+  compose correctly with the surrounding firing sequence. For
+  selection-driving granted bodies, the proper path is `QueuedEffect`
+  with a `granted_effect_id` discriminator + lookup in
+  `run_queued_effect_inner`. That's a follow-up.
+
+Coverage:
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- granted_triggered_effect`
+
+## Track H Phase 4 — Multi-timing dispatch, EX1-068, BT21-095, cross-track integration (2026-05-10)
+
+### Phase 4a — `Expiry::EndOfOpponentsNextTurn` / `EndOfYourNextTurn` DSL keys
+
+DSL string keys `end_of_opponents_next_turn` / `end_of_your_next_turn`
+round-trip through `expiry_map.rs` to the new engine variants. v1
+aliases the removal predicates to `EndOfOpponentsTurn` /
+`EndOfYourTurn` semantics (correct for installs on source's own turn —
+the common case for `[Main]` / `WhenDigivolving`). Mid-opp-turn install
+nuance ("skip current opp-turn-end, expire on next") is a separate
+follow-up requiring per-entry `pending_skips: u8` counter.
+
+```yaml
+- add_modifier:
+    target: opponent
+    modifier: ChangeDp
+    value: -2000
+    expiry: end_of_opponents_next_turn
+```
+
+### Phase 4b — Multi-timing dispatch for granted triggered abilities
+
+`Game::pending_granted_fires` field accumulates carrier+timing pairs
+discovered during `enqueue_from_permanent` /
+`enqueue_from_breeding_permanent`; `drain_effect_queue` flushes them
+inline AFTER its main loop drains. ALL `EffectTiming` variants are
+covered automatically — no per-timing call-site additions needed.
+Order: printed observers first, granted bodies second (matches DCGO's
+"appended to effect list" semantic).
+
+EX1-068 Ice Wall! ("All of your opponent's Digimon gain `[When
+Attacking] lose 2 memory` until the end of their next turn") is wired
+end-to-end as a raw_rust behavioral fixture — exercises:
+- `EffectTiming::WhenAttacking` granted dispatch
+- `Expiry::EndOfOpponentsNextTurn` carrying through expire_end_of_turn
+- Per-carrier installation with multi-target enumeration
+- Post-expiry attacks correctly do NOT fire the granted body
+
+Coverage:
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- ex1_068`
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- granted_triggered_effect_fires_at_when_attacking`
+
+### Phase 4c — Inherited filter aura (§6)
+
+Filter auras with `scope: inherited` correctly emit when the source is
+a card under a digivolution stack (not the top card). Verified by
+`group6_auras::inherited_filter_aura_emits_grants_from_under_stack_source`
+— a [Beast]-trait DigiEgg-style under-stack source publishes a
+"+1000 DP to all your [Beast] Digimon" filter aura; the field
+permanents matching the filter receive the grant including the
+stack-top itself.
+
+### Phase 4d — Cross-track integration (Track H × Track C)
+
+`predicate.rs::eval_permanent_fields` now consults the synth-identity
+overlay's traits union when evaluating `trait_has`. Without this
+fix, a Track C `ChangeTraits` overlay (e.g., a Tamer treated as
+[Holy] for the turn) was invisible to Track H aura filters. Pinned
+by `aura_filter_includes_track_c_change_traits_overlay`. Other Track C
+overlays (`ChangeBaseCardName`, `ChangeBaseCardColor`) follow the same
+pattern but aren't yet propagated through the corresponding predicate
+fields (`name_*`, `color_*`); separate follow-up.
+
+### Phase 4f — EX1-068 Ice Wall! end-to-end raw_rust fixture
+
+DCGO reference: EX1-068 grants `[When Attacking] lose 2 memory` to
+all opp Digimon "until the end of their next turn." The Rust fixture
+in `group6_auras::ex1_068_ice_wall_grants_when_attacking_loses_2_memory_to_all_opp_digimon`
+walks opp's battle area at the source's [Main] effect time and calls
+`ctx.grant_triggered_effect(opp_h, EffectTiming::WhenAttacking,
+Expiry::EndOfOpponentsNextTurn, |inner| inner.gain_memory(-2))`.
+
+DSL `kind: grant_triggered` clause (which would let EX1-068 land as
+pure YAML) is a separate Phase 4e gap. Today the card requires
+raw_rust authoring.
+
+### Phase 4g — BT21-095 Wind Guardians real card YAML
+
+`code/digimon-engine/cards/bt21/BT21-095.yaml` lands the [Security]
+[All Turns] aura half via `kind: aura, scope: security` +
+`grant_keyword: { keyword: Vortex }`. Behavioral fixture in
+`code/digimon-engine/tests/cards_behavioral/bt21/bt21_095.rs`
+covers: face-up grants, face-down does NOT grant, leave-security
+evicts on next tick, owner-scope filter excludes opp [WG] Digimon.
+Other clauses (IgnoreColorRequirement, [Main] replace-bottom-security,
+[Security] play-WG-from-hand) are tracked under separate gap entries.
+
+### Phase 4h — KeywordEntry `until_condition` extension
+
+`KeywordEntry` gains `until_condition: Option<UntilConditionFn>` and
+shares the globally-monotone `next_install_order` counter with
+`ModifierEntry` / `PlayerModifierEntry`. The UntilCondition controller
+now walks all three stores. New API:
+`EffectContext::grant_keyword_with_until_condition(target, keyword,
+predicate_arc)`. The DSL `while_condition` aura slot now lowers
+keyword grants through this path:
+
+```yaml
+# ZEPH-G004-style: this Digimon gains <Vortex> while opponent has no
+# unsuspended Digimon (memory_gte: 0 used as stand-in until
+# VortexCanAttackPlayer's own consult site lands).
+effects:
+  - kind: aura
+    grant_keyword: { keyword: Vortex }
+    while_condition:
+      count_lte:
+        n: 0
+        filter: { owner: opponent, kind: digimon, is_unsuspended: true }
+```
+
+Coverage:
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- while_condition_keyword_grant_lands_via_keyword_entry_until_condition`
+
+### Phase 4e — DSL `grant_triggered_effect` step
+
+The new step `grant_triggered_effect` lets card authors install a
+granted triggered ability through pure YAML — no raw_rust required.
+
+```yaml
+# EX1-068 Ice Wall! authored as pure DSL.
+effects:
+  - when: main_from_hand
+    optional: false
+    process:
+      - grant_triggered_effect:
+          target: { owner: opponent, kind: digimon }
+          timing: when_attacking
+          expiry: end_of_opponents_next_turn
+          body:
+            - gain_memory: -2
+```
+
+Walks battle areas for `target` matches at the step's resolution
+time and installs a granted-triggered-effect entry on each. The
+body is a step list (anything `run_steps` can execute). Carrier vs.
+source attribution flows through automatically — when the body
+fires, `EffectContext::source_card` is the grantor and
+`source_permanent` is the carrier (DCGO `EffectSourceCard` /
+`EffectSourcePermanent`).
+
+`timing:` accepts snake_case names: `on_play`, `on_digivolve`,
+`when_digivolving`, `when_attacking`, `on_attack`, `end_of_attack`,
+`end_of_battle`, `on_deletion`, `on_any_deletion`, `on_enter_field`,
+`on_enter_field_anyone`, `on_suspend`, `on_unsuspend`,
+`start_of_your_turn`, `start_of_opponents_turn`,
+`start_of_your_main_phase`, `end_of_your_turn`,
+`end_of_opponents_turn`, `on_ally_played`, `on_ally_attack`,
+`on_opponent_attack`, `on_attack_target_change`. Unknown names
+no-op silently with a debug-build warning.
+
+`expiry:` uses the standard expiry-map keys (Phase 4a added
+`end_of_opponents_next_turn` / `end_of_your_next_turn`).
+
+v1 limitations:
+- Bodies are non-selection (run inline after the printed-observer
+  drain). Selection-driving bodies still require raw_rust until the
+  `QueuedEffect.granted_effect_id` plumbing lands.
+- The walk is at install-time; permanents that join the filter set
+  AFTER the step resolves don't receive the grant. For
+  install-once-then-leave-frozen semantics this is correct (matches
+  EX1-068's printed text "all of your opponent's Digimon" snapshots
+  current state).
+
+Coverage:
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- dsl_grant_triggered_effect_step`
+
+### Phase 4 cross-track integration (§10)
+
+Three focused fixtures pin Track H's compatibility with adjacent
+tracks at the consult-site level:
+
+- **Track B (replacement) × H** — an aura granting `CannotBeDestroyed`
+  via the `modifier:` slot installs a passive replacement modifier
+  visible to Track B's deletion replacement window. Test:
+  `aura_grant_cannot_be_destroyed_modifier_reaches_track_b_replacement_framework`.
+- **Track D (combat) × H** — a self-aura granting `Piercing`
+  surfaces through `Game::has_keyword` so Track D's combat
+  security-check pipeline applies the Piercing follow-up. Test:
+  `aura_grant_piercing_keyword_propagates_through_combat_consult`.
+- **Track G (keyword payloads) × H** — a self-aura granting
+  `Decoy(color)` preserves the parametric color discriminator
+  through the registry so opponent's attack-target resolution
+  filters correctly. Test:
+  `aura_grant_decoy_keyword_includes_color_filter_payload`.
+
+Coverage:
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- aura_grant`
+
+### Phase 4i — Queue-based granted-body dispatch + selection support
+
+`QueuedEffect.granted_effect_id: Option<u64>` discriminates granted
+entries from printed-effect entries. `Game::granted_effect_bodies`
+holds the closure bodies indexed by id. Granted entries flow through
+the standard queue/drain pipeline so:
+- Selection-installing bodies park correctly on `pending_selection`;
+  the queue holds the entry alive while the selection resolves.
+- The standard FIFO ordering (turn-player-bundle-first → trigger-order
+  prompt for multi-trigger bundles) applies uniformly to granted and
+  printed entries inside the same timing.
+- The drainer skips the standard condition/pay_cost/max_per_turn
+  gates for granted entries (they're closure-bodied with no Effect
+  metadata).
+
+Replaces the inline-fire `pending_granted_fires` flush (Phase 4b) that
+worked only for non-selection bodies.
+
+Coverage:
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- granted_body_runs_via_queue_with_correct_attribution`
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- granted_body_installing_selection_parks_via_pending_selection`
+
+### Phase 4 — `pending_skips` for `*NextTurn` expiry mid-opp-turn install
+
+`ModifierEntry.pending_skips: u8` enables accurate
+`EndOfOpponentsNextTurn`/`EndOfYourNextTurn` semantics for the rare
+mid-opp-turn install case. Default 0 preserves source-turn-install
+alias to `EndOfOpponentsTurn`. Set to 1 via
+`.with_pending_skips(1)` when installing during the same player's
+turn whose end would otherwise immediately expire the entry — the
+current firing decrements (instead of expires), the next firing
+expires. Matches printed text "until end of their NEXT turn" exactly
+for all install timings.
+
+Coverage:
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- end_of_opponents_next_turn_with_pending_skips`
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- end_of_opponents_next_turn_without_pending_skips`
+
+### Phase 4l — Track C overlay propagation (full set)
+
+`predicate.rs::eval_permanent_fields` now consults the synth-identity
+overlay union for ALL overlayable card-level fields:
+- `trait_has` ← `synth_identity.traits` (covers Track C `ChangeTraits`)
+- `name_is`, `name_contains`, `name_in` ← `synth_identity.card_name`
+  (covers Track C `ChangeBaseCardName`)
+- `color_is`, `color_only` ← `synth_identity.colors` (covers Track C
+  `ChangeBaseCardColor`)
+
+Previously Track C overlays were invisible to Track H aura filters
+unless the predicate tested only `kind` (which already routed through
+synth_identity). Now the full identity overlay union propagates,
+matching DCGO's `Permanent.HasTrait` / `Permanent.GetCardName` /
+`Permanent.GetColors` behavior — which all consult the live overlay
+state.
+
+Coverage:
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- aura_filter_includes_track_c_change_traits_overlay`
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- aura_filter_includes_track_c_change_base_card_name_overlay`

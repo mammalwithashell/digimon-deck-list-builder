@@ -121,12 +121,14 @@ impl CardEffect for DslCardEffect {
                         target_player,
                         dp_modifier,
                         dp_modifier_fn,
+                        security_attack,
                         security_attack_fn,
                         grant_keyword,
                         modifier,
+                        while_condition,
                         ..
                     } => {
-                        if let Some(e) = lower_aura::lower(
+                        for e in lower_aura::lower_all(
                             card,
                             *scope,
                             active_when.clone(),
@@ -134,9 +136,11 @@ impl CardEffect for DslCardEffect {
                             *target_player,
                             *dp_modifier,
                             dp_modifier_fn.clone(),
+                            *security_attack,
                             security_attack_fn.clone(),
                             grant_keyword.clone(),
                             modifier.clone(),
+                            while_condition.clone(),
                             self.raw.clone(),
                         ) {
                             out.push(e);

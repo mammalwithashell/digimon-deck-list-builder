@@ -1243,10 +1243,88 @@ fn eval_permanent_fields(
     };
     // Delegate the shared card fields to the card-handle path using the top card.
     let top_handle = perm.top_card().handle();
-    if !eval_card_fields(pred, rctx, top_handle, false, bindings) {
+    let synth_identity = perm.synth_identity(rctx.card_data(), &rctx.game.modifiers, handle);
+    // Track H × Track C — propagate synth-identity overlays into the
+    // shared card-field checks (`trait_has`, `name_is`, `name_contains`,
+    // `name_in`, `color_is`, `color_only`). `eval_card_fields` only
+    // sees printed `CardData`; without this, Track C overlays
+    // (`ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor`)
+    // were invisible to Track H aura filters. We pre-check each
+    // overlay-able field against `synth_identity` and clear it from
+    // the delegated predicate if the overlay matches. Pinned by
+    // `aura_filter_includes_track_c_change_traits_overlay` (and follow-
+    // up tests for name/color overlay propagation).
+    let trait_overlay_match = pred.trait_has.as_ref().is_some_and(|t| {
+        synth_identity
+            .traits
+            .iter()
+            .any(|x| x.eq_ignore_ascii_case(t))
+    });
+    let name_is_overlay_match = pred
+        .name_is
+        .as_ref()
+        .is_some_and(|n| synth_identity.card_name == *n);
+    let name_contains_overlay_match = pred.name_contains.as_ref().is_some_and(|n| {
+        synth_identity
+            .card_name
+            .to_lowercase()
+            .contains(&n.to_lowercase())
+    });
+    let name_in_overlay_match = pred
+        .name_in
+        .as_ref()
+        .is_some_and(|names| names.iter().any(|n| synth_identity.card_name == *n));
+    let color_is_overlay_match = pred.color_is.is_some_and(|want| {
+        synth_identity
+            .colors
+            .iter()
+            .any(|c| color_matches(want, *c))
+    });
+    let color_only_overlay_match = pred
+        .color_only
+        .as_ref()
+        .is_some_and(|allowed| {
+            !synth_identity.colors.is_empty()
+                && synth_identity
+                    .colors
+                    .iter()
+                    .all(|c| allowed.iter().any(|a| color_matches(*a, *c)))
+        });
+    let delegated_pred_storage;
+    let delegated_pred = if trait_overlay_match
+        || name_is_overlay_match
+        || name_contains_overlay_match
+        || name_in_overlay_match
+        || color_is_overlay_match
+        || color_only_overlay_match
+    {
+        let mut p = pred.clone();
+        if trait_overlay_match {
+            p.trait_has = None;
+        }
+        if name_is_overlay_match {
+            p.name_is = None;
+        }
+        if name_contains_overlay_match {
+            p.name_contains = None;
+        }
+        if name_in_overlay_match {
+            p.name_in = None;
+        }
+        if color_is_overlay_match {
+            p.color_is = None;
+        }
+        if color_only_overlay_match {
+            p.color_only = None;
+        }
+        delegated_pred_storage = p;
+        &delegated_pred_storage
+    } else {
+        pred
+    };
+    if !eval_card_fields(delegated_pred, rctx, top_handle, false, bindings) {
         return false;
     }
-    let synth_identity = perm.synth_identity(rctx.card_data(), &rctx.game.modifiers, handle);
     if let Some(want) = pred.kind {
         if !kind_matches_field(want, synth_identity.kind) {
             return false;

@@ -3529,6 +3529,115 @@ impl<'a> EffectContext<'a> {
         self.game.mark_until_condition_dirty();
     }
 
+    /// Install a `Expiry::UntilCondition`-scoped modifier with a runtime
+    /// eviction predicate. Mirrors `add_modifier` (honors the
+    /// `can_affect_permanent` guard) but tags the entry with the
+    /// supplied `UntilConditionFn`. The UntilCondition controller (PR
+    /// #458) evaluates the predicate after every mutation event; once
+    /// the predicate returns false, the entry is removed and the
+    /// printed-semantics rule applies — `false → true` does NOT
+    /// re-install. Used by Track H's `while_condition` aura lowering;
+    /// also exposed for raw_rust card scripts that need the same gate.
+    pub fn add_modifier_with_until_condition(
+        &mut self,
+        target: PermanentHandle,
+        modifier: ModifierType,
+        value: i32,
+        predicate: crate::modifiers::UntilConditionFn,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::simple(modifier, value, Expiry::UntilCondition, self.player)
+                .with_until_condition(predicate),
+        );
+        self.game.mark_until_condition_dirty();
+    }
+
+    /// Track H §4 — grant a keyword scoped to `Expiry::UntilCondition`
+    /// with a runtime predicate. Mirrors `add_modifier_with_until_condition`
+    /// for keyword grants. The UntilCondition controller (PR #458)
+    /// evicts on the first false transition; printed-semantics rule
+    /// holds (no re-install on false → true). Used by Track H's
+    /// `while_condition` aura lowering for keyword grants and by
+    /// raw_rust card scripts.
+    pub fn grant_keyword_with_until_condition(
+        &mut self,
+        target: PermanentHandle,
+        keyword: Keyword,
+        predicate: crate::modifiers::UntilConditionFn,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.grant_keyword_with_until_condition(
+            target,
+            keyword,
+            predicate,
+            self.player,
+        );
+        self.game.mark_until_condition_dirty();
+    }
+
+    /// Track H §3 — grant a triggered effect to `carrier` (DCGO
+    /// `AddSkillClass.cs` analog). The body fires when the carrier's
+    /// matching `timing` event drains, with `EffectContext::source_card`
+    /// = grantor (this effect's source) and `EffectContext::source_permanent`
+    /// = carrier — mirroring DCGO's
+    /// `EffectSourceCard` / `EffectSourcePermanent` distinction.
+    ///
+    /// v1 dispatch covers `EffectTiming::OnDeletion`; calls with other
+    /// timings install the entry on the registry but the dispatcher
+    /// hook only consults `OnDeletion` for now (extend
+    /// `Game::fire_granted_triggered_effects` and its callers as
+    /// further timings come online).
+    ///
+    /// `expiry` follows the same semantics as `add_modifier`:
+    /// `Permanent` for "until carrier leaves the field" (clears via
+    /// `clear_permanent`); `EndOfTurn` / `EndOfYourTurn` /
+    /// `EndOfOpponentsTurn` for turn-bound grants. The
+    /// `can_affect_permanent` guard is honored so opponent-effect
+    /// immunities suppress the install.
+    pub fn grant_triggered_effect<F>(
+        &mut self,
+        carrier: PermanentHandle,
+        timing: crate::enums::EffectTiming,
+        expiry: Expiry,
+        body: F,
+    ) where
+        F: Fn(&mut EffectContext<'_>) + Send + Sync + 'static,
+    {
+        if !self.can_affect_permanent(carrier) {
+            return;
+        }
+        // Phase 4i — allocate a body id and register the closure in the
+        // game-level body registry so the queue-based drainer can fetch
+        // it at fire time. The same Arc is also stored on the entry for
+        // direct/inline-fire compat (legacy `fire_granted_triggered_effects`
+        // path remains, though Phase 4b's drain hook is now the primary
+        // dispatcher).
+        self.game.next_granted_effect_id =
+            self.game.next_granted_effect_id.saturating_add(1);
+        let body_id = self.game.next_granted_effect_id;
+        let body_arc: crate::modifiers::GrantedEffectBody = std::sync::Arc::new(body);
+        self.game
+            .granted_effect_bodies
+            .insert(body_id, body_arc.clone());
+        self.game.modifiers.add_granted_triggered(
+            carrier,
+            crate::modifiers::GrantedTriggeredEffect {
+                timing,
+                source_card: self.source_card,
+                source_player: self.player,
+                expiry,
+                body_id,
+                body: body_arc,
+            },
+        );
+    }
+
     pub fn add_effect_immunity_modifier(
         &mut self,
         target: PermanentHandle,

@@ -279,12 +279,34 @@ pub struct AuraBody {
     pub dp_modifier: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dp_modifier_fn: Option<crate::formula::FormulaSpec>,
+    /// Flat `Security A. ±N` grant. Track H §1 — `AuraGrant::SecurityAttack(i32)`.
+    /// Installs `ModifierType::SecurityAttackChange` carrying the literal
+    /// delta on each matching target. Use this for printed text like
+    /// "your Olympos XII Digimon get Security Attack +1"; use
+    /// `security_attack_fn` only when the value is computed dynamically
+    /// (formula over board state).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub security_attack: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub security_attack_fn: Option<crate::formula::FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grant_keyword: Option<GrantKeywordValue>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modifier: Option<String>,
+    /// Track H §4 — install-once continuous gate. When set, the aura's
+    /// modifier installs with `Expiry::UntilCondition` carrying this
+    /// predicate. The UntilCondition controller (PR #458) evicts the
+    /// modifier as soon as the predicate flips false; per the
+    /// printed-semantics rule, `false → true` does NOT re-install.
+    /// Distinct from `active_when`, which gates per-tick re-installation
+    /// and is symmetric. Use `while_condition` for printed text like
+    /// "while opponent has no unsuspended Digimon, this Digimon gains X"
+    /// where the eviction is final once it fires. Currently lowers for
+    /// self-auras with `dp_modifier`, `security_attack`, or named
+    /// `modifier` grants (keyword grants TBD — `KeywordEntry` lacks an
+    /// `until_condition` field; tracked separately).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub while_condition: Option<PredicateSpec>,
 }
 
 /// Inline keyword grant used inside [`AuraBody`].

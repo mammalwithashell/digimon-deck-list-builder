@@ -1061,6 +1061,7 @@ fn compile_declarative(
                 .dp_modifier_fn
                 .as_ref()
                 .map(|f| compile_formula(f, &format!("{prefix}.dp_modifier_fn"), card_id, errors)),
+            security_attack: a.security_attack,
             security_attack_fn: a.security_attack_fn.as_ref().map(|f| {
                 compile_formula(f, &format!("{prefix}.security_attack_fn"), card_id, errors)
             }),
@@ -1069,6 +1070,9 @@ fn compile_declarative(
                 value: gk.value,
             }),
             modifier: a.modifier,
+            while_condition: a.while_condition.as_ref().map(|p| {
+                compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
+            }),
             summary,
             summary_key,
         },
@@ -1707,6 +1711,19 @@ fn compile_step(
             keyword: a.keyword.clone(),
             expiry: a.expiry.clone(),
             value: a.value,
+        },
+        S::GrantTriggeredEffect(a) => CompiledStep::GrantTriggeredEffect {
+            target: compile_predicate(&a.target, &format!("{prefix}.target"), card_id, errors),
+            timing: a.timing.clone(),
+            expiry: a.expiry.clone(),
+            body: a
+                .body
+                .iter()
+                .enumerate()
+                .map(|(i, s)| {
+                    compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors)
+                })
+                .collect(),
         },
         S::GrantEffectImmunity(a) => CompiledStep::GrantEffectImmunity {
             target: compile_binding_ref(&a.target),

@@ -297,6 +297,17 @@ pub struct QueuedEffect {
     /// Preserves transient DNA-origin context when a DNA digivolve parks on
     /// trigger-order or target selections before the queued effect runs.
     pub dna_origin_context: Option<bool>,
+    /// Track H §3 — when `Some(id)`, this queue entry runs a granted
+    /// triggered-effect body fetched from `Game::granted_effect_bodies`
+    /// instead of the standard `effects_for_card(card_id, source_card)
+    /// [effect_slot]` path. `card_id` and `effect_slot` are unused for
+    /// granted entries but kept default to satisfy the existing
+    /// QueuedEffect shape. The drainer's source-liveness, max-per-turn,
+    /// condition, and pay_cost gates are skipped for granted bodies in
+    /// v1 — granted bodies are closure-bodied and don't carry that
+    /// metadata. Selection-driving bodies park on the queue identically
+    /// to printed effects via the standard `pending_selection` path.
+    pub granted_effect_id: Option<u64>,
 }
 
 /// Queued triggered effect parked after its `pay_cost_fn` installed a

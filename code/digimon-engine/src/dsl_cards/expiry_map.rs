@@ -14,6 +14,8 @@ static EXPIRY_TABLE: &[(&str, Expiry)] = &[
     ("end_of_turn", Expiry::EndOfTurn),
     ("end_of_opponents_turn", Expiry::EndOfOpponentsTurn),
     ("end_of_your_turn", Expiry::EndOfYourTurn),
+    ("end_of_opponents_next_turn", Expiry::EndOfOpponentsNextTurn),
+    ("end_of_your_next_turn", Expiry::EndOfYourNextTurn),
     ("end_of_attack", Expiry::EndOfAttack),
     ("end_of_battle", Expiry::EndOfBattle),
     ("until_leave_field", Expiry::UntilLeaveField),
@@ -47,6 +49,8 @@ const fn _expiry_variant_exhaustiveness_check(e: Expiry) {
         | Expiry::EndOfTurn
         | Expiry::EndOfOpponentsTurn
         | Expiry::EndOfYourTurn
+        | Expiry::EndOfOpponentsNextTurn
+        | Expiry::EndOfYourNextTurn
         | Expiry::EndOfAttack
         | Expiry::EndOfBattle
         | Expiry::UntilLeaveField
@@ -70,6 +74,8 @@ mod tests {
             Expiry::EndOfTurn,
             Expiry::EndOfOpponentsTurn,
             Expiry::EndOfYourTurn,
+            Expiry::EndOfOpponentsNextTurn,
+            Expiry::EndOfYourNextTurn,
             Expiry::EndOfAttack,
             Expiry::EndOfBattle,
             Expiry::UntilLeaveField,
