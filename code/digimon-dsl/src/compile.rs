@@ -282,7 +282,7 @@ fn compile_per_selector(
                     of: compile_player_ref(spec.of),
                 }
             }
-        }
+        },
     }
 }
 
@@ -2040,25 +2040,34 @@ fn compile_step(
         },
         S::CancelAttack(_) => CompiledStep::CancelAttack,
         S::OpenCounterWindow(_) => CompiledStep::OpenCounterWindow,
-        S::RefireEffect(a) => CompiledStep::RefireEffect {
-            source: compile_binding_ref(&a.source),
-            timing: if matches!(
-                a.timing.as_str(),
-                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
-            ) {
-                a.timing.clone()
-            } else {
+        S::RefireEffect(a) => {
+            if a.timing == "on_play_or_when_digivolving" && a.optional {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
-                    path: format!("{prefix}.refire_effect.timing"),
-                    message: format!(
-                        "refire_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
-                        a.timing
-                    ),
+                    path: format!("{prefix}.refire_effect.optional"),
+                    message: "refire_effect optional: true is not supported with timing: on_play_or_when_digivolving; put optionality on the target selection or containing clause".to_string(),
                 });
-                "when_digivolving".to_string()
-            },
-            optional: a.optional,
+            }
+            CompiledStep::RefireEffect {
+                source: compile_binding_ref(&a.source),
+                timing: if matches!(
+                    a.timing.as_str(),
+                    "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+                ) {
+                    a.timing.clone()
+                } else {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.refire_effect.timing"),
+                        message: format!(
+                            "refire_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
+                            a.timing
+                        ),
+                    });
+                    "when_digivolving".to_string()
+                },
+                optional: a.optional,
+            }
         },
         S::EndAttack(enabled) => CompiledStep::EndAttack { enabled: *enabled },
         S::CancelReplacement(_) => CompiledStep::CancelReplacement,

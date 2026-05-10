@@ -50,11 +50,28 @@ struct OnAnyPlayedObserver {
     seen: Arc<Mutex<u8>>,
 }
 
+#[derive(Clone)]
+struct OnDigivolveObserver {
+    seen: Arc<Mutex<u8>>,
+}
+
 impl CardEffect for OnAnyPlayedObserver {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         let seen = Arc::clone(&self.seen);
         vec![Effect::on_any_digimon_played(card)
             .name("record any played")
+            .process(move |_ctx| {
+                *seen.lock().unwrap() += 1;
+            })
+            .build()]
+    }
+}
+
+impl CardEffect for OnDigivolveObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let seen = Arc::clone(&self.seen);
+        vec![Effect::on_digivolve(card)
+            .name("record digivolve observer")
             .process(move |_ctx| {
                 *seen.lock().unwrap() += 1;
             })
@@ -209,6 +226,48 @@ fn refire_on_play_effect_uses_grantor_source_and_does_not_fire_play_observers() 
         *observer_seen.lock().unwrap(),
         0,
         "refiring an [On Play] effect must not make the target enter play again"
+    );
+}
+
+#[test]
+fn refire_when_digivolving_effect_does_not_fire_digivolve_observers() {
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let observer_seen = Arc::new(Mutex::new(0));
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("SOURCE-STACK", "Source Stack"))
+        .add_card(make_test_card("REFIRE-TARGET", "Refire Target"))
+        .add_card(make_test_card("OBSERVER", "Observer"))
+        .memory(0)
+        .start();
+    r.register_effect(
+        "REFIRE-TARGET",
+        Arc::new(SourceRecordingWhenDigivolving {
+            seen: Arc::clone(&seen),
+        }),
+    );
+    r.register_effect(
+        "OBSERVER",
+        Arc::new(OnDigivolveObserver {
+            seen: Arc::clone(&observer_seen),
+        }),
+    );
+
+    let source_stack = r.place_on_field(0, "SOURCE-STACK", Some(0));
+    let target = r.place_on_field(0, "REFIRE-TARGET", Some(0));
+    let _observer = r.place_on_field(0, "OBSERVER", Some(0));
+    let caller_source = r.top_card(source_stack);
+
+    {
+        let mut ctx = EffectContext::new(&mut r.game, caller_source, Some(source_stack), 0);
+        assert!(ctx.refire_target_effect(target, TimingFilter::WhenDigivolving, 0, false));
+    }
+
+    assert_eq!(r.memory(), 1);
+    assert_eq!(*seen.lock().unwrap(), vec![(caller_source, Some(target))]);
+    assert_eq!(
+        *observer_seen.lock().unwrap(),
+        0,
+        "refiring a [When Digivolving] effect must not make the target digivolve again"
     );
 }
 

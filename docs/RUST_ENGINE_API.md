@@ -176,7 +176,7 @@ ctx.unsuspend(target: PermanentHandle)
 ```rust
 ctx.refire_target_effect(
     target: PermanentHandle,
-    timing_filter: TimingFilter, // OnPlay, WhenDigivolving, Either, All
+    timing_filter: TimingFilter, // OnPlay, WhenDigivolving, Either
     selecting_player: PlayerId,
     bypass_once_per_turn: bool,
 ) -> bool
@@ -196,6 +196,12 @@ slots are checked and consumed on the target's selected effect slot unless
 `bypass_once_per_turn` is `true`; printed card text must explicitly justify
 using that bypass.
 
+Condition and `pay_cost` contexts use the same grantor source-card attribution.
+Target-local live state should be read through `source_permanent`, not by
+assuming `source_card` is the target's top card. This is a behavior change for
+cross-stack callers of `refire_effect_from_permanent`; existing self-refire
+users are unchanged because the grantor and target are the same card.
+
 When no eligible effect exists, the helper returns `false` and installs no
 selection. With one eligible effect it invokes directly. With two or more, it
 installs an `EffectChoice` pending selection for `selecting_player`, reusing
@@ -210,6 +216,10 @@ the existing action-mask range. YAML lowers the Homeros shape through:
     source: refire_target
     timing: on_play_or_when_digivolving
 ```
+
+For `timing: on_play_or_when_digivolving`, `refire_effect.optional: true` is
+rejected by the DSL. Put optionality on the containing trigger or target
+selection so the effect-pick prompt does not get a second hidden decline path.
 
 This is distinct from Track H granted-triggered abilities: granted-triggered
 effects persist and fire on future matching events, while refire invokes an

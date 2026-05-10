@@ -521,6 +521,13 @@ fn validate_step(
                     ),
                 });
             }
+            if args.timing == "on_play_or_when_digivolving" && args.optional {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.optional"),
+                    message: "refire_effect optional: true is not supported with timing: on_play_or_when_digivolving; put optionality on the target selection or containing clause".to_string(),
+                });
+            }
         }
         StepSpec::AddDpModifier(args) => {
             validate_modifier_value(

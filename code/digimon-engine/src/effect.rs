@@ -78,7 +78,6 @@ pub enum TimingFilter {
     OnPlay,
     WhenDigivolving,
     Either,
-    All,
 }
 
 impl TimingFilter {
@@ -94,7 +93,7 @@ impl TimingFilter {
         match self {
             Self::OnPlay => &["on_play"],
             Self::WhenDigivolving => &["when_digivolving"],
-            Self::Either | Self::All => &["on_play", "when_digivolving"],
+            Self::Either => &["on_play", "when_digivolving"],
         }
     }
 }
