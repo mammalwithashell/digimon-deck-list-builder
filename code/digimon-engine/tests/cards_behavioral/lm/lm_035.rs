@@ -278,8 +278,11 @@ fn lm_035_delay_activation_gains_2_memory_when_played_as_delay_option() {
 
     assert_eq!(
         runner.game.play_option_from_hand(0, 0),
-        OptionPlayResult::Trashed
+        OptionPlayResult::Pending
     );
+    runner
+        .auto_resolve()
+        .expect("resolve LM-035 reveal selection and delay placement");
     assert!(
         runner
             .game

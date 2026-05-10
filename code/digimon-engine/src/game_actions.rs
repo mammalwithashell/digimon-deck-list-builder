@@ -2045,7 +2045,7 @@ impl Game {
     /// Hand/Trash per-turn activation counters (§4.5c-residual 🟡) are not
     /// tracked here; see docs/RUST_PYTHON_PARITY.md §4.5c.
     pub fn activate_hand_main(&mut self, player_id: PlayerId, hand_index: usize) -> bool {
-        let (card_id, handle) = {
+        let (card_id, handle, card_kind) = {
             let player = match self.players.get(player_id as usize) {
                 Some(p) => p,
                 None => return false,
@@ -2054,7 +2054,11 @@ impl Game {
                 Some(c) => c,
                 None => return false,
             };
-            (card.card_id(&self.card_data).to_string(), card.handle())
+            (
+                card.card_id(&self.card_data).to_string(),
+                card.handle(),
+                card.card_kind(&self.card_data),
+            )
         };
 
         // Use `effects_for_card` rather than the raw registry so that
@@ -2067,8 +2071,14 @@ impl Game {
             None => return false,
         };
 
+        let main_timing_matches = |timing: EffectTiming| {
+            timing == EffectTiming::MainFromHand
+                || (matches!(card_kind, CardKind::Option | CardKind::Dual)
+                    && timing == EffectTiming::OptionMain)
+        };
+
         for effect in &effects {
-            if effect.timing != EffectTiming::MainFromHand {
+            if !main_timing_matches(effect.timing) {
                 continue;
             }
             if let Some(cond) = &effect.condition {

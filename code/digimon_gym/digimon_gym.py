@@ -230,6 +230,11 @@ class DigimonEnv(gymnasium.Env):
             (observation, info) tuple per Gymnasium v1.0 API.
         """
         super().reset(seed=seed)
+        if seed is not None:
+            self.action_space.seed(seed)
+        runner_seed = seed
+        if runner_seed is None:
+            runner_seed = int(self.np_random.integers(0, np.iinfo(np.int32).max))
 
         # Allow per-episode deck overrides
         deck1 = self._deck1
@@ -241,7 +246,7 @@ class DigimonEnv(gymnasium.Env):
         self.runner = _make_runner(
             deck1,
             deck2,
-            seed=seed,
+            seed=runner_seed,
             tensor_profile=self.tensor_profile,
         )
         self._step_count = 0
