@@ -530,9 +530,7 @@ EndOfAttack           # cleared when the current attack resolves
 EndOfBattle           # cleared when the current battle resolution finishes
 UntilLeaveField       # cleared when the source permanent leaves the field
 UntilCondition        # active while a per-entry boolean predicate holds; re-evaluated
-                      # by the continuous controller (controller wire-up is a follow-up
-                      # to the Track C taxonomy publication; the variant is reserved
-                      # for predicate-driven auras such as Zephagamon ZEPH-G004)
+                      # by the continuous controller after mutation-event drains
 OnceUsed(u32)         # the value is the limit; consume_use(...) advances a per-entry
                       # counter and the entry expires once the counter reaches the limit.
                       # Reserved variant — consumption tracking is a follow-up to the
@@ -544,8 +542,42 @@ OnceUsed(u32)         # the value is the limit; consume_use(...) advances a per-
 identity and metadata modifiers should use the typed payload so string/list
 parameters are not smuggled through ad hoc encodings. Debug builds reject
 mismatched `(ModifierType, ModifierPayload)` pairs at install time. Debug
-builds also reject `Expiry::UntilCondition` installs until the continuous
-controller exists; release builds permit the install and emit a warning.
+builds reject `Expiry::UntilCondition` entries that do not carry an
+`until_condition` predicate. Entries with predicates install normally in
+debug and release builds.
+
+`Expiry::UntilCondition` contract:
+
+- **Predicate surface:** `ModifierEntry::until_condition` /
+  `PlayerModifierEntry::until_condition` stores an `Arc<dyn Fn(&Game,
+  ModifierSubject) -> bool + Send + Sync>`. The subject is the installed
+  permanent or player, not the event subject that dirtied the controller.
+- **Triggering events:** the game marks the controller dirty for field/zone
+  changes (play, deletion, breeding move, hatch, source add/remove/trash,
+  return-to-hand/deck/security placement), orientation changes
+  (`OnSuspend`/`OnUnsuspend` and turn-start bulk unsuspend), counter changes
+  (memory, security, hand/draw movement), phase boundaries
+  (`StartOfYourTurn`, `StartOfYourMainPhase`, turn end, end-of-attack
+  drains), and modifier-set changes installed through `EffectContext`.
+- **Re-evaluation timing:** dirty entries are checked after the current
+  mutation event's observer queue drains. State mutations inside an observer
+  mark the controller dirty but do not evict modifiers mid-observer.
+- **Atomicity:** one controller cycle evaluates each active
+  `UntilCondition` entry at most once. Multiple field changes inside one
+  event coalesce through the dirty flag.
+- **Removal semantics:** true -> false removes that installed entry. A later
+  false -> true state transition does not restore it; a fresh card trigger
+  must install a fresh modifier entry.
+- **Eviction order:** entries that become false in the same cycle are
+  evaluated and evicted by install order (FIFO). Later predicates see earlier
+  removals in the same cycle.
+- **Telemetry:** `Game::until_condition_last_cycle_evaluations()` and
+  `Game::until_condition_reevaluation_cycles()` expose lightweight counters
+  for tests and future cycle-budget work.
+- **DSL boundary:** the DSL expiry key `until_condition` is recognized, but
+  schema-only YAML that does not lower a predicate onto the entry is a
+  programming error. Do not author production YAML with bare
+  `expiry: until_condition` until the lowering path supplies the predicate.
 
 Payload variants currently consumed by consult sites:
 
@@ -665,10 +697,10 @@ exercise this.
   (`ChangeDp`, `ChangePlayCost`, etc.) via the future continuous
   controller. The aura → modifier delivery API is reserved.
 - **Track J (predicate evaluator):** is the input to
-  `Expiry::UntilCondition`. The predicate type lives on
-  `ModifierEntry::replacement_condition` for replacement-shaped
-  predicates today; `UntilCondition` re-uses this surface when the
-  controller wires up.
+  `Expiry::UntilCondition`. Runtime entries use
+  `ModifierEntry::until_condition` / `PlayerModifierEntry::until_condition`;
+  DSL lowering must compile a `BoolPredicate` into that predicate field before
+  using `expiry: until_condition`.
 
 ### `Keyword`
 

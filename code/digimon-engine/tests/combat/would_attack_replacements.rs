@@ -433,7 +433,9 @@ fn when_would_be_attack_target_opponent_cancel_filter() {
             materialized_declarative: false,
             cause_filter: Some(ReplacementCause::OpponentEffect),
             replacement_condition: None,
+            until_condition: None,
             effect_immunity_filter: None,
+            install_order: 0,
         },
     );
 

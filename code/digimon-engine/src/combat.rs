@@ -3370,6 +3370,7 @@ impl Game {
         self.modifiers.clear_permanent(handle);
         // Phase 6: expire any player-scoped modifiers sourced from this permanent.
         self.modifiers.expire_player_on_permanent_leave(handle);
+        self.mark_until_condition_dirty();
 
         // Phase D Task 8 — drain post-deletion replays (e.g. printed
         // `<Fortitude>` keyword auto-install). The carrier's OnDeletion
@@ -3450,6 +3451,7 @@ impl Game {
             }
         }
         self.drain_effect_queue();
+        self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     /// Resume a deletion that was deferred by `commit_permanent_deletion`

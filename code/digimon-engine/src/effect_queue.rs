@@ -552,6 +552,7 @@ impl Game {
             }
             if self.effect_queue.is_empty() {
                 self.effect_chain_depth = 0;
+                self.reevaluate_until_condition_modifiers_if_dirty();
                 return;
             }
 

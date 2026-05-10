@@ -1747,7 +1747,12 @@ impl<'a> EffectContext<'a> {
             }
         }
 
-        self.game.player_mut(player).draw_many(count)
+        let drawn = self.game.player_mut(player).draw_many(count);
+        if drawn > 0 {
+            self.game.mark_until_condition_dirty();
+            self.game.reevaluate_until_condition_modifiers_if_dirty();
+        }
+        drawn
     }
 
     /// Trash the top N cards of a player's deck.
@@ -1811,6 +1816,8 @@ impl<'a> EffectContext<'a> {
                 card,
                 crate::selection::SecurityRemovalDestination::Trash,
             );
+            self.game.mark_until_condition_dirty();
+            self.game.reevaluate_until_condition_modifiers_if_dirty();
             true
         } else {
             false
@@ -3496,6 +3503,7 @@ impl<'a> EffectContext<'a> {
             target,
             ModifierEntry::simple(modifier, value, expiry, self.player),
         );
+        self.game.mark_until_condition_dirty();
     }
 
     pub fn add_declarative_modifier(
@@ -3518,6 +3526,7 @@ impl<'a> EffectContext<'a> {
                 self.player,
             ),
         );
+        self.game.mark_until_condition_dirty();
     }
 
     pub fn add_effect_immunity_modifier(
@@ -3538,6 +3547,7 @@ impl<'a> EffectContext<'a> {
                     controller,
                 }),
         );
+        self.game.mark_until_condition_dirty();
         true
     }
 
@@ -3564,6 +3574,7 @@ impl<'a> EffectContext<'a> {
                 ModifierEntry::passive_replacement(modifier, expiry, self.player),
             );
         }
+        self.game.mark_until_condition_dirty();
     }
 
     pub fn ignore_option_color_requirement(&mut self, target_player: PlayerId, expiry: Expiry) {
@@ -3577,6 +3588,7 @@ impl<'a> EffectContext<'a> {
                 self.player,
             ),
         );
+        self.game.mark_until_condition_dirty();
     }
 
     pub fn add_declarative_player_modifier(
@@ -3596,6 +3608,7 @@ impl<'a> EffectContext<'a> {
                 self.player,
             ),
         );
+        self.game.mark_until_condition_dirty();
     }
 
     pub fn grant_keyword(&mut self, target: PermanentHandle, keyword: Keyword, expiry: Expiry) {
@@ -3605,6 +3618,7 @@ impl<'a> EffectContext<'a> {
         self.game
             .modifiers
             .grant_keyword(target, keyword, expiry, self.player);
+        self.game.mark_until_condition_dirty();
     }
 
     pub fn grant_declarative_keyword(
@@ -3623,6 +3637,7 @@ impl<'a> EffectContext<'a> {
             self.source_permanent,
             self.player,
         );
+        self.game.mark_until_condition_dirty();
     }
 
     // ─── Breeding-area mutations ──────────────────────────────────────
