@@ -1231,6 +1231,9 @@ impl Game {
                 source_card: card_handle,
                 source_permanent: None,
                 source_kind: EffectSourceKind::Digimon,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
                 controller: owner,
                 timing: EffectTiming::WhenDigivolving,
                 trigger_context: None,
@@ -1316,6 +1319,9 @@ impl Game {
                 source_card: card_handle,
                 source_permanent: None,
                 source_kind: EffectSourceKind::Option,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
                 controller: owner,
                 timing: EffectTiming::OptionMain,
                 trigger_context: None,
@@ -1357,6 +1363,9 @@ impl Game {
                 source_card: card_handle,
                 source_permanent: None,
                 source_kind: EffectSourceKind::Option,
+                attribution_source_card: None,
+                attribution_source_kind: None,
+                bypass_once_per_turn: false,
                 controller: owner,
                 timing: EffectTiming::CounterEffect,
                 trigger_context: None,
@@ -1496,7 +1505,7 @@ impl Game {
                         if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
                             continue;
                         }
-                        let link_max = (1 + self.modifiers.link_max_delta(handle))
+                        let link_max = (5 + self.modifiers.link_max_delta(handle))
                             .clamp(0, u8::MAX as i32)
                             as usize;
                         if perm.linked_cards.len() >= link_max {

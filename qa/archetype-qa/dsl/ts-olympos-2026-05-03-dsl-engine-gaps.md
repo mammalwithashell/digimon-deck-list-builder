@@ -1,5 +1,23 @@
 # TS Olympos Rust DSL/Engine Gap Inputs
 
+> **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
+> #449–#458. Track E DSL verbs landed (PR #454) so `raw_rust` carve-outs
+> for the ten zone-movement verbs in `qa/dsl-vocab-gaps.md` are now
+> expressible in YAML. Track C deferred modifier variants landed (PR
+> #455) with typed `ModifierPayload`; identity overlays / DigiXros
+> aliases / Security Attack / EndTurn min memory / Link cost+max are
+> wired but a structured DSL payload schema is still pending. Track G
+> keyword library closed (PR #457) — Evade printed-semantics fix,
+> Decoy color-filter via `Keyword::Decoy(u8)`, Progress card-shape
+> backfill. `Expiry::UntilCondition` runtime controller landed (PR
+> #458). For the canonical engine-side closures consult
+> [docs/RUST_ENGINE_GAPS.md](../../../docs/RUST_ENGINE_GAPS.md);
+> per-archetype `raw_rust` carve-out audit lives in
+> [qa/dsl-vocab-gaps.md](../../dsl-vocab-gaps.md). See
+> `.claude/plans/pre-scaling-cleanup-batch.md` §2 for the closure-
+> index narrative.
+
+
 Date: 2026-05-03
 
 Assessment workflow: `.codex/skills/assess-rust-engine-archetype/`
@@ -105,10 +123,11 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
 ### G-TS-CROSS-CARD-EFFECT-REFIRING
 
 - **Type:** engine / DSL gap
-- **Blocks TS Olympos cards:** `BT24-102` Homeros.
+- **Status:** CLOSED for BT24-102 Homeros on 2026-05-10.
+- **Blocks TS Olympos cards:** none for the permanent-target Homeros shape.
 - **Cross-archetype reuse:** Apocalymon, Dark Masters, Royal Knights, and any effect that activates another card's printed triggered effect outside its normal timing.
 - **Printed shape:** choose an Olympos XII Digimon and activate one of its `[On Play]` or `[When Digivolving]` effects at end of turn.
-- **Current evidence:** Existing trackers describe cross-card / cross-timing effect re-firing as an open reusable blocker. Current DSL has no step that walks another permanent's registered effects, filters by timing, lets the player choose one when multiple are available, and enqueues it with correct source attribution.
+- **Current evidence:** `EffectContext::refire_target_effect` now walks another permanent's registered effects, filters by timing, lets the player choose one when multiple are available, respects once-per-turn slots, and enqueues it with correct Homeros-as-source / target-as-carrier attribution. YAML `refire_effect` supports `timing: on_play_or_when_digivolving`.
 - **Required capability:** an effect re-firing primitive that can select a permanent, enumerate eligible effects by timing, present an action-masked choice, and run the selected effect without pretending the target just played or digivolved.
 - **Suggested DSL shape:**
 
@@ -127,6 +146,7 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
 
 - **First test:** Homeros is unsuspended with two Olympos XII Digimon in battle, one with an On Play effect and one with both On Play and When Digivolving effects. At end of turn, assert the mask first selects the Digimon, then selects one eligible effect, suspends Homeros as the cost, and resolves only that chosen effect.
 - **Spec note:** The spec should define attribution and once-per-turn accounting explicitly. Homeros should not refresh a once-per-turn effect that has already been used unless the card text permits it.
+- **Passing focused tests:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context effect_refiring -- --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl refire -- --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt24_102 -- --nocapture`.
 
 ### G-TS-CROSS-PERMANENT-REPLACEMENT-PREVENTION
 
@@ -289,7 +309,7 @@ Task 10 production-authoring audit update (2026-05-03): `BT24-031`, `BT24-040`, 
 | Card(s) | Status | Next Rust test |
 |---|---|---|
 | `BT24-034` Aegiomon | blocked by top-security-to-hand + duplicate-name Tamer filter | Optional cost branch, non-duplicate TS Tamer selection, free play, OnMove/OnPlay/WhenDigivolving all share body |
-| `BT24-102` Homeros | blocked by cross-card effect re-firing | Start-main memory/draw, TS DP aura, EOT reactivation with Homeros suspend cost |
+| `BT24-102` Homeros | YAML fixture landed; Track K refire primitive closed for this shape | Start-main memory/draw, TS DP aura, EOT reactivation with Homeros suspend cost |
 | `BT24-100` In-Between Theater | authoring / test gap after generic Delay support | Ignore color with TS field presence, reveal-add TS, place as Delay, Delay gain 2, Security places in battle area |
 | `BT24-031` Elecmon | implemented 2026-05-03; production YAML and 5 focused behavioral tests pass | Keep in validated-cards report as implemented; no remaining BT24-031-specific blocker from this audit. |
 | `BT24-043`, `BT24-020` | reusable multi-bucket reveal search primitive closed; production authoring still needed for their printed inherited variants | Reveal 3 with bucketed choices, no duplicate reveal card, correct bottom remainder, then any printed inherited security movement / Recovery. |

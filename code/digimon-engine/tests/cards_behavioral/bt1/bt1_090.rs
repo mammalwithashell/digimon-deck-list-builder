@@ -259,3 +259,92 @@ fn bt1_090_scheduled_effect_queued_then_drained() {
     );
     assert_eq!(runner.memory(), 0, "lose_memory: 2 fired at EOT");
 }
+
+// =============================================================================
+// Section 5 — Failure-mode audit: scheduled-effect queue (PR #456 cluster 3d)
+// =============================================================================
+//
+// PR #456 fixed BT1-090 by ensuring the scheduled body fires once at
+// end_of_your_turn and clears the queue. The adjacent failure modes here
+// stress the queue itself rather than the single-card lifecycle.
+
+/// **Adjacent edge-case (cluster 3d):** two BT1-090 plays in the same
+/// turn install two independent schedules. Both must fire at the same
+/// EOT, clearing the queue completely. Guards against the implicit
+/// assumption that `scheduled_effects.len() == 1` is the only valid
+/// pre-EOT state.
+#[test]
+fn bt1_090_two_plays_in_same_turn_drain_both_schedules_at_eot() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT1-090")
+        .expect("BT1-090 YAML parses and compiles")
+        .hand(0, &["BT1-090", "BT1-090"])
+        .memory(0)
+        .start();
+
+    // Play first BT1-090 from hand[0]: gain 2 → memory = 2; schedule
+    // queued.
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(runner.memory(), 2);
+    assert_eq!(runner.game.scheduled_effects.len(), 1);
+
+    // Play second BT1-090 from hand[0] (the prior card was consumed,
+    // so hand has shifted). Gain 2 → memory = 4; second schedule queued.
+    assert!(runner.game.activate_hand_main(0, 0));
+    assert_eq!(runner.memory(), 4);
+    assert_eq!(
+        runner.game.scheduled_effects.len(),
+        2,
+        "each activation installs an independent schedule"
+    );
+
+    // End P0's turn: BOTH schedules fire (each loses 2 → 4-2-2 = 0),
+    // then seesaw flip (0 → 0).
+    runner.end_turn();
+
+    assert!(
+        runner.game.scheduled_effects.is_empty(),
+        "both schedules drained at EOT"
+    );
+    assert_eq!(
+        runner.memory(),
+        0,
+        "two independent lose_memory bodies both fired"
+    );
+}
+
+/// **Adjacent edge-case (cluster 3d):** the schedule's owner is the
+/// player who activated the card. Schedules installed during P0's turn
+/// must NOT fire at the end of P1's turn — they're keyed to "your
+/// turn", not "any turn". This is the explicit owner-scope assertion
+/// not directly exercised by the existing per-card tests.
+#[test]
+fn bt1_090_schedule_does_not_fire_at_end_of_opponents_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT1-090")
+        .expect("BT1-090 YAML parses and compiles")
+        .hand(0, &["BT1-090"])
+        .memory(0)
+        .start();
+
+    runner.game.activate_hand_main(0, 0);
+    assert_eq!(runner.memory(), 2);
+    assert_eq!(runner.game.scheduled_effects.len(), 1);
+
+    // End P0's turn: schedule fires (memory 2→0); then seesaw flip
+    // (0 → 0); P1 is now turn player.
+    runner.end_turn();
+    assert!(
+        runner.game.scheduled_effects.is_empty(),
+        "schedule already drained at end of OWNER's (P0's) turn — not pending"
+    );
+    assert_eq!(runner.memory(), 0);
+
+    // Sanity: ending P1's turn must not generate phantom schedule
+    // resurrections.
+    runner.end_turn();
+    assert!(
+        runner.game.scheduled_effects.is_empty(),
+        "no phantom schedule appears at end of opponent's turn"
+    );
+}

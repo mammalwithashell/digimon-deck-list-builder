@@ -15,6 +15,21 @@
 
 Each entry cites the canonical source lines so divergences can be rechecked after either engine evolves.
 
+> **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
+> #449–#458. The Rust engine added Track A `ProvenanceToken` (PR #451),
+> Track B replacement framework (PR #449), Track C modifier taxonomy +
+> typed `ModifierPayload` (PRs #452, #455), Track D centralized attack
+> flow (PR #450), Track E zone-movement helpers + owner-routing fix
+> (PR #453), Track E DSL verbs (PR #454), Track G keyword library
+> close (PR #457), and the `Expiry::UntilCondition` continuous
+> controller (PR #458). The PyO3 binding surface
+> (`code/digimon-engine-py`) preserves the Python 1/2 ↔ Rust 0/1
+> player-ID convention; no parity entries were affected by this batch
+> (no Python-side card-script changes; the Python engine is sunset
+> reference). The pre-scaling cleanup batch (§2) added owner-routing
+> live coverage in `tests/owner_routing_live.rs`; that test exercises
+> Rust-only zone helpers and does not interact with the Python engine.
+
 ---
 
 ## 1. Core game flow
@@ -697,6 +712,32 @@ Rust's `PendingSelection` struct does not (no equivalent field). When this
 field would be non-null in Python, Rust simply omits it — net result on
 the wire is the absence of the key.
 
+### Curated `CardData` exposure across consumer surfaces (audited 2026-05-10)
+
+The Rust `CardData` struct (`code/digimon-engine/src/card_data.rs`) is the
+canonical card-metadata shape. Consumers expose intentionally narrowed
+subsets — adding a field to `CardData` does **not** automatically propagate.
+Audit performed after PR #457 flagged a Tauri build break from
+`ace_overflow` / `digixros_aliases` (added in PRs #413 / #455) not being
+mirrored on the desktop builder.
+
+| Consumer | Surface | New-field policy |
+|---|---|---|
+| Tauri DTO | `code/src-tauri/src/engine_commands.rs::CardDto` | All `CardData` fields the desktop UI may render. `ace_overflow` and `digixros_aliases` exposed as of 2026-05-10. `card_dto` exhaustively destructures `CardData`, so the next field addition trips a compile error here. |
+| PyO3 binding | `code/digimon-engine-py/src/lib.rs::PyCard` | Curated subset by design. `ace_overflow` / `digixros_aliases` deliberately not exposed — no Python caller currently reads them. Add `#[pyo3(get)]` accessors on demand when a Python consumer needs them. |
+| Frontend types | `code/frontend/src/types/{game,cards}.ts` | Hosted-API path consumes `to_ui_json` (state-shape, not `CardData`-shape). Desktop frontend consumes the Tauri DTO via `invoke()` with looser typing — extra fields on `CardDto` are ignored, not rejected. |
+| State filter | `code/server/state_filter.py` | Operates on `to_ui_json` output, not `CardData`. Card metadata flows in through hand/permanent shapes that already filter sensitive identity for opponents (`handIds`, `handCards` redaction per Working Rule 14). |
+| RL env / observation tensor | `code/digimon_gym/digimon_gym.py`, engine tensor encoding | Tensor encodes a fixed feature schema; `ace_overflow` / `digixros_aliases` are not encoded. Adding them is a separate spec change (Working Rule 4). |
+
+The structural drift detector for the Tauri layer is the exhaustive
+destructure of `CardData` inside `card_dto`. The engine-side analog is
+Rust's struct-literal exhaustiveness (which is what caught PR #457's
+build break — by definition, every `CardData { ... }` constructor must
+list every field). Construction-time drift detection is therefore
+already free; consumption-time drift detection requires the explicit
+destructure pattern. New consumers reading `CardData` should follow the
+`card_dto` pattern.
+
 ---
 
 ## 8. Test strategy
@@ -1058,6 +1099,24 @@ by Phase 3 into `CardData.keywords`; verified by
 `tests/keyword_parsing.rs`). Phase 9's Raid retarget rider uses
 `Game::has_keyword(pa.attacker, Keyword::Raid)` which honors both
 native-printed AND modifier-granted Raid. No parity gap.
+
+---
+
+## 16. Refire attribution (Track K, 2026-05-10)
+
+### 16.1 ⚪ Permanent-target refire source-card attribution
+
+Rust `EffectContext::refire_effect_from_permanent` now routes through the
+same permanent-target refire path as `refire_target_effect`. For cross-stack
+callers, the refired effect's lookup identity remains the target's effect
+slot, while `EffectContext::source_card` / source kind are attributed to the
+grantor and `source_permanent` carries the target. Existing self-refire users
+are observationally unchanged because grantor and target are the same card.
+
+This is Rust-leading by design for BT24-102 Homeros's "activate 1 [On Play]
+or [When Digivolving] effect" shape and intentionally does not dispatch fake
+`OnAnyDigimonPlayed` or `OnDigivolve` events. The Python legacy engine has no
+equivalent Homeros cross-card primitive.
 
 ---
 

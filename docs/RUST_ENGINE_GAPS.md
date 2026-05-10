@@ -2,6 +2,22 @@
 
 Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`), discovered during archetype audits by `assess-rust-engine-archetype`. Distinct from [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md), which tracks Rust↔Python divergences in shared subsystems — this document catalogs **net-new primitives** the Rust scripting API needs before a given archetype can be implemented under the no-approximations policy (CLAUDE.md §17–18).
 
+> **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
+> #449–#458. The audit-table summary at the top is consistent with the
+> per-entry status below. New since the previous sweep: Track B (PR
+> #449 replacement framework), Track A (PR #451 event payload + Track A
+> `ProvenanceToken`), Track C (PR #452 modifier taxonomy + 10 wired
+> consult sites; PR #455 deferred modifier variants + `ModifierPayload`
+> typed payloads), Track D (PR #450 attack-flow centralization), Track
+> E (PR #453 zone-movement helpers + owner-routing fix; PR #454 ten
+> deferred DSL verbs), Track G (PR #457 keyword library close — Evade
+> fix, Decoy color-filter, Progress backfill), and the
+> `Expiry::UntilCondition` runtime controller (PR #458). The owner-
+> routing fix from PR #453 is now exercised end-to-end through real
+> card flows by `code/digimon-engine/tests/owner_routing_live.rs`
+> (pre-scaling cleanup batch §1). See `.claude/plans/pre-scaling-cleanup-batch.md`
+> for the full closure-index narrative.
+
 There are two related assessment workflows:
 
 - `.codex/skills/assess-rust-engine-archetype/` is the Codex read-only readiness workflow. It inspects printed text, current DSL schema/lowering, engine action/pending-selection support, and tests, then reports `ready`, `dsl-gap`, `engine-gap`, `rules-gap`, `test-gap`, or `data-gap` findings. It should cite this tracker when a known primitive blocks an archetype, but it does not modify files.
@@ -924,11 +940,12 @@ Drasil while leaving no duplicate battle-area copy. Coverage:
   Until this lands, BT15-102 Apocalymon's [Main] play is OMITTED from any compiled YAML.
 
 ### Cross-card effect re-firing — activate a foreign card's [On Play] effect attributed to the source
-- **Severity:** 🔴 BLOCKING
+- **Severity:** 🟡 PARTIAL
 - **Discovered in:** Dark Masters (2026-04-18)
 - **Card(s):** BT15-102 Apocalymon
 - **Effect text:** "by placing 1 level 6 or lower card from your trash as this Digimon's bottom digivolution card, activate 1 [On Play] effect on that card as an effect of this Digimon."
-- **What's missing:** Existing gap "Effect re-firing / cross-timing self-trigger" addresses invoking the SOURCE card's own effects from another timing. This clause invokes the [On Play] effect of a DIFFERENT card (the placed Lv6-or-lower) but attributes the effect to the source (`source_card = Apocalymon's CardHandle`, `source_permanent = Apocalymon`). The selection layer ("activate 1 [On Play] effect on that card") also needs an in-effect choice over multiple OnPlay clauses on the placed card. No primitive walks `CardEffectRegistry::get(other_card_id).effects(handle)`, lets the player pick one OnPlay clause when multiple exist, then enqueues with re-bound source attribution.
+- **Status update 2026-05-10:** Track K resolved the permanent-target version used by BT24-102 Homeros. `EffectContext::refire_target_effect(target, TimingFilter::{OnPlay, WhenDigivolving, Either}, selecting_player, bypass_once_per_turn)` enumerates a target permanent's registered effects, filters On Play / When Digivolving timings, respects the target's once-per-turn accounting, exposes an `EffectChoice` when multiple effects are eligible, preserves carrier semantics on the target permanent, and keeps source attribution on the grantor. YAML `refire_effect` now accepts `timing: on_play_or_when_digivolving`, covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context effect_refiring`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl refire`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt24_102`.
+- **What's still missing:** BT15-102 Apocalymon's clause invokes the [On Play] effect of a DIFFERENT card object just placed from trash as a digivolution source, not an existing battle-area permanent. That still needs a source-card / stack-card refire variant that can enumerate `CardEffectRegistry::get(other_card_id).effects(handle)` for the placed source card and bind carrier/source attribution to Apocalymon.
 - **Suggested API shape:** `ctx.activate_foreign_on_play(other_card_id: &str, target_perm: PermanentHandle, attribution: SourceAttribution)` paired with the existing `select_effect_choice` gap when the foreign card has >1 OnPlay clause. SourceAttribution variants: `AttributeToSource` vs. `AttributeToOther`.
 - **Workaround:** "None — BLOCKED." Inline-duplicating every Lv6-or-lower card's OnPlay text is unscalable.
 - **Related:** "Effect re-firing / cross-timing self-trigger"; "In-effect branch-choice selector (`select_effect_choice` / \"choose one of N effects\")".
@@ -1228,6 +1245,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Effect text:** As above.
 - **What's missing:** Options that live on the battle area (Plug-Ins after link, Delay-placed Options, Option-as-cost-trash here) can exit via a trash path that bypasses `delete_permanent`. Existing `OnDeletion` fires only on permanent deletion, not on Option-specific trash; existing `OnTrash` in the enum is not dispatched for this case. Need a global fan-out filtered to `CardKind::Option` so an unrelated Digimon can observe the trash.
 - **Suggested API shape:** Introduce `EffectTiming::OnOptionTrashedAnywhere` (or the broader parametric `OnCardKindTrashed(CardKind::Option)`). Fire from every Option-leave-battle-area path: cost-pay trash, resolve-and-trash, Delay activation trash, link-unlink trash. Fan out globally to battle-area / hand / inherited-stack observer effects with context `{trashed_card_id, former_controller}`. Couples with the Option card play flow gap.
+- **Updated 2026-05-10 (Track I substrate slice):** Narrowed. `EffectTiming::OnOptionTrashed`, `TriggerSource::OptionTrashed`, `EffectContext::option_last_field_state()`, and `Game::trash_field_option(option_handle, cause)` now cover explicit lifecycle API trashes for standalone persistent field Options. Payload includes `event_card`, `event_cause`, `moved_card_sets`, and the last `OptionFieldState`; fan-out currently covers battle-area and breeding observers through the standard trigger queue. Remaining open work: wire every legacy Option trash path (standard dispose, Delay expiry/activation, linked-card cascade, security trash-after-resolve) through this API, and extend fan-out to hand/trash/security-resident observers if Track A requires those zones. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow`.
 - **Workaround:** None — BLOCKED.
 - **Related:** Existing "Option card play flow + Plug-In / Link mechanic"; existing "Global `OnAnyDigimonPlayed` / `OnAnyDeletion` observer timings" (same architectural class of global fan-out).
 
@@ -1238,6 +1256,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Effect text:** As above.
 - **What's missing:** The existing Plug-In sub-gap inside "Option card play flow" scopes the source zone to the hand. ST22-11 allows re-linking from the battle area — a Plug-In already on the field (unlinked or linked to a now-gone Digimon) can transfer to a new carrier. Needs a three-zone Plug-In state model: hand→link, battle-area-free→link, linked→battle-area-free on carrier loss.
 - **Suggested API shape:** `ctx.link_plug_in(source: PlugInSource, target: PermanentHandle)` where `PlugInSource = Hand(index) | BattleArea(permanent_handle)`. Engine maintains per-permanent `linked_cards: Vec<CardSource>` and a reverse-lookup from orphaned Plug-In permanents. On carrier loss, orphaned Plug-Ins return to battle-area-free state (distinct from trash and distinct from return-to-hand).
+- **Updated 2026-05-10 (Track I substrate slice):** Partially narrowed. `option_lifecycle::OptionFieldState` now defines `LinkedPlugIn` and `OrphanedPlugIn`; `Game::orphan_linked_plug_in`, `Game::orphan_plug_in`, and `Game::relink_plug_in` provide the observer-safe storage transitions for orphan/re-link flows. Remaining open work: route automatic carrier-loss cascades through orphaning instead of the existing trash cascade where printed rules require survival, surface orphan candidates through pending selections, and lower the source-zone vocabulary into DSL. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow`.
 - **Workaround:** None — BLOCKED.
 - **Related:** Existing "Option card play flow (resolve + trash vs. place-on-field; [Main]/[Security] activation) + Plug-In / Link mechanic".
 

@@ -38,6 +38,10 @@ pub enum OptionState {
     Linked {
         host: PermanentHandle,
     },
+    OrdinaryFieldOption,
+    OrphanedPlugIn {
+        last_carrier_owner: PlayerId,
+    },
     Training {
         owner: PlayerId,
         trained: Option<TrainingBinding>,

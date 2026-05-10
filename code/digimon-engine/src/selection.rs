@@ -278,9 +278,18 @@ impl PendingSelection {
 /// alongside so re-lookup doesn't have to scan zones for a handle.
 #[derive(Debug, Clone)]
 pub struct QueuedEffect {
+    /// Card handle used to look up the effect body and its OPT slot.
+    ///
+    /// For ordinary queued effects this is also the effect attribution card.
+    /// Refired effects keep this pointed at the target card whose printed
+    /// effect is being invoked, while `attribution_source_card` points at the
+    /// grantor whose effect caused the refire.
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
     pub source_kind: EffectSourceKind,
+    pub attribution_source_card: Option<CardHandle>,
+    pub attribution_source_kind: Option<EffectSourceKind>,
+    pub bypass_once_per_turn: bool,
     pub controller: PlayerId,
     pub timing: EffectTiming,
     pub trigger_context: Option<TriggerContext>,
@@ -401,6 +410,14 @@ pub enum TriggerSource {
         permanent: Option<PermanentHandle>,
         linked_host: Option<PermanentHandle>,
         card: CardHandle,
+    },
+    /// Observer timing fired after a persistent Option is trashed through the
+    /// lifecycle API.
+    OptionTrashed {
+        player: PlayerId,
+        card: CardHandle,
+        cause: crate::option_lifecycle::OptionTrashCause,
+        last_state: crate::option_lifecycle::OptionFieldState,
     },
     /// Generic observer timing carrying the permanent/card that caused the
     /// event. Used by event-gated delayed Options such as suspend watchers.

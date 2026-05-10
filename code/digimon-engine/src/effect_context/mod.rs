@@ -27,7 +27,7 @@ use crate::card_source::CardHandle;
 use crate::combat::{AttackError, AttackInitiator, AttackOpen, AttackResult, TargetConstraint};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
-use crate::effect::enumerate_refireable_effects;
+use crate::effect::{enumerate_refireable_effects, ReFireableEffect, TimingFilter};
 use crate::enums::{
     CardKind, DelayTrigger, EffectSourceKind, EffectTiming, Expiry, GamePhase, Keyword,
     ModifierType, PlaySource, PlayerId, StackPosition,
@@ -372,6 +372,13 @@ impl<'a> EffectReadContext<'a> {
             .and_then(|trigger| trigger.cause)
     }
 
+    pub fn option_last_field_state(&self) -> Option<crate::option_lifecycle::OptionFieldState> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.option_last_field_state)
+    }
+
     pub fn event_source_effect(&self) -> Option<crate::trigger_context::EffectAttribution> {
         self.game
             .current_trigger_context
@@ -649,22 +656,96 @@ impl<'a> EffectContext<'a> {
         timing_key: &str,
         optional: bool,
     ) -> Result<(), EffectRefireError> {
-        if timing_key != "when_digivolving" {
+        let Some(timing_filter) = TimingFilter::from_timing_key(timing_key) else {
             return Err(EffectRefireError::InvalidTiming(timing_key.to_string()));
+        };
+        let _ =
+            self.refire_target_effect_inner(source, timing_filter, self.player, false, optional);
+        Ok(())
+    }
+
+    /// Refire one of `target`'s registered `[On Play]` or `[When Digivolving]`
+    /// effects without treating the target as newly played or digivolved.
+    ///
+    /// Carrier semantics: the refired body sees `source_permanent` as
+    /// `target`, so "this Digimon" reads the target permanent. Source
+    /// attribution remains this context's `source_card`, so Homeros-style
+    /// "this card's effect" predicates read the refire grantor.
+    ///
+    /// Once-per-turn accounting uses the target effect's normal slot unless
+    /// `bypass_once_per_turn` is true.
+    pub fn refire_target_effect(
+        &mut self,
+        target: PermanentHandle,
+        timing_filter: TimingFilter,
+        selecting_player: PlayerId,
+        bypass_once_per_turn: bool,
+    ) -> bool {
+        self.refire_target_effect_inner(
+            target,
+            timing_filter,
+            selecting_player,
+            bypass_once_per_turn,
+            false,
+        )
+    }
+
+    fn refire_target_effect_inner(
+        &mut self,
+        target: PermanentHandle,
+        timing_filter: TimingFilter,
+        selecting_player: PlayerId,
+        bypass_once_per_turn: bool,
+        optional: bool,
+    ) -> bool {
+        let mut effects: Vec<ReFireableEffect> = timing_filter
+            .timing_keys()
+            .iter()
+            .flat_map(|timing_key| enumerate_refireable_effects(self.game, target, timing_key))
+            .filter(|effect| bypass_once_per_turn || self.refire_effect_slot_available(effect))
+            .collect();
+        for effect in &mut effects {
+            effect.attribution_source_card = Some(self.source_card);
+            effect.attribution_source_kind = Some(self.source_kind);
+            effect.bypass_once_per_turn = bypass_once_per_turn;
+            effect.controller = self.player;
         }
-        let effects = enumerate_refireable_effects(self.game, source, timing_key);
         match effects.as_slice() {
-            [] => Ok(()),
+            [] => false,
             [effect] if !optional => {
                 self.game.run_refired_effect(effect.clone());
-                Ok(())
+                true
             }
             _ => {
                 self.game
-                    .install_refire_effect_selection(self.player, effects, optional);
-                Ok(())
+                    .install_refire_effect_selection(selecting_player, effects, optional);
+                true
             }
         }
+    }
+
+    fn refire_effect_slot_available(&self, effect: &ReFireableEffect) -> bool {
+        let Some(effects) = self
+            .game
+            .effects_for_card(&effect.card_id, effect.source_card)
+        else {
+            return false;
+        };
+        let Some(effect_body) = effects.get(effect.effect_id as usize) else {
+            return false;
+        };
+        if effect_body.max_per_turn == 0 {
+            return true;
+        }
+        let Some(perm) = self
+            .game
+            .players
+            .get(effect.source.player as usize)
+            .and_then(|p| p.battle_area.get(effect.source.index as usize))
+        else {
+            return false;
+        };
+        perm.activation_count(effect.source_card, effect.effect_id) < effect_body.max_per_turn
     }
 
     pub fn new_with_cost_target(
@@ -1057,6 +1138,10 @@ impl<'a> EffectContext<'a> {
 
     pub fn event_cause(&self) -> Option<crate::trigger_context::EventCause> {
         self.as_read().event_cause()
+    }
+
+    pub fn option_last_field_state(&self) -> Option<crate::option_lifecycle::OptionFieldState> {
+        self.as_read().option_last_field_state()
     }
 
     pub fn event_source_effect(&self) -> Option<crate::trigger_context::EffectAttribution> {

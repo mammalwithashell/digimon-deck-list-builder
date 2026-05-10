@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-04
+Last updated: 2026-05-10
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,15 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## DSL Gap: `refire_effect` On Play / When Digivolving timing filter — RESOLVED 2026-05-10
+
+- **Status:** Closed for existing permanent-target refire.
+- **DSL surface:** `refire_effect: { source: <permanent binding>, timing: on_play_or_when_digivolving }`.
+- **Lowers to engine API:** `EffectContext::refire_target_effect(target, TimingFilter::Either, selecting_player, false)`.
+- **Semantics:** Enumerates the target permanent's eligible `[On Play]` and `[When Digivolving]` effects, exposes an `EffectChoice` when 2+ effects are legal, preserves the original source card as grantor attribution, uses the target permanent as carrier, and respects the target effect's once-per-turn slot. The combined timing rejects `optional: true`; put optionality on the containing trigger or target selection.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl refire`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt24_102`.
+
 ## Engine Gaps: Legacy Resolved List
 
 1. ~~**Also Treated As (Name Aliasing)**~~ — RESOLVED 2026-03-14. Added `card.also_treated_as_names` list to `CardSource`, `card_names` property returns `[base] + aliases`. 41 scripts batch-updated.

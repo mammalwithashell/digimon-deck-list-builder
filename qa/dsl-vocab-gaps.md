@@ -4,6 +4,18 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+> **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
+> #449–#458. The Track E zone-movement DSL verb table (below) is
+> current as of PR #454. The Track C modifier-payload schema gap is
+> still the principal open DSL item; the matching engine substrate
+> landed in PR #455 (typed `ModifierPayload`), so the remaining work
+> is structured payload schema + parser. The `OnSuspend` /
+> `name-filtered DelayTrigger` shape (BT24-089) and the bilateral
+> player-scoped passive modifier shape (Rocks) remain open. See
+> `docs/RUST_ENGINE_GAPS.md` for the canonical engine-side closures
+> driving DSL substrate. Pre-scaling cleanup batch §2 narrative in
+> `.claude/plans/pre-scaling-cleanup-batch.md`.
+
 ## Track C modifier payload YAML shape (2026-05-09) — rich payload parser pending
 
 The Rust engine now has typed `ModifierPayload` storage and consult sites for

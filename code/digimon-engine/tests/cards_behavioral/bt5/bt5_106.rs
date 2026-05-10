@@ -220,3 +220,32 @@ fn bt5_106_security_prompts_for_level_3_purple_digimon_in_trash() {
 fn bt5_106_security_suppresses_on_play_effects_of_played_digimon() {
     todo!("played Digimon's On Play effects must not activate");
 }
+
+// ─── Failure-mode audit (PR #456 cluster 3f — effect-driven play / sacrifice) ──
+
+/// **Adjacent edge-case (cluster 3f):** BT5-106 [Main] is a "you may"
+/// sacrifice. With NO own Digimon on field, the optional sacrifice
+/// pool is empty. The effect must short-circuit cleanly: no
+/// pending_selection installed, no field changes, no crash. Guards
+/// against the empty-candidate-pool branch silently keeping the
+/// selection alive.
+#[test]
+fn bt5_106_main_with_no_own_digimon_short_circuits_without_panic() {
+    let mut runner = option_runner();
+    // No place_on_field calls — P0 has no Digimon.
+    assert_eq!(runner.battle_area_size(0), 0);
+
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired, "[Main] still fires; the optional inner step is what's empty");
+
+    // Selection should not park (no targets to pick from).
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no pending_selection should be installed when sacrifice candidate pool is empty"
+    );
+    assert_eq!(
+        runner.battle_area_size(0),
+        0,
+        "no field state can change when the optional sacrifice has no targets"
+    );
+}
