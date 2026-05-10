@@ -1272,7 +1272,7 @@ mod tests {
         let summary = tensor_summary_for(&game, pid, &registry, &mask);
 
         assert_eq!(summary.player_id, pid);
-        assert_eq!(summary.profile_id, "standard_v1");
+        assert_eq!(summary.profile_id, default_profile().id);
         assert_eq!(summary.profile_version, 1);
         assert_eq!(summary.tensor_size, digimon_engine::tensor::TENSOR_SIZE);
         assert_eq!(
