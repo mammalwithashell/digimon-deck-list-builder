@@ -1489,7 +1489,7 @@ impl Game {
                         if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
                             continue;
                         }
-                        let link_max = (1 + self.modifiers.link_max_delta(handle))
+                        let link_max = (5 + self.modifiers.link_max_delta(handle))
                             .clamp(0, u8::MAX as i32)
                             as usize;
                         if perm.linked_cards.len() >= link_max {

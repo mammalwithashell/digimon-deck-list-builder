@@ -30,6 +30,7 @@ pub mod inference;
 pub mod logger;
 pub mod modifiers;
 pub mod observation;
+pub mod option_lifecycle;
 pub mod permanent;
 pub mod phases;
 pub mod player;

@@ -332,6 +332,32 @@ impl Game {
                     );
                 }
             }
+            TriggerSource::OptionTrashed { .. } => {
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle));
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                    let breeding_handle = PermanentHandle {
+                        player,
+                        index: BREEDING_TARGET as u8,
+                    };
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(breeding_handle));
+                    self.enqueue_from_breeding_permanent(
+                        timing,
+                        breeding_handle,
+                        Some(trigger_context),
+                    );
+                }
+            }
             TriggerSource::EventObserved { .. } | TriggerSource::AttackTargetChanged { .. } => {
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
@@ -751,6 +777,30 @@ impl Game {
                 event_host_card: linked_host.and_then(|h| self.top_card_handle(h)),
                 event_host_permanent: linked_host,
                 source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::OptionTrashed {
+                player,
+                card,
+                cause,
+                last_state,
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::BattleArea,
+                }),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_card: Some(card),
+                affected_player: Some(player),
+                source_player: Some(player),
+                cause: Some(crate::trigger_context::EventCause::from(cause)),
+                option_last_field_state: Some(last_state),
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: vec![card],
+                    from: Some(crate::enums::Zone::BattleArea),
+                    to: Some(crate::enums::Zone::Trash),
+                }],
                 ..TriggerContext::default()
             },
             TriggerSource::EventObserved {

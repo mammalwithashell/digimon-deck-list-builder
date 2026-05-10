@@ -1379,15 +1379,44 @@ Options are *ephemeral*: they do not normally live on the field. The exceptions 
 | **Plug-In (Link)** | Body drains, player selects a legal host, card attaches sideways into `host.linked_cards`. `OnLink` fires globally after attach. Effects on the attached card flagged `.linked()` fire off the host's timings. | `OnUseOption` → `OptionMain` (runs `.link(cost, filter)` mask + prompt + attach) → `OnLink` (global). |
 | **Training** | Body drains, card parks on field as `OptionState::Training`. At the owner's next breeding-hatch, an `OnTrainingTrash` observer fires on the specific Training permanent being trashed, then `delete_permanent_with_cause(Cost)` routes it to the trash. | `OnUseOption` → `OptionMain` → later: `OnTrainingTrash` → deletion. |
 
+The resolver's default Plug-In carrier capacity is 5 linked cards plus any
+`ChangeLinkMax` modifier delta, clamped at zero. This matches the linked-card
+tensor capacity and keeps multiple Plug-Ins independently visible unless a
+modifier narrows the host.
+
 ### Shape types added in Task 1
 
 ```rust
 // permanent.rs
 pub enum OptionState {
     Standard,
-    Delayed { owner: PlayerId, trash_on_turn: u16 },  // absolute turn_count
+    Delayed {
+        owner: PlayerId,
+        trash_on_turn: u16,      // absolute turn_count
+        trigger: DelayTrigger,
+        placed_on_turn: u16,
+    },
     Linked { host: PermanentHandle },
+    OrdinaryFieldOption,
+    OrphanedPlugIn { last_carrier_owner: PlayerId },
     Training { owner: PlayerId, trained: Option<TrainingBinding> },
+}
+
+// option_lifecycle.rs — public lifecycle taxonomy for field Options.
+pub enum OptionFieldState {
+    Delay { placed_turn: u32, can_activate_this_turn: bool },
+    LinkedPlugIn { carrier: PermanentHandle, link_index: u8 },
+    OrphanedPlugIn { last_carrier_owner: PlayerId },
+    OrdinaryFieldOption,
+}
+
+pub enum OptionTrashCause {
+    Effect,
+    LeaveField,
+    EndOfTurnDelayExpiry,
+    PlugInCarrierLoss,
+    SecurityActivation,
+    Resolution,
 }
 
 pub struct Permanent {
@@ -1430,6 +1459,24 @@ pub enum OptionPlayResult {
 pub pending_option: Option<PendingOption>;
 ```
 
+### Option lifecycle entry points
+
+Use the `option_lifecycle.rs` entry points when a card or DSL verb needs to
+move an Option into or out of persistent lifecycle state:
+
+| Entry point | Use |
+|-------------|-----|
+| `Game::install_field_option_as_delay(card, controller, placed_turn)` | Places a resolving Option as a Delay permanent, dispatches `OnOptionPlaced`, and exposes `OptionFieldState::Delay`. Same-turn activation is false by default because `can_activate_this_turn` is derived from `turn_count > placed_turn`. |
+| `Game::install_field_option_as_ordinary(card, controller)` | Places a non-Delay, non-Plug-In field Option and exposes `OrdinaryFieldOption`. |
+| `Game::install_field_option_as_plug_in(card, carrier, link_index)` | Inserts a Plug-In into `carrier.linked_cards`, dispatches `OnOptionPlaced`, then dispatches `OnLink`. |
+| `Game::orphan_linked_plug_in(carrier, link_index, last_carrier_owner)` | Removes a linked Plug-In from a carrier and parks it as `OrphanedPlugIn` on its owner's battle area. |
+| `Game::orphan_plug_in(option_handle, last_carrier_owner)` | Marks an existing standalone Option permanent as orphaned. |
+| `Game::relink_plug_in(option_handle, new_carrier, link_index)` | Consumes an orphaned Plug-In permanent and links it to a new carrier. |
+| `Game::trash_field_option(option_handle, cause)` | Trashes a standalone field Option and dispatches `OnOptionTrashed` with `event_card`, `event_cause`, `moved_card_sets`, and `option_last_field_state()`. |
+
+These helpers are the observer-safe mutation surface for the explicit lifecycle
+taxonomy. Do not edit `Permanent.option_state` directly in card code.
+
 ### DUAL cards and Arts Digivolve
 
 DUAL cards are represented as `CardKind::Dual` with explicit `dual.digimon` and
@@ -1448,11 +1495,12 @@ a legal battle-area or breeding-area target stacks the pending card as a
 digivolution card, performs the normal draw and rule check, then fires
 `WhenDigivolving` for the new stack.
 
-### `EffectTiming` variants (seven wired)
+### `EffectTiming` variants (eight wired)
 
 | Variant | Scope | Fires when |
 |---------|-------|-----------|
 | `OnUseOption` | Global observer | Any Option card is played (both players' listeners hear it). |
+| `OnOptionTrashed` | Global observer | A persistent field Option is trashed through `Game::trash_field_option`; `EffectContext::option_last_field_state()` exposes the last lifecycle state. |
 | `OptionMain` | This Option | The played Option's own body — pre-existing variant, now dispatched. |
 | `DelayEffect` | This Option | Scheduled turn-end landing for a `Delayed` Option. |
 | `OnLink` | Global observer | After a Plug-In attaches to its host. |
