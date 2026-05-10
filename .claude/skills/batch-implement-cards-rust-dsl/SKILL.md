@@ -48,7 +48,8 @@ The positional argument is either an archetype name from `data/deck_library.json
 | Card test directory | `code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs` |
 | Test discovery root | `code/digimon-engine/tests/cards_behavioral/main.rs` |
 | Test discovery per set | `code/digimon-engine/tests/cards_behavioral/<set>/mod.rs` |
-| Card metadata | `data/cards.json` |
+| Per-card metadata JSON (authoritative for the card under work) | `code/digimon-engine/cards/<set>/<CARD_ID>.json` |
+| Aggregate card metadata (fallback only) | `data/cards.json` |
 | Deck library | `data/deck_library.json` |
 | DSL test pool (curated) | `qa/dsl-test-pool.md` |
 | C# reference | `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID_UNDERSCORE}.cs` |
@@ -236,12 +237,16 @@ Repeat for each batch from Phase 2.
 
 For each card in the current batch, collect:
 
-1. **Card metadata** from `data/cards.json`:
+1. **Card metadata** — read the per-card JSON colocated with the YAML script at `code/digimon-engine/cards/<set>/<CARD_ID>.json` (e.g. `code/digimon-engine/cards/bt15/BT15-003.json`). This file is the authoritative source for the card text the worker will implement against — every shipping set is pre-populated with one JSON per card. Read this file directly with the `Read` tool; do **not** open the aggregate `data/cards.json` for routine work (it is a 4000-card monolith and wastes context).
+
+   Fields to extract:
    - `card_name_eng`
    - `effect_description_eng`
    - `inherited_effect_description_eng`
-   - `security_effect_eng`
-   - `card_kind`, `level`, `dp`, `play_cost`, `card_colors`, `type_eng` (traits), `evo_costs`, `dna_costs`
+   - `security_effect_description_eng`
+   - `card_kind`, `level`, `dp`, `play_cost`, `card_colors`, `type_eng` (traits), `evo_costs`, `dna_costs` (when present)
+
+   **Fallback:** if `code/digimon-engine/cards/<set>/<CARD_ID>.json` is missing (rare; happens only for cards not yet ingested into the per-set directory), surface a one-line warning to the user (`per-card JSON missing for {{CARD_ID}}, falling back to data/cards.json`) and pull the same fields from the matching `card_id` entry in `data/cards.json`. Never silently substitute — the per-card JSON is the canonical pre-extracted slice and any divergence between the two is meaningful.
 
 2. **DCGO C# reference**: glob `DCGO/Assets/Scripts/CardEffect/<SET>/*/<CARD_ID_UNDERSCORE>.cs` where `<CARD_ID_UNDERSCORE> = card_id.replace("-", "_")` (e.g. `BT15-003` → `BT15_003.cs`). Read the file body if found; record "absent" if not. Promo cards (`P-...`) frequently lack DCGO files; that is acceptable, the worker proceeds with printed text only.
 
@@ -799,7 +804,7 @@ Re-running on the same archetype (or `--pool`) is safe: the `validated_cards_dsl
 This appendix is the "C" half of the hybrid checklist. The "A" half is `docs/RUST_DSL_TEST_API.md` §11 (the anti-pattern list). Both halves are embedded into the implementer, auditor, and reviewer prompts in Phase 4.
 
 1. **TDD ordering is strict.** Tests are written before YAML. Test file must exist and fail before any YAML is authored. Implementer's verdict block must show the failing-test output before the passing-test output.
-2. **File header docstring is mandatory** (test API §5). Format: card text verbatim from `cards.json`, DCGO C# reference path, pattern row tags from §4.3.
+2. **File header docstring is mandatory** (test API §5). Format: card text verbatim from the per-card JSON at `code/digimon-engine/cards/<set>/<CARD_ID>.json` (the same file the orchestrator hands the worker in 4A.1), DCGO C# reference path, pattern row tags from §4.3.
 3. **One positive AND one negative test per condition.** Splitting is non-negotiable per test API §11.3. A single test asserting both directions is rejected.
 4. **Every clause gets ≥1 integrated test** driven through `play` / `attack` / `end_turn`. Clause-isolated `EffectContext` tests (per §7) are *additional*, not substitutes.
 5. **OPT clauses get an explicit lockout test** (test API §5 Section 5). Test that the second activation in the same turn is gated, and that the lockout clears after `end_turn`.
