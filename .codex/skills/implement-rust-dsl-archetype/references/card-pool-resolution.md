@@ -15,7 +15,8 @@ Use this reference when the user gives an archetype, deck name, decklist, or loo
    - Search `qa/archetype-qa/` and `qa/archetype-qa/dsl/` for prior readiness or gap documents.
    - Reuse previous card grouping if it matches the target; update stale status with current code evidence.
 5. **Card metadata**:
-   - Read `data/cards.json` for `effect_text`, `inherited_text`, `security_text`, type, colors, traits, levels, DP, play cost, and alternate requirements.
+   - Prefer per-card metadata from `code/digimon-engine/cards/<set>/<CARD-ID>.json` for `effect_description_eng`, `inherited_effect_description_eng`, `security_effect_description_eng`, type, colors, traits, levels, DP, play cost, `evo_costs`, and `xros_req`.
+   - Use `data/cards.json` only when the per-card JSON is missing or to cross-check an apparent metadata mismatch.
 
 ## Core vs Tech
 
@@ -32,6 +33,7 @@ Implement core cards first. Do not block an archetype on a tech card unless the 
 
 For each card, inspect:
 
+- Per-card metadata: `code/digimon-engine/cards/<set>/<CARD-ID>.json`.
 - Production YAML: `code/digimon-engine/cards/<set>/<CARD-ID>.yaml`.
 - Example YAML: `code/digimon-engine/cards/_examples/`.
 - Behavioral tests: `code/digimon-engine/tests/cards_behavioral/<set>/`.

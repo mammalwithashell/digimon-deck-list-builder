@@ -63,7 +63,7 @@ Load these references as soon as they become relevant:
 
 Every task must include:
 
-- Printed text evidence from `data/cards.json`.
+- Printed text and metadata evidence from `code/digimon-engine/cards/<set>/<CARD-ID>.json` when that per-card file exists; use `data/cards.json` only as a fallback or cross-check.
 - Existing YAML/DSL examples to mimic when possible.
 - A failing test under `code/digimon-engine/tests/` before YAML or engine edits.
 - Action-mask or pending-selection assertions for every player-visible choice.

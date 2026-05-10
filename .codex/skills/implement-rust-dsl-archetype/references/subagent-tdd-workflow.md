@@ -50,7 +50,7 @@ If a card returns `BLOCKED` and wrote no tests, remove its module line and place
 
 For each card in a batch, gather:
 
-- Printed text and metadata from `data/cards.json`: name, kind, level, DP, play cost, colors, traits, evo costs, effect, inherited, and security text.
+- Printed text and metadata from `code/digimon-engine/cards/<set>/<CARD-ID>.json`: name, kind, level, DP, play cost, colors, traits, `evo_costs`, `xros_req`, effect, inherited, and security text. Use `data/cards.json` only as a fallback or mismatch cross-check.
 - DCGO C# reference if present at `DCGO/Assets/Scripts/CardEffect/<SET>/*/<CARD_ID_UNDERSCORE>.cs`.
 - Prior DSL verdict from `qa/qa-reports/validated_cards_dsl.json`, if present.
 - Existing YAML and tests for `AUDIT` mode.
@@ -78,7 +78,8 @@ Each `IMPLEMENT` worker task should include:
 Use TDD to implement <CARD-ID> as a Rust engine YAML DSL card.
 
 Context:
-- Printed text: <effect/inherited/security text from data/cards.json>
+- Printed text: <effect/inherited/security text from code/digimon-engine/cards/<set>/<CARD-ID>.json>
+- Metadata: <kind, level, DP, play cost, colors, traits, evo costs, xros_req from per-card JSON>
 - Required docs: AGENTS.md, docs/RUST_DSL_AGENT_GUIDE.md, docs/RUST_DSL_TEST_API.md, docs/RUST_ENGINE_API.md
 - Existing examples to inspect: <YAML/test paths>
 - Scout brief: <brief or "none">
@@ -118,7 +119,8 @@ Each `AUDIT` worker task should include:
 Audit <CARD-ID> for Rust DSL faithfulness and test coverage.
 
 Context:
-- Printed text: <effect/inherited/security text from data/cards.json>
+- Printed text: <effect/inherited/security text from code/digimon-engine/cards/<set>/<CARD-ID>.json>
+- Metadata: <kind, level, DP, play cost, colors, traits, evo costs, xros_req from per-card JSON>
 - Existing YAML: code/digimon-engine/cards/<set>/<CARD-ID>.yaml
 - Existing tests: code/digimon-engine/tests/cards_behavioral/<set>/<card_id_lower>.rs
 - DCGO reference: <path/body or "absent">
