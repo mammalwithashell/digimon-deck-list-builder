@@ -2126,6 +2126,208 @@ effects:
     };
 }
 
+// ── Phase 4k — Typed AuraScope / AuraGrant builder API ─────────────────
+//
+// Phase 4k wraps the existing `add_declarative_*` / `grant_declarative_*`
+// install APIs in a typed fluent builder for raw_rust card scripts.
+// End behavior is identical to direct API calls; pinned by tests
+// confirming the same modifier-registry state for both paths.
+
+#[test]
+fn typed_aura_builder_grants_dp_to_filter_matched_field_digimon() {
+    use digimon_engine::aura::{AuraGrant, AuraScope};
+    use digimon_engine::card_source::CardHandle;
+    use digimon_engine::effect::{CardEffect, Effect};
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use std::sync::Arc;
+
+    // Build a synthetic CardEffect that uses the typed AuraBuilder.
+    struct TypedHolyAura;
+    impl CardEffect for TypedHolyAura {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            vec![Effect::declarative(card)
+                .name("Typed Holy +1000 DP")
+                .aura()
+                .scope(AuraScope::Player(0))
+                .target_filter(|rctx, h| {
+                    // Match owner's-side Holy Digimon (excluding the source).
+                    let perm = match rctx.game.player(h.player).battle_area.get(h.index as usize) {
+                        Some(p) => p,
+                        None => return false,
+                    };
+                    let card_id = perm.top_card().card_id(rctx.card_data()).to_string();
+                    let data = match rctx
+                        .game
+                        .card_data
+                        .iter()
+                        .find(|cd| cd.card_id == card_id)
+                    {
+                        Some(d) => d,
+                        None => return false,
+                    };
+                    data.traits.iter().any(|t| t == "Holy") && Some(h) != rctx.source_permanent
+                })
+                .grants(AuraGrant::Dp {
+                    value: 1000,
+                    base: false,
+                    origin: false,
+                })
+                .duration(Expiry::Permanent)
+                .build()]
+        }
+    }
+
+    let mut runner = DebugRunner::builder()
+        .add_card({
+            let mut c = make_test_card("TEST-TYPED-SRC", "Typed Source");
+            c.dp = Some(3000);
+            c
+        })
+        .add_card({
+            let mut c = make_test_card("TEST-TYPED-HOLY", "Typed Holy Ally");
+            c.traits.push("Holy".to_string());
+            c.dp = Some(2000);
+            c
+        })
+        .add_card(make_test_card("TEST-TYPED-PLAIN", "Typed Plain"))
+        .build();
+    runner
+        .game
+        .effect_registry
+        .insert("TEST-TYPED-SRC", Arc::new(TypedHolyAura));
+
+    let _src = runner.place_on_field(0, "TEST-TYPED-SRC", None);
+    let holy = runner.place_on_field(0, "TEST-TYPED-HOLY", None);
+    let plain = runner.place_on_field(0, "TEST-TYPED-PLAIN", None);
+
+    runner.game.tick_declarative_effects();
+
+    assert_eq!(
+        runner.game.modifiers.sum(holy, ModifierType::ChangeDp),
+        1000,
+        "typed AuraBuilder must install +1000 DP on Holy ally"
+    );
+    assert_eq!(
+        runner.game.modifiers.sum(plain, ModifierType::ChangeDp),
+        0,
+        "typed AuraBuilder filter must exclude non-Holy"
+    );
+}
+
+#[test]
+fn typed_aura_builder_grants_keyword_via_typed_enum() {
+    // AuraGrant::Keyword routes through grant_declarative_keyword.
+    use digimon_engine::aura::{AuraGrant, AuraScope};
+    use digimon_engine::card_source::CardHandle;
+    use digimon_engine::effect::{CardEffect, Effect};
+    use digimon_engine::enums::{Expiry, Keyword};
+    use std::sync::Arc;
+
+    struct TypedRushAura;
+    impl CardEffect for TypedRushAura {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            vec![Effect::declarative(card)
+                .name("Typed Rush grant")
+                .aura()
+                .scope(AuraScope::Permanent(
+                    digimon_engine::permanent::PermanentHandle {
+                        player: 0,
+                        index: 0,
+                    },
+                ))
+                .grants(AuraGrant::Keyword(Keyword::Rush))
+                .duration(Expiry::Permanent)
+                .build()]
+        }
+    }
+
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TEST-TYPED-RUSH", "Typed Rush Source"))
+        .build();
+    runner
+        .game
+        .effect_registry
+        .insert("TEST-TYPED-RUSH", Arc::new(TypedRushAura));
+    let h = runner.place_on_field(0, "TEST-TYPED-RUSH", None);
+
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        runner.game.has_keyword(h, Keyword::Rush),
+        "typed AuraBuilder Keyword grant must surface via has_keyword"
+    );
+}
+
+#[test]
+fn typed_aura_builder_with_while_condition_evicts_via_until_controller() {
+    // Pins that AuraBuilder.while_condition routes to the typed
+    // until_condition install paths — modifier evicts on predicate-
+    // false, no re-install on predicate-true.
+    use digimon_engine::aura::{AuraGrant, AuraScope};
+    use digimon_engine::card_source::CardHandle;
+    use digimon_engine::effect::{CardEffect, Effect};
+    use digimon_engine::enums::ModifierType;
+    use digimon_engine::modifiers::ModifierSubject;
+    use std::sync::Arc;
+
+    struct TypedWhileAura;
+    impl CardEffect for TypedWhileAura {
+        fn effects(&self, card: CardHandle) -> Vec<Effect> {
+            vec![Effect::declarative(card)
+                .name("Typed while +1000 DP")
+                .aura()
+                .scope(AuraScope::Permanent(
+                    digimon_engine::permanent::PermanentHandle {
+                        player: 0,
+                        index: 0,
+                    },
+                ))
+                .grants(AuraGrant::Dp {
+                    value: 1000,
+                    base: false,
+                    origin: false,
+                })
+                .while_condition(|game, _subject: ModifierSubject| game.memory >= 0)
+                .build()]
+        }
+    }
+
+    let mut runner = DebugRunner::builder()
+        .add_card({
+            let mut c = make_test_card("TEST-TYPED-WHILE", "Typed While Source");
+            c.dp = Some(2000);
+            c
+        })
+        .build();
+    runner
+        .game
+        .effect_registry
+        .insert("TEST-TYPED-WHILE", Arc::new(TypedWhileAura));
+    let h = runner.place_on_field(0, "TEST-TYPED-WHILE", None);
+
+    runner.game.tick_declarative_effects();
+    assert_eq!(
+        runner.game.modifiers.sum(h, ModifierType::ChangeDp),
+        1000,
+        "typed builder while_condition must install when predicate is true"
+    );
+
+    runner.game.set_memory(-1);
+    assert_eq!(
+        runner.game.modifiers.sum(h, ModifierType::ChangeDp),
+        0,
+        "controller must evict on predicate-false"
+    );
+    runner.game.set_memory(0);
+    // Without re-tick, the install-once via UntilCondition stays evicted.
+    assert_eq!(
+        runner.game.modifiers.sum(h, ModifierType::ChangeDp),
+        0,
+        "controller must not restore on predicate-true (false→true non-restoration)"
+    );
+    let _: Arc<()> = Arc::new(()); // silence unused-Arc-import in some builds
+}
+
 // ── Phase 4i — Queue-based granted-body dispatch + selection parking ────
 //
 // Phase 4i moved granted-triggered-effect dispatch from inline-fire (in

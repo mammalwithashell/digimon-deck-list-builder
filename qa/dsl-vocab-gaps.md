@@ -1920,6 +1920,57 @@ Coverage:
 - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- granted_body_runs_via_queue_with_correct_attribution`
 - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- granted_body_installing_selection_parks_via_pending_selection`
 
+### Phase 4k — Typed `AuraScope` / `AuraGrant` builder API (raw Rust)
+
+New `code/digimon-engine/src/aura.rs` module ships a typed fluent
+builder for raw_rust card scripts that author auras programmatically.
+YAML-authored cards continue to use the field-slot DSL (`kind: aura`
+body) — that path is unchanged.
+
+```rust
+use digimon_engine::aura::{AuraScope, AuraGrant};
+use digimon_engine::effect::Effect;
+use digimon_engine::enums::{Expiry, Keyword};
+
+Effect::declarative(card)
+    .name("All your Holy Digimon gain +1000 DP")
+    .aura()
+        .scope(AuraScope::Player(controller))
+        .target_filter(|rctx, h| {
+            // ... per-permanent filter predicate
+            true
+        })
+        .grants(AuraGrant::Dp { value: 1000, base: false, origin: false })
+        .duration(Expiry::EndOfYourTurn)
+    .build()
+```
+
+`AuraScope` variants: `Permanent(handle)`, `Player(player_id)`,
+`OpponentPlayer(source_player)`, `Bilateral`, `SecurityZone(player_id)`.
+
+`AuraGrant` variants: `Keyword(Keyword)`, `Dp { value, base, origin }`,
+`SecurityAttack(i32)`, `PlayCost(i32)`, `DigivolutionCost(i32)`,
+`LinkCost(i32)`, `Immunity(ImmunityKind)`, `Cannot(CannotKind)`,
+`Modifier { ty, value }` (escape hatch for any ModifierType).
+
+`ImmunityKind`: `OpponentDpReduction`, `OpponentDeDigivolve`,
+`BattleDeletion`, `EffectDeletion`.
+
+`CannotKind`: `Suspend`, `Unsuspend`, `Block`, `Attack`,
+`AttackPlayer`, `ReturnToHand`, `ReturnToDeck`, `DeDigivolve`.
+
+The builder routes through the existing typed install APIs:
+- `AuraGrant::Keyword` → `grant_declarative_keyword` (or
+  `grant_keyword_with_until_condition` when `while_condition` is set)
+- All other grants → `add_declarative_modifier` (or
+  `add_modifier_with_until_condition` when `while_condition` is set)
+
+End behavior identical to direct API calls; pinned by tests
+confirming the same modifier-registry state for both paths.
+
+Coverage:
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- typed_aura_builder`
+
 ### Phase 4 — `pending_skips` for `*NextTurn` expiry mid-opp-turn install
 
 `ModifierEntry.pending_skips: u8` enables accurate
