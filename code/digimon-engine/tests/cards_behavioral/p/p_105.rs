@@ -306,7 +306,7 @@ fn p_105_playing_main_places_it_as_delayed_option() {
 
     assert_eq!(
         runner.game.play_option_from_hand(0, 0),
-        OptionPlayResult::Trashed
+        OptionPlayResult::Pending
     );
     runner
         .auto_resolve()

@@ -34,7 +34,11 @@ def _make_env(backend: str):
     import digimon_gym.digimon_gym as gym_mod
 
     importlib.reload(gym_mod)
-    return gym_mod.DigimonEnv(deck1=DECK_A, deck2=DECK_B)
+    return gym_mod.DigimonEnv(
+        deck1=DECK_A,
+        deck2=DECK_B,
+        tensor_profile="standard_compact_v1",
+    )
 
 
 def _replay_until_fork(env, max_steps: int = 50) -> list[np.ndarray]:

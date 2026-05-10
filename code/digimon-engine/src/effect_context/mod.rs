@@ -407,7 +407,7 @@ impl<'a> EffectReadContext<'a> {
     }
 
     pub fn dna_origin(&self) -> bool {
-        self.game.current_dna_origin.unwrap_or(false)
+        event_dna_origin(self.game).unwrap_or(false)
     }
 
     pub fn source_kind(&self) -> EffectSourceKind {

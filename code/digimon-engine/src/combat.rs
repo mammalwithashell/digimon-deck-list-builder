@@ -1901,6 +1901,15 @@ impl Game {
         if !self.has_keyword(attacker, Keyword::Raid) {
             return false;
         }
+        // Track C: `CannotSwitchAttackTarget` locks the attack onto its
+        // declared target. Raid's printed switch window would rewrite that
+        // target, so suppress the optional selection entirely.
+        if self
+            .modifiers
+            .has(attacker, ModifierType::CannotSwitchAttackTarget)
+        {
+            return false;
+        }
 
         let candidates = self.raid_switch_candidates(attacker, pa.effective_target);
         if candidates.is_empty() {
