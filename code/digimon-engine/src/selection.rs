@@ -391,6 +391,14 @@ pub enum TriggerSource {
         linked_host: Option<PermanentHandle>,
         card: CardHandle,
     },
+    /// Observer timing fired after a persistent Option is trashed through the
+    /// lifecycle API.
+    OptionTrashed {
+        player: PlayerId,
+        card: CardHandle,
+        cause: crate::option_lifecycle::OptionTrashCause,
+        last_state: crate::option_lifecycle::OptionFieldState,
+    },
     /// Generic observer timing carrying the permanent/card that caused the
     /// event. Used by event-gated delayed Options such as suspend watchers.
     EventObserved {

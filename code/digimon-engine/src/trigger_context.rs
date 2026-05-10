@@ -135,4 +135,20 @@ pub struct TriggerContext {
     pub new_attack_target: Option<crate::selection::AttackTarget>,
     pub provenance_token: Option<ProvenanceToken>,
     pub was_security_skill: bool,
+    pub option_last_field_state: Option<crate::option_lifecycle::OptionFieldState>,
+}
+
+impl From<crate::option_lifecycle::OptionTrashCause> for EventCause {
+    fn from(value: crate::option_lifecycle::OptionTrashCause) -> Self {
+        match value {
+            crate::option_lifecycle::OptionTrashCause::Effect => EventCause::EffectDeletion,
+            crate::option_lifecycle::OptionTrashCause::LeaveField => EventCause::Rule,
+            crate::option_lifecycle::OptionTrashCause::EndOfTurnDelayExpiry => EventCause::Cost,
+            crate::option_lifecycle::OptionTrashCause::PlugInCarrierLoss => EventCause::Rule,
+            crate::option_lifecycle::OptionTrashCause::SecurityActivation => {
+                EventCause::SecurityRemoval
+            }
+            crate::option_lifecycle::OptionTrashCause::Resolution => EventCause::Cost,
+        }
+    }
 }

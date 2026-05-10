@@ -302,6 +302,10 @@ pub enum EffectTiming {
     /// the battle area and has a stable permanent/card handle.
     OnOptionPlaced,
 
+    /// Global observer: fires after a persistent Option card is trashed via
+    /// the explicit Option lifecycle API.
+    OnOptionTrashed,
+
     /// Fires when an Option's delayed body resolves. Most printed Delays
     /// fire at end of owner's next turn; see DelayTrigger for triggers.
     DelayEffect,

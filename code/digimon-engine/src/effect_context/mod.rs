@@ -372,6 +372,13 @@ impl<'a> EffectReadContext<'a> {
             .and_then(|trigger| trigger.cause)
     }
 
+    pub fn option_last_field_state(&self) -> Option<crate::option_lifecycle::OptionFieldState> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.option_last_field_state)
+    }
+
     pub fn event_source_effect(&self) -> Option<crate::trigger_context::EffectAttribution> {
         self.game
             .current_trigger_context
@@ -1057,6 +1064,10 @@ impl<'a> EffectContext<'a> {
 
     pub fn event_cause(&self) -> Option<crate::trigger_context::EventCause> {
         self.as_read().event_cause()
+    }
+
+    pub fn option_last_field_state(&self) -> Option<crate::option_lifecycle::OptionFieldState> {
+        self.as_read().option_last_field_state()
     }
 
     pub fn event_source_effect(&self) -> Option<crate::trigger_context::EffectAttribution> {

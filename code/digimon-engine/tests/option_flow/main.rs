@@ -3,6 +3,7 @@ mod delay_flow;
 mod enum_and_state_shape;
 mod event_gated_delay;
 mod inherited_security_option;
+mod lifecycle_state_machine;
 mod link_flow;
 mod option_placed_observers;
 mod replacement_integration;
