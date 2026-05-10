@@ -5,8 +5,69 @@
 
 use std::collections::HashMap;
 
-use crate::enums::{EffectSourceKind, EffectTiming, Expiry, Keyword, ModifierType, PlayerId};
+use crate::enums::{
+    CardColor, CardKind, EffectSourceKind, EffectTiming, Expiry, Keyword, ModifierType, PlayerId,
+};
 use crate::permanent::PermanentHandle;
+
+/// Typed payload carried by parametric modifier variants.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ModifierPayload {
+    None,
+    Traits {
+        add: Vec<String>,
+        replace: bool,
+    },
+    Name {
+        value: String,
+        base: bool,
+    },
+    Colors {
+        value: Vec<CardColor>,
+        base: bool,
+    },
+    DigiXrosNames {
+        aliases: Vec<String>,
+    },
+    Dp {
+        value: i32,
+        base: bool,
+        origin: bool,
+    },
+    SecurityAttack {
+        delta: i32,
+        invert: bool,
+    },
+    EndTurnMinMemory {
+        value: i32,
+    },
+    LinkCost {
+        delta: i32,
+    },
+    LinkMax {
+        delta: i32,
+    },
+    LevelForAssembly {
+        value: u8,
+    },
+    SynthIdentity {
+        kind: CardKind,
+        level: u8,
+        colors: Vec<CardColor>,
+        traits: Vec<String>,
+        dp: i32,
+    },
+    LevelOverride {
+        value: i32,
+        delta: bool,
+    },
+}
+
+impl Default for ModifierPayload {
+    fn default() -> Self {
+        Self::None
+    }
+}
 
 /// A single modifier entry.
 ///
@@ -16,6 +77,7 @@ use crate::permanent::PermanentHandle;
 pub struct ModifierEntry {
     pub modifier: ModifierType,
     pub value: i32,
+    pub payload: ModifierPayload,
     pub expiry: Expiry,
     /// Permanent that materialized this entry, when source-scoped cleanup matters.
     pub source_permanent: Option<PermanentHandle>,
@@ -54,6 +116,7 @@ impl std::fmt::Debug for ModifierEntry {
         f.debug_struct("ModifierEntry")
             .field("modifier", &self.modifier)
             .field("value", &self.value)
+            .field("payload", &self.payload)
             .field("expiry", &self.expiry)
             .field("source_permanent", &self.source_permanent)
             .field("source_player", &self.source_player)
@@ -71,6 +134,7 @@ impl ModifierEntry {
         Self {
             modifier,
             value,
+            payload: ModifierPayload::None,
             expiry,
             source_permanent: None,
             source_player,
@@ -92,6 +156,7 @@ impl ModifierEntry {
         Self {
             modifier,
             value,
+            payload: ModifierPayload::None,
             expiry,
             source_permanent,
             source_player,
@@ -112,6 +177,7 @@ impl ModifierEntry {
         Self {
             modifier: ModifierType::DisableEffect,
             value: 0,
+            payload: ModifierPayload::None,
             expiry,
             source_permanent: None,
             source_player,
@@ -134,6 +200,7 @@ impl ModifierEntry {
         Self {
             modifier,
             value: 0,
+            payload: ModifierPayload::None,
             expiry,
             source_permanent: None,
             source_player,
@@ -194,6 +261,11 @@ impl ModifierEntry {
         self.disable_effect_timing = Some(timing);
         self
     }
+
+    pub fn with_payload(mut self, payload: ModifierPayload) -> Self {
+        self.payload = payload;
+        self
+    }
 }
 
 /// A player-scoped modifier entry (Phase 6 flood gates).
@@ -208,6 +280,7 @@ pub struct PlayerModifierEntry {
     pub modifier: ModifierType,
     /// For future parametric variants; ignored for boolean flags.
     pub value: i32,
+    pub payload: ModifierPayload,
     /// Reuses the existing `Expiry` enum.
     pub expiry: Expiry,
     /// Required when `expiry == Expiry::UntilLeaveField`.
@@ -228,6 +301,7 @@ impl std::fmt::Debug for PlayerModifierEntry {
         f.debug_struct("PlayerModifierEntry")
             .field("modifier", &self.modifier)
             .field("value", &self.value)
+            .field("payload", &self.payload)
             .field("expiry", &self.expiry)
             .field("source_permanent", &self.source_permanent)
             .field("source_player", &self.source_player)
@@ -250,6 +324,7 @@ impl PlayerModifierEntry {
         Self {
             modifier,
             value,
+            payload: ModifierPayload::None,
             expiry,
             source_permanent,
             source_player,
@@ -270,6 +345,7 @@ impl PlayerModifierEntry {
         Self {
             modifier,
             value,
+            payload: ModifierPayload::None,
             expiry,
             source_permanent,
             source_player,
@@ -292,6 +368,7 @@ impl PlayerModifierEntry {
         Self {
             modifier,
             value: 0,
+            payload: ModifierPayload::None,
             expiry,
             source_permanent,
             source_player,
@@ -311,6 +388,11 @@ impl PlayerModifierEntry {
     /// Builder variant: attach a runtime `replacement_condition` closure.
     pub fn with_condition(mut self, cond: crate::replacement::ReplacementConditionFn) -> Self {
         self.replacement_condition = Some(cond);
+        self
+    }
+
+    pub fn with_payload(mut self, payload: ModifierPayload) -> Self {
+        self.payload = payload;
         self
     }
 }
@@ -336,6 +418,76 @@ pub(crate) fn default_passive_cause_filter(
         // CannotBeDestroyed / CannotBeDestroyedByEffect are cause-agnostic in
         // printed text (the latter covers both own and opponent effects).
         _ => None,
+    }
+}
+
+fn payload_matches_modifier(modifier: ModifierType, payload: &ModifierPayload) -> bool {
+    matches!(
+        (modifier, payload),
+        (_, ModifierPayload::None)
+            | (ModifierType::ChangeTraits, ModifierPayload::Traits { .. })
+            | (
+                ModifierType::ChangeBaseCardName,
+                ModifierPayload::Name { .. }
+            )
+            | (
+                ModifierType::ChangeBaseCardColor,
+                ModifierPayload::Colors { .. }
+            )
+            | (
+                ModifierType::ChangeCardNamesForDigiXros,
+                ModifierPayload::DigiXrosNames { .. }
+            )
+            | (ModifierType::ChangeCardDP, ModifierPayload::Dp { .. })
+            | (ModifierType::ChangeOriginDP, ModifierPayload::Dp { .. })
+            | (
+                ModifierType::ChangeSAttack,
+                ModifierPayload::SecurityAttack { .. }
+            )
+            | (
+                ModifierType::SecurityAttackChange,
+                ModifierPayload::SecurityAttack { .. }
+            )
+            | (
+                ModifierType::ChangeEndTurnMinMemory,
+                ModifierPayload::EndTurnMinMemory { .. }
+            )
+            | (
+                ModifierType::ChangeLinkCost,
+                ModifierPayload::LinkCost { .. }
+            )
+            | (ModifierType::ChangeLinkMax, ModifierPayload::LinkMax { .. })
+            | (
+                ModifierType::ChangeCardLevelForAssembly,
+                ModifierPayload::LevelForAssembly { .. }
+            )
+            | (
+                ModifierType::TreatAsDigimon,
+                ModifierPayload::SynthIdentity { .. }
+            )
+            | (
+                ModifierType::ChangePermanentLevel,
+                ModifierPayload::LevelOverride { .. }
+            )
+    )
+}
+
+fn guard_install(modifier: ModifierType, payload: &ModifierPayload, expiry: Expiry) {
+    debug_assert!(
+        payload_matches_modifier(modifier, payload),
+        "modifier payload mismatch: {:?} cannot carry {:?}",
+        modifier,
+        payload
+    );
+    if matches!(expiry, Expiry::UntilCondition) {
+        #[cfg(debug_assertions)]
+        panic!(
+            "Expiry::UntilCondition is disabled until the continuous modifier controller is wired"
+        );
+        #[cfg(not(debug_assertions))]
+        eprintln!(
+            "warning: installing Expiry::UntilCondition modifier before continuous controller is wired"
+        );
     }
 }
 
@@ -393,6 +545,7 @@ impl ModifierRegistry {
 
     /// Add a modifier to a permanent.
     pub fn add(&mut self, target: PermanentHandle, entry: ModifierEntry) {
+        guard_install(entry.modifier, &entry.payload, entry.expiry);
         self.permanent_modifiers
             .entry(target)
             .or_default()
@@ -579,6 +732,7 @@ impl ModifierRegistry {
 
     /// Install a player-scoped modifier.
     pub fn add_player_modifier(&mut self, target_player: PlayerId, entry: PlayerModifierEntry) {
+        guard_install(entry.modifier, &entry.payload, entry.expiry);
         self.player_modifiers
             .entry(target_player)
             .or_default()
@@ -591,6 +745,18 @@ impl ModifierRegistry {
             .get(&target_player)
             .map(|entries| entries.iter().any(|e| e.modifier == modifier))
             .unwrap_or(false)
+    }
+
+    pub fn any_player_has(&self, modifier: ModifierType) -> bool {
+        self.player_modifiers
+            .values()
+            .any(|entries| entries.iter().any(|e| e.modifier == modifier))
+    }
+
+    pub fn any_other_player_has(&self, acting_player: PlayerId, modifier: ModifierType) -> bool {
+        self.player_modifiers.iter().any(|(player, entries)| {
+            *player != acting_player && entries.iter().any(|e| e.modifier == modifier)
+        })
     }
 
     /// Sum of all `value` fields for a given modifier type on a player.
@@ -606,6 +772,69 @@ impl ModifierRegistry {
                     .sum()
             })
             .unwrap_or(0)
+    }
+
+    pub fn end_turn_min_memory_floor(&self, player: PlayerId) -> Option<i32> {
+        let player_floors = self
+            .player_modifiers
+            .get(&player)
+            .into_iter()
+            .flatten()
+            .filter(|entry| entry.modifier == ModifierType::ChangeEndTurnMinMemory)
+            .map(|entry| match &entry.payload {
+                ModifierPayload::EndTurnMinMemory { value } => *value,
+                ModifierPayload::None => entry.value,
+                _ => 0,
+            });
+        let permanent_floors = self
+            .permanent_modifiers
+            .iter()
+            .filter(move |(handle, _)| handle.player == player)
+            .flat_map(|(_, entries)| entries)
+            .filter(|entry| entry.modifier == ModifierType::ChangeEndTurnMinMemory)
+            .map(|entry| match &entry.payload {
+                ModifierPayload::EndTurnMinMemory { value } => *value,
+                ModifierPayload::None => entry.value,
+                _ => 0,
+            });
+        player_floors.chain(permanent_floors).max()
+    }
+
+    pub fn link_cost_delta_for_player(&self, player: PlayerId) -> i32 {
+        let player_delta = self
+            .player_modifiers
+            .get(&player)
+            .into_iter()
+            .flatten()
+            .filter(|entry| entry.modifier == ModifierType::ChangeLinkCost)
+            .map(|entry| match &entry.payload {
+                ModifierPayload::LinkCost { delta } => *delta,
+                ModifierPayload::None => entry.value,
+                _ => 0,
+            });
+        let permanent_delta = self
+            .permanent_modifiers
+            .iter()
+            .filter(move |(handle, _)| handle.player == player)
+            .flat_map(|(_, entries)| entries)
+            .filter(|entry| entry.modifier == ModifierType::ChangeLinkCost)
+            .map(|entry| match &entry.payload {
+                ModifierPayload::LinkCost { delta } => *delta,
+                ModifierPayload::None => entry.value,
+                _ => 0,
+            });
+        player_delta.chain(permanent_delta).sum()
+    }
+
+    pub fn link_max_delta(&self, host: PermanentHandle) -> i32 {
+        self.get(host, ModifierType::ChangeLinkMax)
+            .into_iter()
+            .map(|entry| match &entry.payload {
+                ModifierPayload::LinkMax { delta } => *delta,
+                ModifierPayload::None => entry.value,
+                _ => 0,
+            })
+            .sum()
     }
 
     /// Iterate over all player-scoped modifier entries for `target_player`.
@@ -728,17 +957,20 @@ mod tests {
     }
 
     #[test]
-    fn until_condition_and_once_used_persist_through_turn_ends() {
-        // Until the continuous controller and consumption tracker land,
-        // entries with these expiries are stored but never auto-removed
-        // by `expire_end_of_turn` / `expire_end_of_attack`. This test
-        // pins that contract so consuming tracks know the storage shape.
+    #[should_panic(expected = "Expiry::UntilCondition is disabled")]
+    fn until_condition_panics_in_debug_until_controller_lands() {
         let mut reg = ModifierRegistry::new();
         let target = h(0, 0);
         reg.add(
             target,
             ModifierEntry::simple(ModifierType::ChangeDp, 100, Expiry::UntilCondition, 0),
         );
+    }
+
+    #[test]
+    fn once_used_persists_through_turn_ends_until_consumed() {
+        let mut reg = ModifierRegistry::new();
+        let target = h(0, 0);
         reg.add(
             target,
             ModifierEntry::simple(ModifierType::ChangeDp, 50, Expiry::OnceUsed(1), 0),
@@ -748,8 +980,24 @@ mod tests {
         reg.expire_end_of_attack();
         assert_eq!(
             reg.sum(target, ModifierType::ChangeDp),
-            150,
-            "UntilCondition + OnceUsed entries must persist through turn-end cycles"
+            50,
+            "OnceUsed entries must persist through turn-end cycles until a consult site consumes them"
+        );
+    }
+
+    #[test]
+    #[should_panic(expected = "modifier payload mismatch")]
+    fn debug_guard_rejects_mismatched_payload() {
+        let mut reg = ModifierRegistry::new();
+        let target = h(0, 0);
+        reg.add(
+            target,
+            ModifierEntry::simple(ModifierType::ChangeDp, 0, Expiry::Permanent, 0).with_payload(
+                ModifierPayload::Traits {
+                    add: vec!["Holy".to_string()],
+                    replace: false,
+                },
+            ),
         );
     }
 

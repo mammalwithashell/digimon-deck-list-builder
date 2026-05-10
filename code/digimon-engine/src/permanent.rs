@@ -2,7 +2,8 @@ use std::collections::HashMap;
 
 use crate::card_data::CardData;
 use crate::card_source::{CardHandle, CardSource};
-use crate::enums::{CardKind, DelayTrigger, PlayerId};
+use crate::enums::{CardColor, CardKind, DelayTrigger, ModifierType, PlayerId};
+use crate::modifiers::{ModifierPayload, ModifierRegistry};
 
 /// Lightweight handle to a Permanent on a player's field. Copy-able, used in closures.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -41,6 +42,16 @@ pub enum OptionState {
         owner: PlayerId,
         trained: Option<TrainingBinding>,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SynthIdentity {
+    pub card_name: String,
+    pub kind: CardKind,
+    pub level: Option<u8>,
+    pub colors: Vec<CardColor>,
+    pub traits: Vec<String>,
+    pub dp: Option<i32>,
 }
 
 impl Default for OptionState {
@@ -135,15 +146,138 @@ impl Permanent {
         self.top_card().level(data)
     }
 
+    pub fn synth_identity(
+        &self,
+        data: &[CardData],
+        modifiers: &ModifierRegistry,
+        handle: PermanentHandle,
+    ) -> SynthIdentity {
+        let top = self.top_card();
+        let mut identity = SynthIdentity {
+            card_name: top.card_name(data).to_string(),
+            kind: top.card_kind(data),
+            level: top.level(data),
+            colors: top.colors(data).to_vec(),
+            traits: top.traits(data).to_vec(),
+            dp: top.dp(data),
+        };
+
+        for entry in modifiers.get(handle, ModifierType::TreatAsDigimon) {
+            if let ModifierPayload::SynthIdentity {
+                kind,
+                level,
+                colors,
+                traits,
+                dp,
+            } = &entry.payload
+            {
+                identity.kind = *kind;
+                identity.level = Some(*level);
+                identity.colors = colors.clone();
+                identity.traits = traits.clone();
+                identity.dp = Some(*dp);
+            }
+        }
+        for entry in modifiers.get(handle, ModifierType::ChangePermanentLevel) {
+            match &entry.payload {
+                ModifierPayload::LevelOverride { value, delta } => {
+                    identity.level = if *delta {
+                        identity
+                            .level
+                            .map(|level| (level as i32 + *value).clamp(0, u8::MAX as i32) as u8)
+                    } else {
+                        Some((*value).clamp(0, u8::MAX as i32) as u8)
+                    };
+                }
+                ModifierPayload::None => {
+                    identity.level = Some(entry.value.clamp(0, u8::MAX as i32) as u8);
+                }
+                _ => {}
+            }
+        }
+        for entry in modifiers.get(handle, ModifierType::ChangeBaseCardName) {
+            match &entry.payload {
+                ModifierPayload::Name { value, base: _ } => {
+                    identity.card_name = value.clone();
+                }
+                ModifierPayload::None if entry.value != 0 => {
+                    identity.card_name = entry.value.to_string();
+                }
+                _ => {}
+            }
+        }
+        for entry in modifiers.get(handle, ModifierType::ChangeBaseCardColor) {
+            if let ModifierPayload::Colors { value, base: _ } = &entry.payload {
+                identity.colors = value.clone();
+            }
+        }
+        for entry in modifiers.get(handle, ModifierType::ChangeTraits) {
+            if let ModifierPayload::Traits { add, replace } = &entry.payload {
+                if *replace {
+                    identity.traits.clear();
+                }
+                for trait_name in add {
+                    if !identity
+                        .traits
+                        .iter()
+                        .any(|existing| existing.eq_ignore_ascii_case(trait_name))
+                    {
+                        identity.traits.push(trait_name.clone());
+                    }
+                }
+            }
+        }
+        for modifier in [ModifierType::ChangeCardDP, ModifierType::ChangeOriginDP] {
+            for entry in modifiers.get(handle, modifier) {
+                match &entry.payload {
+                    ModifierPayload::Dp { value, .. } => identity.dp = Some(*value),
+                    ModifierPayload::None => identity.dp = Some(entry.value),
+                    _ => {}
+                }
+            }
+        }
+        identity
+    }
+
+    pub fn level_for_rules(
+        &self,
+        data: &[CardData],
+        modifiers: &ModifierRegistry,
+        handle: PermanentHandle,
+    ) -> Option<u8> {
+        self.synth_identity(data, modifiers, handle).level
+    }
+
     /// Base DP from the top card (before modifiers).
     pub fn base_dp(&self, data: &[CardData]) -> Option<i32> {
         self.top_card().dp(data)
+    }
+
+    pub fn base_dp_for_rules(
+        &self,
+        data: &[CardData],
+        modifiers: &ModifierRegistry,
+        handle: PermanentHandle,
+    ) -> Option<i32> {
+        self.synth_identity(data, modifiers, handle).dp
     }
 
     /// Whether the top card is a Digimon.
     pub fn is_digimon(&self, data: &[CardData]) -> bool {
         matches!(
             self.top_card().card_kind(data),
+            CardKind::Digimon | CardKind::Dual
+        )
+    }
+
+    pub fn is_digimon_for_rules(
+        &self,
+        data: &[CardData],
+        modifiers: &ModifierRegistry,
+        handle: PermanentHandle,
+    ) -> bool {
+        matches!(
+            self.synth_identity(data, modifiers, handle).kind,
             CardKind::Digimon | CardKind::Dual
         )
     }
@@ -156,6 +290,15 @@ impl Permanent {
     /// Whether the top card is a Tamer.
     pub fn is_tamer(&self, data: &[CardData]) -> bool {
         self.top_card().card_kind(data) == CardKind::Tamer
+    }
+
+    pub fn colors_for_rules(
+        &self,
+        data: &[CardData],
+        modifiers: &ModifierRegistry,
+        handle: PermanentHandle,
+    ) -> Vec<CardColor> {
+        self.synth_identity(data, modifiers, handle).colors
     }
 
     /// Returns `true` if this permanent's digivolution stack contains at
@@ -203,6 +346,23 @@ impl Permanent {
         false
     }
 
+    pub fn contains_card_name_for_rules(
+        &self,
+        name: &str,
+        data: &[CardData],
+        modifiers: &ModifierRegistry,
+        handle: PermanentHandle,
+    ) -> bool {
+        let needle = name.to_lowercase();
+        let identity = self.synth_identity(data, modifiers, handle);
+        if identity.card_name.to_lowercase().contains(&needle) {
+            return true;
+        }
+        self.card_sources
+            .iter()
+            .any(|card| card.contains_card_name(name, data))
+    }
+
     /// Check if any card in the stack has a given trait.
     pub fn has_trait(&self, trait_name: &str, data: &[CardData]) -> bool {
         let trait_lower = trait_name.to_lowercase();
@@ -214,6 +374,22 @@ impl Permanent {
             }
         }
         false
+    }
+
+    pub fn has_trait_for_rules(
+        &self,
+        trait_name: &str,
+        data: &[CardData],
+        modifiers: &ModifierRegistry,
+        handle: PermanentHandle,
+    ) -> bool {
+        let needle = trait_name.to_lowercase();
+        let identity = self.synth_identity(data, modifiers, handle);
+        identity
+            .traits
+            .iter()
+            .any(|trait_name| trait_name.to_lowercase() == needle)
+            || self.has_trait(trait_name, data)
     }
 
     /// Digivolve: push a new card on top of the stack.

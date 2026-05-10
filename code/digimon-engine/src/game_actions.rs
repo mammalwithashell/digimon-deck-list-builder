@@ -764,6 +764,12 @@ impl Game {
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
     ) -> Option<usize> {
+        if self
+            .modifiers
+            .player_has(player_id, ModifierType::CannotPlayFromTrash)
+        {
+            return None;
+        }
         let field_slots = self.rules.field_slots;
 
         let card_kind = {
@@ -862,6 +868,12 @@ impl Game {
         player_id: PlayerId,
         trash_index: usize,
     ) -> OptionPlayResult {
+        if self
+            .modifiers
+            .player_has(player_id, ModifierType::CannotPlayFromTrash)
+        {
+            return OptionPlayResult::Invalid;
+        }
         self.play_option_core(player_id, OptionSource::Trash(trash_index))
     }
 
@@ -941,7 +953,9 @@ impl Game {
             .iter()
             .find_map(|effect| effect.link_cost)
             .unwrap_or(0);
-        let effective_cost = (base_cost - total_reduction).max(0) as u16 + link_cost;
+        let modified_link_cost =
+            (link_cost as i32 + self.modifiers.link_cost_delta_for_player(player_id)).max(0) as u16;
+        let effective_cost = (base_cost - total_reduction).max(0) as u16 + modified_link_cost;
         if !self.pay_memory(effective_cost) {
             return OptionPlayResult::Invalid;
         }
@@ -1256,12 +1270,14 @@ impl Game {
     pub(crate) fn run_rule_check_after_arts(&mut self) {
         let mut to_delete: Vec<PermanentHandle> = Vec::new();
         for pid in 0..self.players.len() {
-            for (idx, perm) in self.players[pid].battle_area.iter().enumerate() {
+            for idx in 0..self.players[pid].battle_area.len() {
                 let handle = PermanentHandle {
                     player: pid as PlayerId,
                     index: idx as u8,
                 };
-                if perm.is_digimon(&self.card_data) && self.effective_dp(handle).unwrap_or(1) <= 0 {
+                if self.permanent_is_digimon_for_rules(handle)
+                    && self.effective_dp(handle).unwrap_or(1) <= 0
+                {
                     to_delete.push(handle);
                 }
             }
@@ -1463,16 +1479,22 @@ impl Game {
                     let owner_player = self.player(owner);
                     let mut out: Vec<PermanentHandle> = Vec::new();
                     for (i, perm) in owner_player.battle_area.iter().enumerate() {
-                        if !perm.is_digimon(&self.card_data) {
+                        let handle = PermanentHandle {
+                            player: owner,
+                            index: i as u8,
+                        };
+                        if !self.permanent_is_digimon_for_rules(handle) {
                             continue;
                         }
                         if !matches!(perm.option_state, crate::permanent::OptionState::Standard) {
                             continue;
                         }
-                        let handle = PermanentHandle {
-                            player: owner,
-                            index: i as u8,
-                        };
+                        let link_max = (1 + self.modifiers.link_max_delta(handle))
+                            .clamp(0, u8::MAX as i32)
+                            as usize;
+                        if perm.linked_cards.len() >= link_max {
+                            continue;
+                        }
                         // Find a link effect; evaluate its filter.
                         let filter_ok = effects.iter().find(|e| e.link_cost.is_some()).map_or(
                             true,
@@ -1721,7 +1743,7 @@ impl Game {
             .battle_area
             .get(host.index as usize)
             .map(|p| {
-                p.is_digimon(&self.card_data)
+                self.permanent_is_digimon_for_rules(host)
                     && matches!(p.option_state, crate::permanent::OptionState::Standard)
             })
             .unwrap_or(false);
@@ -1790,7 +1812,7 @@ impl Game {
             .battle_area
             .get(host.index as usize)
             .map(|p| {
-                p.is_digimon(&self.card_data)
+                self.permanent_is_digimon_for_rules(host)
                     && matches!(p.option_state, crate::permanent::OptionState::Standard)
             })
             .unwrap_or(false);
@@ -2034,7 +2056,7 @@ impl Game {
 
     /// Activate a `[Main]` effect on the card at `player_id`'s hand slot
     /// `hand_index`. Returns `true` if a matching effect fired, `false` if no
-    /// `EffectTiming::MainFromHand` effect on the card was legal.
+    /// `EffectTiming::MainFromHand`/`OptionMain` effect on the card was legal.
     ///
     /// Consumes `HAND_EFFECT` action bits (30-59) that the mask emits. Memory
     /// cost, card movement, and any side effects are handled inside the
@@ -3684,11 +3706,16 @@ impl Game {
             || (cost_kind == CostReductionKind::Play
                 && self
                     .modifiers
-                    .player_has(acting_player, ModifierType::CannotReducePlayCost))
+                    .any_player_has(ModifierType::CannotReducePlayCost))
             || (cost_kind == CostReductionKind::Digivolve
                 && self
                     .modifiers
                     .player_has(acting_player, ModifierType::CannotReduceDigivolveCost))
+            || (cost_kind == CostReductionKind::Digivolve
+                && self.modifiers.any_other_player_has(
+                    acting_player,
+                    ModifierType::OpponentCannotReduceDigivolveCost,
+                ))
         {
             return Vec::new();
         }
@@ -5008,13 +5035,13 @@ impl Game {
         let (base_level, base_colors) = {
             let target_player = self.player(target.player);
             let perm = &target_player.battle_area[target.index as usize];
-            let Some(base_level) = perm.top_card().level(&self.card_data) else {
+            let identity = perm.synth_identity(&self.card_data, &self.modifiers, target);
+            let Some(base_level) = identity.level else {
                 self.logger
                     .log("[Rejected] effect_initiated_digivolve: target top card has no level");
                 return false;
             };
-            let base_colors = perm.top_card().colors(&self.card_data);
-            (base_level, base_colors)
+            (base_level, identity.colors)
         };
 
         let evo_costs = &self.card_data[evo_card_data_index].evo_costs;

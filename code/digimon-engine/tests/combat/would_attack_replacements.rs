@@ -426,6 +426,7 @@ fn when_would_be_attack_target_opponent_cancel_filter() {
         PlayerModifierEntry {
             modifier: ModifierType::CannotAttackTarget,
             value: 0,
+            payload: digimon_engine::modifiers::ModifierPayload::None,
             expiry: Expiry::Permanent,
             source_permanent: None,
             source_player: 1,

@@ -18,7 +18,7 @@ use crate::digixros::matches_digixros_name_requirement;
 use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::effect_context::EffectReadContext;
-use crate::enums::{CardColor, CardKind, EffectTiming, GamePhase, PlayerId};
+use crate::enums::{CardColor, CardKind, EffectTiming, GamePhase, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::Permanent;
 use crate::permanent::PermanentHandle;
@@ -69,6 +69,16 @@ impl Game {
         let top = perm.top_card();
         let data = &self.card_data[top.data_index];
         matches_digixros_name_requirement(data, required_name)
+            || self
+                .modifiers
+                .get(handle, ModifierType::ChangeCardNamesForDigiXros)
+                .into_iter()
+                .any(|entry| match &entry.payload {
+                    crate::modifiers::ModifierPayload::DigiXrosNames { aliases } => aliases
+                        .iter()
+                        .any(|alias| alias.to_lowercase().contains(&required_name.to_lowercase())),
+                    _ => false,
+                })
     }
 
     pub fn card_matches_generic_name(&self, card_id: &str, required_name: &str) -> bool {
@@ -162,7 +172,7 @@ impl Game {
             .get(base_handle.index as usize)?;
 
         [
-            printed_digivolve_memory_cost(card, base, &self.card_data)
+            self.rules_digivolve_memory_cost(card, base_handle, base)
                 .map(|memory_cost| DigivolveRouteMatch { memory_cost }),
             self.dsl_alt_digivolve_route_for_card(card, base_handle),
         ]
@@ -545,6 +555,23 @@ impl Game {
             }
         }
         None
+    }
+
+    fn rules_digivolve_memory_cost(
+        &self,
+        card: &CardSource,
+        base_handle: PermanentHandle,
+        base: &Permanent,
+    ) -> Option<u16> {
+        let identity = base.synth_identity(&self.card_data, &self.modifiers, base_handle);
+        if !matches!(
+            identity.kind,
+            CardKind::Digimon | CardKind::Dual | CardKind::DigiEgg
+        ) {
+            return None;
+        }
+        let base_level = identity.level?;
+        matching_evo_cost(card, base_level, &identity.colors, &self.card_data)
     }
 }
 

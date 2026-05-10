@@ -280,6 +280,13 @@ impl Game {
             EffectTiming::EndOfOpponentsNextTurn,
         );
 
+        if let Some(floor) = self.modifiers.end_turn_min_memory_floor(ending_player) {
+            let floor = floor.clamp(i16::MIN as i32, i16::MAX as i32) as i16;
+            if self.memory < floor {
+                self.memory = floor;
+            }
+        }
+
         // Advance turn
         self.turn_player_idx = (self.turn_player_idx + 1) % self.turn_order.len();
         self.turn_count += 1;

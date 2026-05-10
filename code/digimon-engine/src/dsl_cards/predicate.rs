@@ -1246,16 +1246,13 @@ fn eval_permanent_fields(
     if !eval_card_fields(pred, rctx, top_handle, false, bindings) {
         return false;
     }
+    let synth_identity = perm.synth_identity(rctx.card_data(), &rctx.game.modifiers, handle);
     if let Some(want) = pred.kind {
-        let data = match rctx.game.card_data_for_handle(top_handle) {
-            Some(d) => d,
-            None => return false,
-        };
-        if !kind_matches_field(want, data.card_kind) {
+        if !kind_matches_field(want, synth_identity.kind) {
             return false;
         }
     }
-    if !eval_level_aggregate_match(pred, rctx, perm.level(rctx.card_data())) {
+    if !eval_level_aggregate_match(pred, rctx, synth_identity.level) {
         return false;
     }
     if !eval_dp_constraints(pred, rctx, handle, bindings) {
