@@ -150,7 +150,7 @@ fn save_and_decoy_coexist_on_one_printed_only_card() {
     let mut r = DebugRunner::builder()
         .add_card(printed_only_digimon(
             "DUAL",
-            vec![Keyword::Save, Keyword::Decoy],
+            vec![Keyword::Save, Keyword::Decoy(0)],
         ))
         .add_card(tamer_card("TAMER"))
         .add_card(plain_digimon("ALLY"))

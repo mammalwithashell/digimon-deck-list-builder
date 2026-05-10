@@ -1259,7 +1259,49 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Workaround:** Older hand-expanded `select_own_sources` + `trash_selected_sources` bodies are still faithful, but new YAML should use `digi_burst` to keep cost ordering consistent.
 - **Updated 2026-05-07:** BT4-072 Gogmamon is authored and tested with `digi_burst`. Its source selection is restricted to `target: source`, excludes other own stacks from the action mask, trashes the selected source through the source-trash payload path, then exposes the printed DP target selection. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt4_072`.
 - **Updated 2026-05-08:** A synthetic `digi_burst: { count: 2 }` fixture now proves the multi-source contract: exactly two self-stack sources are required, PASS is not legal before the count is satisfied, other own stacks are excluded, each selected source emits `OnDigivolutionCardTrashed`, and the nested body continues after the source-trash cost. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- digi_burst_two_selects_exact_self_sources_and_fires_source_trash_per_card`.
+- **Updated 2026-05-10 (Track G close):** Native `keyword_to_auto_effect` install for `Keyword::DigiBurst(N)` is now **intentionally absent** with explicit documentation in `code/digimon-engine/src/cards/keyword_effects.rs` (file-header docstring) and an explicit `Keyword::DigiBurst(_) => Vec::new()` arm. Rationale: the printed keyword token is a cost prefix for a per-card `[Main]` body that can't be synthesized from the keyword alone (DCGO matches by inlining cost+body per card; we matched that pattern with the DSL `digi_burst:` step). Auto-installing only the cost would be strictly worse for the player. The reusable authoring surface remains the DSL `digi_burst: { count: N, then: [...] }` step. Cards from `cards.json` carrying printed `<Digi-Burst N>` without a DSL spec silently no-op, but `Keyword::DigiBurst(N)` is still produced for tensor / mask / "cards with `<Digi-Burst>`" filter predicates (e.g. BT4-076 reveal-and-add).
 - **Related:** Existing "Dynamic cost reduction at `BeforePayCost`"; existing "`<Armor Purge>` keyword" (sibling trash-top-source-of-self); existing "Native printed keyword parsing"; new "`OnDigivolutionCardTrashed` observer timing".
+
+### `<Decoy>` color-filter parameterisation (Track G close)
+- **Severity:** 🟡 PARTIAL — color filter resolved; trait filter remains a documented gap.
+- **Discovered in:** Track G keyword-library audit (2026-05-10)
+- **Card(s):** `<Decoy (Black)>` printings (X Antibody Black archetype, Black token bodies); `<Decoy (Red/Black)>` and `<Decoy (Black/White)>` multi-color printings; `<Decoy ([Bagra Army] trait)>` / `<Decoy ([Xros Heart] trait)>` / `<Decoy ([Puppet] trait)>` / `<Decoy ([D-Brigade] trait)>` / `<Decoy ([Deva] or [Four Sovereigns] trait)>` trait printings.
+- **Effect text:** "`<Decoy (Color)>`" or "`<Decoy ([Trait] trait)>`" — narrows the substitute target to allies whose colors / traits match the parenthetical.
+- **What landed (color filter):** `Keyword::Decoy` is now `Keyword::Decoy(u8)` where the u8 is a `CardColor` bitmask (bit `n` = color index `n`; `0` = no filter, matches the un-parameterised printing). The parser at `code/digimon-engine/src/card_data.rs::parse_printed_keywords` extracts color names from the parenthetical via `decoy_color_mask_from_paren`. The auto-install body in `code/digimon-engine/src/cards/keyword_effects.rs::keyword_to_auto_effect` consults `subject.colors_for_rules(...)` and rejects ally substitutions whose color set has no overlap with the bitmask. `Keyword: Copy` is preserved (u8 payload).
+- **What's missing (trait filter):** Trait-form parentheticals (`[Bagra Army] trait`, `[Xros Heart] trait`, etc.) parse to `Decoy(0)` (no color filter — equivalent to un-parameterised behavior). Trait filtering requires per-card hand-rolled `CardEffect` overrides, since trait names are arbitrary strings and storing them in the `Keyword` variant would force `Keyword: Copy → Clone` and cascade into ~50 `CardData` literal sites and every `has_keyword`-style consumer. The "Decoy ([Deva] or [Four Sovereigns] trait)" multi-trait-OR form is uncommon; per-card overrides remain the authoring path.
+- **Suggested API shape (trait follow-up):** Either (a) per-card hand-rolled `CardEffect` that applies the trait gate using `Permanent::has_trait` before falling through to the keyword-derived auto-install, or (b) a side-table `card_id → DecoyTraitFilter` registry consulted by the auto-install body. Defer to (a) as long as the trait-filter card pool stays small.
+- **Workaround:** The existing un-parameterised behavior (substitute for any same-controller ally Digimon) is still installed for trait-filter cards. The trait gate can be enforced by overriding the auto-install with a hand-rolled `CardEffect` per card.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parser_decoy` (6 parser cases) + `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_phase_d -- decoy_color_filter` (3 behavioral cases for accept-on-match, reject-on-mismatch, multi-color OR).
+- **Related:** Existing "Native printed keyword parsing"; existing `<Decoy>` Phase D Task 7 entry (un-parameterised auto-install).
+
+### `<Evade>` printed semantics — suspend-and-cancel, NOT redirect-to-deck (Track G close)
+- **Severity:** ✅ RESOLVED
+- **Discovered in:** Track G keyword-library audit (2026-05-10)
+- **Card(s):** Every printed `<Evade>` Digimon (e.g. BT5-105 Beelzemon Blast Mode, BT11-098 Mervamon, P-067 Thomas H. Norstein) — the parenthetical reads "When this Digimon would be deleted, you may suspend it to prevent that deletion."
+- **What was wrong:** The Phase 7 auto-install in `code/digimon-engine/src/cards/keyword_effects.rs::Keyword::Evade` redirected the deletion to the deck bottom (`rctx.redirect_to(Zone::Deck)`). This contradicted both the printed text ("suspend it to prevent that deletion") and DCGO's `KeyWordEffects/Evade.cs:38-49` (`SuspendPermanentsClass.Tap` + `willBeRemoveField = false`). The pre-existing tests `printed_evade_keyword_redirects_to_deck_bottom` and `evade_synchronous_process_unchanged` enshrined the wrong behavior.
+- **Fix:** Auto-install now suspends the carrier (firing `OnSuspend` observers) and calls `rctx.cancel()` to cancel the deletion. Gate at candidate-collection time on `!is_suspended` — an already-suspended carrier cannot pay the cost (DCGO `CanActivatePermanentSuspendCostEffect`). Self-scope and re-check guards in the body match the Fragment / ArmorPurge precedents.
+- **Tests updated:** `tests/replacements/native_keywords.rs::printed_evade_keyword_suspends_and_cancels_deletion` and `tests/replacements/nested_select_regression.rs::evade_synchronous_process_unchanged` now assert suspend-and-cancel semantics. Comprehensive new `tests/keyword_phase_d/evade.rs` adds 6 cases: effect-deletion accept, battle-deletion accept, decline (PASS), already-suspended gate failure, neighbor-deletion self-scope, and empty-deck independence.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_phase_d -- evade` (6 passing) + `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- evade printed_evade_keyword_suspends` (2 passing).
+- **Related:** "Native printed keyword parsing" (parent entry); RULES_CONTEXT 16-XX (Evade); DCGO `KeyWordEffects/Evade.cs`.
+
+### `<Progress>` card-shaped test backfill (Track G close)
+- **Severity:** ✅ RESOLVED — engine consult was already implemented; only test coverage was missing.
+- **Discovered in:** Track G keyword-library audit (2026-05-10)
+- **Card(s):** Every printed `<Progress>` Digimon (BT21-025 Lamiamon, BT24-018 Styracomon, BT24-017 Medusamon, etc.) plus modifier-granted forms (e.g. inherited `<Progress>` from sources under the top card).
+- **What was missing:** The `Game::progress_excludes` consult covered native printed Progress and modifier-granted Progress at the unit-test level (see `tests::progress_excludes_only_when_attacking_and_opponent_sourced`), but **inherited Progress** (Progress on a digivolution source under the top card) had no dedicated card-shaped coverage. The engine implementation in `Game::has_keyword` already walks the stack and consults `inherited_keywords()` against each source under the top — the gap was test coverage, not behavior.
+- **Tests added:** `code/digimon-engine/tests/keyword_phase_f/progress.rs` adds 9 card-shaped cases:
+  1. Native printed Progress excludes opponent effects while attacking.
+  2. Modifier-granted Progress excludes identically.
+  3. Inherited Progress (source under top card) excludes via the stack walk in `Game::has_keyword`.
+  4. Inherited Progress at stack bottom (multi-card stack) is still discovered.
+  5. Inherited keyword text on a TOP-only card does NOT count as inherited (only sources strictly below the top contribute).
+  6. `Expiry::EndOfTurn` modifier-granted Progress goes away after `expire_end_of_turn` sweep.
+  7. Progress does NOT exclude own effects (`progress_excludes(_, Some(own))` returns false).
+  8. Not-attacking carrier with the keyword is dormant — no exclusion.
+  9. Inherited keyword walk is card-kind-agnostic (Tamer source under a Digimon still grants Progress).
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_phase_f -- progress` (9 passing).
+- **Related:** Existing "`<Progress>` keyword + `ImmunityToOpponentEffects` modifier" entry (RESOLVED for core Progress); RULES_CONTEXT 16-XX.
+
 ## Puppets Batch 5/6 Residual Engine Gaps
 
 ### Costed self-digivolve stable source binding

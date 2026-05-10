@@ -143,15 +143,19 @@ fn printed_barrier_keyword_ignores_non_battle_deletion() {
 }
 
 /// Printed `<Evade>` auto-installs an optional `WhenWouldBeDeleted`
-/// replacement that redirects the deletion to the owner's deck (bottom).
+/// replacement that suspends the carrier and cancels the deletion.
+/// Per printed text: "When this Digimon would be deleted, you may suspend it
+/// to prevent that deletion." Mirrors DCGO `Evade.cs:38-49` (suspend cost +
+/// `willBeRemoveField = false`).
 #[test]
-fn printed_evade_keyword_redirects_to_deck_bottom() {
+fn printed_evade_keyword_suspends_and_cancels_deletion() {
     let mut r = DebugRunner::builder()
         .add_card(card_with_keywords("EVADE_CARD", vec![Keyword::Evade]))
         .start();
     let handle = r.place_on_field(0, "EVADE_CARD", Some(0));
 
     let deck_before = r.game.player(0).deck.len();
+    let trash_before = r.game.player(0).trash.len();
     r.game.delete_permanent_with_effects(handle);
     assert!(r.game.pending_selection.is_some());
     r.game
@@ -160,13 +164,23 @@ fn printed_evade_keyword_redirects_to_deck_bottom() {
 
     assert_eq!(
         r.battle_area_size(0),
-        0,
-        "Evade removes the permanent from the field"
+        1,
+        "Evade keeps the carrier on the field — only the deletion is cancelled"
+    );
+    let perm = &r.game.player(0).battle_area[0];
+    assert!(
+        perm.is_suspended,
+        "Evade pays its cost by suspending the carrier"
     );
     assert_eq!(
         r.game.player(0).deck.len(),
-        deck_before + 1,
-        "Evade redirects to deck (grew by 1)"
+        deck_before,
+        "Evade does not move the carrier to the deck (printed text says 'suspend it', not 'place at deck bottom')"
+    );
+    assert_eq!(
+        r.game.player(0).trash.len(),
+        trash_before,
+        "Evade cancels the deletion — nothing lands in trash"
     );
 }
 

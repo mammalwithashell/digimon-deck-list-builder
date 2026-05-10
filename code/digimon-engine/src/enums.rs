@@ -397,7 +397,19 @@ pub enum Keyword {
     Fortitude,
     Overclock,
     Barrier,
-    Decoy,
+    /// Printed `<Decoy>` (RULES_CONTEXT 16-XX). The carrier may substitute
+    /// itself for an ally Digimon's deletion. The `u8` payload encodes the
+    /// printed color filter as a bitmask over `CardColor` (bit `n` set ⇒
+    /// allies of color `n` are eligible). `0` means no color filter — every
+    /// ally Digimon is eligible (matches the un-parameterised printing).
+    /// Multi-color filters (e.g. `<Decoy (Red/Black)>`) OR the bits.
+    ///
+    /// **Trait filters NOT encoded here.** Printed forms such as
+    /// `<Decoy ([Bagra Army] trait)>` parse to `Decoy(0)` (no color filter)
+    /// and require a hand-rolled `CardEffect` override to apply the trait
+    /// gate. See `RUST_ENGINE_GAPS.md` "Decoy color-filter parameterisation"
+    /// for the trait-filter follow-up entry.
+    Decoy(u8),
     Partition,
     Vortex,
     /// Attacker keyword — while this Digimon is attacking, every opponent

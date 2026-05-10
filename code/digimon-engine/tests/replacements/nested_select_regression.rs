@@ -87,16 +87,21 @@ fn evade_synchronous_process_unchanged() {
         .resolve_selection(0, REPLACEMENT_ACCEPT)
         .expect("accept Evade");
 
-    // Evade: redirect to deck bottom.
+    // Evade: suspend the carrier and cancel the deletion (per printed text:
+    // "you may suspend it to prevent that deletion").
     assert_eq!(
         r.game.players[0].battle_area.len(),
-        0,
-        "Evade redirected: digimon left field"
+        1,
+        "Evade cancelled the deletion — carrier stays on field"
+    );
+    assert!(
+        r.game.players[0].battle_area[0].is_suspended,
+        "Evade paid its cost by suspending the carrier"
     );
     assert_eq!(
         r.game.players[0].deck.len(),
-        deck_size_before + 1,
-        "Evade put digimon at deck bottom"
+        deck_size_before,
+        "Evade is not a deck-redirect — deck size unchanged"
     );
     assert!(r.game.parked_replacement_outcome_for_test().is_none());
 }

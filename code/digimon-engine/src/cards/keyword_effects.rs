@@ -32,6 +32,21 @@
 //! bare printings; auto-install would double-fire alongside hand-rolled
 //! effect text on every card): DeDigivolve(N), DrawX(N).
 //!
+//! Also intentionally NOT auto-installed: DigiBurst(N). The printed token is
+//! a **cost prefix** for an effect body that lives in the same `[Main]`
+//! activation, but the body's text varies per card and cannot be synthesized
+//! from the keyword alone. The reusable authoring surface is the DSL
+//! `digi_burst: { count: N, then: [...] }` step (lowers to `SelectOwnSources`
+//! with `target: source`, `min=max=N`, plus `TrashSelectedSources` prepended
+//! to the body) — see `code/digimon-dsl/src/compile.rs` and
+//! `RUST_ENGINE_GAPS.md` "<Digi-Burst N> keyword". An auto-install that
+//! merely paid the cost without a body would be strictly worse for the
+//! player; declining to install matches DCGO, which also implements
+//! Digi-Burst inline per card rather than via a shared `KeyWordEffects/*`
+//! file. Card data parsing still produces `Keyword::DigiBurst(N)` for tensor
+//! / mask awareness and for any future "cards with `<Digi-Burst>`" filter
+//! predicates (e.g. BT4-076 reveal-and-add).
+//!
 //! ## Combat-only consumption (no auto-install)
 //!
 //! Iceclad (Phase F) does not have a `keyword_to_auto_effect` arm — it is
@@ -158,22 +173,63 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
             })
             .build()],
 
-        // Printed Evade: "When this Digimon would be deleted, you may place
-        // it at the bottom of your deck instead."
-        // Redirecting to Zone::Deck is honored by
-        // `delete_permanent_with_cause`'s `Redirected(Zone::Deck)` arm,
-        // which routes through `return_to_deck(StackPosition::Bottom)`.
+        // Printed Evade: "When this Digimon would be deleted, you may suspend
+        // it to prevent that deletion." DCGO `Evade.cs:38-49`.
+        //
+        // Cost: suspend the carrier (paid via `EffectContext::suspend`, which
+        // fires `OnSuspend` observers as a regular suspension would). Effect:
+        // cancel the deletion. The carrier survives on the field, suspended.
+        //
+        // Gate (DCGO `CanActivateEvade` → `CanActivatePermanentSuspendCostEffect`):
+        // the carrier must NOT already be suspended. An already-suspended
+        // carrier cannot pay the cost. We check this at candidate-collection
+        // time so the outer accept dialog is suppressed when the cost cannot
+        // be paid; the body re-checks belt-and-suspenders.
+        //
+        // Note: we do not consult `ModifierType::CannotSuspend` here. That
+        // modifier blocks orientation flips (e.g. an opponent prevents the
+        // unsuspend phase from un-tapping); paying the Evade cost is a
+        // self-suspend by the carrier's own effect, which DCGO permits even
+        // under most "can't be suspended" effects. If a future rule narrows
+        // this, add the consult here.
         Keyword::Evade => vec![Effect::when_would_be_deleted(card)
             .name("<Evade>")
             .optional()
+            .condition(|ctx| {
+                let Some(perm) = ctx.source_permanent() else {
+                    return false;
+                };
+                !perm.is_suspended
+            })
             .replacement_process(|rctx| {
-                let me = rctx.effect.source_permanent;
-                if let ReplacementSubject::Permanent(subject) = rctx.subject {
-                    if Some(subject) != me {
-                        return;
-                    }
-                    rctx.redirect_to(Zone::Deck);
+                // Self-scope guard: only fire on the carrier's own deletion.
+                let me_perm = rctx.effect.source_permanent;
+                let subject = match rctx.subject {
+                    ReplacementSubject::Permanent(h) => h,
+                    _ => return,
+                };
+                if Some(subject) != me_perm {
+                    return;
                 }
+                // Re-check the gate at process time. A prior replacement in
+                // the same chain could have suspended the carrier between
+                // collection and process.
+                let already_suspended = rctx
+                    .effect
+                    .game
+                    .player(subject.player)
+                    .battle_area
+                    .get(subject.index as usize)
+                    .map(|p| p.is_suspended)
+                    .unwrap_or(true);
+                if already_suspended {
+                    return;
+                }
+                // Pay the cost: suspend the carrier (fires OnSuspend).
+                rctx.effect.suspend(subject);
+                // Cancel the original deletion. Honored by
+                // `delete_permanent_with_cause`'s `Cancelled` arm.
+                rctx.cancel();
             })
             .build()],
 
@@ -548,22 +604,24 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
         //
         // Note on UX: the outer optional dialog is parked at candidate-
         // collection time, BEFORE the body runs. So when the body's filter
-        // would reject (subject==self, cross-controller, or non-Digimon),
-        // the dialog still appears. On accept, the body falls through
-        // without setting an outcome and the original deletion proceeds.
-        // This matches the Phase C `nested_select_decoy.rs` precedent and
-        // is acceptable for v1; cards needing finer pre-dialog filtering
-        // (e.g. printed "Decoy: Black" color filter) override via a
-        // hand-rolled `CardEffect`.
+        // would reject (subject==self, cross-controller, non-Digimon, or
+        // color-mismatch under a non-zero color_mask), the dialog still
+        // appears. On accept, the body falls through without setting an
+        // outcome and the original deletion proceeds. This matches the
+        // Phase C `nested_select_decoy.rs` precedent.
         //
-        // Color/parameter filtering is NOT in scope here — `Keyword::Decoy`
-        // is parsed un-parameterized (`card_data.rs:314`). The auto-install
-        // offers any same-controller Digimon. Per-card-text restrictions
-        // (e.g. "Decoy: Black") are applied by hand-rolled overrides.
-        Keyword::Decoy => vec![Effect::when_would_be_deleted(card)
-            .name("<Decoy>")
+        // Color filter (Track G close): `Keyword::Decoy(u8)` carries a
+        // CardColor bitmask. `0` = no filter (un-parameterized printed form
+        // and prior behavior). Non-zero filters narrow eligible allies to
+        // those whose `colors_for_rules` overlaps the bitmask. Trait-filter
+        // forms (`<Decoy ([Bagra Army] trait)>`) parse to `Decoy(0)` and
+        // require hand-rolled overrides for the trait gate (existing
+        // precedent; trait id is not stored in the keyword variant to keep
+        // `Keyword: Copy`).
+        Keyword::Decoy(color_mask) => vec![Effect::when_would_be_deleted(card)
+            .name(if color_mask == 0 { "<Decoy>".to_string() } else { format!("<Decoy ({color_mask:#04x})>") }.as_str())
             .optional()
-            .replacement_process(|rctx| {
+            .replacement_process(move |rctx| {
                 // Self-scope guard: never substitute self for self
                 // (infinite-loop prevention).
                 let me_perm = match rctx.effect.source_permanent {
@@ -594,6 +652,22 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 };
                 if !subject_perm.is_digimon(&game.card_data) {
                     return;
+                }
+                // Color-filter gate: when `color_mask != 0`, the subject's
+                // rules-facing colors must overlap the bitmask. Bit `n` set
+                // ⇒ color index `n` (CardColor as u8) is eligible.
+                if color_mask != 0 {
+                    let subject_colors = subject_perm.colors_for_rules(
+                        &game.card_data,
+                        &game.modifiers,
+                        subject,
+                    );
+                    let any_match = subject_colors
+                        .iter()
+                        .any(|c| (color_mask & (1u8 << (*c as u8))) != 0);
+                    if !any_match {
+                        return;
+                    }
                 }
 
                 // Substitute: redirect deletion to self. Synchronous; the
@@ -1524,6 +1598,14 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 ctx.training_place_deck_top_under_self_face_down(me);
             })
             .build()],
+
+        // Intentionally NOT auto-installed (see file-header docstring for
+        // rationale). The printed `<Digi-Burst N>` token is a cost prefix for
+        // a per-card body that DSL `digi_burst: { count: N, then: [...] }`
+        // expresses inline. Synthesizing the cost without a body here would
+        // be strictly worse for the player. Cards using the printed keyword
+        // must author the `[Main]` body via DSL or hand-rolled `CardEffect`.
+        Keyword::DigiBurst(_) => Vec::new(),
 
         // Non-replacement keywords — handled elsewhere (combat, mask, etc.).
         _ => Vec::new(),

@@ -244,9 +244,9 @@ sets the replacement outcome via one of these methods:
   ```
 
 - **`ctx.redirect_replacement(zone)`** — Redirect to a different zone
-  (Evade-style redirect to deck bottom).
+  (Decode-style redirect of return-to-deck into hand).
   ```rust
-  ctx.redirect_replacement(Zone::Deck);
+  ctx.redirect_replacement(Zone::Hand);
   ```
 
 - **`ctx.substitute_replacement(subject)`** — Substitute a different
@@ -402,7 +402,7 @@ Keyword::Save => vec![Effect::on_deletion(card)
 | `WhenWouldBe*` replacement with nested selection ("you may pick a Tamer") | Use `.optional()` on the `Effect` builder — this is mandatory for parked selections inside a replacement window. The substrate `debug_assert!` in `run_candidate_inner` will trip if a non-optional process installs a `pending_selection`. |
 | `OnDeletion` trigger with nested selection (Save) | Do NOT use `.optional()` — OnDeletion triggers don't carry the outer accept dialog. Use `is_optional=true` on the inner `select_*` call as the "may" hook. |
 | Mandatory replacement with no nested selection (ArmorPurge) | Do NOT use `.optional()` — use `rctx.cancel()` / `rctx.handled()` / `rctx.substitute()` synchronously inside the `replacement_process` closure. No `pending_selection` is parked; the outcome is set in-place. |
-| Optional replacement with no nested selection (Evade, Barrier) | Use `.optional()` — the outer accept dialog fires and `rctx.redirect_to()` / `rctx.handled()` runs synchronously inside the accepted process closure. |
+| Optional replacement with no nested selection (Barrier, Evade, Decode) | Use `.optional()` — the outer accept dialog fires and `rctx.cancel()` / `rctx.redirect_to()` / `rctx.handled()` runs synchronously inside the accepted process closure. **Note:** `<Evade>` is not a redirect — it pays a self-suspend cost via `rctx.effect.suspend(self)` and then calls `rctx.cancel()`. See `Keyword::Evade` in `keyword_effects.rs`. |
 
 #### Gate check pattern — preventing the outer dialog when the pre-condition fails
 
@@ -464,9 +464,13 @@ The keyword auto-install (`keyword_to_auto_effect`) provides a permissive
 default for each keyword. Some cards need custom selection filters that the
 auto-install cannot encode:
 
-- **Color-filtered Decoy** (e.g. "Decoy: Black") — auto-install offers any
-  ally Digimon; per-card text restricts by color. Override via a hand-rolled
-  `CardEffect` with an explicit color filter on the `rctx.subject` permanent.
+- **Trait-filtered Decoy** (e.g. `<Decoy ([Bagra Army] trait)>`) — the
+  parser drops trait filters to `Decoy(0)` (no filter); auto-install offers
+  any ally Digimon. Override via a hand-rolled `CardEffect` with an
+  explicit `Permanent::has_trait` filter. **Color-filtered Decoy** (e.g.
+  `<Decoy (Black)>` or `<Decoy (Red/Black)>`) is now handled natively —
+  `Keyword::Decoy(u8)` carries a `CardColor` bitmask and the auto-install
+  consults `subject.colors_for_rules` against the mask.
 - **DigiXros-source MaterialSave** — auto-install offers any own source;
   per-card text may restrict to sources that were DigiXros materials.
 - **Color-grouped Partition** — auto-install offers any 2 sources; printed

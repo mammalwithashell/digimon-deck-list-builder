@@ -373,7 +373,12 @@ pub fn lookup_keyword(name: &str, value: Option<i32>) -> Option<Keyword> {
         "Fortitude" => Keyword::Fortitude,
         "Overclock" => Keyword::Overclock,
         "Barrier" => Keyword::Barrier,
-        "Decoy" => Keyword::Decoy,
+        // DSL `keyword: Decoy` with optional `value:` carrying the color
+        // bitmask (default 0 = no filter — matches all ally Digimon).
+        // Bit layout matches `CardColor as u8`: Red=0..Purple=6. Cards
+        // wanting a single-color filter pass `value: 32` (bit 5 = Black),
+        // multi-color use OR'd values (e.g. `value: 33` for Red|Black).
+        "Decoy" => Keyword::Decoy(value.unwrap_or(0) as u8),
         "Partition" => Keyword::Partition,
         "Vortex" => Keyword::Vortex,
         "Collision" => Keyword::Collision,
