@@ -650,3 +650,104 @@ fn bt8_097_cost_reduction_reduces_play_cost_by_one_per_opp_digimon() {
         "BT8-097 must reduce by 2 for opponent Digimon only; Tamer must not count"
     );
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 7 — Failure-mode audit: floodgate scope (PR #456 cluster 3c)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// PR #456 fixed the BT8-097 [Main]+[Security] tests by routing the floodgate
+// through `add_player_modifier` and clearing on opponent's EOT. Adjacent
+// failure modes that were not directly fixed but ride the same plumbing —
+// these guard against regressions in the floodgate scope.
+
+/// **Adjacent edge-case (cluster 3c):** printed text restricts only
+/// effect-driven Digimon plays. Natural plays from hand
+/// (`PlaySource::ByHand`) MUST continue to succeed under the floodgate.
+/// Verifies the gate at `game_actions.rs:380` consults the play-source
+/// kind, not just the card kind.
+#[test]
+fn bt8_097_floodgate_does_not_block_opponent_natural_play_from_hand() {
+    use digimon_engine::card_data::CardData;
+    use digimon_engine::enums::CardColor;
+
+    fn opp_digi() -> CardData {
+        let mut c = make_test_card("OPP-NATURAL", "OppNatural");
+        c.card_kind = CardKind::Digimon;
+        c.colors = vec![CardColor::Red];
+        c.dp = Some(3000);
+        c.level = Some(3);
+        c.play_cost = 1;
+        c
+    }
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT8-097")
+        .expect("BT8-097 in embedded DSL pack")
+        .add_card(opp_digi())
+        .hand(0, &["BT8-097"])
+        .hand(1, &["OPP-NATURAL"])
+        .deck(0, &["BT8-097", "BT8-097"])
+        .deck(1, &["BT8-097", "BT8-097"])
+        .memory(8)
+        .start();
+
+    runner.game.activate_hand_main(0, 0);
+    runner.auto_resolve();
+    assert!(
+        runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect),
+        "floodgate must be installed before opponent's turn"
+    );
+
+    // P0 ends turn → P1's turn.
+    runner.end_turn();
+
+    // P1 plays Digimon naturally from hand (PlaySource::ByHand path).
+    let played = runner.game.play_from_hand(1, 0);
+    assert!(
+        played.is_some(),
+        "natural play_from_hand must NOT be blocked by CannotPlayDigimonByEffect — \
+         floodgate is scoped to effect-driven plays only"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "opponent's natural Digimon play must succeed under the floodgate"
+    );
+}
+
+/// **Adjacent edge-case (cluster 3c):** the floodgate is installed via
+/// `add_player_modifier`'s `EndOfOpponentsTurn` expiry. Verifies the
+/// modifier persists across the boundary where P0's turn ends + P1's
+/// turn starts, then clears exactly when P1's turn ENDS — the boundary
+/// PR #456 only round-tripped on.
+#[test]
+fn bt8_097_floodgate_clears_at_exactly_opp_turn_end_boundary() {
+    let mut runner = crimson_blaze_in_hand();
+    runner.game.activate_hand_main(0, 0);
+    runner.auto_resolve();
+
+    assert!(runner
+        .game
+        .modifiers
+        .player_has(1, ModifierType::CannotPlayDigimonByEffect));
+
+    runner.end_turn(); // P0 → P1
+    assert!(
+        runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect),
+        "still active during P1's turn (opp's turn hasn't ended yet)"
+    );
+    runner.end_turn(); // P1 → P0
+    assert!(
+        !runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotPlayDigimonByEffect),
+        "must clear at the boundary where P1's turn ends"
+    );
+}

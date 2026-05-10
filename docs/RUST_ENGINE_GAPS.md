@@ -2,6 +2,22 @@
 
 Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`), discovered during archetype audits by `assess-rust-engine-archetype`. Distinct from [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md), which tracks Rust↔Python divergences in shared subsystems — this document catalogs **net-new primitives** the Rust scripting API needs before a given archetype can be implemented under the no-approximations policy (CLAUDE.md §17–18).
 
+> **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
+> #449–#458. The audit-table summary at the top is consistent with the
+> per-entry status below. New since the previous sweep: Track B (PR
+> #449 replacement framework), Track A (PR #451 event payload + Track A
+> `ProvenanceToken`), Track C (PR #452 modifier taxonomy + 10 wired
+> consult sites; PR #455 deferred modifier variants + `ModifierPayload`
+> typed payloads), Track D (PR #450 attack-flow centralization), Track
+> E (PR #453 zone-movement helpers + owner-routing fix; PR #454 ten
+> deferred DSL verbs), Track G (PR #457 keyword library close — Evade
+> fix, Decoy color-filter, Progress backfill), and the
+> `Expiry::UntilCondition` runtime controller (PR #458). The owner-
+> routing fix from PR #453 is now exercised end-to-end through real
+> card flows by `code/digimon-engine/tests/owner_routing_live.rs`
+> (pre-scaling cleanup batch §1). See `.claude/plans/pre-scaling-cleanup-batch.md`
+> for the full closure-index narrative.
+
 There are two related assessment workflows:
 
 - `.codex/skills/assess-rust-engine-archetype/` is the Codex read-only readiness workflow. It inspects printed text, current DSL schema/lowering, engine action/pending-selection support, and tests, then reports `ready`, `dsl-gap`, `engine-gap`, `rules-gap`, `test-gap`, or `data-gap` findings. It should cite this tracker when a known primitive blocks an archetype, but it does not modify files.

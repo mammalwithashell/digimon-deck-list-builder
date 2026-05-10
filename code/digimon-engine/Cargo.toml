@@ -17,8 +17,12 @@ digimon-dsl = { path = "../digimon-dsl", optional = true }
 serde_yml = { version = "0.0.12", optional = true }
 
 [features]
-default = ["dsl-yaml-loader"]
+default = ["dsl-yaml-loader", "test-helpers"]
 dsl-yaml-loader = ["dep:digimon-dsl", "dep:serde_yml"]
+# Test-only helpers (e.g. `DebugRunner::transfer_control`) gated behind this
+# flag. On by default so integration tests can use them without an explicit
+# `--features` flag; production callers who care can `default-features = false`.
+test-helpers = []
 
 [build-dependencies]
 digimon-dsl = { path = "../digimon-dsl" }
@@ -128,3 +132,8 @@ path = "tests/dual_cards/main.rs"
 [[test]]
 name = "effect_source_kind"
 path = "tests/effect_source_kind/main.rs"
+
+[[test]]
+name = "owner_routing_live"
+path = "tests/owner_routing_live.rs"
+required-features = ["test-helpers"]

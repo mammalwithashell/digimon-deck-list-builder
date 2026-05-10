@@ -3,6 +3,72 @@
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
 Last updated: 2026-05-09
+Last sweep: 2026-05-10 (pre-scaling cleanup batch — see `.claude/plans/pre-scaling-cleanup-batch.md` §2)
+
+## Sweep notes (2026-05-10)
+
+Cross-referenced every entry against PRs #449–#458. Below is the closure
+index — what landed in each PR and which entries it narrows or closes.
+Entries already noted "RESOLVED" / "PARTIALLY RESOLVED" with PR-cited
+test commands stay as-is. New closures since the previous sweep:
+
+- **Track B replacement framework (PR #449):** replacement-effect framework
+  scaffold landed; consumed by Track C/D consult sites (e.g.
+  `WhenWouldLeaveBattleArea`, `WhenWouldBeReturnedToHand`,
+  `WhenWouldPlaceInSecurity`).
+- **Track D combat centralization (PR #450):** `Game::begin_attack_open` is
+  the central entry for natural / Vortex / Overclock / effect-created
+  attacks. Closes "fixed attack target" and "non-switchable attack
+  target" gap shapes; `CannotSwitchAttackTarget` /
+  `CannotBeRedirectedAsAttackTarget` consult sites are wired (PR #452).
+- **Track A event payload (PR #451):** `ProvenanceToken` system + typed
+  event-payload contract; consumed by Track E zone helpers' source
+  attribution.
+- **Track C foundation (PR #452):** modifier taxonomy publication +
+  10 fully-wired consult sites: `MayAttackPlayerOnly`,
+  `CannotSwitchAttackTarget`, `CannotBeRedirectedAsAttackTarget`,
+  `CannotMove`, `DisableEffect`, `CannotAddMemory`, `CannotAddSecurity`,
+  `ImmuneFromStackTrashing`, `CanAttackTargetDefendingPermanent`,
+  `ImmuneFromDPMinus`. New `Expiry` variants
+  (`EndOfYourTurn`, `OnceUsed`, `UntilCondition`) typed.
+- **Track E zone movement (PR #453):** 8 zone-movement helpers + the
+  owner-routing fix (`CardSource.owner` consulted in `return_to_hand`
+  and `return_to_deck_inner`). The dormant fix now has live coverage
+  via `tests/owner_routing_live.rs` (added by this sweep). Closes:
+  "Forced opponent hand reduction primitive", "Effect-played permanent
+  cleanup provenance" (superseded by Track A `ProvenanceToken`),
+  "Zone-manipulation: security stack operations" (significantly
+  expanded), "Zone-manipulation: return-to-hand / return-to-deck /
+  bounce self".
+- **Track E DSL verbs (PR #454):** the 10 deferred zone-movement DSL
+  verbs are now expressible end to end. Demote `raw_rust` carve-out
+  notes pointing at these verbs; see the DSL-verb table in
+  `qa/dsl-vocab-gaps.md` for the per-verb closure.
+- **Track C deferred modifiers (PR #455):** `ModifierEntry` /
+  `PlayerModifierEntry` carry typed `ModifierPayload`;
+  `Permanent::synth_identity` centralizes identity overlays. Wires
+  `ChangeTraits`, `ChangeBaseCardName`, `ChangeBaseCardColor`,
+  `ChangeCardNamesForDigiXros`, `TreatAsDigimon`,
+  `ChangePermanentLevel`, `ChangeCardDP`, `ChangeOriginDP`,
+  `ChangeSAttack`, `ChangeEndTurnMinMemory`, `ChangeLinkCost`,
+  `ChangeLinkMax`, `CannotPlayFromTrash`, bilateral
+  `CannotReducePlayCost`, `OpponentCannotReduceDigivolveCost`. The
+  Track C entry above is updated.
+- **Track G keyword library close (PR #457):** Evade printed-semantics
+  (suspend-and-cancel, not deck redirect); Decoy color-filter via
+  `Keyword::Decoy(u8)` bitmask payload; Progress card-shape backfill;
+  Digi-Burst documented as not auto-installed. Decoy trait-filter
+  remains open.
+- **UntilCondition continuous controller (PR #458):** runtime
+  evaluation/eviction for `Expiry::UntilCondition`. The Zephagamon
+  status-condition entries that referenced "needs UntilCondition
+  controller" are now substrate-complete; remaining work is per-card
+  predicate authoring.
+
+For the canonical engine-side gap status, see
+[docs/RUST_ENGINE_GAPS.md](../../docs/RUST_ENGINE_GAPS.md). The
+per-archetype `qa/archetype-qa/dsl/*.md` rollups also received sweep
+markers in this batch.
 
 ## Open / Partial Gaps
 

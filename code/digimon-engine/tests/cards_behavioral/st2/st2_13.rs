@@ -609,3 +609,102 @@ fn _unused_silencer() {
     let _ = make_filler("X");
     let _ = make_attacker("X");
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section X — Failure-mode audit: pure memory ±N (PR #456 cluster 3e)
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// PR #456 fixed ST2-13 / BT4-104 by routing main-from-hand activations
+// through the gain_memory step. Adjacent failure modes here stress the
+// memory clamp boundary and the modifier gates that ride the same path.
+
+/// **Adjacent edge-case (cluster 3e):** memory at the upper clamp before
+/// activation. ST2-13 [Main] is a `gain_memory: 1`. With memory at 9
+/// (one below the +10 clamp), the gain raises to 10. With memory at 10
+/// (already at the clamp), the gain MUST clamp at 10, not exceed.
+/// `Game::gain_memory_for_player` clamps to `rules.memory_range.1`.
+#[test]
+fn st2_13_main_gain_clamps_at_upper_memory_range() {
+    let mut runner = hammer_spark();
+    runner.game.memory = 10; // already at upper clamp (rules default = 10)
+    let memory_before = runner.memory();
+    assert_eq!(memory_before, 10);
+
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired);
+
+    assert_eq!(
+        runner.memory(),
+        10,
+        "memory at upper clamp must NOT exceed +10 — gain_memory clamps to memory_range.1"
+    );
+}
+
+/// **Adjacent edge-case (cluster 3e):** a battle-area permanent with
+/// the `CannotAddMemory` modifier blocks the controller's effect-driven
+/// memory gain. Per Track C consult site (effect_context::gain_memory).
+#[test]
+fn st2_13_main_gain_blocked_by_cannot_add_memory_on_battle_area_permanent() {
+    use digimon_engine::enums::{Expiry, ModifierType};
+    use digimon_engine::modifiers::ModifierEntry;
+
+    let attacker = make_attacker("ATK");
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST2-13 must be in embedded DSL pack")
+        .add_card(attacker.clone())
+        .hand(0, &[CARD_ID])
+        .memory(5)
+        .start();
+    let perm = runner.place_on_field(0, "ATK", Some(0));
+    runner.game.modifiers.add(
+        perm,
+        ModifierEntry::simple(ModifierType::CannotAddMemory, 0, Expiry::EndOfTurn, 0),
+    );
+    let memory_before = runner.memory();
+    assert_eq!(memory_before, 5);
+
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired, "activate_hand_main returns true regardless");
+
+    // The gain_memory step is consulted for CannotAddMemory and silently
+    // skips. Memory stays at 5.
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "CannotAddMemory on a battle-area permanent must block the [Main] gain"
+    );
+}
+
+/// **Adjacent edge-case (cluster 3e):** the player-scoped
+/// `CannotGainMemoryByEffect` floodgate blocks all memory gains by
+/// effect — verified through the simplest effect-driven gain available
+/// (ST2-13's [Main]).
+#[test]
+fn st2_13_main_gain_blocked_by_cannot_gain_memory_by_effect_player_modifier() {
+    use digimon_engine::enums::{Expiry, ModifierType, PlayerId};
+    use digimon_engine::modifiers::PlayerModifierEntry;
+
+    let mut runner = hammer_spark();
+    let memory_before = runner.memory();
+    let owner: PlayerId = 0;
+    runner.game.modifiers.add_player_modifier(
+        owner,
+        PlayerModifierEntry::simple(
+            ModifierType::CannotGainMemoryByEffect,
+            0,
+            Expiry::EndOfTurn,
+            None,
+            owner,
+        ),
+    );
+
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired);
+
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "CannotGainMemoryByEffect must suppress effect-driven gain_memory"
+    );
+}
