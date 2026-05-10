@@ -2042,14 +2042,17 @@ fn compile_step(
         S::OpenCounterWindow(_) => CompiledStep::OpenCounterWindow,
         S::RefireEffect(a) => CompiledStep::RefireEffect {
             source: compile_binding_ref(&a.source),
-            timing: if a.timing == "when_digivolving" {
+            timing: if matches!(
+                a.timing.as_str(),
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+            ) {
                 a.timing.clone()
             } else {
                 errors.push(ValidationError {
                     card_id: card_id.to_string(),
                     path: format!("{prefix}.refire_effect.timing"),
                     message: format!(
-                        "refire_effect only supports timing: when_digivolving, got {}",
+                        "refire_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
                         a.timing
                     ),
                 });

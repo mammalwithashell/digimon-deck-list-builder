@@ -278,9 +278,18 @@ impl PendingSelection {
 /// alongside so re-lookup doesn't have to scan zones for a handle.
 #[derive(Debug, Clone)]
 pub struct QueuedEffect {
+    /// Card handle used to look up the effect body and its OPT slot.
+    ///
+    /// For ordinary queued effects this is also the effect attribution card.
+    /// Refired effects keep this pointed at the target card whose printed
+    /// effect is being invoked, while `attribution_source_card` points at the
+    /// grantor whose effect caused the refire.
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
     pub source_kind: EffectSourceKind,
+    pub attribution_source_card: Option<CardHandle>,
+    pub attribution_source_kind: Option<EffectSourceKind>,
+    pub bypass_once_per_turn: bool,
     pub controller: PlayerId,
     pub timing: EffectTiming,
     pub trigger_context: Option<TriggerContext>,

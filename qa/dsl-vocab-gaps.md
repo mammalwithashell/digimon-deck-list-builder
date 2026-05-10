@@ -4,6 +4,14 @@ Resolved DSL gaps have been moved to [qa/resolved-gaps.md](resolved-gaps.md). Th
 
 This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine has the primitive but the DSL lacks a verb that lowers to it). Entries are appended by `/batch-implement-cards-rust-dsl`.
 
+## `refire_effect` On Play / When Digivolving timing filter (closed 2026-05-10)
+
+- **Status:** CLOSED for existing permanent-target refire.
+- **DSL surface:** `refire_effect: { source: <permanent binding>, timing: on_play_or_when_digivolving }`.
+- **Lowers to engine API:** `EffectContext::refire_target_effect(target, TimingFilter::Either, selecting_player, false)`.
+- **Semantics:** Enumerates the target permanent's eligible `[On Play]` and `[When Digivolving]` effects, exposes an `EffectChoice` when 2+ effects are legal, preserves the original source card as grantor attribution, uses the target permanent as carrier, and respects the target effect's once-per-turn slot.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl refire`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt24_102`.
+
 ## Track C modifier payload YAML shape (2026-05-09) — rich payload parser pending
 
 The Rust engine now has typed `ModifierPayload` storage and consult sites for

@@ -171,6 +171,50 @@ ctx.unsuspend(target: PermanentHandle)
 
 `delete_permanent` removes the permanent and moves all cards in its stack to trash. It also clears modifiers attached to that handle. **Does not fire OnDeletion** — use `Game::delete_permanent_with_effects` for that when you're calling from combat paths. From a card script, `ctx.delete_permanent` is usually what you want (OnDeletion is handled by combat, not effect).
 
+### Cross-card effect refiring
+
+```rust
+ctx.refire_target_effect(
+    target: PermanentHandle,
+    timing_filter: TimingFilter, // OnPlay, WhenDigivolving, Either, All
+    selecting_player: PlayerId,
+    bypass_once_per_turn: bool,
+) -> bool
+```
+
+Use this for printed text such as BT24-102 Homeros: "activate 1 [On Play] or
+[When Digivolving] effect of 1 of your [Olympos XII] trait Digimon." This is
+not a fake play or fake digivolution. The target permanent stays where it is,
+so `OnAnyDigimonPlayed` / `OnDigivolve` observers do not fire.
+
+The refired body runs with carrier semantics from `target`: reads of "this
+Digimon", source permanent DP, traits, keywords, and modifiers resolve against
+the selected target. Source attribution remains the grantor context:
+`ctx.source_card` in the refired body is the original effect source card, so
+"this card's effect" / "by [card]" checks read the grantor. Once-per-turn
+slots are checked and consumed on the target's selected effect slot unless
+`bypass_once_per_turn` is `true`; printed card text must explicitly justify
+using that bypass.
+
+When no eligible effect exists, the helper returns `false` and installs no
+selection. With one eligible effect it invokes directly. With two or more, it
+installs an `EffectChoice` pending selection for `selecting_player`, reusing
+the existing action-mask range. YAML lowers the Homeros shape through:
+
+```yaml
+- select_own_permanent:
+    bind_as: refire_target
+    optional: true
+    filter: { trait_has: "Olympos XII" }
+- refire_effect:
+    source: refire_target
+    timing: on_play_or_when_digivolving
+```
+
+This is distinct from Track H granted-triggered abilities: granted-triggered
+effects persist and fire on future matching events, while refire invokes an
+existing effect once immediately.
+
 ### Modifiers
 
 ```rust

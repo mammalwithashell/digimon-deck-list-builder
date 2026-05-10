@@ -1,0 +1,74 @@
+card: BT24-102
+name: Homeros
+kind: tamer
+color: [white]
+cost: 5
+traits: [Iliad, TS]
+
+# Printed:
+#   [Start of Your Main Phase] Gain 1 memory. Then, if you have 5 or more
+#     memory, suspend this Tamer and <Draw 1>.
+#   [All Turns] All of your [TS] trait Digimon get +1000 DP.
+#   [End of Your Turn] By suspending this Tamer, you may activate 1 [On Play]
+#     or [When Digivolving] effect of 1 of your [Olympos XII] trait Digimon.
+#   [Security] Play this card without paying the cost.
+#
+# Track K: the End-of-Your-Turn clause uses `refire_effect` with the
+# `on_play_or_when_digivolving` timing filter. This is not a fake play or
+# fake digivolution: the selected Digimon stays in place, the chosen effect
+# uses that Digimon as carrier, and Homeros remains the effect source.
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Main Phase] Gain 1 memory; if memory >= 5, suspend this Tamer and Draw 1"
+    process:
+      - gain_memory: 1
+      - if:
+          condition: { memory_gte: 5 }
+          then:
+            - suspend: { target: source }
+            - draw: { of: you, count: 1 }
+
+  - kind: aura
+    summary: "[All Turns] Your TS Digimon get +1000 DP"
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: TS
+    dp_modifier: 1000
+
+  - when: end_of_your_turn
+    optional: true
+    summary: "[End of Your Turn] Suspend this Tamer to activate an On Play or When Digivolving effect of your Olympos XII Digimon"
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "BT24-102"
+            is_unsuspended: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            trait_has: "Olympos XII"
+    process:
+      - select_own_permanent:
+          bind_as: refire_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Olympos XII"
+          prompt: "Choose 1 of your Olympos XII Digimon"
+      - suspend: { target: source }
+      - refire_effect:
+          source: refire_target
+          timing: on_play_or_when_digivolving
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}
