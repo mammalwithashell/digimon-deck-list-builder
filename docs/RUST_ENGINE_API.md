@@ -1418,7 +1418,8 @@ Options are *ephemeral*: they do not normally live on the field. The exceptions 
 The resolver's default Plug-In carrier capacity is 5 linked cards plus any
 `ChangeLinkMax` modifier delta, clamped at zero. This matches the linked-card
 tensor capacity and keeps multiple Plug-Ins independently visible unless a
-modifier narrows the host.
+modifier narrows the host. Lifecycle entry points that insert or re-link a
+Plug-In enforce this same capacity before mutating the carrier.
 
 ### Shape types added in Task 1
 
@@ -1504,14 +1505,18 @@ move an Option into or out of persistent lifecycle state:
 |-------------|-----|
 | `Game::install_field_option_as_delay(card, controller, placed_turn)` | Places a resolving Option as a Delay permanent, dispatches `OnOptionPlaced`, and exposes `OptionFieldState::Delay`. Same-turn activation is false by default because `can_activate_this_turn` is derived from `turn_count > placed_turn`. |
 | `Game::install_field_option_as_ordinary(card, controller)` | Places a non-Delay, non-Plug-In field Option and exposes `OrdinaryFieldOption`. |
-| `Game::install_field_option_as_plug_in(card, carrier, link_index)` | Inserts a Plug-In into `carrier.linked_cards`, dispatches `OnOptionPlaced`, then dispatches `OnLink`. |
+| `Game::install_field_option_as_plug_in(card, carrier, link_index)` | Inserts a Plug-In into `carrier.linked_cards` only if `link_index` is in range and the carrier is below `5 + ChangeLinkMax`; dispatches `OnOptionPlaced`, then dispatches `OnLink`. |
 | `Game::orphan_linked_plug_in(carrier, link_index, last_carrier_owner)` | Removes a linked Plug-In from a carrier and parks it as `OrphanedPlugIn` on its owner's battle area. |
 | `Game::orphan_plug_in(option_handle, last_carrier_owner)` | Marks an existing standalone Option permanent as orphaned. |
-| `Game::relink_plug_in(option_handle, new_carrier, link_index)` | Consumes an orphaned Plug-In permanent and links it to a new carrier. |
+| `Game::relink_plug_in(option_handle, new_carrier, link_index)` | Consumes a single-source orphaned Plug-In permanent and links it to a new carrier after validating the target slot and capacity. Invalid re-link attempts leave the orphan in place. |
 | `Game::trash_field_option(option_handle, cause)` | Trashes a standalone field Option and dispatches `OnOptionTrashed` with `event_card`, `event_cause`, `moved_card_sets`, and `option_last_field_state()`. |
 
 These helpers are the observer-safe mutation surface for the explicit lifecycle
 taxonomy. Do not edit `Permanent.option_state` directly in card code.
+`Game::option_field_state` is for standalone field Options; it returns `None`
+for `OptionState::Linked` because that storage shape does not carry a precise
+slot. Use `Game::linked_plug_in_field_state(carrier, link_index)` when reading
+linked Plug-In state.
 
 ### DUAL cards and Arts Digivolve
 
