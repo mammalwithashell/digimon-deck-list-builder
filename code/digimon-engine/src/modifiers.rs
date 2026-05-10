@@ -4,11 +4,21 @@
 //! Examples: +1000 DP this turn, can't be deleted by effects, granted blocker, etc.
 
 use std::collections::HashMap;
+use std::sync::Arc;
 
 use crate::enums::{
     CardColor, CardKind, EffectSourceKind, EffectTiming, Expiry, Keyword, ModifierType, PlayerId,
 };
 use crate::permanent::PermanentHandle;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum ModifierSubject {
+    Permanent(PermanentHandle),
+    Player(PlayerId),
+}
+
+pub type UntilConditionFn =
+    Arc<dyn Fn(&crate::game::Game, ModifierSubject) -> bool + Send + Sync + 'static>;
 
 /// Typed payload carried by parametric modifier variants.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -89,6 +99,9 @@ pub struct ModifierEntry {
     pub cause_filter: Option<crate::replacement::ReplacementCause>,
     /// Optional runtime condition for passive replacements. None = always applies.
     pub replacement_condition: Option<crate::replacement::ReplacementConditionFn>,
+    /// Runtime predicate for `Expiry::UntilCondition`. The controller
+    /// evaluates it against the installed subject after mutation events.
+    pub until_condition: Option<UntilConditionFn>,
     /// Optional source-kind/controller filter for CannotBeAffected-style gates.
     pub effect_immunity_filter: Option<EffectImmunityFilter>,
     /// For `ModifierType::DisableEffect` entries — the specific
@@ -96,6 +109,8 @@ pub struct ModifierEntry {
     /// every other variant. Read by the observer dispatch hook before
     /// firing per-permanent observers (Track A's responsibility).
     pub disable_effect_timing: Option<EffectTiming>,
+    #[doc(hidden)]
+    pub install_order: u64,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -122,8 +137,10 @@ impl std::fmt::Debug for ModifierEntry {
             .field("source_player", &self.source_player)
             .field("materialized_declarative", &self.materialized_declarative)
             .field("cause_filter", &self.cause_filter)
+            .field("has_until_condition", &self.until_condition.is_some())
             .field("effect_immunity_filter", &self.effect_immunity_filter)
             .field("disable_effect_timing", &self.disable_effect_timing)
+            .field("install_order", &self.install_order)
             .finish_non_exhaustive()
     }
 }
@@ -141,8 +158,10 @@ impl ModifierEntry {
             materialized_declarative: false,
             cause_filter: None,
             replacement_condition: None,
+            until_condition: None,
             effect_immunity_filter: None,
             disable_effect_timing: None,
+            install_order: 0,
         }
     }
 
@@ -163,8 +182,10 @@ impl ModifierEntry {
             materialized_declarative: true,
             cause_filter: None,
             replacement_condition: None,
+            until_condition: None,
             effect_immunity_filter: None,
             disable_effect_timing: None,
+            install_order: 0,
         }
     }
 
@@ -184,8 +205,10 @@ impl ModifierEntry {
             materialized_declarative: false,
             cause_filter: None,
             replacement_condition: None,
+            until_condition: None,
             effect_immunity_filter: None,
             disable_effect_timing: Some(timing),
+            install_order: 0,
         }
     }
 
@@ -207,8 +230,10 @@ impl ModifierEntry {
             materialized_declarative: false,
             cause_filter: default_passive_cause_filter(modifier),
             replacement_condition: None,
+            until_condition: None,
             effect_immunity_filter: None,
             disable_effect_timing: None,
+            install_order: 0,
         }
     }
 
@@ -222,6 +247,11 @@ impl ModifierEntry {
     /// Builder variant: attach a runtime `replacement_condition` closure.
     pub fn with_condition(mut self, cond: crate::replacement::ReplacementConditionFn) -> Self {
         self.replacement_condition = Some(cond);
+        self
+    }
+
+    pub fn with_until_condition(mut self, cond: UntilConditionFn) -> Self {
+        self.until_condition = Some(cond);
         self
     }
 
@@ -293,7 +323,10 @@ pub struct PlayerModifierEntry {
     pub cause_filter: Option<crate::replacement::ReplacementCause>,
     /// Optional runtime condition for passive replacements. None = always applies.
     pub replacement_condition: Option<crate::replacement::ReplacementConditionFn>,
+    pub until_condition: Option<UntilConditionFn>,
     pub effect_immunity_filter: Option<EffectImmunityFilter>,
+    #[doc(hidden)]
+    pub install_order: u64,
 }
 
 impl std::fmt::Debug for PlayerModifierEntry {
@@ -307,7 +340,9 @@ impl std::fmt::Debug for PlayerModifierEntry {
             .field("source_player", &self.source_player)
             .field("materialized_declarative", &self.materialized_declarative)
             .field("cause_filter", &self.cause_filter)
+            .field("has_until_condition", &self.until_condition.is_some())
             .field("effect_immunity_filter", &self.effect_immunity_filter)
+            .field("install_order", &self.install_order)
             .finish_non_exhaustive()
     }
 }
@@ -331,7 +366,9 @@ impl PlayerModifierEntry {
             materialized_declarative: false,
             cause_filter: None,
             replacement_condition: None,
+            until_condition: None,
             effect_immunity_filter: None,
+            install_order: 0,
         }
     }
 
@@ -352,7 +389,9 @@ impl PlayerModifierEntry {
             materialized_declarative: true,
             cause_filter: None,
             replacement_condition: None,
+            until_condition: None,
             effect_immunity_filter: None,
+            install_order: 0,
         }
     }
 
@@ -375,7 +414,9 @@ impl PlayerModifierEntry {
             materialized_declarative: false,
             cause_filter: default_passive_cause_filter(modifier),
             replacement_condition: None,
+            until_condition: None,
             effect_immunity_filter: None,
+            install_order: 0,
         }
     }
 
@@ -388,6 +429,11 @@ impl PlayerModifierEntry {
     /// Builder variant: attach a runtime `replacement_condition` closure.
     pub fn with_condition(mut self, cond: crate::replacement::ReplacementConditionFn) -> Self {
         self.replacement_condition = Some(cond);
+        self
+    }
+
+    pub fn with_until_condition(mut self, cond: UntilConditionFn) -> Self {
+        self.until_condition = Some(cond);
         self
     }
 
@@ -472,23 +518,22 @@ fn payload_matches_modifier(modifier: ModifierType, payload: &ModifierPayload) -
     )
 }
 
-fn guard_install(modifier: ModifierType, payload: &ModifierPayload, expiry: Expiry) {
+fn guard_install(
+    modifier: ModifierType,
+    payload: &ModifierPayload,
+    expiry: Expiry,
+    has_until_condition: bool,
+) {
     debug_assert!(
         payload_matches_modifier(modifier, payload),
         "modifier payload mismatch: {:?} cannot carry {:?}",
         modifier,
         payload
     );
-    if matches!(expiry, Expiry::UntilCondition) {
-        #[cfg(debug_assertions)]
-        panic!(
-            "Expiry::UntilCondition is disabled until the continuous modifier controller is wired"
-        );
-        #[cfg(not(debug_assertions))]
-        eprintln!(
-            "warning: installing Expiry::UntilCondition modifier before continuous controller is wired"
-        );
-    }
+    debug_assert!(
+        !matches!(expiry, Expiry::UntilCondition) || has_until_condition,
+        "Expiry::UntilCondition entries must carry an until_condition predicate"
+    );
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -536,6 +581,7 @@ pub struct ModifierRegistry {
     permanent_keywords: HashMap<PermanentHandle, Vec<KeywordEntry>>,
     /// Player-scoped modifiers (Phase 6 flood gates).
     player_modifiers: HashMap<PlayerId, Vec<PlayerModifierEntry>>,
+    next_install_order: u64,
 }
 
 impl ModifierRegistry {
@@ -544,8 +590,15 @@ impl ModifierRegistry {
     }
 
     /// Add a modifier to a permanent.
-    pub fn add(&mut self, target: PermanentHandle, entry: ModifierEntry) {
-        guard_install(entry.modifier, &entry.payload, entry.expiry);
+    pub fn add(&mut self, target: PermanentHandle, mut entry: ModifierEntry) {
+        guard_install(
+            entry.modifier,
+            &entry.payload,
+            entry.expiry,
+            entry.until_condition.is_some(),
+        );
+        self.next_install_order = self.next_install_order.saturating_add(1);
+        entry.install_order = self.next_install_order;
         self.permanent_modifiers
             .entry(target)
             .or_default()
@@ -731,8 +784,15 @@ impl ModifierRegistry {
     // ── Player-scoped modifier methods (Phase 6 flood gates) ─────────────
 
     /// Install a player-scoped modifier.
-    pub fn add_player_modifier(&mut self, target_player: PlayerId, entry: PlayerModifierEntry) {
-        guard_install(entry.modifier, &entry.payload, entry.expiry);
+    pub fn add_player_modifier(&mut self, target_player: PlayerId, mut entry: PlayerModifierEntry) {
+        guard_install(
+            entry.modifier,
+            &entry.payload,
+            entry.expiry,
+            entry.until_condition.is_some(),
+        );
+        self.next_install_order = self.next_install_order.saturating_add(1);
+        entry.install_order = self.next_install_order;
         self.player_modifiers
             .entry(target_player)
             .or_default()
@@ -876,6 +936,83 @@ impl ModifierRegistry {
             });
         }
     }
+
+    pub fn until_condition_candidates(&self) -> Vec<(u64, ModifierSubject)> {
+        let mut out = Vec::new();
+        for (target, entries) in &self.permanent_modifiers {
+            for entry in entries {
+                if matches!(entry.expiry, Expiry::UntilCondition) {
+                    out.push((entry.install_order, ModifierSubject::Permanent(*target)));
+                }
+            }
+        }
+        for (player, entries) in &self.player_modifiers {
+            for entry in entries {
+                if matches!(entry.expiry, Expiry::UntilCondition) {
+                    out.push((entry.install_order, ModifierSubject::Player(*player)));
+                }
+            }
+        }
+        out.sort_by_key(|(order, _)| *order);
+        out
+    }
+
+    pub fn evaluate_until_condition(
+        &self,
+        subject: ModifierSubject,
+        install_order: u64,
+        game: &crate::game::Game,
+    ) -> Option<bool> {
+        match subject {
+            ModifierSubject::Permanent(target) => self
+                .permanent_modifiers
+                .get(&target)?
+                .iter()
+                .find(|entry| entry.install_order == install_order)
+                .and_then(|entry| entry.until_condition.as_ref())
+                .map(|pred| pred(game, subject)),
+            ModifierSubject::Player(player) => self
+                .player_modifiers
+                .get(&player)?
+                .iter()
+                .find(|entry| entry.install_order == install_order)
+                .and_then(|entry| entry.until_condition.as_ref())
+                .map(|pred| pred(game, subject)),
+        }
+    }
+
+    pub fn remove_until_condition_by_order(
+        &mut self,
+        subject: ModifierSubject,
+        install_order: u64,
+    ) -> bool {
+        match subject {
+            ModifierSubject::Permanent(target) => {
+                let Some(entries) = self.permanent_modifiers.get_mut(&target) else {
+                    return false;
+                };
+                let before = entries.len();
+                entries.retain(|entry| entry.install_order != install_order);
+                let removed = entries.len() != before;
+                if entries.is_empty() {
+                    self.permanent_modifiers.remove(&target);
+                }
+                removed
+            }
+            ModifierSubject::Player(player) => {
+                let Some(entries) = self.player_modifiers.get_mut(&player) else {
+                    return false;
+                };
+                let before = entries.len();
+                entries.retain(|entry| entry.install_order != install_order);
+                let removed = entries.len() != before;
+                if entries.is_empty() {
+                    self.player_modifiers.remove(&player);
+                }
+                removed
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -957,14 +1094,29 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Expiry::UntilCondition is disabled")]
-    fn until_condition_panics_in_debug_until_controller_lands() {
+    #[should_panic(
+        expected = "Expiry::UntilCondition entries must carry an until_condition predicate"
+    )]
+    fn until_condition_rejects_missing_predicate_in_debug() {
         let mut reg = ModifierRegistry::new();
         let target = h(0, 0);
         reg.add(
             target,
             ModifierEntry::simple(ModifierType::ChangeDp, 100, Expiry::UntilCondition, 0),
         );
+    }
+
+    #[test]
+    fn until_condition_with_predicate_installs() {
+        let mut reg = ModifierRegistry::new();
+        let target = h(0, 0);
+        reg.add(
+            target,
+            ModifierEntry::simple(ModifierType::ChangeDp, 100, Expiry::UntilCondition, 0)
+                .with_until_condition(std::sync::Arc::new(|_, _| true)),
+        );
+        assert_eq!(reg.sum(target, ModifierType::ChangeDp), 100);
+        assert_eq!(reg.until_condition_candidates().len(), 1);
     }
 
     #[test]

@@ -60,6 +60,7 @@ impl Game {
         // Unsuspend phase
         self.current_phase = GamePhase::Unsuspend;
         self.player_mut(tp).unsuspend_all();
+        self.mark_until_condition_dirty();
 
         // Phase 9 Task 7: <Reboot> consumer. "At the start of your
         // opponent's unsuspend phase, unsuspend this Digimon." Scan every
@@ -113,6 +114,7 @@ impl Game {
                 perm.is_suspended = false;
             }
         }
+        self.reevaluate_until_condition_modifiers_if_dirty();
 
         // Draw phase
         self.current_phase = GamePhase::Draw;
@@ -131,6 +133,8 @@ impl Game {
                 self.handle_deckout(tp);
                 return;
             }
+            self.mark_until_condition_dirty();
+            self.reevaluate_until_condition_modifiers_if_dirty();
         }
 
         // Breeding phase
@@ -170,6 +174,8 @@ impl Game {
             crate::selection::TriggerSource::PlayerBreedingArea(tp),
         );
         self.drain_effect_queue();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
 
         self.current_phase = GamePhase::Main;
     }
@@ -249,6 +255,7 @@ impl Game {
         self.modifiers.expire_end_of_turn(ending_player);
         // Phase 6: expire player-scoped flood-gate modifiers.
         self.modifiers.expire_player_end_of_turn(ending_player);
+        self.mark_until_condition_dirty();
 
         // EndOfOpponentsTurn: every non-ending-player observes the turn ending.
         // Fires after EndOfYourTurn has drained but before memory flip and rotation.

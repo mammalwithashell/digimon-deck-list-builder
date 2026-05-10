@@ -70,7 +70,7 @@ High-frequency cards across those lists:
 ### ZEPH-G001: Production YAML Missing for the Core Vortex Warriors Package
 
 - **Type:** `dsl-gap` / `test-gap`
-- **Status:** open
+- **Status:** narrowed 2026-05-10 — runtime controller landed; DSL predicate-to-modifier lowering remains open.
 - **Blocks:** `EX7-064`, `P-166`, `ST18-04`, `BT20-101`, `EX7-031`, `ST22-13`, `BT20-085`, `BT24-047`, `EX7-034`, `BT24-044`, `EX7-032`, `EX11-028`, `EX11-035`, `EX11-062`, `EX11-072`, `ST18-12`, `EX11-026`, `EX7-036`, and most starter/promotional line pieces.
 - **Why it matters:** The Rust runtime only executes production YAML or registered Rust effects. A deck can appear in metadata and legacy QA while still being unusable as a faithful Rust training/evaluation target.
 - **Evidence:** Only `EX7-074`, `EX8-074`, and `EX11-074` have Zephagamon-adjacent production YAML. Only those three have matching card-level behavioral test files.
@@ -105,10 +105,10 @@ High-frequency cards across those lists:
 - **Status:** open
 - **Blocks:** `EX11-062` Shoto Kazama.
 - **Effect text:** "[Your Turn] While your opponent has no unsuspended Digimon, your <Vortex> can also attack players."
-- **Why it matters:** The engine has `ModifierType::VortexCanAttackPlayer`, and Vortex masks already distinguish Digimon targets from player/security targets. The missing piece is a board-state conditional aura that grants the modifier only while the opponent has no unsuspended Digimon.
+- **Why it matters:** The engine has `ModifierType::VortexCanAttackPlayer`, Vortex masks already distinguish Digimon targets from player/security targets, and `Expiry::UntilCondition` can now evict condition-gated modifiers after board mutations. The missing piece is DSL aura lowering that grants the modifier with an attached BoolPredicate while the opponent has no unsuspended Digimon.
 - **Evidence:** `qa/dsl-vocab-gaps.md` records this as a Zephagamon gap. `code/digimon-engine/tests/mask_and_tensor/mask_end_of_turn_parity.rs` already proves base Vortex does not attack players unless `VortexCanAttackPlayer` is present.
 - **First test:** With `EX11-062` in battle, a Vortex Digimon, and no unsuspended opponent Digimon, the EndOfTurnAction mask should include the security/player target. Adding an unsuspended opponent Digimon should remove that target while retaining legal Digimon-target Vortex attacks.
-- **Implementation hint:** Add aura/flood-gate syntax that grants `VortexCanAttackPlayer` to matching own Vortex Digimon with `active_when` checking opponent unsuspended Digimon count equals zero.
+- **Implementation hint:** Add aura/flood-gate syntax that grants `VortexCanAttackPlayer` to matching own Vortex Digimon with `expiry: until_condition` and an attached `until_condition` predicate checking opponent unsuspended Digimon count equals zero.
 
 ### ZEPH-G005: Attack Target Change and Immediate May-Attack Flow
 

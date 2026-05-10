@@ -211,6 +211,8 @@ impl Game {
                 );
                 self.drain_effect_queue();
             }
+            self.mark_until_condition_dirty();
+            self.reevaluate_until_condition_modifiers_if_dirty();
 
             // Phase 8 Task 5: trash every Training permanent the owner
             // controls. Collect handles, then process in reverse so each
@@ -727,6 +729,8 @@ impl Game {
             },
         );
         self.drain_effect_queue();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
 
         Some(field_index)
     }
@@ -1941,6 +1945,8 @@ impl Game {
             return false;
         };
         self.player_mut(player_id).add_to_hand(removed);
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
         true
     }
 
@@ -1954,6 +1960,8 @@ impl Game {
             return false;
         };
         self.player_mut(player_id).add_to_hand(removed);
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
         true
     }
 
@@ -1978,6 +1986,8 @@ impl Game {
             .face_up_security
             .remove(&removed.card_index);
         self.player_mut(owner).add_to_hand(removed);
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
         true
     }
 
@@ -2449,6 +2459,8 @@ impl Game {
             return false;
         }
         player.battle_area[field_index].digivolve(card, turn);
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
         true
     }
 
@@ -2595,6 +2607,8 @@ impl Game {
         self.modifiers.clear_permanent(handle);
         // Phase 6: expire any player-scoped modifiers sourced from this permanent.
         self.modifiers.expire_player_on_permanent_leave(handle);
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
         Some(top_handle)
     }
 
@@ -2674,6 +2688,8 @@ impl Game {
             },
         );
         self.drain_effect_queue();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     /// Low-level source-attribution helper for tests and engine internals.
@@ -4518,6 +4534,8 @@ impl Game {
 
         self.player_mut(player_id).security.insert(0, card);
         self.fire_on_place_security(player_id, observer_player, source_card);
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
         true
     }
 

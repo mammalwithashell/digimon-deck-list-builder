@@ -499,6 +499,11 @@ pub struct Game {
     /// delete/replacement selection. Re-entered from `resolve_selection`.
     pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
     pub(crate) pending_delayed_option_lifecycle_stack: Vec<DelayedOptionLifecycleResume>,
+
+    until_condition_dirty: bool,
+    until_condition_last_cycle_evaluations: usize,
+    until_condition_total_evaluations: u64,
+    until_condition_reevaluation_cycles: u64,
 }
 
 impl Game {
@@ -691,6 +696,10 @@ impl Game {
             scheduled_drain_tail: None,
             pending_delayed_option_lifecycle: None,
             pending_delayed_option_lifecycle_stack: Vec::new(),
+            until_condition_dirty: false,
+            until_condition_last_cycle_evaluations: 0,
+            until_condition_total_evaluations: 0,
+            until_condition_reevaluation_cycles: 0,
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
@@ -706,6 +715,56 @@ impl Game {
     /// Get the current turn player's ID.
     pub fn turn_player(&self) -> PlayerId {
         self.turn_order[self.turn_player_idx]
+    }
+
+    pub fn until_condition_last_cycle_evaluations(&self) -> usize {
+        self.until_condition_last_cycle_evaluations
+    }
+
+    pub fn until_condition_reevaluation_cycles(&self) -> u64 {
+        self.until_condition_reevaluation_cycles
+    }
+
+    pub fn mark_until_condition_dirty(&mut self) {
+        self.until_condition_dirty = true;
+    }
+
+    pub fn reevaluate_until_condition_modifiers_if_dirty(&mut self) {
+        if !self.until_condition_dirty {
+            return;
+        }
+        if self.pending_selection.is_some()
+            || !self.effect_queue.is_empty()
+            || self.effect_chain_depth != 0
+        {
+            return;
+        }
+        self.until_condition_dirty = false;
+        self.reevaluate_until_condition_modifiers();
+    }
+
+    pub fn reevaluate_until_condition_modifiers(&mut self) {
+        let candidates = self.modifiers.until_condition_candidates();
+        let mut evaluations = 0usize;
+        for (install_order, subject) in candidates {
+            let keep = self
+                .modifiers
+                .evaluate_until_condition(subject, install_order, self);
+            let Some(keep) = keep else {
+                continue;
+            };
+            evaluations += 1;
+            if !keep {
+                self.modifiers
+                    .remove_until_condition_by_order(subject, install_order);
+            }
+        }
+        self.until_condition_last_cycle_evaluations = evaluations;
+        self.until_condition_total_evaluations = self
+            .until_condition_total_evaluations
+            .saturating_add(evaluations as u64);
+        self.until_condition_reevaluation_cycles =
+            self.until_condition_reevaluation_cycles.saturating_add(1);
     }
 
     /// Swap out the game logger (defaults to `SilentLogger`). Callers
@@ -875,6 +934,8 @@ impl Game {
         self.player_mut(source_ref.permanent.player)
             .trash
             .push(removed);
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
         true
     }
 
@@ -913,6 +974,8 @@ impl Game {
         self.player_mut(source_ref.permanent.player)
             .hand
             .push(removed);
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
         Some(card)
     }
 
@@ -973,6 +1036,8 @@ impl Game {
             },
         );
         self.drain_effect_queue();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
         Some(entered)
     }
 
@@ -1086,6 +1151,8 @@ impl Game {
             );
         }
         self.drain_effect_queue();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
         true
     }
 
@@ -1344,6 +1411,8 @@ impl Game {
             delta,
             total: self.memory,
         });
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
         true
     }
 
@@ -1374,6 +1443,8 @@ impl Game {
             delta,
             total: self.memory,
         });
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     /// End the turn if memory has crossed to the opponent's side.
@@ -1410,6 +1481,8 @@ impl Game {
             delta,
             total: self.memory,
         });
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     /// Set memory to a specific value.
@@ -1425,6 +1498,8 @@ impl Game {
             delta,
             total: self.memory,
         });
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     // ─── Elimination / winner ──────────────────────────────────────
@@ -1537,6 +1612,7 @@ impl Game {
         {
             perm.is_suspended = true;
         }
+        self.mark_until_condition_dirty();
         if let Some(card) = event_card {
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnSuspend,
@@ -1548,6 +1624,7 @@ impl Game {
             );
         }
         self.drain_effect_queue();
+        self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     /// Unsuspend a single permanent. Fires `OnUnsuspend` observers in every
@@ -1576,6 +1653,7 @@ impl Game {
         {
             perm.is_suspended = false;
         }
+        self.mark_until_condition_dirty();
         if let Some(card) = event_card {
             self.enqueue_triggered(
                 crate::enums::EffectTiming::OnUnsuspend,
@@ -1587,6 +1665,7 @@ impl Game {
             );
         }
         self.drain_effect_queue();
+        self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     /// Hatch for a player (copies turn_count to avoid borrow conflict).
@@ -1596,6 +1675,7 @@ impl Game {
         let turn = self.turn_count;
         let ok = self.player_mut(player_id).hatch(turn);
         if ok {
+            self.mark_until_condition_dirty();
             let n = self.players.len();
             for pid in 0..n {
                 self.enqueue_triggered(
@@ -1606,6 +1686,7 @@ impl Game {
                 );
             }
             self.drain_effect_queue();
+            self.reevaluate_until_condition_modifiers_if_dirty();
         }
         ok
     }

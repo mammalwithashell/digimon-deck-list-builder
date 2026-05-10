@@ -718,8 +718,8 @@ pub enum ModifierType {
 ///
 /// Lifecycle taxonomy used by the modifier registry. The expiry decides
 /// when `ModifierRegistry::expire_*` removes the entry, and (for
-/// `UntilCondition`) when the future continuous controller toggles it
-/// active/inactive.
+/// `UntilCondition`) when the continuous controller evicts it after a
+/// condition transition.
 ///
 /// Variants:
 /// - `Permanent` — never expires until the source is removed.
@@ -736,11 +736,11 @@ pub enum ModifierType {
 ///   battle area (consumes the leave-field event).
 /// - `UntilCondition` — re-evaluated by the continuous controller; the
 ///   modifier is active while a per-entry boolean predicate holds. The
-///   predicate itself lives on `ModifierEntry::condition_predicate` so
-///   the `Expiry` enum stays `Copy + Eq + Hash`. Until the controller
-///   wires up, entries with this expiry are stored but not toggled —
-///   document the predicate at the install site so consumers know what
-///   shape Track J's evaluator should provide.
+///   predicate itself lives on `ModifierEntry::until_condition` /
+///   `PlayerModifierEntry::until_condition` so the `Expiry` enum stays
+///   `Copy + Eq + Hash`. When the predicate transitions false, the
+///   installed entry is removed and is not restored if the predicate later
+///   becomes true again.
 /// - `OnceUsed(u32)` — the value is the limit; the entry tracks
 ///   `uses_consumed` and is removed once `uses_consumed >= limit`. Use
 ///   `ModifierRegistry::consume_use` from the consult site to advance
