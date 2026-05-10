@@ -2110,6 +2110,34 @@ When implementing a card that needs one of these, log the gap and pick a safe fa
 For a comprehensive Rust ↔ Python divergence catalog with severity and fix order,
 see [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md).
 
+### Cross-boundary shape drift — detection pattern
+
+When a consumer (Tauri DTO, PyO3 binding, frontend type) mirrors a subset
+of an engine struct like `CardData` or `Permanent`, adding a field to the
+engine can leave the consumer silently behind. PR #457 surfaced this for
+`CardData::ace_overflow` / `digixros_aliases` — the engine grew the
+fields, the desktop builder didn't, and `cargo build --manifest-path
+code/src-tauri/Cargo.toml` failed at the construction site.
+
+Two patterns make drift detection free:
+
+1. **Construction-time** — `CardData { ... }` literals must list every
+   field; Rust's struct-literal exhaustiveness is the check. **Do not**
+   add `Default` to `CardData` / `Permanent` / `SynthIdentity` to make
+   construction easier on consumers — `Default` masks drift.
+2. **Consumption-time** — destructure the engine struct exhaustively at
+   the read site. `card_dto` in `code/src-tauri/src/engine_commands.rs`
+   uses this pattern: `let CardData { card_id, card_name, ..., ace_overflow,
+   dual: _, digixros_aliases } = ...;` (no `..` rest-pattern). New fields
+   then trip a compile error at the consumer site, forcing a deliberate
+   choice (expose or drop).
+
+PyO3's `PyCard` is intentionally a curated subset; it omits drift
+detection because adding `CardData` fields is **not** automatically
+caller-visible from Python. When a Python caller needs a new field,
+add a `#[pyo3(get)]` accessor — don't expand the curated subset
+preemptively.
+
 ---
 
 ## 10. Registering a card

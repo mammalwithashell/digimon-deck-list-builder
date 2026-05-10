@@ -70,6 +70,14 @@ pub struct CardDto {
     pub dp: Option<i32>,
     pub play_cost: u16,
     pub colors: Vec<String>,
+    /// ACE printed-cost overflow (Track C synth profile). `None` for non-ACE
+    /// cards. Frontend chooses whether to render an ACE chip.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ace_overflow: Option<i32>,
+    /// DigiXros alternate names parsed from effect text. Empty for cards
+    /// without DigiXros aliases. Frontend uses these for material-match hints.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub digixros_aliases: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -186,15 +194,42 @@ fn attack_result_str(r: AttackResult) -> &'static str {
 }
 
 fn card_dto(card: &digimon_engine::card_source::CardSource, data: &[CardData]) -> CardDto {
-    let d = &data[card.data_index];
+    // Exhaustive destructure — adding a new field to `CardData` forces a
+    // compile error here so the next maintainer makes a deliberate choice
+    // about whether the desktop UI needs the field. This is the structural
+    // drift detector that catches the kind of bug PR #457 flagged.
+    let CardData {
+        card_id,
+        card_name,
+        card_kind,
+        level,
+        dp,
+        play_cost,
+        colors,
+        traits: _,
+        evo_costs: _,
+        dna_costs: _,
+        effect_text: _,
+        inherited_text: _,
+        security_text: _,
+        effect_class_name: _,
+        index: _,
+        norm_id: _,
+        keywords: _,
+        ace_overflow,
+        dual: _,
+        digixros_aliases,
+    } = &data[card.data_index];
     CardDto {
-        card_id: d.card_id.clone(),
-        card_name: d.card_name.clone(),
-        card_kind: card_kind_str(d.card_kind).to_string(),
-        level: d.level,
-        dp: d.dp,
-        play_cost: d.play_cost,
-        colors: d.colors.iter().map(|&c| color_str(c).to_string()).collect(),
+        card_id: card_id.clone(),
+        card_name: card_name.clone(),
+        card_kind: card_kind_str(*card_kind).to_string(),
+        level: *level,
+        dp: *dp,
+        play_cost: *play_cost,
+        colors: colors.iter().map(|&c| color_str(c).to_string()).collect(),
+        ace_overflow: *ace_overflow,
+        digixros_aliases: digixros_aliases.clone(),
     }
 }
 
@@ -286,7 +321,9 @@ fn synth_card(id: &str, name: &str, kind: CardKind, dp: Option<i32>, cost: u16) 
         index: 0,
         norm_id: 0.0,
         keywords: Vec::new(),
+        ace_overflow: None,
         dual: None,
+        digixros_aliases: Vec::new(),
     }
 }
 
@@ -1079,6 +1116,42 @@ mod tests {
         let parsed: GameStateDto = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.turn_count, 1);
         assert_eq!(parsed.players.len(), 2);
+    }
+
+    /// Track C synth-profile fields (`ace_overflow`, `digixros_aliases`) must
+    /// propagate from `CardData` into `CardDto`. Regression for the drift PR
+    /// #457 flagged: the engine grew the fields, the Tauri builder didn't,
+    /// and `cargo build --manifest-path code/src-tauri/Cargo.toml` failed.
+    #[test]
+    fn card_dto_propagates_synth_profile_fields() {
+        use digimon_engine::card_source::CardSource;
+        let mut card = synth_card(
+            "ACE-XROS",
+            "Ace Xros Test",
+            CardKind::Digimon,
+            Some(7000),
+            6,
+        );
+        card.ace_overflow = Some(3);
+        card.digixros_aliases = vec!["Greymon".to_string(), "MetalGreymon".to_string()];
+
+        let data: Vec<CardData> = vec![card];
+        let source = CardSource::new(/* data_index */ 0, /* owner */ 0, /* card_index */ 0);
+        let dto = card_dto(&source, &data);
+
+        assert_eq!(dto.ace_overflow, Some(3));
+        assert_eq!(
+            dto.digixros_aliases,
+            vec!["Greymon".to_string(), "MetalGreymon".to_string()]
+        );
+
+        // JSON round-trip — frontend relies on this envelope shape.
+        let json = serde_json::to_string(&dto).unwrap();
+        assert!(json.contains("\"ace_overflow\":3"), "got {json}");
+        assert!(json.contains("\"digixros_aliases\""), "got {json}");
+        let parsed: CardDto = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed.ace_overflow, Some(3));
+        assert_eq!(parsed.digixros_aliases.len(), 2);
     }
 
     #[test]
