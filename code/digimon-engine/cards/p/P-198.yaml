@@ -1,0 +1,57 @@
+card: P-198
+name: DemiDevimon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 1000
+traits: [Evil, TS]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: TS
+    cost: 0
+
+effects:
+  - when: start_of_your_main_phase
+    optional: true
+    condition: { memory_lte: 4 }
+    summary: "[Start of Your Main Phase] If memory <= 4, may free-digivolve this Digimon into a Fallen Angel/TS hand Digimon"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_from_source: true
+              - any_of:
+                  - trait_has: Fallen Angel
+                  - trait_has: TS
+          prompt: "Digivolve this Digimon into a Fallen Angel or TS Digimon"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: 0
+          ignore_requirements: false
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking] [Once Per Turn] Draw 1, then trash 1 card in hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }

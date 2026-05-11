@@ -61,6 +61,8 @@ pub struct PredicateSpec {
     pub card_number_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub play_cost_lte: Option<i32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_digivolve_from_source: Option<bool>,
 
     // Leaf — permanent-only
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -1151,7 +1151,25 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(want) = pred.can_digivolve_from_source {
+        if can_card_digivolve_from_source(rctx, card) != want {
+            return false;
+        }
+    }
     true
+}
+
+fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle) -> bool {
+    let Some(source_handle) = rctx.source_permanent else {
+        return false;
+    };
+    let Some(source_permanent) = permanent_for_handle(rctx, source_handle) else {
+        return false;
+    };
+    let Some(candidate) = rctx.game.card_source_for_handle(card) else {
+        return false;
+    };
+    rctx.game.can_digivolve(candidate, source_permanent)
 }
 
 fn card_shares_color_with_any_field_digimon(

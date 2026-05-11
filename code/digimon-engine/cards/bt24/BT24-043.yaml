@@ -1,0 +1,62 @@
+card: BT24-043
+name: Tapirmon
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Holy Beast, Iliad, TS]
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: TS
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add one Shaman/Beast/Animal/Sovereign Digimon and one TS card"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: trait_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_has: Shaman
+                      - all_of:
+                          - any_of:
+                              - trait_has: Beast
+                              - trait_has: Animal
+                              - trait_has: Sovereign
+                          - none_of:
+                              - trait_has: Sea Animal
+            - bind_as: ts_pick
+              min: 1
+              max: 1
+              filter: { trait_has: TS }
+          no_duplicate_cards: true
+          prompt: "Select 1 matching Digimon and 1 [TS] trait card"
+      - add_to_hand_from_reveal: { of: you, card: trait_pick }
+      - add_to_hand_from_reveal: { of: you, card: ts_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking] [Once Per Turn] Suspend 1 opponent Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Suspend 1 of your opponent's Digimon"
+      - suspend: { target: target }
