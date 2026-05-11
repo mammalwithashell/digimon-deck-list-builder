@@ -1240,6 +1240,11 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(want) = pred.can_digivolve_from_source {
+        if can_card_digivolve_from_source(rctx, card) != want {
+            return false;
+        }
+    }
     true
 }
 

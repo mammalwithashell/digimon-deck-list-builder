@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-05-05",
+  "last_updated": "2026-05-10",
   "cards": {
     "BT21-093": {
       "card_name": "Raging Serpentine",
@@ -1995,7 +1995,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt12/BT12-047.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_047.rs",
-      "notes": "Sister to BT12-021 \u2014 Wormmon line reveal-add"
+      "notes": "Sister to BT12-021 — Wormmon line reveal-add"
     },
     "BT12-050": {
       "card_name": "Stingmon",
@@ -2006,7 +2006,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt12/BT12-050.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_050.rs",
-      "notes": "Sister to BT12-022 \u2014 same gaps"
+      "notes": "Sister to BT12-022 — same gaps"
     },
     "ST9-09": {
       "card_name": "Stingmon",
@@ -2098,14 +2098,21 @@
     },
     "BT17-077": {
       "card_name": "Imperialdramon: Paladin Mode",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-05",
+      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
       "status": "PARTIAL",
-      "gap_kind": "hybrid",
-      "archetype": "BG Imperial",
+      "gap_kind": null,
+      "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt17/BT17-077.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_077.rs",
-      "notes": "Blast Digivolve + ACE -5 + WhenAttacking ship; OnPlay mass trash blocked"
+      "test_count": 2,
+      "tests_passing": 1,
+      "tests_ignored": 1,
+      "patterns": [
+        "ROYAL-KNIGHTS-POOL-SLICE",
+        "GAP-STUB"
+      ],
+      "notes": "ACE metadata and source-trash-all-opponent-Digimon slice implemented; Blast Digivolve, bulk trash-to-deck, returned-card binding, and sourceless bottom-deck cost remain blocked."
     },
     "BT20-020": {
       "card_name": "Imperialdramon: Fighter Mode",
@@ -4271,24 +4278,6 @@
       ],
       "notes": "Load-only gap stub; security-trash self-dispatch, security search/play, self-to-security top, and security-Digimon debuff remain blocked."
     },
-    "BT17-077": {
-      "card_name": "Imperialdramon: Paladin Mode",
-      "validated_date": "2026-05-05",
-      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
-      "status": "PARTIAL",
-      "gap_kind": null,
-      "archetype": "Royal Knights",
-      "yaml_path": "code/digimon-engine/cards/bt17/BT17-077.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_077.rs",
-      "test_count": 2,
-      "tests_passing": 1,
-      "tests_ignored": 1,
-      "patterns": [
-        "ROYAL-KNIGHTS-POOL-SLICE",
-        "GAP-STUB"
-      ],
-      "notes": "ACE metadata and source-trash-all-opponent-Digimon slice implemented; Blast Digivolve, bulk trash-to-deck, returned-card binding, and sourceless bottom-deck cost remain blocked."
-    },
     "BT19-093": {
       "card_name": "Queen Device",
       "validated_date": "2026-05-05",
@@ -4881,6 +4870,181 @@
         "GAP-STUB"
       ],
       "notes": "Reveal/add/trash option slice implemented; remaining unsupported activation/flow clauses gap-stubbed."
+    },
+    "BT24-004": {
+      "card_name": "Wanyamon",
+      "validated_date": "2026-05-10",
+      "report": "implement-rust-dsl-archetype TS Olympos batch 1-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Olympos",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-004.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_004.rs",
+      "test_count": 6,
+      "tests_passing": 6,
+      "tests_ignored": 0,
+      "patterns": [
+        "ON_ALLY_PLAYED",
+        "INHERITED",
+        "EVENT_TRAIT_GATE"
+      ],
+      "notes": "Inherited Your Turn OPT on ally Iliad Digimon played draws 1; negative coverage for opponent turn, non-Iliad, Tamer, and once-per-turn."
+    },
+    "BT24-020": {
+      "card_name": "Gomamon",
+      "validated_date": "2026-05-10",
+      "report": "implement-rust-dsl-archetype TS Olympos batch 1-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Olympos",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-020.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_020.rs",
+      "test_count": 6,
+      "tests_passing": 6,
+      "tests_ignored": 0,
+      "patterns": [
+        "A1",
+        "SELECT_REVEAL_BUCKETS",
+        "INHERITED_ON_UNSUSPEND"
+      ],
+      "notes": "Reveal-3 two-bucket Sea Beast/Shaman/Aqua/Sea Animal Digimon plus TS card search with no duplicate selected card; blue Lv2 and TS Lv2 alt paths; inherited Your Turn OPT hand-size gated draw."
+    },
+    "BT24-043": {
+      "card_name": "Tapirmon",
+      "validated_date": "2026-05-10",
+      "report": "implement-rust-dsl-archetype TS Olympos batch 1-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Olympos",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-043.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_043.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "patterns": [
+        "A1",
+        "SELECT_REVEAL_BUCKETS",
+        "INHERITED_SUSPEND"
+      ],
+      "notes": "Reveal-3 Shaman/Beast/Animal/Sovereign non-Sea Animal Digimon plus TS card search with no duplicate selected card; green Lv2 and TS Lv2 alt paths; inherited OPT opponent Digimon suspend."
+    },
+    "BT24-046": {
+      "card_name": "Garurumon",
+      "validated_date": "2026-05-10",
+      "report": "implement-rust-dsl-archetype TS Olympos batch 1-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Olympos",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-046.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_046.rs",
+      "test_count": 5,
+      "tests_passing": 5,
+      "tests_ignored": 0,
+      "patterns": [
+        "H2-JAMMING",
+        "SUSPEND_TARGET",
+        "ALT_DIGIVOLVE"
+      ],
+      "notes": "Green/blue metadata, green Lv3 cost-3 and Gabumon-name/TS Lv3 cost-2 alt paths; Jamming; shared On Play/When Digivolving suspend opponent Digimon; inherited OPT suspend."
+    },
+    "P-194": {
+      "card_name": "Aegiomon",
+      "validated_date": "2026-05-10",
+      "report": "implement-rust-dsl-archetype TS Olympos batch 1-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Olympos",
+      "yaml_path": "code/digimon-engine/cards/p/P-194.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_194.rs",
+      "test_count": 6,
+      "tests_passing": 6,
+      "tests_ignored": 0,
+      "patterns": [
+        "H5-BLOCKER",
+        "H14-BARRIER",
+        "ALT_DIGIVOLVE"
+      ],
+      "notes": "Yellow Lv3 and TS Lv3 cost-2 alt paths; face-up Blocker and Barrier plus inherited Barrier, including runtime battle-deletion prevention coverage."
+    },
+    "P-196": {
+      "card_name": "Gomamon",
+      "validated_date": "2026-05-10",
+      "report": "implement-rust-dsl-archetype TS Olympos batch 1-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Olympos",
+      "yaml_path": "code/digimon-engine/cards/p/P-196.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_196.rs",
+      "test_count": 11,
+      "tests_passing": 11,
+      "tests_ignored": 0,
+      "patterns": [
+        "START_MAIN",
+        "EFFECT_INITIATED_DIGIVOLVE",
+        "CAN_DIGIVOLVE_FROM_SOURCE",
+        "INHERITED_DRAW"
+      ],
+      "notes": "Start of Your Main Phase memory <=4 optional visible hand digivolve into Sea Beast/TS for free; hand mask also requires the selected card can digivolve from source. Blue Lv2 and TS Lv2 alt paths; inherited OPT hand-size gated draw."
+    },
+    "P-197": {
+      "card_name": "Patamon",
+      "validated_date": "2026-05-10",
+      "report": "implement-rust-dsl-archetype TS Olympos batch 1-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Olympos",
+      "yaml_path": "code/digimon-engine/cards/p/P-197.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_197.rs",
+      "test_count": 7,
+      "tests_passing": 7,
+      "tests_ignored": 0,
+      "patterns": [
+        "START_MAIN",
+        "EFFECT_INITIATED_DIGIVOLVE",
+        "DP_MODIFIER",
+        "CAN_DIGIVOLVE_FROM_SOURCE"
+      ],
+      "notes": "Start of Your Main Phase memory <=4 optional visible hand digivolve into Angel/TS for free with can-digivolve-from-source hand masking; yellow Lv2 and TS Lv2 alt paths; inherited OPT -2000 DP target selection."
+    },
+    "P-198": {
+      "card_name": "DemiDevimon",
+      "validated_date": "2026-05-10",
+      "report": "implement-rust-dsl-archetype TS Olympos batch 1-2",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Olympos",
+      "yaml_path": "code/digimon-engine/cards/p/P-198.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_198.rs",
+      "test_count": 8,
+      "tests_passing": 8,
+      "tests_ignored": 0,
+      "patterns": [
+        "START_MAIN",
+        "EFFECT_INITIATED_DIGIVOLVE",
+        "DRAW_THEN_TRASH",
+        "CAN_DIGIVOLVE_FROM_SOURCE"
+      ],
+      "notes": "Start of Your Main Phase memory <=4 optional visible hand digivolve into Fallen Angel/TS for free with can-digivolve-from-source hand masking; purple Lv2 and TS Lv2 alt paths; inherited OPT Draw 1 then trash 1 hand card."
+    },
+    "BT24-100": {
+      "card_name": "In-Between Theater",
+      "validated_date": "2026-05-10",
+      "report": "implement-rust-dsl-archetype TS Olympos primitive refresh",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "TS Olympos",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-100.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_100.rs",
+      "test_count": 4,
+      "tests_passing": 4,
+      "tests_ignored": 0,
+      "patterns": [
+        "D-COLOR-IGNORE",
+        "A1",
+        "OPTION-AS-PERMANENT",
+        "DELAY"
+      ],
+      "notes": "Implemented after DSL primitive refresh using use_requirement plus IgnoreColorRequirement for TS board color bypass, reveal-3 TS search, explicit place_self_as_delay_option, standard Delay gain 2 memory, and inherited Security delayed-option placement."
     }
   }
 }
