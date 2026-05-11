@@ -338,9 +338,24 @@ fn collect_optional_predicate_raw_rust_fns(
 }
 
 fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTreeSet<String>) {
-    for dp in [&predicate.dp_eq, &predicate.dp_lte, &predicate.dp_gte]
-        .into_iter()
-        .flatten()
+    for dp in [
+        &predicate.level_lte,
+        &predicate.level_gte,
+        &predicate.play_cost_lte,
+        &predicate.dp_eq,
+        &predicate.dp_lte,
+        &predicate.dp_gte,
+        &predicate.stack_size_lte,
+        &predicate.stack_size_gte,
+        &predicate.materials_count_lte,
+        &predicate.materials_count_gte,
+        &predicate.memory_lte,
+        &predicate.memory_gte,
+        &predicate.security_count_lte,
+        &predicate.security_count_gte,
+    ]
+    .into_iter()
+    .flatten()
     {
         if let CompiledDpConstraint::Formula(formula) = dp {
             collect_formula_raw_rust_fns(formula, names);
@@ -353,6 +368,9 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
         .into_iter()
         .flatten()
     {
+        if let CompiledDpConstraint::Formula(formula) = &aggregate.n {
+            collect_formula_raw_rust_fns(formula, names);
+        }
         collect_predicate_raw_rust_fns(&aggregate.filter, names);
     }
     for existential in [
@@ -402,13 +420,23 @@ fn collect_formula_raw_rust_fns(formula: &CompiledFormula, names: &mut BTreeSet<
         CompiledFormula::Literal(_)
         | CompiledFormula::Aggregate(_)
         | CompiledFormula::AggregateScoped { .. }
-        | CompiledFormula::BindingDp(_) => {}
+        | CompiledFormula::BindingDp(_)
+        | CompiledFormula::BindingPlayCost(_) => {}
     }
 }
 
 fn collect_per_selector_raw_rust_fns(sel: &CompiledPerSelector, names: &mut BTreeSet<String>) {
-    if let CompiledPerSelector::FilteredCardCountInZoneScoped { filter, .. } = sel {
-        collect_predicate_raw_rust_fns(filter, names);
+    match sel {
+        CompiledPerSelector::FilteredCardCountInZoneScoped { filter, .. } => {
+            collect_predicate_raw_rust_fns(filter, names);
+        }
+        CompiledPerSelector::DistinctColorsCountScoped {
+            filter: Some(filter),
+            ..
+        } => {
+            collect_predicate_raw_rust_fns(filter, names);
+        }
+        _ => {}
     }
 }
 

@@ -32,7 +32,7 @@
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
 use digimon_engine::TriggerSource;
 
 // ─── Card YAML (included from production path) ───────────────────────────────
@@ -55,6 +55,26 @@ fn make_attacker(id: &str) -> digimon_engine::card_data::CardData {
     c.card_kind = CardKind::Digimon;
     c.level = Some(4);
     c.dp = Some(5000);
+    c
+}
+
+fn make_tamer(id: &str, color: CardColor) -> digimon_engine::card_data::CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Tamer;
+    c.colors = vec![color];
+    c.level = None;
+    c.dp = None;
+    c
+}
+
+fn make_trait_digimon(
+    id: &str,
+    play_cost: u16,
+    traits: &[&str],
+) -> digimon_engine::card_data::CardData {
+    let mut c = make_attacker(id);
+    c.play_cost = play_cost;
+    c.traits = traits.iter().map(|t| (*t).to_string()).collect();
     c
 }
 
@@ -94,9 +114,7 @@ fn tai_with_attacker_and_target() -> DebugRunner {
 // Section 1 — Structural assertions
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// BT21-102 must compile with exactly 3 implementable triggered clauses
-/// (start_of_your_turn, when_attacking, on_security). The [Main] OPT clause
-/// is BLOCKED and omitted entirely from the YAML.
+/// BT21-102 must compile with all four triggered clauses.
 #[test]
 fn bt21_102_has_three_implementable_triggered_clauses() {
     let runner = tai_runner();
@@ -110,8 +128,8 @@ fn bt21_102_has_three_implementable_triggered_clauses() {
         .filter(|c| matches!(c, CompiledClause::Triggered(_)))
         .count();
     assert_eq!(
-        triggered_count, 3,
-        "BT21-102 must have exactly 3 triggered clauses (start_of_your_turn, when_attacking, on_security); [Main] OPT is BLOCKED and omitted"
+        triggered_count, 4,
+        "BT21-102 must have start_of_your_turn, when_attacking, main_on_field, and on_security clauses"
     );
 }
 
@@ -429,34 +447,62 @@ fn bt21_102_when_attacking_no_draw_when_tai_already_suspended() {
 ///      could COMPUTE the cap dynamically, we cannot pass it through the
 ///      `select_hand` filter.
 ///
-///   2. **G-DSL-DISTINCT-TAMER-COLORS-FORMULA** — Already known from AD1-014.
-///      No formula primitive counts the distinct colors across own Tamers in
-///      the battle area. DCGO uses
-///      `Combinations.GetDifferenetColorCardCount(tamerCards)` directly.
-///
-/// Implementing the clause with a fixed `play_cost_lte: 2` would silently
-/// drop the "+1 per distinct Tamer color" bonus — a mute approximation that
-/// violates the no-approximations policy (the player would see an
-/// over-restrictive cap and could not learn the Tamer-color synergy).
-///
-/// Implementing it WITHOUT the cost filter would be over-permissive and let
-/// the player play arbitrarily expensive ADVENTURE/Hero cards for free.
-///
-/// Both directions break the contract; the clause is OMITTED from the YAML
-/// pending one of the two gaps closing.
 #[test]
-#[ignore = "pending: G-PLAY-COST-LTE-FORMULA + G-DSL-DISTINCT-TAMER-COLORS-FORMULA — no DSL formula primitive for distinct-color count over own Tamers, and `play_cost_lte` is `Option<i32>` literal only; cannot express dynamic cap = 2 + distinct_tamer_colors"]
 fn bt21_102_main_opt_play_adventure_hero_with_dynamic_cap() {
-    // When both gaps close, this test should:
-    //   1. Place Tai + N Tamers of distinct colors on P0's field.
-    //   2. Put an ADVENTURE/Hero card with cost == 2+N in P0's hand.
-    //   3. Activate the [Main] clause.
-    //   4. Assert the hand card is offered as a legal pick (within cap).
-    //   5. Assert it gets played for free.
-    //   6. Assert Tai is returned to the bottom of the deck.
-    //   7. Assert OPT lockout: re-activating the same turn must not install
-    //      a selection.
-    panic!("BLOCKED until G-PLAY-COST-LTE-FORMULA + G-DSL-DISTINCT-TAMER-COLORS-FORMULA close");
+    let filler = make_test_card("DECK-PAD", "Filler");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(TAI_YAML)
+        .expect("BT21-102 YAML parses")
+        .add_card(make_tamer("RED-TAMER", CardColor::Red))
+        .add_card(make_trait_digimon("COST4-HERO", 4, &["Hero"]))
+        .add_card(make_trait_digimon("COST5-HERO", 5, &["Hero"]))
+        .add_card(make_trait_digimon("NO-TRAIT", 4, &[]))
+        .add_card(filler)
+        .hand(0, &["COST4-HERO", "COST5-HERO", "NO-TRAIT"])
+        .deck(0, &["DECK-PAD"])
+        .deck(1, &["DECK-PAD"])
+        .memory(5)
+        .start();
+
+    let tai = runner.place_on_field(0, "BT21-102", None);
+    runner.place_on_field(0, "RED-TAMER", None);
+    assert!(
+        runner.game.activate_field_main(0, tai.index as usize),
+        "Tai's main_on_field clause should activate"
+    );
+
+    let pending = runner
+        .pending_selection_view()
+        .expect("dynamic play cap should install a hand selection");
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        1,
+        "only the Hero card with play cost <= 2 + two distinct Tamer colors is legal"
+    );
+    runner
+        .execute_action(pending.selecting_player, pending.valid_action_ids[0])
+        .expect("play the cost-4 Hero for free");
+
+    assert!(runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .any(|perm| { perm.top_card().card_id(&runner.game.card_data) == "COST4-HERO" }));
+    assert!(!runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .any(|perm| { perm.top_card().card_id(&runner.game.card_data) == "BT21-102" }));
+    let deck_ids: Vec<_> = runner
+        .game
+        .player(0)
+        .deck
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(deck_ids.first().map(String::as_str), Some("BT21-102"));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

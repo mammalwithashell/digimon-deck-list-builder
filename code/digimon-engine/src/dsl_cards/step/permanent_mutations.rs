@@ -18,7 +18,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         CompiledStep::DeletePermanent { target } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
+                let existed = ctx
+                    .game
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+                    .is_some();
                 ctx.delete_permanent(h);
+                if existed {
+                    bindings.record_deleted(h);
+                }
             }
             true
         }
@@ -27,7 +36,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 handles.sort_by_key(|h| (h.player, h.index));
                 handles.reverse();
                 for handle in handles {
+                    let existed = ctx
+                        .game
+                        .player(handle.player)
+                        .battle_area
+                        .get(handle.index as usize)
+                        .is_some();
                     ctx.delete_permanent(handle);
+                    if existed {
+                        bindings.record_deleted(handle);
+                    }
                 }
             }
             true
@@ -35,14 +53,25 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         CompiledStep::ReturnToHand { target } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
-                let _ = ctx.return_to_hand(h);
+                if let Some(card) = ctx.return_to_hand(h) {
+                    bindings.record_added_to_hand(card);
+                }
             }
             true
         }
         CompiledStep::Suspend { target } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
+                let was_unsuspended = ctx
+                    .game
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+                    .is_some_and(|p| !p.is_suspended);
                 ctx.suspend(h);
+                if was_unsuspended {
+                    bindings.record_suspended(h);
+                }
             }
             true
         }
@@ -61,10 +90,22 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {
                 let position = super::map_stack_position(*position);
+                let top_card = ctx
+                    .game
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+                    .map(|p| p.top_card().handle());
                 if *include_sources {
-                    let _ = ctx.return_stack_to_deck(h, position);
-                } else {
-                    let _ = ctx.return_to_deck(h, position);
+                    if ctx.return_stack_to_deck(h, position) {
+                        if let Some(card) = top_card {
+                            bindings.record_returned_to_deck(card);
+                        }
+                    }
+                } else if ctx.return_to_deck(h, position) {
+                    if let Some(card) = top_card {
+                        bindings.record_returned_to_deck(card);
+                    }
                 }
             }
             true

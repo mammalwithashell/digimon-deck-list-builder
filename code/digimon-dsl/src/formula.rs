@@ -21,6 +21,9 @@ pub enum FormulaSpec {
     BindingDp {
         binding_dp: String,
     },
+    BindingPlayCost {
+        binding_play_cost: String,
+    },
     SourceStackDpSum {
         source_stack_dp_sum: SourceStackDpSumSpec,
     },
@@ -131,6 +134,9 @@ pub enum PerSelector {
     MaterialCount,
     StackSize,
     AllyCount,
+    SuspendedCount {
+        of: PlayerRef,
+    },
     DigivolutionColorCount,
     SameLevelPairsInSources,
     SharedTrashCount {
@@ -138,6 +144,7 @@ pub enum PerSelector {
         bucket: Option<u32>,
     },
     CardCountInZone(CardCountInZoneSpec),
+    DistinctColorsCount(CardCountInZoneSpec),
 }
 
 impl Serialize for PerSelector {
@@ -149,6 +156,15 @@ impl Serialize for PerSelector {
             Self::MaterialCount => serializer.serialize_str("material_count"),
             Self::StackSize => serializer.serialize_str("stack_size"),
             Self::AllyCount => serializer.serialize_str("ally_count"),
+            Self::SuspendedCount { of } => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                #[derive(Serialize)]
+                struct SuspendedPayload {
+                    of: PlayerRef,
+                }
+                outer.serialize_entry("suspended_count", &SuspendedPayload { of: *of })?;
+                outer.end()
+            }
             Self::DigivolutionColorCount => serializer.serialize_str("digivolution_color_count"),
             Self::SameLevelPairsInSources => {
                 serializer.serialize_str("same_level_pairs_in_sources")
@@ -169,6 +185,11 @@ impl Serialize for PerSelector {
             Self::CardCountInZone(spec) => {
                 let mut outer = serializer.serialize_map(Some(1))?;
                 outer.serialize_entry("card_count_in_zone", spec)?;
+                outer.end()
+            }
+            Self::DistinctColorsCount(spec) => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                outer.serialize_entry("distinct_colors_count", spec)?;
                 outer.end()
             }
         }

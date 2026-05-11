@@ -34,8 +34,8 @@
 #![allow(dead_code, unused_imports)]
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledPlayerRef, CompiledScope, CompiledTiming,
-    CompiledTriggeredClause, CompiledZone,
+    CompiledClause, CompiledDeclarativeClause, CompiledDpConstraint, CompiledPlayerRef,
+    CompiledScope, CompiledTiming, CompiledTriggeredClause, CompiledZone,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -217,7 +217,11 @@ fn bt21_024_clause1_condition_counts_opponent_security_lte_5() {
         .count_lte
         .as_ref()
         .expect("condition should use count_lte over opponent security");
-    assert_eq!(aggregate.n, 5, "condition threshold must be ≤5 security");
+    assert_eq!(
+        aggregate.n,
+        CompiledDpConstraint::Literal(5),
+        "condition threshold must be ≤5 security"
+    );
     assert_eq!(
         aggregate.filter.owner,
         Some(CompiledPlayerRef::Opponent),

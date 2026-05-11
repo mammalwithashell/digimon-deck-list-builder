@@ -182,9 +182,7 @@ fn bt24_100_main_adds_ts_card_bottoms_remainder_and_places_as_delay_option() {
 
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
     assert!(hand_ids.contains(&"TS-HIT".to_string()));
-    assert!(
-        !hand_ids.contains(&"MISS-A".to_string()) && !hand_ids.contains(&"MISS-B".to_string())
-    );
+    assert!(!hand_ids.contains(&"MISS-A".to_string()) && !hand_ids.contains(&"MISS-B".to_string()));
     assert_eq!(runner.deck_size(0), 2, "two misses returned to deck bottom");
     let placed = runner
         .game
@@ -231,7 +229,11 @@ fn bt24_100_delay_activation_gains_two_memory_and_trashes_delay_option() {
     runner.game.set_memory(0);
     runner.end_turn();
 
-    let expected_memory = if runner.game.turn_player() == 0 { 2 } else { -2 };
+    let expected_memory = if runner.game.turn_player() == 0 {
+        2
+    } else {
+        -2
+    };
     assert_eq!(runner.memory(), expected_memory);
     assert!(
         !runner.game.player(0).battle_area.iter().any(|permanent| {

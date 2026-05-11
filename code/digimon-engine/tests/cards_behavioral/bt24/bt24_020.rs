@@ -18,8 +18,8 @@
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledCost, CompiledCountAggregate,
-    CompiledPlayerRef, CompiledPredicate, CompiledScope, CompiledStep, CompiledTiming,
-    CompiledZone,
+    CompiledDpConstraint, CompiledPlayerRef, CompiledPredicate, CompiledScope, CompiledStep,
+    CompiledTiming, CompiledZone,
 };
 use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
 use digimon_engine::card_data::CardData;
@@ -52,9 +52,7 @@ fn bt24_020_yaml_has_metadata_alt_path_on_play_and_inherited_unsuspend() {
         card.alt_paths.iter().any(|path| {
             path.cost == Some(CompiledCost::Literal(0))
                 && path.from.as_ref().is_some_and(|from| {
-                    from.all_of
-                        .iter()
-                        .any(|p| p.level_eq == Some(2))
+                    from.all_of.iter().any(|p| p.level_eq == Some(2))
                         && from
                             .all_of
                             .iter()
@@ -91,10 +89,13 @@ fn bt24_020_yaml_has_metadata_alt_path_on_play_and_inherited_unsuspend() {
         })
         .expect("BT24-020 must have an On Play clause");
     assert!(
-        on_play
-            .process
-            .iter()
-            .any(|step| matches!(step, CompiledStep::SelectRevealBuckets { no_duplicate_cards: true, .. })),
+        on_play.process.iter().any(|step| matches!(
+            step,
+            CompiledStep::SelectRevealBuckets {
+                no_duplicate_cards: true,
+                ..
+            }
+        )),
         "On Play must use select_reveal_buckets with no duplicate cards"
     );
     assert!(
@@ -134,7 +135,7 @@ fn bt24_020_yaml_has_metadata_alt_path_on_play_and_inherited_unsuspend() {
                             owner: Some(CompiledPlayerRef::You),
                             ..CompiledPredicate::default()
                         }),
-                        n: 7,
+                        n: CompiledDpConstraint::Literal(7),
                     }),
                     ..CompiledPredicate::default()
                 }
@@ -180,10 +181,7 @@ fn bt24_020_on_play_adds_sea_bucket_and_ts_bucket_without_double_picking() {
 
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
     assert_eq!(hand_ids.iter().filter(|id| *id == "DUAL").count(), 1);
-    assert_eq!(
-        hand_ids.iter().filter(|id| *id == "TS-TAMER").count(),
-        1
-    );
+    assert_eq!(hand_ids.iter().filter(|id| *id == "TS-TAMER").count(), 1);
     assert!(
         !hand_ids.contains(&"SEA-ANIMAL".to_string()),
         "unchosen reveal card must not enter hand"

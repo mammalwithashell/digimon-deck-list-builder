@@ -157,7 +157,7 @@ fn select_reveal_buckets_empty_nested_body_runs_tail_synchronously() {
     let steps = vec![
         CompiledStep::If {
             condition: CompiledPredicate {
-                memory_gte: Some(0),
+                memory_gte: Some(digimon_dsl::compiled::CompiledDpConstraint::Literal(0)),
                 ..Default::default()
             },
             then: vec![

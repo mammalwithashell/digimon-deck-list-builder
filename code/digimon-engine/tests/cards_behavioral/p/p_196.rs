@@ -390,7 +390,12 @@ fn p_196_inherited_when_attacking_does_not_draw_above_seven_cards() {
         .expect("P-196 YAML parses")
         .add_card(blue_lv3_base("CARRIER"))
         .add_card(filler("FILL"))
-        .hand(0, &["FILL", "FILL", "FILL", "FILL", "FILL", "FILL", "FILL", "FILL"])
+        .hand(
+            0,
+            &[
+                "FILL", "FILL", "FILL", "FILL", "FILL", "FILL", "FILL", "FILL",
+            ],
+        )
         .deck(0, &["FILL", "FILL", "FILL"])
         .deck(1, &["FILL", "FILL", "FILL"])
         .security(1, &["FILL", "FILL", "FILL"])

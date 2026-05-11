@@ -46,7 +46,10 @@ fn egg(id: &str, traits: &[&str]) -> CardData {
     card.dp = None;
     card.play_cost = 0;
     card.colors = vec![CardColor::Yellow];
-    card.traits = traits.iter().map(|trait_name| (*trait_name).to_string()).collect();
+    card.traits = traits
+        .iter()
+        .map(|trait_name| (*trait_name).to_string())
+        .collect();
     card
 }
 
@@ -57,7 +60,10 @@ fn yellow_lv4(id: &str, traits: &[&str]) -> CardData {
     card.dp = Some(4000);
     card.play_cost = 4;
     card.colors = vec![CardColor::Yellow];
-    card.traits = traits.iter().map(|trait_name| (*trait_name).to_string()).collect();
+    card.traits = traits
+        .iter()
+        .map(|trait_name| (*trait_name).to_string())
+        .collect();
     card.evo_costs = vec![EvoCost {
         card_color: CardColor::Yellow as u8,
         level: 3,
@@ -111,7 +117,10 @@ fn p_197_has_printed_metadata_alt_paths_and_clauses() {
     assert_eq!(compiled.color, vec![CompiledColor::Yellow]);
     assert_eq!(compiled.cost, Some(3));
     assert_eq!(compiled.dp, Some(1000));
-    assert_eq!(compiled.traits, vec!["Mammal".to_string(), "TS".to_string()]);
+    assert_eq!(
+        compiled.traits,
+        vec!["Mammal".to_string(), "TS".to_string()]
+    );
 
     let has_yellow_lv2_cost_0 = compiled.alt_paths.iter().any(|path| {
         path.kind == CompiledAltPathKind::Digivolve
@@ -438,7 +447,9 @@ fn p_197_can_digivolve_from_yellow_or_ts_level_2_for_cost_0() {
         .start();
     let ts_base = ts_runner.place_on_field(0, "TS-LV2", Some(0));
     assert!(
-        ts_runner.game.digivolve_from_hand(0, 0, ts_base.index as usize, PlaySource::ByHand),
+        ts_runner
+            .game
+            .digivolve_from_hand(0, 0, ts_base.index as usize, PlaySource::ByHand),
         "P-197 should digivolve from any Lv.2 with [TS] for cost 0"
     );
     assert_eq!(ts_runner.memory(), 0);

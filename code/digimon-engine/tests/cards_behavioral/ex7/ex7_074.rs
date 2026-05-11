@@ -26,7 +26,8 @@
 #![allow(unused_imports, dead_code, unused_mut, unused_variables)]
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
+    CompiledClause, CompiledDeclarativeClause, CompiledDpConstraint, CompiledScope, CompiledStep,
+    CompiledTiming,
 };
 use digimon_engine::action::PLAY_HAND_START;
 use digimon_engine::build_action_mask;
@@ -256,11 +257,10 @@ fn ex7_074_security_uses_play_cost_filters_and_native_self_to_hand() {
     fn has_select_with_cost_lte(steps: &[CompiledStep], cap: i32) -> bool {
         steps.iter().any(|step| match step {
             CompiledStep::SelectHand { filter, .. } | CompiledStep::SelectTrash { filter, .. } => {
-                filter.play_cost_lte == Some(cap)
-                    || filter
-                        .all_of
-                        .iter()
-                        .any(|nested| nested.play_cost_lte == Some(cap))
+                filter.play_cost_lte == Some(CompiledDpConstraint::Literal(cap))
+                    || filter.all_of.iter().any(|nested| {
+                        nested.play_cost_lte == Some(CompiledDpConstraint::Literal(cap))
+                    })
             }
             CompiledStep::If { then, .. } => has_select_with_cost_lte(then, cap),
             _ => false,

@@ -102,7 +102,10 @@ pub enum AuraGrant {
     /// Use `AuraGrant::Modifier { ty, value }` when the existing
     /// modifier registry already covers the case via a string-mapped
     /// `ModifierType`.
-    Modifier { ty: ModifierType, value: i32 },
+    Modifier {
+        ty: ModifierType,
+        value: i32,
+    },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -300,9 +303,7 @@ fn apply_aura_grants(
             let opp = if source_player == 0 { 1 } else { 0 };
             snapshot_player_battle_area(ctx, opp, filter)
         }
-        AuraScope::Bilateral | AuraScope::SecurityZone(_) => {
-            snapshot_all_battle_areas(ctx, filter)
-        }
+        AuraScope::Bilateral | AuraScope::SecurityZone(_) => snapshot_all_battle_areas(ctx, filter),
     };
 
     for handle in candidates {

@@ -91,15 +91,10 @@ pub(crate) fn try_run(
     let body_arc: Arc<Vec<CompiledStep>> = Arc::new(body.clone());
     for carrier in matches {
         let body_for_closure = body_arc.clone();
-        ctx.grant_triggered_effect(
-            carrier,
-            engine_timing,
-            engine_expiry,
-            move |inner_ctx| {
-                let mut bindings = Bindings::default();
-                let _ = run_steps(&body_for_closure, inner_ctx, &mut bindings);
-            },
-        );
+        ctx.grant_triggered_effect(carrier, engine_timing, engine_expiry, move |inner_ctx| {
+            let mut bindings = Bindings::default();
+            let _ = run_steps(&body_for_closure, inner_ctx, &mut bindings);
+        });
     }
     true
 }
@@ -150,4 +145,3 @@ fn compiled_timing_string_to_effect_timing(s: &str) -> Option<crate::enums::Effe
         _ => return None,
     })
 }
-

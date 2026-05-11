@@ -63,7 +63,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT17-095 | Miraculous Mega Knight | I | PARTIAL (dsl) | 12/16 | NEW G-DSL-UNION-PLAY-FREE + G-DSL-DNA-FROM-HAND-PARTNER |
 | BT17-102 | Greymon | I | PARTIAL (dsl) | 13/15 | NEW G-FORMULA-SOURCE-DP + G-DYNAMIC-NAME-ALIAS-FROM-STACK |
 | BT20-102 | Omnimon (X Antibody) | AP | AUDITED-DRIFT (hybrid) | 17/20 | YAML BUGS: wrong color (red→blue+white); name_contains→name_is |
-| BT21-102 | Tai Kamiya | I | PARTIAL (dsl) | 9/10 | [Main] OPT BLOCKED on play-cost-cap-with-distinct-colors |
+| BT21-102 | Tai Kamiya | I | IMPLEMENTED | 10/10 | Main OPT play cap now uses formula-valued `play_cost_lte` with `distinct_colors_count`; all active tests pass |
 | BT22-005 | Tsumemon | I | PARTIAL (engine) | 11/14 | DigiEgg G-INHERITED-DISPATCH |
 | BT22-008 | Agumon | I | IMPLEMENTED | 12/12 | Sister to BT17-007 |
 | BT22-013 | WarGreymon | I | PARTIAL (dsl) | 10/15 | 4 known-gap branches BLOCKED |
@@ -114,12 +114,12 @@ Pipeline: batch-implement-cards-rust-dsl
 - G-OPT-RESET-VIA-ATTACK-CYCLE (BT17-015) — inherited [When Attacking][OPT] doesn't re-fire after turn cycle
 - G-OPT-MULTI-TIMING-SHARED-LOCKOUT (AD1-014) — multi-timing OPT clauses fire per timing instead of shared lockout
 - G-DSL-SELF-NAME-CONTAINS (AD1-014) — no leaf predicate for top-card name on inherited gates
-- G-DSL-DISTINCT-TAMER-COLORS-FORMULA (AD1-014) — distinct-tamer-colors formula primitive missing
+- G-DSL-DISTINCT-TAMER-COLORS-FORMULA (AD1-014) — narrowed 2026-05-10: `distinct_colors_count` supports BT21-102's own battle-area Tamer-color play-cost cap. Broader both-player / non-Tamer variants remain tracked separately.
 - G-PLAY-SELECTED-SECURITY-CARD (BT13-012) — no DSL verb plays a selected security card without paying cost
 - G-EVENT-TARGET-COLOR (BT13-012) — no `event_target_color_any_of` predicate
 - G-DSL-EVENT-TARGET-IS-SELF (BT15-101) — no predicate compares event target handle vs source
 - G-OUTER-OPTIONAL-NOT-INSTALLED (AD1-009 family) — clause-level `optional: true` doesn't install outer accept/decline before inner select_hand prompt
-- G-DSL-BIND-PRESENT (EX9-066) — no `binding_present`/`binding_absent` predicate
+- G-DSL-BIND-PRESENT (EX9-066) — narrowed 2026-05-10: `binding_present`/`binding_absent` predicates now parse, compile, and evaluate against threaded bindings. Result-log predicates remain separate.
 - G-COUNT-GTE-NOT-EVALUATED (EX9-066) — `count_gte`/`count_lte` parse+compile but evaluator skips
 - G-DSL-DELAY-ON-ATTACK-EVENT (BT23-096) — `lower_delay.rs` doesn't map on_*_attack timings to DelayTrigger
 - G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM (BT23-008) — no DSL verb takes "top stacked card" deterministically

@@ -5,6 +5,7 @@
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledDpConstraint,
 };
 use digimon_engine::action::space::{encode_attack, PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
@@ -71,8 +72,8 @@ fn bt24_040_has_printed_stats_lv5_ts_alt_path_and_security_gated_cost_reduction(
         cost_reduction
             .1
             .as_ref()
-            .and_then(|pred| pred.security_count_lte),
-        Some(3),
+            .and_then(|pred| pred.security_count_lte.clone()),
+        Some(CompiledDpConstraint::Literal(3)),
         "cost reduction must require your security count <= 3"
     );
 }

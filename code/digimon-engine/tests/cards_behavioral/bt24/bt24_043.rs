@@ -19,8 +19,7 @@
 use std::fs;
 
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledClause, CompiledColor, CompiledCost, CompiledScope,
-    CompiledTiming,
+    CompiledCardKind, CompiledClause, CompiledColor, CompiledCost, CompiledScope, CompiledTiming,
 };
 use digimon_dsl::{compile::compile, spec::CardSpec};
 use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
@@ -58,14 +57,20 @@ fn trait_digimon(id: &str, traits: &[&str]) -> CardData {
     card.card_kind = CardKind::Digimon;
     card.level = Some(4);
     card.dp = Some(4000);
-    card.traits = traits.iter().map(|trait_name| trait_name.to_string()).collect();
+    card.traits = traits
+        .iter()
+        .map(|trait_name| trait_name.to_string())
+        .collect();
     card
 }
 
 fn trait_tamer(id: &str, traits: &[&str]) -> CardData {
     let mut card = make_test_card(id, id);
     card.card_kind = CardKind::Tamer;
-    card.traits = traits.iter().map(|trait_name| trait_name.to_string()).collect();
+    card.traits = traits
+        .iter()
+        .map(|trait_name| trait_name.to_string())
+        .collect();
     card
 }
 
@@ -299,9 +304,10 @@ fn bt24_043_inherited_when_attacking_suspends_selected_opponent_digimon() {
     let carrier = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
     let opponent = runner.place_on_field(1, "OPPONENT", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
 
     let view = runner
@@ -328,9 +334,10 @@ fn bt24_043_inherited_when_attacking_no_target_installs_no_prompt() {
         .start();
 
     let carrier = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -350,9 +357,10 @@ fn bt24_043_inherited_when_attacking_is_once_per_turn() {
     let carrier = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
     let opponent = runner.place_on_field(1, "OPPONENT", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
     let first = runner
         .pending_selection_view()
@@ -364,9 +372,10 @@ fn bt24_043_inherited_when_attacking_is_once_per_turn() {
     runner.game.players[opponent.player as usize].battle_area[opponent.index as usize]
         .is_suspended = false;
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
 
     assert!(

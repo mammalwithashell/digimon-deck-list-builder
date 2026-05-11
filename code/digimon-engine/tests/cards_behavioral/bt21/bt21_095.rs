@@ -51,8 +51,7 @@ fn bt21_095_yaml_compiles_with_correct_printed_face() {
         .join("bt21")
         .join("BT21-095.yaml");
     let yaml = std::fs::read_to_string(&path).expect("BT21-095 YAML exists");
-    let spec: digimon_dsl::CardSpec =
-        serde_yml::from_str(&yaml).expect("BT21-095 YAML parses");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(&yaml).expect("BT21-095 YAML parses");
     let registry =
         digimon_dsl::CardRegistry::from_specs("bt21", &[spec]).expect("BT21-095 YAML compiles");
     let compiled = registry
@@ -68,7 +67,11 @@ fn bt21_095_yaml_compiles_with_correct_printed_face() {
         "BT21-095 must carry the [WG] trait"
     );
     // Compile asserts: a single declarative aura clause with scope=Security.
-    assert_eq!(compiled.effects.len(), 1, "fixture authors only the [Security] [All Turns] aura clause");
+    assert_eq!(
+        compiled.effects.len(),
+        1,
+        "fixture authors only the [Security] [All Turns] aura clause"
+    );
 }
 
 #[test]

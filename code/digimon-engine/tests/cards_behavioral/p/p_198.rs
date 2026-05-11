@@ -18,7 +18,7 @@ use std::path::Path;
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
-    CompiledScope, CompiledTiming,
+    CompiledDpConstraint, CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::{PASS, PLAY_HAND_START};
 use digimon_engine::card_data::{CardData, EvoCost};
@@ -50,7 +50,10 @@ fn digimon_card(id: &str, name: &str, traits: &[&str], level: u8) -> CardData {
     card.dp = Some(4000);
     card.play_cost = 4;
     card.colors = vec![CardColor::Purple];
-    card.traits = traits.iter().map(|trait_name| trait_name.to_string()).collect();
+    card.traits = traits
+        .iter()
+        .map(|trait_name| trait_name.to_string())
+        .collect();
     if level > 2 {
         card.evo_costs = vec![EvoCost {
             card_color: CardColor::Purple as u8,
@@ -97,8 +100,7 @@ fn p_198_has_printed_metadata_and_lv2_purple_and_ts_alt_paths() {
         path.kind == CompiledAltPathKind::Digivolve
             && path.cost == Some(CompiledCost::Literal(0))
             && path.from.as_ref().is_some_and(|predicate| {
-                predicate.level_eq == Some(2)
-                    && predicate.color_is == Some(CompiledColor::Purple)
+                predicate.level_eq == Some(2) && predicate.color_is == Some(CompiledColor::Purple)
             })
     });
     assert!(
@@ -153,8 +155,8 @@ fn p_198_declares_optional_start_main_and_inherited_when_attacking_opt() {
         start_main
             .condition
             .as_ref()
-            .and_then(|condition| condition.memory_lte),
-        Some(4),
+            .and_then(|condition| condition.memory_lte.clone()),
+        Some(CompiledDpConstraint::Literal(4)),
         "start-of-main clause must be gated by memory <= 4"
     );
 
@@ -196,7 +198,10 @@ fn p_198_start_main_prompts_for_fallen_angel_or_ts_hand_digimon_when_memory_is_f
         ))
         .add_card(digimon_card("INVALID-TS", "Invalid TS", &["TS"], 5))
         .add_card(digimon_card("NON-TARGET", "Non Target", &["Evil"], 4))
-        .hand(0, &["TS-TARGET", "FALLEN-TARGET", "INVALID-TS", "NON-TARGET"])
+        .hand(
+            0,
+            &["TS-TARGET", "FALLEN-TARGET", "INVALID-TS", "NON-TARGET"],
+        )
         .memory(4)
         .start();
     runner.place_on_field(0, CARD_ID, Some(0));
@@ -343,9 +348,10 @@ fn p_198_inherited_when_attacking_draws_one_then_trashes_one_card_from_hand() {
         .start();
     let carrier = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
 
     let view = runner
@@ -392,9 +398,10 @@ fn p_198_inherited_when_attacking_opt_blocks_second_activation_same_turn() {
         .start();
     let carrier = runner.place_stack(0, &[CARD_ID, "CARRIER"]);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
     let first_trash = runner
         .pending_selection_view()
@@ -409,9 +416,10 @@ fn p_198_inherited_when_attacking_opt_blocks_second_activation_same_turn() {
     let trash_after_first = trash_ids(&runner, 0);
     let deck_after_first = runner.deck_size(0);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
 
     assert!(

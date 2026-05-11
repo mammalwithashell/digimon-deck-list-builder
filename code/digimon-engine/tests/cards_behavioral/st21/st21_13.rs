@@ -80,7 +80,8 @@
 #![allow(dead_code)]
 
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledDpConstraint,
+    CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
@@ -337,7 +338,7 @@ fn st21_13_clause2_aura_grants_rush_to_own_lv5_adventure_digimon() {
     );
     assert_eq!(
         target.level_gte,
-        Some(5),
+        Some(CompiledDpConstraint::Literal(5)),
         "aura target.level_gte must be 5 (printed 'level 5 or higher')"
     );
     assert!(

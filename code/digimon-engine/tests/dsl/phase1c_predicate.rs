@@ -338,7 +338,7 @@ fn all_of_combinator_ands_children() {
                 ..Default::default()
             },
             CompiledPredicate {
-                level_gte: Some(1),
+                level_gte: Some(digimon_dsl::compiled::CompiledDpConstraint::Literal(1)),
                 ..Default::default()
             },
         ],
@@ -361,7 +361,7 @@ fn all_of_combinator_short_circuits_on_false() {
                 ..Default::default()
             },
             CompiledPredicate {
-                level_gte: Some(1),
+                level_gte: Some(digimon_dsl::compiled::CompiledDpConstraint::Literal(1)),
                 ..Default::default()
             },
         ],

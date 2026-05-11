@@ -3703,8 +3703,7 @@ impl<'a> EffectContext<'a> {
         // direct/inline-fire compat (legacy `fire_granted_triggered_effects`
         // path remains, though Phase 4b's drain hook is now the primary
         // dispatcher).
-        self.game.next_granted_effect_id =
-            self.game.next_granted_effect_id.saturating_add(1);
+        self.game.next_granted_effect_id = self.game.next_granted_effect_id.saturating_add(1);
         let body_id = self.game.next_granted_effect_id;
         let body_arc: crate::modifiers::GrantedEffectBody = std::sync::Arc::new(body);
         self.game

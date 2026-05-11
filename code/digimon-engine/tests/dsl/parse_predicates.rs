@@ -14,7 +14,7 @@ fn parse_leaf_predicates() {
     assert_eq!(p.name_contains.as_deref(), Some("Greymon"));
 
     let p = parse("level_gte: 6");
-    assert_eq!(p.level_gte, Some(6));
+    assert_eq!(p.level_gte, Some(DpConstraint::Literal(6)));
 
     let p = parse("kind: digimon");
     assert_eq!(p.kind, Some(digimon_engine::dsl::spec::CardKind::Digimon));
@@ -77,13 +77,13 @@ count_lte:
   n: 1"#;
     let p = parse(yaml);
     let c = p.count_lte.as_ref().unwrap();
-    assert_eq!(c.n, 1);
+    assert_eq!(c.n, DpConstraint::Literal(1));
 }
 
 #[test]
 fn parse_group7_predicate_leaves() {
     let p = parse("play_cost_lte: 3");
-    assert_eq!(p.play_cost_lte, Some(3));
+    assert_eq!(p.play_cost_lte, Some(DpConstraint::Literal(3)));
 
     let p = parse("not_in_binding: saved");
     assert_eq!(p.not_in_binding.as_deref(), Some("saved"));

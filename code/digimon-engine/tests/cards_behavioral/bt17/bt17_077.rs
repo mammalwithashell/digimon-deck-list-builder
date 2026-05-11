@@ -48,7 +48,8 @@
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause,
-    CompiledPredicate, CompiledScope, CompiledTiming, CompiledTriggeredClause,
+    CompiledDpConstraint, CompiledPredicate, CompiledScope, CompiledTiming,
+    CompiledTriggeredClause,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -317,7 +318,8 @@ fn bt17_077_when_attacking_clause_condition_gates_on_opp_digimon_no_digi_cards()
         .expect("WhenAttacking clause must have a condition");
 
     assert!(
-        pred_any(condition, |q| q.stack_size_lte == Some(1)),
+        pred_any(condition, |q| q.stack_size_lte
+            == Some(CompiledDpConstraint::Literal(1))),
         "WhenAttacking condition must include stack_size_lte: 1 \
          (models 'no digivolution cards'; DCGO: DigivolutionCards.Count == 0)"
     );

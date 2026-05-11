@@ -249,7 +249,10 @@ fn make_trait_digimon(id: &str, traits: &[&str]) -> CardData {
     card.play_cost = 0;
     card.level = Some(3);
     card.dp = Some(2000);
-    card.traits = traits.iter().map(|trait_name| trait_name.to_string()).collect();
+    card.traits = traits
+        .iter()
+        .map(|trait_name| trait_name.to_string())
+        .collect();
     card
 }
 
@@ -259,7 +262,10 @@ fn make_trait_tamer(id: &str, traits: &[&str]) -> CardData {
     card.play_cost = 0;
     card.level = None;
     card.dp = None;
-    card.traits = traits.iter().map(|trait_name| trait_name.to_string()).collect();
+    card.traits = traits
+        .iter()
+        .map(|trait_name| trait_name.to_string())
+        .collect();
     card
 }
 

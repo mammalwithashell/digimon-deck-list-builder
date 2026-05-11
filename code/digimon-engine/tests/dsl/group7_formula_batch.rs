@@ -13,7 +13,7 @@ use digimon_engine::dsl_cards::formula_eval;
 use digimon_engine::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use digimon_engine::dsl_cards::step::run_steps;
 use digimon_engine::effect_context::{EffectContext, EffectReadContext};
-use digimon_engine::enums::{CardKind, Expiry, ModifierType, PlayerId};
+use digimon_engine::enums::{CardColor, CardKind, Expiry, ModifierType, PlayerId};
 use digimon_engine::modifiers::ModifierEntry;
 
 fn compile_yaml(yaml: &str) -> digimon_dsl::compiled::CompiledCard {
@@ -36,6 +36,12 @@ fn tamer_card(id: &str) -> CardData {
     card
 }
 
+fn colored_tamer_card(id: &str, color: CardColor) -> CardData {
+    let mut card = tamer_card(id);
+    card.colors = vec![color];
+    card
+}
+
 fn digimon_card_with_level(id: &str, dp: i32, level: u8) -> CardData {
     let mut card = digimon_card(id, dp);
     card.level = Some(level);
@@ -53,6 +59,114 @@ fn push_card_to_trash(runner: &mut DebugRunner, player: PlayerId, card_id: &str)
     runner.game.players[player as usize]
         .trash
         .push(CardSource::new(data_idx, player, next));
+}
+
+#[test]
+fn suspended_count_formula_counts_selected_players_battle_area() {
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon_card("SRC", 1000))
+        .add_card(digimon_card("A", 3000))
+        .add_card(digimon_card("B", 4000))
+        .add_card(digimon_card("C", 5000))
+        .build();
+    let source = runner.place_on_field(0, "SRC", None);
+    let own = runner.place_on_field(0, "A", None);
+    let opp_1 = runner.place_on_field(1, "B", None);
+    let opp_2 = runner.place_on_field(1, "C", None);
+    runner.game.suspend(own);
+    runner.game.suspend(opp_1);
+    runner.game.suspend(opp_2);
+
+    let src_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let ctx = EffectContext::new(&mut runner.game, src_card, Some(source), 0);
+    let formula = CompiledFormula::BasePerDelta {
+        base: 0,
+        per: CompiledPerSelector::SuspendedCount {
+            of: CompiledPlayerRef::Opponent,
+        },
+        delta: 1,
+    };
+
+    assert_eq!(formula_eval::evaluate(&formula, &ctx, source), 2);
+}
+
+#[test]
+fn suspended_count_formula_compiles_from_yaml_per_selector() {
+    let yaml = r#"
+card: T-G7-SUSPENDED-COUNT
+name: Suspended Count Formula
+kind: option
+color: [green]
+cost: 0
+effects:
+  - when: main_from_hand
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula:
+              base: 0
+              per:
+                suspended_count: { of: opponent }
+              delta: 1
+          bind_as: targets
+          prompt: Pick suspended-count targets
+          filter: { kind: digimon }
+"#;
+    let compiled = compile_yaml(yaml);
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let CompiledStep::SelectCountCappedMulti { max, .. } = &triggered.process[0] else {
+        panic!("expected select_count_capped_multi");
+    };
+    assert!(matches!(
+        max,
+        digimon_dsl::compiled::CompiledCountBound::Formula(CompiledFormula::BasePerDelta {
+            per: CompiledPerSelector::SuspendedCount {
+                of: CompiledPlayerRef::Opponent
+            },
+            ..
+        })
+    ));
+}
+
+#[test]
+fn distinct_colors_count_formula_counts_filtered_tamer_colors() {
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon_card("SRC", 1000))
+        .add_card(colored_tamer_card("TAI", CardColor::White))
+        .add_card(colored_tamer_card("RED-TAMER", CardColor::Red))
+        .add_card(colored_tamer_card("RED-TAMER-2", CardColor::Red))
+        .add_card(digimon_card("RED-DIGIMON", 3000))
+        .build();
+    let source = runner.place_on_field(0, "SRC", None);
+    runner.place_on_field(0, "TAI", None);
+    runner.place_on_field(0, "RED-TAMER", None);
+    runner.place_on_field(0, "RED-TAMER-2", None);
+    runner.place_on_field(0, "RED-DIGIMON", None);
+
+    let src_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let ctx = EffectContext::new(&mut runner.game, src_card, Some(source), 0);
+    let formula = CompiledFormula::BasePerDelta {
+        base: 2,
+        per: CompiledPerSelector::DistinctColorsCountScoped {
+            zone: CompiledZone::BattleArea,
+            of: CompiledPlayerRef::You,
+            filter: Some(Box::new(CompiledPredicate {
+                kind: Some(CompiledCardKind::Tamer),
+                ..Default::default()
+            })),
+        },
+        delta: 1,
+    };
+
+    assert_eq!(formula_eval::evaluate(&formula, &ctx, source), 4);
 }
 
 #[test]

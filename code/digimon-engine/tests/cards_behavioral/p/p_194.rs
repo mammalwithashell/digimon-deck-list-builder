@@ -67,18 +67,17 @@ fn p_194_has_printed_metadata_and_yellow_lv3_evo_path() {
     assert_eq!(compiled.color, vec![CompiledColor::Yellow]);
     assert_eq!(compiled.cost, Some(4));
     assert_eq!(compiled.dp, Some(4000));
-    assert_eq!(compiled.traits, vec!["Shaman".to_string(), "TS".to_string()]);
+    assert_eq!(
+        compiled.traits,
+        vec!["Shaman".to_string(), "TS".to_string()]
+    );
 
     let has_yellow_lv3_cost_2 = compiled.alt_paths.iter().any(|path| {
         path.kind == CompiledAltPathKind::Digivolve
             && path.cost == Some(CompiledCost::Literal(2))
-            && path
-                .from
-                .as_ref()
-                .is_some_and(|predicate| {
-                    predicate.level_eq == Some(3)
-                        && predicate.color_is == Some(CompiledColor::Yellow)
-                })
+            && path.from.as_ref().is_some_and(|predicate| {
+                predicate.level_eq == Some(3) && predicate.color_is == Some(CompiledColor::Yellow)
+            })
     });
     assert!(
         has_yellow_lv3_cost_2,

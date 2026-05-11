@@ -13,7 +13,7 @@
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledCostDelta, CompiledDeclarativeClause,
-    CompiledStep, CompiledTiming,
+    CompiledDpConstraint, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::space::BREEDING_TARGET;
 use digimon_engine::card_source::{CardHandle, CardSource};
@@ -136,8 +136,8 @@ fn bt20_083_has_blocker_grant_and_low_security_on_play_digivolve() {
         on_play
             .condition
             .as_ref()
-            .and_then(|predicate| predicate.security_count_lte),
-        Some(1),
+            .and_then(|predicate| predicate.security_count_lte.clone()),
+        Some(CompiledDpConstraint::Literal(1)),
         "On Play clause is gated to 1 or fewer own security"
     );
     assert!(

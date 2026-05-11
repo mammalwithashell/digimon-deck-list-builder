@@ -25,7 +25,8 @@
 //! - Gap-routed high-security protection and inherited text-gated DP aura.
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDpConstraint,
+    CompiledTiming,
 };
 use digimon_engine::action::space::encode_attack;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -94,16 +95,19 @@ fn bt16_055_metadata_paths_and_supported_clause_shape_match_printed_text() {
         supported_low_security[0]
             .condition
             .as_ref()
-            .and_then(|predicate| predicate.security_count_lte),
-        Some(3),
+            .and_then(|predicate| predicate.security_count_lte.clone()),
+        Some(CompiledDpConstraint::Literal(3)),
         "active slice must require your security count <= 3"
     );
     assert!(
         !compiled.effects.iter().any(|clause| matches!(
             clause,
             CompiledClause::Triggered(triggered)
-                if triggered.condition.as_ref().and_then(|predicate| predicate.security_count_gte)
-                    == Some(3)
+                if triggered
+                    .condition
+                    .as_ref()
+                    .and_then(|predicate| predicate.security_count_gte.clone())
+                    == Some(CompiledDpConstraint::Literal(3))
         )),
         "omit the >=3 protection slice until narrow anti-DP-reduction and anti-De-Digivolve are expressible"
     );

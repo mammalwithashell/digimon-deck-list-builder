@@ -15,8 +15,8 @@
 //! - Inherited [When Attacking] [Once Per Turn] target selection
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost,
-    CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledScope, CompiledTiming,
 };
 use digimon_dsl::{compile::compile, spec::CardSpec};
 use digimon_engine::action::space::encode_attack;
@@ -71,16 +71,18 @@ fn target_action(handle: PermanentHandle) -> u16 {
 }
 
 fn fire_when_digivolving(runner: &mut DebugRunner, source: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(source));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(source),
+    );
     runner.game.drain_effect_queue();
 }
 
 fn fire_when_attacking(runner: &mut DebugRunner, source: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(source));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(source),
+    );
     runner.game.drain_effect_queue();
 }
 
