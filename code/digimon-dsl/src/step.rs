@@ -480,9 +480,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_modifier" => StepSpec::AddModifier(map.next_value()?),
             "add_player_modifier" => StepSpec::AddPlayerModifier(map.next_value()?),
             "grant_keyword" => StepSpec::GrantKeyword(map.next_value()?),
-            "grant_triggered_effect" => {
-                StepSpec::GrantTriggeredEffect(map.next_value()?)
-            }
+            "grant_triggered_effect" => StepSpec::GrantTriggeredEffect(map.next_value()?),
             "grant_effect_immunity" => StepSpec::GrantEffectImmunity(map.next_value()?),
 
             // Selection

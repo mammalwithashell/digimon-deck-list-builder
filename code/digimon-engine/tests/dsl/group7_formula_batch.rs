@@ -62,6 +62,79 @@ fn push_card_to_trash(runner: &mut DebugRunner, player: PlayerId, card_id: &str)
 }
 
 #[test]
+fn suspended_count_formula_counts_selected_players_battle_area() {
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon_card("SRC", 1000))
+        .add_card(digimon_card("A", 3000))
+        .add_card(digimon_card("B", 4000))
+        .add_card(digimon_card("C", 5000))
+        .build();
+    let source = runner.place_on_field(0, "SRC", None);
+    let own = runner.place_on_field(0, "A", None);
+    let opp_1 = runner.place_on_field(1, "B", None);
+    let opp_2 = runner.place_on_field(1, "C", None);
+    runner.game.suspend(own);
+    runner.game.suspend(opp_1);
+    runner.game.suspend(opp_2);
+
+    let src_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let ctx = EffectContext::new(&mut runner.game, src_card, Some(source), 0);
+    let formula = CompiledFormula::BasePerDelta {
+        base: 0,
+        per: CompiledPerSelector::SuspendedCount {
+            of: CompiledPlayerRef::Opponent,
+        },
+        delta: 1,
+    };
+
+    assert_eq!(formula_eval::evaluate(&formula, &ctx, source), 2);
+}
+
+#[test]
+fn suspended_count_formula_compiles_from_yaml_per_selector() {
+    let yaml = r#"
+card: T-G7-SUSPENDED-COUNT
+name: Suspended Count Formula
+kind: option
+color: [green]
+cost: 0
+effects:
+  - when: main_from_hand
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula:
+              base: 0
+              per:
+                suspended_count: { of: opponent }
+              delta: 1
+          bind_as: targets
+          prompt: Pick suspended-count targets
+          filter: { kind: digimon }
+"#;
+    let compiled = compile_yaml(yaml);
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let CompiledStep::SelectCountCappedMulti { max, .. } = &triggered.process[0] else {
+        panic!("expected select_count_capped_multi");
+    };
+    assert!(matches!(
+        max,
+        digimon_dsl::compiled::CompiledCountBound::Formula(CompiledFormula::BasePerDelta {
+            per: CompiledPerSelector::SuspendedCount {
+                of: CompiledPlayerRef::Opponent
+            },
+            ..
+        })
+    ));
+}
+
+#[test]
 fn distinct_colors_count_formula_counts_filtered_tamer_colors() {
     let mut runner = DebugRunner::builder()
         .add_card(digimon_card("SRC", 1000))

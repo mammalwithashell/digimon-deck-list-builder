@@ -73,8 +73,8 @@ High-frequency cards across those lists:
 | Gap ID | Type | Status | Blocks | Canonical tracker |
 |---|---|---|---|---|
 | `ZEPH-G001` | dsl-gap / test-gap | open | Most Zephagamon core cards | none; archetype-local authoring backlog |
-| `ZEPH-G002` | dsl-gap | open | `EX11-074`, `BT20-101`, `EX7-036`, `ST18-12`, `EX11-035` | `qa/dsl-vocab-gaps.md` |
-| `ZEPH-G003` | dsl-gap / engine-gap | open | `BT20-101`, `EX7-036`, `EX8-074`, `EX11-035` | `qa/dsl-vocab-gaps.md`, `docs/RUST_ENGINE_GAPS.md` |
+| `ZEPH-G002` | dsl-gap | narrowed | substrate landed; card YAML/test expansion still needed for `EX11-074`, `BT20-101`, `EX7-036`, `ST18-12`, `EX11-035` | `qa/dsl-vocab-gaps.md` |
+| `ZEPH-G003` | dsl-gap / engine-gap | narrowed | suspended-count formula substrate landed; card YAML/test expansion still needed for `BT20-101`, `EX7-036`, `EX8-074`, `EX11-035` | `qa/dsl-vocab-gaps.md`, `docs/RUST_ENGINE_GAPS.md` |
 | `ZEPH-G004` | dsl-gap | open | `EX11-062` | `qa/dsl-vocab-gaps.md` |
 | `ZEPH-G005` | engine-gap / dsl-gap | partially resolved | `ST18-14` and `BT24-047` covered; related may-attack cards remain card-authored as encountered | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
 | `ZEPH-G006` | engine-gap / dsl-gap | partially resolved | `BT20-101`, other ACE/Counter cards | `docs/DCGO_KEYWORD_PARITY.md`, `docs/RUST_ENGINE_GAPS.md` |
@@ -98,22 +98,22 @@ High-frequency cards across those lists:
 ### ZEPH-G002: Result-Bound Branches for "If This Effect Suspended Your Digimon"
 
 - **Type:** `dsl-gap`
-- **Status:** partially resolved
+- **Status:** narrowed 2026-05-10 — DSL result-log predicate substrate landed; production card bodies remain to author and verify.
 - **Blocks:** `EX11-074`, `EX7-034`, `BT24-044`, `ST18-10`, `BT20-085`, `EX11-026`, `EX11-035`, `ST18-12`, `BT20-101`. `BT24-047` is covered for the unsuspended-target branch.
 - **Effect text examples:** "If this effect suspended your Digimon..." and "If this effect suspended your Digimon, this Digimon isn't affected..." / "return 1 of your opponent's suspended Digimon..."
 - **Why it matters:** The DSL can select and suspend, but Zephagamon cards repeatedly branch based on whether the suspend step actually suspended a friendly Digimon. This cannot be modeled by blindly executing the tail, because opponent/self target choice changes legal outcomes.
-- **Evidence:** `binding_owner: { binding, of }` now supports the owner branch used by BT24-047 after an optional `select_any_permanent` choice. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- binding_owner_predicate_matches_bound_permanent_controller` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_047`. `EX11-074` and related cards still need richer mutation-result payloads where protection/already-suspended cases must be distinguished.
+- **Evidence:** `binding_owner: { binding, of }` supports the owner branch used by BT24-047 after an optional `select_any_permanent` choice. Track J added an append-only per-effect result log plus `effect_suspended_any_own_digimon`; covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group7_predicate_batch -- --nocapture`. `EX11-074` and related cards still need production YAML/test expansion that applies these predicates to the printed DP/immunity branches.
 - **First test:** For `EX11-074`, resolve the When Digivolving/When Attacking effect twice: once choosing an own Digimon and once choosing an opponent Digimon. Only the own-Digimon suspension should grant +6000 DP and opponent-effect immunity.
 - **Implementation hint:** For BT24-047-style branches, bind the selected target and use `binding_owner`; for stricter "this mutation actually changed state" cards, add a DSL result binding such as `suspend: { target: picked, bind_result_as: suspended_by_this_effect }`, then allow `if` conditions to test that binding and target controller.
 
 ### ZEPH-G003: Suspended-Count and Formula-Driven Multi-Selection
 
 - **Type:** `dsl-gap` / `engine-gap`
-- **Status:** open
+- **Status:** narrowed 2026-05-10 — `suspended_count` formulas and formula-backed `select_count_capped_multi` bounds are available; production card bodies remain to author and verify.
 - **Blocks:** `BT20-101`, `EX7-036`, `EX8-074`, `EX11-035`, and related suspend-count cards.
 - **Effect text examples:** `BT20-101`: "for every 2 suspended Digimon, you may return 1 of your opponent's suspended Digimon to the bottom of the deck." `EX11-035`: "For each suspended Digimon, add 2000 to this effect's DP maximum."
 - **Why it matters:** These effects need live board formulas, floor division, and formula results that drive either target count or target-card DP ceilings. A static target count or fixed DP predicate hides legal choices.
-- **Evidence:** `qa/dsl-vocab-gaps.md` lists the `BT20-101` suspended-count / divide-by-2 / count-capped bottom-deck formula and `EX11-035` formula DP cap as open Zephagamon gaps. `EX8-074` currently carries raw formula and ignored-test comments for dynamic DP cap behavior.
+- **Evidence:** Track J added `suspended_count: { of: ... }` as a formula per-selector and confirmed formula-backed `select_count_capped_multi` bounds in `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl suspended_count -- --nocapture`. `BT20-101`, `EX11-035`, and `EX8-074` still need production YAML/test expansion that exercises their printed count and DP-cap bodies.
 - **First test:** Put four suspended Digimon across both battle areas, resolve `BT20-101`, and assert exactly two opponent suspended Digimon can be selected for bottom-decking, with PASS only legal after the minimum/optional selection rule is satisfied.
 - **Implementation hint:** Reuse existing formula primitives (`floor_div`, aggregate scopes, count-capped selection), but add a suspended-permanent count selector and a way to bind a formula result into `select_count_capped_multi` over opponent battle-area permanents.
 

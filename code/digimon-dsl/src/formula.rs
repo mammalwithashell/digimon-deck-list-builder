@@ -134,6 +134,9 @@ pub enum PerSelector {
     MaterialCount,
     StackSize,
     AllyCount,
+    SuspendedCount {
+        of: PlayerRef,
+    },
     DigivolutionColorCount,
     SameLevelPairsInSources,
     SharedTrashCount {
@@ -153,6 +156,15 @@ impl Serialize for PerSelector {
             Self::MaterialCount => serializer.serialize_str("material_count"),
             Self::StackSize => serializer.serialize_str("stack_size"),
             Self::AllyCount => serializer.serialize_str("ally_count"),
+            Self::SuspendedCount { of } => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                #[derive(Serialize)]
+                struct SuspendedPayload {
+                    of: PlayerRef,
+                }
+                outer.serialize_entry("suspended_count", &SuspendedPayload { of: *of })?;
+                outer.end()
+            }
             Self::DigivolutionColorCount => serializer.serialize_str("digivolution_color_count"),
             Self::SameLevelPairsInSources => {
                 serializer.serialize_str("same_level_pairs_in_sources")

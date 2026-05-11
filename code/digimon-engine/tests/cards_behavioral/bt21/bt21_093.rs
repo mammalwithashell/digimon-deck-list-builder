@@ -53,8 +53,8 @@
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledCostDelta, CompiledCountAggregate,
-    CompiledDeclarativeClause, CompiledPlayerRef, CompiledPredicate, CompiledScope, CompiledStep,
-    CompiledTiming, CompiledZone,
+    CompiledDeclarativeClause, CompiledDpConstraint, CompiledPlayerRef, CompiledPredicate,
+    CompiledScope, CompiledStep, CompiledTiming, CompiledZone,
 };
 use digimon_engine::debug_runner::DebugRunner;
 
@@ -119,7 +119,7 @@ fn bt21_093_cost_reduction_uses_opponent_security_count_predicate() {
                     owner: Some(CompiledPlayerRef::Opponent),
                     ..CompiledPredicate::default()
                 }),
-                n: 3,
+                n: CompiledDpConstraint::Literal(3),
             }),
             ..CompiledPredicate::default()
         }),

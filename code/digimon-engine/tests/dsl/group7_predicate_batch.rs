@@ -459,6 +459,68 @@ effects:
 }
 
 #[test]
+fn scalar_threshold_predicates_accept_formula_threshold_yaml() {
+    let yaml = r#"
+card: T-G7-SCALAR-FORMULAS
+name: Scalar Formula Predicate Thresholds
+kind: option
+color: [white]
+cost: 0
+effects:
+  - when: main_from_hand
+    active_when:
+      memory_lte: { formula: 2 }
+      security_count_gte: { formula: 1 }
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          prompt: Pick a levelled card
+          filter:
+            kind: digimon
+            level_lte: { formula: 5 }
+            level_gte: { formula: 3 }
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: { formula: 2 }
+          bind_as: targets
+          prompt: Pick targets
+          filter:
+            kind: digimon
+            materials_count_lte: { formula: 4 }
+            stack_size_gte: { formula: 1 }
+"#;
+    let spec: digimon_dsl::CardSpec =
+        serde_yml::from_str(yaml).expect("formula scalar predicate yaml parses");
+    let compiled =
+        digimon_dsl::compile::compile(&spec).expect("formula scalar predicate thresholds compile");
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let active_when = triggered
+        .active_when
+        .as_ref()
+        .expect("active_when should compile");
+    assert!(active_when.memory_lte.is_some());
+    assert!(active_when.security_count_gte.is_some());
+    let CompiledStep::SelectHand { filter, .. } = &triggered.process[0] else {
+        panic!("expected select_hand");
+    };
+    assert!(filter.level_lte.is_some());
+    assert!(filter.level_gte.is_some());
+    let CompiledStep::SelectCountCappedMulti { filter, max, .. } = &triggered.process[1] else {
+        panic!("expected select_count_capped_multi");
+    };
+    assert!(matches!(
+        max,
+        digimon_dsl::compiled::CompiledCountBound::Formula(_)
+    ));
+    assert!(filter.materials_count_lte.is_some());
+    assert!(filter.stack_size_gte.is_some());
+}
+
+#[test]
 fn select_hand_play_cost_lte_formula_reads_bound_permanent_play_cost() {
     let mut source = make_test_card("SRC", "Source");
     source.card_kind = CardKind::Option;
@@ -506,6 +568,105 @@ fn select_hand_play_cost_lte_formula_reads_bound_permanent_play_cost() {
 
     let pending = runner.game.pending_selection.as_ref().expect("selection");
     assert_eq!(pending.valid_action_ids, vec![PLAY_HAND_START + 1]);
+}
+
+#[test]
+fn result_bound_suspend_predicate_reads_current_effect_result_log() {
+    let mut runner = runner_with_dp_cards();
+    let own = runner.place_on_field(0, "LOW-DP", None);
+    let source = src_card(&runner);
+    let steps = vec![
+        CompiledStep::Suspend {
+            target: digimon_dsl::compiled::CompiledBindingRef::Binding("target".to_string()),
+        },
+        CompiledStep::If {
+            condition: CompiledPredicate {
+                effect_suspended_any_own_digimon: Some(true),
+                ..Default::default()
+            },
+            then: vec![CompiledStep::AddModifier {
+                target: CompiledModifierTarget::Binding(
+                    digimon_dsl::compiled::CompiledBindingRef::Named("target".to_string()),
+                ),
+                modifier: "ChangeDp".to_string(),
+                value: CompiledModifierValue::Literal(1000),
+                expiry: "end_of_turn".to_string(),
+            }],
+            else_branch: vec![],
+        },
+    ];
+
+    let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("target", own);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    assert_eq!(
+        runner.game.modifiers.sum(own, ModifierType::ChangeDp),
+        1000,
+        "branch should fire after this effect suspended an own Digimon"
+    );
+}
+
+#[test]
+fn result_bound_suspend_predicate_ignores_opponent_suspends() {
+    let mut runner = runner_with_dp_cards();
+    let opp = runner.place_on_field(1, "LOW-DP", None);
+    let source = src_card(&runner);
+    let steps = vec![
+        CompiledStep::Suspend {
+            target: digimon_dsl::compiled::CompiledBindingRef::Binding("target".to_string()),
+        },
+        CompiledStep::If {
+            condition: CompiledPredicate {
+                effect_suspended_any_own_digimon: Some(true),
+                ..Default::default()
+            },
+            then: vec![CompiledStep::GainMemory(1)],
+            else_branch: vec![],
+        },
+    ];
+
+    let before = runner.game.memory;
+    let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("target", opp);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    assert_eq!(
+        runner.game.memory, before,
+        "own-suspend result predicate must not fire for opponent suspends"
+    );
+}
+
+#[test]
+fn result_bound_returned_any_card_reads_current_effect_result_log() {
+    let mut runner = runner_with_dp_cards();
+    let target = runner.place_on_field(1, "LOW-DP", None);
+    let source = src_card(&runner);
+    let before = runner.game.memory;
+    let steps = vec![
+        CompiledStep::ReturnToDeck {
+            target: digimon_dsl::compiled::CompiledBindingRef::Binding("target".to_string()),
+            position: digimon_dsl::compiled::CompiledStackPosition::Bottom,
+            include_sources: false,
+        },
+        CompiledStep::If {
+            condition: CompiledPredicate {
+                effect_returned_any_card: Some(true),
+                ..Default::default()
+            },
+            then: vec![CompiledStep::GainMemory(1)],
+            else_branch: vec![],
+        },
+    ];
+
+    let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("target", target);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    assert_eq!(runner.game.memory, before + 1);
 }
 
 #[test]

@@ -1,0 +1,62 @@
+card: BT24-100
+name: "In-Between Theater"
+kind: option
+color: [white]
+cost: 3
+traits: [TS]
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: TS
+      - all_of:
+          - kind: tamer
+          - trait_has: TS
+
+effects:
+  - kind: flood_gate
+    active_when:
+      any_of:
+        - any_permanent:
+            of: you
+            kind: digimon
+            trait_has: TS
+        - any_permanent:
+            of: you
+            kind: tamer
+            trait_has: TS
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT24-100" }
+    summary: "While you have a TS Digimon or Tamer, ignore color requirements for this card"
+
+  - when: main_from_hand
+    summary: "[Main] Reveal top 3; add 1 TS card; bottom the rest; place this card in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 3
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter:
+            trait_has: TS
+          prompt: "Add 1 card with the [TS] trait to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: end_of_your_next_turn
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

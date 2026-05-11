@@ -46,7 +46,7 @@
 #![allow(dead_code, unused_imports, unused_variables)]
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledClause, CompiledDeclarativeClause, CompiledDpConstraint, CompiledScope, CompiledTiming,
 };
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, EffectTiming, PlayerId};
@@ -200,7 +200,7 @@ fn ex8_074_cost_reduction_has_two_unsuspended_digimon_condition() {
         .count_gte
         .as_ref()
         .expect("cost reduction must require enough unsuspended Digimon");
-    assert_eq!(count.n, 2);
+    assert_eq!(count.n, CompiledDpConstraint::Literal(2));
     assert_eq!(
         count.filter.kind,
         Some(digimon_dsl::compiled::CompiledCardKind::Digimon)

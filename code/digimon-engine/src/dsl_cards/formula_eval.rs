@@ -323,6 +323,17 @@ fn evaluate_per(
                 .len()
                 .saturating_sub(1) as i32
         }
+        CompiledPerSelector::SuspendedCount { of } => players_for_ref(*of, ctx)
+            .into_iter()
+            .map(|player| {
+                ctx.game
+                    .player(player)
+                    .battle_area
+                    .iter()
+                    .filter(|perm| perm.is_suspended)
+                    .count() as i32
+            })
+            .sum(),
         CompiledPerSelector::DigivolutionColorCount => {
             let Some(perm) = target_permanent(ctx, target) else {
                 return 0;
@@ -390,6 +401,17 @@ fn evaluate_per_read(
             .battle_area
             .len()
             .saturating_sub(1) as i32,
+        CompiledPerSelector::SuspendedCount { of } => players_for_ref_read(*of, ctx)
+            .into_iter()
+            .map(|player| {
+                ctx.game
+                    .player(player)
+                    .battle_area
+                    .iter()
+                    .filter(|perm| perm.is_suspended)
+                    .count() as i32
+            })
+            .sum(),
         CompiledPerSelector::DigivolutionColorCount => {
             let Some(perm) = target_permanent_read(ctx, target) else {
                 return 0;

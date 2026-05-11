@@ -23,6 +23,17 @@ pub enum BindingValue {
 #[derive(Debug, Default, Clone)]
 pub struct Bindings {
     slots: HashMap<String, BindingValue>,
+    result_log: EffectResultLog,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct EffectResultLog {
+    pub suspended: Vec<PermanentHandle>,
+    pub returned_to_deck: Vec<CardHandle>,
+    pub deleted: Vec<PermanentHandle>,
+    pub played: Vec<PermanentHandle>,
+    pub digivolved: Vec<PermanentHandle>,
+    pub added_to_hand: Vec<CardHandle>,
 }
 
 impl Bindings {
@@ -45,6 +56,34 @@ impl Bindings {
     /// destructuring in `binding_ref::resolve_named`).
     pub fn get_ref(&self, name: &str) -> Option<&BindingValue> {
         self.slots.get(name)
+    }
+
+    pub fn result_log(&self) -> &EffectResultLog {
+        &self.result_log
+    }
+
+    pub fn record_suspended(&mut self, handle: PermanentHandle) {
+        self.result_log.suspended.push(handle);
+    }
+
+    pub fn record_returned_to_deck(&mut self, card: CardHandle) {
+        self.result_log.returned_to_deck.push(card);
+    }
+
+    pub fn record_deleted(&mut self, handle: PermanentHandle) {
+        self.result_log.deleted.push(handle);
+    }
+
+    pub fn record_played(&mut self, handle: PermanentHandle) {
+        self.result_log.played.push(handle);
+    }
+
+    pub fn record_digivolved(&mut self, handle: PermanentHandle) {
+        self.result_log.digivolved.push(handle);
+    }
+
+    pub fn record_added_to_hand(&mut self, card: CardHandle) {
+        self.result_log.added_to_hand.push(card);
     }
 
     pub fn get_permanent(&self, name: &str) -> Option<PermanentHandle> {

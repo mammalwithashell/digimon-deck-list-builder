@@ -121,7 +121,9 @@ pub fn try_run(
                 _ => (p, None),
             };
             if let Some(h) = handle {
-                ctx.add_to_hand_from_trash(owner, h);
+                if ctx.add_to_hand_from_trash(owner, h) {
+                    bindings.record_added_to_hand(h);
+                }
             }
             true
         }
@@ -131,7 +133,9 @@ pub fn try_run(
             };
             let p = resolve_player(ctx, *of);
             if let ResolvedBinding::Card(h) = resolved {
-                let _ = ctx.add_to_hand_from_security(p, h);
+                if ctx.add_to_hand_from_security(p, h) {
+                    bindings.record_added_to_hand(h);
+                }
             }
             true
         }
@@ -156,7 +160,9 @@ pub fn try_run(
             };
             let p = resolve_player(ctx, *of);
             if let ResolvedBinding::Card(h) = resolved {
-                let _ = ctx.add_to_hand_from_deck(p, h);
+                if ctx.add_to_hand_from_deck(p, h) {
+                    bindings.record_added_to_hand(h);
+                }
             }
             true
         }
@@ -168,7 +174,9 @@ pub fn try_run(
             };
             let p = resolve_player(ctx, *of);
             if let Some(h) = singleton_card(resolved) {
-                ctx.add_to_hand_from_reveal(p, h);
+                if ctx.add_to_hand_from_reveal(p, h) {
+                    bindings.record_added_to_hand(h);
+                }
             }
             true
         }
@@ -217,7 +225,9 @@ pub fn try_run(
             };
             let p = resolve_player(ctx, *of);
             if let Some(h) = singleton_card(resolved) {
-                ctx.return_to_deck_from_reveal(p, h, super::map_stack_position(*position));
+                if ctx.return_to_deck_from_reveal(p, h, super::map_stack_position(*position)) {
+                    bindings.record_returned_to_deck(h);
+                }
             }
             true
         }
@@ -371,6 +381,9 @@ pub fn try_run(
         CompiledStep::ReturnAllTrashToDeckBottom { of } => {
             let player = resolve_player(ctx, *of);
             let _ = ctx.return_all_trash_to_deck_bottom(player);
+            // `return_all_trash_to_deck_bottom` is bulk and does not currently
+            // expose the moved handles. Record a sentinel only through
+            // per-card moves until the helper returns provenance.
             true
         }
         CompiledStep::TrashTopNDigivolutionCardsOfEach { of, n } => {

@@ -113,7 +113,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
                 let delta = lower_cost_delta(cost_delta.as_ref());
-                let _ = ctx.play_from_hand_with_cost(owner, i as usize, delta);
+                if let Some(played) = ctx.play_from_hand_with_cost(owner, i as usize, delta) {
+                    bindings.record_played(played);
+                }
             }
             true
         }
@@ -121,7 +123,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
-                let _ = ctx.play_from_hand_free(owner, i as usize);
+                if let Some(played) = ctx.play_from_hand_free(owner, i as usize) {
+                    bindings.record_played(played);
+                }
             }
             true
         }
@@ -136,7 +140,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 resolve_binding_ref(trash_index, ctx, bindings)
             {
                 let delta = lower_cost_delta(cost_delta.as_ref());
-                let _ = ctx.play_from_trash_with_cost(owner, i as usize, delta);
+                if let Some(played) = ctx.play_from_trash_with_cost(owner, i as usize, delta) {
+                    bindings.record_played(played);
+                }
             }
             true
         }
@@ -153,7 +159,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     .get(i as usize)
                     .map(|cs| cs.handle());
                 if let Some(h) = handle {
-                    let _ = ctx.play_from_trash_free_unsuspended(h);
+                    if let Some(played) = ctx.play_from_trash_free_unsuspended(h) {
+                        bindings.record_played(played);
+                    }
                 }
             }
             true
@@ -173,7 +181,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if ctx.game.pending_security.is_some() {
                 ctx.play_pending_security();
             } else {
-                let _ = ctx.play_from_security(ctx.player);
+                if let Some(played) = ctx.play_from_security(ctx.player) {
+                    bindings.record_played(played);
+                }
             }
             true
         }
@@ -207,6 +217,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             let delta = lower_cost_delta(cost_delta.as_ref());
             if let Some(played) = ctx.play_from_materials(target_handle, src_idx, delta) {
+                bindings.record_played(played);
                 if let Some(name) = bind_as {
                     bindings.insert_permanent(name, played);
                 }
@@ -233,7 +244,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // applied to `target`; the result card can now come from any
             // supported source zone.
             let player = target_handle.player;
-            let _ = if *ignore_requirements {
+            let success = if *ignore_requirements {
                 ctx.effect_initiated_digivolve_from_source_ignore_requirements(
                     player,
                     source_ref,
@@ -249,6 +260,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     false,
                 )
             };
+            if success {
+                bindings.record_digivolved(target_handle);
+            }
             true
         }
         CompiledStep::EffectInitiatedDnaDigivolve {
@@ -289,13 +303,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     0
                 }
             };
-            let _ = ctx.effect_initiated_dna_digivolve(
+            let success = ctx.effect_initiated_dna_digivolve(
                 a,
                 b,
                 from_card,
                 cost as i32,
                 *ignore_requirements,
             );
+            if let Some(played) = success {
+                bindings.record_digivolved(played);
+            }
             true
         }
 
@@ -305,7 +322,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             token_name,
         } => {
             let p = resolve_player(ctx, *controller);
-            let _ = ctx.play_token(p, token_name);
+            if let Some(played) = ctx.play_token(p, token_name) {
+                bindings.record_played(played);
+            }
             true
         }
         CompiledStep::PlaceOnSecurity {

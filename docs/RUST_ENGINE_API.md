@@ -2776,9 +2776,11 @@ Use `bind_permanent_property` when text chooses one permanent and later compares
 
 `property: level` reads the selected permanent's current top-card level at process time and stores it as a literal binding. `level_eq_binding` compares a later predicate subject's level to that bound value. This is the canonical shape for "choose 1, affect all with the same level" text such as BT17-078.
 
-### DSL Formula Play-Cost Thresholds
+### DSL Formula Predicate Thresholds
 
-`play_cost_lte` accepts either the legacy literal shape or a formula wrapper:
+Cost, DP, level, stack/material-count, memory, security-count, and general
+`count_lte` / `count_gte` thresholds accept either the legacy literal shape or
+a formula wrapper. Example:
 
 ```yaml
 filter:
@@ -2791,6 +2793,11 @@ filter:
 ```
 
 Formula thresholds are evaluated while the pending selection mask is built, using the same per-effect `Bindings` map that later steps consume. `binding_play_cost` reads the printed play cost of a bound card or bound permanent's top card; if the named binding is absent or not card-like, the evaluator currently returns `0`, so card YAML should bind the source in an earlier required step.
+
+The validator enforces source-order binding scope for formula bindings: a
+`binding_play_cost` / `binding_dp` formula may only reference a `bind_as` name
+declared by an earlier step in the same effect resolution. Bindings do not
+carry across effects.
 
 BT21-102 also uses:
 
@@ -2806,6 +2813,29 @@ formula:
 ```
 
 `distinct_colors_count` walks the requested card/permanent zone, applies the nested predicate filter, and counts unique card colors. Existing literal predicates remain backward-compatible.
+
+Suspended-count formulas use the same `base/per/delta` shape:
+
+```yaml
+formula:
+  base: 0
+  per:
+    suspended_count: { of: opponent }
+  delta: 1
+```
+
+`suspended_count` walks battle areas for `you`, `opponent`, `active`, or `any`
+and counts currently suspended permanents.
+
+### DSL Result-Bound Predicates
+
+During a DSL effect resolution, runtime bindings also carry an append-only
+result log for mutations performed by earlier steps in that same effect. The
+predicate surface can branch on that log with leaves such as
+`effect_suspended_any_own_digimon`, `effect_returned_any_card`, and the
+parallel delete/play/digivolve/add-to-hand leaves. The log is dropped with the
+effect bindings, so result-bound predicates never see mutations from a
+different effect resolution.
 
 ### DSL Binding Presence Predicates
 

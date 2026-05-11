@@ -625,9 +625,8 @@ impl KeywordEntry {
 /// Closure body for a granted triggered effect — runs at the carrier's
 /// matching timing with `EffectContext` set up so the carrier is the
 /// `source_permanent` and the grantor's card is `source_card`. Track H §3.
-pub type GrantedEffectBody = std::sync::Arc<
-    dyn Fn(&mut crate::effect_context::EffectContext<'_>) + Send + Sync + 'static,
->;
+pub type GrantedEffectBody =
+    std::sync::Arc<dyn Fn(&mut crate::effect_context::EffectContext<'_>) + Send + Sync + 'static>;
 
 /// Phase 4i — `Debug`-friendly wrapper around the granted-effect body
 /// registry. The body closures are `Arc<dyn Fn ...>` which don't
@@ -928,11 +927,7 @@ impl ModifierRegistry {
         &self,
         carrier: PermanentHandle,
         timing: crate::enums::EffectTiming,
-    ) -> Vec<(
-        crate::card_source::CardHandle,
-        PlayerId,
-        GrantedEffectBody,
-    )> {
+    ) -> Vec<(crate::card_source::CardHandle, PlayerId, GrantedEffectBody)> {
         self.granted_triggered
             .get(&carrier)
             .map(|entries| {
@@ -1007,9 +1002,7 @@ impl ModifierRegistry {
                 Expiry::EndOfOpponentsTurn | Expiry::EndOfOpponentsNextTurn => {
                     source_player != ending_player
                 }
-                Expiry::EndOfYourTurn | Expiry::EndOfYourNextTurn => {
-                    source_player == ending_player
-                }
+                Expiry::EndOfYourTurn | Expiry::EndOfYourNextTurn => source_player == ending_player,
                 _ => false,
             }
         };
@@ -1057,9 +1050,7 @@ impl ModifierRegistry {
                 Expiry::EndOfOpponentsTurn | Expiry::EndOfOpponentsNextTurn => {
                     source_player != ending_player
                 }
-                Expiry::EndOfYourTurn | Expiry::EndOfYourNextTurn => {
-                    source_player == ending_player
-                }
+                Expiry::EndOfYourTurn | Expiry::EndOfYourNextTurn => source_player == ending_player,
                 _ => false,
             }
         };
@@ -1285,9 +1276,7 @@ impl ModifierRegistry {
         match subject {
             ModifierSubject::Permanent(target) => {
                 if let Some(entries) = self.permanent_modifiers.get(&target) {
-                    if let Some(entry) =
-                        entries.iter().find(|e| e.install_order == install_order)
-                    {
+                    if let Some(entry) = entries.iter().find(|e| e.install_order == install_order) {
                         return entry
                             .until_condition
                             .as_ref()
@@ -1296,9 +1285,7 @@ impl ModifierRegistry {
                 }
                 // Track H §4 — keyword-grant fallback.
                 if let Some(entries) = self.permanent_keywords.get(&target) {
-                    if let Some(entry) =
-                        entries.iter().find(|e| e.install_order == install_order)
-                    {
+                    if let Some(entry) = entries.iter().find(|e| e.install_order == install_order) {
                         return entry
                             .until_condition
                             .as_ref()

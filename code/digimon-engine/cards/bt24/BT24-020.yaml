@@ -1,0 +1,63 @@
+card: BT24-020
+name: Gomamon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Sea Beast, Iliad, ADAMAS, TS]
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - color_is: blue
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: TS
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add one Sea Beast/Shaman/Aqua/Sea Animal Digimon and one TS card"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: sea_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_has: Sea Beast
+                      - trait_has: Shaman
+                      - trait_has: Aqua
+                      - trait_has: Sea Animal
+            - bind_as: ts_pick
+              min: 1
+              max: 1
+              filter: { trait_has: TS }
+          no_duplicate_cards: true
+          prompt: "Select 1 Sea Beast/Shaman/Aqua/Sea Animal Digimon and 1 [TS] card"
+      - add_to_hand_from_reveal: { of: you, card: sea_pick }
+      - add_to_hand_from_reveal: { of: you, card: ts_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: on_unsuspend
+    once_per_turn: true
+    summary: "[Your Turn][Once Per Turn] When this Digimon unsuspends, if you have 7 or fewer cards in hand, Draw 1"
+    condition:
+      all_of:
+        - your_turn: true
+        - count_lte:
+            filter: { of: you, zone: [hand] }
+            n: 7
+    process:
+      - draw: { of: you, count: 1 }

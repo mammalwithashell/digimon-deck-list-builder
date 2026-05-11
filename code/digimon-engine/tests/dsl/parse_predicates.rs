@@ -14,7 +14,7 @@ fn parse_leaf_predicates() {
     assert_eq!(p.name_contains.as_deref(), Some("Greymon"));
 
     let p = parse("level_gte: 6");
-    assert_eq!(p.level_gte, Some(6));
+    assert_eq!(p.level_gte, Some(DpConstraint::Literal(6)));
 
     let p = parse("kind: digimon");
     assert_eq!(p.kind, Some(digimon_engine::dsl::spec::CardKind::Digimon));
@@ -77,7 +77,7 @@ count_lte:
   n: 1"#;
     let p = parse(yaml);
     let c = p.count_lte.as_ref().unwrap();
-    assert_eq!(c.n, 1);
+    assert_eq!(c.n, DpConstraint::Literal(1));
 }
 
 #[test]

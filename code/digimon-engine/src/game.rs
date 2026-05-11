@@ -204,7 +204,10 @@ pub struct Game {
     /// matches DCGO's "appended to effect list" semantic for granted
     /// effects). Each granted body runs inline; if it enqueues further
     /// triggered effects, the drain loop re-runs.
-    pub pending_granted_fires: Vec<(crate::permanent::PermanentHandle, crate::enums::EffectTiming)>,
+    pub pending_granted_fires: Vec<(
+        crate::permanent::PermanentHandle,
+        crate::enums::EffectTiming,
+    )>,
     /// Track H §3 Phase 4i — registry of granted-triggered-effect
     /// bodies indexed by id. Bodies are allocated an id at install
     /// time (`grant_triggered_effect`) and referenced from
@@ -2079,7 +2082,9 @@ impl Game {
     /// Returns the count of body-registry entries removed (mostly for
     /// tests / instrumentation).
     pub fn clear_permanent_full(&mut self, handle: crate::permanent::PermanentHandle) -> usize {
-        let body_ids = self.modifiers.drain_granted_triggered_ids_on_carrier(handle);
+        let body_ids = self
+            .modifiers
+            .drain_granted_triggered_ids_on_carrier(handle);
         self.modifiers.clear_permanent(handle);
         let mut removed = 0usize;
         for id in body_ids {
@@ -2107,9 +2112,7 @@ impl Game {
         carrier: crate::permanent::PermanentHandle,
         timing: crate::enums::EffectTiming,
     ) {
-        let entries = self
-            .modifiers
-            .granted_triggered_for_timing(carrier, timing);
+        let entries = self.modifiers.granted_triggered_for_timing(carrier, timing);
         for (source_card, source_player, body) in entries {
             let mut ctx = crate::effect_context::EffectContext::new(
                 self,

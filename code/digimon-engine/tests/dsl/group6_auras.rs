@@ -909,7 +909,9 @@ effects:
     // places the card "face up as the bottom security card"; for the
     // unit test we go straight to the resulting state.
     let src_card_index = runner.game.players[0].security[0].card_index;
-    runner.game.players[0].face_up_security.insert(src_card_index);
+    runner.game.players[0]
+        .face_up_security
+        .insert(src_card_index);
 
     let wg = runner.place_on_field(0, "TEST-WG-DIGIMON", None);
     let non_wg = runner.place_on_field(0, "TEST-NON-WG-DIGIMON", None);
@@ -959,7 +961,9 @@ effects:
         .build();
 
     let src_card_index = runner.game.players[0].security[0].card_index;
-    runner.game.players[0].face_up_security.insert(src_card_index);
+    runner.game.players[0]
+        .face_up_security
+        .insert(src_card_index);
 
     let wg = runner.place_on_field(0, "TEST-WG-EVICT-ALLY", None);
 
@@ -1061,7 +1065,9 @@ effects:
         .build();
 
     let src_card_index = runner.game.players[0].security[0].card_index;
-    runner.game.players[0].face_up_security.insert(src_card_index);
+    runner.game.players[0]
+        .face_up_security
+        .insert(src_card_index);
 
     let own_wg = runner.place_on_field(0, "TEST-WG-OWN-ALLY", None);
     let opp_wg = runner.place_on_field(1, "TEST-WG-OPP-ALLY", None);
@@ -1111,7 +1117,9 @@ effects:
         .build();
 
     let src_card_index = runner.game.players[0].security[0].card_index;
-    runner.game.players[0].face_up_security.insert(src_card_index);
+    runner.game.players[0]
+        .face_up_security
+        .insert(src_card_index);
 
     // Tick BEFORE any [WG] Digimon enters the field — the install
     // closure runs but finds zero matches.
@@ -1173,9 +1181,7 @@ fn granted_triggered_effect_on_deletion_fires_when_carrier_deleted() {
 
     // Snapshot the grantor's source_card identity (top card handle)
     // so we can install a granted effect with attribution.
-    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
-        .top_card()
-        .handle();
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0].top_card().handle();
     let grantor_player = 0u8;
 
     // Install a granted OnDeletion effect on the carrier via direct
@@ -1242,9 +1248,7 @@ fn granted_triggered_effect_clears_when_carrier_leaves_field_without_firing() {
         .build();
     let _g = runner.place_on_field(0, "TEST-GTE-LEAVE-GRANTOR", None);
     let carrier_h = runner.place_on_field(0, "TEST-GTE-LEAVE-CARRIER", None);
-    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
-        .top_card()
-        .handle();
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0].top_card().handle();
 
     {
         let mut ctx = digimon_engine::effect_context::EffectContext::new(
@@ -1308,9 +1312,7 @@ fn granted_triggered_effect_with_end_of_turn_expiry_evicts_at_turn_end() {
         .build();
     let _g = runner.place_on_field(0, "TEST-GTE-EOT-GRANTOR", None);
     let carrier_h = runner.place_on_field(0, "TEST-GTE-EOT-CARRIER", None);
-    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
-        .top_card()
-        .handle();
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0].top_card().handle();
 
     {
         let mut ctx = digimon_engine::effect_context::EffectContext::new(
@@ -1374,12 +1376,8 @@ fn granted_triggered_effect_carrier_attribution_distinguishes_carrier_from_sourc
         .build();
     let _g = runner.place_on_field(0, "TEST-GTE-ATTR-GRANTOR", None);
     let carrier_h = runner.place_on_field(0, "TEST-GTE-ATTR-CARRIER", None);
-    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
-        .top_card()
-        .handle();
-    let carrier_top: CardHandle = runner.game.players[0].battle_area[1]
-        .top_card()
-        .handle();
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0].top_card().handle();
+    let carrier_top: CardHandle = runner.game.players[0].battle_area[1].top_card().handle();
 
     let observed_source_card = Arc::new(AtomicU8::new(255));
     let observed_carrier_index = Arc::new(AtomicU8::new(255));
@@ -1464,9 +1462,7 @@ fn granted_triggered_effect_fires_at_when_attacking_via_multi_timing_dispatch() 
         .build();
     let _g = runner.place_on_field(0, "TEST-GTE-WA-GRANTOR", None);
     let carrier_h = runner.place_on_field(0, "TEST-GTE-WA-CARRIER", Some(0));
-    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
-        .top_card()
-        .handle();
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0].top_card().handle();
 
     let fired = Arc::new(AtomicBool::new(false));
     let recorder = fired.clone();
@@ -1526,9 +1522,7 @@ fn granted_triggered_effect_with_end_of_opponents_next_turn_expiry() {
         .build();
     let _g = runner.place_on_field(0, "TEST-GTE-NEXTTURN-G", None);
     let carrier_h = runner.place_on_field(1, "TEST-GTE-NEXTTURN-C", None);
-    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
-        .top_card()
-        .handle();
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0].top_card().handle();
 
     {
         let mut ctx = digimon_engine::effect_context::EffectContext::new(
@@ -1762,7 +1756,10 @@ traits: [Beast]
 
     // Beast ally receives the +1000 DP from the inherited aura.
     assert_eq!(
-        runner.game.modifiers.sum(beast_ally, ModifierType::ChangeDp),
+        runner
+            .game
+            .modifiers
+            .sum(beast_ally, ModifierType::ChangeDp),
         1000,
         "Beast ally must receive aura DP from under-stack inherited source"
     );
@@ -1775,7 +1772,10 @@ traits: [Beast]
     );
     // Non-Beast ally is excluded by the filter.
     assert_eq!(
-        runner.game.modifiers.sum(plain_ally, ModifierType::ChangeDp),
+        runner
+            .game
+            .modifiers
+            .sum(plain_ally, ModifierType::ChangeDp),
         0,
         "non-Beast ally must NOT receive the aura DP"
     );
@@ -1832,11 +1832,12 @@ effects:
     // Track C identity overlay: ChangeTraits adds [Holy] to the target.
     runner.game.modifiers.add(
         target,
-        ModifierEntry::simple(ModifierType::ChangeTraits, 0, Expiry::Permanent, 0)
-            .with_payload(ModifierPayload::Traits {
+        ModifierEntry::simple(ModifierType::ChangeTraits, 0, Expiry::Permanent, 0).with_payload(
+            ModifierPayload::Traits {
                 add: vec!["Holy".to_string()],
                 replace: false,
-            }),
+            },
+        ),
     );
 
     // Re-tick — the aura's predicate must now see the overlay-injected
@@ -2105,21 +2106,17 @@ effects:
     // EndOfOpponentsNextTurn aliases to EndOfOpponentsTurn — opp's
     // next turn end expires the entries.
     runner.game.modifiers.expire_end_of_turn(0); // source's turn — must NOT expire
-    assert!(
-        !runner
-            .game
-            .modifiers
-            .granted_triggered_for_timing(opp_a_h, EffectTiming::WhenAttacking)
-            .is_empty()
-    );
+    assert!(!runner
+        .game
+        .modifiers
+        .granted_triggered_for_timing(opp_a_h, EffectTiming::WhenAttacking)
+        .is_empty());
     runner.game.modifiers.expire_end_of_turn(1); // opp's turn — expires
-    assert!(
-        runner
-            .game
-            .modifiers
-            .granted_triggered_for_timing(opp_a_h, EffectTiming::WhenAttacking)
-            .is_empty()
-    );
+    assert!(runner
+        .game
+        .modifiers
+        .granted_triggered_for_timing(opp_a_h, EffectTiming::WhenAttacking)
+        .is_empty());
     let _ = PermanentHandle {
         player: 0,
         index: 0,
@@ -2149,9 +2146,7 @@ fn granted_body_registry_pruned_on_carrier_leave_field() {
         .build();
     let _g = runner.place_on_field(0, "TEST-CLEAN-G", None);
     let carrier_h = runner.place_on_field(0, "TEST-CLEAN-C", None);
-    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
-        .top_card()
-        .handle();
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0].top_card().handle();
 
     {
         let mut ctx = digimon_engine::effect_context::EffectContext::new(
@@ -2176,7 +2171,10 @@ fn granted_body_registry_pruned_on_carrier_leave_field() {
     // Carrier leaves field via `clear_permanent_full` — body
     // registry must drop the entry.
     let removed = runner.game.clear_permanent_full(carrier_h);
-    assert_eq!(removed, 1, "clear_permanent_full must report one body removed");
+    assert_eq!(
+        removed, 1,
+        "clear_permanent_full must report one body removed"
+    );
     assert_eq!(
         runner.game.granted_effect_bodies.bodies.len(),
         0,
@@ -2198,9 +2196,7 @@ fn granted_body_registry_pruned_at_turn_end_for_end_of_turn_expiry() {
         .build();
     let _g = runner.place_on_field(0, "TEST-CLEAN-EOT-G", None);
     let carrier_h = runner.place_on_field(0, "TEST-CLEAN-EOT-C", None);
-    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
-        .top_card()
-        .handle();
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0].top_card().handle();
 
     {
         let mut ctx = digimon_engine::effect_context::EffectContext::new(
@@ -2223,10 +2219,7 @@ fn granted_body_registry_pruned_at_turn_end_for_end_of_turn_expiry() {
 
     // Don't go through full end_turn — directly drive the
     // turn-boundary cleanup the same way `game_phases::end_turn` does.
-    let dropped = runner
-        .game
-        .modifiers
-        .collect_expiring_granted_body_ids(0);
+    let dropped = runner.game.modifiers.collect_expiring_granted_body_ids(0);
     runner.game.modifiers.expire_end_of_turn(0);
     for id in dropped {
         runner.game.granted_effect_bodies.remove(id);
@@ -2268,12 +2261,7 @@ fn typed_aura_builder_grants_dp_to_filter_matched_field_digimon() {
                         None => return false,
                     };
                     let card_id = perm.top_card().card_id(rctx.card_data()).to_string();
-                    let data = match rctx
-                        .game
-                        .card_data
-                        .iter()
-                        .find(|cd| cd.card_id == card_id)
-                    {
+                    let data = match rctx.game.card_data.iter().find(|cd| cd.card_id == card_id) {
                         Some(d) => d,
                         None => return false,
                     };
@@ -2470,9 +2458,7 @@ fn granted_body_runs_via_queue_with_correct_attribution() {
         .build();
     let _g = runner.place_on_field(0, "TEST-Q-G", None);
     let carrier_h = runner.place_on_field(0, "TEST-Q-C", None);
-    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
-        .top_card()
-        .handle();
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0].top_card().handle();
 
     let observed_src = Arc::new(AtomicU8::new(255));
     let observed_carrier = Arc::new(AtomicU8::new(255));
@@ -2548,9 +2534,7 @@ fn granted_body_installing_selection_parks_via_pending_selection() {
     let _g = runner.place_on_field(0, "TEST-Q-SEL-G", None);
     let carrier_h = runner.place_on_field(0, "TEST-Q-SEL-C", None);
     let _other_h = runner.place_on_field(0, "TEST-Q-SEL-OTHER", None);
-    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
-        .top_card()
-        .handle();
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0].top_card().handle();
 
     {
         let mut ctx = digimon_engine::effect_context::EffectContext::new(
@@ -2764,9 +2748,7 @@ fn ex1_068_ice_wall_grants_when_attacking_loses_2_memory_to_all_opp_digimon() {
     let opp_a_h = runner.place_on_field(1, "TEST-EX1-068-OPP-A", None);
     let opp_b_h = runner.place_on_field(1, "TEST-EX1-068-OPP-B", None);
 
-    let grantor_top: CardHandle = runner.game.players[0].battle_area[0]
-        .top_card()
-        .handle();
+    let grantor_top: CardHandle = runner.game.players[0].battle_area[0].top_card().handle();
     let starting_memory = runner.game.memory;
 
     // Mirror EX1-068's [Main] body: walk opp battle area, grant each
@@ -2865,13 +2847,11 @@ fn ex1_068_ice_wall_grants_when_attacking_loses_2_memory_to_all_opp_digimon() {
             .is_empty(),
         "EndOfOpponentsNextTurn must expire at the first opp-turn-end after install"
     );
-    assert!(
-        runner
-            .game
-            .modifiers
-            .granted_triggered_for_timing(opp_b_h, EffectTiming::WhenAttacking)
-            .is_empty(),
-    );
+    assert!(runner
+        .game
+        .modifiers
+        .granted_triggered_for_timing(opp_b_h, EffectTiming::WhenAttacking)
+        .is_empty(),);
 
     // After expiry, opp attacks no longer trigger the granted body.
     let memory_before_post_expiry_attack = runner.game.memory;

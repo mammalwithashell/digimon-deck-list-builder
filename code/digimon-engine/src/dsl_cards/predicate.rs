@@ -62,23 +62,27 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
-    if let Some(cap) = pred.memory_lte {
-        if (rctx.game.memory as i32) > cap {
+    if let Some(cap) = &pred.memory_lte {
+        if (rctx.game.memory as i32) > eval_int_constraint_read(cap, rctx, None, bindings) {
             return false;
         }
     }
-    if let Some(floor) = pred.memory_gte {
-        if (rctx.game.memory as i32) < floor {
+    if let Some(floor) = &pred.memory_gte {
+        if (rctx.game.memory as i32) < eval_int_constraint_read(floor, rctx, None, bindings) {
             return false;
         }
     }
-    if let Some(cap) = pred.security_count_lte {
-        if rctx.security_count(rctx.player) as u8 > cap {
+    if let Some(cap) = &pred.security_count_lte {
+        if (rctx.security_count(rctx.player) as i32)
+            > eval_int_constraint_read(cap, rctx, None, bindings)
+        {
             return false;
         }
     }
-    if let Some(floor) = pred.security_count_gte {
-        if (rctx.security_count(rctx.player) as u8) < floor {
+    if let Some(floor) = &pred.security_count_gte {
+        if (rctx.security_count(rctx.player) as i32)
+            < eval_int_constraint_read(floor, rctx, None, bindings)
+        {
             return false;
         }
     }
@@ -96,6 +100,9 @@ pub fn eval_predicate_with_bindings(
         if bindings.and_then(|b| b.get_ref(name)).is_some() {
             return false;
         }
+    }
+    if !eval_result_bound_fields(pred, rctx, bindings) {
+        return false;
     }
     if let Some(player_ref) = pred.can_hatch {
         let can_any = resolve_predicate_players(player_ref, rctx)
@@ -229,12 +236,14 @@ pub fn eval_predicate_with_bindings(
         }
     }
     if let Some(agg) = &pred.count_lte {
-        if count_matching(agg, rctx, bindings) > agg.n {
+        let cap = eval_int_constraint_read(&agg.n, rctx, None, bindings).max(0) as u32;
+        if count_matching(agg, rctx, bindings) > cap {
             return false;
         }
     }
     if let Some(agg) = &pred.count_gte {
-        if count_matching(agg, rctx, bindings) < agg.n {
+        let floor = eval_int_constraint_read(&agg.n, rctx, None, bindings).max(0) as u32;
+        if count_matching(agg, rctx, bindings) < floor {
             return false;
         }
     }
@@ -276,6 +285,66 @@ fn eval_replacement_fields(pred: &CompiledPredicate, rctx: &EffectReadContext<'_
         };
         let is_mine = controller == rctx.player();
         if is_mine != want {
+            return false;
+        }
+    }
+    true
+}
+
+fn eval_result_bound_fields(
+    pred: &CompiledPredicate,
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> bool {
+    let Some(bindings) = bindings else {
+        return pred.effect_suspended_any_own_digimon != Some(true)
+            && pred.effect_returned_any_card != Some(true)
+            && pred.effect_deleted_any_own_digimon != Some(true)
+            && pred.effect_deleted_any_opponent_digimon != Some(true)
+            && pred.effect_played_any_digimon != Some(true)
+            && pred.effect_digivolved_any_digimon != Some(true)
+            && pred.effect_added_any_card_to_hand != Some(true);
+    };
+    let log = bindings.result_log();
+    if let Some(want) = pred.effect_suspended_any_own_digimon {
+        let actual = log.suspended.iter().any(|h| h.player == rctx.player);
+        if actual != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.effect_returned_any_card {
+        let actual = !log.returned_to_deck.is_empty();
+        if actual != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.effect_deleted_any_own_digimon {
+        let actual = log.deleted.iter().any(|h| h.player == rctx.player);
+        if actual != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.effect_deleted_any_opponent_digimon {
+        let actual = log.deleted.iter().any(|h| h.player != rctx.player);
+        if actual != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.effect_played_any_digimon {
+        let actual = !log.played.is_empty();
+        if actual != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.effect_digivolved_any_digimon {
+        let actual = !log.digivolved.is_empty();
+        if actual != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.effect_added_any_card_to_hand {
+        let actual = !log.added_to_hand.is_empty();
+        if actual != want {
             return false;
         }
     }
@@ -1083,13 +1152,15 @@ fn eval_card_fields(
             return false;
         }
     }
-    if let Some(cap) = pred.level_lte {
-        if data.level.map_or(true, |l| l > cap) {
+    if let Some(cap) = &pred.level_lte {
+        let cap = eval_int_constraint(cap, rctx, formula_target, bindings);
+        if data.level.map_or(true, |l| i32::from(l) > cap) {
             return false;
         }
     }
-    if let Some(floor) = pred.level_gte {
-        if data.level.map_or(true, |l| l < floor) {
+    if let Some(floor) = &pred.level_gte {
+        let floor = eval_int_constraint(floor, rctx, formula_target, bindings);
+        if data.level.map_or(true, |l| i32::from(l) < floor) {
             return false;
         }
     }
@@ -1164,7 +1235,25 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(want) = pred.can_digivolve_from_source {
+        if can_card_digivolve_from_source(rctx, card) != want {
+            return false;
+        }
+    }
     true
+}
+
+fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle) -> bool {
+    let Some(source_handle) = rctx.source_permanent else {
+        return false;
+    };
+    let Some(source_permanent) = permanent_for_handle(rctx, source_handle) else {
+        return false;
+    };
+    let Some(candidate) = rctx.game.card_source_for_handle(card) else {
+        return false;
+    };
+    rctx.game.can_digivolve(candidate, source_permanent)
 }
 
 fn card_shares_color_with_any_field_digimon(
@@ -1363,24 +1452,26 @@ fn eval_permanent_fields(
             return false;
         }
     }
-    if let Some(cap) = pred.stack_size_lte {
-        if perm.card_sources.len() as u8 > cap {
+    if let Some(cap) = &pred.stack_size_lte {
+        if perm.card_sources.len() as i32 > eval_int_constraint(cap, rctx, Some(handle), bindings) {
             return false;
         }
     }
-    if let Some(floor) = pred.stack_size_gte {
-        if (perm.card_sources.len() as u8) < floor {
+    if let Some(floor) = &pred.stack_size_gte {
+        if (perm.card_sources.len() as i32)
+            < eval_int_constraint(floor, rctx, Some(handle), bindings)
+        {
             return false;
         }
     }
-    let materials_count = perm.card_sources.len().saturating_sub(1) as u8;
-    if let Some(cap) = pred.materials_count_lte {
-        if materials_count > cap {
+    let materials_count = perm.card_sources.len().saturating_sub(1) as i32;
+    if let Some(cap) = &pred.materials_count_lte {
+        if materials_count > eval_int_constraint(cap, rctx, Some(handle), bindings) {
             return false;
         }
     }
-    if let Some(floor) = pred.materials_count_gte {
-        if materials_count < floor {
+    if let Some(floor) = &pred.materials_count_gte {
+        if materials_count < eval_int_constraint(floor, rctx, Some(handle), bindings) {
             return false;
         }
     }
@@ -1507,6 +1598,15 @@ fn eval_int_constraint(
             formula_eval::evaluate_read_with_bindings(f, rctx, target, bindings)
         }
     }
+}
+
+fn eval_int_constraint_read(
+    constraint: &CompiledDpConstraint,
+    rctx: &EffectReadContext<'_>,
+    formula_target: Option<PermanentHandle>,
+    bindings: Option<&Bindings>,
+) -> i32 {
+    eval_int_constraint(constraint, rctx, formula_target, bindings)
 }
 
 fn eval_breeding_permanent_fields(

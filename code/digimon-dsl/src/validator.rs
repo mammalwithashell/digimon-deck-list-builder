@@ -10,6 +10,7 @@ use crate::errors::ValidationError;
 use crate::raw_rust_registry::RawRustRegistry;
 use crate::spec::CardSpec;
 use crate::step::{BindingRef, StepSpec, StructuredBindingRef};
+use std::collections::BTreeSet;
 
 pub struct ValidationContext<'a> {
     pub raw_rust: &'a dyn RawRustRegistry,
@@ -93,6 +94,16 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         &mut errors,
                                     );
                                 }
+                                if let Some(pay_cost) = &b.pay_cost {
+                                    let mut scope = BTreeSet::new();
+                                    validate_steps_binding_scope(
+                                        pay_cost,
+                                        &format!("{prefix}.pay_cost"),
+                                        &spec.card,
+                                        &mut scope,
+                                        &mut errors,
+                                    );
+                                }
                             }
                         }
                         DeclarativeKind::Replacement => {
@@ -106,6 +117,14 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         &mut errors,
                                     );
                                 }
+                                let mut scope = BTreeSet::new();
+                                validate_steps_binding_scope(
+                                    &b.process,
+                                    &format!("{prefix}.process"),
+                                    &spec.card,
+                                    &mut scope,
+                                    &mut errors,
+                                );
                             }
                         }
                         DeclarativeKind::Delay => {
@@ -119,6 +138,14 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         &mut errors,
                                     );
                                 }
+                                let mut scope = BTreeSet::new();
+                                validate_steps_binding_scope(
+                                    &b.process,
+                                    &format!("{prefix}.process"),
+                                    &spec.card,
+                                    &mut scope,
+                                    &mut errors,
+                                );
                             }
                         }
                         DeclarativeKind::FloodGate => {
@@ -366,6 +393,14 @@ fn validate_triggered(
         let sp = format!("{prefix}.process[{i}]");
         validate_step(step, &sp, card_id, ctx, errors);
     }
+    let mut scope = BTreeSet::new();
+    validate_steps_binding_scope(
+        &t.process,
+        &format!("{prefix}.process"),
+        card_id,
+        &mut scope,
+        errors,
+    );
 }
 
 fn validate_predicate(
@@ -376,10 +411,20 @@ fn validate_predicate(
     errors: &mut Vec<ValidationError>,
 ) {
     for (field, dp) in [
+        ("level_lte", &pred.level_lte),
+        ("level_gte", &pred.level_gte),
         ("play_cost_lte", &pred.play_cost_lte),
         ("dp_eq", &pred.dp_eq),
         ("dp_lte", &pred.dp_lte),
         ("dp_gte", &pred.dp_gte),
+        ("stack_size_lte", &pred.stack_size_lte),
+        ("stack_size_gte", &pred.stack_size_gte),
+        ("materials_count_lte", &pred.materials_count_lte),
+        ("materials_count_gte", &pred.materials_count_gte),
+        ("memory_lte", &pred.memory_lte),
+        ("memory_gte", &pred.memory_gte),
+        ("security_count_lte", &pred.security_count_lte),
+        ("security_count_gte", &pred.security_count_gte),
     ] {
         if let Some(crate::predicate::DpConstraint::Formula(formula)) = dp {
             validate_formula(formula, &format!("{prefix}.{field}"), card_id, ctx, errors);
@@ -457,6 +502,15 @@ fn validate_predicate(
         );
     }
     if let Some(agg) = &pred.count_lte {
+        if let crate::predicate::DpConstraint::Formula(formula) = &agg.n {
+            validate_formula(
+                formula,
+                &format!("{prefix}.count_lte.n"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
         validate_predicate(
             &agg.filter,
             &format!("{prefix}.count_lte.filter"),
@@ -466,6 +520,15 @@ fn validate_predicate(
         );
     }
     if let Some(agg) = &pred.count_gte {
+        if let crate::predicate::DpConstraint::Formula(formula) = &agg.n {
+            validate_formula(
+                formula,
+                &format!("{prefix}.count_gte.n"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
         validate_predicate(
             &agg.filter,
             &format!("{prefix}.count_gte.filter"),
@@ -833,6 +896,632 @@ fn validate_step(
             }
         }
         _ => {}
+    }
+}
+
+fn validate_steps_binding_scope(
+    steps: &[StepSpec],
+    prefix: &str,
+    card_id: &str,
+    scope: &mut BTreeSet<String>,
+    errors: &mut Vec<ValidationError>,
+) {
+    for (i, step) in steps.iter().enumerate() {
+        validate_step_binding_scope(step, &format!("{prefix}[{i}]"), card_id, scope, errors);
+    }
+}
+
+fn validate_step_binding_scope(
+    step: &StepSpec,
+    prefix: &str,
+    card_id: &str,
+    scope: &mut BTreeSet<String>,
+    errors: &mut Vec<ValidationError>,
+) {
+    match step {
+        StepSpec::AddDpModifier(args) => {
+            validate_modifier_value_binding_scope(
+                &args.value,
+                &format!("{prefix}.value"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+        StepSpec::AddModifier(args) => {
+            if let crate::step::ModifierTarget::Filter(filter) = &args.target {
+                validate_predicate_binding_scope(
+                    filter,
+                    &format!("{prefix}.target"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
+            validate_modifier_value_binding_scope(
+                &args.value,
+                &format!("{prefix}.value"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+        StepSpec::TrashTopNDigivolutionCardsOfEach(args) => {
+            validate_formula_binding_scope(&args.n, &format!("{prefix}.n"), card_id, scope, errors);
+        }
+        StepSpec::TrashOpponentHandToCount(args) => {
+            validate_formula_binding_scope(
+                &args.target_count,
+                &format!("{prefix}.target_count"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+        StepSpec::SelectOwnPermanent(args)
+        | StepSpec::SelectOpponentPermanent(args)
+        | StepSpec::SelectAnyPermanent(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectHand(args)
+        | StepSpec::SelectTrash(args)
+        | StepSpec::SelectReveal(args)
+        | StepSpec::SelectSecurity(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectDnaPair(args) => {
+            validate_predicate_binding_scope(
+                &args.left_filter,
+                &format!("{prefix}.left_filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            validate_predicate_binding_scope(
+                &args.right_filter,
+                &format!("{prefix}.right_filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            scope.insert(args.bind_left_as.clone());
+            scope.insert(args.bind_right_as.clone());
+        }
+        StepSpec::SelectRevealBuckets(args) => {
+            for (i, bucket) in args.buckets.iter().enumerate() {
+                if let Some(filter) = &bucket.filter {
+                    validate_predicate_binding_scope(
+                        filter,
+                        &format!("{prefix}.buckets[{i}].filter"),
+                        card_id,
+                        scope,
+                        errors,
+                    );
+                }
+            }
+            for bucket in &args.buckets {
+                scope.insert(bucket.bind_as.clone());
+            }
+        }
+        StepSpec::SelectMaterial(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectOwnSources(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            let mut child = scope.clone();
+            declare_optional_binding(&mut child, &args.bind_as);
+            validate_steps_binding_scope(
+                &args.then,
+                &format!("{prefix}.then"),
+                card_id,
+                &mut child,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::DigiBurst(args) => {
+            let mut child = scope.clone();
+            declare_optional_binding(&mut child, &args.bind_as);
+            validate_steps_binding_scope(
+                &args.then,
+                &format!("{prefix}.then"),
+                card_id,
+                &mut child,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectOpponentDpBudget(args) => {
+            let mut child = scope.clone();
+            declare_optional_binding(&mut child, &args.bind_as);
+            validate_steps_binding_scope(
+                &args.then,
+                &format!("{prefix}.then"),
+                card_id,
+                &mut child,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectOwnBreedingPermanent(args) => {
+            let mut child = scope.clone();
+            declare_optional_binding(&mut child, &args.bind_as);
+            validate_steps_binding_scope(
+                &args.then,
+                &format!("{prefix}.then"),
+                card_id,
+                &mut child,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectUnionZone(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectOrderedPermutation(args) => {
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectCountCappedMulti(args) => {
+            if let crate::step::CountBound::Formula { formula } = &args.max {
+                validate_formula_binding_scope(
+                    formula,
+                    &format!("{prefix}.max.formula"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectEffectChoice(args) => {
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SearchOwnSecurityStack(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            let mut on_select_scope = scope.clone();
+            declare_optional_binding(&mut on_select_scope, &args.bind_as);
+            validate_steps_binding_scope(
+                &args.on_select,
+                &format!("{prefix}.on_select"),
+                card_id,
+                &mut on_select_scope,
+                errors,
+            );
+            if let Some(no_match) = &args.on_no_match {
+                let mut no_match_scope = scope.clone();
+                validate_steps_binding_scope(
+                    no_match,
+                    &format!("{prefix}.on_no_match"),
+                    card_id,
+                    &mut no_match_scope,
+                    errors,
+                );
+            }
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::RevealTopDeck(args) => {
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::PlayFromMaterials(args) => {
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::BindPermanentProperty(args) => {
+            scope.insert(args.bind_as.clone());
+        }
+        StepSpec::RawRust(raw) => {
+            for binding in &raw.binds {
+                scope.insert(binding.clone());
+            }
+        }
+        StepSpec::If(i) => {
+            if let Ok(condition) =
+                serde_yml::from_value::<crate::predicate::PredicateSpec>(i.condition.clone())
+            {
+                validate_predicate_binding_scope(
+                    &condition,
+                    &format!("{prefix}.condition"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
+            let mut then_scope = scope.clone();
+            validate_steps_binding_scope(
+                &i.then,
+                &format!("{prefix}.then"),
+                card_id,
+                &mut then_scope,
+                errors,
+            );
+            if let Some(else_) = &i.else_ {
+                let mut else_scope = scope.clone();
+                validate_steps_binding_scope(
+                    else_,
+                    &format!("{prefix}.else"),
+                    card_id,
+                    &mut else_scope,
+                    errors,
+                );
+            }
+        }
+        StepSpec::ForEach(args) => {
+            validate_predicate_binding_scope(
+                &args.over,
+                &format!("{prefix}.over"),
+                card_id,
+                scope,
+                errors,
+            );
+            let mut child = scope.clone();
+            child.insert(args.bind_as.clone());
+            validate_steps_binding_scope(
+                &args.body,
+                &format!("{prefix}.body"),
+                card_id,
+                &mut child,
+                errors,
+            );
+            scope.insert(args.bind_as.clone());
+        }
+        StepSpec::PerSelected(args) => {
+            report_if_undeclared_binding(
+                &args.selection,
+                &format!("{prefix}.selection"),
+                card_id,
+                scope,
+                errors,
+            );
+            let mut child = scope.clone();
+            child.insert(args.bind_as.clone());
+            validate_steps_binding_scope(
+                &args.body,
+                &format!("{prefix}.body"),
+                card_id,
+                &mut child,
+                errors,
+            );
+            scope.insert(args.bind_as.clone());
+        }
+        StepSpec::ScheduleDelayed(args) => {
+            let mut child = scope.clone();
+            validate_steps_binding_scope(
+                &args.body,
+                &format!("{prefix}.body"),
+                card_id,
+                &mut child,
+                errors,
+            );
+        }
+        StepSpec::AsSelectingPlayer(args) => {
+            validate_steps_binding_scope(
+                &args.body,
+                &format!("{prefix}.body"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+        StepSpec::Optional(optional) => {
+            validate_steps_binding_scope(
+                &optional.0,
+                &format!("{prefix}.optional"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+        _ => {}
+    }
+}
+
+fn declare_optional_binding(scope: &mut BTreeSet<String>, binding: &Option<String>) {
+    if let Some(binding) = binding {
+        scope.insert(binding.clone());
+    }
+}
+
+fn validate_modifier_value_binding_scope(
+    value: &crate::step::ModifierValueSpec,
+    prefix: &str,
+    card_id: &str,
+    scope: &BTreeSet<String>,
+    errors: &mut Vec<ValidationError>,
+) {
+    if let crate::step::ModifierValueSpec::Formula(formula) = value {
+        validate_formula_binding_scope(&formula.formula, prefix, card_id, scope, errors);
+    }
+}
+
+fn validate_predicate_binding_scope(
+    pred: &crate::predicate::PredicateSpec,
+    prefix: &str,
+    card_id: &str,
+    scope: &BTreeSet<String>,
+    errors: &mut Vec<ValidationError>,
+) {
+    for (field, dp) in [
+        ("level_lte", &pred.level_lte),
+        ("level_gte", &pred.level_gte),
+        ("play_cost_lte", &pred.play_cost_lte),
+        ("dp_eq", &pred.dp_eq),
+        ("dp_lte", &pred.dp_lte),
+        ("dp_gte", &pred.dp_gte),
+        ("stack_size_lte", &pred.stack_size_lte),
+        ("stack_size_gte", &pred.stack_size_gte),
+        ("materials_count_lte", &pred.materials_count_lte),
+        ("materials_count_gte", &pred.materials_count_gte),
+        ("memory_lte", &pred.memory_lte),
+        ("memory_gte", &pred.memory_gte),
+        ("security_count_lte", &pred.security_count_lte),
+        ("security_count_gte", &pred.security_count_gte),
+    ] {
+        if let Some(crate::predicate::DpConstraint::Formula(formula)) = dp {
+            validate_formula_binding_scope(
+                formula,
+                &format!("{prefix}.{field}"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+    }
+
+    for (field, binding) in [
+        ("binding_exists", &pred.binding_exists),
+        ("binding_present", &pred.binding_present),
+        ("binding_absent", &pred.binding_absent),
+    ] {
+        if let Some(binding) = binding {
+            report_if_undeclared_binding(
+                binding,
+                &format!("{prefix}.{field}"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+    }
+
+    for (i, sub) in pred.all_of.iter().enumerate() {
+        validate_predicate_binding_scope(
+            sub,
+            &format!("{prefix}.all_of[{i}]"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
+    for (i, sub) in pred.any_of.iter().enumerate() {
+        validate_predicate_binding_scope(
+            sub,
+            &format!("{prefix}.any_of[{i}]"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
+    for (i, sub) in pred.none_of.iter().enumerate() {
+        validate_predicate_binding_scope(
+            sub,
+            &format!("{prefix}.none_of[{i}]"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
+    if let Some(sub) = &pred.not {
+        validate_predicate_binding_scope(sub, &format!("{prefix}.not"), card_id, scope, errors);
+    }
+    if let Some(inh) = &pred.has_inherited {
+        validate_predicate_binding_scope(
+            inh,
+            &format!("{prefix}.has_inherited"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
+    for (field, ex) in [
+        ("any_permanent", &pred.any_permanent),
+        ("any_field_permanent", &pred.any_field_permanent),
+        ("no_permanent", &pred.no_permanent),
+        ("all_permanents", &pred.all_permanents),
+    ] {
+        if let Some(ex) = ex {
+            validate_predicate_binding_scope(
+                &ex.predicate,
+                &format!("{prefix}.{field}"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+    }
+    if let Some(agg) = &pred.count_lte {
+        if let crate::predicate::DpConstraint::Formula(formula) = &agg.n {
+            validate_formula_binding_scope(
+                formula,
+                &format!("{prefix}.count_lte.n"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+        validate_predicate_binding_scope(
+            &agg.filter,
+            &format!("{prefix}.count_lte.filter"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
+    if let Some(agg) = &pred.count_gte {
+        if let crate::predicate::DpConstraint::Formula(formula) = &agg.n {
+            validate_formula_binding_scope(
+                formula,
+                &format!("{prefix}.count_gte.n"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+        validate_predicate_binding_scope(
+            &agg.filter,
+            &format!("{prefix}.count_gte.filter"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
+}
+
+fn validate_formula_binding_scope(
+    formula: &crate::formula::FormulaSpec,
+    prefix: &str,
+    card_id: &str,
+    scope: &BTreeSet<String>,
+    errors: &mut Vec<ValidationError>,
+) {
+    use crate::formula::{CompoundFormula, FormulaSpec};
+
+    match formula {
+        FormulaSpec::BindingDp { binding_dp } => {
+            report_if_undeclared_binding(binding_dp, prefix, card_id, scope, errors);
+        }
+        FormulaSpec::BindingPlayCost { binding_play_cost } => {
+            report_if_undeclared_binding(binding_play_cost, prefix, card_id, scope, errors);
+        }
+        FormulaSpec::BasePerDelta { per, .. } => {
+            validate_per_selector_binding_scope(
+                per,
+                &format!("{prefix}.per"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+        FormulaSpec::SourceStackDpSum {
+            source_stack_dp_sum,
+        } => {
+            report_if_undeclared_binding(
+                &source_stack_dp_sum.target,
+                &format!("{prefix}.source_stack_dp_sum.target"),
+                card_id,
+                scope,
+                errors,
+            );
+            if let Some(filter) = &source_stack_dp_sum.filter {
+                validate_predicate_binding_scope(
+                    filter,
+                    &format!("{prefix}.source_stack_dp_sum.filter"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
+        }
+        FormulaSpec::Compound(CompoundFormula::FloorDiv(args))
+        | FormulaSpec::Compound(CompoundFormula::Max(args))
+        | FormulaSpec::Compound(CompoundFormula::Min(args)) => {
+            for (i, arg) in args.iter().enumerate() {
+                validate_formula_binding_scope(
+                    arg,
+                    &format!("{prefix}[{i}]"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
+        }
+        FormulaSpec::Literal(_)
+        | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
+        | FormulaSpec::Compound(CompoundFormula::AggregateScoped(_))
+        | FormulaSpec::Compound(CompoundFormula::RawRust(_)) => {}
+    }
+}
+
+fn validate_per_selector_binding_scope(
+    per: &crate::formula::PerSelector,
+    prefix: &str,
+    card_id: &str,
+    scope: &BTreeSet<String>,
+    errors: &mut Vec<ValidationError>,
+) {
+    if let crate::formula::PerSelector::CardCountInZone(spec)
+    | crate::formula::PerSelector::DistinctColorsCount(spec) = per
+    {
+        if let Some(filter) = &spec.filter {
+            validate_predicate_binding_scope(
+                filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+    }
+}
+
+fn report_if_undeclared_binding(
+    binding: &str,
+    path: &str,
+    card_id: &str,
+    scope: &BTreeSet<String>,
+    errors: &mut Vec<ValidationError>,
+) {
+    if !scope.contains(binding) {
+        errors.push(ValidationError {
+            card_id: card_id.into(),
+            path: path.into(),
+            message: format!("undeclared binding referenced before declaration: {binding}"),
+        });
     }
 }
 
@@ -1357,5 +2046,70 @@ effects:
         assert!(errs
             .iter()
             .any(|e| e.path.contains("level_matches_aggregate.selector")));
+    }
+
+    #[test]
+    fn binding_formula_rejects_reference_before_bind_as_declaration() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: option
+color: [black]
+cost: 0
+effects:
+  - when: main_from_hand
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          prompt: Pick
+          filter:
+            kind: digimon
+            play_cost_lte:
+              formula:
+                binding_play_cost: source_digimon
+      - select_own_permanent:
+          bind_as: source_digimon
+          prompt: Source
+          filter: { kind: digimon }
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs.iter().any(|e| {
+            e.path.ends_with(".play_cost_lte")
+                && e.message
+                    .contains("undeclared binding referenced before declaration: source_digimon")
+        }));
+    }
+
+    #[test]
+    fn binding_formula_accepts_reference_after_bind_as_declaration() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: option
+color: [black]
+cost: 0
+effects:
+  - when: main_from_hand
+    process:
+      - select_own_permanent:
+          bind_as: source_digimon
+          prompt: Source
+          filter: { kind: digimon }
+      - select_hand:
+          of: you
+          bind_as: pick
+          prompt: Pick
+          filter:
+            kind: digimon
+            play_cost_lte:
+              formula:
+                binding_play_cost: source_digimon
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
     }
 }

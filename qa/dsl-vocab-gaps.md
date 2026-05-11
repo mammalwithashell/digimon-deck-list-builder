@@ -1537,10 +1537,10 @@ Format per entry:
       prompt: "Change the attack target to another Digimon or the player"
   ```
 
-## Zephagamon / BT24-047 — result-bound friendly suspend branch  [ZEPH-G002/ZEPH-G005]
+## Zephagamon — result-bound predicates and suspended-count formulas  [ZEPH-G002/ZEPH-G003/ZEPH-G005]
 
-- Status (2026-05-08): narrowed. DSL predicate `binding_owner: { binding, of }` now checks the controller of a previously bound permanent. BT24-047 uses it after an optional `select_any_permanent` + `suspend` step so the "If this effect suspended your Digimon..." tail only runs for your selected Digimon; the Digimon selected by the unsuspend branch then receives the shared `may_attack_now` prompt.
-- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- binding_owner_predicate_matches_bound_permanent_controller`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_047`.
+- Status (2026-05-10): narrowed. DSL predicate `binding_owner: { binding, of }` still covers the BT24-047 owner branch. Track J additionally added per-effect result-log predicates (`effect_suspended_any_own_digimon`, `effect_returned_any_card`, and sibling delete/play/digivolve/add-to-hand leaves) plus `suspended_count: { of: ... }` as a formula per-selector usable by formula-backed selection counts and thresholds. Production Zephagamon YAML still needs to be expanded for EX11-074 / BT20-101 / EX11-035 card-shaped coverage.
+- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group7_predicate_batch -- --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl suspended_count -- --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- binding_owner_predicate_matches_bound_permanent_controller`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_047`.
 - Supported DSL syntax:
   ```yaml
   - if:
@@ -1548,8 +1548,19 @@ Format per entry:
         binding_owner: { binding: suspended, of: you }
       then:
         - may_attack_now: { attacker: suspended, targets: any, optional: true }
+  - if:
+      condition: { effect_suspended_any_own_digimon: true }
+      then:
+        - add_modifier: ...
+
+  max:
+    formula:
+      base: 0
+      per:
+        suspended_count: { of: any }
+      delta: 1
   ```
-- Remaining adjacent result-binding gaps: steps that must distinguish whether a mutation actually changed state when the target was already suspended/unsuspended or protected still need a richer `bind_result_as`/`binding_present` style result payload. BT24-047 avoids that by filtering the initial target to `is_unsuspended: true`.
+- Remaining adjacent card-authoring work: migrate the Zephagamon bodies that need these primitives and add card-shaped fixtures. If a printed card needs to distinguish a failed/protected mutation in a way the append-only result log cannot express, file that as a narrower `bind_result_as` payload gap.
 
 ## Track H §1 — Aura `security_attack: i32` flat slot (2026-05-10) — RESOLVED
 

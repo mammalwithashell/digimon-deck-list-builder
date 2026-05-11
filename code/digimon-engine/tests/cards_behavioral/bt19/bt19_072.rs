@@ -2,7 +2,7 @@
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
-    CompiledPredicate, CompiledStep, CompiledTiming,
+    CompiledDpConstraint, CompiledPredicate, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::space::encode_attack;
 use digimon_engine::combat::{AttackInitiator, AttackOpen, TargetConstraint};
@@ -32,7 +32,7 @@ fn predicate_contains_kind(predicate: &CompiledPredicate, kind: CompiledCardKind
 }
 
 fn predicate_has_level_lte(predicate: &CompiledPredicate, level: u8) -> bool {
-    predicate.level_lte == Some(level)
+    predicate.level_lte == Some(CompiledDpConstraint::Literal(level as i32))
         || predicate
             .any_of
             .iter()

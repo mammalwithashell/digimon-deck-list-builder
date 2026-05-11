@@ -28,9 +28,9 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level_eq_binding: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub level_lte: Option<u8>,
+    pub level_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub level_gte: Option<u8>,
+    pub level_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level_matches_aggregate: Option<LevelAggregatePredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -61,6 +61,8 @@ pub struct PredicateSpec {
     pub card_number_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub play_cost_lte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub can_digivolve_from_source: Option<bool>,
 
     // Leaf — permanent-only
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -70,13 +72,13 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub dp_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub stack_size_lte: Option<u8>,
+    pub stack_size_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub stack_size_gte: Option<u8>,
+    pub stack_size_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub materials_count_lte: Option<u8>,
+    pub materials_count_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub materials_count_gte: Option<u8>,
+    pub materials_count_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_inherited: Option<Box<PredicateSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -112,13 +114,13 @@ pub struct PredicateSpec {
 
     // Leaf — global / observer
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub memory_lte: Option<i32>,
+    pub memory_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub memory_gte: Option<i32>,
+    pub memory_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub security_count_lte: Option<u8>,
+    pub security_count_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub security_count_gte: Option<u8>,
+    pub security_count_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub your_turn: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -183,6 +185,20 @@ pub struct PredicateSpec {
     pub binding_present: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "binding_is_none")]
     pub binding_absent: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect_suspended_any_own_digimon: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "any_returned_card")]
+    pub effect_returned_any_card: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect_deleted_any_own_digimon: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect_deleted_any_opponent_digimon: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect_played_any_digimon: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect_digivolved_any_digimon: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect_added_any_card_to_hand: Option<bool>,
 
     // Count aggregates
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -322,7 +338,7 @@ fn default_level_aggregate_of() -> PlayerRef {
 #[serde(deny_unknown_fields)]
 pub struct CountAggregate {
     pub filter: Box<PredicateSpec>,
-    pub n: u32,
+    pub n: DpConstraint,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

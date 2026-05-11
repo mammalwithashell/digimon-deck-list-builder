@@ -261,6 +261,9 @@ fn compile_per_selector(
         S::MaterialCount => CompiledPerSelector::MaterialCount,
         S::StackSize => CompiledPerSelector::StackSize,
         S::AllyCount => CompiledPerSelector::AllyCount,
+        S::SuspendedCount { of } => CompiledPerSelector::SuspendedCount {
+            of: compile_player_ref(*of),
+        },
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
         S::SameLevelPairsInSources => CompiledPerSelector::SameLevelPairsInSources,
         S::SharedTrashCount { bucket } => CompiledPerSelector::SharedTrashCount { bucket: *bucket },
@@ -450,8 +453,14 @@ fn compile_predicate(
         kind: p.kind.map(compile_card_kind),
         level_eq: p.level_eq,
         level_eq_binding: p.level_eq_binding.clone(),
-        level_lte: p.level_lte,
-        level_gte: p.level_gte,
+        level_lte: p
+            .level_lte
+            .as_ref()
+            .map(|d| compile_dp_constraint(d, &format!("{prefix}.level_lte"), card_id, errors)),
+        level_gte: p
+            .level_gte
+            .as_ref()
+            .map(|d| compile_dp_constraint(d, &format!("{prefix}.level_gte"), card_id, errors)),
         level_matches_aggregate: p.level_matches_aggregate.map(|m| {
             (
                 compile_aggregate_selector(m.selector),
@@ -478,6 +487,7 @@ fn compile_predicate(
             .play_cost_lte
             .as_ref()
             .map(|d| compile_dp_constraint(d, &format!("{prefix}.play_cost_lte"), card_id, errors)),
+        can_digivolve_from_source: p.can_digivolve_from_source,
         dp_eq: p
             .dp_eq
             .as_ref()
@@ -490,10 +500,18 @@ fn compile_predicate(
             .dp_gte
             .as_ref()
             .map(|d| compile_dp_constraint(d, &format!("{prefix}.dp_gte"), card_id, errors)),
-        stack_size_lte: p.stack_size_lte,
-        stack_size_gte: p.stack_size_gte,
-        materials_count_lte: p.materials_count_lte,
-        materials_count_gte: p.materials_count_gte,
+        stack_size_lte: p.stack_size_lte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.stack_size_lte"), card_id, errors)
+        }),
+        stack_size_gte: p.stack_size_gte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.stack_size_gte"), card_id, errors)
+        }),
+        materials_count_lte: p.materials_count_lte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.materials_count_lte"), card_id, errors)
+        }),
+        materials_count_gte: p.materials_count_gte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.materials_count_gte"), card_id, errors)
+        }),
         has_inherited: p.has_inherited.as_ref().map(|b| {
             Box::new(compile_predicate(
                 b,
@@ -521,10 +539,20 @@ fn compile_predicate(
         source_name_contains: p.source_name_contains.clone(),
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
         self_digivolution_contains_name: p.self_digivolution_contains_name.clone(),
-        memory_lte: p.memory_lte,
-        memory_gte: p.memory_gte,
-        security_count_lte: p.security_count_lte,
-        security_count_gte: p.security_count_gte,
+        memory_lte: p
+            .memory_lte
+            .as_ref()
+            .map(|d| compile_dp_constraint(d, &format!("{prefix}.memory_lte"), card_id, errors)),
+        memory_gte: p
+            .memory_gte
+            .as_ref()
+            .map(|d| compile_dp_constraint(d, &format!("{prefix}.memory_gte"), card_id, errors)),
+        security_count_lte: p.security_count_lte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.security_count_lte"), card_id, errors)
+        }),
+        security_count_gte: p.security_count_gte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.security_count_gte"), card_id, errors)
+        }),
         your_turn: p.your_turn,
         opponents_turn: p.opponents_turn,
         all_turns: p.all_turns,
@@ -561,6 +589,13 @@ fn compile_predicate(
         binding_exists: p.binding_exists.clone(),
         binding_present: p.binding_present.clone(),
         binding_absent: p.binding_absent.clone(),
+        effect_suspended_any_own_digimon: p.effect_suspended_any_own_digimon,
+        effect_returned_any_card: p.effect_returned_any_card,
+        effect_deleted_any_own_digimon: p.effect_deleted_any_own_digimon,
+        effect_deleted_any_opponent_digimon: p.effect_deleted_any_opponent_digimon,
+        effect_played_any_digimon: p.effect_played_any_digimon,
+        effect_digivolved_any_digimon: p.effect_digivolved_any_digimon,
+        effect_added_any_card_to_hand: p.effect_added_any_card_to_hand,
         count_lte: p.count_lte.as_ref().map(|c| CompiledCountAggregate {
             filter: Box::new(compile_predicate(
                 &c.filter,
@@ -568,7 +603,7 @@ fn compile_predicate(
                 card_id,
                 errors,
             )),
-            n: c.n,
+            n: compile_dp_constraint(&c.n, &format!("{prefix}.count_lte.n"), card_id, errors),
         }),
         count_gte: p.count_gte.as_ref().map(|c| CompiledCountAggregate {
             filter: Box::new(compile_predicate(
@@ -577,7 +612,7 @@ fn compile_predicate(
                 card_id,
                 errors,
             )),
-            n: c.n,
+            n: compile_dp_constraint(&c.n, &format!("{prefix}.count_gte.n"), card_id, errors),
         }),
         any_permanent: p.any_permanent.as_ref().map(|e| {
             Box::new(CompiledExistential {
