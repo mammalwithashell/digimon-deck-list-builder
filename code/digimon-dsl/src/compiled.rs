@@ -184,7 +184,7 @@ pub struct CompiledPredicate {
     pub name_contains: Option<String>,
     pub name_in: Option<Vec<String>>,
     pub card_number_is: Option<String>,
-    pub play_cost_lte: Option<i32>,
+    pub play_cost_lte: Option<CompiledDpConstraint>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
     pub dp_gte: Option<CompiledDpConstraint>,
@@ -233,6 +233,8 @@ pub struct CompiledPredicate {
     pub equals: Option<Vec<CompiledBindingCompare>>,
     pub not_equals: Option<Vec<CompiledBindingCompare>>,
     pub binding_exists: Option<String>,
+    pub binding_present: Option<String>,
+    pub binding_absent: Option<String>,
     pub count_lte: Option<CompiledCountAggregate>,
     pub count_gte: Option<CompiledCountAggregate>,
     pub any_permanent: Option<Box<CompiledExistential>>,
@@ -339,6 +341,7 @@ pub enum CompiledFormula {
         scope: CompiledPlayerRef,
     },
     BindingDp(String),
+    BindingPlayCost(String),
     SourceStackDpSum {
         target: String,
         filter: Option<Box<CompiledPredicate>>,
@@ -365,6 +368,11 @@ pub enum CompiledPerSelector {
         zone: CompiledZone,
         of: CompiledPlayerRef,
         filter: Box<CompiledPredicate>,
+    },
+    DistinctColorsCountScoped {
+        zone: CompiledZone,
+        of: CompiledPlayerRef,
+        filter: Option<Box<CompiledPredicate>>,
     },
 }
 

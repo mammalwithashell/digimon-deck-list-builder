@@ -658,9 +658,9 @@ Format per entry:
 ## BT21-102 / BT15-096 — `play_cost_lte` formula-valued / binding-relative variant
 - Effect text: BT21-102 Tai Kamiya — "[Main] [Once Per Turn] You may play 1 [ADVENTURE] or [Hero] trait card with a play cost of 2 or less from your hand without paying the cost. For each of your Tamers' colors, add 1 to this effect's play cost maximum."
 - Effect text: BT15-096 Supreme Connection! — "[Delay] 1 of your Digimon with the [Machine] or [Cyborg] trait may play 1 Digimon card with a play cost less than or equal to that Digimon's play cost from your hand with the play cost reduced by 3."
-- Missing DSL verb / step kind / predicate: `PredicateSpec::play_cost_lte` is `Option<i32>` (literal only — `code/digimon-dsl/src/predicate.rs` line 59). It cannot accept a formula expression or binding-relative expression, so dynamic play-cost ceilings ("cost ≤ 2 + N" or "hand card cost ≤ selected source Digimon play cost") cannot be expressed in selection filters. Closely related to existing G-PLAY-COST-LTE entry but for the formula-valued/binding-valued variant rather than the literal predicate.
+- Status: RESOLVED on 2026-05-10. `PredicateSpec::play_cost_lte` now accepts either the legacy literal threshold or `{ formula: ... }`. Formula thresholds compile through `CompiledDpConstraint`, evaluate during selection-mask construction, and can read `binding_play_cost` from a previously selected card/permanent binding. BT21-102's color-scaled cap is also covered by `distinct_colors_count`.
 - Lowers to engine API: `card.play_cost <= rctx.eval_formula(formula)` — engine already has formula evaluation and per-card play_cost reads.
-- Suggested DSL syntax:
+- DSL syntax:
   ```yaml
   filter:
     play_cost_lte:
@@ -673,21 +673,21 @@ Format per entry:
             filter: { kind: tamer }
         delta: 0
   ```
-- Suggested binding-relative syntax:
+- Binding-relative syntax:
   ```yaml
   filter:
     play_cost_lte:
-      binding_play_cost: source_digimon
+      formula:
+        binding_play_cost: source_digimon
   ```
-- Implementation: change `PredicateSpec::play_cost_lte` to a sum type accepting either `i32` (literal) or `{ formula: FormulaSpec }`; thread compiled formula through `eval_card_fields`.
-- Implementation addendum for BT15-096: the same sum type needs a binding-relative variant that resolves a previously selected permanent/card binding and compares candidates against that binding's printed play cost during `select_hand` mask construction.
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group7_predicate_batch -- --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group7_formula_batch -- --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt15_096 -- --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt21_102 -- --nocapture`.
 - Gap kind: dsl. Companion to G-DSL-DISTINCT-TAMER-COLORS-FORMULA for BT21-102; independently blocks BT15-096's Delay clause.
 - First reported: 2026-05-03 (BT21-102 Tai Kamiya, batch-implement-cards-rust-dsl). Binding-relative variant reaffirmed 2026-05-10 (BT15-096 Supreme Connection!, Alter-S Ladder batch).
 
 ## EX9-066 — Binding-presence predicate (`binding_present`/`binding_absent`)  [G-DSL-BIND-PRESENT]
 - Effect text: EX9-066 Tai Kamiya & Matt Ishida — "[On Play] You may return 1 Digimon card with [Greymon], [Garurumon] or [Omnimon] in its name from your trash to the hand. If this effect didn't return, ＜Draw 1＞." Also EX11-074 — "[When Digivolving] [When Attacking] You may suspend 1 Digimon. If this effect suspended your Digimon, ..."
-- Status: OPEN (filed 2026-05-03 during EX9-066 batch-implement-cards-rust-dsl). Sibling of the EX11-074 gap noted at line 61 of this file (Zephagamon section), restated here as a standalone reusable primitive.
-- Missing DSL verb / step kind / predicate: no `binding_present: <name>` or `binding_absent: <name>` BoolPredicate leaf that evaluates whether a prior `bind_as:` step (e.g. an optional `select_trash` / `select_hand` / `select_own_permanent` that the player may have declined) actually produced a value. The existing `equals: [<binding>, <literal>]` compare on `CompiledBindingCompare` only supports integer-valued bindings (literals + integer bindings via `Bindings::get_literal`) — it cannot distinguish a permanent/card binding that was set vs absent.
+- Status: NARROWED on 2026-05-10. The pure binding-presence predicate primitive is implemented as `binding_present` / `binding_absent` plus aliases `binding_is_present` / `binding_is_none`, compiled to `CompiledPredicate`, and evaluated against the threaded `Bindings`. This does not close richer result-log predicates such as "this effect suspended your Digimon" when the mutation itself must be distinguished from a selected target.
+- Former missing DSL verb / step kind / predicate: no `binding_present: <name>` or `binding_absent: <name>` BoolPredicate leaf that evaluates whether a prior `bind_as:` step (e.g. an optional `select_trash` / `select_hand` / `select_own_permanent` that the player may have declined) actually produced a value. The existing `equals: [<binding>, <literal>]` compare on `CompiledBindingCompare` only supports integer-valued bindings (literals + integer bindings via `Bindings::get_literal`) — it cannot distinguish a permanent/card binding that was set vs absent.
 - Lowers to engine API: `Bindings::get_card(name).is_some()` / `Bindings::get_permanent(name).is_some()` / `Bindings::get_literal(name).is_some()` — engine already has these read paths through `digimon_dsl::compiled::Bindings` and `effect_context::Bindings`.
 - Suggested DSL syntax:
   ```yaml
@@ -700,7 +700,8 @@ Format per entry:
       then: [ add_to_hand_from_trash: { card: pick } ]
       else: [ draw: 1 ]
   ```
-- Implementation: add `binding_present: Option<String>` and `binding_absent: Option<String>` BoolPredicate leaves to `PredicateSpec`, compile to a `CompiledPredicate` field, evaluate inside `eval_predicate_with_bindings` in `dsl_cards/predicate.rs` by checking the named binding in the threaded `Bindings`.
+- Implementation: added `binding_present: Option<String>` and `binding_absent: Option<String>` BoolPredicate leaves to `PredicateSpec`, compile to `CompiledPredicate` fields, and evaluate inside `eval_predicate_with_bindings` in `dsl_cards/predicate.rs` by checking the named binding in the threaded `Bindings`.
+- Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group7_predicate_batch -- --nocapture`.
 - Gap kind: dsl. Engine has the comparison primitive (binding presence is a trivial Option check).
 - Workaround used in EX9-066: drop the binding-result check entirely; present a binary `select_effect_choice [Return / Draw]` so the player explicitly picks the branch up front. The Return branch's inner `select_trash` is `optional: true` so it degrades gracefully when no eligible cards exist. Case C (no eligible card + player picked Return) becomes a no-op rather than a forced draw — diverges from DCGO but the action mask still surfaces the Decline → Draw alternative, so a faithful RL agent learns to pick Decline in case C. No auto-selection is performed on the agent's behalf; the no-approximations policy is preserved.
 - First reported: 2026-05-03 (EX9-066 Tai Kamiya & Matt Ishida, batch-implement-cards-rust-dsl)

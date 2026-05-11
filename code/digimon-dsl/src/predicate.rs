@@ -60,7 +60,7 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card_number_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub play_cost_lte: Option<i32>,
+    pub play_cost_lte: Option<DpConstraint>,
 
     // Leaf — permanent-only
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -179,6 +179,10 @@ pub struct PredicateSpec {
     pub not_equals: Option<Vec<serde_yml::Value>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub binding_exists: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "binding_is_present")]
+    pub binding_present: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", alias = "binding_is_none")]
+    pub binding_absent: Option<String>,
 
     // Count aggregates
     #[serde(skip_serializing_if = "Option::is_none")]

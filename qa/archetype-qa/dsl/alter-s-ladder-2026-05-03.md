@@ -24,7 +24,7 @@ Date: 2026-05-03
 
 **Blocked, but substantially advanced by the 2026-05-10 implementation pass.** The refreshed `Alter-S Ladder` deck pool has only one exact `Alter-S Ladder` decklist, from DigiLab. The deck contains 17 unique card IDs. As of the 2026-05-10 pass, 10 have Rust YAML/tests in the active lane: `BT16-082`, `BT17-077`, `BT5-112`, `EX10-002`, `EX10-010`, `EX4-060`, `EX9-013`, `EX9-021`, `P-101`, and `P-128`.
 
-Do not claim this archetype is playable in Rust yet. The remaining blockers are reusable engine/DSL gaps around face-down sources, source-to-hand costs, binding-relative play-cost filters, granted future attacks / source-name predicates, reveal-to-play, replacement-triggered DNA, and Paladin-style mass cleanup.
+Do not claim this archetype is playable in Rust yet. The remaining blockers are reusable engine/DSL gaps around face-down sources, source-to-hand costs, granted future attacks / source-name predicates, reveal-to-play, replacement-triggered DNA, and Paladin-style mass cleanup.
 
 ## 2026-05-10 Implementation Update
 
@@ -41,7 +41,7 @@ Implemented or audited forward:
 
 Blocked with tests or assessment evidence:
 
-- `BT15-096`: 6 card-shaped tests added and ignored under `G-PLAY-COST-LTE-BINDING`; Delay needs `play_cost_lte` relative to the selected source Digimon's play cost.
+- `BT15-096`: resolved 2026-05-10. The 6 `G-PLAY-COST-LTE-BINDING` tests are active and pass; Delay uses formula-valued `play_cost_lte` relative to the selected source Digimon's play cost.
 - `EX10-008`: full card blocked on inherited `source_name_contains` target-change predicate evaluation and granted future start-main attack behavior.
 - `EX5-048`: full card blocked on play-from-reveal and granted future start-main attack behavior.
 - `EX9-011` / `EX9-068`: blocked on face-down source placement/state and related predicates/formulas.
@@ -92,7 +92,7 @@ Blocked with tests or assessment evidence:
 | `EX4-060` Omnimon Alter-S | Delete small Digimon and bottom-deck Lv6+; when leaving, play BlitzGreymon + CresGarurumon sources and place self bottom security | implemented | `code/digimon-engine/cards/ex4/EX4-060.yaml`; `code/digimon-engine/tests/cards_behavioral/ex4/ex4_060.rs` | Source-stack play and bottom-security replacement are covered for this card. |
 | `EX9-021` Omnimon Alter-S | DNA immunity, delete all highest-level opponent Digimon, end-of-attack play two named/trait sources and place self top security | implemented | `code/digimon-engine/cards/ex9/EX9-021.yaml`; `code/digimon-engine/tests/cards_behavioral/ex9/ex9_021.rs` | DNA-origin immunity adopted 2026-05-10. |
 | `BT5-087` Omnimon Zwart | Mill 3, may play up to two cost <=8 black/purple Digimon from trash; source-to-hand cost then delete unsuspended cost <=12 | dsl-gap | no YAML | Author up-to-two trash play and source-return cost tests. |
-| `BT15-096` Supreme Connection! | Reveal 3, add one Machine/Cyborg and trash one, return rest on top; Delay play hand Digimon with cost <= selected source play cost, reduced by 3 | dsl-gap | `code/digimon-engine/tests/cards_behavioral/bt15/bt15_096.rs` | Blocked on `G-PLAY-COST-LTE-BINDING`; tests are present and ignored. |
+| `BT15-096` Supreme Connection! | Reveal 3, add one Machine/Cyborg and trash one, return rest on top; Delay play hand Digimon with cost <= selected source play cost, reduced by 3 | implemented | `code/digimon-engine/cards/bt15/BT15-096.yaml`; `code/digimon-engine/tests/cards_behavioral/bt15/bt15_096.rs` | Resolved 2026-05-10 via formula-valued `play_cost_lte` + `binding_play_cost`; 6 active tests pass with `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt15_096 -- --nocapture`. |
 | `EX10-002` Koromon | Inherited attack-target-change draw | implemented | `code/digimon-engine/cards/ex10/EX10-002.yaml`; `code/digimon-engine/tests/cards_behavioral/ex10/ex10_002.rs` | Shared triggered OPT enforcement remains ignored under `G-OPT-TRIGGERED`. |
 | `P-101` Raremon | Draw/discard and inherited Lv3 deletion | implemented | `code/digimon-engine/cards/p/P-101.yaml`; `code/digimon-engine/tests/cards_behavioral/p/p_101.rs` | Full card covered. |
 | `P-128` Cody Hida | Free-trait memory, modal On Play, security play | implemented | `code/digimon-engine/cards/p/P-128.yaml`; `code/digimon-engine/tests/cards_behavioral/p/p_128.rs` | Full card covered. |
@@ -116,4 +116,4 @@ Blocked with tests or assessment evidence:
   - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt5_112` → 7 passed.
   - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral ex10_002` → 5 passed, 1 ignored.
   - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral p_128` → 10 passed.
-  - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt15_096` → 6 ignored under `G-PLAY-COST-LTE-BINDING`.
+  - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt15_096 -- --nocapture` → 6 passed, 0 ignored after formula-valued `play_cost_lte` landing.

@@ -282,6 +282,18 @@ fn compile_per_selector(
                     of: compile_player_ref(spec.of),
                 }
             }
+        }
+        S::DistinctColorsCount(spec) => CompiledPerSelector::DistinctColorsCountScoped {
+            zone: compile_zone(spec.zone),
+            of: compile_player_ref(spec.of),
+            filter: spec.filter.as_ref().map(|filter| {
+                Box::new(compile_predicate(
+                    filter,
+                    &format!("{prefix}.filter"),
+                    card_id,
+                    errors,
+                ))
+            }),
         },
     }
 }
@@ -358,6 +370,9 @@ fn compile_formula(
             delta: *delta,
         },
         FormulaSpec::BindingDp { binding_dp } => CompiledFormula::BindingDp(binding_dp.clone()),
+        FormulaSpec::BindingPlayCost { binding_play_cost } => {
+            CompiledFormula::BindingPlayCost(binding_play_cost.clone())
+        }
         FormulaSpec::SourceStackDpSum {
             source_stack_dp_sum,
         } => CompiledFormula::SourceStackDpSum {
@@ -459,7 +474,10 @@ fn compile_predicate(
         name_contains: p.name_contains.clone(),
         name_in: p.name_in.clone(),
         card_number_is: p.card_number_is.clone(),
-        play_cost_lte: p.play_cost_lte,
+        play_cost_lte: p
+            .play_cost_lte
+            .as_ref()
+            .map(|d| compile_dp_constraint(d, &format!("{prefix}.play_cost_lte"), card_id, errors)),
         dp_eq: p
             .dp_eq
             .as_ref()
@@ -541,6 +559,8 @@ fn compile_predicate(
             .as_ref()
             .map(|v| v.iter().map(compile_binding_compare).collect()),
         binding_exists: p.binding_exists.clone(),
+        binding_present: p.binding_present.clone(),
+        binding_absent: p.binding_absent.clone(),
         count_lte: p.count_lte.as_ref().map(|c| CompiledCountAggregate {
             filter: Box::new(compile_predicate(
                 &c.filter,
@@ -1720,9 +1740,7 @@ fn compile_step(
                 .body
                 .iter()
                 .enumerate()
-                .map(|(i, s)| {
-                    compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors)
-                })
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors))
                 .collect(),
         },
         S::GrantEffectImmunity(a) => CompiledStep::GrantEffectImmunity {
@@ -2085,7 +2103,7 @@ fn compile_step(
                 },
                 optional: a.optional,
             }
-        },
+        }
         S::EndAttack(enabled) => CompiledStep::EndAttack { enabled: *enabled },
         S::CancelReplacement(_) => CompiledStep::CancelReplacement,
         S::HandleReplacement(_) => CompiledStep::HandleReplacement,

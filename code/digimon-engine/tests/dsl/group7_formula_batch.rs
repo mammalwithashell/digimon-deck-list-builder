@@ -13,7 +13,7 @@ use digimon_engine::dsl_cards::formula_eval;
 use digimon_engine::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use digimon_engine::dsl_cards::step::run_steps;
 use digimon_engine::effect_context::{EffectContext, EffectReadContext};
-use digimon_engine::enums::{CardKind, Expiry, ModifierType, PlayerId};
+use digimon_engine::enums::{CardColor, CardKind, Expiry, ModifierType, PlayerId};
 use digimon_engine::modifiers::ModifierEntry;
 
 fn compile_yaml(yaml: &str) -> digimon_dsl::compiled::CompiledCard {
@@ -36,6 +36,12 @@ fn tamer_card(id: &str) -> CardData {
     card
 }
 
+fn colored_tamer_card(id: &str, color: CardColor) -> CardData {
+    let mut card = tamer_card(id);
+    card.colors = vec![color];
+    card
+}
+
 fn digimon_card_with_level(id: &str, dp: i32, level: u8) -> CardData {
     let mut card = digimon_card(id, dp);
     card.level = Some(level);
@@ -53,6 +59,41 @@ fn push_card_to_trash(runner: &mut DebugRunner, player: PlayerId, card_id: &str)
     runner.game.players[player as usize]
         .trash
         .push(CardSource::new(data_idx, player, next));
+}
+
+#[test]
+fn distinct_colors_count_formula_counts_filtered_tamer_colors() {
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon_card("SRC", 1000))
+        .add_card(colored_tamer_card("TAI", CardColor::White))
+        .add_card(colored_tamer_card("RED-TAMER", CardColor::Red))
+        .add_card(colored_tamer_card("RED-TAMER-2", CardColor::Red))
+        .add_card(digimon_card("RED-DIGIMON", 3000))
+        .build();
+    let source = runner.place_on_field(0, "SRC", None);
+    runner.place_on_field(0, "TAI", None);
+    runner.place_on_field(0, "RED-TAMER", None);
+    runner.place_on_field(0, "RED-TAMER-2", None);
+    runner.place_on_field(0, "RED-DIGIMON", None);
+
+    let src_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let ctx = EffectContext::new(&mut runner.game, src_card, Some(source), 0);
+    let formula = CompiledFormula::BasePerDelta {
+        base: 2,
+        per: CompiledPerSelector::DistinctColorsCountScoped {
+            zone: CompiledZone::BattleArea,
+            of: CompiledPlayerRef::You,
+            filter: Some(Box::new(CompiledPredicate {
+                kind: Some(CompiledCardKind::Tamer),
+                ..Default::default()
+            })),
+        },
+        delta: 1,
+    };
+
+    assert_eq!(formula_eval::evaluate(&formula, &ctx, source), 4);
 }
 
 #[test]

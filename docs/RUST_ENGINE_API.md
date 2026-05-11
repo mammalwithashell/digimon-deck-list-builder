@@ -2776,6 +2776,41 @@ Use `bind_permanent_property` when text chooses one permanent and later compares
 
 `property: level` reads the selected permanent's current top-card level at process time and stores it as a literal binding. `level_eq_binding` compares a later predicate subject's level to that bound value. This is the canonical shape for "choose 1, affect all with the same level" text such as BT17-078.
 
+### DSL Formula Play-Cost Thresholds
+
+`play_cost_lte` accepts either the legacy literal shape or a formula wrapper:
+
+```yaml
+filter:
+  play_cost_lte: 5
+
+filter:
+  play_cost_lte:
+    formula:
+      binding_play_cost: source_digimon
+```
+
+Formula thresholds are evaluated while the pending selection mask is built, using the same per-effect `Bindings` map that later steps consume. `binding_play_cost` reads the printed play cost of a bound card or bound permanent's top card; if the named binding is absent or not card-like, the evaluator currently returns `0`, so card YAML should bind the source in an earlier required step.
+
+BT21-102 also uses:
+
+```yaml
+formula:
+  base: 2
+  per:
+    distinct_colors_count:
+      of: you
+      zone: [battle_area]
+      filter: { kind: tamer }
+  delta: 1
+```
+
+`distinct_colors_count` walks the requested card/permanent zone, applies the nested predicate filter, and counts unique card colors. Existing literal predicates remain backward-compatible.
+
+### DSL Binding Presence Predicates
+
+Use `binding_present: <name>` or `binding_absent: <name>` in an `if` condition to branch on whether a prior optional selection produced a binding. Aliases `binding_is_present` and `binding_is_none` parse to the same compiled predicates. The check is per effect resolution because the runtime `Bindings` map is threaded through the current DSL effect only.
+
 ---
 
 ## 14. Zone Manipulation (Phase 2)

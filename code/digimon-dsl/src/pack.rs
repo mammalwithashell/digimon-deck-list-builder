@@ -402,13 +402,23 @@ fn collect_formula_raw_rust_fns(formula: &CompiledFormula, names: &mut BTreeSet<
         CompiledFormula::Literal(_)
         | CompiledFormula::Aggregate(_)
         | CompiledFormula::AggregateScoped { .. }
-        | CompiledFormula::BindingDp(_) => {}
+        | CompiledFormula::BindingDp(_)
+        | CompiledFormula::BindingPlayCost(_) => {}
     }
 }
 
 fn collect_per_selector_raw_rust_fns(sel: &CompiledPerSelector, names: &mut BTreeSet<String>) {
-    if let CompiledPerSelector::FilteredCardCountInZoneScoped { filter, .. } = sel {
-        collect_predicate_raw_rust_fns(filter, names);
+    match sel {
+        CompiledPerSelector::FilteredCardCountInZoneScoped { filter, .. } => {
+            collect_predicate_raw_rust_fns(filter, names);
+        }
+        CompiledPerSelector::DistinctColorsCountScoped {
+            filter: Some(filter),
+            ..
+        } => {
+            collect_predicate_raw_rust_fns(filter, names);
+        }
+        _ => {}
     }
 }
 

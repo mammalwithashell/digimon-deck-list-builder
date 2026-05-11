@@ -21,6 +21,9 @@ pub enum FormulaSpec {
     BindingDp {
         binding_dp: String,
     },
+    BindingPlayCost {
+        binding_play_cost: String,
+    },
     SourceStackDpSum {
         source_stack_dp_sum: SourceStackDpSumSpec,
     },
@@ -138,6 +141,7 @@ pub enum PerSelector {
         bucket: Option<u32>,
     },
     CardCountInZone(CardCountInZoneSpec),
+    DistinctColorsCount(CardCountInZoneSpec),
 }
 
 impl Serialize for PerSelector {
@@ -169,6 +173,11 @@ impl Serialize for PerSelector {
             Self::CardCountInZone(spec) => {
                 let mut outer = serializer.serialize_map(Some(1))?;
                 outer.serialize_entry("card_count_in_zone", spec)?;
+                outer.end()
+            }
+            Self::DistinctColorsCount(spec) => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                outer.serialize_entry("distinct_colors_count", spec)?;
                 outer.end()
             }
         }

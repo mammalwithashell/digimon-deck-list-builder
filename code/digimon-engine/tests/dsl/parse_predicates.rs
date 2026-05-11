@@ -83,7 +83,7 @@ count_lte:
 #[test]
 fn parse_group7_predicate_leaves() {
     let p = parse("play_cost_lte: 3");
-    assert_eq!(p.play_cost_lte, Some(3));
+    assert_eq!(p.play_cost_lte, Some(DpConstraint::Literal(3)));
 
     let p = parse("not_in_binding: saved");
     assert_eq!(p.not_in_binding.as_deref(), Some("saved"));

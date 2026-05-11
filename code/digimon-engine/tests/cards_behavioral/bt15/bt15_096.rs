@@ -42,6 +42,7 @@ fn option_card(id: &str) -> CardData {
 fn digimon(id: &str, traits: &[&str], play_cost: u16) -> CardData {
     let mut card = make_test_card(id, id);
     card.card_kind = CardKind::Digimon;
+    card.level = Some(5);
     card.colors = vec![CardColor::Black];
     card.traits = traits.iter().map(|s| (*s).to_string()).collect();
     card.play_cost = play_cost;
@@ -79,6 +80,17 @@ fn runner() -> DebugRunner {
     runner_builder().memory(10).start()
 }
 
+fn place_bt15_096_as_mature_delay(runner: &mut DebugRunner) {
+    let handle = runner.place_on_field(0, "BT15-096", Some(0));
+    runner.game.player_mut(0).battle_area[handle.index as usize].option_state =
+        OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: runner.game.turn_count,
+            trigger: DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn: 0,
+        };
+}
+
 fn zone_ids(cards: &[CardSource], data: &[CardData]) -> Vec<String> {
     cards
         .iter()
@@ -87,7 +99,6 @@ fn zone_ids(cards: &[CardSource], data: &[CardData]) -> Vec<String> {
 }
 
 #[test]
-#[ignore = "pending: G-PLAY-COST-LTE-BINDING — BT15-096 Delay needs hand Digimon play_cost <= selected source Digimon play cost; current DSL only supports literal play_cost_lte"]
 fn bt15_096_yaml_compiles_to_printed_main_delay_and_security_clauses() {
     let runner = runner();
     let card = runner.compiled_card("BT15-096").expect("BT15-096 compiled");
@@ -185,7 +196,6 @@ fn bt15_096_yaml_compiles_to_printed_main_delay_and_security_clauses() {
 }
 
 #[test]
-#[ignore = "pending: G-PLAY-COST-LTE-BINDING — BT15-096 Delay needs hand Digimon play_cost <= selected source Digimon play cost; current DSL only supports literal play_cost_lte"]
 fn bt15_096_main_adds_and_trashes_distinct_machine_or_cyborg_cards_then_tops_rest() {
     let mut runner = runner_builder()
         .hand(0, &["BT15-096"])
@@ -227,7 +237,6 @@ fn bt15_096_main_adds_and_trashes_distinct_machine_or_cyborg_cards_then_tops_res
 }
 
 #[test]
-#[ignore = "pending: G-PLAY-COST-LTE-BINDING — BT15-096 Delay needs hand Digimon play_cost <= selected source Digimon play cost; current DSL only supports literal play_cost_lte"]
 fn bt15_096_main_requires_machine_or_cyborg_and_skips_tamer_trait_matches() {
     let mut runner = runner_builder()
         .hand(0, &["BT15-096"])
@@ -248,7 +257,6 @@ fn bt15_096_main_requires_machine_or_cyborg_and_skips_tamer_trait_matches() {
 }
 
 #[test]
-#[ignore = "pending: G-PLAY-COST-LTE-BINDING — BT15-096 Delay needs hand Digimon play_cost <= selected source Digimon play cost; current DSL only supports literal play_cost_lte"]
 fn bt15_096_delay_filters_source_trait_and_hand_play_cost_cap() {
     let mut runner = runner_builder()
         .hand(0, &["CHEAP-MACHINE", "EXPENSIVE-CYBORG"])
@@ -256,12 +264,11 @@ fn bt15_096_delay_filters_source_trait_and_hand_play_cost_cap() {
         .deck(1, &["FILL"])
         .memory(10)
         .start();
-    runner.place_on_field(0, "BT15-096", Some(0));
+    place_bt15_096_as_mature_delay(&mut runner);
     runner.place_on_field(0, "SOURCE-MACHINE", Some(0));
     runner.place_on_field(0, "SOURCE-PLAIN", Some(0));
 
-    runner.game.enter_main_phase();
-    runner.auto_resolve().expect("activate BT15-096 delay");
+    runner.end_turn();
 
     let source_pick = runner
         .pending_selection_view()
@@ -303,19 +310,17 @@ fn bt15_096_delay_filters_source_trait_and_hand_play_cost_cap() {
 }
 
 #[test]
-#[ignore = "pending: G-PLAY-COST-LTE-BINDING — BT15-096 Delay needs hand Digimon play_cost <= selected source Digimon play cost; current DSL only supports literal play_cost_lte"]
-fn bt15_096_delay_can_be_declined_without_trashing_the_option() {
+fn bt15_096_delay_can_decline_the_play_after_paying_delay_cost() {
     let mut runner = runner_builder()
         .hand(0, &["CHEAP-MACHINE"])
         .deck(0, &["FILL"])
         .deck(1, &["FILL"])
         .memory(10)
         .start();
-    runner.place_on_field(0, "BT15-096", Some(0));
+    place_bt15_096_as_mature_delay(&mut runner);
     runner.place_on_field(0, "SOURCE-CYBORG", Some(0));
 
-    runner.game.enter_main_phase();
-    runner.auto_resolve().expect("activate BT15-096 delay");
+    runner.end_turn();
     assert!(
         runner.pending_is_optional(),
         "Delay play effect is printed as may"
@@ -324,14 +329,21 @@ fn bt15_096_delay_can_be_declined_without_trashing_the_option() {
         .execute_action(0, PASS)
         .expect("decline Delay source selection");
 
-    assert!(runner.game.player(0).battle_area.iter().any(|perm| {
-        perm.top_card().card_id(&runner.game.card_data) == "BT15-096"
-            && matches!(perm.option_state, OptionState::Delayed { .. })
-    }));
+    assert!(
+        !runner.game.player(0).battle_area.iter().any(|perm| {
+            perm.top_card().card_id(&runner.game.card_data) == "BT15-096"
+                && matches!(perm.option_state, OptionState::Delayed { .. })
+        }),
+        "once the scheduled Delay body fires, declining the optional play still leaves the Delay cost paid"
+    );
+    assert!(
+        zone_ids(&runner.game.player(0).trash, &runner.game.card_data)
+            .iter()
+            .any(|id| id == "BT15-096")
+    );
 }
 
 #[test]
-#[ignore = "pending: G-PLAY-COST-LTE-BINDING — BT15-096 Delay needs hand Digimon play_cost <= selected source Digimon play cost; current DSL only supports literal play_cost_lte"]
 fn bt15_096_security_places_self_in_battle_area() {
     let mut runner = runner_builder()
         .security(1, &["BT15-096"])

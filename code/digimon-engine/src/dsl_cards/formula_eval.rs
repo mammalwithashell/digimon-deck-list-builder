@@ -46,6 +46,7 @@
 //!   payload-less aggregate variant scans the controller for compatibility.
 
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::sync::OnceLock;
 
 use digimon_dsl::compiled::{
@@ -142,6 +143,7 @@ pub fn evaluate_with_bindings(
             .and_then(|b| b.get_permanent(name))
             .and_then(|handle| ctx.game.effective_dp(handle))
             .unwrap_or(0),
+        CompiledFormula::BindingPlayCost(name) => binding_play_cost(ctx, name, bindings),
         CompiledFormula::SourceStackDpSum {
             target: target_name,
             filter,
@@ -273,6 +275,7 @@ fn evaluate_read_with_raw_and_bindings(
             .and_then(|b| b.get_permanent(name))
             .and_then(|handle| ctx.game.effective_dp(handle))
             .unwrap_or(0),
+        CompiledFormula::BindingPlayCost(name) => binding_play_cost_read(ctx, name, bindings),
         CompiledFormula::SourceStackDpSum {
             target: target_name,
             filter,
@@ -355,6 +358,16 @@ fn evaluate_per(
                 .map(|player| count_zone(*zone, player, ctx, Some(filter), bindings))
                 .sum()
         }
+        CompiledPerSelector::DistinctColorsCountScoped { zone, of, filter } => {
+            let read = ctx.as_read();
+            players_for_ref(*of, ctx)
+                .into_iter()
+                .flat_map(|player| {
+                    distinct_colors_in_zone(*zone, player, &read, filter.as_deref(), bindings)
+                })
+                .collect::<HashSet<_>>()
+                .len() as i32
+        }
     }
 }
 
@@ -406,6 +419,15 @@ fn evaluate_per_read(
                 .into_iter()
                 .map(|player| count_zone_read(*zone, player, ctx, Some(filter), bindings))
                 .sum()
+        }
+        CompiledPerSelector::DistinctColorsCountScoped { zone, of, filter } => {
+            players_for_ref_read(*of, ctx)
+                .into_iter()
+                .flat_map(|player| {
+                    distinct_colors_in_zone(*zone, player, ctx, filter.as_deref(), bindings)
+                })
+                .collect::<HashSet<_>>()
+                .len() as i32
         }
     }
 }
@@ -475,6 +497,90 @@ fn source_stack_dp_sum(
         })
         .filter_map(|source| source.dp(ctx.card_data()))
         .sum()
+}
+
+fn binding_play_cost(ctx: &EffectContext<'_>, name: &str, bindings: Option<&Bindings>) -> i32 {
+    let Some(bindings) = bindings else {
+        return 0;
+    };
+    if let Some(card) = bindings.get_card(name) {
+        return ctx
+            .game
+            .card_data_for_handle(card)
+            .map(|data| i32::from(data.play_cost))
+            .unwrap_or(0);
+    }
+    if let Some(handle) = bindings.get_permanent(name) {
+        return target_permanent(ctx, handle)
+            .and_then(|perm| ctx.game.card_data_for_handle(perm.top_card().handle()))
+            .map(|data| i32::from(data.play_cost))
+            .unwrap_or(0);
+    }
+    if let Some((player, index)) = bindings.get_hand_index_with_player(name) {
+        return ctx
+            .game
+            .player(player)
+            .hand
+            .get(index as usize)
+            .and_then(|card| ctx.game.card_data_for_handle(card.handle()))
+            .map(|data| i32::from(data.play_cost))
+            .unwrap_or(0);
+    }
+    if let Some((player, index)) = bindings.get_trash_index_with_player(name) {
+        return ctx
+            .game
+            .player(player)
+            .trash
+            .get(index as usize)
+            .and_then(|card| ctx.game.card_data_for_handle(card.handle()))
+            .map(|data| i32::from(data.play_cost))
+            .unwrap_or(0);
+    }
+    0
+}
+
+fn binding_play_cost_read(
+    ctx: &EffectReadContext<'_>,
+    name: &str,
+    bindings: Option<&Bindings>,
+) -> i32 {
+    let Some(bindings) = bindings else {
+        return 0;
+    };
+    if let Some(card) = bindings.get_card(name) {
+        return ctx
+            .game
+            .card_data_for_handle(card)
+            .map(|data| i32::from(data.play_cost))
+            .unwrap_or(0);
+    }
+    if let Some(handle) = bindings.get_permanent(name) {
+        return target_permanent_read(ctx, handle)
+            .and_then(|perm| ctx.game.card_data_for_handle(perm.top_card().handle()))
+            .map(|data| i32::from(data.play_cost))
+            .unwrap_or(0);
+    }
+    if let Some((player, index)) = bindings.get_hand_index_with_player(name) {
+        return ctx
+            .game
+            .player(player)
+            .hand
+            .get(index as usize)
+            .and_then(|card| ctx.game.card_data_for_handle(card.handle()))
+            .map(|data| i32::from(data.play_cost))
+            .unwrap_or(0);
+    }
+    if let Some((player, index)) = bindings.get_trash_index_with_player(name) {
+        return ctx
+            .game
+            .player(player)
+            .trash
+            .get(index as usize)
+            .and_then(|card| ctx.game.card_data_for_handle(card.handle()))
+            .map(|data| i32::from(data.play_cost))
+            .unwrap_or(0);
+    }
+    0
 }
 
 fn resolve_formula_target(
@@ -615,6 +721,123 @@ fn count_zone_read(
         }
     };
     count as i32
+}
+
+fn distinct_colors_in_zone(
+    zone: CompiledZone,
+    player: PlayerId,
+    ctx: &EffectReadContext<'_>,
+    filter: Option<&CompiledPredicate>,
+    bindings: Option<&Bindings>,
+) -> Vec<CardColor> {
+    let player_state = ctx.game.player(player);
+    match zone {
+        CompiledZone::BattleArea => player_state
+            .battle_area
+            .iter()
+            .enumerate()
+            .filter_map(|(index, perm)| {
+                let handle = PermanentHandle {
+                    player,
+                    index: index as u8,
+                };
+                if filter.is_some_and(|filter| {
+                    !eval_predicate_with_bindings(
+                        filter,
+                        ctx,
+                        PredicateSubject::Permanent(handle),
+                        bindings,
+                    )
+                }) {
+                    return None;
+                }
+                Some(perm.top_card().colors(ctx.card_data()).to_vec())
+            })
+            .flatten()
+            .collect(),
+        CompiledZone::Breeding => player_state
+            .breeding_area
+            .as_ref()
+            .filter(|_| {
+                filter.is_none_or(|filter| {
+                    eval_predicate_with_bindings(
+                        filter,
+                        ctx,
+                        PredicateSubject::BreedingPermanent(player),
+                        bindings,
+                    )
+                })
+            })
+            .map(|perm| perm.top_card().colors(ctx.card_data()).to_vec())
+            .unwrap_or_default(),
+        CompiledZone::Hand => distinct_colors_from_cards(&player_state.hand, filter, ctx, bindings),
+        CompiledZone::Deck => distinct_colors_from_cards(&player_state.deck, filter, ctx, bindings),
+        CompiledZone::Trash => {
+            distinct_colors_from_cards(&player_state.trash, filter, ctx, bindings)
+        }
+        CompiledZone::Security => {
+            distinct_colors_from_cards(&player_state.security, filter, ctx, bindings)
+        }
+        CompiledZone::DigiEggDeck => {
+            distinct_colors_from_cards(&player_state.digitama_deck, filter, ctx, bindings)
+        }
+        CompiledZone::Reveal => ctx
+            .game
+            .revealed_cards
+            .iter()
+            .filter(|card| card.owner == player)
+            .filter(|card| {
+                filter.is_none_or(|filter| {
+                    eval_predicate_with_bindings(
+                        filter,
+                        ctx,
+                        PredicateSubject::RevealedCard(card.handle()),
+                        bindings,
+                    )
+                })
+            })
+            .flat_map(|card| card.colors(ctx.card_data()).to_vec())
+            .collect(),
+        CompiledZone::Material => player_state
+            .battle_area
+            .iter()
+            .chain(player_state.breeding_area.iter())
+            .flat_map(|perm| perm.card_sources.iter().rev().skip(1))
+            .filter(|source| {
+                filter.is_none_or(|filter| {
+                    eval_predicate_with_bindings(
+                        filter,
+                        ctx,
+                        PredicateSubject::Card(source.handle()),
+                        bindings,
+                    )
+                })
+            })
+            .flat_map(|source| source.colors(ctx.card_data()).to_vec())
+            .collect(),
+    }
+}
+
+fn distinct_colors_from_cards(
+    cards: &[crate::card_source::CardSource],
+    filter: Option<&CompiledPredicate>,
+    ctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> Vec<CardColor> {
+    cards
+        .iter()
+        .filter(|source| {
+            filter.is_none_or(|filter| {
+                eval_predicate_with_bindings(
+                    filter,
+                    ctx,
+                    PredicateSubject::Card(source.handle()),
+                    bindings,
+                )
+            })
+        })
+        .flat_map(|source| source.colors(ctx.card_data()).to_vec())
+        .collect()
 }
 
 fn count_zone_filtered_read(

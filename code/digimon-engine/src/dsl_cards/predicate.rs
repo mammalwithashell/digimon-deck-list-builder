@@ -87,6 +87,16 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(name) = &pred.binding_present {
+        if bindings.and_then(|b| b.get_ref(name)).is_none() {
+            return false;
+        }
+    }
+    if let Some(name) = &pred.binding_absent {
+        if bindings.and_then(|b| b.get_ref(name)).is_some() {
+            return false;
+        }
+    }
     if let Some(player_ref) = pred.can_hatch {
         let can_any = resolve_predicate_players(player_ref, rctx)
             .into_iter()
@@ -230,8 +240,10 @@ pub fn eval_predicate_with_bindings(
     }
 
     match subject {
-        PredicateSubject::Card(card) => eval_card_fields(pred, rctx, card, false, bindings),
-        PredicateSubject::RevealedCard(card) => eval_card_fields(pred, rctx, card, true, bindings),
+        PredicateSubject::Card(card) => eval_card_fields(pred, rctx, card, false, None, bindings),
+        PredicateSubject::RevealedCard(card) => {
+            eval_card_fields(pred, rctx, card, true, None, bindings)
+        }
         PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h, bindings),
         PredicateSubject::BreedingPermanent(player) => {
             eval_breeding_permanent_fields(pred, rctx, player, bindings)
@@ -1031,6 +1043,7 @@ fn eval_card_fields(
     rctx: &EffectReadContext<'_>,
     card: CardHandle,
     reveal_overlay_visible: bool,
+    formula_target: Option<PermanentHandle>,
     bindings: Option<&Bindings>,
 ) -> bool {
     let data = match rctx.game.card_data_for_handle(card) {
@@ -1146,8 +1159,8 @@ fn eval_card_fields(
             return false;
         }
     }
-    if let Some(cap) = pred.play_cost_lte {
-        if i32::from(data.play_cost) > cap {
+    if let Some(cap) = &pred.play_cost_lte {
+        if i32::from(data.play_cost) > eval_int_constraint(cap, rctx, formula_target, bindings) {
             return false;
         }
     }
@@ -1280,16 +1293,13 @@ fn eval_permanent_fields(
             .iter()
             .any(|c| color_matches(want, *c))
     });
-    let color_only_overlay_match = pred
-        .color_only
-        .as_ref()
-        .is_some_and(|allowed| {
-            !synth_identity.colors.is_empty()
-                && synth_identity
-                    .colors
-                    .iter()
-                    .all(|c| allowed.iter().any(|a| color_matches(*a, *c)))
-        });
+    let color_only_overlay_match = pred.color_only.as_ref().is_some_and(|allowed| {
+        !synth_identity.colors.is_empty()
+            && synth_identity
+                .colors
+                .iter()
+                .all(|c| allowed.iter().any(|a| color_matches(*a, *c)))
+    });
     let delegated_pred_storage;
     let delegated_pred = if trait_overlay_match
         || name_is_overlay_match
@@ -1322,7 +1332,14 @@ fn eval_permanent_fields(
     } else {
         pred
     };
-    if !eval_card_fields(delegated_pred, rctx, top_handle, false, bindings) {
+    if !eval_card_fields(
+        delegated_pred,
+        rctx,
+        top_handle,
+        false,
+        Some(handle),
+        bindings,
+    ) {
         return false;
     }
     if let Some(want) = pred.kind {
@@ -1472,6 +1489,26 @@ fn eval_dp_constraint(
     }
 }
 
+fn eval_int_constraint(
+    constraint: &CompiledDpConstraint,
+    rctx: &EffectReadContext<'_>,
+    formula_target: Option<PermanentHandle>,
+    bindings: Option<&Bindings>,
+) -> i32 {
+    match constraint {
+        CompiledDpConstraint::Literal(n) => *n,
+        CompiledDpConstraint::Formula(f) => {
+            let target = formula_target
+                .or(rctx.source_permanent)
+                .unwrap_or(PermanentHandle {
+                    player: rctx.player,
+                    index: 0,
+                });
+            formula_eval::evaluate_read_with_bindings(f, rctx, target, bindings)
+        }
+    }
+}
+
 fn eval_breeding_permanent_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
@@ -1485,7 +1522,17 @@ fn eval_breeding_permanent_fields(
 
     let mut card_pred = pred.clone();
     card_pred.kind = None;
-    if !eval_card_fields(&card_pred, rctx, top_handle, false, bindings) {
+    if !eval_card_fields(
+        &card_pred,
+        rctx,
+        top_handle,
+        false,
+        Some(PermanentHandle {
+            player,
+            index: crate::action::space::BREEDING_TARGET as u8,
+        }),
+        bindings,
+    ) {
         return false;
     }
 

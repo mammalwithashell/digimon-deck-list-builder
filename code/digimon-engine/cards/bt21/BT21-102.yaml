@@ -68,7 +68,7 @@ traits: [ADVENTURE, Hero]
 # the `is_unsuspended: true` condition gate blocks activation entirely. This
 # matches DCGO's CanActivateSuspendCostEffect check.
 #
-# ─── Clause (c): [Main][OPT] play ADVENTURE/Hero — BLOCKED ────────────────────
+# ─── Clause (c): [Main][OPT] play ADVENTURE/Hero ─────────────────────────────
 #
 # DCGO BT21_102.cs Main body:
 #   - SelectHandEffect: canTargetCondition CanSelectCard(source) =
@@ -81,67 +81,8 @@ traits: [ADVENTURE, Hero]
 #   - PlayPermanentCards(payCost: false) on the chosen card.
 #   - DeckBottomBounceClass([Tai's permanent]) — return self to deck bottom.
 #
-# Two reusable DSL gaps prevent a faithful implementation:
-#
-#   G-PLAY-COST-LTE-FORMULA [new — dsl]
-#     `play_cost_lte` on PredicateSpec is `Option<i32>` literal only
-#     (digimon-dsl/src/predicate.rs line 59). It does not accept a formula.
-#     Even if a `distinct_tamer_colors` formula existed, we could not pass
-#     it through `select_hand` filtering as a play-cost ceiling.
-#     Same gap surface as G-PLAY-COST-LTE in qa/dsl-vocab-gaps.md but for the
-#     formula-valued variant rather than a literal.
-#
-#   G-DSL-DISTINCT-TAMER-COLORS-FORMULA [known — dsl]
-#     Already documented for AD1-014. No formula primitive counts distinct
-#     colors across own Tamers in battle area. Would lower to a future
-#     CompiledFormula::DistinctColorsCount { of, zone, filter } that maps to
-#     an engine helper paralleling DCGO's
-#     Combinations.GetDifferenetColorCardCount.
-#
-# Implementing with a hardcoded `play_cost_lte: 2` would silently drop the
-# "+1 per distinct Tamer color" bonus — a mute approximation that violates
-# the no-approximations policy (the player would never see legal targets
-# enabled by additional Tamer colors, and the RL agent could not learn the
-# Tamer-color synergy). Implementing without the cost filter would be
-# over-permissive and let the player play arbitrarily expensive cards free.
-#
-# Both directions break the contract; the clause is OMITTED from this YAML
-# pending one of the two gaps closing. The companion behavioral test
-# `bt21_102_main_opt_play_adventure_hero_with_dynamic_cap` is `#[ignore]`'d
-# with the gap names cited in the ignore reason.
-#
-# Suggested YAML when the gaps close:
-#
-#   - when: main_from_field
-#     once_per_turn: true
-#     optional: true
-#     summary: "[Main][OPT] Play ADVENTURE/Hero card cost ≤ 2+colors free; return self to deck bottom"
-#     process:
-#       - select_hand:
-#           of: you
-#           bind_as: pick
-#           optional: true
-#           filter:
-#             all_of:
-#               - any_of:
-#                   - trait_has: ADVENTURE
-#                   - trait_has: Hero
-#               - play_cost_lte:
-#                   formula:
-#                     base: 2
-#                     per:
-#                       distinct_colors_count:
-#                         of: you
-#                         zone: [battle_area]
-#                         filter: { kind: tamer }
-#                     delta: 0
-#           prompt: "Play 1 ADVENTURE/Hero card free (cost ≤ 2 + your Tamers' colors)"
-#       - play_from_hand_free: { of: you, hand_index: pick }
-#       - return_to_deck: { target: source, position: bottom }
-#
-# (Note: `main_from_field` is the natural Tamer-active timing analogue of
-# DCGO `OnDeclaration` for tamers; see also EX11-054 / BT24-082 for tamer
-# main-phase clauses.)
+# Implemented through formula-valued `play_cost_lte` and the
+# `distinct_colors_count` formula primitive.
 #
 # ─── Clause (d): [Security] play self free ───────────────────────────────────
 #
@@ -191,8 +132,33 @@ effects:
       # Effect: draw 1 card.
       - draw: { of: you, count: 1 }
 
-  # ─── Clause (c): [Main][OPT] BLOCKED — see header for gap analysis ──────────
-  # Omitted entirely pending G-PLAY-COST-LTE-FORMULA + G-DSL-DISTINCT-TAMER-COLORS-FORMULA.
+  # ─── Clause (c): [Main][OPT] play ADVENTURE/Hero free, dynamic cap ─────────
+  - when: main_on_field
+    once_per_turn: true
+    optional: true
+    summary: "[Main][OPT] Play ADVENTURE/Hero cost <= 2 + Tamer colors free; return Tai to deck bottom"
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - trait_has: ADVENTURE
+                  - trait_has: Hero
+              - play_cost_lte:
+                  formula:
+                    base: 2
+                    per:
+                      distinct_colors_count:
+                        of: you
+                        zone: battle_area
+                        filter: { kind: tamer }
+                    delta: 1
+          prompt: "Play 1 ADVENTURE/Hero card free"
+      - play_from_hand_free: { of: you, hand_index: pick }
+      - return_to_deck: { target: source, position: bottom }
 
   # ─── Clause (d): [Security] Play this card without paying the cost ──────────
   - when: on_security

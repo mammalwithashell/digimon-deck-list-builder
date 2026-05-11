@@ -1,0 +1,81 @@
+card: BT15-096
+name: "Supreme Connection!"
+kind: option
+color: [black]
+cost: 3
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Reveal top 3; add and trash Machine/Cyborg Digimon; return rest top; place self as Delay"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 3
+          bind_as: revealed
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: add_pick
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_has: Machine
+                      - trait_has: Cyborg
+              min: 1
+              max: 1
+            - bind_as: trash_pick
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - trait_has: Machine
+                      - trait_has: Cyborg
+              min: 1
+              max: 1
+          no_duplicate_cards: true
+          prompt: "Add and trash Machine/Cyborg Digimon"
+      - add_to_hand_from_reveal: { of: you, card: add_pick }
+      - trash_from_reveal: { of: you, card: trash_pick }
+      - place_remainder_on_deck: { of: you, position: top }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: end_of_your_next_turn
+    summary: "[Main]<Delay> Choose Machine/Cyborg Digimon; play Lv5+ Machine/Cyborg hand Digimon cost <= its play cost, cost -3"
+    process:
+      - select_own_permanent:
+          bind_as: source_digimon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Machine
+                  - trait_has: Cyborg
+          prompt: "Choose 1 Machine/Cyborg Digimon"
+      - select_hand:
+          of: you
+          bind_as: play_pick
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 5
+              - any_of:
+                  - trait_has: Machine
+                  - trait_has: Cyborg
+              - play_cost_lte:
+                  formula:
+                    binding_play_cost: source_digimon
+          prompt: "Play 1 Lv5+ Machine/Cyborg Digimon"
+      - play_from_hand:
+          of: you
+          hand_index: play_pick
+          cost_delta: { reduce: 3 }
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

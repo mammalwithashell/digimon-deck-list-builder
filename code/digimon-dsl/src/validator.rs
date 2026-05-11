@@ -376,6 +376,7 @@ fn validate_predicate(
     errors: &mut Vec<ValidationError>,
 ) {
     for (field, dp) in [
+        ("play_cost_lte", &pred.play_cost_lte),
         ("dp_eq", &pred.dp_eq),
         ("dp_lte", &pred.dp_lte),
         ("dp_gte", &pred.dp_gte),
@@ -935,6 +936,7 @@ fn validate_formula(
         }
         FormulaSpec::Literal(_)
         | FormulaSpec::BindingDp { .. }
+        | FormulaSpec::BindingPlayCost { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
         | FormulaSpec::Compound(CompoundFormula::AggregateScoped(_)) => {}
     }
@@ -947,7 +949,9 @@ fn validate_per_selector(
     ctx: &ValidationContext<'_>,
     errors: &mut Vec<ValidationError>,
 ) {
-    if let crate::formula::PerSelector::CardCountInZone(spec) = per {
+    if let crate::formula::PerSelector::CardCountInZone(spec)
+    | crate::formula::PerSelector::DistinctColorsCount(spec) = per
+    {
         if let Some(filter) = &spec.filter {
             validate_predicate(filter, &format!("{prefix}.filter"), card_id, ctx, errors);
         }
@@ -976,6 +980,7 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
         FormulaSpec::SourceStackDpSum { .. } => false,
         FormulaSpec::Literal(_)
         | FormulaSpec::BindingDp { .. }
+        | FormulaSpec::BindingPlayCost { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
         | FormulaSpec::Compound(CompoundFormula::RawRust(_)) => false,
     }
@@ -983,7 +988,8 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
 
 fn per_uses_dp_aggregate(per: &crate::formula::PerSelector) -> bool {
     match per {
-        crate::formula::PerSelector::CardCountInZone(spec) => spec
+        crate::formula::PerSelector::CardCountInZone(spec)
+        | crate::formula::PerSelector::DistinctColorsCount(spec) => spec
             .filter
             .as_deref()
             .is_some_and(predicate_uses_dp_aggregate),
