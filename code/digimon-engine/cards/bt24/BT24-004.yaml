@@ -1,0 +1,26 @@
+# BT24-004 Wanyamon — Digi-Egg, Lv.2, Green.
+#
+# Printed text (BT24-004.json):
+#   Inherited Effect [Your Turn] [Once Per Turn] When any of your [Iliad]
+#   trait Digimon are played, <Draw 1> (Draw 1 card from your deck.).
+
+card: BT24-004
+name: Wanyamon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+traits: [Lesser, Iliad, TS]
+
+effects:
+  - scope: inherited
+    when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] When your Iliad trait Digimon is played, Draw 1"
+    condition:
+      all_of:
+        - event_target_kind: digimon
+        - event_card_trait_has: Iliad
+    process:
+      - draw: { of: you, count: 1 }

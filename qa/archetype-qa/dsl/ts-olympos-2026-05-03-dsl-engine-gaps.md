@@ -22,7 +22,7 @@ Date: 2026-05-03
 
 Assessment workflow: `.codex/skills/assess-rust-engine-archetype/`
 
-Target: `data/deck_library.json` archetype `TS Olympos`, using the current 64-list local archetype pool and prioritizing high-frequency TS / Iliad / Olympos XII cards. This document is a spec-input artifact for compiling remaining cross-archetype Rust DSL and engine gaps. It is not the legacy Python-lane faithfulness report in `qa/archetype-qa/ts_olympos.md`.
+Target: `data/deck_library.json` archetype `TS Olympos`, using the current 66-list local archetype pool and prioritizing high-frequency TS / Iliad / Olympos XII cards. This document is a spec-input artifact for compiling remaining cross-archetype Rust DSL and engine gaps. It is not the legacy Python-lane faithfulness report in `qa/archetype-qa/ts_olympos.md`.
 
 ## Verdict
 
@@ -35,20 +35,23 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
 ## Coverage Snapshot
 
 - Archetype source: `data/deck_library.json` entry `TS Olympos`.
-- Local decklists: 64.
+- Local decklists: 66.
 - Core cards by presence:
-  - `BT24-102` Homeros: 64/64 lists.
-  - `BT24-034` Aegiomon: 55/64 lists.
-  - `BT24-100` In-Between Theater: 54/64 lists.
-  - `BT24-031` Elecmon: 50/64 lists.
-  - `BT24-041` Minervamon: 50/64 lists.
-  - `BT24-040` Venusmon: 55/64 lists.
-  - `BT24-085` Dan Yuki & Kanan Yuki: 48/64 lists.
-  - `BT24-030` Neptunemon: 47/64 lists.
-  - `BT24-043` Tapirmon: 41/64 lists.
-  - `BT24-090` Abyss Sanctuary: Throne Room: 38/64 lists.
-- Rust YAML currently found under `code/digimon-engine/cards/bt24/`: `BT24-001`, `BT24-008`, `BT24-011`, `BT24-012`, `BT24-016`, `BT24-017`, `BT24-018`, `BT24-031`, `BT24-040`, `BT24-082`, `BT24-089`, `BT24-101`.
-- TS Olympos core cards currently missing production Rust YAML include `BT24-034`, `BT24-100`, `BT24-102`, `BT24-041`, `BT24-043`, `BT24-085`, `BT24-030`, `BT24-014`, `BT24-004`, `BT24-083`, `BT24-088`, `BT24-020`, `BT24-090`, `BT24-046`, and the common promo support cards. `BT24-037` now has production YAML and focused Track D coverage for its shared On Play/When Digivolving -5000 DP plus may-attack branch and its DNA-origin Security A.+1/+5000 DP rider.
+  - `BT24-102` Homeros: 66/66 lists.
+  - `BT24-034` Aegiomon: 57/66 lists.
+  - `BT24-040` Venusmon: 57/66 lists.
+  - `BT24-100` In-Between Theater: 54/66 lists.
+  - `BT24-031` Elecmon: 52/66 lists.
+  - `BT24-041` Minervamon: 52/66 lists.
+  - `BT24-030` Neptunemon: 48/66 lists.
+  - `BT24-085` Dan Yuki & Kanan Yuki: 48/66 lists.
+  - `BT24-088` Blue Card: 44/66 lists.
+  - `BT24-043` Tapirmon: 43/66 lists.
+  - `BT24-083` Tamer support: 39/66 lists.
+  - `BT24-090` Abyss Sanctuary: Throne Room: 38/66 lists.
+- Rust YAML currently found under `code/digimon-engine/cards/bt24/`: `BT24-001`, `BT24-004`, `BT24-008`, `BT24-011`, `BT24-012`, `BT24-016`, `BT24-017`, `BT24-018`, `BT24-020`, `BT24-031`, `BT24-037`, `BT24-040`, `BT24-043`, `BT24-046`, `BT24-047`, `BT24-062`, `BT24-082`, `BT24-089`, `BT24-101`, `BT24-102`.
+- 2026-05-10 batch update: `BT24-004`, `BT24-020`, `BT24-043`, `BT24-046`, `P-194`, `P-196`, `P-197`, and `P-198` now have production YAML plus focused behavioral tests. The promo start-main hand digivolve clauses also use the reusable `can_digivolve_from_source` predicate so trait-matching but illegal hand cards are not exposed in the action mask. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_004 bt24_020 bt24_043 bt24_046 p_194 p_196 p_197 p_198 --nocapture` (56 passed).
+- TS Olympos core cards currently missing production Rust YAML or still blocked by reusable primitives include `BT24-034`, `BT24-041`, `BT24-085`, `BT24-030`, `BT24-014`, `BT24-083`, `BT24-088`, `BT24-090`, `BT24-051`, `BT24-035`, `BT24-084`, `P-213`, and `BT10-042`. `BT24-037` has production YAML and focused Track D coverage for its shared On Play/When Digivolving -5000 DP plus may-attack branch and its DNA-origin Security A.+1/+5000 DP rider. `BT24-100` now has production YAML and focused coverage after the 2026-05-10 primitive refresh.
 
 ## Reusable Gaps For Cross-Archetype Spec
 
@@ -91,7 +94,7 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
 
 - **Type:** DSL selection / pending-selection gap
 - **Status:** Reusable primitive resolved on 2026-05-03. `select_reveal_buckets` now parses, compiles, validates, lowers to `EffectContext::select_reveal_buckets`, binds bucket results, and prevents duplicate reveal-card picks across buckets when `no_duplicate_cards: true`.
-- **Blocks TS Olympos cards:** `BT24-043`, `BT24-020`, `BT24-100`, `BT24-083`, and sibling TS searchers. `BT24-031` is no longer blocked by this item after the 2026-05-03 production YAML/tests.
+- **Blocks TS Olympos cards:** `BT24-083` and sibling TS searchers. `BT24-031`, `BT24-020`, `BT24-043`, and `BT24-100` are no longer blocked by this item after production YAML/tests.
 - **Cross-archetype reuse:** searchers that say "add 1 A and 1 B", especially where a revealed card can satisfy more than one bucket and must not be selected twice.
 - **Printed shape:** reveal N cards, add one card matching bucket A and one card matching bucket B, then bottom the rest.
 - **Current evidence:** Focused coverage exercises compile lowering, runtime bucket binding into `add_to_hand_from_reveal`, and action-mask duplicate prevention across buckets.
@@ -119,6 +122,7 @@ The remaining most important blockers are reusable: cross-card effect re-firing,
 - **First test:** `BT24-031` reveals one Iliad-only card, one TS-only card, and one Iliad+TS card. Assert the player can choose legal non-duplicate bucket assignments and cannot add the same revealed card twice.
 - **Passing focused tests:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection -- reveal_buckets --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- reveal_buckets --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2e_select_reveal phase2e_select_ordered_permutation phase2b_zone_moves_extra --nocapture`.
 - **Spec note:** The generic reveal-zone selection capability is implemented; keep future follow-up notes card-specific rather than reopening this reusable gap.
+- **Updated 2026-05-10:** `BT24-020` and `BT24-043` migrated to production YAML with focused coverage for two-bucket reveal selection, no-duplicate-card enforcement, bottom remainder handling, printed alternate digivolution paths, and inherited effects. The reusable multi-bucket search primitive should remain closed.
 
 ### G-TS-CROSS-CARD-EFFECT-REFIRING
 
@@ -306,19 +310,22 @@ These items should not become cross-archetype gaps unless a failing Rust test pr
 
 Task 10 production-authoring audit update (2026-05-03): `BT24-031`, `BT24-040`, and `BT24-101` now have production YAML and focused behavioral tests. This closes their listed card-specific blockers: `BT24-031` On Play multi-bucket reveal plus inherited top-security-to-hand/Recovery; `BT24-040` trash-all-sources, two-target suspension/WhenDigivolving lock, cost reduction, Lv5 TS alt path, placement-cost protection, no-cost-body replacement preflight, and CannotAddSecurityByEffect security-placement cost preflight/resolution; `BT24-101` standard Lv5 yellow cost-5 digivolve route, Lv5 TS cost-3 alt path, dynamic Lv5 Aegiochusmon-name alt path, top-security trash/Recovery, OnLoseSecurity observer, and trash-security protection. TS Olympos remains `blocked` because many other core cards below still lack faithful YAML or remain blocked by reusable primitives.
 
+Batch production-authoring update (2026-05-10): `BT24-004`, `BT24-020`, `BT24-043`, `BT24-046`, `P-194`, `P-196`, `P-197`, and `P-198` now have production YAML and focused behavioral tests. This closes the listed card-specific blockers for the rookie reveal searchers, Wanyamon inherited Iliad-play draw, Garurumon suspend/Jamming/alt paths, Aegiomon Blocker/Barrier, and the promo TS start-main free digivolve rookies. The promo rookie work added `can_digivolve_from_source` to the shared predicate vocabulary to keep the hand-selection mask aligned with normal digivolution legality. Primitive refresh follow-up also implemented `BT24-100` using `use_requirement`, `IgnoreColorRequirement`, `place_self_as_delay_option`, and standard `kind: delay` support. TS Olympos remains `blocked` because high-frequency cards such as `BT24-034`, `BT24-041`, `BT24-030`, `BT24-085`, `BT24-083`, `BT24-088`, and `BT24-090` still need faithful YAML or reusable primitive closure.
+
 | Card(s) | Status | Next Rust test |
 |---|---|---|
 | `BT24-034` Aegiomon | blocked by top-security-to-hand + duplicate-name Tamer filter | Optional cost branch, non-duplicate TS Tamer selection, free play, OnMove/OnPlay/WhenDigivolving all share body |
 | `BT24-102` Homeros | YAML fixture landed; Track K refire primitive closed for this shape | Start-main memory/draw, TS DP aura, EOT reactivation with Homeros suspend cost |
-| `BT24-100` In-Between Theater | authoring / test gap after generic Delay support | Ignore color with TS field presence, reveal-add TS, place as Delay, Delay gain 2, Security places in battle area |
+| `BT24-100` In-Between Theater | implemented 2026-05-10; production YAML and 4 focused behavioral tests pass | Keep in validated-cards report as implemented; color bypass, reveal-add TS, delayed-option placement, Delay gain 2, and Security placement are covered. |
 | `BT24-031` Elecmon | implemented 2026-05-03; production YAML and 5 focused behavioral tests pass | Keep in validated-cards report as implemented; no remaining BT24-031-specific blocker from this audit. |
-| `BT24-043`, `BT24-020` | reusable multi-bucket reveal search primitive closed; production authoring still needed for their printed inherited variants | Reveal 3 with bucketed choices, no duplicate reveal card, correct bottom remainder, then any printed inherited security movement / Recovery. |
+| `BT24-043`, `BT24-020` | implemented 2026-05-10; production YAML and focused behavioral tests pass | Keep in validated-cards report as implemented; reveal bucket choices, duplicate prevention, bottom remainder, alt paths, and inherited effects are covered. |
 | `BT24-040` Venusmon | implemented 2026-05-03; production YAML and 10 focused behavioral tests pass | Keep in validated-cards report as implemented; no-cost-body and CannotAddSecurityByEffect replacement preflight are covered; no remaining BT24-040-specific blocker from this audit. |
 | `BT24-041` Minervamon | blocked by dynamic De-Digivolve count + play-cost reduction + aura keywords | Free-play Iliad cost <=5, De-Digivolve count equals own Digimon count, Reboot/Blocker aura on opponent turn |
 | `BT24-030` Neptunemon | blocked by source-count aggregate + cross-permanent protection | Bottom-deck all fewest-source opponent Digimon, unsuspend self once, opponent-effect protection by suspending self |
 | `BT24-101` Jupitermon | implemented 2026-05-03; production YAML and 12 focused behavioral tests pass | Keep in validated-cards report as implemented; standard Lv5 yellow cost-5, Lv5 TS cost-3, and dynamic Aegiochusmon route precedence are covered; no remaining BT24-101-specific blocker from this audit. |
 | `BT24-085` Dan Yuki & Kanan Yuki | blocked by Option use from hand and may-attack | End-turn suspend cost, dynamic Option use ceiling, then TS may-attack |
 | `BT24-037` Silphymon | implemented Track D slice 2026-05-08; shared On Play/WD -5000 DP + may-attack branch and DNA-origin Security A.+1/+5000 DP rider covered | Track D proof: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_037`. |
+| `BT24-004`, `BT24-046`, `P-194`, `P-196`, `P-197`, `P-198` | implemented 2026-05-10; production YAML and focused behavioral tests pass | Keep in validated-cards report as implemented; evidence command covers all eight 2026-05-10 batch cards. |
 | `BT24-083`, `BT24-088` | authoring / test gap with existing play-from-hand/trash helpers | Return Tamer to deck as cost, free-play matching card, On Play search/trash-draw |
 | `BT24-090` Abyss Sanctuary | blocked by top/bottom security movement and option self-disposition tests | Main bottom-security-to-hand, self face-up bottom security, reduced-cost play, Security hand/trash free play |
 

@@ -460,6 +460,7 @@ fn compile_predicate(
         name_in: p.name_in.clone(),
         card_number_is: p.card_number_is.clone(),
         play_cost_lte: p.play_cost_lte,
+        can_digivolve_from_source: p.can_digivolve_from_source,
         dp_eq: p
             .dp_eq
             .as_ref()

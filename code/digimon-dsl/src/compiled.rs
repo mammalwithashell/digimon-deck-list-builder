@@ -185,6 +185,7 @@ pub struct CompiledPredicate {
     pub name_in: Option<Vec<String>>,
     pub card_number_is: Option<String>,
     pub play_cost_lte: Option<i32>,
+    pub can_digivolve_from_source: Option<bool>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
     pub dp_gte: Option<CompiledDpConstraint>,

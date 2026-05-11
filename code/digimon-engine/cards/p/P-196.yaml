@@ -1,0 +1,57 @@
+card: P-196
+name: Gomamon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+traits: [Sea Beast, TS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - color_is: blue
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: TS
+    cost: 0
+
+effects:
+  - when: start_of_your_main_phase
+    condition: { memory_lte: 4 }
+    summary: "[Start of Your Main Phase] At memory <=4, this Digimon may free-digivolve into Sea Beast or TS in hand"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - can_digivolve_from_source: true
+              - any_of:
+                  - trait_has: Sea Beast
+                  - trait_has: TS
+          prompt: "You may digivolve this Digimon into a [Sea Beast] or [TS] Digimon card in your hand without paying the cost"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: 0
+          ignore_requirements: false
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      count_lte:
+        filter: { of: you, zone: [hand] }
+        n: 7
+    summary: "[When Attacking][OPT] If you have 7 or fewer cards in hand, Draw 1"
+    process:
+      - draw: { of: you, count: 1 }
