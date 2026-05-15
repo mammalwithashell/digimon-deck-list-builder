@@ -34,7 +34,7 @@ cost: 2
 # needed (see G-PLACE-SELF-AS-OPTION-PERMANENT notes in dsl-vocab-gaps.md and
 # the LM-027 precedent).
 #
-# ─── Clause B: [Start of Your Turn] Delay — BLOCKED (G-DELAY-START-OF-TURN) ──
+# ─── Clause B: [Start of Your Turn] Delay — BLOCKED (body gaps) ──────────────
 #
 # "[Start of Your Turn] If your opponent has a Digimon, ＜Delay＞ (By trashing
 # this card after the placing turn, activate the effect below.)
@@ -56,21 +56,19 @@ cost: 2
 #          && DP ≤ 2000, canNoSelect: true (optional).
 #          PlayFromTrashEffect (free play of selected card).
 #
-# G-DELAY-START-OF-TURN [engine gap]:
-#   The engine's `DelayTrigger` enum only has `EndOfThisTurn` and
-#   `EndOfYourNextTurn`. The DSL `kind: delay` lowerer maps everything except
-#   `EndOfYourTurn` to `EndOfYourNextTurn` — always end-of-turn, never
-#   start-of-turn. There is no `DelayTrigger::StartOfYourNextTurn` variant.
-#   DCGO fires this at `EffectTiming.OnStartTurn` (start of the owner's turn),
-#   which is a fundamentally different timing. The Delay clause is omitted from
-#   this pass until the gap is resolved (following the LM-029 precedent).
+# Timing status:
+#   Start-of-turn Delay timing is now implementable: `kind: delay` with
+#   `trigger: start_of_your_turn` lowers to `DelayTrigger::StartOfYourNextTurn`.
+#   LM-030 still omits the Delay clause because the body cannot be expressed
+#   faithfully without the reusable zone/predicate/optional-tail pieces below.
 #
-# Inner body gaps (both blocked by the outer timing gap anyway):
+# Remaining body gaps:
 #
-# G-ZONE-TRASH-TO-DECK [DSL gap]:
+# G-ZONE-SELECTED-TRASH-TO-DECK-TOP [DSL gap]:
 #   "Return 1 green Digimon card from your trash to the top of the deck" — no
-#   native DSL verb for trash → deck-top transfer. Tracked in
-#   qa/archetype-qa/engine-gaps.md.
+#   native DSL verb for moving the selected trash card to deck top. The current
+#   `return_all_trash_to_deck_bottom` helper is bulk and bottom-only, so it is
+#   not a faithful substitute.
 #
 # G-PRED-DP-LTE [engine gap]:
 #   The `dp_lte: 2000` predicate is parsed but not evaluated at selection time
@@ -97,10 +95,11 @@ cost: 2
 #   - play_from_trash_free
 #   - add_this_option_to_hand
 #
-# G-PRED-DP-LTE: dp_lte: 2000 is parsed but not enforced by eval_card_fields for
-# trash card subjects. All green Digimon in trash appear as candidates until the
-# gap closes. The mandatory "Then, add this card to the hand" tail runs regardless
-# (not gated on whether a card was selected and played).
+# G-PRED-DP-LTE: dp_lte: 2000 is authored in the filter below, but is not
+# enforced by eval_card_fields for trash card subjects. All green Digimon in
+# trash appear as candidates until the gap closes. The mandatory "Then, add
+# this card to the hand" tail must run regardless of whether a card was selected
+# and played; decline handling remains tracked separately.
 
 effects:
   # ─── Clause A: [Main] ───────────────────────────────────────────────────────
@@ -140,15 +139,16 @@ effects:
           cost: { reduce: 3 }
           ignore_requirements: false
 
-  # ─── Clause B: [Start of Your Turn] Delay — BLOCKED (G-DELAY-START-OF-TURN) ─
-  # Omitted: the engine has no StartOfYourTurn DelayTrigger variant. This clause
-  # will be added when G-DELAY-START-OF-TURN is resolved (see LM-027 raw_rust
-  # placeholder precedent and LM-029 omission precedent — both are valid; this
-  # pass follows the LM-029 omit approach as the simpler structural model).
+  # ─── Clause B: [Start of Your Turn] Delay — BLOCKED (body gaps) ────────────
+  # Omitted: start-of-turn Delay timing is available, but the Delay body still
+  # needs a faithful selected-trash-card → deck-top move, card-zone DP filtering,
+  # and optional-selection mandatory-tail continuation. A native `kind: delay`
+  # clause with an incomplete or wrong body would silently trash this Delay
+  # option and approximate the printed text.
   #
-  # When G-DELAY-START-OF-TURN and inner body gaps are resolved, add:
+  # When the remaining body gaps are resolved, add:
   #   - kind: delay
-  #     trigger: start_of_your_next_turn
+  #     trigger: start_of_your_turn
   #     condition:
   #       any_permanent:
   #         of: opponent
@@ -164,7 +164,7 @@ effects:
   #               - kind: digimon
   #               - color_is: green
   #           prompt: "Return 1 green Digimon card from your trash to the top of the deck"
-  #       - move_trash_to_deck_top:   # G-ZONE-TRASH-TO-DECK
+  #       - move_trash_to_deck_top:   # G-ZONE-SELECTED-TRASH-TO-DECK-TOP
   #           of: you
   #           card: to_return
   #       - if:
@@ -199,10 +199,11 @@ effects:
     optional: true
     summary: "[Security][Inherited] You may play 1 green Digimon (≤2000 DP) from trash free; then add this card to hand"
     process:
-      # Step 1: optional trash selection — green Digimon (≤2000 DP gated by G-PRED-DP-LTE).
+      # Step 1: optional trash selection — green Digimon with DP ≤ 2000.
       # DCGO: canNoSelect: true; filter IsGreen && IsDigimon && DP ≤ 2000.
-      # G-PRED-DP-LTE: dp_lte: 2000 is parsed but not enforced at selection time.
-      # All green Digimon in trash appear as candidates until the gap closes.
+      # G-PRED-DP-LTE: dp_lte: 2000 is authored below but not yet enforced for
+      # card-zone subjects such as trash selections; large green Digimon still
+      # appear as candidates until the reusable predicate gap closes.
       - select_trash:
           of: you
           bind_as: picked
@@ -211,6 +212,7 @@ effects:
             all_of:
               - kind: digimon
               - color_is: green
+              - dp_lte: 2000
           prompt: "You may play 1 green Digimon with 2000 DP or less from your trash without paying its cost"
       # Step 2: play the selected card from trash without paying the cost.
       - play_from_trash_free:

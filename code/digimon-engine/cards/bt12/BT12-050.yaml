@@ -31,24 +31,17 @@
 #     Structurally identical to BT12-022 clause 0 (green→blue swap only).
 #     See qa/dsl-vocab-gaps.md entries for these gaps.
 #
-#   Clause 1 (inherited): PARTIAL
+#   Clause 1 (inherited): IMPLEMENTED
 #     "[Your Turn] While this Digimon has [Imperialdramon] in its name or the
 #     [Free] trait, it gains <Piercing>"
 #     DCGO: EffectTiming.OnDetermineDoSecurityCheck, PierceSelfEffect(isInheritedEffect: true),
 #     Condition: IsExistOnBattleArea && IsOwnerTurn &&
 #       (PermanentOfThisCard().TopCard.ContainsCardName("Imperialdramon")
 #        || PermanentOfThisCard().TopCard.CardTraits.Contains("Free"))
-#     Shipped as `kind: grant_keyword` (scope: inherited) with `active_when`
-#     carrying the condition. The `active_when` is compiled but NOT consumed
-#     by `lower_grant_keyword::lower` — so the Piercing is granted unconditionally
-#     to any carrier. Over-fires for carriers without [Imperialdramon] in name
-#     or [Free] trait. The negative-condition test is #[ignore]'d under
-#     G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.
+#     Implemented as an inherited self-aura (`target: {}`) gated by your turn
+#     and either carrier name contains [Imperialdramon] or carrier top-card
+#     trait includes [Free].
 #     Structurally identical to BT12-022 clause 1 (Jamming→Piercing swap only).
-#     The carrier-name condition would additionally require G-DSL-SELF-NAME-CONTAINS
-#     (BoolPredicate that checks the carrier top-card name from an inherited
-#     clause context). The carrier-trait condition would require
-#     `source_permanent_trait_has` to be evaluated in predicate.rs.
 
 card: BT12-050
 name: Stingmon
@@ -83,28 +76,23 @@ effects:
   #   process:
   #     - gain_memory: 1              # needs triggered form, not cost_reduction
 
-  # ─── Clause 1 — Inherited [Your Turn] <Piercing> (conditional, over-fires) ──
+  # ─── Clause 1 — Inherited [Your Turn] <Piercing> (conditional) ─────────────
   #
   # Printed text:
   #   "[Your Turn] While this Digimon has [Imperialdramon] in its name or the
   #    [Free] trait, it gains ＜Piercing＞"
   #
   # DCGO: PierceSelfEffect(isInheritedEffect: true), condition checks
-  #   carrier's TopCard name or trait. Shipped with `active_when` encoding the
-  #   name condition via `self_digivolution_contains_name` and a `your_turn`
-  #   gate, but `active_when` is NOT consumed by the lowering (see header).
-  #   Trait branch (source_permanent_trait_has: "Free") also silently dropped.
-  #   Net effect: Piercing is granted unconditionally to every carrier at
-  #   any turn — over-fires for non-Imperialdramon/non-Free carriers and
-  #   on opponent's turn. Negative tests are #[ignore]'d under
-  #   G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.
+  #   carrier's TopCard name or trait. The inherited aura targets only the
+  #   source permanent carrying this card.
   - scope: inherited
-    kind: grant_keyword
-    keyword: Piercing
+    kind: aura
+    target: {}
+    grant_keyword: { keyword: Piercing }
     active_when:
       all_of:
         - your_turn: true
         - any_of:
             - self_digivolution_contains_name: "Imperialdramon"
             - source_permanent_trait_has: "Free"
-    summary: "[Inherited][Your Turn] Carrier gains <Piercing> if name has [Imperialdramon] or [Free] trait (active_when over-fires: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED)"
+    summary: "[Inherited][Your Turn] Carrier gains <Piercing> if name has [Imperialdramon] or [Free] trait"

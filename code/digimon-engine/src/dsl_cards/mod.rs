@@ -101,6 +101,7 @@ impl CardEffect for DslCardEffect {
                         keyword,
                         value,
                         scope,
+                        active_when,
                         overclock_cost_filter,
                         ..
                     } => {
@@ -109,6 +110,7 @@ impl CardEffect for DslCardEffect {
                             keyword,
                             *value,
                             *scope,
+                            active_when.clone(),
                             overclock_cost_filter.clone(),
                         ) {
                             out.push(e);

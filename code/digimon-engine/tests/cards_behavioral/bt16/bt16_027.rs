@@ -35,9 +35,9 @@
 //!   See qa/dsl-vocab-gaps.md.
 //!
 //! - Clause 2 ([End of Attack][OPT] unsuspend + conditional return):
-//!   BLOCKED — G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME. The `if` condition requires
-//!   checking whether "Imperialdramon: Dragon Mode" is in the source permanent's own
-//!   digivolution stack. No DSL predicate supports this. See qa/dsl-vocab-gaps.md.
+//!   IMPLEMENTED for the Dragon Mode source predicate slice. The source-relative
+//!   `self_digivolution_contains_name` predicate gates the opponent suspended
+//!   Digimon return prompt.
 //!
 //! - Inherited (Ace Overflow -4): Fully implemented via top-level `ace_overflow: -4`.
 //!
@@ -45,12 +45,18 @@
 //! - H12: Blast Digivolve / burst_digivolve alt-path + BlastDigivolve keyword grant
 //! - H13: ACE Overflow -4 via `ace_overflow` top-level field
 //! - G-PRED-STACK-SIZE-LTE-SOURCE: dynamic stack-size comparison predicate gap
-//! - G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME: self-digivolution stack name-check gap
+//! - `self_digivolution_contains_name`: gates the Dragon Mode End of Attack rider
 
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::encode_attack;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::EffectTiming;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledTiming,
 };
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::permanent::PermanentHandle;
 
 // ─── Fixture ─────────────────────────────────────────────────────────────────
 
@@ -189,25 +195,22 @@ fn bt16_027_on_play_clause_is_absent_while_stack_size_predicate_gap_is_open() {
     );
 }
 
-/// Confirm Clause 3 (end_of_attack unsuspend + conditional) is not authored in
-/// the current YAML while G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME is open.
+/// Confirm Clause 3 (end_of_attack unsuspend + conditional) is authored now that
+/// the source-stack name predicate is available.
 #[test]
-fn bt16_027_end_of_attack_clause_is_absent_while_digi_stack_name_gap_is_open() {
+fn bt16_027_end_of_attack_clause_is_once_per_turn() {
     let runner = fighter_mode_runner().start();
     let compiled = runner.compiled_card("BT16-027").expect("BT16-027 compiles");
 
-    let has_end_of_attack = compiled.effects.iter().any(|clause| match clause {
+    let end_of_attack = compiled.effects.iter().find_map(|clause| match clause {
         CompiledClause::Triggered(t) => {
-            use digimon_dsl::compiled::CompiledTiming;
-            t.when.contains(&CompiledTiming::EndOfAttack)
+            t.when.contains(&CompiledTiming::EndOfAttack).then_some(t)
         }
-        _ => false,
+        _ => None,
     });
-    assert!(
-        !has_end_of_attack,
-        "end_of_attack clause must not be authored while \
-         G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME is open (conditional arm would be missing)"
-    );
+    let clause = end_of_attack.expect("end_of_attack clause must be authored");
+    assert!(clause.once_per_turn, "printed End of Attack effect is OPT");
+    assert!(!clause.optional, "printed End of Attack effect is mandatory");
 }
 
 // ─── Gap-blocked behavioural tests ───────────────────────────────────────────
@@ -241,60 +244,169 @@ fn bt16_027_on_play_excludes_opp_digimon_with_more_digi_cards() {
     // Play BT16-027 — that opponent Digimon must not appear in the selection.
 }
 
-/// [End of Attack][OPT] unsuspend this Digimon.
-///
-/// The unsuspend arm is not blocked by any gap (unsuspend: { target: source } is valid).
-/// The entire clause is BLOCKED because the conditional "Then, if [Dragon Mode] in
-/// digi-cards" arm cannot be expressed, and partial implementation would silently drop
-/// the conditional return arm — violating no-approximations.
-///
-/// Blocked pending G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME from qa/dsl-vocab-gaps.md.
+fn fire_end_of_attack(runner: &mut DebugRunner, handle: PermanentHandle) {
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfAttack, TriggerSource::Permanent(handle));
+    runner.game.drain_effect_queue();
+}
+
+fn set_suspended(runner: &mut DebugRunner, handle: PermanentHandle, suspended: bool) {
+    runner.game.players[handle.player as usize].battle_area[handle.index as usize].is_suspended =
+        suspended;
+}
+
+fn is_suspended(runner: &DebugRunner, handle: PermanentHandle) -> bool {
+    runner.game.players[handle.player as usize].battle_area[handle.index as usize].is_suspended
+}
+
+fn end_of_attack_runner() -> DebugRunner {
+    fighter_mode_runner()
+        .add_card(make_test_card(
+            "DRAGON-MODE",
+            "Imperialdramon: Dragon Mode",
+        ))
+        .add_card(make_test_card("PLAIN-SOURCE", "Plain Source"))
+        .add_card(make_test_card("OPP-SUSPENDED", "Opponent Suspended"))
+        .add_card(make_test_card("OPP-UNSUSPENDED", "Opponent Unsuspended"))
+        .memory(10)
+        .start()
+}
+
+/// [End of Attack][OPT] always unsuspends this Digimon.
 #[test]
-#[ignore = "pending: G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME from qa/dsl-vocab-gaps.md — self digivolution contains name predicate not in DSL"]
 fn bt16_027_end_of_attack_unsuspends_self() {
-    // When G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME closes:
-    // 1. Place BT16-027 on field (suspended after attacking).
-    // 2. Trigger end_of_attack.
-    // 3. Assert BT16-027 is unsuspended.
-    // 4. If Dragon Mode is NOT in digi-cards: no additional selection.
-    // 5. If Dragon Mode IS in digi-cards: assert OppField selection for suspended Digimon.
+    let mut runner = end_of_attack_runner();
+    let fighter = runner.place_on_field(0, "BT16-027", Some(0));
+    set_suspended(&mut runner, fighter, true);
+
+    fire_end_of_attack(&mut runner, fighter);
+
+    assert!(
+        !is_suspended(&runner, fighter),
+        "End of Attack must unsuspend BT16-027"
+    );
 }
 
 /// [End of Attack][OPT][Once Per Turn] — conditional return fires when Dragon Mode is in digi-cards.
-///
-/// Blocked pending G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME from qa/dsl-vocab-gaps.md.
 #[test]
-#[ignore = "pending: G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME from qa/dsl-vocab-gaps.md — self digivolution contains name predicate not in DSL"]
 fn bt16_027_end_of_attack_returns_opp_suspended_when_dragon_mode_in_digi_cards() {
-    // When G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME closes:
-    // 1. Place a stack: [Imperialdramon: Dragon Mode] → BT16-027 on field.
-    // 2. Trigger end_of_attack.
-    // 3. Self unsuspends.
-    // 4. A suspended opponent Digimon must appear in the OppField selection.
-    // 5. Execute selection; assert opponent Digimon moves to the bottom of deck.
+    let mut runner = end_of_attack_runner();
+    let fighter = runner.place_stack(0, &["DRAGON-MODE", "BT16-027"]);
+    let suspended = runner.place_on_field(1, "OPP-SUSPENDED", Some(0));
+    let unsuspended = runner.place_on_field(1, "OPP-UNSUSPENDED", Some(0));
+    set_suspended(&mut runner, fighter, true);
+    set_suspended(&mut runner, suspended, true);
+
+    fire_end_of_attack(&mut runner, fighter);
+
+    assert!(
+        !is_suspended(&runner, fighter),
+        "BT16-027 must unsuspend before the conditional return prompt"
+    );
+    assert!(
+        !is_suspended(&runner, unsuspended),
+        "control target starts unsuspended"
+    );
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
+    assert!(
+        !runner.pending_is_optional(),
+        "printed return rider is mandatory when a suspended target exists"
+    );
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Dragon Mode source should install opponent selection");
+    let suspended_action = encode_attack(0, suspended.index as u16);
+    let unsuspended_action = encode_attack(0, unsuspended.index as u16);
+    assert_eq!(
+        view.valid_action_ids,
+        vec![suspended_action],
+        "only suspended opponent Digimon should be selectable"
+    );
+    assert!(
+        !view.valid_action_ids.contains(&unsuspended_action),
+        "unsuspended opponent Digimon must be excluded from action ids"
+    );
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert!(mask[suspended_action as usize] > 0.0);
+    assert_eq!(
+        mask[unsuspended_action as usize], 0.0,
+        "action mask must not expose the unsuspended opponent Digimon"
+    );
+
+    let deck_before = runner.deck_size(1);
+    runner
+        .execute_action(0, suspended_action)
+        .expect("select suspended opponent Digimon");
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "selected suspended opponent Digimon must leave the battle area"
+    );
+    assert_eq!(
+        runner.deck_size(1),
+        deck_before + 1,
+        "selected suspended opponent Digimon must return to deck bottom"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "selection should be fully resolved"
+    );
 }
 
 /// [End of Attack][OPT][Once Per Turn] — conditional return does NOT fire when Dragon Mode is absent.
-///
-/// Blocked pending G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME from qa/dsl-vocab-gaps.md.
 #[test]
-#[ignore = "pending: G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME from qa/dsl-vocab-gaps.md — self digivolution contains name predicate not in DSL"]
 fn bt16_027_end_of_attack_no_selection_when_dragon_mode_absent_from_digi_cards() {
-    // When G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME closes:
-    // 1. Place BT16-027 on field WITHOUT Dragon Mode in digi-cards.
-    // 2. Trigger end_of_attack.
-    // 3. Self unsuspends.
-    // 4. No selection should appear (conditional return must not fire).
+    let mut runner = end_of_attack_runner();
+    let fighter = runner.place_stack(0, &["PLAIN-SOURCE", "BT16-027"]);
+    let suspended = runner.place_on_field(1, "OPP-SUSPENDED", Some(0));
+    set_suspended(&mut runner, fighter, true);
+    set_suspended(&mut runner, suspended, true);
+
+    fire_end_of_attack(&mut runner, fighter);
+
+    assert!(
+        !is_suspended(&runner, fighter),
+        "BT16-027 must still unsuspend without Dragon Mode in sources"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "without Dragon Mode in digivolution cards, the return prompt must not install"
+    );
 }
 
 /// [End of Attack][OPT][Once Per Turn] OPT enforcement.
-///
-/// Blocked pending G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME from qa/dsl-vocab-gaps.md.
 #[test]
-#[ignore = "pending: G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME from qa/dsl-vocab-gaps.md — self digivolution contains name predicate not in DSL"]
 fn bt16_027_end_of_attack_is_once_per_turn() {
-    // When G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME closes:
-    // 1. Trigger end_of_attack; assert effect fires (or no-pending-selection if unsuspend is only move).
-    // 2. Trigger end_of_attack a second time in the same turn.
-    // 3. Assert the OPT lockout prevents a second unsuspend + selection.
+    let mut runner = end_of_attack_runner();
+    let fighter = runner.place_stack(0, &["DRAGON-MODE", "BT16-027"]);
+    let first = runner.place_on_field(1, "OPP-SUSPENDED", Some(0));
+    set_suspended(&mut runner, first, true);
+    set_suspended(&mut runner, fighter, true);
+
+    fire_end_of_attack(&mut runner, fighter);
+    let action = runner
+        .pending_selection_view()
+        .expect("first End of Attack should prompt")
+        .valid_action_ids[0];
+    runner
+        .execute_action(0, action)
+        .expect("resolve first End of Attack prompt");
+
+    let second = runner.place_on_field(1, "OPP-SUSPENDED", Some(0));
+    set_suspended(&mut runner, second, true);
+    set_suspended(&mut runner, fighter, true);
+
+    fire_end_of_attack(&mut runner, fighter);
+
+    assert!(
+        is_suspended(&runner, fighter),
+        "OPT lockout must prevent a second same-turn unsuspend"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "OPT lockout must prevent a second same-turn return prompt"
+    );
 }

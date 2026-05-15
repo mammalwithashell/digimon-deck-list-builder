@@ -22,16 +22,13 @@
 //! face-up). Resolves as G-DECLARATIVE-KEYWORD was RESOLVED 2026-05-02.
 //!
 //! ## Clause 1 — [Inherited][Your Turn] conditional ＜Jamming＞
-//! Name arm (carrier stack contains "Imperialdramon"): IMPLEMENTED, with known
-//! over-fire (G-DSL-AURA-TARGET-SOURCE-PERMANENT) — the aura targets all
-//! controller Digimon, not only the carrier.
-//! [Free] trait arm: BLOCKED (G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT).
+//! Name arm (carrier stack contains "Imperialdramon"): IMPLEMENTED.
+//! [Free] trait arm: IMPLEMENTED via source-permanent trait predicate.
 //!
 //! # Patterns this test covers
 //! - H9 — face-up `＜Jamming＞` via declarative `grant_keyword`.
 //! - D4 — inherited conditional keyword aura (`kind: aura`, `scope: inherited`)
-//!   gated on `self_digivolution_contains_name: "Imperialdramon"` and
-//!   `your_turn: true`.
+//!   gated on carrier name/trait predicates and `your_turn: true`.
 
 #![allow(dead_code, unused_imports)]
 
@@ -174,13 +171,8 @@ fn ex1_014_face_up_jamming_installs_on_field() {
 // digivolution stack of a carrier whose stack contains "Imperialdramon" in
 // its name, the carrier gains ＜Jamming＞ on the controller's turn.
 //
-// KNOWN OVER-FIRE (G-DSL-AURA-TARGET-SOURCE-PERMANENT): the current `kind:
-// aura` lowering applies the keyword to ALL controller battle_area Digimon
-// matching `target: { owner: you }`, not only the carrier. The tests below
-// reflect this known divergence; see the YAML header for the gap detail.
-//
-// BLOCKED (G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT): the [Free] trait arm is
-// omitted from the YAML and therefore not tested. See the YAML header.
+// The aura uses `target: {}` under inherited scope, so only the source
+// permanent that carries EX1-014 receives the keyword.
 
 /// Positive path: EX1-014 stacked under "Imperialdramon" carrier on your turn.
 /// The carrier must gain ＜Jamming＞ after a declarative-effect tick.
@@ -293,24 +285,37 @@ fn ex1_014_inherited_jamming_reactivates_when_turn_switches_back() {
     );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// Section 4 — BLOCKED: [Free] trait arm (Clause 1 trait branch)
-// ═══════════════════════════════════════════════════════════════════════════════
-//
-// DCGO: `card.PermanentOfThisCard().TopCard.CardTraits.Contains("Free")`
-// DSL gap: G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT — no BoolPredicate that
-// evaluates whether the carrier permanent's stack contains a card with trait X.
-// `source_permanent_trait_has` exists in CompiledPredicate spec but is not
-// evaluated in `eval_predicate_with_bindings` at runtime.
-//
-// Tests below are `#[ignore]`'d with the gap tag. They document the intended
-// behavioral coverage once the gap closes.
+/// Aura target scope: EX1-014 should grant Jamming only to its carrier, not to
+/// another allied Digimon in the battle area.
+#[test]
+fn ex1_014_inherited_jamming_does_not_spill_to_other_ally() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX1-014")
+        .expect("EX1-014 in embedded pack")
+        .add_card(imperialdramon_carrier())
+        .add_card(unrelated_carrier())
+        .memory(0)
+        .start();
+
+    let carrier = runner.place_stack(0, &["EX1-014", "IMPERIALDRAMON"]);
+    let other = runner.place_on_field(0, "UNRELATED", Some(1));
+
+    runner.game.turn_player_idx = 0;
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        runner.game.has_keyword(carrier, Keyword::Jamming),
+        "carrier should receive EX1-014's inherited Jamming"
+    );
+    assert!(
+        !runner.game.has_keyword(other, Keyword::Jamming),
+        "EX1-014 inherited Jamming should not spill over to another allied Digimon"
+    );
+}
 
 /// When EX1-014 is stacked under a carrier with the [Free] trait (but no
 /// "Imperialdramon" in its name), the inherited aura should grant ＜Jamming＞.
-/// BLOCKED: G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT.
 #[test]
-#[ignore = "BLOCKED: G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT — no DSL predicate to check carrier's stack for a trait; [Free] trait arm omitted from YAML pending gap closure"]
 fn ex1_014_inherited_jamming_active_when_carrier_has_free_trait() {
     let mut free_carrier = make_test_card("FREE-CARRIER", "FreeCarrier");
     free_carrier.card_kind = CardKind::Digimon;
@@ -333,6 +338,6 @@ fn ex1_014_inherited_jamming_active_when_carrier_has_free_trait() {
     assert!(
         runner.game.has_keyword(carrier, Keyword::Jamming),
         "Carrier with [Free] trait must gain <Jamming> from EX1-014 inherited aura \
-         (BLOCKED pending G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT)"
+         through the source-permanent trait predicate"
     );
 }

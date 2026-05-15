@@ -30,7 +30,7 @@
 //! | Clause 0: Delayed return at next opp EOT | BLOCKED | G-PLAY-FROM-HAND-FREE-BIND-AS |
 //! | Clause 1: Digivolve observer suspend tamer → +1 memory | PARTIAL | — |
 //! | Clause 1: Blue/green color gate | BLOCKED | G-EVENT-CARD-COLOR-IS |
-//! | Clause 1: DNA sub-condition trash 3 opp digi-cards | BLOCKED | G-DSL-IS-DNA-DIGIVOLVING + G-SELECT-OPPONENT-SOURCES |
+//! | Clause 1: DNA sub-condition trash 3 opp digi-cards | BLOCKED | G-SELECT-OPPONENT-SOURCES |
 //! | Clause 2: Security free-play | IMPLEMENTED | — |
 //!
 //! # Coverage
@@ -42,7 +42,7 @@
 //! - Clause 0: Delayed return blocked (#[ignore]).
 //! - Clause 1: Digivolve fires observer; player can optionally suspend for +1 memory.
 //! - Clause 1: Color gate (#[ignore] — G-EVENT-CARD-COLOR-IS).
-//! - Clause 1: DNA trash sub-clause (#[ignore] — G-DSL-IS-DNA-DIGIVOLVING + G-SELECT-OPPONENT-SOURCES).
+//! - Clause 1: DNA trash sub-clause (#[ignore] — G-SELECT-OPPONENT-SOURCES).
 //! - Clause 2: Security clause structural shape verified.
 
 use digimon_dsl::compiled::{
@@ -266,6 +266,30 @@ fn bt16_085_clause_1_is_optional() {
     assert!(
         clause.optional,
         "Clause 1 must be optional — 'by suspending this Tamer' is an activation cost"
+    );
+}
+
+#[test]
+fn bt16_085_dna_rider_blocker_is_narrowed_to_opponent_source_selection() {
+    let runner = base_runner();
+    let compiled = runner
+        .compiled_card("BT16-085")
+        .expect("BT16-085 in embedded DSL pack");
+
+    let digivolve_clause = compiled.effects.iter().find_map(|c| match c {
+        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDigivolve) => Some(t),
+        _ => None,
+    });
+
+    let clause = digivolve_clause.expect("on_digivolve clause must exist");
+    let summary = clause.summary.as_deref().expect("digivolve summary");
+    assert!(
+        summary.contains("G-SELECT-OPPONENT-SOURCES"),
+        "DNA rider must keep the current reusable opponent-source selection blocker in the audit summary"
+    );
+    assert!(
+        !summary.contains("G-DSL-IS-DNA-DIGIVOLVING"),
+        "dna_origin is now evaluated by the DSL/engine; do not keep the resolved DNA predicate gap as this card's blocker"
     );
 }
 
@@ -591,11 +615,11 @@ fn bt16_085_digivolve_observer_does_not_fire_on_non_blue_non_green_digivolve() {
     unimplemented!("blocked on G-EVENT-CARD-COLOR-IS");
 }
 
-/// DNA trash sub-clause is doubly blocked. Documents both gaps.
+/// DNA trash sub-clause is blocked on opponent-source selection/trashing.
 #[test]
-#[ignore = "BLOCKED: G-DSL-IS-DNA-DIGIVOLVING (dna_origin predicate not evaluated in predicate.rs) AND G-SELECT-OPPONENT-SOURCES (no select_opponent_sources verb to pick 3 opponent digi-cards). The DNA branch of Clause 1 is entirely omitted from the YAML."]
+#[ignore = "BLOCKED: G-SELECT-OPPONENT-SOURCES — dna_origin is available, but no select_opponent_sources verb exists to pick 3 opponent digi-cards. The DNA branch of Clause 1 is entirely omitted from the YAML."]
 fn bt16_085_dna_digivolve_trashes_3_opp_digi_cards() {
-    // When both gaps close, implement:
+    // When G-SELECT-OPPONENT-SOURCES closes, implement:
     //   1. Place tamer on P0 field, opponent Digimon with ≥3 sources on P1 field.
     //   2. P0 DNA-digivolves.
     //   3. Trigger Clause 1 as DNA-origin.
@@ -603,7 +627,7 @@ fn bt16_085_dna_digivolve_trashes_3_opp_digi_cards() {
     //   5. DNA sub-condition fires: select opponent permanent, select 3 sources,
     //      trash them.
     //   6. Assert: opponent's chosen permanent has 3 fewer sources.
-    unimplemented!("blocked on G-DSL-IS-DNA-DIGIVOLVING + G-SELECT-OPPONENT-SOURCES");
+    unimplemented!("blocked on G-SELECT-OPPONENT-SOURCES");
 }
 
 /// Smoke: when P0's Digimon digivolves via digivolve_from_hand, the tamer's

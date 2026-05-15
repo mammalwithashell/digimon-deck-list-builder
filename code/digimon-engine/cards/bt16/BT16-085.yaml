@@ -36,9 +36,10 @@
 # [G-PLAY-FROM-HAND-FREE-BIND-AS]:
 #
 #   The "return it to the hand" step requires referencing the just-played
-#   permanent inside a `schedule_delayed` body. `play_from_hand_free` discards
-#   the `Option<PermanentHandle>` return value; `CompiledStep::PlayFromHandFree`
-#   has no `bind_as` field, and `schedule_delayed` only captures bindings that
+#   permanent inside a `schedule_delayed` body. `play_from_hand_free` records
+#   the played permanent in the effect result log, but `CompiledStep::
+#   PlayFromHandFree` still has no `bind_as` field (or equivalent played-
+#   permanent binding), and `schedule_delayed` only captures named bindings that
 #   were present in the caller's `Bindings` map at schedule time. After
 #   `play_from_hand_free` runs, no named binding points to the new permanent.
 #   `return_to_hand` requires a `target: <PermanentHandle-binding>`, so the
@@ -81,26 +82,18 @@
 #   the observer over-fires on any digivolve, not just into blue/green.
 #   Tests for the color-gate are #[ignore = "pending: G-EVENT-CARD-COLOR-IS"].
 #
-#   [G-DSL-IS-DNA-DIGIVOLVING] — already filed. `dna_origin: true` is present
-#   in `PredicateSpec` and `CompiledPredicate` but is NOT evaluated in
-#   `predicate.rs`'s `eval_predicate`. The `if: condition: { dna_origin: true }`
-#   guard inside process: never fires, so the DNA trash sub-clause cannot be
-#   expressed. The behavioral test for the DNA branch is
-#   #[ignore = "pending: G-DSL-IS-DNA-DIGIVOLVING"].
-#
 #   [G-SELECT-OPPONENT-SOURCES] — no `select_opponent_sources` verb exists.
 #   DSL has `select_own_sources` and `trash_selected_sources` but no equivalent
 #   that targets a SPECIFIC OPPONENT'S permanent's digivolution cards. The
-#   Rocks gap entry (G-ROCKS-SOURCE-SELECTION-DSL) covers own-side source
-#   selection; opponent-side targeting is a separate, unfiled gap. The "trash
-#   any 3 digivolution cards under your opponent's Digimon" step is therefore
-#   doubly blocked: by the DNA predicate gap AND by missing opponent source
-#   selection. Both are omitted from the YAML.
+#   former `G-DSL-IS-DNA-DIGIVOLVING` blocker is resolved; `dna_origin: true`
+#   now evaluates correctly. The "trash any 3 digivolution cards under your
+#   opponent's Digimon" step is still omitted until opponent-source selection
+#   and trashing can be expressed without auto-picking.
 #
 # Partial implementation authored:
 #   - Observer timing + optional suspend cost + gain 1 memory are expressible.
 #   - Color filter omitted (over-fires without it).
-#   - DNA + trash sub-clause omitted entirely.
+#   - DNA + trash sub-clause omitted entirely pending opponent-source selection.
 #
 # ─── Clause 2 — [Security] Play this card without paying the cost ─────────────
 #
@@ -189,13 +182,13 @@ effects:
   # on the tamer being on-field and not already suspended (engine will decline
   # to suspend an already-suspended permanent).
   #
-  # DNA sub-clause: OMITTED entirely — doubly blocked by
-  # G-DSL-IS-DNA-DIGIVOLVING (dna_origin predicate not evaluated) and
-  # G-SELECT-OPPONENT-SOURCES (no verb to select 3 opponent digi-cards).
+  # DNA sub-clause: OMITTED entirely. `dna_origin: true` is available now, but
+  # there is still no faithful opponent-side source picker for "trash any 3
+  # digivolution cards under your opponent's Digimon".
   - when: on_digivolve
     optional: true
     active_when: { your_turn: true }
-    summary: "[Your Turn][OPT] On own Digimon digivolve (into blue/green — color gate OMITTED G-EVENT-CARD-COLOR-IS), suspend self → +1 memory (DNA trash OMITTED G-DSL-IS-DNA-DIGIVOLVING + G-SELECT-OPPONENT-SOURCES)"
+    summary: "[Your Turn][OPT] On own Digimon digivolve (into blue/green — color gate OMITTED G-EVENT-CARD-COLOR-IS), suspend self → +1 memory (DNA trash OMITTED G-SELECT-OPPONENT-SOURCES)"
     condition:
       all_of:
         - event_target_owner: you
@@ -206,7 +199,7 @@ effects:
       # Immediate effect: gain 1 memory.
       - gain_memory: 1
       # OMITTED: DNA sub-clause.
-      # Intended YAML once G-DSL-IS-DNA-DIGIVOLVING and G-SELECT-OPPONENT-SOURCES close:
+      # Intended YAML once G-SELECT-OPPONENT-SOURCES closes:
       #   - if:
       #       condition: { dna_origin: true }
       #       then:
@@ -218,7 +211,7 @@ effects:
       #             target: opp_stack
       #             count: 3
       #             bind_as: trashed_sources
-      #         - trash_selected_sources: { sources: trashed_sources }
+      #         - trash_selected_sources: { source_refs: trashed_sources }
 
   # ─── Clause 2 — [Security] Play this card without paying the cost ───────────
   #

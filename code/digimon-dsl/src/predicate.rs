@@ -87,6 +87,8 @@ pub struct PredicateSpec {
     pub is_unsuspended: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_keyword: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub self_color_count_gte: Option<u8>,
 
     // Leaf — zone / owner
     #[serde(skip_serializing_if = "Vec::is_empty")]

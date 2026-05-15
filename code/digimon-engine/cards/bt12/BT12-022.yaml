@@ -39,19 +39,10 @@
 #     Condition: IsExistOnBattleArea && IsOwnerTurn &&
 #       (PermanentOfThisCard().TopCard.ContainsCardName("Imperialdramon")
 #        || PermanentOfThisCard().TopCard.CardTraits.Contains("Free"))
-#     Shipped as `kind: grant_keyword` (scope: inherited) with `active_when`
-#     carrying the condition. The `active_when` is compiled but NOT consumed
-#     by `lower_grant_keyword::lower` (mod.rs line 82-98 uses `..` to discard
-#     the field) — so the Jamming is granted unconditionally to any carrier.
-#     This over-fires for carriers without [Imperialdramon] in name or [Free]
-#     trait. The negative-condition test is #[ignore]'d under
-#     G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.
-#     The carrier-name condition would additionally require G-DSL-SELF-NAME-CONTAINS
-#     (BoolPredicate that checks the carrier top-card name from an inherited
-#     clause context — filed under AD1-014 in qa/dsl-vocab-gaps.md).
-#     The carrier-trait condition would require `source_permanent_trait_has`
-#     to be evaluated in predicate.rs (currently it exists in compiled.rs but
-#     has no evaluator arm).
+#     The inherited clause is now implemented as an inherited self aura with
+#     `active_when`; `self_digivolution_contains_name` scans the carrier stack,
+#     `source_permanent_trait_has` checks the carrier top card's [Free] trait,
+#     and `your_turn` gates the materialized keyword tick.
 
 card: BT12-022
 name: ExVeemon
@@ -85,28 +76,25 @@ effects:
   #   active_when: { your_turn: true }
   #   # effect: gain_memory: 1       # needs triggered form, not cost_reduction
 
-  # ─── Clause 1 — Inherited [Your Turn] <Jamming> (conditional, over-fires) ───
+  # ─── Clause 1 — Inherited [Your Turn] <Jamming> ────────────────────────────
   #
   # Printed text:
   #   "[Your Turn] While this Digimon has [Imperialdramon] in its name or the
   #    [Free] trait, it gains ＜Jamming＞"
   #
   # DCGO: JammingSelfStaticEffect(isInheritedEffect: true), condition checks
-  #   carrier's TopCard name or trait. Shipped with `active_when` encoding the
-  #   name condition via `self_digivolution_contains_name` and a `your_turn`
-  #   gate, but `active_when` is NOT consumed by the lowering (see header).
-  #   Trait branch (source_permanent_trait_has: "Free") also silently dropped.
-  #   Net effect: Jamming is granted unconditionally to every carrier at
-  #   any turn — over-fires for non-Imperialdramon/non-Free carriers and
-  #   on opponent's turn. Negative tests are #[ignore]'d under
-  #   G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.
+  #   carrier's TopCard name or trait. This is faithful through a self
+  #   inherited aura: `active_when` sees this source's carrier via
+  #   `source_permanent`, and the empty target makes the materialized keyword
+  #   apply only to that carrier.
   - scope: inherited
-    kind: grant_keyword
-    keyword: Jamming
+    kind: aura
     active_when:
       all_of:
         - your_turn: true
         - any_of:
             - self_digivolution_contains_name: "Imperialdramon"
             - source_permanent_trait_has: "Free"
-    summary: "[Inherited][Your Turn] Carrier gains <Jamming> if name has [Imperialdramon] or [Free] trait (active_when over-fires: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED)"
+    target: {}
+    grant_keyword: { keyword: Jamming }
+    summary: "[Inherited][Your Turn] Carrier gains <Jamming> if its stack has [Imperialdramon] in name or its top card has [Free] trait"

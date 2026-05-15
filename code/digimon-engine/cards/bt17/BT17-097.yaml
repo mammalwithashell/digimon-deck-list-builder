@@ -71,7 +71,7 @@
 #
 # | Card-text element                                                   | Status |
 # |---------------------------------------------------------------------|--------|
-# | [Main] select own Digimon + digivolve from hand Lv5+ [Free] cost-4 | BLOCKED — G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET |
+# | [Main] select own Digimon + digivolve from hand Lv5+ [Free] cost-4 | IMPLEMENTED via select_own_permanent + select_hand + effect_initiated_digivolve |
 # | [Main] "Then, place this card in the battle area"                   | IMPLEMENTED via place_self_as_delay_option |
 # | [All Turns] subject is own Digimon with [Free] trait                | IMPLEMENTED via trait_has: Free + replacement_subject_is_mine |
 # | [All Turns] "other than by one of your effects"                     | IMPLEMENTED via none_of: [replacement_cause: own_effect] |
@@ -80,19 +80,6 @@
 # | [All Turns] prevent the deletion                                    | IMPLEMENTED via outcome: prevent |
 # | [Security] play Davis/Ken Tamer from hand or trash, free            | PARTIAL — hand branch via select_hand/play_from_hand_free; trash branch via select_trash/play_from_trash_free; zone-choice workaround for G-DSL-UNION-PLAY-FREE |
 # | [Security] "Then, place this card in the battle area"               | IMPLEMENTED via place_self_as_delay_option |
-#
-# ─── DSL gap: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET ────
-#
-# Clause A's core mechanic (select own Digimon → select hand card Lv5+ [Free]
-# trait cost-4 → digivolve) is the same gap family as BT16-040 Wormmon.
-# The process chain terminates after the Digimon pick; the subsequent hand-card
-# pick and `effect_initiated_digivolve` verb do not resume. Tracked in
-# qa/dsl-vocab-gaps.md §G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET.
-#
-# Consequence: Clause A's process only surfaces the Main timing trigger to
-# install this card as a Delay-Option permanent (via `place_self_as_delay_option`).
-# The digivolve prompt is omitted until the gap closes. Behavioral tests for
-# the digivolve sub-clause are #[ignore]'d.
 #
 # ─── DSL gap: G-DSL-UNION-PLAY-FREE ──────────────────────────────────────────
 #
@@ -131,13 +118,6 @@ effects:
   # Digimon card with the [Free] trait in your hand with the digivolution cost
   # reduced by 4. Then, place this card in the battle area."
   #
-  # BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET
-  #   (qa/dsl-vocab-gaps.md). The `select_own_permanent → select_hand →
-  #   effect_initiated_digivolve` chain does not resume after the Digimon pick.
-  #   Until the gap closes the digivolve sub-clause is omitted; only
-  #   `place_self_as_delay_option` fires, which correctly installs this card
-  #   as a Delay-Option permanent so Clause B can observe.
-  #
   # `optional: true` — DCGO `canNoSelect: true` on both picks; the player may
   # decline entirely (and even skip the Delay-Option placement, per the printed
   # "may digivolve" grammar — the placement is a tail of the same "may"
@@ -147,39 +127,33 @@ effects:
   # activate as `optional: true` (the player may decline the trigger), but
   # once activated, `place_self_as_delay_option` runs unconditionally.
   #
-  # Since the DSL has no auto-selection suppression for the digivolve sub-
-  # clause, we omit it entirely and list `place_self_as_delay_option` as the
-  # sole process step.
   - when: main_from_hand
     optional: true
-    summary: "[Main] (BLOCKED: digivolve into Lv5+ [Free] hand card cost-4) Then place self in battle area as Delay permanent"
+    summary: "[Main] 1 of your Digimon may digivolve into a Lv5+ [Free] hand card, cost -4; then place self in battle area as Delay permanent"
     process:
-      # BLOCKED step (digivolve) — omitted pending G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET.
-      # When gap closes, add before place_self_as_delay_option:
-      #   - select_own_permanent:
-      #       bind_as: digi_target
-      #       filter:
-      #         all_of:
-      #           - kind: digimon
-      #           - any_hand_card_can_digivolve_onto: true   # (hypothetical; engine needs support)
-      #       optional: true
-      #       prompt: "Select 1 of your Digimon to digivolve"
-      #   - select_hand:
-      #       of: you
-      #       bind_as: digi_card
-      #       optional: true
-      #       filter:
-      #         all_of:
-      #           - kind: digimon
-      #           - level_gte: 5
-      #           - trait_has: "Free"
-      #       prompt: "Select a Lv5+ [Free] trait hand card to digivolve (cost -4)"
-      #   - effect_initiated_digivolve:
-      #       target: digi_target
-      #       from_hand: digi_card
-      #       cost_reduction: 4
-      #
-      # Final step: place this Option in the battle area as a Delay permanent.
+      - select_own_permanent:
+          bind_as: digi_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+          prompt: "Select 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: digi_card
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 5
+              - trait_has: "Free"
+          prompt: "Select a Lv5+ [Free] trait hand card to digivolve (cost -4)"
+      - effect_initiated_digivolve:
+          target: digi_target
+          from_hand: digi_card
+          cost: { reduce: 4 }
+          ignore_requirements: false
+      # Place this Option in the battle area as a Delay permanent.
       # DCGO: `CardEffectCommons.PlaceDelayOptionCards` always fires after the
       # digivolve attempt.
       - place_self_as_delay_option: {}

@@ -9,6 +9,7 @@ use digimon_dsl::compiled::{
 use crate::card_source::{CardHandle, CardSource};
 use crate::dsl_cards::bindings::{BindingValue, Bindings};
 use crate::dsl_cards::formula_eval;
+use crate::dsl_cards::modifier_map::lookup_keyword;
 use crate::effect_context::EffectReadContext;
 use crate::enums::{CardColor, CardKind, PlayerId};
 use crate::permanent::PermanentHandle;
@@ -142,6 +143,30 @@ pub fn eval_predicate_with_bindings(
             return false;
         };
         if !perm.contains_card_name(needle, rctx.card_data()) {
+            return false;
+        }
+    }
+    if let Some(ref needle) = pred.source_name_contains {
+        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+            return false;
+        };
+        if !perm
+            .top_card()
+            .card_name(rctx.card_data())
+            .to_lowercase()
+            .contains(&needle.to_lowercase())
+        {
+            return false;
+        }
+    }
+    if let Some(ref trait_name) = pred.source_permanent_trait_has {
+        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(perm.top_card().handle()) else {
+            return false;
+        };
+        if !data.traits.iter().any(|x| x.eq_ignore_ascii_case(trait_name)) {
             return false;
         }
     }
@@ -670,6 +695,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.name_in.is_none()
         && pred.card_number_is.is_none()
         && pred.play_cost_lte.is_none()
+        && pred.self_color_count_gte.is_none()
         && pred.dp_eq.is_none()
         && pred.dp_lte.is_none()
         && pred.dp_gte.is_none()
@@ -1202,6 +1228,11 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(floor) = pred.self_color_count_gte {
+        if distinct_color_count(&data.colors) < usize::from(floor) {
+            return false;
+        }
+    }
     if pred.form_is.is_some() {
         // CardData has no `form` field yet; engine doesn't track form.
         // Phase 1c: treat as always-false when set (mirrors "no card matches").
@@ -1270,6 +1301,16 @@ fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle
         return false;
     };
     rctx.game.can_digivolve(candidate, source_permanent)
+}
+
+fn distinct_color_count(colors: &[CardColor]) -> usize {
+    let mut seen = Vec::new();
+    for color in colors {
+        if !seen.contains(color) {
+            seen.push(*color);
+        }
+    }
+    seen.len()
 }
 
 fn card_shares_color_with_any_field_digimon(
@@ -1465,6 +1506,19 @@ fn eval_permanent_fields(
     }
     if let Some(want) = pred.is_unsuspended {
         if perm.is_suspended == want {
+            return false;
+        }
+    }
+    if let Some(ref keyword) = pred.has_keyword {
+        let Some(kw) = lookup_keyword(keyword, None) else {
+            return false;
+        };
+        if !rctx.game.has_keyword(handle, kw) {
+            return false;
+        }
+    }
+    if let Some(floor) = pred.self_color_count_gte {
+        if distinct_color_count(&synth_identity.colors) < usize::from(floor) {
             return false;
         }
     }

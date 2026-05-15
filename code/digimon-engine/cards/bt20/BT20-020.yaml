@@ -36,7 +36,8 @@
 #
 # ─── DSL-GAP — Cannot read source permanent's DP in formula  [G-FORMULA-SOURCE-DP] ─
 #
-# Clause 3 requires deleting 1 opponent Digimon with DP ≤ this Digimon's DP.
+# Clause 3 requires deleting 1 opponent Digimon with DP ≤ this Digimon's
+# current effective DP, not merely BT20-020's printed/base DP.
 # The `dp_lte` predicate accepts literal values or formula-based values, but
 # the `FormulaSpec` enum has no `source_dp: {}` primitive that reads the
 # source permanent's own effective DP at runtime. The engine has the data
@@ -205,7 +206,8 @@ effects:
   # BLOCKED sub-clause (delete with DP ≤ self):
   #   The delete target filter requires `dp_lte: { formula: { source_dp: {} } }`
   #   — a `source_dp` formula primitive that reads `ctx.source_permanent`'s
-  #   effective DP. This primitive does not exist in the DSL.
+  #   current effective DP, including buffs/debuffs. This primitive does not
+  #   exist in the DSL.
   #   BLOCKED by G-FORMULA-SOURCE-DP (see BT17-102 and P-182 headers for full docs).
   #
   #   Under no-approximations, the delete step MUST be omitted:

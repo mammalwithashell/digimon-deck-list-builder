@@ -36,16 +36,84 @@
 //! - Inherited End of Attack conditional memory gain (blocked on G-DSL-SOURCE-NAME-CONTAINS)
 
 use digimon_dsl::compiled::{CompiledAltPathKind, CompiledScope, CompiledTiming};
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::{CardKind, EffectTiming, ModifierType};
+use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 // ─── Runner factory ──────────────────────────────────────────────────────────
+
+fn make_digimon(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(4000);
+    card
+}
+
+fn make_named_digimon(id: &str, name: &str, traits: &[&str]) -> CardData {
+    let mut card = make_test_card(id, name);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(5);
+    card.dp = Some(8000);
+    card.traits = traits.iter().map(|trait_name| trait_name.to_string()).collect();
+    card
+}
 
 fn paildramon() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card("BT12-028")
         .expect("BT12-028 in embedded DSL pack")
+        .add_card(make_digimon("MAT-BLUE"))
+        .add_card(make_digimon("MAT-GREEN"))
+        .add_card(make_digimon("OWN-BASE"))
+        .add_card(make_digimon("OWN-SRC"))
+        .add_card(make_digimon("OPP-A"))
+        .add_card(make_digimon("OPP-A1"))
+        .add_card(make_digimon("OPP-A2"))
+        .add_card(make_digimon("OPP-A3"))
+        .add_card(make_digimon("OPP-A4"))
+        .add_card(make_digimon("OPP-B"))
+        .add_card(make_digimon("OPP-C"))
+        .add_card(make_digimon("OPP-C1"))
+        .add_card(make_digimon("OPP-C2"))
         .memory(8)
         .start()
+}
+
+fn stack_ids(runner: &DebugRunner, handle: PermanentHandle) -> Vec<String> {
+    runner.game.players[handle.player as usize].battle_area[handle.index as usize]
+        .card_sources
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect()
+}
+
+fn trash_ids(runner: &DebugRunner, player: u8) -> Vec<String> {
+    runner.game.players[player as usize]
+        .trash
+        .iter()
+        .map(|card| card.card_id(&runner.game.card_data).to_string())
+        .collect()
+}
+
+fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle, dna_origin: bool) {
+    let card = runner.game.players[handle.player as usize].battle_area[handle.index as usize]
+        .top_card()
+        .handle();
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Digivolved {
+            player: handle.player,
+            permanent: handle,
+            card,
+            effect_initiated: false,
+            dna_origin,
+        },
+    );
+    runner.game.drain_effect_queue();
 }
 
 // ─── §1 Structural assertions ─────────────────────────────────────────────────
@@ -73,109 +141,241 @@ fn bt12_028_has_dna_digivolve_alt_path() {
 }
 
 #[test]
-fn bt12_028_notes_native_trash_top_n_verb_but_keeps_runtime_clauses_blocked() {
+fn bt12_028_compiles_implemented_main_clause_but_keeps_inherited_blocked() {
     let runner = paildramon();
     let compiled = runner.compiled_card("BT12-028").expect("BT12-028 compiled");
     assert_eq!(
         compiled.effects.len(),
-        0,
-        "BT12-028 remains load-only until card-local DNA and inherited predicate gaps close"
+        2,
+        "BT12-028 should compile the main When Digivolving clause plus inherited EndOfAttack clause"
     );
 }
 
 // ─── §2 Behavioral — Clause 0a: trash top 3 divi-cards (deferred card wiring) ─
 
-/// The reusable Track E verb has landed; this card-local body is still deferred
-/// until the following DNA-gated CannotAttack branch can be authored alongside it.
-///
 #[test]
-#[ignore = "pending: BT12-028 card-local wiring after G-DSL-IS-DNA-DIGIVOLVING / CannotAttack follow-up; reusable trash_top_n_digivolution_cards_of_each verb is landed"]
 fn bt12_028_when_digivolving_trashes_top_3_source_cards_from_each_opponent_digimon() {
-    // Intended test body (once gap closes):
-    //
-    // 1. Place an opponent Digimon with a 4-card stack
-    //    (top card + 3 digivolution sources).
-    // 2. Digivolve BT12-028 onto P0's field to fire the WhenDigivolving batch.
-    // 3. Assert: opponent Digimon's stack shrinks from 4 to 1 (only top card remains).
-    // 4. Assert: opponent Digimon is still on the field (not deleted).
-    // 5. Place a second opponent Digimon with only its top card (no divi cards).
-    // 6. Assert: second Digimon's stack is unchanged (no crash on empty source set).
-    todo!()
-}
+    let mut runner = paildramon();
+    let own = runner.place_stack(0, &["OWN-SRC", "OWN-BASE"]);
+    let paildramon = runner.place_on_field(0, "BT12-028", Some(0));
+    let opp_with_four_sources =
+        runner.place_stack(1, &["OPP-A1", "OPP-A2", "OPP-A3", "OPP-A4", "OPP-A"]);
+    let opp_without_sources = runner.place_stack(1, &["OPP-B"]);
 
-#[test]
-#[ignore = "pending: BT12-028 card-local wiring after DNA follow-up; reusable Track E source-trash verb fires OnDigivolutionCardTrashed in zone_movement_verbs coverage"]
-fn bt12_028_when_digivolving_fires_on_digivolution_card_trashed_per_source() {
-    // Intended: each of the 3 trashed sources fires OnDigivolutionCardTrashed.
-    // For an opponent Digimon with 3+ divi cards, exactly 3 events must fire.
-    // For an opponent with 1 divi card, exactly 1 event fires (stops at top card).
-    todo!()
+    fire_when_digivolving(&mut runner, paildramon, false);
+    runner.auto_resolve().expect("non-DNA clause resolves");
+
+    assert_eq!(
+        stack_ids(&runner, opp_with_four_sources),
+        vec!["OPP-A1", "OPP-A"],
+        "top 3 digivolution cards are trashed, leaving the deepest source plus top card"
+    );
+    assert_eq!(
+        stack_ids(&runner, opp_without_sources),
+        vec!["OPP-B"],
+        "opponent Digimon with no digivolution cards is unchanged"
+    );
+    assert_eq!(
+        stack_ids(&runner, own),
+        vec!["OWN-SRC", "OWN-BASE"],
+        "own Digimon stacks are not touched"
+    );
+    assert_eq!(
+        trash_ids(&runner, 1),
+        vec!["OPP-A4", "OPP-A3", "OPP-A2"],
+        "trashed sources go to the opponent owner's trash in top-source-first order"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "standard digivolve must not park the DNA-only target selection"
+    );
 }
 
 // ─── §3 Behavioral — Clause 0b: DNA sub-condition (BLOCKED) ─────────────────
 
-/// BLOCKED on G-DSL-IS-DNA-DIGIVOLVING.
-///
-/// DSL has no `is_dna_digivolving` predicate leaf and the engine's
-/// TriggerSource::Digivolved carries no `via_dna` flag. The DNA sub-clause
-/// that applies CannotAttack modifiers to 2 opponent Digimon with no divi cards
-/// cannot be expressed faithfully.
 #[test]
-#[ignore = "pending: G-DSL-IS-DNA-DIGIVOLVING from qa/dsl-vocab-gaps.md — engine TriggerSource::Digivolved lacks via_dna flag; DSL has no is_dna_digivolving predicate"]
 fn bt12_028_dna_digivolve_applies_cannot_attack_to_two_digimon_with_no_sources() {
-    // Intended: when BT12-028 enters via DNA digivolve, a multi-select
-    // (up to 2) prompt appears for opponent Digimon with stack_size == 1.
-    // Selected Digimon receive CannotAttack expiring end_of_opponents_turn.
-    todo!()
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT12-028")
+        .expect("BT12-028 in embedded DSL pack")
+        .add_card(make_digimon("MAT-BLUE"))
+        .add_card(make_digimon("MAT-GREEN"))
+        .add_card(make_digimon("OWN-NO-SRC"))
+        .add_card(make_digimon("OPP-A"))
+        .add_card(make_digimon("OPP-B"))
+        .add_card(make_digimon("OPP-C"))
+        .add_card(make_digimon("OPP-C1"))
+        .add_card(make_digimon("OPP-C2"))
+        .hand(0, &["BT12-028"])
+        .memory(8)
+        .start();
+
+    let material_a = runner.place_on_field(0, "MAT-BLUE", Some(0));
+    let material_b = runner.place_on_field(0, "MAT-GREEN", Some(0));
+    let own_no_sources = runner.place_on_field(0, "OWN-NO-SRC", Some(0));
+    let opp_a = runner.place_on_field(1, "OPP-A", Some(0));
+    let opp_b = runner.place_on_field(1, "OPP-B", Some(0));
+    let opp_c = runner.place_stack(1, &["OPP-C1", "OPP-C2", "OPP-C"]);
+    let hand_card = runner.game.player(0).hand[0].handle();
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card, None, 0);
+        ctx.effect_initiated_dna_digivolve(material_a, material_b, hand_card, 0, true)
+            .expect("BT12-028 DNA digivolves from hand");
+    }
+
+    assert_eq!(
+        stack_ids(&runner, opp_c),
+        vec!["OPP-C"],
+        "trash step resolves before target selection, making the former stacked Digimon eligible"
+    );
+
+    let view = runner
+        .pending_selection_view()
+        .expect("DNA branch must park a visible target selection");
+    assert_eq!(
+        view.kind,
+        SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 },
+        "DNA branch selects up to 2 opponent Digimon"
+    );
+    assert_eq!(
+        view.selecting_player, 0,
+        "BT12-028's controller chooses targets"
+    );
+    assert!(
+        !view.is_optional,
+        "the first DNA target is mandatory when eligible targets exist"
+    );
+    assert_eq!(
+        view.valid_action_ids.len(),
+        3,
+        "only opponent Digimon with no digivolution cards are legal targets"
+    );
+
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("select first no-source opponent Digimon");
+    let view = runner
+        .pending_selection_view()
+        .expect("second DNA target selection remains pending");
+    assert_eq!(
+        view.kind,
+        SelectionKind::CountCappedMultiSelect { max: 2, picked: 1 }
+    );
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("select second no-source opponent Digimon");
+    runner.auto_resolve().expect("DNA branch resolves");
+
+    assert!(runner.game.modifiers.has(opp_a, ModifierType::CannotAttack));
+    assert!(runner.game.modifiers.has(opp_b, ModifierType::CannotAttack));
+    assert!(
+        !runner.game.modifiers.has(opp_c, ModifierType::CannotAttack),
+        "unselected eligible opponent Digimon is not locked"
+    );
+    assert!(
+        !runner
+            .game
+            .modifiers
+            .has(own_no_sources, ModifierType::CannotAttack),
+        "own Digimon are excluded from the opponent target selection"
+    );
 }
 
 #[test]
-#[ignore = "pending: G-DSL-IS-DNA-DIGIVOLVING from qa/dsl-vocab-gaps.md — standard digivolve must not trigger DNA sub-condition"]
 fn bt12_028_standard_digivolve_does_not_trigger_dna_sub_condition() {
-    // Negative: standard (non-DNA) digivolving must NOT apply CannotAttack
-    // even if opponent Digimon with no divi cards are present.
-    todo!()
+    let mut runner = paildramon();
+    let paildramon = runner.place_on_field(0, "BT12-028", Some(0));
+    let opp = runner.place_on_field(1, "OPP-A", Some(0));
+
+    fire_when_digivolving(&mut runner, paildramon, false);
+    runner.auto_resolve().expect("standard digivolve resolves");
+
+    assert!(
+        !runner.game.modifiers.has(opp, ModifierType::CannotAttack),
+        "standard digivolve must not apply the DNA-only CannotAttack rider"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "standard digivolve must not install a DNA-only selection"
+    );
 }
 
-// ─── §4 Behavioral — Clause 1: Inherited [End of Attack] (BLOCKED) ──────────
+// ─── §4 Behavioral — Clause 1: Inherited [End of Attack] ────────────────────
 
-/// BLOCKED on G-DSL-SOURCE-NAME-CONTAINS.
-///
-/// `source_name_contains` and `source_permanent_trait_has` are defined in
-/// PredicateSpec and compile cleanly, but have no runtime evaluation branch in
-/// predicate.rs. The condition check silently no-ops (formula_eval.rs marks
-/// them as needing formula context but the evaluator branch is absent).
-///
-/// The inherited clause is omitted from the YAML; all behavioral tests here
-/// are #[ignore]d until the gap closes.
+fn fire_end_of_attack(runner: &mut DebugRunner, handle: PermanentHandle) {
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfAttack, TriggerSource::Permanent(handle));
+    runner.game.drain_effect_queue();
+}
+
 #[test]
-#[ignore = "pending: G-DSL-SOURCE-NAME-CONTAINS from qa/dsl-vocab-gaps.md — source_name_contains not evaluated at runtime in predicate.rs"]
 fn bt12_028_inherited_end_of_attack_gains_memory_when_carrier_has_imperialdramon_in_name() {
-    // Intended: carrier top card name contains "Imperialdramon" → gain 1 memory.
-    todo!()
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT12-028")
+        .expect("BT12-028 in embedded DSL pack")
+        .add_card(make_named_digimon(
+            "IMPERIAL-CARRIER",
+            "Imperialdramon Fighter Mode",
+            &[],
+        ))
+        .memory(0)
+        .start();
+
+    let carrier = runner.place_stack(0, &["BT12-028", "IMPERIAL-CARRIER"]);
+    fire_end_of_attack(&mut runner, carrier);
+
+    assert_eq!(
+        runner.memory(),
+        1,
+        "carrier with Imperialdramon in name should gain 1 memory from BT12-028 inherited effect"
+    );
 }
 
 #[test]
-#[ignore = "pending: G-DSL-SOURCE-NAME-CONTAINS from qa/dsl-vocab-gaps.md — source_permanent_trait_has not evaluated at runtime"]
 fn bt12_028_inherited_end_of_attack_gains_memory_when_carrier_has_free_trait() {
-    // Intended: carrier has no Imperialdramon name but has [Free] trait → gain 1 memory.
-    todo!()
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT12-028")
+        .expect("BT12-028 in embedded DSL pack")
+        .add_card(make_named_digimon("FREE-CARRIER", "Paildramon", &["Free"]))
+        .memory(0)
+        .start();
+
+    let carrier = runner.place_stack(0, &["BT12-028", "FREE-CARRIER"]);
+    fire_end_of_attack(&mut runner, carrier);
+
+    assert_eq!(
+        runner.memory(),
+        1,
+        "carrier with Free trait should gain 1 memory from BT12-028 inherited effect"
+    );
 }
 
 #[test]
-#[ignore = "pending: G-DSL-SOURCE-NAME-CONTAINS from qa/dsl-vocab-gaps.md — condition must not fire for unrelated carrier"]
 fn bt12_028_inherited_end_of_attack_does_not_fire_for_unrelated_carrier() {
-    // Negative: carrier has neither "Imperialdramon" in name nor [Free] trait.
-    // The inherited End of Attack must not gain memory.
-    todo!()
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT12-028")
+        .expect("BT12-028 in embedded DSL pack")
+        .add_card(make_named_digimon("UNRELATED", "Tyrannomon", &[]))
+        .memory(0)
+        .start();
+
+    let carrier = runner.place_stack(0, &["BT12-028", "UNRELATED"]);
+    fire_end_of_attack(&mut runner, carrier);
+
+    assert_eq!(
+        runner.memory(),
+        0,
+        "carrier without Imperialdramon name or Free trait should not gain memory"
+    );
 }
 
 // ─── §5 Inherited scope structural check (BLOCKED) ───────────────────────────
 
-/// When all inherited-clause gaps close, this test verifies the structural
-/// shape: scope=Inherited, when=EndOfAttack, not optional, no OPT flag.
+/// Inherited clause shape: scope=Inherited, when=EndOfAttack, not optional,
+/// no OPT flag.
 #[test]
-#[ignore = "pending: G-DSL-SOURCE-NAME-CONTAINS from qa/dsl-vocab-gaps.md — inherited clause not yet authored in YAML"]
 fn bt12_028_inherited_clause_is_end_of_attack_non_optional() {
     use digimon_dsl::compiled::CompiledClause;
 

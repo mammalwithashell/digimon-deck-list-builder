@@ -29,16 +29,11 @@
 //!   predicate threading. DSL has no triggered gain_memory at BeforePayCost timing
 //!   and no event_card_color_is predicate. See qa/dsl-vocab-gaps.md.
 //!
-//! Clause 1 (inherited): PARTIAL — shipped as `kind: grant_keyword, scope:
-//!   inherited` with `active_when` encoding the name/trait condition. The
-//!   `active_when` is compiled but silently discarded by lower_grant_keyword::lower
-//!   (mod.rs line 82 uses `..` to ignore active_when for GrantKeyword).
-//!   Net: Jamming is granted unconditionally to any carrier, regardless of name
-//!   or trait. Over-fires for non-Imperialdramon/non-Free carriers.
-//!   New gap: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.
-//!   Also blocked: carrier name check needs G-DSL-SELF-NAME-CONTAINS (AD1-014);
-//!   carrier trait check needs source_permanent_trait_has evaluator arm in
-//!   predicate.rs.
+//! Clause 1 (inherited): IMPLEMENTED — `kind: aura, scope: inherited` with a
+//!   materialized self keyword grant. The [Imperialdramon] name arm, [Free]
+//!   trait arm, and [Your Turn] gate are covered by `active_when` using
+//!   `self_digivolution_contains_name`, `source_permanent_trait_has`, and
+//!   `your_turn`.
 
 use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
 use digimon_engine::card_data::CardData;
@@ -109,10 +104,10 @@ fn bt12_022_clause_0_is_absent_blocked() {
     );
 }
 
-/// BT12-022 has exactly one declarative clause: an inherited GrantKeyword
-/// with keyword Jamming (clause 1, partial implementation).
+/// BT12-022 has exactly one declarative clause: an inherited Aura that grants
+/// Jamming (clause 1, partial implementation).
 #[test]
-fn bt12_022_has_one_inherited_grant_keyword_jamming() {
+fn bt12_022_has_one_inherited_jamming_aura() {
     let runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT12-022 in embedded DSL pack")
@@ -121,13 +116,20 @@ fn bt12_022_has_one_inherited_grant_keyword_jamming() {
 
     let compiled = runner.compiled_card(CARD_ID).expect("BT12-022 compiled");
 
-    let inherited_jamming_count = compiled
+    let inherited_jamming_aura_count = compiled
         .effects
         .iter()
         .filter(|c| match c {
             CompiledClause::Declarative(d) => match d {
-                CompiledDeclarativeClause::GrantKeyword { keyword, scope, .. } => {
-                    *scope == CompiledScope::Inherited && keyword.eq_ignore_ascii_case("Jamming")
+                CompiledDeclarativeClause::Aura {
+                    scope,
+                    grant_keyword,
+                    ..
+                } => {
+                    *scope == CompiledScope::Inherited
+                        && grant_keyword
+                            .as_ref()
+                            .is_some_and(|g| g.keyword.eq_ignore_ascii_case("Jamming"))
                 }
                 _ => false,
             },
@@ -136,8 +138,8 @@ fn bt12_022_has_one_inherited_grant_keyword_jamming() {
         .count();
 
     assert_eq!(
-        inherited_jamming_count, 1,
-        "BT12-022 must have exactly one inherited GrantKeyword(Jamming) declarative clause"
+        inherited_jamming_aura_count, 1,
+        "BT12-022 must have exactly one inherited Aura grant_keyword(Jamming) declarative clause"
     );
 }
 
@@ -189,12 +191,11 @@ fn bt12_022_clause_0_does_not_fire_on_opponents_turn() {
 // Clause 1: "[Your Turn] While this Digimon has [Imperialdramon] in its name
 // or the [Free] trait, it gains <Jamming>"
 //
-// Over-fires: `active_when` is compiled but not consumed by lowering.
-// Positive tests pass; negative tests are #[ignore]'d.
+// The [Imperialdramon] name arm, [Free] trait arm, and [Your Turn] gate are
+// implemented through an inherited self aura.
 
 /// When BT12-022 is stacked under a carrier with [Imperialdramon] in its name,
-/// the carrier should have Jamming. (Over-fires: any carrier gets Jamming due
-/// to G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.)
+/// the carrier should have Jamming.
 #[test]
 fn bt12_022_inherited_jamming_granted_when_carrier_has_imperialdramon_name() {
     let mut runner = DebugRunner::builder()
@@ -206,6 +207,7 @@ fn bt12_022_inherited_jamming_granted_when_carrier_has_imperialdramon_name() {
 
     // Stack: [BT12-022 (bottom), IMPERIALDRAMON (top)]
     let carrier = runner.place_stack(0, &[CARD_ID, "IMPERIALDRAMON"]);
+    runner.game.tick_declarative_effects();
 
     let has_jamming = runner.game.has_keyword(carrier, Keyword::Jamming);
     assert!(
@@ -215,9 +217,7 @@ fn bt12_022_inherited_jamming_granted_when_carrier_has_imperialdramon_name() {
 }
 
 /// When BT12-022 is stacked under a carrier with the [Free] trait, the carrier
-/// should have Jamming. (Over-fires regardless of trait due to
-/// G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED; this positive test passes
-/// for the wrong reason — the trait check is silently dropped.)
+/// should have Jamming.
 #[test]
 fn bt12_022_inherited_jamming_granted_when_carrier_has_free_trait() {
     let mut runner = DebugRunner::builder()
@@ -229,6 +229,7 @@ fn bt12_022_inherited_jamming_granted_when_carrier_has_free_trait() {
 
     // Stack: [BT12-022 (bottom), FREE-CARRIER (top)]
     let carrier = runner.place_stack(0, &[CARD_ID, "FREE-CARRIER"]);
+    runner.game.tick_declarative_effects();
 
     let has_jamming = runner.game.has_keyword(carrier, Keyword::Jamming);
     assert!(
@@ -240,11 +241,7 @@ fn bt12_022_inherited_jamming_granted_when_carrier_has_free_trait() {
 /// When BT12-022 is stacked under a carrier WITHOUT [Imperialdramon] in name
 /// or [Free] trait, the carrier should NOT have Jamming.
 ///
-/// FAILS (over-fires): `active_when` condition is not consumed by lowering,
-/// so Jamming is granted unconditionally to any carrier.
-/// Ignored pending G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.
 #[test]
-#[ignore = "pending: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED from qa/dsl-vocab-gaps.md — active_when is compiled but discarded in lower_grant_keyword::lower; Jamming over-fires for all carriers"]
 fn bt12_022_inherited_jamming_not_granted_when_carrier_has_no_matching_name_or_trait() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -255,6 +252,7 @@ fn bt12_022_inherited_jamming_not_granted_when_carrier_has_no_matching_name_or_t
 
     // Stack: [BT12-022 (bottom), TYRANNO (top)]
     let carrier = runner.place_stack(0, &[CARD_ID, "TYRANNO"]);
+    runner.game.tick_declarative_effects();
 
     let has_jamming = runner.game.has_keyword(carrier, Keyword::Jamming);
     assert!(
@@ -293,11 +291,9 @@ fn bt12_022_no_jamming_when_alone_on_field_as_top_card() {
     let _ = handle;
 }
 
-/// Carrier with [Imperialdramon] in name inherits Jamming even on opponent's
-/// turn — FAILS (over-fires: your_turn gate not enforced due to active_when
-/// being dropped).
+/// Carrier with [Imperialdramon] in name should not inherit Jamming on the
+/// opponent's turn because the aura is gated by `[Your Turn]`.
 #[test]
-#[ignore = "pending: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED from qa/dsl-vocab-gaps.md — your_turn gate in active_when is silently dropped; Jamming fires on both turns"]
 fn bt12_022_inherited_jamming_not_active_on_opponents_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -308,6 +304,7 @@ fn bt12_022_inherited_jamming_not_active_on_opponents_turn() {
 
     let carrier = runner.place_stack(0, &[CARD_ID, "IMPERIALDRAMON"]);
     runner.end_turn(); // switch to player 1's turn
+    runner.game.tick_declarative_effects();
 
     // Now it is player 1's turn — BT12-022's [Your Turn] gate should block Jamming.
     let has_jamming = runner.game.has_keyword(carrier, Keyword::Jamming);

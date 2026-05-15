@@ -47,11 +47,13 @@
 #
 # Clause 2 — [When Attacking][OPT] suspend + unsuspend-self fallback:
 #   DCGO: Suspend 1 opp unsuspended Digimon (optional select, can no-select if
-#   none available). Then checks if ANY suspension happened — if not, unsuspend
-#   self. The "if this effect didn't suspend" branch requires branching on the
-#   RESULT of the prior selection step (empty / no target available). The DSL
-#   has no `if_no_target` predicate or result binding from suspend steps, so
-#   the self-unsuspend fallback is BLOCKED.
+#   none available). Then checks whether this effect actually suspended a
+#   Digimon — if not, unsuspend self. The DSL now has `binding_is_none`, but
+#   using selection absence would approximate the printed result check and miss
+#   cases where a selected target was not suspended. Current result-log
+#   predicates only expose `effect_suspended_any_own_digimon`; BT16-025 needs an
+#   opponent/any-Digimon suspend-result predicate, so the fallback remains
+#   BLOCKED.
 #
 # ─── Implementation status ────────────────────────────────────────────────────
 #
@@ -64,7 +66,7 @@
 # | [When Digivolving] Suspend all opp Digimon ≤ source stack size  | BLOCKED — G-DSL-STACK-SIZE-LTE-SOURCE |
 # | [When Digivolving] If DNA: CannotUnsuspend all opp Digimon     | IMPLEMENTED (via on_dna_digivolve) |
 # | [When Attacking][OPT] Suspend 1 opp unsuspended Digimon        | IMPLEMENTED      |
-# | [When Attacking] If didn't suspend, unsuspend self             | BLOCKED — G-DSL-IF-NO-TARGET |
+# | [When Attacking] If didn't suspend, unsuspend self             | BLOCKED — G-DSL-EFFECT-SUSPENDED-RESULT |
 #
 # Gaps:
 #   G-DSL-STACK-SIZE-LTE-SOURCE: No DSL predicate that compares a candidate
@@ -73,11 +75,11 @@
 #     `stack_size_lte_source: true` would need to evaluate
 #     `candidate.card_sources.len() <= source_permanent.card_sources.len()`.
 #
-#   G-DSL-IF-NO-TARGET: No DSL control-flow form that branches on whether a
-#     prior optional selection produced a target vs. produced nothing (the
-#     player passed / no eligible targets existed). `select_opponent_permanent`
-#     with `optional: true` skips the step when no targets exist but does not
-#     bind a "skipped" flag; subsequent `if` conditions have no binding to test.
+#   G-DSL-EFFECT-SUSPENDED-RESULT: No DSL predicate that branches on whether the
+#     current effect actually suspended an opponent/any Digimon. `binding_is_none`
+#     exists for selection absence, and `effect_suspended_any_own_digimon` exists
+#     for own-Digimon result checks, but BT16-025 needs the result of attempting
+#     to suspend an opponent's Digimon.
 
 card: BT16-025
 name: Paildramon
@@ -159,15 +161,18 @@ effects:
   # matching DCGO's `canNoSelect: true` when no eligible targets exist).
   #
   # "If this effect didn't suspend, unsuspend this Digimon" is BLOCKED
-  # (G-DSL-IF-NO-TARGET). When that gap closes, add:
+  # (G-DSL-EFFECT-SUSPENDED-RESULT). Do not approximate this with
+  # `binding_is_none`; printed text depends on whether the suspend mutation
+  # occurred, not merely whether a target was selected. When an opponent/any
+  # suspend-result predicate closes, add a result-gated branch such as:
   #   - if:
-  #       condition: { binding_is_none: wa_target }   # ← hypothetical predicate
+  #       condition: { effect_suspended_any_opponent_digimon: false }
   #       then:
   #         - unsuspend: { target: source }
   - when: when_attacking
     once_per_turn: true
     optional: true
-    summary: "[WA][OPT] Suspend 1 opp unsuspended Digimon (unsuspend-self fallback blocked G-DSL-IF-NO-TARGET)"
+    summary: "[WA][OPT] Suspend 1 opp unsuspended Digimon (unsuspend-self fallback blocked G-DSL-EFFECT-SUSPENDED-RESULT)"
     process:
       - select_opponent_permanent:
           bind_as: wa_target
@@ -178,9 +183,9 @@ effects:
           optional: true
           prompt: "Suspend 1 of your opponent's unsuspended Digimon"
       - suspend: { target: wa_target }
-      # Self-unsuspend fallback — BLOCKED: G-DSL-IF-NO-TARGET
-      # The DSL cannot branch on whether wa_target was bound (i.e. whether
-      # the player passed the selection or no targets existed).
+      # Self-unsuspend fallback — BLOCKED: G-DSL-EFFECT-SUSPENDED-RESULT
+      # The DSL cannot yet branch on whether this effect actually suspended an
+      # opponent/any Digimon. `binding_is_none` alone would be an approximation.
 
   # ─── Clause 3: Inherited <Partition (Blue Lv.4 & Green Lv.4)> ────────────────
   # Declarative inherited. DCGO: PartitionSelfEffect(isInheritedEffect: true).

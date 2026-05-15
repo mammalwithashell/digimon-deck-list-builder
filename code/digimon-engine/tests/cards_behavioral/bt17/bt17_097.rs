@@ -67,13 +67,14 @@
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
+use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{HAND_EFFECT_START, PASS};
-use digimon_engine::card_data::CardData;
+use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
 use digimon_engine::permanent::OptionState;
 use digimon_engine::replacement::ReplacementCause;
-use digimon_engine::selection::TriggerSource;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 const BT17_097_YAML: &str = include_str!("../../../cards/bt17/BT17-097.yaml");
 
@@ -103,6 +104,42 @@ fn make_non_free_digimon(id: &str) -> CardData {
     c.dp = Some(6000);
     c.play_cost = 7;
     c.colors = vec![CardColor::Blue];
+    c
+}
+
+/// A plain blue Lv.4 Digimon that can be used as the Main-effect digivolve base.
+fn make_blue_lv4_base(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Blue Lv4 Base");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(5000);
+    c.play_cost = 5;
+    c.colors = vec![CardColor::Blue];
+    c
+}
+
+/// A Lv.5 [Free] Digimon with a normal blue Lv.4 digivolution cost of 5.
+fn make_free_lv5_evo(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Free Lv5 Evolution");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(5);
+    c.dp = Some(7000);
+    c.play_cost = 7;
+    c.colors = vec![CardColor::Blue];
+    c.traits = vec!["Free".to_string()];
+    c.evo_costs = vec![EvoCost {
+        card_color: CardColor::Blue as u8,
+        level: 4,
+        memory_cost: 5,
+    }];
+    c
+}
+
+/// A Lv.5 Digimon with a matching evo cost but no [Free] trait.
+fn make_non_free_lv5_evo(id: &str) -> CardData {
+    let mut c = make_free_lv5_evo(id);
+    c.card_name = "Non-Free Lv5 Evolution".to_string();
+    c.traits = vec![];
     c
 }
 
@@ -322,43 +359,89 @@ fn bt17_097_main_places_self_as_delay_option_on_field() {
     );
 }
 
-/// G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET: the [Main]
-/// digivolve sub-clause (select own Digimon → select Lv5+ [Free] hand card
-/// with cost -4 → digivolve) is blocked. When gap closes, a Free-trait Lv5+
-/// hand card should be offered as a digivolve target for an own Digimon.
 #[test]
-#[ignore = "pending: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — select_own_permanent chain doesn't resume after first pick"]
-fn bt17_097_main_offers_digivolve_into_free_trait_lv5_hand_card() {
-    let free_lv5 = {
-        let mut c = make_test_card("FREE-LV5", "Free Digimon Lv5");
-        c.card_kind = CardKind::Digimon;
-        c.level = Some(5);
-        c.traits = vec!["Free".to_string()];
-        c.play_cost = 7;
-        c.colors = vec![CardColor::Blue];
-        c
-    };
+fn bt17_097_main_digivolves_into_free_lv5_hand_card_cost_reduced_by_4_then_places_self() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT17_097_YAML)
         .expect("BT17-097 YAML parses")
-        .add_card(free_lv5)
+        .add_card(make_blue_lv4_base("BT17097-BASE"))
+        .add_card(make_free_lv5_evo("BT17097-FREE-LV5"))
+        .add_card(make_non_free_lv5_evo("BT17097-NONFREE-LV5"))
         .add_card(make_filler("FILL"))
         .memory(10)
-        .hand(0, &["BT17-097", "FREE-LV5"])
+        .hand(0, &["BT17-097", "BT17097-FREE-LV5", "BT17097-NONFREE-LV5"])
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
         .start();
 
-    // Place a Digimon to digivolve from.
-    let _own_digimon = runner.place_on_field(0, "FILL", Some(0));
+    let base = runner.place_on_field(0, "BT17097-BASE", Some(0));
 
     let fired = runner.game.activate_hand_main(0, 0);
     assert!(fired);
 
-    // When gap closes, the next pending_selection should be selecting the own
-    // Digimon target; then selecting the Lv5+ [Free] hand card; then the
-    // digivolve should complete with cost reduced by 4.
-    unimplemented!("blocked on G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET");
+    let field_view = runner
+        .pending_selection_view()
+        .expect("Main effect must ask which Digimon digivolves");
+    assert_eq!(field_view.kind, SelectionKind::OwnField);
+    assert!(
+        runner.pending_is_optional(),
+        "the printed 'may digivolve' target selection must expose PASS"
+    );
+    assert_eq!(
+        field_view.valid_action_ids.len(),
+        1,
+        "only the own field Digimon should be offered as the digivolve target"
+    );
+    let field_mask = build_action_mask(&runner.game, field_view.selecting_player);
+    assert_eq!(field_mask[field_view.valid_action_ids[0] as usize], 1.0);
+    runner
+        .execute_action(field_view.selecting_player, field_view.valid_action_ids[0])
+        .expect("select own Digimon target");
+
+    let hand_view = runner
+        .pending_selection_view()
+        .expect("Main effect must ask which Lv5+ [Free] hand card to digivolve into");
+    assert_eq!(hand_view.kind, SelectionKind::Hand);
+    assert_eq!(
+        hand_view.valid_action_ids.len(),
+        1,
+        "only the Lv5+ [Free] trait hand card should be legal; non-Free Lv5 is excluded"
+    );
+    let hand_action = hand_view.valid_action_ids[0];
+    let hand_mask = build_action_mask(&runner.game, hand_view.selecting_player);
+    assert_eq!(hand_mask[hand_action as usize], 1.0);
+    runner
+        .execute_action(hand_view.selecting_player, hand_action)
+        .expect("select Lv5+ [Free] hand card");
+    runner.auto_resolve().expect("finish BT17-097 Main effect");
+
+    let evolved = &runner.game.players[0].battle_area[base.index as usize];
+    assert_eq!(
+        evolved.top_card().card_id(&runner.game.card_data),
+        "BT17097-FREE-LV5",
+        "selected Lv5+ [Free] card must become the stack's top card"
+    );
+    assert_eq!(
+        runner.memory(),
+        9,
+        "evo cost 5 reduced by 4 should spend exactly 1 memory"
+    );
+    assert!(
+        runner
+            .game
+            .player(0)
+            .hand
+            .iter()
+            .all(|card| card.card_id(&runner.game.card_data) != "BT17097-FREE-LV5"),
+        "selected Lv5+ [Free] card must leave hand"
+    );
+    assert!(
+        runner.game.players[0].battle_area.iter().any(|p| {
+            p.top_card().card_id(&runner.game.card_data) == "BT17-097"
+                && matches!(p.option_state, OptionState::Delayed { .. })
+        }),
+        "BT17-097 must be placed in the battle area as a Delay option after the Main digivolve"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

@@ -10,7 +10,7 @@ use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::predicate::{eval_predicate_with_bindings, PredicateSubject};
 use digimon_engine::dsl_cards::step::run_steps;
 use digimon_engine::effect_context::{EffectContext, EffectReadContext};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, ModifierType};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Expiry, Keyword, ModifierType};
 use digimon_engine::permanent::{Permanent, PermanentHandle};
 use digimon_engine::selection::TriggerSource;
 
@@ -224,6 +224,70 @@ effects:
     runner.game.drain_effect_queue();
 
     assert_eq!(runner.memory(), 1);
+}
+
+#[test]
+fn has_keyword_predicate_matches_permanent_keywords() {
+    let mut runner = runner_with_dp_cards();
+    let low = runner.place_on_field(0, "LOW-DP", None);
+    let high = runner.place_on_field(0, "HIGH-DP", None);
+    runner
+        .game
+        .modifiers
+        .grant_keyword(high, Keyword::Jamming, Expiry::Permanent, 0);
+    let rctx = EffectReadContext::new(&runner.game, src_card(&runner), None, 0);
+
+    let pred = CompiledPredicate {
+        has_keyword: Some("Jamming".to_string()),
+        ..Default::default()
+    };
+
+    assert!(eval_predicate_with_bindings(
+        &pred,
+        &rctx,
+        PredicateSubject::Permanent(high),
+        None
+    ));
+    assert!(!eval_predicate_with_bindings(
+        &pred,
+        &rctx,
+        PredicateSubject::Permanent(low),
+        None
+    ));
+}
+
+#[test]
+fn source_permanent_trait_predicate_reads_carrier_top_card_traits() {
+    let mut runner = runner_with_dp_cards();
+    let mut free = make_test_card("FREE-TOP", "Free Top");
+    free.traits.push("Free".to_string());
+    let plain = make_test_card("PLAIN-TOP", "Plain Top");
+    runner.game.card_data.push(free);
+    runner.game.card_data.push(plain);
+    let matching = runner.place_on_field(0, "FREE-TOP", None);
+    let non_matching = runner.place_on_field(0, "PLAIN-TOP", None);
+
+    let pred = CompiledPredicate {
+        source_permanent_trait_has: Some("Free".to_string()),
+        ..Default::default()
+    };
+
+    let src = src_card(&runner);
+    let matching_ctx = EffectReadContext::new(&runner.game, src, Some(matching), 0);
+    let non_matching_ctx = EffectReadContext::new(&runner.game, src, Some(non_matching), 0);
+
+    assert!(eval_predicate_with_bindings(
+        &pred,
+        &matching_ctx,
+        PredicateSubject::None,
+        None
+    ));
+    assert!(!eval_predicate_with_bindings(
+        &pred,
+        &non_matching_ctx,
+        PredicateSubject::None,
+        None
+    ));
 }
 
 #[test]

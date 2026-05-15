@@ -26,6 +26,7 @@
 #   0b. Return 1 opp suspended Digimon to hand: IMPLEMENTED
 #   0c. Alt-cost: By returning 1 [Dragon Mode] from own divi-cards → return ALL
 #       suspended to bottom of decks instead: BLOCKED G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME
+#       (narrowed: selected own source refs cannot currently be returned to hand)
 #
 # Clause 1 — [All Turns] DP formula + conditional keyword aura:
 #   1a. +1000 DP for each color in its digi cards: IMPLEMENTED
@@ -60,25 +61,19 @@
 #   - If player declines (canNoSelect → no card selected):
 #       • SelectPermanentEffect over 1 opp suspended Digimon, mode: Bounce.
 #
-# The entire alt-cost clause needs two primitives both absent from the DSL:
+# Readiness refresh:
+#   - `select_own_sources` now accepts `filter:` and can restrict to the
+#     source permanent, so the name-filtered Dragon Mode source pick is no
+#     longer the blocker.
+#   - `binding_present` / `binding_absent` now exist, but a min:0 source
+#     selection still binds `SourceRefs([])` on PASS, so it is not by itself a
+#     reliable "paid this cost" guard.
+#   - The remaining hard blocker for the faithful alt-cost is a first-class
+#     DSL zone-move step that returns selected own source refs from a
+#     digivolution stack to their owner's hand. Existing source-ref consumers
+#     can trash or play selected sources, but not return them to hand.
 #
-# (A) `select_own_sources` with a name-based filter. The current
-#     `select_own_sources` verb (DSL step.rs line 138) accepts `min/max/then`
-#     but has no `filter:` predicate field. `EffectContext::select_own_sources`
-#     already takes a `candidate_filter` closure at the Rust level, but
-#     `install_select_own_sources` (selections.rs:1330) hard-codes
-#     `|_game, _source| true` — rejecting all filter YAML. This gap is
-#     `G-DSL-SELECT-OWN-SOURCES-FILTER` (filed under EX4-073 in
-#     qa/dsl-vocab-gaps.md).
-#
-# (B) Once a source is selected (and returned to hand), the effect branches on
-#     that selection result: the "did the player return a Dragon Mode?" check
-#     controls whether 1 suspended goes to hand or ALL go to deck-bottom.
-#     The DSL has no `binding_present` predicate for checking whether an
-#     optional `select_own_sources` produced a binding (filed as
-#     `G-DSL-BIND-PRESENT` in qa/dsl-vocab-gaps.md).
-#
-# New gap filed (synthesises both sub-gaps as a single card-level entry):
+# Composite card-level gap:
 #   G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME
 #
 # Workaround: Omit the alt-cost branch per no-approximations policy.
@@ -194,10 +189,12 @@ effects:
   #   digivolution cards to its owner's hand, return all of your opponent's
   #   suspended Digimon at the bottom of their owners' decks instead."
   #   BLOCKED: G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME
-  #   Requires: (A) `select_own_sources` with name filter (G-DSL-SELECT-OWN-SOURCES-FILTER)
-  #             (B) `binding_present` predicate to branch on selection result (G-DSL-BIND-PRESENT)
-  #             (C) `return_to_deck { position: bottom }` for ALL currently-suspended
-  #                 opp Digimon (would need for_each over binding of suspended perms).
+  #   Remaining requirement: a source-ref zone move from selected own
+  #   digivolution cards to their owner's hand. `select_own_sources.filter`,
+  #   `binding_present`, and `return_to_deck { position: bottom }` now exist,
+  #   but existing selected-source consumers only trash or play selected
+  #   sources. Do not approximate this by trashing, playing, or silently
+  #   moving a source outside the selection/action flow.
   #   When G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME closes, replace this clause
   #   body with the full three-step flow.
   - when: when_digivolving
@@ -236,13 +233,13 @@ effects:
       #     min: 0
       #     max: 1
       #     filter:
-      #       name_contains: "Imperialdramon: Dragon Mode"   # ← G-DSL-SELECT-OWN-SOURCES-FILTER
+      #       name_contains: "Imperialdramon: Dragon Mode"
       #     bind_as: dragon_mode_source
       #     prompt: "By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's digi-cards to hand, return all opponent's suspended Digimon to bottom of decks instead"
       # - if:
-      #     condition: { binding_present: dragon_mode_source }  # ← G-DSL-BIND-PRESENT
+      #     condition: { binding_present: dragon_mode_source }
       #     then:
-      #       - return_source_to_hand: { source: dragon_mode_source }  # new verb for source→hand
+      #       - return_selected_sources_to_hand: { source_refs: dragon_mode_source }  # ← missing source-ref→hand verb
       #       - for_each:
       #           over:
       #             all_of:
