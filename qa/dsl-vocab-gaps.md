@@ -16,6 +16,36 @@ This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine h
 > driving DSL substrate. Pre-scaling cleanup batch §2 narrative in
 > `.claude/plans/pre-scaling-cleanup-batch.md`.
 
+> **Tracker hygiene sweep — 2026-05-14:** Cross-referenced against PRs
+> #459–#473. The Track E zone-movement DSL verb table remains current
+> (no new entries). Track C modifier-payload structured YAML parser is
+> still the principal open DSL item — engine substrate from PR #455
+> is unchanged, parser work has not landed yet. New since 2026-05-10:
+>
+> - **Track H aura DSL (PR #467):** `grant_triggered_effect` step
+>   (target / timing / expiry / body), `kind: aura` materialization
+>   for battle-area and security-zone scopes, plus the typed
+>   `AuraScope` / `AuraGrant` builder all lower through existing DSL
+>   schema. Card authoring for EX1-068 Ice Wall! and BT21-095 Wind
+>   Guardians is now pure DSL; no new vocabulary gap surfaced.
+> - **Alter-S Ladder DSL (PR #468):** EX9-021 Omnimon Alter-S and DNA
+>   Omnimon ladder cards land using existing zone-movement /
+>   replacement / source-selection verbs. No new DSL verb required.
+> - **Formula-threshold DSL (PR #470):** `play_cost_lte` /
+>   `binding_play_cost` / `distinct_colors_count` formula leaves
+>   activated for BT15-096 and BT21-102. The shape is shared with
+>   level/DP/material/memory/security aggregate predicate leaves —
+>   see the "Track J formula/result substrate slice (2026-05-10)"
+>   paragraph in `docs/RUST_ENGINE_GAPS.md`.
+> - **Puppet observer DSL (PR #472):** predicate leaves
+>   `event_target_kind`, `event_target_trait_has`,
+>   `event_permanent_is_source`, and `source_is_unsuspended` are
+>   wired through existing lowering paths. PUPPETS-G011 closed.
+>
+> The `OnSuspend` / name-filtered DelayTrigger shape (BT24-089) and
+> bilateral player-scoped passive modifier shape (Rocks) remain open
+> from the 2026-05-10 sweep.
+
 ## Track C modifier payload YAML shape (2026-05-09) — rich payload parser pending
 
 The Rust engine now has typed `ModifierPayload` storage and consult sites for

@@ -2,8 +2,38 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-05-09
-Last sweep: 2026-05-10 (pre-scaling cleanup batch — see `.claude/plans/pre-scaling-cleanup-batch.md` §2)
+Last updated: 2026-05-14
+Last sweep: 2026-05-14 (post-Track-H + Alter-S Ladder rollup)
+
+## Sweep notes (2026-05-14)
+
+Cross-referenced every entry against PRs #459–#473 and the per-archetype
+DSL gap input documents in `qa/archetype-qa/dsl/`. New closures since the
+2026-05-10 sweep:
+
+- **Track H aura system (PR #467):** typed `AuraScope` / `AuraGrant`
+  builder API, security-zone aura tick dispatch, and queue-based granted-
+  triggered-effect dispatch with parked-selection support. Closes the
+  "Granted triggered ability", "Named-target declarative aura", and
+  "Declarative aura sourced from security zone" entries in
+  `docs/RUST_ENGINE_GAPS.md` at the substrate level — entries remain
+  🟡 PARTIAL pending the body-registry cleanup optimization and the
+  query-time aura model follow-up.
+- **Alter-S Ladder DSL (PR #468):** EX9-021 Omnimon Alter-S and DNA
+  Omnimon ladder cards landed on existing zone-movement / replacement /
+  source-selection substrate. No new engine gap surfaced.
+- **Formula thresholds (PR #470):** validates the Track J
+  formula/result substrate slice on real card-shaped fixtures
+  (BT15-096, BT21-102). No new substrate.
+- **Puppet DSL observers (PR #472):** PUPPETS-G011 closed; observer
+  fan-out and `OnAnyDeletion` event-target predicates are exercised by
+  card-shaped fixtures (BT22-002, BT22-088, EX9-033, EX11-023, ST19-14).
+  No new engine timing required.
+
+No new engine gaps surfaced from the per-archetype DSL gap input
+documents in `qa/archetype-qa/dsl/`. The shadow tracker in this file
+remains consistent with the canonical engine-side gap document
+[docs/RUST_ENGINE_GAPS.md](../../docs/RUST_ENGINE_GAPS.md).
 
 ## Sweep notes (2026-05-10)
 
