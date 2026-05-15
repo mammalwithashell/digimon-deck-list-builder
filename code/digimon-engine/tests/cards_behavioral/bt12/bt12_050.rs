@@ -31,13 +31,9 @@
 //!   and no event_card_color_is predicate. See qa/dsl-vocab-gaps.md.
 //!   Structurally identical to BT12-022 clause 0 (green→blue swap only).
 //!
-//! Clause 1 (inherited): PARTIAL — shipped as `kind: grant_keyword, scope:
-//!   inherited` with `active_when` encoding the name/trait condition. The
-//!   `active_when` is compiled but silently discarded by lower_grant_keyword::lower
-//!   (mod.rs uses `..` to ignore active_when for GrantKeyword).
-//!   Net: Piercing is granted unconditionally to any carrier, regardless of name
-//!   or trait. Over-fires for non-Imperialdramon/non-Free carriers.
-//!   Gap: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.
+//! Clause 1 (inherited): IMPLEMENTED — represented as an inherited self-aura
+//!   with `target: {}`, gated by `[Your Turn]` plus either carrier name contains
+//!   "Imperialdramon" or carrier top-card trait includes [Free].
 //!   Structurally identical to BT12-022 clause 1 (Jamming→Piercing swap only).
 
 use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
@@ -109,10 +105,10 @@ fn bt12_050_clause_0_is_absent_blocked() {
     );
 }
 
-/// BT12-050 has exactly one declarative clause: an inherited GrantKeyword
-/// with keyword Piercing (clause 1, partial implementation).
+/// BT12-050 has exactly one inherited Aura clause for the conditional Piercing
+/// grant (clause 1).
 #[test]
-fn bt12_050_has_one_inherited_grant_keyword_piercing() {
+fn bt12_050_has_one_inherited_piercing_aura() {
     let runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT12-050 in embedded DSL pack")
@@ -121,14 +117,12 @@ fn bt12_050_has_one_inherited_grant_keyword_piercing() {
 
     let compiled = runner.compiled_card(CARD_ID).expect("BT12-050 compiled");
 
-    let inherited_piercing_count = compiled
+    let inherited_aura_count = compiled
         .effects
         .iter()
         .filter(|c| match c {
             CompiledClause::Declarative(d) => match d {
-                CompiledDeclarativeClause::GrantKeyword { keyword, scope, .. } => {
-                    *scope == CompiledScope::Inherited && keyword.eq_ignore_ascii_case("Piercing")
-                }
+                CompiledDeclarativeClause::Aura { scope, .. } => *scope == CompiledScope::Inherited,
                 _ => false,
             },
             _ => false,
@@ -136,8 +130,8 @@ fn bt12_050_has_one_inherited_grant_keyword_piercing() {
         .count();
 
     assert_eq!(
-        inherited_piercing_count, 1,
-        "BT12-050 must have exactly one inherited GrantKeyword(Piercing) declarative clause"
+        inherited_aura_count, 1,
+        "BT12-050 must have exactly one inherited Aura declarative clause for conditional Piercing"
     );
 }
 
@@ -189,12 +183,11 @@ fn bt12_050_clause_0_does_not_fire_on_opponents_turn() {
 // Clause 1: "[Your Turn] While this Digimon has [Imperialdramon] in its name
 // or the [Free] trait, it gains <Piercing>"
 //
-// Over-fires: `active_when` is compiled but not consumed by lowering.
-// Positive tests pass; negative tests are #[ignore]'d.
+// Implemented as an inherited self-aura. Positive and negative tests verify
+// the carrier name/trait gate and the `[Your Turn]` gate.
 
 /// When BT12-050 is stacked under a carrier with [Imperialdramon] in its name,
-/// the carrier should have Piercing. (Over-fires: any carrier gets Piercing due
-/// to G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.)
+/// the carrier should have Piercing.
 #[test]
 fn bt12_050_inherited_piercing_granted_when_carrier_has_imperialdramon_name() {
     let mut runner = DebugRunner::builder()
@@ -206,6 +199,7 @@ fn bt12_050_inherited_piercing_granted_when_carrier_has_imperialdramon_name() {
 
     // Stack: [BT12-050 (bottom), IMPERIALDRAMON (top)]
     let carrier = runner.place_stack(0, &[CARD_ID, "IMPERIALDRAMON"]);
+    runner.game.tick_declarative_effects();
 
     let has_piercing = runner.game.has_keyword(carrier, Keyword::Piercing);
     assert!(
@@ -215,9 +209,7 @@ fn bt12_050_inherited_piercing_granted_when_carrier_has_imperialdramon_name() {
 }
 
 /// When BT12-050 is stacked under a carrier with the [Free] trait, the carrier
-/// should have Piercing. (Over-fires regardless of trait due to
-/// G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED; this positive test passes
-/// for the wrong reason — the trait check is silently dropped.)
+/// should have Piercing.
 #[test]
 fn bt12_050_inherited_piercing_granted_when_carrier_has_free_trait() {
     let mut runner = DebugRunner::builder()
@@ -229,6 +221,7 @@ fn bt12_050_inherited_piercing_granted_when_carrier_has_free_trait() {
 
     // Stack: [BT12-050 (bottom), FREE-CARRIER (top)]
     let carrier = runner.place_stack(0, &[CARD_ID, "FREE-CARRIER"]);
+    runner.game.tick_declarative_effects();
 
     let has_piercing = runner.game.has_keyword(carrier, Keyword::Piercing);
     assert!(
@@ -240,11 +233,7 @@ fn bt12_050_inherited_piercing_granted_when_carrier_has_free_trait() {
 /// When BT12-050 is stacked under a carrier WITHOUT [Imperialdramon] in name
 /// or [Free] trait, the carrier should NOT have Piercing.
 ///
-/// FAILS (over-fires): `active_when` condition is not consumed by lowering,
-/// so Piercing is granted unconditionally to any carrier.
-/// Ignored pending G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.
 #[test]
-#[ignore = "pending: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED from qa/dsl-vocab-gaps.md — active_when is compiled but discarded in lower_grant_keyword::lower; Piercing over-fires for all carriers"]
 fn bt12_050_inherited_piercing_not_granted_when_carrier_has_no_matching_name_or_trait() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -255,6 +244,7 @@ fn bt12_050_inherited_piercing_not_granted_when_carrier_has_no_matching_name_or_
 
     // Stack: [BT12-050 (bottom), TYRANNO (top)]
     let carrier = runner.place_stack(0, &[CARD_ID, "TYRANNO"]);
+    runner.game.tick_declarative_effects();
 
     let has_piercing = runner.game.has_keyword(carrier, Keyword::Piercing);
     assert!(
@@ -289,11 +279,9 @@ fn bt12_050_no_piercing_when_alone_on_field_as_top_card() {
     let _ = handle;
 }
 
-/// Carrier with [Imperialdramon] in name inherits Piercing even on opponent's
-/// turn — FAILS (over-fires: your_turn gate not enforced due to active_when
-/// being dropped).
+/// Carrier with [Imperialdramon] in name should not inherit Piercing on the
+/// opponent's turn because the inherited effect is gated by `[Your Turn]`.
 #[test]
-#[ignore = "pending: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED from qa/dsl-vocab-gaps.md — your_turn gate in active_when is silently dropped; Piercing fires on both turns"]
 fn bt12_050_inherited_piercing_not_active_on_opponents_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -304,6 +292,7 @@ fn bt12_050_inherited_piercing_not_active_on_opponents_turn() {
 
     let carrier = runner.place_stack(0, &[CARD_ID, "IMPERIALDRAMON"]);
     runner.end_turn(); // switch to player 1's turn
+    runner.game.tick_declarative_effects();
 
     // Now it is player 1's turn — BT12-050's [Your Turn] gate should block Piercing.
     let has_piercing = runner.game.has_keyword(carrier, Keyword::Piercing);

@@ -380,7 +380,7 @@ fn bt21_037_when_digivolving_no_opp_digimon_no_selection_but_dp_fires() {
     );
 }
 
-// ─── §3 Armor Purge keyword — structural only (G-DECLARATIVE-KEYWORD) ────────
+// ─── §3 Armor Purge keyword runtime behavior ────────────────────────────────
 
 #[test]
 fn bt21_037_armor_purge_prevents_deletion_when_top_source_trashed() {

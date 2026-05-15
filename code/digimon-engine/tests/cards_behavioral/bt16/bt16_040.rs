@@ -51,12 +51,12 @@
 //! ## DSL gap blocking clause 0 full execution  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET]
 //!
 //! The chain `select_own_permanent { bind_as: target } → select_trash { bind_as: evo }
-//! → effect_initiated_digivolve { target: target, from_hand: evo }` terminates
+//! → effect_initiated_digivolve { target: target, source: evo }` terminates
 //! after the permanent pick. The trash-pick prompt never installs and the
 //! digivolve verb never executes. This is the same gap that blocked BT17-015
 //! branch 1 and BT17-027 branch 1 (see those files' gap analysis).
 //!
-//! Note: `effect_initiated_digivolve` with `from_hand: <trash_binding>` is
+//! Note: `effect_initiated_digivolve` with `source: <trash_binding>` is
 //! sound — `resolve_card_source_ref` in `play_digivolve.rs` maps `TrashIndex`
 //! to `CardSourceRef::Trash` and calls `effect_initiated_digivolve_from_source`.
 //! The blocker is specifically the selection chain not continuing past the
@@ -70,7 +70,9 @@
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
-use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledScope, CompiledTiming,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -229,6 +231,46 @@ fn bt16_040_clause1_inherited_when_attacking_once_per_turn() {
     assert!(
         inherited_wa.once_per_turn,
         "clause 1 must be once_per_turn ([Once Per Turn] printed)"
+    );
+}
+
+/// Printed special evolution path: `[Digivolve] [Minomon]: Cost 0`.
+#[test]
+fn bt16_040_has_minomon_cost0_digivolve_alt_path() {
+    let runner = wormmon_base().start();
+    let compiled = runner
+        .compiled_card("BT16-040")
+        .expect("BT16-040 compiled card present");
+
+    let minomon_path = compiled.alt_paths.iter().find(|path| {
+        path.kind == CompiledAltPathKind::Digivolve
+            && path
+                .from
+                .as_ref()
+                .and_then(|predicate| predicate.name_is.as_deref())
+                == Some("Minomon")
+    });
+
+    let minomon_path = minomon_path.expect("BT16-040 must include [Digivolve] [Minomon]: Cost 0");
+    assert_eq!(
+        minomon_path.cost,
+        Some(CompiledCost::Literal(0)),
+        "BT16-040 Minomon special digivolve path must cost 0"
+    );
+}
+
+/// Clause 0 picks an evolution card from trash, so the YAML should use the
+/// neutral `source: evo` field rather than the legacy hand-specific alias.
+#[test]
+fn bt16_040_effect_initiated_trash_digivolve_uses_source_field() {
+    let yaml = include_str!("../../../cards/bt16/BT16-040.yaml");
+    assert!(
+        yaml.contains("source: evo"),
+        "trash-source effect_initiated_digivolve must be authored with `source: evo`"
+    );
+    assert!(
+        !yaml.contains("from_hand:"),
+        "BT16-040 YAML must not use legacy `from_hand:` for a trash-source digivolve"
     );
 }
 

@@ -337,19 +337,19 @@ Format per entry:
 
 ## P-117 — inherited When Attacking color-count predicate  [G-DSL-SELF-COLOR-COUNT-GTE]
 - Effect text: "[When Attacking] If this Digimon has 2 or more colors, ＜Draw 1＞ (Draw 1 card from your deck.)"
-- Missing DSL verb / step kind / predicate: `self_color_count_gte: N` boolean predicate (or equivalent) evaluating whether the carrier permanent's top card has N or more distinct colors. No such predicate exists in the DSL's `PredicateSpec` / `CompiledPredicate` hierarchy.
+- Status 2026-05-11: resolved for top-card color counts. `self_color_count_gte: N` is now in `PredicateSpec` / `CompiledPredicate` and evaluates the predicate subject/source permanent's synthesized top-card colors.
 - DCGO reference: `P_117.cs` lines 203-211 — `card.PermanentOfThisCard().TopCard.CardColors.Count >= 2`. Note: DCGO checks ONLY the top card's colors, not the union of the full digivolution stack. The DSL predicate should align with DCGO behavior: count the top card's colors only.
 - Lowers to engine API: `Game::player(p).battle_area[i].top_card()` → `card_data[idx].colors.len()` comparison; no new engine primitive needed, only a DSL predicate leaf that invokes `ctx.source_permanent` top-card color count.
-- Suggested DSL syntax:
+- DSL syntax:
   ```yaml
   condition:
     self_color_count_gte: 2
   ```
   Evaluates as: `ctx.source_permanent.and_then(|h| perm.top_card().colors().len()).unwrap_or(0) >= 2`.
   Alternative: `source_top_card_color_count_gte: 2` if the naming convention favors explicit subject.
-- Workaround: omit condition (over-fires — Draw fires unconditionally on all carriers including mono-color). Negative-condition tests are `#[ignore = "pending: G-DSL-SELF-COLOR-COUNT-GTE from qa/dsl-vocab-gaps.md"]`.
 - Gap kind: DSL only (engine has the data; only the predicate leaf is missing).
-- Cards blocked: P-117 clause 1 (inherited When Attacking); BT12-031 clause 1b ([All Turns] SecurityAttackPlus+Blocker conditional on 2+ colors in digi-cards — same predicate needed, but evaluated against the FULL digivolution stack's union of colors, not just the top card).
+- Cards unblocked: P-117 clause 1 (inherited When Attacking).
+- Remaining sibling blocker: BT12-031 clause 1b still needs a distinct stack-union color-count predicate ("2+ colors in digi-cards"), not this top-card-only predicate.
 - First reported: 2026-05-04 (P-117 batch-implement-cards-rust-dsl)
 
 ---

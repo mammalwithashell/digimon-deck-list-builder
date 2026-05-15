@@ -23,7 +23,8 @@
 //! - Clause 0a: suspend-all opp Digimon with no digi-cards — IMPLEMENTED
 //! - Clause 0b: return 1 opp suspended Digimon to hand — IMPLEMENTED
 //! - Clause 0c: alt-cost return Dragon Mode → return-all-to-bottom — BLOCKED
-//!   G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME (qa/dsl-vocab-gaps.md)
+//!   G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME (qa/dsl-vocab-gaps.md),
+//!   currently narrowed to selected-source-refs → hand zone movement
 //! - Clause 1a: +1000 DP per color in digi-cards — IMPLEMENTED
 //! - Clause 1b: while 2+ colors → Security A. +1 + Blocker — BLOCKED
 //!   G-DSL-SELF-COLOR-COUNT-GTE (qa/dsl-vocab-gaps.md)
@@ -327,18 +328,19 @@ fn bt12_031_when_digivolving_with_no_opp_digimon_does_not_error() {
 /// digivolution cards to its owner's hand, return all of your opponent's
 /// suspended Digimon at the bottom of their owners' decks instead" branch
 /// requires:
-///   (A) `select_own_sources` with a name-based filter
-///       (G-DSL-SELECT-OWN-SOURCES-FILTER, filed under EX4-073).
-///   (B) `binding_present` predicate for conditional branching on the
-///       selection result (G-DSL-BIND-PRESENT, filed under EX9-066).
-///   (C) Return-all-suspended-to-bottom loop after the opt-in cost.
+///   (A) source-ref → hand zone movement for a selected card from this
+///       Digimon's digivolution cards.
+///   (B) optional-cost flow that cleanly distinguishes PASS from a non-empty
+///       selected source list. `select_own_sources.filter` and
+///       `binding_present` now exist, but min:0 source selection binds an empty
+///       `SourceRefs([])` on PASS, so it is not a complete paid-cost guard.
 ///
 /// Until G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME closes, there is no
 /// player-visible selection for the Dragon Mode opt-in, and ALL suspended
 /// Digimon only ever go to hand (base clause) rather than to the bottom of
 /// the deck.
 #[test]
-#[ignore = "pending: G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME from qa/dsl-vocab-gaps.md — select_own_sources lacks filter predicate; binding_present predicate missing"]
+#[ignore = "pending: G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME from qa/dsl-vocab-gaps.md — selected source refs cannot be returned to hand"]
 fn bt12_031_alt_cost_dragon_mode_offers_selection_and_returns_all_suspended_to_bottom() {
     // Intended test body:
     //
@@ -355,7 +357,7 @@ fn bt12_031_alt_cost_dragon_mode_offers_selection_and_returns_all_suspended_to_b
 }
 
 #[test]
-#[ignore = "pending: G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME from qa/dsl-vocab-gaps.md — declining alt-cost must fall through to base return-1-to-hand"]
+#[ignore = "pending: G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME from qa/dsl-vocab-gaps.md — selected source refs cannot be returned to hand; decline must fall through to base return-1-to-hand"]
 fn bt12_031_declining_alt_cost_falls_through_to_return_one_to_hand() {
     // Intended test body:
     //

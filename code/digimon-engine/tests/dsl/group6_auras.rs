@@ -1957,6 +1957,51 @@ effects:
     );
 }
 
+#[test]
+fn declarative_grant_keyword_respects_active_when_condition() {
+    let yaml = r#"
+card: TEST-GK-ACTIVE
+name: Conditional Keyword Source
+kind: digimon
+color: [blue]
+level: 4
+cost: 4
+dp: 4000
+traits: []
+effects:
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Jamming
+    active_when:
+      name_contains: Imperialdramon
+"#;
+
+    let mut imperial = make_test_card("TEST-IMPERIAL", "Imperialdramon Dragon Mode");
+    imperial.level = Some(6);
+    let mut plain = make_test_card("TEST-PLAIN", "Plain Digimon");
+    plain.level = Some(6);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("register DSL card")
+        .add_card(imperial)
+        .add_card(plain)
+        .build();
+
+    let matching = runner.place_stack(0, &["TEST-GK-ACTIVE", "TEST-IMPERIAL"]);
+    let non_matching = runner.place_stack(0, &["TEST-GK-ACTIVE", "TEST-PLAIN"]);
+    runner.game.tick_declarative_effects();
+
+    assert!(
+        runner.game.has_keyword(matching, Keyword::Jamming),
+        "grant_keyword active_when should allow the Imperialdramon carrier"
+    );
+    assert!(
+        !runner.game.has_keyword(non_matching, Keyword::Jamming),
+        "grant_keyword active_when should suppress non-matching carriers"
+    );
+}
+
 // ── DSL `grant_triggered_effect` step (Phase 4e) ────────────────────────
 //
 // EX1-068 Ice Wall! pattern, but authored as pure YAML via the new

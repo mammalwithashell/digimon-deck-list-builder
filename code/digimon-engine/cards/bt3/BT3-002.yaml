@@ -17,13 +17,11 @@
 #     absent, `optional: true` is preserved so the RL agent can decline the
 #     whole clause, keeping the action space surfaced.
 #
-# DSL gap: G-DSL-CARRIER-HAS-KEYWORD
-#   `condition: { carrier_has_keyword: Jamming }` is not implemented. The
-#   predicate subject for inherited clauses is the source permanent (egg slot),
-#   not the carrier. Without a `carrier_has_keyword` predicate the condition is
-#   omitted — the clause over-fires on any carrier. Negative test is
-#   `#[ignore]`'d in bt3_002.rs. See qa/dsl-vocab-gaps.md entry
-#   G-DSL-CARRIER-HAS-KEYWORD for details.
+# Current DSL audit:
+#   `condition: { has_keyword: Jamming }` compiles, but behavioral coverage in
+#   bt3_002.rs shows it does not currently gate this inherited trigger at
+#   runtime. The clause still over-fires until predicate runtime support is
+#   completed outside this card file.
 #
 # Closest exemplar: code/digimon-engine/cards/bt15/BT15-020.yaml
 #   (inherited When Attacking + OPT + Draw 1, no condition).
@@ -38,14 +36,13 @@ traits: [Baby Dragon]
 
 effects:
   # ─── Inherited [When Attacking] [Once Per Turn] <Draw 1> ──────────────────
-  # Printed text gates on carrier having <Jamming>; that condition is omitted
-  # due to G-DSL-CARRIER-HAS-KEYWORD. The clause over-fires without the gate.
-  # Trade-off documented: omission preferred over shipping the clause with no
-  # gating (sensible baseline — Draw 1 is harmless for structural coverage).
+  # Printed text gates on the inherited carrier having <Jamming>. The condition
+  # is authored here, but currently does not block runtime over-fire.
   - scope: inherited
     when: when_attacking
     once_per_turn: true
     optional: true
-    summary: "[When Attacking][OPT] If carrier has Jamming, Draw 1 (condition omitted: G-DSL-CARRIER-HAS-KEYWORD)"
+    condition: { has_keyword: Jamming }
+    summary: "[When Attacking][OPT] If carrier has Jamming, Draw 1 (blocked: has_keyword condition does not runtime-gate inherited trigger)"
     process:
       - draw: { of: you, count: 1 }

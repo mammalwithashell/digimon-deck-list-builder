@@ -397,17 +397,21 @@ fn bt20_020_clause3_fires_at_most_once_per_turn() {
 }
 
 /// BLOCKED: G-FORMULA-SOURCE-DP — clause 3's delete target must have DP ≤ this
-/// Digimon's DP (13000 base). Without `source_dp` formula, the DP filter cannot
-/// be enforced. When the gap closes:
-///   - Select opponent Digimon with ≤13000 DP should be offered.
-///   - Select opponent Digimon with >13000 DP should NOT be offered.
+/// Digimon's current effective DP. Without a `source_dp` formula, the DP filter
+/// cannot be enforced without incorrectly snapshotting BT20-020's printed/base
+/// DP. When the gap closes:
+///   - An opponent Digimon with DP ≤ BT20-020's effective DP should be offered.
+///   - An opponent Digimon with DP > BT20-020's effective DP should NOT be offered.
+///   - A DP buff/debuff on BT20-020 must move that threshold dynamically.
 #[test]
 #[ignore = "G-FORMULA-SOURCE-DP: source_dp formula primitive missing; dp_lte filter cannot gate on source permanent DP"]
 fn bt20_020_clause3_only_targets_digimon_with_lte_dp() {
     // Once G-FORMULA-SOURCE-DP closes:
-    //   1. Place BT20-020 on field (13000 DP base).
-    //   2. Place two opponent Digimon: one with 13000 DP (eligible) and one with 14000 DP (ineligible).
+    //   1. Place BT20-020 on field and apply a visible DP modifier to prove
+    //      the comparator reads effective DP, not the printed/base value.
+    //   2. Place two opponent Digimon around BT20-020's current effective DP:
+    //      one eligible at or below the threshold, one ineligible above it.
     //   3. Trigger clause 3 (remove opponent security card).
-    //   4. Verify only the 13000 DP Digimon is offered as a delete target.
+    //   4. Verify only the at-or-below-threshold Digimon is offered as a delete target.
     todo!("G-FORMULA-SOURCE-DP: add dp_lte: {{ formula: {{ source_dp: {{}} }} }} filter when primitive lands")
 }

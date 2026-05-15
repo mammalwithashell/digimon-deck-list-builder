@@ -18,7 +18,7 @@
 //! # Patterns this test covers
 //! - D2-adjacent: BeforePayCost cost reduction (clause 0 — BLOCKED)
 //! - B3-adjacent: Tamer-on-field condition (clause 0 — BLOCKED)
-//! - G4-adjacent: inherited When Attacking on base Digimon (clause 1 — PARTIAL)
+//! - G4-adjacent: inherited When Attacking on base Digimon (clause 1)
 //!
 //! # Known gaps affecting these tests
 //!
@@ -30,13 +30,9 @@
 //!   into the condition closure. Same gap as BT23-005.
 //!   Tests for this clause are `#[ignore = "pending: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET"]`.
 //!
-//! **G-DSL-SELF-COLOR-COUNT-GTE [DSL gap]:**
-//!   Clause 1 condition ("if this Digimon has 2 or more colors") cannot be
-//!   expressed — no `self_color_count_gte: N` predicate exists in the DSL.
-//!   DCGO gates on `card.PermanentOfThisCard().TopCard.CardColors.Count >= 2`.
-//!   Shipped unconditionally (Draw fires even on mono-color carriers).
-//!   The negative-condition test (mono-color carrier, Draw must NOT fire) is
-//!   `#[ignore = "pending: G-DSL-SELF-COLOR-COUNT-GTE"]`.
+//! Clause 1 condition uses `self_color_count_gte: 2`, evaluated against the
+//! source permanent's synthesized top-card colors. DCGO gates on
+//! `card.PermanentOfThisCard().TopCard.CardColors.Count >= 2`.
 
 #![allow(dead_code, unused_imports)]
 
@@ -210,10 +206,7 @@ fn p_117_inherited_when_attacking_is_not_once_per_turn() {
 
 /// POSITIVE: Carrier has 2+ colors — inherited When Attacking fires, deck shrinks.
 ///
-/// This is the over-fire scenario: because G-DSL-SELF-COLOR-COUNT-GTE is unresolved,
-/// the draw fires unconditionally. The carrier's color count is irrelevant to
-/// the DSL engine — this test passes even though we cannot enforce the condition.
-/// We use a multi-color carrier to document the intended positive path.
+/// POSITIVE: Carrier has 2+ colors, so the inherited draw fires.
 #[test]
 fn p_117_inherited_when_attacking_multi_color_carrier_draw_fires() {
     let mut runner = DebugRunner::builder()
@@ -247,13 +240,7 @@ fn p_117_inherited_when_attacking_multi_color_carrier_draw_fires() {
 
 /// NEGATIVE: Carrier has only 1 color — Draw must NOT fire.
 ///
-/// BLOCKED by G-DSL-SELF-COLOR-COUNT-GTE: the condition "if 2+ colors" cannot be
-/// expressed in DSL, so the Draw fires unconditionally. This test is ignored until
-/// the gap closes.
 #[test]
-#[ignore = "pending: G-DSL-SELF-COLOR-COUNT-GTE from qa/dsl-vocab-gaps.md — \
-            self_color_count_gte predicate missing; Draw fires unconditionally \
-            (over-fires on mono-color carriers)"]
 fn p_117_inherited_when_attacking_mono_color_carrier_draw_does_not_fire() {
     let mut runner = DebugRunner::builder()
         .dsl_card("P-117")
@@ -324,11 +311,9 @@ fn p_117_inherited_when_attacking_fires_draw_1() {
 }
 
 /// When P-117 is on the field as a standalone permanent (top card) and any ally
-/// attacks, the engine's WhenAttacking observer timing fires for ALL permanents
-/// in the battle area — including standalone P-117. Since G-DSL-SELF-COLOR-COUNT-GTE
-/// is unresolved, the draw fires unconditionally even for a mono-color standalone.
-/// This test documents that behavior (draw fires once per attacking turn for each
-/// P-117 in the battle area, regardless of stack position).
+/// attacks, the engine's WhenAttacking observer timing visits battle-area
+/// permanents. P-117's color-count condition prevents the draw because standalone
+/// P-117 is only blue.
 ///
 /// This is consistent with the engine's PlayerBattleArea observer semantics:
 /// WhenAttacking enqueues from every permanent in the battle area.
@@ -358,9 +343,10 @@ fn p_117_inherited_when_attacking_fires_for_standalone_p117_observer_semantics()
     let _ = runner.auto_resolve();
 
     let deck_after = runner.deck_size(0);
-    // Draw fires once (from standalone P-117 observing ally attack).
-    // No panic = primary assertion.
-    let _ = (deck_before, deck_after); // values documented above; primary = no panic
+    assert_eq!(
+        deck_after, deck_before,
+        "standalone mono-color P-117 must not draw from its own inherited condition"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -26,11 +26,8 @@
 //!   pattern as EX9-019; same `CannotUnsuspend / end_of_opponents_turn` as BT16-025.
 //!
 //! - Clause 0b ([When Digivolving] by-suspending-unsuspend):
-//!   BLOCKED — G-DSL-IF-NO-TARGET (qa/archetype-qa/engine-gaps.md).
-//!   The suspend-cost (optional) + conditional unsuspend-reward pattern requires a
-//!   `binding_present` DSL predicate to check whether the optional selection produced
-//!   a target. Without it, the unsuspend arm would fire unconditionally, violating
-//!   the "by" cost semantics.
+//!   IMPLEMENTED. The suspend-cost selection is optional and filtered to opponent
+//!   unsuspended Digimon/Tamers, then `binding_present` gates the own-unsuspend reward.
 //!
 //! - Clause 1 ([All Turns] effect-play/digivolve trigger → conditional free digivolve):
 //!   BLOCKED — G-IS-EFFECT-INITIATED (new gap; see qa/dsl-vocab-gaps.md).
@@ -42,15 +39,17 @@
 //! # Patterns
 //! - F7: Cannot unsuspend modifier via `CannotUnsuspend` + `end_of_opponents_turn`
 //! - D1/Digimon+Tamer union target: `any_of: [kind: digimon, kind: tamer]` selection
-//! - G-DSL-IF-NO-TARGET: binding-result conditional for cost-gated alternate effects
+//! - binding-result conditional for cost-gated alternate effects
 //! - G-IS-EFFECT-INITIATED: effect-initiated vs. player-action play/digivolve distinction
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledTiming,
 };
+use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, CostDelta, ModifierType, PlaySource};
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::enums::{CardKind, CostDelta, EffectTiming, ModifierType, PlaySource};
+use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 // ─── Fixture helpers ─────────────────────────────────────────────────────────
 
@@ -81,6 +80,14 @@ fn dragon_mode_with_opp_field() -> DebugRunner {
         .hand(0, &["BT16-028"])
         .memory(14)
         .start()
+}
+
+fn fire_when_digivolving(runner: &mut DebugRunner, dragon: PermanentHandle) {
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(dragon),
+    );
+    runner.game.drain_effect_queue();
 }
 
 // ─── Section 1: Structural assertions ────────────────────────────────────────
@@ -348,41 +355,130 @@ fn bt16_028_cannot_unsuspend_modifier_expires_at_end_of_opp_turn() {
     );
 }
 
-// ─── Section 4: Gap-blocked behavioral tests ────────────────────────────────
+// ─── Section 4: By-suspending branch behavioral tests ───────────────────────
 
 /// [When Digivolving] Part B: "by suspending 1 opp Digimon/Tamer, unsuspend 1 of your Digimon".
 ///
-/// BLOCKED: G-DSL-IF-NO-TARGET (qa/archetype-qa/engine-gaps.md).
-/// The DSL has no `binding_present` predicate to conditionally fire the own-unsuspend
-/// reward only when the optional opp-suspend cost was paid. Authoring both steps
-/// sequentially would unsuspend unconditionally, violating "by" cost semantics.
+/// The own-unsuspend reward is gated behind the optional opponent-suspend cost.
 #[test]
-#[ignore = "pending: G-DSL-IF-NO-TARGET from qa/archetype-qa/engine-gaps.md — no DSL conditional on optional-selection result; suspend-cost + unsuspend-reward chain blocked"]
 fn bt16_028_when_digivolving_by_suspending_opp_unsuspend_own_digimon() {
-    // When G-DSL-IF-NO-TARGET closes:
-    // 1. Set up: own suspended Digimon on field, opp unsuspended Digimon/Tamer on field.
-    // 2. Digivolve BT16-028.
-    // 3. After CannotUnsuspend selection (Part A): a second selection should appear
-    //    over opponent's unsuspended Digimon/Tamers (optional — can decline).
-    // 4. Choose to suspend an opp permanent.
-    // 5. Assert: own suspended Digimon selection appears (Part B reward).
-    // 6. Select own Digimon → it unsuspends.
-    // Also: if the player declines Step 3 (no opp-suspend), Step 5 must NOT appear.
+    let mut runner = dragon_mode_builder().memory(14).start();
+    let dragon = runner.place_on_field(0, "BT16-028", None);
+    let own_suspended = runner.place_on_field(0, "BT16-028", None);
+    let opp_unsuspended = runner.place_on_field(1, "BT16-028", None);
+    runner.game.players[0].battle_area[own_suspended.index as usize].is_suspended = true;
+
+    fire_when_digivolving(&mut runner, dragon);
+
+    let lock = runner
+        .pending_selection_view()
+        .expect("first selection locks one opponent Digimon/Tamer");
+    assert_eq!(lock.kind, SelectionKind::OppField);
+    assert_eq!(lock.valid_action_ids.len(), 1);
+    assert!(
+        !runner.pending_is_optional(),
+        "CannotUnsuspend target selection is mandatory when a target exists"
+    );
+    runner
+        .execute_action(lock.selecting_player, lock.valid_action_ids[0])
+        .expect("select CannotUnsuspend target");
+
+    let suspend_cost = runner
+        .pending_selection_view()
+        .expect("second selection offers optional opponent suspend cost");
+    assert_eq!(suspend_cost.kind, SelectionKind::OppField);
+    assert_eq!(
+        suspend_cost.valid_action_ids.len(),
+        1,
+        "only unsuspended opponent Digimon/Tamers are legal suspend-cost targets"
+    );
+    assert!(
+        runner.pending_is_optional(),
+        "by-suspending cost selection must be optional so the player can decline"
+    );
+    runner
+        .execute_action(suspend_cost.selecting_player, suspend_cost.valid_action_ids[0])
+        .expect("pay suspend cost");
+
+    assert!(
+        runner.game.players[1].battle_area[opp_unsuspended.index as usize].is_suspended,
+        "selected opponent permanent must be suspended as the cost"
+    );
+
+    let unsuspend_reward = runner
+        .pending_selection_view()
+        .expect("paying the suspend cost should offer own suspended Digimon to unsuspend");
+    assert_eq!(unsuspend_reward.kind, SelectionKind::OwnField);
+    assert_eq!(
+        unsuspend_reward.valid_action_ids.len(),
+        1,
+        "only own suspended Digimon should be legal for the reward"
+    );
+    assert!(
+        !runner.pending_is_optional(),
+        "reward selection is mandatory after the suspend cost is paid"
+    );
+    runner
+        .execute_action(
+            unsuspend_reward.selecting_player,
+            unsuspend_reward.valid_action_ids[0],
+        )
+        .expect("select own suspended Digimon");
+    runner.auto_resolve().expect("finish effect");
+
+    assert!(
+        !runner.game.players[0].battle_area[own_suspended.index as usize].is_suspended,
+        "selected own Digimon must be unsuspended after paying the cost"
+    );
 }
 
 /// [When Digivolving] Part B: if player declines the optional opp-suspend cost,
 /// the unsuspend reward must NOT fire (no-selection → no unsuspend).
 ///
-/// BLOCKED: G-DSL-IF-NO-TARGET from qa/archetype-qa/engine-gaps.md.
+/// PASSing the optional opponent-suspend cost suppresses the reward branch.
 #[test]
-#[ignore = "pending: G-DSL-IF-NO-TARGET from qa/archetype-qa/engine-gaps.md — declining optional suspend must suppress own-unsuspend reward"]
 fn bt16_028_when_digivolving_declining_suspend_does_not_unsuspend_own() {
-    // When G-DSL-IF-NO-TARGET closes:
-    // 1. Opp has an unsuspended Digimon; own has a suspended Digimon.
-    // 2. Digivolve BT16-028.
-    // 3. After CannotUnsuspend selection (Part A): optional suspend selection appears.
-    // 4. Decline the selection (execute PASS).
-    // 5. Assert: no unsuspend selection installs; own Digimon remains suspended.
+    let mut runner = dragon_mode_builder().memory(14).start();
+    let dragon = runner.place_on_field(0, "BT16-028", None);
+    let own_suspended = runner.place_on_field(0, "BT16-028", None);
+    let opp_unsuspended = runner.place_on_field(1, "BT16-028", None);
+    runner.game.players[0].battle_area[own_suspended.index as usize].is_suspended = true;
+
+    fire_when_digivolving(&mut runner, dragon);
+
+    let lock = runner
+        .pending_selection_view()
+        .expect("first selection locks one opponent Digimon/Tamer");
+    runner
+        .execute_action(lock.selecting_player, lock.valid_action_ids[0])
+        .expect("select CannotUnsuspend target");
+
+    let suspend_cost = runner
+        .pending_selection_view()
+        .expect("second selection offers optional opponent suspend cost");
+    assert_eq!(suspend_cost.kind, SelectionKind::OppField);
+    assert_eq!(suspend_cost.valid_action_ids.len(), 1);
+    assert!(
+        runner.pending_is_optional(),
+        "by-suspending cost selection must expose a PASS decline"
+    );
+    runner
+        .execute_action(suspend_cost.selecting_player, PASS)
+        .expect("decline suspend cost");
+    runner.auto_resolve().expect("finish declined branch");
+
+    assert!(
+        !runner.game.players[1].battle_area[opp_unsuspended.index as usize].is_suspended,
+        "declining the branch must not suspend the opponent permanent"
+    );
+    assert!(
+        runner.game.players[0].battle_area[own_suspended.index as usize].is_suspended,
+        "declining the suspend cost must not install or resolve the unsuspend reward"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "declining the optional suspend cost should leave no own-unsuspend selection"
+    );
 }
 
 /// [All Turns] When effect plays opp Digimon + own Tamer → may free-digivolve self

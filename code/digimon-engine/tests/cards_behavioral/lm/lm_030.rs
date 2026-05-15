@@ -22,28 +22,25 @@
 //! # Patterns this test covers
 //! - Clause A (Main): effect_initiated_digivolve with cost reduce 3 from an
 //!   option card (main_from_hand timing, optional permanent selection)
-//! - Clause B (Delay/StartOfYourTurn): BLOCKED G-DELAY-START-OF-TURN — DSL
-//!   `kind: delay` only supports EndOfThisTurn / EndOfYourNextTurn; no
-//!   StartOfYourTurn delay trigger exists in engine or DSL. Clause is omitted
-//!   (following the LM-029 precedent, not the LM-027 raw_rust placeholder).
+//! - Clause B (Delay/StartOfYourTurn): timing is supported by `kind: delay`
+//!   with `trigger: start_of_your_turn`, but the clause remains omitted until
+//!   its body can faithfully move a selected trash card to deck top and enforce
+//!   the DP-limited optional play tail.
 //! - Clause C (Security, inherited): on_security with select_trash (green
 //!   Digimon ≤2000 DP, gated by G-PRED-DP-LTE), play_from_trash_free,
 //!   add_this_option_to_hand.
 //!
 //! # Known gaps
-//! - **G-DELAY-START-OF-TURN**: Clause B requires a Delay that fires at the
-//!   START of the owner's next turn (DCGO `EffectTiming.OnStartTurn`). The
-//!   engine's `DelayTrigger` enum only has `EndOfThisTurn` and
-//!   `EndOfYourNextTurn`. The DSL `kind: delay` lowerer maps everything except
-//!   `EndOfYourTurn` to `EndOfYourNextTurn` (fires at end-of-turn, not start).
-//!   There is no `DelayTrigger::StartOfYourNextTurn`. Clause B is omitted from
-//!   the YAML until this gap is resolved.
-//! - **G-PRED-DP-LTE**: `dp_lte: 2000` predicate not evaluated at selection
-//!   time for trash cards (eval_card_fields does not check dp_lte for Card
-//!   predicate subjects — only eval_dp_constraints for Permanent handles does).
-//! - **G-ZONE-TRASH-TO-DECK** (Clause B inner): "Return 1 green Digimon from
-//!   trash to top of deck" — no native DSL verb; blocked by G-DELAY-START-OF-TURN
-//!   outer gap anyway.
+//! - **G-ZONE-SELECTED-TRASH-TO-DECK-TOP** (Clause B): "Return 1 green
+//!   Digimon from trash to top of deck" needs a selected-card trash-to-deck-top
+//!   verb. The current bulk `return_all_trash_to_deck_bottom` verb is not a
+//!   faithful substitute.
+//! - **G-PRED-DP-LTE**: `dp_lte: 2000` is authored for LM-030 Security, but is
+//!   not evaluated at selection time for trash/card-zone subjects
+//!   (`eval_card_fields` does not check `dp_lte` for `PredicateSubject::Card`).
+//! - **G-OPTIONAL-SELECTION-CONTINUE-TAIL**: declining the optional trash play
+//!   must still continue the mandatory "Then, add this card to the hand" tail
+//!   while leaving the selected trash Digimon unplayed.
 
 #![allow(unused_imports, dead_code)]
 
@@ -127,8 +124,9 @@ fn lm_030_is_green_option_cost_2() {
 }
 
 /// LM-030 has exactly 2 compiled clauses: Main (main_from_hand) and Security
-/// (on_security inherited). The Delay clause (Clause B) is omitted pending
-/// G-DELAY-START-OF-TURN (following the LM-029 precedent).
+/// (on_security inherited). The Delay clause (Clause B) is omitted even though
+/// start-of-turn Delay timing is now available, because its body still needs
+/// selected-trash-card deck-top movement plus the DP/optional-tail fixes.
 #[test]
 fn lm_030_has_two_clauses_main_and_security() {
     let runner = lm_030_runner();
@@ -137,7 +135,7 @@ fn lm_030_has_two_clauses_main_and_security() {
     assert_eq!(
         compiled.effects.len(),
         2,
-        "LM-030 ships only the supported Main and Security clauses; Delay body is blocked"
+        "LM-030 ships only Main and Security; Delay body remains blocked by reusable body gaps"
     );
 }
 
@@ -421,39 +419,40 @@ fn lm_030_main_decline_leaves_field_and_hand_unchanged() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 3 — Clause B: Delay (BLOCKED — G-DELAY-START-OF-TURN)
+// Section 3 — Clause B: Delay (BLOCKED — body gaps)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Clause B is omitted from YAML entirely. When G-DELAY-START-OF-TURN is
-/// resolved the following blocked tests become implementable.
+/// Clause B is omitted from YAML entirely. Start-of-turn Delay timing is
+/// available; these tests stay blocked until the Delay body can faithfully
+/// perform selected trash-to-deck-top movement and DP-limited optional play.
 
 #[test]
-#[ignore = "pending: G-DELAY-START-OF-TURN — no StartOfYourNextTurn DelayTrigger in engine"]
+#[ignore = "pending: G-ZONE-SELECTED-TRASH-TO-DECK-TOP + G-PRED-DP-LTE + G-OPTIONAL-SELECTION-CONTINUE-TAIL — timing exists, body not faithful yet"]
 fn lm_030_delay_fires_at_start_of_your_turn_when_opponent_has_digimon() {
-    unimplemented!("blocked on G-DELAY-START-OF-TURN");
+    unimplemented!("blocked until Delay body gaps are resolved");
 }
 
 #[test]
-#[ignore = "pending: G-DELAY-START-OF-TURN — no StartOfYourNextTurn DelayTrigger in engine"]
+#[ignore = "pending: G-ZONE-SELECTED-TRASH-TO-DECK-TOP + G-PRED-DP-LTE + G-OPTIONAL-SELECTION-CONTINUE-TAIL — Delay clause omitted until body can be faithful"]
 fn lm_030_delay_does_not_fire_when_opponent_has_no_digimon() {
-    unimplemented!("blocked on G-DELAY-START-OF-TURN");
+    unimplemented!("blocked until Delay body gaps are resolved");
 }
 
 /// Inner Delay body (1/2): "Return 1 green Digimon from trash to top of deck."
-/// Blocked by both G-DELAY-START-OF-TURN (outer timing) and G-ZONE-TRASH-TO-DECK
-/// (no native DSL verb for trash → deck-top transfer).
+/// Blocked by G-ZONE-SELECTED-TRASH-TO-DECK-TOP: there is no native DSL verb
+/// for moving the selected trash card to deck top.
 #[test]
-#[ignore = "pending: G-DELAY-START-OF-TURN + G-ZONE-TRASH-TO-DECK — outer timing gap blocks; no trash-to-deck-top DSL verb"]
+#[ignore = "pending: G-ZONE-SELECTED-TRASH-TO-DECK-TOP — no selected trash-card to deck-top DSL verb"]
 fn lm_030_delay_body_returns_green_digimon_to_top_of_deck() {
-    unimplemented!("blocked until G-DELAY-START-OF-TURN + G-ZONE-TRASH-TO-DECK resolved");
+    unimplemented!("blocked until selected trash-card to deck-top movement is available");
 }
 
 /// Inner Delay body (2/2): conditional free-play only fires when you have no
 /// Digimon on field.
 #[test]
-#[ignore = "pending: G-DELAY-START-OF-TURN + G-PRED-DP-LTE — outer timing and DP-filter gaps block this test"]
+#[ignore = "pending: G-ZONE-SELECTED-TRASH-TO-DECK-TOP + G-PRED-DP-LTE + G-OPTIONAL-SELECTION-CONTINUE-TAIL"]
 fn lm_030_delay_body_play_from_trash_only_when_no_field_digimon() {
-    unimplemented!("blocked until G-DELAY-START-OF-TURN + G-PRED-DP-LTE resolved");
+    unimplemented!("blocked until Delay body movement, DP filter, and optional-tail gaps resolve");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -570,9 +569,10 @@ fn lm_030_security_no_selection_when_trash_is_empty() {
 /// DP filter test: when trash contains ONLY a large green Digimon (>2000 DP),
 /// the Security clause should filter it out and install no selection.
 ///
-/// BLOCKED by G-PRED-DP-LTE: dp_lte: 2000 is not evaluated by eval_card_fields
-/// for Card predicate subjects (trash selection). Large Digimon currently appear
-/// as valid targets until the gap is closed. Test is #[ignore]'d until fixed.
+/// BLOCKED by G-PRED-DP-LTE: LM-030's YAML authors `dp_lte: 2000`, but the
+/// predicate is not evaluated by eval_card_fields for Card predicate subjects
+/// (trash selection). Large Digimon currently appear as valid targets until the
+/// reusable predicate gap is closed. Test is #[ignore]'d until fixed.
 #[test]
 #[ignore = "pending: G-PRED-DP-LTE — dp_lte filter not evaluated by select_trash for card-zone subjects"]
 fn lm_030_security_no_selection_when_only_large_green_digimon_in_trash() {
@@ -661,16 +661,13 @@ fn lm_030_security_adds_card_to_hand_and_plays_small_green_digimon() {
     assert_eq!(played_id, "LM030-SMALL-SEC");
 }
 
-/// add-this-option-to-hand would still fire when the player DECLINES the optional
-/// trash play. However, when PASS is taken on select_trash, the callback (which
-/// carries the remaining tail: play_from_trash_free + add_this_option_to_hand)
-/// is NOT invoked — on_decline is None for select_trash, so the tail is lost.
-/// This is the G-OPTIONAL-SELECTION-CONTINUE-TAIL gap: the mandatory tail
-/// ("Then, add this card to the hand") cannot run on decline without an
-/// on_decline hook carrying the tail forward.
+/// add-this-option-to-hand must still fire when the player DECLINES the optional
+/// trash play. The selected Digimon must remain in trash while the mandatory
+/// tail ("Then, add this card to the hand") continues. This remains covered by
+/// G-OPTIONAL-SELECTION-CONTINUE-TAIL for optional card-zone selections.
 /// When G-OPTIONAL-SELECTION-CONTINUE-TAIL is resolved, this test should pass.
 #[test]
-#[ignore = "pending: G-OPTIONAL-SELECTION-CONTINUE-TAIL — on_decline=None for select_trash drops the mandatory add_this_option_to_hand tail when the player declines the optional play"]
+#[ignore = "pending: G-OPTIONAL-SELECTION-CONTINUE-TAIL — optional trash-selection decline must continue mandatory add_this_option_to_hand tail without playing the trash card"]
 fn lm_030_security_adds_card_to_hand_even_when_trash_play_declined() {
     let small = make_small_green_digimon("LM030-SMALL-DECL");
     let mut attacker = make_filler("LM030-ATTACKER-DECL");

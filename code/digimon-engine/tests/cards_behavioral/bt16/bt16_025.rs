@@ -34,7 +34,8 @@
 //!       `if` conditions is not evaluated by the engine (G-ENGINE-DNA-ORIGIN-PRED gap).
 //! - [When Attacking][OPT] triggered clause — PARTIAL:
 //!     - Suspend 1 opp unsuspended Digimon: IMPLEMENTED
-//!     - Unsuspend-self fallback "if this effect didn't suspend": BLOCKED G-DSL-IF-NO-TARGET
+//!     - Unsuspend-self fallback "if this effect didn't suspend": BLOCKED
+//!       G-DSL-EFFECT-SUSPENDED-RESULT
 //!
 //! # Engine gaps that block full clause implementation
 //!
@@ -47,12 +48,16 @@
 //! `candidate.card_sources.len() <= ctx.source_permanent().card_sources.len()`.
 //! Tracked in: qa/dsl-vocab-gaps.md
 //!
-//! ## G-DSL-IF-NO-TARGET
+//! ## G-DSL-EFFECT-SUSPENDED-RESULT
 //! "If this effect didn't suspend, unsuspend this Digimon" requires branching on
-//! whether a prior optional selection bound a target or skipped (no eligible targets
-//! existed / player passed). The DSL has no `binding_is_none:` predicate or result
-//! binding from selection steps.
-//! Tracked in: qa/dsl-vocab-gaps.md
+//! whether the current effect actually suspended an opponent/any Digimon. The DSL
+//! now has `binding_is_none` / `binding_absent`, but using selection absence would
+//! approximate the printed result check and miss cases where a selected target was
+//! not suspended. The current result-log predicate family includes
+//! `effect_suspended_any_own_digimon`; BT16-025 needs an opponent/any-Digimon
+//! suspend-result predicate before this fallback can be authored faithfully.
+//! Cross-reference: qa/dsl-vocab-gaps.md still carries the older
+//! G-DSL-IF-NO-TARGET wording for this card.
 
 #![allow(dead_code, unused_imports)]
 
@@ -607,8 +612,10 @@ fn bt16_025_when_attacking_installs_opp_field_selection_when_targets_exist() {
 /// allow skipping without crashing.
 ///
 /// Note: the self-unsuspend fallback ("If this effect didn't suspend, unsuspend
-/// this Digimon") is BLOCKED (G-DSL-IF-NO-TARGET). Once that gap closes and the
-/// fallback is wired, this test should additionally assert that Paildramon
+/// this Digimon") is BLOCKED (G-DSL-EFFECT-SUSPENDED-RESULT). `binding_is_none`
+/// can identify this no-target path, but using that alone would approximate the
+/// printed result check. Once an opponent/any suspend-result predicate closes and
+/// the fallback is wired, this test should additionally assert that Paildramon
 /// becomes unsuspended after the skipped selection.
 #[test]
 fn bt16_025_when_attacking_no_eligible_targets_selection_skipped() {
@@ -798,12 +805,16 @@ fn bt16_025_when_digivolving_suspends_all_opp_digimon_with_lte_digivolution_card
 
 /// BLOCKED: the [When Attacking] self-unsuspend fallback "If this effect didn't
 /// suspend, unsuspend this Digimon" requires an `if` condition that branches on
-/// whether the prior optional selection bound a target. The DSL has no
-/// `binding_is_none:` predicate or result binding from suspension steps.
+/// whether this effect actually suspended an opponent/any Digimon. The DSL now
+/// has `binding_is_none`, but that would only detect selection absence. The
+/// available result-log predicate `effect_suspended_any_own_digimon` explicitly
+/// ignores opponent suspends, so BT16-025 still needs an opponent/any suspend
+/// result predicate before this can be implemented without approximation.
 #[test]
-#[ignore = "pending: G-DSL-IF-NO-TARGET — no DSL predicate for branching on whether \
-            a prior optional selection produced a target. Tracked in qa/dsl-vocab-gaps.md."]
-fn bt16_025_when_attacking_unsuspends_self_when_no_target_selected() {
+#[ignore = "pending: G-DSL-EFFECT-SUSPENDED-RESULT — no DSL predicate for branching \
+            on whether this effect suspended an opponent/any Digimon. qa/dsl-vocab-gaps.md \
+            still has older G-DSL-IF-NO-TARGET wording for this card."]
+fn bt16_025_when_attacking_unsuspends_self_when_effect_did_not_suspend() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT16-025")
         .expect("BT16-025 must be in embedded DSL pack")
