@@ -19,5 +19,33 @@ effects:
 
   # [Your Turn] When effects play one of your Tokens or Puppet Digimon, by
   # suspending this Tamer, 1 of those Digimon gains Rush for the turn.
-  # Omitted rather than approximated: this needs effect-initiated play event
-  # context/provenance for the just-played Token/Puppet permanent (PUPPETS-G005).
+  - when: on_any_digimon_played
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When effects play your Token/Puppet, suspend this Tamer so it gains Rush"
+    condition:
+      all_of:
+        - event_is_effect_initiated: true
+        - event_target_owner: you
+        - any_of:
+            - event_target_kind: token
+            - all_of:
+                - event_target_kind: digimon
+                - event_target_trait_has: Puppet
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "ST19-14"
+            is_unsuspended: true
+    process:
+      - select_effect_choice:
+          labels: ["Suspend this Tamer", "Decline"]
+          bind_as: arisa_choice
+          prompt: "Suspend Arisa Kinosaki to give the played Token/Puppet Rush?"
+      - if:
+          condition: { equals: [arisa_choice, 0] }
+          then:
+            - suspend: { target: source }
+            - grant_keyword:
+                target: event_target
+                keyword: Rush
+                expiry: end_of_turn

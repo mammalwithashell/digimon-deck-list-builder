@@ -23,13 +23,16 @@
 //! - E2: optional EndOfYourTurn trash play
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledTiming,
+    CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledCost,
+    CompiledDeclarativeClause, CompiledPredicate, CompiledTiming,
 };
+use digimon_engine::action::space::encode_attack;
 use digimon_engine::action::space::{PASS, TRASH_EFFECT_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Keyword};
+use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 fn runner_with_kaguyamon() -> DebugRunner {
@@ -42,6 +45,9 @@ fn runner_with_kaguyamon() -> DebugRunner {
         .add_card(make_digimon("TRASH-PUPPET-L4", 4, &["Puppet"]))
         .add_card(make_digimon("TRASH-PUPPET-L5", 5, &["Puppet"]))
         .add_card(make_digimon("TRASH-BEAST-L3", 3, &["Beast"]))
+        .add_card(make_digimon("OPP-L3", 3, &["Puppet"]))
+        .add_card(make_digimon("OPP-L4", 4, &["Puppet"]))
+        .add_card(make_digimon("OPP-L5", 5, &["Puppet"]))
         .memory(20)
         .start()
 }
@@ -121,22 +127,44 @@ fn ex9_033_has_two_keyword_auras_and_eot_trash_play_clause() {
 }
 
 #[test]
-fn ex9_033_deletion_observer_is_omitted_pending_deleted_event_context() {
+fn ex9_033_deletion_observer_is_opt_and_excludes_deleted_source() {
     let runner = runner_with_kaguyamon();
     let card = runner
         .compiled_card("EX9-033")
         .expect("EX9-033 compiled card present");
 
+    let deletion_observer = card
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(triggered)
+                if triggered.when.contains(&CompiledTiming::OnAnyDeletion) =>
+            {
+                Some(triggered)
+            }
+            _ => None,
+        })
+        .expect("printed [All Turns] deletion observer must exist");
+
     assert!(
-        !card.effects.iter().any(|clause| {
-            matches!(
-                clause,
-                CompiledClause::Triggered(triggered)
-                    if triggered.when.contains(&CompiledTiming::OnAnyDeletion)
-            )
-        }),
-        "do not ship an approximating OnAnyDeletion clause until the deleted \
-         Digimon can be distinguished from EX9-033 itself"
+        deletion_observer.once_per_turn,
+        "printed [Once Per Turn] must be retained"
+    );
+    assert!(
+        !deletion_observer.optional,
+        "printed delete effect is mandatory when a legal target exists"
+    );
+    let condition = deletion_observer
+        .condition
+        .as_ref()
+        .expect("observer must gate on deleted-object event context");
+    assert!(
+        predicate_has_event_target_kind(condition, CompiledCardKind::Digimon),
+        "printed 'Digimon are deleted' must reject non-Digimon deletion events"
+    );
+    assert!(
+        predicate_has_event_permanent_is_source(condition, false),
+        "printed 'other Digimon' must exclude EX9-033 itself as the deleted source"
     );
 }
 
@@ -248,21 +276,84 @@ fn ex9_033_eot_trash_play_can_be_declined() {
 }
 
 #[test]
-#[ignore = "pending: G-ON-ANY-DELETION-EVENT-CONTEXT — OnAnyDeletion lacks deleted permanent/card TriggerContext for 'other Digimon'"]
 fn ex9_033_deletes_one_opponent_lowest_level_digimon_when_other_digimon_deleted() {
-    todo!("unignore once OnAnyDeletion carries the deleted permanent/card");
+    let mut runner = runner_with_kaguyamon();
+    runner.place_on_field(0, "EX9-033", Some(0));
+    let deleted = runner.place_on_field(0, "ALLY-BEAST", Some(0));
+    let lowest = runner.place_on_field(1, "OPP-L3", Some(0));
+    let mid = runner.place_on_field(1, "OPP-L4", Some(0));
+    let high = runner.place_on_field(1, "OPP-L5", Some(0));
+
+    runner.game.delete_permanent_with_effects(deleted);
+
+    let target = runner
+        .pending_selection_view()
+        .expect("other Digimon deletion should install lowest-level target prompt");
+    assert_eq!(target.kind, SelectionKind::OppField);
+    assert_eq!(
+        target.valid_action_ids,
+        vec![encode_permanent(lowest)],
+        "only the opponent's lowest-level Digimon should be selectable; mid={}, high={}",
+        encode_permanent(mid),
+        encode_permanent(high)
+    );
+    runner
+        .execute_action(0, target.valid_action_ids[0])
+        .expect("select lowest-level opponent Digimon");
+    runner.auto_resolve().expect("finish deletion observer");
+
+    let opponent_field = field_ids(&runner, 1);
+    assert!(!opponent_field.contains(&"OPP-L3".to_string()));
+    assert!(opponent_field.contains(&"OPP-L4".to_string()));
+    assert!(opponent_field.contains(&"OPP-L5".to_string()));
 }
 
 #[test]
-#[ignore = "pending: G-ON-ANY-DELETION-EVENT-CONTEXT — self-deletion exclusion needs deleted-object context"]
 fn ex9_033_does_not_trigger_when_kaguyamon_itself_is_deleted() {
-    todo!("unignore once OnAnyDeletion can distinguish EX9-033 from the deleted object");
+    let mut runner = runner_with_kaguyamon();
+    let kaguyamon = runner.place_on_field(0, "EX9-033", Some(0));
+    runner.place_on_field(1, "OPP-L3", Some(0));
+
+    runner.game.delete_permanent_with_effects(kaguyamon);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "self-deletion is not 'other Digimon are deleted'"
+    );
+    assert!(
+        field_ids(&runner, 1).contains(&"OPP-L3".to_string()),
+        "opponent Digimon must remain when self-deletion is suppressed"
+    );
 }
 
 #[test]
-#[ignore = "pending: G-ON-ANY-DELETION-EVENT-CONTEXT — OPT coverage depends on faithful deleted-object gating"]
 fn ex9_033_deletion_observer_is_once_per_turn() {
-    todo!("unignore once the OnAnyDeletion clause can be authored faithfully");
+    let mut runner = runner_with_kaguyamon();
+    runner.place_on_field(0, "EX9-033", Some(0));
+    let first_deleted = runner.place_on_field(0, "ALLY-PUPPET", Some(0));
+    let second_deleted = runner.place_on_field(0, "ALLY-BEAST", Some(0));
+    let lowest = runner.place_on_field(1, "OPP-L3", Some(0));
+    runner.place_on_field(1, "OPP-L4", Some(0));
+    runner.place_on_field(1, "OPP-L5", Some(0));
+
+    runner.game.delete_permanent_with_effects(first_deleted);
+    let first_prompt = runner
+        .pending_selection_view()
+        .expect("first eligible deletion should trigger");
+    assert_eq!(first_prompt.valid_action_ids, vec![encode_permanent(lowest)]);
+    runner
+        .execute_action(0, first_prompt.valid_action_ids[0])
+        .expect("select first lowest-level target");
+    runner.auto_resolve().expect("finish first observer");
+
+    runner.game.delete_permanent_with_effects(second_deleted);
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "same-turn OPT should suppress the second eligible deletion"
+    );
+    let opponent_field = field_ids(&runner, 1);
+    assert!(opponent_field.contains(&"OPP-L4".to_string()));
+    assert!(opponent_field.contains(&"OPP-L5".to_string()));
 }
 
 fn make_digimon(id: &str, level: u8, traits: &[&str]) -> CardData {
@@ -314,4 +405,46 @@ fn trash_ids(runner: &DebugRunner, player: usize) -> Vec<String> {
         .iter()
         .map(|card| card.card_id(&runner.game.card_data).to_string())
         .collect()
+}
+
+fn field_ids(runner: &DebugRunner, player: usize) -> Vec<String> {
+    runner.game.players[player]
+        .battle_area
+        .iter()
+        .map(|perm| perm.top_card().card_id(&runner.game.card_data).to_string())
+        .collect()
+}
+
+fn encode_permanent(handle: PermanentHandle) -> u16 {
+    encode_attack(0, handle.index as u16)
+}
+
+fn predicate_has_event_target_kind(
+    predicate: &CompiledPredicate,
+    kind: CompiledCardKind,
+) -> bool {
+    predicate.event_target_kind == Some(kind)
+        || predicate
+            .all_of
+            .iter()
+            .any(|child| predicate_has_event_target_kind(child, kind))
+        || predicate
+            .any_of
+            .iter()
+            .any(|child| predicate_has_event_target_kind(child, kind))
+}
+
+fn predicate_has_event_permanent_is_source(
+    predicate: &CompiledPredicate,
+    expected: bool,
+) -> bool {
+    predicate.event_permanent_is_source == Some(expected)
+        || predicate
+            .all_of
+            .iter()
+            .any(|child| predicate_has_event_permanent_is_source(child, expected))
+        || predicate
+            .any_of
+            .iter()
+            .any(|child| predicate_has_event_permanent_is_source(child, expected))
 }

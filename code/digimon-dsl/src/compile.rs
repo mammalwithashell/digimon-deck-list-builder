@@ -536,6 +536,7 @@ fn compile_predicate(
                 of: compile_player_ref(b.of),
             }),
         source_is_tamer: p.source_is_tamer,
+        source_is_unsuspended: p.source_is_unsuspended,
         source_name_contains: p.source_name_contains.clone(),
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
         self_digivolution_contains_name: p.self_digivolution_contains_name.clone(),

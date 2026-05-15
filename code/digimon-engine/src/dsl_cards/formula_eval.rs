@@ -1041,6 +1041,7 @@ fn predicate_has_card_zone_unsupported_leaf(pred: &CompiledPredicate) -> bool {
         || pred.other.is_some()
         || pred.of_permanent.is_some()
         || pred.source_is_tamer.is_some()
+        || pred.source_is_unsuspended.is_some()
         || pred.source_name_contains.is_some()
         || pred.source_permanent_trait_has.is_some()
         || pred.in_breeding.is_some()
