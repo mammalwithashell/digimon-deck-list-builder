@@ -9,6 +9,8 @@ This guide is the practical authoring companion to:
 - [`RUST_ENGINE_GAPS.md`](RUST_ENGINE_GAPS.md), [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md), and [`qa/archetype-qa/engine-gaps.md`](../qa/archetype-qa/engine-gaps.md) for reusable blockers found by archetype audits.
 - [`docs/superpowers/specs/2026-04-29-archetype-engine-dsl-gap-roadmap-design.md`](superpowers/specs/2026-04-29-archetype-engine-dsl-gap-roadmap-design.md) for the capability-first roadmap.
 
+**Last refreshed:** 2026-05-15. Tracks A–H folded in via PR #471 (2026-05-14); the `source_is_unsuspended` predicate (PR #472) and the Track I engine-only callout were added 2026-05-15. Phase 1 DSL pipeline completion (2026-05-15) closed `G-ALT-PATH-CONDITION` by adding `condition:` to `alt_paths` entries (Digivolve route) and wired eval arms for `all_turns`, `source_is_tamer`, `of_permanent`, `has_alt_path`, and `has_inherited` predicates. See [`RUST_ENGINE_API.md`](RUST_ENGINE_API.md) §0 "Tracks A–K Substrate Quick Reference" for the canonical substrate index, and [`RUST_ENGINE_GAPS.md`](RUST_ENGINE_GAPS.md) (swept 2026-05-15) for the live gap state.
+
 The DSL exists so card behavior can be authored declaratively while preserving the no-approximations rule: every legal player choice must be surfaced through engine actions or `PendingSelection`. Do not use YAML stubs, hidden auto-picks, broad `raw_rust` bypasses, or UI-only decisions to claim a card is ready.
 
 ## 1. Agent Workflow
@@ -216,6 +218,12 @@ Use declarative clauses for persistent or registered behavior. The full set of `
 
 Replacement causes available in `active_when` predicates: `battle`, `own_effect`, `opponent_effect`, `security_check`, `cost`, `overclock` (see `ReplacementCauseSpec` in [`predicate.rs`](../code/digimon-dsl/src/predicate.rs)).
 
+### Track I — Option Plug-In lifecycle (engine-only, no DSL surface yet)
+
+Track I (PRs #461 + #466, 2026-05-10) added the substrate for Option Plug-In lifecycle on the engine side: `EffectTiming::OnOptionTrashed`, `TriggerContext.option_last_field_state`, `OptionFieldState::{LinkedPlugIn, OrphanedPlugIn}`, and `Game::orphan_linked_plug_in` / `orphan_plug_in` / `relink_plug_in` helpers. See [`RUST_ENGINE_API.md`](RUST_ENGINE_API.md) §0 "Tracks A–K Substrate Quick Reference" for the engine surface.
+
+**The DSL does not expose these yet.** `on_option_trashed` does not lower to a `when:` value (verified against `code/digimon-engine/src/dsl_cards/timing_map.rs`), and no DSL verb constructs an orphan/relink operation. If a card needs Plug-In lifecycle behavior today, you must reach for `raw_rust:` and call the `EffectContext` helpers directly — and file a `qa/dsl-vocab-gaps.md` entry for the missing DSL surface so it can be planned in. Do not stub the behavior or omit the carrier-loss cascade.
+
 ## 5. Step API by Pattern
 
 ### Selection
@@ -380,7 +388,7 @@ Common predicate families (full list in [`predicate.rs`](../code/digimon-dsl/src
 
 - Identity: `kind`, `level_eq`, `level_eq_binding`, `level_lte`, `level_gte`, `color_is`, `color_only`, `color_matches_any_field_digimon`, `color_matches_binding`, `trait_has`, `form_is`, `attribute_is`, `name_is`, `name_contains`, `name_in`, `card_number_is`, `play_cost_lte`, `can_digivolve_from_source`.
 - Permanent state: `dp_eq`, `dp_lte`, `dp_gte`, `is_suspended`, `is_unsuspended`, `materials_count_lte`, `materials_count_gte`, `stack_size_lte`, `stack_size_gte`, `has_keyword`, `has_inherited` (nested predicate), `of_permanent`.
-- Source-relative (resolves against `ctx.source_card`): `source_is_tamer`, `source_name_contains`, `source_permanent_trait_has`, `self_digivolution_contains_name`.
+- Source-relative (resolves against `ctx.source_card` / `ctx.source_permanent`): `source_is_tamer`, `source_name_contains`, `source_permanent_trait_has`, `source_is_unsuspended` (PR #472 — checks the source permanent's suspension state from a triggered clause), `self_digivolution_contains_name`.
 - Context / global: `your_turn`, `opponents_turn`, `all_turns`, `memory_lte`, `memory_gte`, `security_count_lte`, `security_count_gte`, `can_hatch`, `in_breeding`, `on_field`, `dna_origin`.
 - Event payloads (PR #451 event-payload contract — only valid inside event-driven triggers): `event_target_kind`, `event_target_trait_has`, `event_target_owner`, `event_target_is_player`, `event_target_was_self`, `event_permanent_is_source`, `event_is_effect_initiated`, `event_card_trait_has`, `event_card_name_contains`, `event_cause`, `attacker_trait_has`, `attack_target_change_reason`, `host_permanent_trait_has`, `trashed_source_trait_has`, `trashed_source_card_id_is`.
 - Replacement payloads (Track B, only valid inside `kind: replacement` clauses): `replacement_cause`, `replacement_source_is_opponent`, `replacement_subject_is_mine`.
@@ -528,6 +536,30 @@ Preferred shape:
 - `select_dna_pair` for player-visible material choices.
 
 Do not fake an effect digivolve with raw stack mutation. It must fire the standard digivolve events and When Digivolving queue.
+
+**Activation gate on an alt-path (Phase 1, 2026-05-15).** When a printed alt-path is conditional on game state beyond the source filter and extra-cost ritual — e.g. "[Hand] [Main] **If you have [Owen Dreadnought]**, by placing 1 [Dimetromon] …, [Elizamon] digivolves into this card" — use `condition:` on the alt-path. It evaluates after the source filter and before the extra-cost flow, with the source permanent as `PredicateSubject`. Currently consumed by the Digivolve route only (not yet by DigiXros / BurstDigivolve / Assembly / AppFusion — file a gap entry if you need them).
+
+```yaml
+alt_paths:
+  - kind: activated_digivolve
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        name_contains: "Owen Dreadnought"
+    from: { name_contains: "Elizamon" }
+    cost: 3
+    ignore_requirements: true
+    extra_cost:
+      - select_trash:
+          of: you
+          bind_as: source
+          filter: { name_contains: "Dimetromon" }
+      - place_as_bottom_source:
+          source: source
+          target: { binding: activated_digivolve_target }
+```
 
 ### Auras, Flood Gates, and Keywords
 

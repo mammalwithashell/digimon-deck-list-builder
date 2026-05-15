@@ -21,13 +21,15 @@
 //! # Implementation notes / DSL gaps
 //!
 //! 1. **Alt-path with activation gate** — The "[Matt Ishida] tamer present AND
-//!    opponent has 10000 DP+ Digimon" gate cannot be expressed today:
-//!    `AltPathSpec` has no `condition:` field (G-ALT-PATH-CONDITION,
-//!    qa/dsl-vocab-gaps.md). Authoring the alt-path WITHOUT the gate would
-//!    let any Gabumon alt-digivolve into BT15-101 for cost 4 unconditionally,
-//!    which violates printed text and the no-approximations policy. The Gabumon
-//!    alt-path is therefore OMITTED from the YAML pending G-ALT-PATH-CONDITION.
-//!    Standard Lv5 Blue cost 4 path is present (printed `evo_costs`).
+//!    opponent has 10000 DP+ Digimon" gate is expressible at the substrate
+//!    level: `AltPathSpec.condition` was added 2026-05-15
+//!    (G-ALT-PATH-CONDITION RESOLVED, qa/resolved-gaps.md). The opp-DP
+//!    side of the gate still requires `G-PRED-DP-LTE` for the inverse
+//!    "opponent has 10000+ DP Digimon" check. Until that lands, authoring
+//!    the alt-path with only the Matt Ishida half would still violate
+//!    printed text. The Gabumon alt-path therefore remains OMITTED from
+//!    the YAML pending G-PRED-DP-LTE; the standard Lv5 Blue cost 4 path
+//!    is present (printed `evo_costs`).
 //!
 //! 2. **Self-target on_suspend gate** — Printed text says "When THIS Digimon
 //!    becomes suspended". The DSL has `event_target_owner` and
@@ -175,11 +177,13 @@ fn bt15_101_has_when_digivolving_lock_clause_and_all_turns_on_suspend_clause() {
 #[test]
 fn bt15_101_omits_gabumon_alt_path_pending_dsl_gap() {
     // The Gabumon alt-path is gated on a printed condition (Matt Ishida tamer
-    // + opp 10000 DP+ Digimon) which AltPathSpec cannot express today
-    // (G-ALT-PATH-CONDITION). The path is intentionally OMITTED from YAML.
-    // We assert that no cost-4 alt-path with `ignore_requirements: true` is
-    // present — the standard cost-4 alt-path (printed evo_costs) does NOT
-    // ignore requirements.
+    // + opp 10000 DP+ Digimon). The `AltPathSpec.condition` side is now
+    // expressible (G-ALT-PATH-CONDITION RESOLVED 2026-05-15), but the
+    // opp-DP half still requires `G-PRED-DP-LTE` for the "opponent has
+    // 10000+ DP Digimon" check. The path is intentionally OMITTED from
+    // YAML until that gap closes. We assert that no cost-4 alt-path with
+    // `ignore_requirements: true` is present — the standard cost-4
+    // alt-path (printed evo_costs) does NOT ignore requirements.
     let card = compiled();
 
     let has_ignore_alt = card
@@ -188,7 +192,7 @@ fn bt15_101_omits_gabumon_alt_path_pending_dsl_gap() {
         .any(|p| p.kind == CompiledAltPathKind::Digivolve && p.ignore_requirements);
     assert!(
         !has_ignore_alt,
-        "Gabumon alt-path must be omitted pending G-ALT-PATH-CONDITION"
+        "Gabumon alt-path must be omitted pending G-PRED-DP-LTE"
     );
 }
 

@@ -47,8 +47,10 @@
 //!   tamer, -3 cost) vs the activated_digivolve from Gabumon at cost 6.
 //! - BT24-016 Lamiamon — first/canonical user of `activated_digivolve` from
 //!   field with `extra_cost`. Header for that card established
-//!   G-ALT-PATH-CONDITION as a DSL vocab gap. BT22-026's [Hand][Main]
-//!   alt-path requires Nokia Shiramine — same gap.
+//!   G-ALT-PATH-CONDITION; substrate RESOLVED 2026-05-15
+//!   (`AltPathSpec.condition` field + consumer wiring). BT22-026's
+//!   YAML does not yet populate `condition:` to gate on Nokia
+//!   Shiramine; card-local authoring follow-up.
 //! - AD1-012 CresGarurumon — first/canonical user of `level_matches_aggregate
 //!   { selector: lowest_level, of: opponent }`. BT22-026 branch 1 reuses
 //!   this exact pattern.
@@ -66,10 +68,12 @@
 //!
 //! # Known gaps that affect this card
 //!
-//! - **G-ALT-PATH-CONDITION** — `AltPathSpec` has no `condition:` field; the
-//!   Nokia Shiramine precondition on the [Hand][Main] activated_digivolve cannot
-//!   be expressed in DSL. The Gabumon-on-field filter IS enforced via `from:`.
-//!   First flagged on BT24-016 (Lamiamon).
+//! - **G-ALT-PATH-CONDITION** — RESOLVED 2026-05-15 at the substrate
+//!   level (`AltPathSpec.condition` field exists, consumed by the
+//!   Digivolve route in `dna_digivolve.rs`). BT22-026's YAML does not
+//!   yet populate `condition:` to gate on Nokia Shiramine; the
+//!   Gabumon-on-field filter IS enforced via `from:` but Nokia presence
+//!   is not checked. Card-local authoring follow-up.
 //! - **G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET** — the
 //!   `select_own_permanent → select_hand → effect_initiated_digivolve` chain
 //!   terminates after the permanent pick; the hand-pick prompt never installs.
@@ -609,13 +613,19 @@ fn bt22_026_inherited_when_attacking_opt_blocks_second_activation() {
 // encoded and verifiable.
 
 /// Negative: with Gabumon on field but NO Nokia Shiramine tamer, the
-/// activated_digivolve alt-path should NOT be available. **BLOCKED** by
-/// G-ALT-PATH-CONDITION. Same gap as BT22-013 / BT24-016.
+/// activated_digivolve alt-path should NOT be available. **PENDING**
+/// card-local authoring of `condition:` on the BT22-026.yaml
+/// activated_digivolve path. Substrate is ready (G-ALT-PATH-CONDITION
+/// RESOLVED 2026-05-15); same authoring gap as BT22-013 / BT24-016.
 #[test]
-#[ignore = "BLOCKED: G-ALT-PATH-CONDITION — AltPathSpec has no `condition:` field; the \
-            'If you have [Nokia Shiramine]' precondition cannot be expressed today. The \
-            activated_digivolve alt-path is offered whenever a Gabumon is on field, regardless \
-            of Nokia presence (over-permissive). Same gap blocks BT22-013 / BT24-016."]
+#[ignore = "PENDING card-local authoring: BT22-026.yaml does not populate \
+            `condition:` on the activated_digivolve alt-path to gate on Nokia \
+            Shiramine. Substrate is ready (G-ALT-PATH-CONDITION RESOLVED \
+            2026-05-15 — AltPathSpec.condition field + consumer wired in \
+            dna_digivolve.rs). Until the YAML is updated, the alt-path is \
+            offered whenever a Gabumon is on field, regardless of Nokia \
+            presence (over-permissive). Same authoring gap blocks BT22-013 \
+            and BT24-016."]
 fn bt22_026_activated_digivolve_blocked_without_nokia_tamer() {
     // Setup: Gabumon on field, BT22-026 in hand, NO Nokia Shiramine tamer.
     // The activated_digivolve alt-path MUST NOT be offered as a play option.

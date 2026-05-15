@@ -122,6 +122,10 @@ pub struct CompiledAltPath {
     pub extra_cost: Vec<CompiledStep>,
     pub on_burst_turn_end: Vec<CompiledStep>,
     pub marker: bool,
+    /// Activation gate on top of source/material/extra-cost gates.
+    /// Closes G-ALT-PATH-CONDITION (BT24-016).
+    #[serde(default)]
+    pub condition: Option<Box<CompiledPredicate>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -334,7 +338,9 @@ pub enum CompiledPlayerRef {
 
 // ── Formulas ────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, strum_macros::EnumDiscriminants)]
+#[strum_discriminants(derive(strum_macros::EnumIter, Hash))]
+#[strum_discriminants(name(CompiledFormulaDiscriminant))]
 pub enum CompiledFormula {
     Literal(i32),
     BasePerDelta {
@@ -562,7 +568,9 @@ pub enum CompiledScope {
     Security,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, strum_macros::EnumIter,
+)]
 pub enum CompiledTiming {
     OnPlay,
     WhenDigivolving,
@@ -648,7 +656,9 @@ pub struct CompiledAttackCostUpgrade {
     pub security_attack: i32,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, strum_macros::EnumDiscriminants)]
+#[strum_discriminants(derive(strum_macros::EnumIter, Hash))]
+#[strum_discriminants(name(CompiledStepDiscriminant))]
 pub enum CompiledStep {
     GainMemory(i32),
     LoseMemory(i32),

@@ -292,7 +292,7 @@ fn bt22_042_declining_free_play_still_applies_scaled_dp_reduction() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-ALT-PATH-CONDITION — AltPathSpec has no condition field for 'while you have Arisa Kinosaki'"]
+#[ignore = "PENDING card-local authoring: substrate is ready (G-ALT-PATH-CONDITION RESOLVED 2026-05-15 — AltPathSpec.condition field + consumer wired in dna_digivolve.rs); BT22-042.yaml does not yet populate `condition:` to gate on Arisa Kinosaki."]
 fn bt22_042_chaperomon_alt_digivolve_requires_arisa_kinosaki() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
@@ -318,7 +318,7 @@ fn bt22_042_chaperomon_alt_digivolve_requires_arisa_kinosaki() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-ALT-PATH-CONDITION — conditional Chaperomon route cannot be faithfully gated yet"]
+#[ignore = "PENDING card-local authoring: substrate is ready (G-ALT-PATH-CONDITION RESOLVED 2026-05-15 — AltPathSpec.condition field + consumer wired in dna_digivolve.rs); BT22-042.yaml does not yet populate `condition:` for the Chaperomon route."]
 fn bt22_042_chaperomon_alt_digivolve_costs_6_while_arisa_is_present() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")

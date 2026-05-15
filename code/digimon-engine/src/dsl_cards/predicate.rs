@@ -63,6 +63,21 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    // `all_turns: true` is an explicit "passes during any turn" marker
+    // used in `active_when` scopes (the printed [All Turns] tag). It is
+    // a no-op filter — the predicate passes regardless of whose turn
+    // it is. `all_turns: false` is nonsensical (no turn would satisfy)
+    // and is treated as a non-match.
+    if let Some(want) = pred.all_turns {
+        if !want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.source_is_tamer {
+        if rctx.source_is_tamer() != want {
+            return false;
+        }
+    }
     if let Some(cap) = &pred.memory_lte {
         if (rctx.game.memory as i32) > eval_int_constraint_read(cap, rctx, None, bindings) {
             return false;
@@ -235,6 +250,21 @@ pub fn eval_predicate_with_bindings(
     }
     if let Some(binding_name) = &pred.not_in_binding {
         if !subject_not_in_binding(subject, binding_name, bindings) {
+            return false;
+        }
+    }
+    // `of_permanent: <name>` constrains the subject to the named
+    // permanent binding. The subject must be a `Permanent` and equal
+    // to whatever `<name>` is bound to. Used by source-stack selection
+    // step bodies (e.g. "select an inherited card on `carrier`").
+    if let Some(binding_name) = &pred.of_permanent {
+        let PredicateSubject::Permanent(handle) = subject else {
+            return false;
+        };
+        let Some(target) = bindings.and_then(|b| b.get_permanent(binding_name)) else {
+            return false;
+        };
+        if target != handle {
             return false;
         }
     }
@@ -1282,12 +1312,60 @@ fn eval_card_fields(
             return false;
         }
     }
-    if let Some(want) = pred.can_digivolve_from_source {
-        if can_card_digivolve_from_source(rctx, card) != want {
+    if let Some(ref alt_kind) = pred.has_alt_path {
+        if !card_has_alt_path(rctx, &data.card_id, alt_kind) {
+            return false;
+        }
+    }
+    if let Some(ref inner) = pred.has_inherited {
+        // For card subjects (in deck/hand/trash), `has_inherited` checks
+        // whether the card's printed `inherited_text` is non-empty when
+        // the inner predicate is empty/default. With a non-default
+        // inner predicate, a card subject has no inherited card sources
+        // to recurse into, so the predicate fails — only permanents on
+        // the field have a digivolution stack to scan.
+        if inner.as_ref() == &CompiledPredicate::default() {
+            if data.inherited_text.is_empty() {
+                return false;
+            }
+        } else {
+            // Non-trivial inner predicate cannot match a card subject.
             return false;
         }
     }
     true
+}
+
+/// Returns true if the card with `card_id` has at least one DSL-registered
+/// alt-path whose `kind` snake-cases to `kind_name`. Mirrors the YAML
+/// vocabulary for `has_alt_path: <name>` (e.g. `digixros`, `digivolve`).
+fn card_has_alt_path(rctx: &EffectReadContext<'_>, card_id: &str, kind_name: &str) -> bool {
+    let registry = &rctx.game.alt_path_registry;
+    let Some(paths) = registry.get(card_id) else {
+        return false;
+    };
+    paths
+        .iter()
+        .any(|p| alt_path_kind_matches(&p.kind, kind_name))
+}
+
+fn alt_path_kind_matches(
+    kind: &digimon_dsl::compiled::CompiledAltPathKind,
+    name: &str,
+) -> bool {
+    use digimon_dsl::compiled::CompiledAltPathKind as K;
+    let normalized = name.to_ascii_lowercase().replace('-', "_");
+    let kind_str = match kind {
+        K::Digivolve => "digivolve",
+        K::DnaDigivolve => "dna_digivolve",
+        K::BlastDnaDigivolve => "blast_dna_digivolve",
+        K::DigiXros => "digixros",
+        K::BurstDigivolve => "burst_digivolve",
+        K::AppFusion => "app_fusion",
+        K::Assembly => "assembly",
+        K::ActivatedDigivolve => "activated_digivolve",
+    };
+    kind_str == normalized
 }
 
 fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle) -> bool {

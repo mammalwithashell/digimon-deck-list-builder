@@ -2,8 +2,28 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-05-14
-Last sweep: 2026-05-14 (post-Track-H + Alter-S Ladder rollup)
+Last updated: 2026-05-15
+Last sweep: 2026-05-15 (post-rebaseline audit cleanup)
+
+## Sweep notes (2026-05-15)
+
+Post-rebaseline audit cleanup driven by
+[`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md):
+the canonical engine-side tracker
+[`docs/RUST_ENGINE_GAPS.md`](../../docs/RUST_ENGINE_GAPS.md) was shrunk
+from ~50 open entries to ~22, with ~54 entries (the 8 audit-flagged
+CLOSED + ~46 NARROW closed-core halves) relocated to
+[`qa/resolved-gaps.md`](../resolved-gaps.md). The narrowed residual
+sub-shapes (e.g. `play_from_revealed_free`, `play_from_security_at`,
+top-N security trash + face-up flip, bilateral `UntilLeaveField`
+delivery for BT14-009, `pop_top_digivolution_source` for BT24-093)
+live as their own entries.
+
+This shadow tracker remains consistent with the canonical engine-side
+gap document — the per-entry status updates here already cited the
+2026-05-08 and 2026-05-10 closures that the audit confirmed as
+closed-at-substrate. No engine code, tests, or card YAML were
+modified by the sweep.
 
 ## Sweep notes (2026-05-14)
 

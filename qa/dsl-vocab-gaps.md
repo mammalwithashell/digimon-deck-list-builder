@@ -16,6 +16,17 @@ This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine h
 > driving DSL substrate. Pre-scaling cleanup batch §2 narrative in
 > `.claude/plans/pre-scaling-cleanup-batch.md`.
 
+> **Tracker hygiene sweep — 2026-05-15:** Post-rebaseline audit cleanup
+> per [`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md).
+> The canonical engine-side tracker `docs/RUST_ENGINE_GAPS.md` was
+> compacted: ~54 closed entries moved to `qa/resolved-gaps.md`, ~10
+> entries had headline severity reframed from 🔴 to 🟡 PARTIAL with
+> narrowed residual titles (e.g. "Decode residual: EX10-061 Apocalymon
+> batch + different-name source play DSL sugar", "Conditional
+> security-in-stack trigger residual: start-of-turn variants"), and
+> the at-a-glance table was rewritten. No new DSL-vocab gap entries
+> surfaced; existing entries in this file remain accurate.
+>
 > **Tracker hygiene sweep — 2026-05-14:** Cross-referenced against PRs
 > #459–#473. The Track E zone-movement DSL verb table remains current
 > (no new entries). Track C modifier-payload structured YAML parser is
@@ -400,23 +411,12 @@ Format per entry:
 
 ---
 
-## BT24-016 — `condition:` field on `AltPathSpec` (alt-digivolve activation gates)  [G-ALT-PATH-CONDITION]
-- Effect text: "[Hand] [Main] If you have [Owen Dreadnought], by placing 1 [Dimetromon] from your trash as any of your [Elizamon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements."
-- Missing DSL verb / step kind / predicate: `AltPathSpec` (in `digimon-dsl`) has `#[serde(deny_unknown_fields)]` and no `condition:` field. The "If you have [Owen Dreadnought]" gate cannot be expressed; the activated alt-path becomes available whenever the source filter (Elizamon on field) plus the extra_cost (Dimetromon in trash) are satisfied, regardless of Owen presence.
-- Lowers to engine API: The activated-digivolve activation check already evaluates predicates via the standard `PredicateSpec` path; the gap is that `AltPathSpec` doesn't carry an extra activation predicate.
-- Suggested DSL syntax: add `condition: Option<PredicateSpec>` to `AltPathSpec` (evaluated on top of the existing source-filter / extra-cost gates).
-  ```yaml
-  alt_paths:
-    - kind: activated_digivolve
-      condition:
-        all_of:
-          - exists: { of: you, zone: [battle_area], kind: tamer, name_contains: "Owen Dreadnought" }
-      from: { name_contains: "Elizamon" }
-      cost: 3
-      ignore_requirements: true
-      extra_cost: ...
-  ```
-- First reported: 2026-04-27 (BT24-016 batch-implement-cards-rust-dsl)
+## ~~BT24-016 — `condition:` field on `AltPathSpec` (alt-digivolve activation gates)  [G-ALT-PATH-CONDITION]~~ — RESOLVED 2026-05-15
+
+- **Status:** Schema + consumer wired. `AltPathSpec.condition: Option<PredicateSpec>` is now accepted by the DSL parser, compiles to `CompiledAltPath.condition: Option<Box<CompiledPredicate>>`, and is evaluated in `code/digimon-engine/src/dna_digivolve.rs::find_matching_alt_path` after the source-filter check (Digivolve route).
+- **Card-side authoring follow-up:** BT24-016's YAML still leaves the Owen Dreadnought gate unenforced; populating `condition:` on the activated_digivolve path is card-local work, not substrate.
+- **Evidence:** `cargo test --manifest-path code/digimon-dsl/Cargo.toml`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage`.
+- **Full entry archived to:** `qa/resolved-gaps.md` under "DSL Gap: `AltPathSpec.condition` field for alt-digivolve activation gates".
 
 ---
 
@@ -979,10 +979,10 @@ Format per entry:
       ignore_requirements: true
   ```
   (Option B — dedicated kind): `kind: warp_into_hand` with required `into:` field (no `from:`); same lowering on the engine side.
-- Workaround that would VIOLATE no-approximations: silently move the alt-path to WarGreymon's YAML (over-broadcasts to every Lv3 controller) or omit the gating predicate (path always available regardless of opp DP / Tamer colours). Per no-approximations the warp clause is OMITTED until this gap closes. Five behavioral tests in `code/digimon-engine/tests/cards_behavioral/st20/st20_10.rs` are `#[ignore]`'d under this gap tag (paired with `G-ALT-PATH-CONDITION` and either `G-PRED-DP-LTE` or `G-DSL-DISTINCT-TAMER-COLORS`).
+- Workaround that would VIOLATE no-approximations: silently move the alt-path to WarGreymon's YAML (over-broadcasts to every Lv3 controller) or omit the gating predicate (path always available regardless of opp DP / Tamer colours). Per no-approximations the warp clause is OMITTED until this gap closes. Five behavioral tests in `code/digimon-engine/tests/cards_behavioral/st20/st20_10.rs` are `#[ignore]`'d under this gap tag (paired with `G-PRED-DP-LTE` or `G-DSL-DISTINCT-TAMER-COLORS`; the previously-companion `G-ALT-PATH-CONDITION` was RESOLVED 2026-05-15).
 - Also blocks: any future "this Digimon can digivolve into [Card] in the hand for cost N" warp effect printed on the source card with a self-controller-state gate.
 - Gap kind: dsl. Engine substrate already exists (DCGO uses the same `AddSelfDigivolutionRequirementStaticEffect` factory regardless of direction).
-- First reported: 2026-05-03 (ST20-10 Agumon, batch-implement-cards-rust-dsl). Companion gap to `G-ALT-PATH-CONDITION` (BT24-016) — the gating predicate hole and the inverse-direction hole both block ST20-10 independently.
+- First reported: 2026-05-03 (ST20-10 Agumon, batch-implement-cards-rust-dsl). Originally paired with `G-ALT-PATH-CONDITION` (BT24-016); that companion gap was RESOLVED 2026-05-15, so the inverse-direction hole is now the sole substrate blocker on this clause.
 
 ## ST20-10 — Distinct-Tamer-colours-on-field BoolPredicate  [G-DSL-DISTINCT-TAMER-COLORS]
 - Effect text: ST20-10 Agumon — "...or your Tamers have 3 or more total colors..." (gating disjunct of the [Your Turn] warp clause). Sibling form of BT21-102 Tai Kamiya's "For each of your Tamers' colors, add 1 to this effect's play cost maximum" — both reference the same per-colour-count computation, but BT21-102 needs the value as a `FormulaSpec::per` aggregate (tracked under `G-DSL-DISTINCT-TAMER-COLORS-FORMULA`) while ST20-10 needs it as a BoolPredicate threshold ("3 or more").
@@ -1003,7 +1003,7 @@ Format per entry:
       filter: { kind: tamer }
       gte: 3
   ```
-- Workaround that would VIOLATE no-approximations: drop the disjunct entirely (gate fires only on opp ≥10000 DP, never on Tamer colours), or replace with a coarser proxy like "you have 3+ Tamers" (over-fires on three same-colour Tamers, under-fires on 3 distinct-colour Tamers some of which are deleted). Per no-approximations the entire warp clause is OMITTED until this gap (paired with `G-ALT-PATH-DIRECTION-INTO` and `G-ALT-PATH-CONDITION`) closes.
+- Workaround that would VIOLATE no-approximations: drop the disjunct entirely (gate fires only on opp ≥10000 DP, never on Tamer colours), or replace with a coarser proxy like "you have 3+ Tamers" (over-fires on three same-colour Tamers, under-fires on 3 distinct-colour Tamers some of which are deleted). Per no-approximations the entire warp clause is OMITTED until this gap (paired with `G-ALT-PATH-DIRECTION-INTO`) closes. The earlier-paired `G-ALT-PATH-CONDITION` was RESOLVED 2026-05-15.
 - Also blocks: any future "while your Tamers have N or more total colours" or "if you have N or more distinct-colour Tamers" gate. Sibling to `G-DSL-DISTINCT-TAMER-COLORS-FORMULA` (BT21-102) — the formula-aggregate form lands the underlying primitive; this gap closes the BoolPredicate wrapping. Both should land together once the formula primitive is generalised to also expose its result as a comparable scalar.
 - Gap kind: dsl. Engine has the count primitive via `eval_aggregate`.
 - First reported: 2026-05-03 (ST20-10 Agumon, batch-implement-cards-rust-dsl). Sibling of `G-DSL-DISTINCT-TAMER-COLORS-FORMULA` (BT21-102).

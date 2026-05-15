@@ -9,12 +9,13 @@ traits: [Dragonkin, LIBERATOR]
 
 # Standard digivolution from any Lv4 (cost 3 from battlearea).
 # Alt activated-digivolve path: [Hand][Main] requires Owen Dreadnought in
-# play. Owen gate CANNOT be expressed as a `condition:` on the alt_path
-# because AltPathSpec has no `condition` field (DSL vocab gap — see
-# G-ALT-PATH-CONDITION). The gate is partially enforced by the `from:`
-# filter (Elizamon must be on field) and the `extra_cost` select_trash
-# (Dimetromon must be in trash). Owen presence is tracked as a runtime
-# semantic gap until AltPathSpec gains a `condition:` field.
+# play. AltPathSpec now carries a `condition:` field (G-ALT-PATH-CONDITION
+# RESOLVED 2026-05-15 — see qa/resolved-gaps.md) consumed by the
+# Digivolve route in dna_digivolve.rs. The Owen gate is NOT wired here:
+# authoring the predicate for this card is card-local follow-up.
+# Currently the gate is partially enforced by the `from:` filter
+# (Elizamon must be on field) and the `extra_cost` select_trash
+# (Dimetromon must be in trash); Owen presence is not checked.
 alt_paths:
   - kind: digivolve
     from: { level_eq: 4 }
