@@ -10,8 +10,8 @@
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
-    CompiledDeclarativeClause, CompiledReplacementCause, CompiledScope, CompiledStep,
-    CompiledTiming,
+    CompiledDeclarativeClause, CompiledPlayerRef, CompiledPredicate, CompiledReplacementCause,
+    CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::space::{PASS, TRASH_EFFECT_START};
 use digimon_engine::card_data::CardData;
@@ -152,20 +152,54 @@ fn ex11_023_has_alliance_scapegoat_and_lowest_level_delete_clauses() {
 }
 
 #[test]
-fn ex11_023_does_not_ship_approximating_on_any_deletion_observer() {
+fn ex11_023_has_optional_opt_on_any_deletion_observer_with_self_exclusion() {
     let runner = runner();
     let card = runner
         .compiled_card("EX11-023")
         .expect("EX11-023 must be compiled");
 
-    assert!(
-        !card.effects.iter().any(|clause| matches!(
-            clause,
+    let observer = card
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
             CompiledClause::Triggered(triggered)
-                if triggered.when.contains(&CompiledTiming::OnAnyDeletion)
+                if triggered.when.contains(&CompiledTiming::OnAnyDeletion) =>
+            {
+                Some(triggered)
+            }
+            _ => None,
+        })
+        .expect("OnAnyDeletion trash-play observer should exist");
+
+    assert!(observer.once_per_turn, "printed observer is [Once Per Turn]");
+    let condition = observer
+        .condition
+        .as_ref()
+        .expect("observer must inspect the deleted-object event context");
+    assert!(
+        predicate_has_event_target_kind(condition, CompiledCardKind::Digimon),
+        "observer must only trigger when a Digimon is deleted"
+    );
+    assert!(
+        predicate_has_event_permanent_is_source(condition, false),
+        "observer must exclude Kaguyamon itself from 'other Digimon'"
+    );
+    assert!(
+        observer
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::SelectTrash { optional: true, .. })),
+        "printed 'you may play' should surface as an optional trash selection"
+    );
+    assert!(
+        observer.process.iter().any(|step| matches!(
+            step,
+            CompiledStep::PlayFromTrashFree {
+                of: CompiledPlayerRef::You,
+                ..
+            }
         )),
-        "do not ship the trash-play observer until PUPPETS-G011 can exclude \
-         Kaguyamon itself from the deleted-object trigger"
+        "selected Puppet must be played from trash for free"
     );
 }
 
@@ -335,7 +369,6 @@ fn ex11_023_lowest_level_delete_no_opp_digimon_does_not_prompt() {
 }
 
 #[test]
-#[ignore = "pending: PUPPETS-G011 — OnAnyDeletion needs deleted-object context plus source-exclusion for 'other Digimon'"]
 fn ex11_023_other_deletion_may_play_level_4_or_lower_puppet_from_trash() {
     let mut runner = runner();
     let kaguyamon = runner.place_on_field(0, "EX11-023", Some(0));
@@ -367,7 +400,6 @@ fn ex11_023_other_deletion_may_play_level_4_or_lower_puppet_from_trash() {
 }
 
 #[test]
-#[ignore = "pending: PUPPETS-G011 — OnAnyDeletion needs deleted-object context plus source-exclusion for 'other Digimon'"]
 fn ex11_023_other_deletion_trash_play_can_be_declined() {
     let mut runner = runner();
     runner.place_on_field(0, "EX11-023", Some(0));
@@ -388,7 +420,6 @@ fn ex11_023_other_deletion_trash_play_can_be_declined() {
 }
 
 #[test]
-#[ignore = "pending: PUPPETS-G011 — self-deletion exclusion needs deleted-object/source comparison"]
 fn ex11_023_does_not_trigger_trash_play_when_kaguyamon_itself_is_deleted() {
     let mut runner = runner();
     let kaguyamon = runner.place_on_field(0, "EX11-023", Some(0));
@@ -404,9 +435,33 @@ fn ex11_023_does_not_trigger_trash_play_when_kaguyamon_itself_is_deleted() {
 }
 
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED + PUPPETS-G011 — OPT lockout depends on faithful observer dispatch"]
 fn ex11_023_other_deletion_trash_play_is_once_per_turn() {
-    let _runner = runner();
+    let mut runner = runner();
+    runner.place_on_field(0, "EX11-023", Some(0));
+    let first_deleted = runner.place_on_field(0, "OTHER-DIGIMON", Some(0));
+    let second_deleted = runner.place_on_field(0, "OPP-L3", Some(0));
+    push_to_trash(&mut runner, 0, "TRASH-PUPPET-L4");
+
+    runner.game.delete_permanent_with_effects(first_deleted);
+    runner.game.drain_effect_queue();
+
+    let first_prompt = runner
+        .pending_selection_view()
+        .expect("first other deletion should install trash-play prompt");
+    assert_eq!(first_prompt.kind, SelectionKind::Trash);
+    runner
+        .execute_action(0, first_prompt.valid_action_ids[0])
+        .expect("play Puppet from trash");
+    runner.auto_resolve().expect("finish first trash play");
+    assert_eq!(count_field_card(&runner, 0, "TRASH-PUPPET-L4"), 1);
+
+    runner.game.delete_permanent_with_effects(second_deleted);
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "second eligible deletion in the same turn must be blocked by OPT"
+    );
 }
 
 fn digimon(id: &str, level: u8, dp: i32, traits: &[&str]) -> CardData {
@@ -456,4 +511,34 @@ fn trash_ids(runner: &DebugRunner, player: usize) -> Vec<String> {
         .iter()
         .map(|card| card.card_id(&runner.game.card_data).to_string())
         .collect()
+}
+
+fn predicate_has_event_target_kind(
+    predicate: &CompiledPredicate,
+    kind: CompiledCardKind,
+) -> bool {
+    predicate.event_target_kind == Some(kind)
+        || predicate
+            .all_of
+            .iter()
+            .any(|child| predicate_has_event_target_kind(child, kind))
+        || predicate
+            .any_of
+            .iter()
+            .any(|child| predicate_has_event_target_kind(child, kind))
+}
+
+fn predicate_has_event_permanent_is_source(
+    predicate: &CompiledPredicate,
+    value: bool,
+) -> bool {
+    predicate.event_permanent_is_source == Some(value)
+        || predicate
+            .all_of
+            .iter()
+            .any(|child| predicate_has_event_permanent_is_source(child, value))
+        || predicate
+            .any_of
+            .iter()
+            .any(|child| predicate_has_event_permanent_is_source(child, value))
 }

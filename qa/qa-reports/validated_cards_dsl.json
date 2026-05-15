@@ -3027,19 +3027,25 @@
     },
     "ST19-14": {
       "card_name": "Arisa Kinosaki",
-      "validated_date": "2026-05-03",
-      "report": "implement-rust-dsl-archetype puppets",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
-      "archetype": "Puppets Batch 3",
+      "validated_date": "2026-05-11",
+      "report": "implement-rust-dsl-archetype/puppets-st19-14-rush-observer",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/st19/ST19-14.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_14.rs",
-      "test_count": 2,
+      "test_count": 7,
       "patterns": [
         "MEMORY-SETTER",
-        "SECURITY-PLAY-SELF"
+        "SECURITY-PLAY-SELF",
+        "EFFECT-PLAYED-OBSERVER",
+        "EVENT-CONTEXT",
+        "TOKEN-FILTER",
+        "PUPPET-FILTER",
+        "SUSPEND-COST",
+        "KEYWORD-GRANT"
       ],
-      "notes": "Start-of-turn memory setter and Security self-play shipped. Effect-played Token/Puppet Rush observer remains omitted pending PUPPETS-G005 effect-initiated event context/provenance."
+      "notes": "Production YAML and focused tests cover the start-of-turn memory setter, Security self-play, and Your Turn effect-played own Token/Puppet Rush observer. The observer uses effect-initiated event context, event target owner/kind/trait gates, a visible Arisa activation/decline choice, suspend-this-Tamer cost, Rush grant to the event target, and a normal-play rejection. The token path is backed by play_token entered-field observer payload coverage."
     },
     "EX9-024": {
       "card_name": "Hanimon",
@@ -3287,10 +3293,10 @@
     },
     "BT22-002": {
       "card_name": "Kyaromon",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-2",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
+      "validated_date": "2026-05-11",
+      "report": "implement-rust-dsl-archetype/puppets-puppets-g011-adoption",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-002.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_002.rs",
@@ -3302,7 +3308,7 @@
         "OTHER-PUPPET-FILTER",
         "DRAW"
       ],
-      "notes": "Production YAML preserves metadata and intentionally omits the inherited deletion observer. Focused tests document that full behavior is blocked until OnAnyDeletion fan-out carries the deleted permanent/card in TriggerContext so event_target predicates can distinguish own Tokens, own other Puppet Digimon, opponent Puppets, and the carrier itself."
+      "notes": "Production YAML and focused tests cover the inherited Token/other-Puppet deletion observer using deleted-object event snapshots. Coverage proves own Token and own other Puppet Digimon deletions draw 1, while carrier/self deletion, opponent Puppet deletion, and own non-Puppet deletion do not, with once-per-turn lockout preserved."
     },
     "EX11-020": {
       "card_name": "Hanimon",
@@ -3489,10 +3495,10 @@
     },
     "EX9-033": {
       "card_name": "Kaguyamon",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-5",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-05-11",
+      "report": "implement-rust-dsl-archetype/puppets-puppets-g011-adoption",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex9/EX9-033.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_033.rs",
@@ -3503,7 +3509,7 @@
         "PLAY-FROM-TRASH-FREE",
         "ON-ANY-DELETION"
       ],
-      "notes": "Production YAML and focused tests cover yellow Lv5 cost 4 plus Puppet Lv5 cost 3 digivolve paths, Alliance/Blocker aura for own Puppet Digimon and Tokens only, and optional End of Your Turn play of a level 4 or lower Puppet from trash. The All Turns other-deletion lowest-level delete observer is omitted pending deleted-permanent event context for OnAnyDeletion."
+      "notes": "Production YAML and focused tests cover yellow Lv5 cost 4 plus Puppet Lv5 cost 3 digivolve paths, Alliance/Blocker aura for own Puppet Digimon and Tokens only, optional End of Your Turn play of a level 4 or lower Puppet from trash, and the All Turns once-per-turn other-Digimon deletion observer. The observer uses deleted-object event context with source exclusion, exposes a mandatory lowest-level opponent target prompt, suppresses self-deletion, and locks out after the first eligible deletion."
     },
     "BT22-036": {
       "card_name": "Chaperomon",
@@ -3544,10 +3550,10 @@
     },
     "EX11-023": {
       "card_name": "Kaguyamon",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-6",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-05-11",
+      "report": "implement-rust-dsl-archetype/puppets-puppets-g011-adoption",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-023.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_023.rs",
@@ -3559,7 +3565,7 @@
         "LOWEST-LEVEL-DELETE",
         "ON-ANY-DELETION"
       ],
-      "notes": "Production YAML and focused tests cover printed metadata, yellow Lv5 cost 4 and Puppet Lv5 cost 3 digivolve paths, Alliance, Scapegoat, mandatory lowest-level opponent Digimon deletion on When Digivolving and End of Opponent's Turn, tied-lowest target choice, and no-target no-prompt behavior. The All Turns other-Digimon-deleted optional level 4 or lower Puppet trash play is omitted pending deleted-object event context and source-exclusion support for OnAnyDeletion."
+      "notes": "Production YAML and focused tests cover printed metadata, yellow Lv5 cost 4 and Puppet Lv5 cost 3 digivolve paths, Alliance, Scapegoat, mandatory lowest-level opponent Digimon deletion on When Digivolving and End of Opponent's Turn, tied-lowest target choice, no-target no-prompt behavior, and the All Turns once-per-turn other-Digimon-deleted optional level 4 or lower Puppet trash play. The trash-play observer uses deleted-object event context with source exclusion, surfaces decline through the optional pending selection, rejects self-deletion, and locks out after the first eligible deletion."
     },
     "EX11-060": {
       "card_name": "Arisa Kinosaki",
@@ -3744,21 +3750,25 @@
     },
     "BT22-088": {
       "card_name": "Arisa Kinosaki",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-8",
+      "validated_date": "2026-05-11",
+      "report": "implement-rust-dsl-archetype/puppets-bt22-088-played-observer",
       "status": "PARTIAL",
-      "gap_kind": "engine",
+      "gap_kind": "hybrid",
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-088.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_088.rs",
-      "test_count": 7,
+      "test_count": 11,
       "patterns": [
         "SECURITY-PLAY",
         "OPTIONAL-COST",
         "ON-ENTER-FIELD-OBSERVER",
-        "SUSPEND-COST"
+        "SUSPEND-COST",
+        "SOURCE-PREFLIGHT",
+        "TOKEN-FILTER",
+        "PUPPET-FILTER",
+        "DRAW"
       ],
-      "notes": "Production YAML and focused tests cover Security play-self. The Start of Your Main Phase optional return-this-Tamer-to-deck-bottom cost into exact Arisa/Shoemon free-play branches and the All Turns Token/Puppet played observer with suspend-this-Tamer Draw 1 cost are omitted pending optional trigger-cost support and faithful play-event context."
+      "notes": "Production YAML and focused tests cover Security play-self and the All Turns own Token/Puppet played observer. The observer uses played-object event context, a source-bound unsuspended preflight, a visible suspend-this-Tamer/decline choice, Draw 1 on acceptance, Token and Puppet branches, opponent/non-Puppet rejection, and multi-Arisa source-bound cost coverage. The Start of Your Main Phase optional return-this-Tamer-to-deck-bottom cost into exact Arisa/Shoemon free-play branches remains omitted pending PUPPETS-G028."
     },
     "BT23-077": {
       "card_name": "Sistermon Ciel",

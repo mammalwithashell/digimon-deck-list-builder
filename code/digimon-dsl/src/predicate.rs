@@ -106,6 +106,8 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_is_tamer: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_is_unsuspended: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_name_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_permanent_trait_has: Option<String>,

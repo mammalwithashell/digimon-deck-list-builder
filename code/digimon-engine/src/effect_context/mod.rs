@@ -2073,8 +2073,9 @@ impl<'a> EffectContext<'a> {
     ///
     /// Looks up `token_name` in `game.token_registry`, synthesizes a
     /// `CardSource` with `is_token = true`, wraps it in a `Permanent`, and
-    /// pushes onto `controller.battle_area`. No play cost, no OnPlay
-    /// observer fan-out (tokens enter via effect, not via `play_from_hand`).
+    /// pushes onto `controller.battle_area`. No play cost and no token
+    /// OnPlay drain, but entered-field observers fire with `effect_initiated`
+    /// so cards that watch effects playing Tokens can see the new permanent.
     ///
     /// Returns the spawned permanent's handle, or `None` if the token name
     /// is unknown or the field is full.
@@ -2113,10 +2114,46 @@ impl<'a> EffectContext<'a> {
         let player = self.game.player_mut(controller);
         player.battle_area.push(perm);
         let idx = player.battle_area.len() - 1;
-        Some(PermanentHandle {
+        let entered = PermanentHandle {
             player: controller,
             index: idx as u8,
-        })
+        };
+        let entered_card = self.game.players[controller as usize].battle_area[idx]
+            .top_card()
+            .handle();
+        let emitted_card_id = self.game.players[controller as usize].battle_area[idx]
+            .top_card()
+            .card_id(&self.game.card_data)
+            .to_string();
+        let seq = self.game.next_event_seq();
+        self.game.events.push(crate::events::GameEvent::Play {
+            seq,
+            player: controller,
+            card_id: emitted_card_id,
+            field_index: idx as u8,
+        });
+        self.game.enqueue_triggered(
+            crate::enums::EffectTiming::OnEnterFieldAnyone,
+            crate::selection::TriggerSource::EnteredField {
+                player: controller,
+                permanent: entered,
+                card: entered_card,
+                effect_initiated: true,
+            },
+        );
+        self.game.enqueue_triggered(
+            crate::enums::EffectTiming::OnAllyPlayed,
+            crate::selection::TriggerSource::EnteredField {
+                player: controller,
+                permanent: entered,
+                card: entered_card,
+                effect_initiated: true,
+            },
+        );
+        self.game.drain_effect_queue();
+        self.game.mark_until_condition_dirty();
+        self.game.reevaluate_until_condition_modifiers_if_dirty();
+        Some(entered)
     }
 
     /// Suspend a permanent and fire `OnSuspend` observers.

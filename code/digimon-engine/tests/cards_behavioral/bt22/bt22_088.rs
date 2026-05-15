@@ -1,15 +1,20 @@
 //! BT22-088 Arisa Kinosaki.
 //! Printed text covered here: Security Effect [Security] Play this card
-//! without paying the cost.
+//! without paying the cost, and the All Turns Token/Puppet played observer.
 //!
 //! Partial: the start-of-main return-this-Tamer cost and all-turns
-//! Token/Puppet play observer are omitted until the engine can expose the
-//! required optional cost and event-context choices without auto-resolution.
+//! Arisa/Shoemon play branch is omitted until the engine can expose the
+//! required optional return-this-Tamer cost without auto-resolution.
 
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledClause, CompiledColor, CompiledScope, CompiledTiming,
+    CompiledBindingRef, CompiledCardKind, CompiledClause, CompiledColor, CompiledPredicate,
+    CompiledScope, CompiledStep, CompiledTiming,
 };
+use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::selection::SelectionKind;
 
 #[test]
 fn bt22_088_is_yellow_tamer_cost_3_liberator() {
@@ -26,7 +31,7 @@ fn bt22_088_is_yellow_tamer_cost_3_liberator() {
 }
 
 #[test]
-fn bt22_088_only_exposes_supported_security_clause() {
+fn bt22_088_exposes_security_and_token_or_puppet_played_observer() {
     let runner = DebugRunner::builder()
         .dsl_card("BT22-088")
         .expect("BT22-088 YAML loads")
@@ -42,15 +47,48 @@ fn bt22_088_only_exposes_supported_security_clause() {
         })
         .collect();
 
-    assert_eq!(
-        triggered.len(),
-        1,
-        "only the currently faithful [Security] slice should be live"
-    );
-    let security = triggered[0];
+    assert_eq!(triggered.len(), 2, "security and played-observer slices are live");
+    let security = triggered
+        .iter()
+        .find(|triggered| triggered.when.contains(&CompiledTiming::OnSecurity))
+        .expect("security clause is present");
     assert!(security.when.contains(&CompiledTiming::OnSecurity));
     assert!(!security.optional, "[Security] play this card is mandatory");
     assert_eq!(security.scope, CompiledScope::FaceUp);
+
+    let observer = triggered
+        .iter()
+        .find(|triggered| {
+            triggered
+                .when
+                .contains(&CompiledTiming::OnAnyDigimonPlayed)
+        })
+        .expect("All Turns Token/Puppet played observer is present");
+    let condition = observer
+        .condition
+        .as_ref()
+        .expect("observer needs event-target and source-cost preflight gates");
+    assert!(
+        predicate_has_event_target_kind(condition, CompiledCardKind::Token)
+            && predicate_has_event_target_kind(condition, CompiledCardKind::Digimon),
+        "observer must cover Tokens and Puppet Digimon"
+    );
+    assert!(
+        predicate_has_event_target_trait(condition, "Puppet"),
+        "Digimon branch must require Puppet"
+    );
+    assert!(
+        condition.source_is_unsuspended == Some(true)
+            || condition
+                .all_of
+                .iter()
+                .any(|child| child.source_is_unsuspended == Some(true)),
+        "suspend-this-Tamer preflight must be source-bound"
+    );
+    assert!(
+        steps_draw_after_suspending_source(&observer.process),
+        "accepting the visible cost should suspend this Tamer and Draw 1"
+    );
 }
 
 #[test]
@@ -99,7 +137,236 @@ fn bt22_088_start_of_main_no_digimon_branch_plays_exact_shoemon_from_trash() {
 }
 
 #[test]
-#[ignore = "BLOCKED: PUPPETS-G005 - OnEnterFieldAnyone lacks faithful Token/Puppet play event context plus source-bound suspend-this-Tamer cost preflight"]
 fn bt22_088_all_turns_token_or_puppet_played_suspends_this_tamer_to_draw() {
-    todo!("play an own Token or Puppet while BT22-088 is unsuspended, assert a visible suspend-this-Tamer cost then Draw 1; non-Puppet and opponent plays must not trigger");
+    let mut runner = observer_runner(&["PUPPET-HAND-BT22-088"], &["DRAW-BT22-088"]);
+    let arisa = runner.place_on_field(0, "BT22-088", Some(0));
+
+    runner.play(0, 0).expect("own Puppet plays");
+    let choice = runner
+        .pending_selection_view()
+        .expect("own Puppet play should offer Arisa activation");
+    assert_eq!(choice.kind, SelectionKind::EffectChoice);
+    runner
+        .execute_action(choice.selecting_player, choice.valid_action_ids[0])
+        .expect("accept suspend-this-Tamer cost");
+    runner.auto_resolve().expect("finish Draw 1");
+
+    assert!(
+        runner.game.player(0).battle_area[arisa.index as usize].is_suspended,
+        "BT22-088 must suspend as the visible cost"
+    );
+    assert_eq!(runner.hand_size(0), 1, "Draw 1 adds the deck card to hand");
+    assert_eq!(runner.deck_size(0), 0, "Draw 1 consumes one deck card");
+}
+
+#[test]
+fn bt22_088_token_played_by_effect_can_trigger_draw_observer() {
+    let mut runner = observer_runner(&[], &["DRAW-BT22-088"]);
+    let arisa = runner.place_on_field(0, "BT22-088", Some(0));
+    let source = runner.place_on_field(0, "EFFECT-SOURCE-BT22-088", Some(0));
+
+    let source_card = runner.top_card(source);
+    let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(source), 0);
+    ctx.play_token(0, "familiar")
+        .expect("effect should play Familiar Token");
+
+    let choice = runner
+        .pending_selection_view()
+        .expect("own Token play should offer Arisa activation");
+    runner
+        .execute_action(choice.selecting_player, choice.valid_action_ids[0])
+        .expect("accept Token observer");
+    runner.auto_resolve().expect("finish Token observer");
+
+    assert!(
+        runner.game.player(0).battle_area[arisa.index as usize].is_suspended,
+        "BT22-088 must suspend for the Token branch"
+    );
+    assert_eq!(runner.hand_size(0), 1);
+    assert_eq!(runner.deck_size(0), 0);
+}
+
+#[test]
+fn bt22_088_played_observer_can_be_declined() {
+    let mut runner = observer_runner(&["PUPPET-HAND-BT22-088"], &["DRAW-BT22-088"]);
+    let arisa = runner.place_on_field(0, "BT22-088", Some(0));
+
+    runner.play(0, 0).expect("own Puppet plays");
+    let choice = runner
+        .pending_selection_view()
+        .expect("own Puppet play should offer Arisa activation");
+    runner
+        .execute_action(choice.selecting_player, choice.valid_action_ids[1])
+        .expect("decline suspend-this-Tamer cost");
+    runner.auto_resolve().expect("finish declined observer");
+
+    assert!(
+        !runner.game.player(0).battle_area[arisa.index as usize].is_suspended,
+        "declining must not suspend BT22-088"
+    );
+    assert_eq!(runner.hand_size(0), 0, "declining must not draw");
+    assert_eq!(runner.deck_size(0), 1, "declining leaves the deck untouched");
+}
+
+#[test]
+fn bt22_088_played_observer_rejects_non_puppet_and_opponent_puppet() {
+    let mut runner = observer_runner(
+        &["NON-PUPPET-BT22-088"],
+        &["DRAW-BT22-088", "DRAW-BT22-088"],
+    );
+    runner.place_on_field(0, "BT22-088", Some(0));
+
+    runner.play(0, 0).expect("own non-Puppet plays");
+    runner.auto_resolve().expect("settle non-Puppet play");
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "own non-Puppet Digimon must not trigger"
+    );
+
+    runner.play(1, 0).expect("opponent Puppet plays");
+    runner.auto_resolve().expect("settle opponent Puppet play");
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "opponent Puppet Digimon must not trigger"
+    );
+}
+
+#[test]
+fn bt22_088_suspend_cost_preflight_is_bound_to_this_tamer() {
+    let mut runner = observer_runner(&["PUPPET-HAND-BT22-088"], &["DRAW-BT22-088"]);
+    let suspended = runner.place_on_field(0, "BT22-088", Some(0));
+    let unsuspended = runner.place_on_field(0, "BT22-088", Some(1));
+    runner.game.player_mut(0).battle_area[suspended.index as usize].is_suspended = true;
+
+    runner.play(0, 0).expect("own Puppet plays");
+    let choice = runner
+        .pending_selection_view()
+        .expect("the unsuspended BT22-088 should offer the activation");
+    runner
+        .execute_action(choice.selecting_player, choice.valid_action_ids[0])
+        .expect("accept the source-bound activation");
+    runner.auto_resolve().expect("finish source-bound activation");
+
+    assert!(
+        runner.game.player(0).battle_area[suspended.index as usize].is_suspended,
+        "already-suspended source stays suspended and must not pay the cost again"
+    );
+    assert!(
+        runner.game.player(0).battle_area[unsuspended.index as usize].is_suspended,
+        "the unsuspended BT22-088 source should pay the cost"
+    );
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "only the source that can pay the suspend cost should trigger"
+    );
+}
+
+fn observer_runner(hand: &[&str], deck: &[&str]) -> DebugRunner {
+    let mut source = make_test_card("EFFECT-SOURCE-BT22-088", "Effect Source");
+    source.card_kind = CardKind::Digimon;
+    source.level = Some(3);
+    source.play_cost = 0;
+    source.dp = Some(1000);
+
+    DebugRunner::builder()
+        .dsl_card("BT22-088")
+        .expect("BT22-088 YAML loads")
+        .add_card(source)
+        .add_card(puppet_digimon("PUPPET-HAND-BT22-088"))
+        .add_card(non_puppet_digimon("NON-PUPPET-BT22-088"))
+        .add_card(draw_card("DRAW-BT22-088"))
+        .hand(0, hand)
+        .hand(1, &["PUPPET-HAND-BT22-088"])
+        .deck(0, deck)
+        .memory(20)
+        .start()
+}
+
+fn puppet_digimon(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.colors = vec![CardColor::Yellow];
+    card.level = Some(3);
+    card.dp = Some(3000);
+    card.play_cost = 3;
+    card.traits = vec!["Puppet".to_string()];
+    card
+}
+
+fn non_puppet_digimon(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.colors = vec![CardColor::Yellow];
+    card.level = Some(3);
+    card.dp = Some(3000);
+    card.play_cost = 3;
+    card.traits = vec!["LIBERATOR".to_string()];
+    card
+}
+
+fn draw_card(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.colors = vec![CardColor::Yellow];
+    card.level = Some(3);
+    card.dp = Some(1000);
+    card.play_cost = 2;
+    card
+}
+
+fn predicate_has_event_target_kind(predicate: &CompiledPredicate, kind: CompiledCardKind) -> bool {
+    predicate.event_target_kind == Some(kind)
+        || predicate
+            .all_of
+            .iter()
+            .any(|child| predicate_has_event_target_kind(child, kind))
+        || predicate
+            .any_of
+            .iter()
+            .any(|child| predicate_has_event_target_kind(child, kind))
+}
+
+fn predicate_has_event_target_trait(predicate: &CompiledPredicate, trait_name: &str) -> bool {
+    predicate.event_target_trait_has.as_deref() == Some(trait_name)
+        || predicate
+            .all_of
+            .iter()
+            .any(|child| predicate_has_event_target_trait(child, trait_name))
+        || predicate
+            .any_of
+            .iter()
+            .any(|child| predicate_has_event_target_trait(child, trait_name))
+}
+
+fn steps_draw_after_suspending_source(steps: &[CompiledStep]) -> bool {
+    let mut saw_source_suspend = false;
+    for step in steps {
+        match step {
+            CompiledStep::Suspend { target, .. } if target == &CompiledBindingRef::Source => {
+                saw_source_suspend = true;
+            }
+            CompiledStep::Draw { count, .. } if *count == 1 && saw_source_suspend => {
+                return true;
+            }
+            CompiledStep::If {
+                then, else_branch, ..
+            } => {
+                if steps_draw_after_suspending_source(then)
+                    || steps_draw_after_suspending_source(else_branch)
+                {
+                    return true;
+                }
+            }
+            CompiledStep::AsSelectingPlayer { body, .. }
+            | CompiledStep::ForEach { body, .. }
+            | CompiledStep::PerSelected { body, .. }
+            | CompiledStep::ScheduleDelayed { body, .. } => {
+                if steps_draw_after_suspending_source(body) {
+                    return true;
+                }
+            }
+            _ => {}
+        }
+    }
+    false
 }

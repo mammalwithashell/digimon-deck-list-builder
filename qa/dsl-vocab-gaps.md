@@ -1091,6 +1091,7 @@ Format per entry:
 - Gap kind: hybrid. The cost/preflight is engine-facing; branch and origin-preserving selection need DSL vocabulary.
 - Workaround: None faithful. Auto-returning the Tamer or auto-selecting Shoemon/Arisa would hide printed player-visible choices.
 - First reported: 2026-05-04 (Puppets resolver Batch 8, BT22-088)
+- Status 2026-05-11: Still open for the Start of Your Main Phase return-this-Tamer cost and chained Arisa/Shoemon free-play branches. The separate All Turns Token/Puppet played observer is now implemented in `BT22-088.yaml` using `source_is_unsuspended`, visible suspend/decline selection, and event-target Token/Puppet filters.
 
 ---
 

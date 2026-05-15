@@ -126,6 +126,17 @@ pub fn eval_predicate_with_bindings(
     if !eval_replacement_fields(pred, rctx) {
         return false;
     }
+    if let Some(want) = pred.source_is_unsuspended {
+        let Some(source) = rctx.source_permanent else {
+            return false;
+        };
+        let Some(perm) = permanent_for_handle(rctx, source) else {
+            return false;
+        };
+        if (!perm.is_suspended) != want {
+            return false;
+        }
+    }
     if let Some(ref needle) = pred.self_digivolution_contains_name {
         let Some(perm) = subject_or_source_permanent(subject, rctx) else {
             return false;

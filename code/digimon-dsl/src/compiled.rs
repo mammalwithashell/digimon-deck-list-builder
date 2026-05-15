@@ -204,6 +204,7 @@ pub struct CompiledPredicate {
     pub not_in_binding: Option<String>,
     pub binding_owner: Option<CompiledBindingOwnerPredicate>,
     pub source_is_tamer: Option<bool>,
+    pub source_is_unsuspended: Option<bool>,
     pub source_name_contains: Option<String>,
     pub source_permanent_trait_has: Option<String>,
     pub memory_lte: Option<CompiledDpConstraint>,

@@ -18,6 +18,8 @@ traits: [LIBERATOR]
 #
 # Supported faithfully:
 # - Security plays this Tamer without paying the cost.
+# - All Turns own Token/Puppet played observer with a visible suspend-this-Tamer
+#   activation choice before Draw 1.
 #
 # Omitted rather than approximated:
 # - The start-of-main clause needs a visible optional activation before the
@@ -25,13 +27,32 @@ traits: [LIBERATOR]
 #   triggered effects auto-fire, and `optional` process bodies do not expose a
 #   decline choice, so paying the cost would be hidden/forced
 #   (G-OPTIONAL-TRIGGER-COST).
-# - The All Turns observer needs event context for an own Token or exact
-#   Puppet-trait Digimon being played, plus a preflighted source-bound
-#   suspend-this-Tamer cost before Draw 1. This remains covered by
-#   PUPPETS-G005.
 
 effects:
   - when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}
+
+  - when: on_any_digimon_played
+    active_when: { all_turns: true }
+    summary: "[All Turns] When your Token/Puppet is played, suspend this Tamer to Draw 1"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - source_is_unsuspended: true
+        - any_of:
+            - event_target_kind: token
+            - all_of:
+                - event_target_kind: digimon
+                - event_target_trait_has: Puppet
+    process:
+      - select_effect_choice:
+          labels: ["Suspend this Tamer", "Decline"]
+          bind_as: arisa_choice
+          prompt: "Suspend Arisa Kinosaki to Draw 1?"
+      - if:
+          condition: { equals: [arisa_choice, 0] }
+          then:
+            - suspend: { target: source }
+            - draw: { of: you, count: 1 }

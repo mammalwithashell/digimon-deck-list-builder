@@ -58,10 +58,10 @@ Newer `EX11` cards are lower-frequency in this snapshot but important for the sa
 
 - Production effects are embedded from YAML under `code/digimon-engine/cards/` by `code/digimon-engine/build.rs`, then registered through `code/digimon-engine/src/cards.rs`.
 - `BT22-029` and `BT22-032` now have production YAML and focused card-level behavioral tests under `code/digimon-engine/cards/bt22/` and `code/digimon-engine/tests/cards_behavioral/bt22/`.
-- `code/digimon-engine/cards/ex11/` now includes Puppet `EX11-019.yaml`, `EX11-021.yaml`, `EX11-022.yaml`, `EX11-023.yaml`, `EX11-024.yaml`, `EX11-060.yaml`, and `EX11-061.yaml`; `EX11-023`, `EX11-060`, and `EX11-061` are partial for the slices routed below.
+- `code/digimon-engine/cards/ex11/` now includes Puppet `EX11-019.yaml`, `EX11-021.yaml`, `EX11-022.yaml`, `EX11-023.yaml`, `EX11-024.yaml`, `EX11-060.yaml`, and `EX11-061.yaml`; `EX11-060` and `EX11-061` are partial for the slices routed below.
 - `code/digimon-engine/cards/ex9/EX9-024.yaml`, `EX9-027.yaml`, `EX9-032.yaml`, `EX9-033.yaml`, and `EX9-067.yaml` now cover the implemented/partial slices listed below.
 - `code/digimon-engine/cards/st19/ST19-03.yaml` now covers Shoemon's On Play dual-bucket reveal search. Its inherited opponent-security-Digimon DP aura remains a DSL vocabulary gap.
-- `code/digimon-engine/cards/st19/` also now contains `ST19-04`, `ST19-05`, `ST19-06`, `ST19-07`, `ST19-09`, `ST19-10`, `ST19-12`, and `ST19-14`. `ST19-14` is partial because its effect-played Token/Puppet Rush observer remains blocked by `PUPPETS-G005`.
+- `code/digimon-engine/cards/st19/` also now contains `ST19-04`, `ST19-05`, `ST19-06`, `ST19-07`, `ST19-09`, `ST19-10`, `ST19-12`, and `ST19-14`. `ST19-14` now covers its effect-played Token/Puppet Rush observer through effect-initiated entered-field context.
 - `code/digimon-engine/cards/ex7/` now includes Puppet `EX7-025.yaml`, `EX7-027.yaml`, and `EX7-063.yaml`.
 - `code/digimon-engine/cards/p/` now includes `P-134.yaml`, `P-165.yaml`, and partial `P-229.yaml`.
 - Engine support exists for several reusable pieces: Overclock pending cost/mask flow, Familiar token behavior, Scapegoat/Barrier keyword auto-effects, Alliance interrupt flow, effect-initiated play/digivolve primitives, reveal/add-to-hand movement, and attack observer/cancel flow. This batch added DSL timing vocabulary for `on_ally_attack` / `on_opponent_attack` so inherited attack-cancel cards can use the existing engine flow declaratively.
@@ -88,7 +88,7 @@ Implemented and validated in follow-up batches on 2026-05-03:
 | `ST19-09` | implemented | Blocker; optional On Deletion play level 3 Puppet from hand | none identified in covered text |
 | `ST19-10` | implemented | Armor Purge; inherited Barrier | none identified in covered text |
 | `ST19-12` | implemented | Puppet Overclock; Blocker; optional When Digivolving play 2 Familiar Tokens | none identified in covered text |
-| `ST19-14` | partial | Start-of-turn memory setter; Security play this Tamer without paying cost | `PUPPETS-G005` for effect-played Token/Puppet Rush observer |
+| `ST19-14` | implemented | Start-of-turn memory setter; Your Turn effect-played own Token/Puppet Rush observer with visible Arisa activation/decline; Security play this Tamer without paying cost | none identified in covered text |
 
 Resolver-backed corrected batches on 2026-05-03:
 
@@ -115,10 +115,10 @@ Resolver-backed corrected batches on 2026-05-03:
 | `BT22-040` | implemented | Puppet/Token Overclock; optional On Play/When Digivolving Familiar Token; All Turns OPT other-Digimon-deleted refire of its When Digivolving effect | none identified in covered text |
 | `BT22-042` | partial | standard yellow Lv6 cost-4 digivolve; Puppet/Token Overclock; When Digivolving optional Lv4-or-lower Puppet free-play followed by mandatory count-scaled DP reduction; All Turns OPT other-Digimon-deleted refire of its When Digivolving effect | conditional Arisa+Chaperomon route needs `G-ALT-PATH-CONDITION` |
 | `EX9-032` | partial | printed metadata; yellow Lv5 and Puppet Lv5 digivolve paths | active delete-cost self-digivolve needs `PUPPETS-G018`; inherited leave-prevention by deleting Token/other Puppet needs `PUPPETS-G019` |
-| `EX9-033` | partial | yellow Lv5 and Puppet Lv5 digivolve paths; Alliance/Blocker aura for own Puppet Digimon and Tokens; End of Your Turn optional level 4 or lower Puppet play from trash | other-deletion lowest-level delete observer now needs card-local YAML/test adoption using the closed `PUPPETS-G011` payload |
+| `EX9-033` | implemented | yellow Lv5 and Puppet Lv5 digivolve paths; Alliance/Blocker aura for own Puppet Digimon and Tokens; All Turns OPT other-Digimon deletion observer that deletes the opponent's lowest-level Digimon; End of Your Turn optional level 4 or lower Puppet play from trash | none identified in covered text |
 | `BT22-036` | partial | yellow Lv4 cost-3 digivolve path; Puppet/Token Overclock; inherited leave-prevention by deleting Token/other Puppet | Hand Main Arisa-gated ShoeShoemon trash-to-Shoemon source placement and hand-card digivolve needs `PUPPETS-G020` |
 | `EX11-022` | partial | yellow Lv4 and Puppet Lv3 digivolve paths; Scapegoat replacement using another own Digimon; inherited leave-prevention by deleting Token/other Puppet | hand-or-trash Puppet DP<=4000 free-play needs `PUPPETS-G021`; effect-played cleanup needs `PUPPETS-G003` |
-| `EX11-023` | partial | yellow Lv5 and Puppet Lv5 digivolve paths; Alliance; Scapegoat; mandatory lowest-level opponent Digimon delete on When Digivolving and End of Opponent's Turn | other-Digimon-deleted optional level 4 or lower Puppet trash play now needs card-local YAML/test adoption using the closed `PUPPETS-G011` payload |
+| `EX11-023` | implemented | yellow Lv5 and Puppet Lv5 digivolve paths; Alliance; Scapegoat; mandatory lowest-level opponent Digimon delete on When Digivolving and End of Opponent's Turn; All Turns OPT other-Digimon-deleted optional level 4 or lower Puppet trash play | none identified in covered text |
 | `EX11-060` | implemented | start-of-turn memory setter; Token/Puppet deletion observer with visible suspend-this-Tamer Draw 1 branch; Overclock-only level 4 Puppet hand-play; Security play this Tamer without paying cost | none identified in covered text |
 | `EX11-061` | partial | Start of Your Main Phase memory gain; Security play this Tamer without paying cost | Puppet digivolve observer/effect-play branch needs `PUPPETS-G005`; exact turn-end cleanup needs `PUPPETS-G003` |
 | `P-229` | partial | Main and Security reveal-top-3 dual-bucket search for 1 Puppet Digimon and 1 LIBERATOR | option battle-area placement and Mirai-played event-gated Delay/reduced-cost digivolve need `PUPPETS-G004` and `PUPPETS-G009` |
@@ -129,7 +129,7 @@ Resolver-backed corrected batches on 2026-05-03:
 | `BT13-101` | partial | optional On Play PawnChessmon-named hand free-play; Security play self | All Turns 2-color black/yellow play observer needs event-card exact color/count predicates and visible source-bound suspend-cost preflight under `PUPPETS-G023` |
 | `BT16-055` | partial | black Lv3 and Pulsemon digivolve paths; <=3 security Blocker/Reboot grant branch | >=3 security narrow protection and inherited text-contains-Pulsemon aura need `PUPPETS-G024` and `PUPPETS-G025` |
 | `BT20-084` | partial | Sistermon Ciel cost-1 digivolve; On Play/When Digivolving CannotSuspend target; trash-resident optional free digivolve from trash; End of All Turns top stacked card to security via Track E | remaining partial status is card-local coverage, not `PUPPETS-G027` |
-| `BT22-088` | partial | Security play self | Start of Main return-this-Tamer optional cost and Token/Puppet played observer need `PUPPETS-G028` and `PUPPETS-G005` |
+| `BT22-088` | partial | Security play self; All Turns own Token/Puppet played observer with visible source-bound suspend-this-Tamer Draw 1 activation | Start of Main return-this-Tamer optional cost and exact Arisa/Shoemon branches need `PUPPETS-G028` |
 | `BT23-077` | implemented | Blocker; On Play delete opponent Digimon with play cost 4 or less; self-suspend De-Digivolve observer gated by `event_permanent_is_source` | none identified in covered text |
 | `BT5-033` | implemented | yellow Lv2 digivolve path; opponent-turn digivolution cost-reduction floodgate | none identified in covered text |
 | `BT5-106` | partial | Main optional own-Digimon delete into visible own suspended purple Digimon unsuspend selection | Security trash play with played-Digimon On Play suppression needs `PUPPETS-G030` |
@@ -151,13 +151,13 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 | `PUPPETS-G002` | engine-gap / dsl-gap | closed for Puppet self-refire | refire primitive exists; `BT22-040` and `BT22-042` prove deleted-object gated self-refire fixtures, including visible optional refire and once-per-turn handling | `qa/archetype-qa/engine-gaps.md` |
 | `PUPPETS-G003` | engine-gap | open | `EX11-022`, `EX11-061`, related effect-play cleanup cards | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G004` | hybrid | partially resolved | `BT22-098`, `P-229` | `qa/dsl-vocab-gaps.md` |
-| `PUPPETS-G005` | engine-gap / test-gap | open | `EX9-067`, `EX11-061`, `ST19-14`, `BT22-088` | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G005` | engine-gap / test-gap | partially resolved | `EX9-067`, `EX11-061` | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G006` | test-gap | partially resolved | security end-of-battle play effects | `docs/RUST_ENGINE_GAPS.md` |
-| `PUPPETS-G007` | test-gap | open | `EX9-033`, `EX11-023`, Puppet aura package | none; add card-level regression coverage |
+| `PUPPETS-G007` | test-gap | closed | no current Puppet aura/Rush cards in the resolved pool | none |
 | `PUPPETS-G008` | dsl-gap | open | `ST19-03`, `EX7-024`, other inherited opponent-security DP auras | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G009` | engine-gap | open | `P-037`, `P-105`, `LM-035`, `LM-037`, `LM-054`, `BT22-098`, standard Memory Boost/Training/Scramble Delay options | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G010` | dsl-gap | open | `BT15-003`, top/bottom security-cost effects | `qa/archetype-qa/engine-gaps.md` |
-| `PUPPETS-G011` | engine-gap | closed | `BT22-002`, Token/Puppet deletion observers | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G011` | engine-gap | closed | `BT22-002`, `EX9-033`, `EX11-023`, `EX11-060`, Token/Puppet/other-Digimon deletion observers | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G012` | dsl-gap | open | `EX11-020`, On Deletion cause-gated effects | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G013` | hybrid | open | `EX7-024`, source-scoped digivolve-into-trait cost reduction | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G014` | hybrid | open | `ST19-08`, `BT22-098`, hand-or-trash filtered free-play security effects | `docs/RUST_ENGINE_GAPS.md` |
@@ -186,7 +186,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 
 - **Type:** `dsl-gap` / `test-gap`
 - **Status:** open
-- **Blocks:** remaining unauthored Puppet pool cards and unauthored option/support cards. `BT22-002`, `BT22-040`, `EX9-024`, `EX9-027`, `EX11-019`, `EX11-021`, `EX11-024`, `EX7-030`, and `ST19-01` now have full covered-text YAML/tests. `EX9-032`, `EX9-033`, `EX9-067`, `EX7-024`, `EX7-025`, `EX7-027`, `EX7-063`, `EX11-020`, `EX11-022`, `EX11-023`, `EX11-060`, `EX11-061`, `ST19-03`, `ST19-08`, `ST19-11`, `ST19-14`, `BT22-036`, `BT22-042`, `P-165`, and `P-229` now have partial production YAML, with omitted slices routed to reusable gaps below. For `BT22-042`, only the conditional Arisa+Chaperomon alternate digivolution route remains omitted.
+- **Blocks:** remaining unauthored Puppet pool cards and unauthored option/support cards. `BT22-002`, `BT22-040`, `EX9-024`, `EX9-027`, `EX9-033`, `EX11-019`, `EX11-021`, `EX11-023`, `EX11-024`, `EX7-030`, `ST19-01`, and `ST19-14` now have full covered-text YAML/tests. `EX9-032`, `EX9-067`, `EX7-024`, `EX7-025`, `EX7-027`, `EX7-063`, `EX11-020`, `EX11-022`, `EX11-060`, `EX11-061`, `ST19-03`, `ST19-08`, `ST19-11`, `BT22-036`, `BT22-042`, `P-165`, and `P-229` now have partial production YAML, with omitted slices routed to reusable gaps below. For `BT22-042`, only the conditional Arisa+Chaperomon alternate digivolution route remains omitted.
 - **Why it matters:** The Rust runtime only executes production card behavior that is registered from the embedded DSL pack or explicit Rust effects. The Puppet archetype cannot be used as a serious Rust training/evaluation target while its core cards are metadata-only.
 - **Evidence:** The relevant set/card YAML files are absent from `code/digimon-engine/cards/`; only unrelated or adjacent cards are present in `ex9/`, `ex11/`, and `p/`.
 - **First test:** Add a card-level DSL registration test for `BT22-042` and assert the compiled card has Overclock, When Digivolving, and other-deletion reactivation clauses.
@@ -228,11 +228,11 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G005: Effect-Initiated Play/Digivolve Event Context and "By This Effect" Filters
 
 - **Type:** `engine-gap` / `test-gap`
-- **Status:** open
-- **Blocks:** `EX9-067`, `EX11-061`, `ST19-14`, `BT22-088`, and related Tamer observer loops.
+- **Status:** partially resolved as of 2026-05-11 for Token/Puppet played observer context; effect-initiated digivolve and exact played-permanent cleanup paths still need card-shaped coverage.
+- **Blocks:** `EX9-067`, `EX11-061`, and related Tamer observer loops.
 - **Effect text examples:** "When any of your Digimon digivolve into a [Puppet] trait Digimon..." and "When effects play one of your Tokens or a Digimon with the [Puppet] trait..."
 - **Why it matters:** Puppet Tamers care whether a Digimon was played or digivolved by effects, and they often immediately play or grant keywords to the entered/digivolved permanent. Normal hand play/digivolve event context has coverage, but effect-initiated paths need to prove the same context and provenance.
-- **Evidence:** `docs/RUST_ENGINE_GAPS.md` notes follow-up paths remain open for effect-created permanents, token play, play-from-trash context, and effect-initiated digivolve context unless separately tested.
+- **Evidence:** `ST19-14` now proves effect-played own Puppet Digimon and Familiar Token observer context through `event_is_effect_initiated`, event-target owner/kind/trait predicates, a visible Arisa activation/decline choice, source suspension, and Rush grant to the entered permanent. `BT22-088` proves the non-effect-restricted played observer with own Token/Puppet filters, a source-bound unsuspended preflight, visible suspend/decline choice, Draw 1 on acceptance, opponent/non-Puppet rejection, and multi-Arisa source-bound cost behavior. `EffectContext::play_token` now emits `OnEnterFieldAnyone` / `OnAllyPlayed` with an `EnteredField` payload and `effect_initiated: true`, without firing token On Play effects. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- st19_14 --nocapture`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_088 --nocapture`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- tokens --nocapture`.
 - **First test:** Trigger `EX11-061` by effect-digivolving into a Puppet and assert Mirai can suspend to play a level 3 Puppet from hand, then schedule the correct turn-end cleanup for that played card.
 - **Implementation hint:** Thread `PlaySource::ByEffect` / effect source identity into `OnEnterFieldAnyone` and `OnDigivolve` trigger context for every effect-created play/digivolve path.
 
@@ -250,12 +250,12 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G007: Puppet Aura Package Needs Card-Level Regression Coverage
 
 - **Type:** `test-gap`
-- **Status:** open
-- **Blocks:** confidence for `EX9-033`, `EX11-023`, `ST19-14`, and related aura/keyword packages.
+- **Status:** closed for the current Puppet resolved pool as of 2026-05-11.
+- **Blocks:** no current Puppet aura/Rush cards in the resolved pool.
 - **Effect text examples:** "All of your Tokens and [Puppet] trait Digimon gain <Alliance> and <Blocker>" and "When effects play one of your Tokens or Puppet Digimon... gains <Rush>."
 - **Why it matters:** The engine has general Alliance, Blocker, Rush, keyword grants, and lowest-level predicates, but the exact Puppet combination is broad and action-mask-sensitive.
-- **Evidence:** Combat tests cover Alliance and Overclock generically; production Puppet cards do not yet have end-to-end YAML behavioral tests.
-- **First test:** Author `EX9-033` YAML, place Puppet and Token allies, assert Alliance and Blocker masks appear only for legal targets, then delete another Digimon and assert the once-per-turn lowest-level delete plus end-turn trash-play choices behave correctly.
+- **Evidence:** `EX9-033` now has end-to-end YAML behavioral tests for Alliance/Blocker aura scope, All Turns OPT other-Digimon deletion into lowest-level target selection, self-deletion suppression, and end-turn trash-play choices. `EX11-023` now has card-level coverage for Alliance, Scapegoat, lowest-level delete prompts, and optional other-Digimon-deleted trash play with decline/self-deletion/OPT cases. `ST19-14` now covers effect-played own Token/Puppet Rush through a visible Arisa activation/decline path, with normal-play rejection and token/Puppet branch coverage. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_033 --nocapture`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_023 --nocapture`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- st19_14 --nocapture`.
+- **First test:** Closed by `st19_14_effect_played_token_may_gain_rush_by_suspending_arisa` and `st19_14_effect_played_puppet_may_gain_rush_by_suspending_arisa`.
 - **Implementation hint:** Keep this as a card-level regression suite rather than a new engine primitive unless the test uncovers missing mask or aura scope behavior.
 
 ### PUPPETS-G008: Inherited Opponent Security Digimon DP Aura DSL Bridge
@@ -295,11 +295,11 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 
 - **Type:** `engine-gap`
 - **Status:** closed 2026-05-08
-- **Blocks:** `BT22-002`, `EX11-023`, `EX11-060`, and related observers that care exactly which Token, Digimon, or trait object was deleted.
+- **Blocks:** no longer blocks `BT22-002`, `EX9-033`, `EX11-023`, or `EX11-060`; future observers that need deleted Token, Digimon, trait, or source-exclusion context can reuse this payload.
 - **Effect text:** "[Your Turn] [Once Per Turn] When any of your Tokens or other [Puppet] trait Digimon are deleted, Draw 1."
 - **Why it matters:** The existing `OnAnyDeletion` observer can fan out, but the worker test showed `event_target_*` predicates do not see the deleted permanent/card. Without deleted-object context, YAML cannot faithfully distinguish own Tokens, own other Puppet Digimon, own non-Puppet Digimon, opponent Puppet Digimon, or the carrier itself.
-- **Resolution:** `BT22-002.yaml` now authors the inherited `on_any_deletion` observer with `event_target_owner`, `event_target_kind`, `event_target_trait_has`, and `event_permanent_is_source: false` for the "other Puppet" branch. Runtime event predicates read `DeletedObjectSnapshot.card_kind` / `traits` first, so deleted Tokens remain matchable after leaving the battle area.
-- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_002` covers own Token, own other Puppet, own non-Puppet, opponent Puppet, carrier deletion, and once-per-turn behavior.
+- **Resolution:** `BT22-002.yaml` now authors the inherited `on_any_deletion` observer with `event_target_owner`, `event_target_kind`, `event_target_trait_has`, and `event_permanent_is_source: false` for the "other Puppet" branch. Runtime event predicates read `DeletedObjectSnapshot.card_kind` / `traits` first, so deleted Tokens remain matchable after leaving the battle area. `EX9-033.yaml` and `EX11-023.yaml` now reuse the same event payload with `event_target_kind: digimon` plus `event_permanent_is_source: false` for their printed "other Digimon are deleted" observers.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_002` covers own Token, own other Puppet, own non-Puppet, opponent Puppet, carrier deletion, and once-per-turn behavior. `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_033 --nocapture` covers the mandatory lowest-level delete observer, self-deletion suppression, and once-per-turn lockout. `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_023 --nocapture` covers optional trash play, decline, self-deletion suppression, and once-per-turn lockout.
 
 ### PUPPETS-G012: On Deletion Predicate for Deletion Cause
 
@@ -480,7 +480,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 - **Blocks:** `BT22-088` Arisa Kinosaki.
 - **Effect text:** "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] with a different card number in your hand without paying the cost, or play 1 [Shoemon] from your hand or trash without paying the cost."
 - **Why it matters:** The source Tamer is the activation cost, and after paying it the player chooses between distinct free-play branches with their own legal target sets. Auto-returning the Tamer or auto-picking a branch would hide player-visible decisions.
-- **Evidence:** Batch 8 ships only the Security play-self slice for `BT22-088`; the Start of Main tests remain ignored pending this cost and branch surface.
+- **Evidence:** Batch 8 originally shipped only the Security play-self slice for `BT22-088`; the 2026-05-11 follow-up added the All Turns Token/Puppet played observer. The Start of Main tests remain ignored pending this cost and branch surface.
 - **First test:** Control `BT22-088`, enter Start of Main with both legal branch targets, assert the activation choice is visible, accept, verify this exact Tamer returns to bottom deck, then choose the Arisa or Shoemon branch through the mask.
 - **Implementation hint:** Generalize triggered activation costs to zone-moving the source permanent, then chain into an in-effect branch selector with hand/trash origin-preserving play consumers.
 
