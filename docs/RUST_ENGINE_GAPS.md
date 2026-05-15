@@ -18,6 +18,57 @@ Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`),
 > (pre-scaling cleanup batch §1). See `.claude/plans/pre-scaling-cleanup-batch.md`
 > for the full closure-index narrative.
 
+> **Tracker hygiene sweep — 2026-05-14:** Cross-referenced every entry
+> against PRs #459–#473 and the per-archetype DSL gap input documents in
+> `qa/archetype-qa/dsl/`. New material closures since the 2026-05-10
+> sweep:
+>
+> - **Track H aura system (PR #467):** typed `AuraScope` / `AuraGrant`
+>   builder API (`code/digimon-engine/src/aura.rs`), security-zone aura
+>   tick dispatch, queue-based granted-triggered-effect dispatch with
+>   parked-selection support, and `Expiry::EndOfOpponentsNextTurn` /
+>   `EndOfYourNextTurn` (+ `pending_skips` for mid-opp-turn installs).
+>   "Granted triggered ability", "Named-target declarative aura", and
+>   "Declarative aura sourced from security zone" entries already
+>   absorbed these per-phase notes inline (Phases 4a/4b/4e/4i/4k and
+>   §3/§5/§9/§10); no entry-level status changes required this sweep.
+> - **Alter-S Ladder DSL cards + tests (PR #468):** EX9-021 Omnimon
+>   Alter-S and DNA Omnimon ladder fixtures landed using existing
+>   substrate (sequential source-play, `place_permanent_on_security`,
+>   replacement framework). The DNA Omnimon gap doc's "Decode and
+>   play-from-material" and "WhenWouldBeDeleted" entries already cite
+>   the EX4-060 / EX9-021 narrowing; no new engine gap surfaced.
+> - **Formula-valued predicate thresholds for BT15-096 / BT21-102
+>   (PR #470):** validates the "Track J formula/result substrate slice
+>   (2026-05-10)" paragraph above against real card-shaped fixtures —
+>   `play_cost_lte`, `distinct_colors_count`, `binding_play_cost`, and
+>   `effect_suspended_any_own_digimon` formula leaves now drive
+>   BT15-096's six active behavioral tests and BT21-102's Tamer-color
+>   play-cost cap. Remaining Track J work (Zephagamon / TS Olympos /
+>   BG Imperial card authoring) is unchanged.
+> - **Puppet DSL observers (PR #472):** card-local fixtures for
+>   `OnAnyDeletion` consumers (BT22-002, BT22-088, EX9-033, EX11-023,
+>   ST19-14) using `event_target_kind` / `event_target_trait_has` /
+>   `event_permanent_is_source` / `source_is_unsuspended`. These run on
+>   the existing event-payload substrate; no new engine timing was
+>   needed. The "Global OnAnyDigimonPlayed / OnAnyDeletion observer
+>   timings" entry already absorbed the 2026-05-11 PUPPETS-G011
+>   consumer adoption notes inline.
+>
+> Docs-only / non-engine PRs in this window: #459 AGENTS guidance,
+> #460 Tauri CardData drift, #461 Option Plug-In lifecycle review fixes,
+> #462 Tauri tensor-profile id test, #463 cross-card effect refire,
+> #464 / #465 DSL batch skill metadata, #466 pre-scaling cleanup,
+> #469 agent engineering guidelines, #471 DSL agent guide refresh,
+> #473 commit-message context update.
+>
+> No new engine gap entries surfaced from the per-archetype DSL gap
+> inputs (DNA Omnimon, Medusamon, Alter-S Ladder, BG Imperial, Chaos
+> Control, Millenniummon, Puppets, Red Hybrid AncientGreymon, Rocks,
+> Royal Knights, TS Olympos, Zephagamon). All reusable primitives
+> called out by those documents are already represented by an entry
+> in this file or as an open verb in `qa/dsl-vocab-gaps.md`.
+
 There are two related assessment workflows:
 
 - `.codex/skills/assess-rust-engine-archetype/` is the Codex read-only readiness workflow. It inspects printed text, current DSL schema/lowering, engine action/pending-selection support, and tests, then reports `ready`, `dsl-gap`, `engine-gap`, `rules-gap`, `test-gap`, or `data-gap` findings. It should cite this tracker when a known primitive blocks an archetype, but it does not modify files.
@@ -111,6 +162,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 **Zephagamon prep note (2026-05-03):** Task 4 added an EX11-074/Vortexdramon readiness slice in `code/digimon-engine/cards/ex11/EX11-074.yaml` and `code/digimon-engine/tests/cards_behavioral/ex11/ex11_074.rs`. The slice confirms the rule boundary that an effect battle resolves DP battle and `EndOfBattle`, but is not an attack: even if the attacker has `<Piercing>`, the `battle:` step must not trigger Piercing security checks and must not leave `pending_attack` populated. Remaining Zephagamon-specific blockers are documented in `qa/dsl-vocab-gaps.md`: conditional "if this effect suspended your Digimon" branch/binding support for EX11-074, BT20-101 suspended-Digimon count / divide-by-2 / capped multi-select bottom-deck formula, EX11-035 formula DP cap for green Avian/Bird play, and EX11-062 conditional `VortexCanAttackPlayer` aura while the opponent has no unsuspended Digimon.
 
 **Track J formula/result substrate slice (2026-05-10):** Formula-valued `play_cost_lte` is now wired for selection filters, including `binding_play_cost` for a previously selected card/permanent and `distinct_colors_count` for BT21-102's Tamer-color cap. The same formula-threshold shape now covers the existing level, DP, stack/material-count, memory, security-count, and general count aggregate predicate leaves. Runtime bindings also carry an append-only per-effect result log for result-bound predicates such as `effect_suspended_any_own_digimon` and `effect_returned_any_card`, and formulas can count suspended battle-area permanents through `suspended_count`. The validator rejects `binding_dp` / `binding_play_cost` formulas that reference bindings before their declaring step. This closes the BT15-096 / BT21-102 play-cost-threshold gap and activates BT15-096's six behavioral tests. Coverage: `cargo test --manifest-path code/digimon-dsl/Cargo.toml`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt15_096 -- --nocapture`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral bt21_102 -- --nocapture`. Remaining Track J work is card authoring/fixture expansion for the Zephagamon, TS Olympos, and BG Imperial cards that need these primitives in full production YAML.
+
+**Validated 2026-05-14 (PR #470):** BT15-096 Supreme Connection! and BT21-102 Undine behavioral tests now ship as card-shaped proof that the Track J substrate landed correctly on real cards. No new substrate surfaced; the slice remains closed.
 
 ## Open gaps
 
