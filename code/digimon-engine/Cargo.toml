@@ -30,6 +30,7 @@ digimon-dsl = { path = "../digimon-dsl" }
 [dev-dependencies]
 # serde_yml is used directly in DSL test files (e.g. serde_yml::from_str).
 serde_yml = "0.0.12"
+strum = "0.26"
 
 # Tests are grouped by domain into 7 binaries. Each binary's entry point is
 # `tests/<domain>/main.rs`; sibling files are `mod`-imported and supply the

@@ -47,6 +47,14 @@ pub struct AltPathSpec {
     /// DigiXros `[Hand] [Counter] <Blast Digivolve>` marker form.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub marker: bool,
+
+    /// Activation gate evaluated on top of the existing source-filter /
+    /// extra-cost gates. Used by activated-digivolve clauses with
+    /// printed conditions like "If you have [Owen Dreadnought], …"
+    /// where the alt-path must check arbitrary game state, not just
+    /// material availability. Closes G-ALT-PATH-CONDITION (BT24-016).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub condition: Option<PredicateSpec>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]

@@ -2,7 +2,41 @@
 
 **Audience:** AI agents (and humans) implementing Digimon card effects in Rust against `digimon-engine`.
 
+**Last refreshed: 2026-05-15** (Tracks A–K substrate sweep; see §"Tracks A–K Substrate Quick Reference" below for the post-Phase-6 / Tracks A–K landings absorbed in this pass).
+
 This document is the canonical scripting reference. Before writing any card effect, read this in full. The engine intentionally exposes a curated API (`EffectContext`); do not reach around it into `Game` internals.
+
+The §"Phase 5/6/7/8/9/10" appendices below are historical and preserved as-is.
+Track-level substrate (Tracks A–K, 2026-04..2026-05) is captured in the
+"Tracks A–K Substrate Quick Reference" section directly below; per-method
+documentation is interleaved into §3 (`EffectContext`) and §5 (enums).
+
+---
+
+## Tracks A–K Substrate Quick Reference (2026-04 → 2026-05)
+
+The lettered tracks landed substrate on top of the phase-numbered scaffolding.
+Each row points at the canonical engine module so card-script authors can
+cross-reference quickly. See the per-track design specs under
+`docs/superpowers/specs/` for full design context.
+
+| Track | Focus | Key engine surface | Doc anchors |
+|---|---|---|---|
+| **Track A** | Event payload contract — `TriggerContext` fields, provenance tokens, `EventCause`/`EventSubject`/`MovedCardSet`/`DeletedObjectSnapshot`, deleted-object snapshots | `trigger_context.rs:1-154`, `effect_queue.rs` fan-out, `effect_context/mod.rs:295-416` (event accessors) | §"Event Payload Contract", §5 enums |
+| **Track B** | Would-replacement framework — `WhenWouldBe*` timings, `ReplacementContext`, passive-modifier migration, selection-bearing keyword pattern | `replacement.rs:1-1316`, `effect.rs:534-567` (when_would_* builders), `effect_context/mod.rs:1307-1620` (outcome-setters) | §3 "Replacement-process outcome-setters", §"Phase 7" |
+| **Track C** | Modifier taxonomy completion — full `ModifierType` variant list with consult-site checklist, source-scoped cause filters, `cannot_be_affected_by_opponents_source_kind` | `enums.rs:526-731`, `modifiers.rs`, `effect_context/mod.rs:3762-3808` | §5 "Modifier consult-site checklist" |
+| **Track D** | Combat machine — `AttackOpen` unification, `RaidOpen`/`PostBlock`/`PostBattle` states, `cancel_attack`/`open_counter_window`/`force_opponent_attack`, retarget validation | `combat.rs`, `effect_context/mod.rs:4232-4530` (attack helpers), `selection.rs:660-753` (`AttackState`) | §"Phase 9" |
+| **Track E** | Zone-movement DSL verbs + EffectContext helpers — `place_self_at_security`, `place_self_option_at_security`, `bounce_self`, `security_place_*`, `return_all_trash_to_deck_bottom`, `trash_top_n_digivolution_cards_of_each`, `trash_opponent_hand_to_count`, `search_own_security_stack` | `effect_context/mod.rs:1422-1620, 3329-4196` | §14 "Zone Manipulation", "Track E zone-movement DSL verbs" table |
+| **Track F** | Keyword Phase F substrate — `Execute`, `Iceclad`, `MindLink`, `Training`, `Retaliation`, `Scapegoat` auto-installs | `cards/keyword_effects.rs`, `enums.rs:440-477` (`Keyword` variants) | §5 `Keyword`, `tests/keyword_phase_f/` |
+| **Track G** | Keyword emitters routing — keywords go through `grant_keyword` / `add_player_modifier`, not direct `ModifierStore` mutation | `modifiers.rs`, `effect_context/mod.rs:3844-3879` (`grant_keyword*`) | §"Cross-track contracts" |
+| **Track H** | Aura system + granted-triggered abilities + `EndOfYour/OpponentsNextTurn` expiry | `aura.rs:1-387`, `effect_context/mod.rs:3725-3760` (`grant_triggered_effect`), `enums.rs:765-785` (`Expiry`) | §"Declarative aura DSL materialization", §13 |
+| **Track I** | Option lifecycle taxonomy — `OptionState`, `OptionFieldState`, `OptionTrashCause`, lifecycle entry points | `option_lifecycle.rs:1-360`, `permanent.rs` (`option_state`), `game.rs` (`install_field_option_*`, `trash_field_option`, `orphan_*`, `relink_plug_in`) | §"Option lifecycle entry points" |
+| **Track J** | Predicate evaluator + `Expiry::UntilCondition` runtime + DSL `until_condition` lowering | `modifiers.rs` (`ModifierEntry::until_condition`), `game.rs` (`mark_until_condition_dirty`, `until_condition_*_evaluations`) | §5 `Expiry`, "Expiry::UntilCondition contract" |
+| **Track K** | Puppet DSL observers + Track-cleanup hygiene + Alter-S targeting + DigiBurst keyword + formula extensions | `cards/keyword_effects.rs`, `enums.rs:398-401` (`DigiBurst(u8)`), `effect_context/mod.rs:289-296` (`source_stack_source_count`) | §"Cross-engine parity", §"Selection-bearing keyword authoring pattern" |
+
+For an at-a-glance status of which substrate items closed which gap entries,
+see `docs/RUST_ENGINE_GAPS.md` (live tracker — its at-a-glance table is the
+source of truth for "is this primitive landed yet?").
 
 ---
 
@@ -167,9 +201,165 @@ ctx.trash_from_top(player: PlayerId, count: u8) -> u8
 ctx.delete_permanent(target: PermanentHandle)
 ctx.suspend(target: PermanentHandle)
 ctx.unsuspend(target: PermanentHandle)
+
+ctx.de_digivolve(target, stop_at_level: Option<u8>, amount: Option<u8>) -> u8
+ctx.return_to_hand(target) -> Option<CardHandle>
+ctx.return_to_deck(target, position: StackPosition) -> bool
+ctx.bounce_self() -> Option<CardHandle>
+
+ctx.trash_card_source(perm, card)            // trash one source by handle
+ctx.trash_all_sources(target) -> bool         // strip every digivolution source
+ctx.trash_top_source(target) -> bool          // strip only the topmost source under the visible top
+ctx.armor_purge_top(perm)                     // <ArmorPurge> trash of the top printed card
 ```
 
 `delete_permanent` removes the permanent and moves all cards in its stack to trash. It also clears modifiers attached to that handle. **Does not fire OnDeletion** — use `Game::delete_permanent_with_effects` for that when you're calling from combat paths. From a card script, `ctx.delete_permanent` is usually what you want (OnDeletion is handled by combat, not effect).
+
+`de_digivolve` (`effect_context/mod.rs:1966`) pops up to `amount` sources off
+`target`'s stack, trashing each into the target owner's trash. `stop_at_level`
+clamps the pop so the resulting top card's level is ≥ the floor; `None` for
+no floor (TS Olympos Ikkakumon-style pop-to-base). Returns the actual count
+popped. See §Phase 10 for printed examples.
+
+`return_to_hand` (`effect_context/mod.rs:3329`) bounces a permanent: top
+card → owner's hand, sources under → owner's trash. Routed through
+`Permanent::owner()` so transferred-control cards return to their original
+owner. `bounce_self` (`mod.rs:3349`) is sugar for `return_to_hand(self.source_permanent.unwrap())`.
+
+`return_to_deck` (`mod.rs:3355`) bounces a permanent to deck at Top/Bottom/Random.
+A companion `return_stack_to_deck` (`mod.rs:3368`) returns the full stack
+(including digivolution sources) to deck.
+
+Both `return_to_hand` and `return_to_deck` route through the corresponding
+`WhenWouldBe*` replacement windows (Phase 7) and honor the passive
+`CannotBeReturnedToHand` / `CannotBeReturnedToDeck` modifiers from Track C.
+
+### Self / source-stack helpers (Track E)
+
+These cover printed text where the resolving card or its own stack is the
+move subject. All live in `effect_context/mod.rs` and route through the
+appropriate replacement window.
+
+```rust
+ctx.place_self_at_security(position: StackPosition, face_up: bool) -> bool
+ctx.place_self_at_security_and_cancel_current_replacement(position, face_up) -> bool
+ctx.place_self_option_at_security(position, face_up) -> bool
+
+ctx.security_place_stacked_card(carrier, source_card, target_player, position, face_up) -> bool
+ctx.security_place_top_stacked_card(carrier, target_player, position, face_up) -> bool
+
+ctx.place_permanent_on_security(player, target, position, face_up) -> bool
+ctx.place_permanent_on_security_and_handle_current_replacement(player, target, position, face_up) -> bool
+ctx.trash_top_security_and_cancel_current_replacement(player) -> bool
+ctx.place_sourceless_permanent_bottom_security_and_cancel_current_replacement(...) -> bool
+
+ctx.trash_opponent_hand_to_count(opponent, target_count) -> bool   // forced-reduction; opponent picks
+ctx.trash_top_n_digivolution_cards_of_each(target_player, n) -> usize
+ctx.return_all_trash_to_deck_bottom(player) -> Vec<CardHandle>
+```
+
+The `*_and_cancel_current_replacement` siblings are for replacement-body
+authors that need to commit a state change AND set the replacement outcome
+in one call. Use them inside a `WhenWouldLeaveBattleArea` or
+`WhenWouldBeDeleted` process body; outside a parked replacement they panic
+in dev builds.
+
+`trash_opponent_hand_to_count` (`mod.rs:4021`) is the forced-reduction
+primitive: the **opponent** is the selecting player (the affected side
+picks which cards to trash, per the no-approximations rule). Used by
+BT19-075 MoonMillenniummon.
+
+### Effect-driven play / digivolve
+
+```rust
+ctx.play_from_hand_with_cost(player, hand_index, CostDelta) -> Option<PermanentHandle>
+ctx.play_from_hand_free(player, hand_index) -> Option<PermanentHandle>
+ctx.play_from_hand_free_with_provenance(player, hand_index) -> Option<(PermanentHandle, ProvenanceToken)>
+ctx.play_from_trash_with_cost(player, trash_index, CostDelta) -> Option<PermanentHandle>
+ctx.play_from_trash_free_unsuspended(player, trash_index) -> Option<PermanentHandle>
+ctx.play_from_security(player) -> Option<PermanentHandle>
+ctx.play_from_materials(carrier, source_index, CostDelta, bind_target: Option<...>) -> Option<PermanentHandle>
+ctx.play_to_breeding_from_hand(player, hand_index) -> bool
+ctx.move_from_breeding_by_effect(player) -> bool
+ctx.hatch(player) -> bool
+
+ctx.effect_initiated_digivolve(player, hand_index, target, CostDelta, ignore_color) -> bool
+ctx.effect_initiated_digivolve_ignore_requirements(player, hand_index, target, CostDelta) -> bool
+ctx.effect_initiated_digivolve_with_provenance(...) -> Option<ProvenanceToken>
+ctx.effect_initiated_digivolve_from_source(carrier, source_index, target, CostDelta) -> bool
+ctx.effect_initiated_digivolve_from_source_ignore_requirements(...) -> bool
+ctx.effect_initiated_dna_digivolve(...) -> bool
+ctx.effect_initiated_dna_digivolve_with_provenance(...) -> Option<ProvenanceToken>
+
+ctx.recover_from_deck(player, count: u8) -> u8       // mod.rs:4197 — "recover N security"
+ctx.trash_top_security(player) -> bool                // mod.rs:1863
+ctx.add_top_security_to_hand(player) -> bool          // mod.rs:2225
+ctx.add_pending_security_to_hand() -> bool            // mod.rs:2324
+```
+
+`play_from_*_with_cost` and `effect_initiated_digivolve_*` thread
+`PlaySource::ByEffect` / `ByDigivolve` so Phase 6 flood gates can
+discriminate effect-initiated plays from natural plays. The
+`*_with_provenance` variants (Track A) return a `ProvenanceToken` keyed to
+the new `CardSource` rather than the battle-area slot — use these when later
+cleanup or suppression must identify the same created object after zone
+movement.
+
+### Granted triggered effects (Track H)
+
+```rust
+ctx.grant_triggered_effect(
+    carrier: PermanentHandle,
+    timing: EffectTiming,
+    expiry: Expiry,
+    body: impl Fn(&mut EffectContext) + Send + Sync + 'static,
+)
+```
+
+Defined at `effect_context/mod.rs:3725`. Installs a granted-triggered ability
+on `carrier` that fires on every matching `timing` event until `expiry`.
+Distinct from `refire_target_effect` (one-shot invocation of an existing
+effect) — granted-triggered effects persist and fire on future matching
+events. Used by "this Digimon gains [End of Your Turn]: <effect>" text.
+
+The granted body has no max-per-turn or pay-cost gates in v1 — it
+unconditionally runs when the timing fires, parking on `pending_selection`
+through the standard `select_*` helpers if a player choice is needed.
+
+### Selection helpers (full list)
+
+The `select_*` family lives in `code/digimon-engine/src/effect_context/selections.rs`.
+Every helper installs exactly one `PendingSelection` (see §5 `SelectionKind`)
+and registers a callback that resumes after the player answers. Singleton or
+trivially-small selections must still surface through `PendingSelection` per
+working rule 17 — never auto-select.
+
+| Helper | `SelectionKind` produced | File:line | Purpose |
+|---|---|---|---|
+| `select_own_permanent(prompt, is_optional, filter, callback)` | `OwnField` | `selections.rs:135` | Pick from the source-controller's battle area. |
+| `select_opponent_permanent(prompt, is_optional, filter, callback)` | `OppField` | `selections.rs:102` | Pick from the opponent's battle area. |
+| `select_hand(of_player, prompt, is_optional, filter, callback)` | `Hand` | `selections.rs:167` | Pick from `of_player`'s hand (index-based filter). |
+| `select_trash(of_player, prompt, is_optional, filter, callback)` | `Trash` | `selections.rs:233` | Pick from `of_player`'s trash. |
+| `select_material(carrier, prompt, is_optional, filter, callback)` | `Material` | `selections.rs:308` | Pick a digivolution-source under a permanent (excludes top card). |
+| `select_own_sources(min, max, prompt, filter, callback)` | `SourceMulti { min, max, picked }` | `selections.rs:383` | Pick `min..=max` source cards across own battle-area stacks (used by Digi-Burst, Partition costs). |
+| `select_partition_sources(prompt, filter, callback)` | `SourceMulti { min: 2, max: 2 }` | `selections.rs:432` | Sugar for the Partition selection (two sources, optionally color-grouped). |
+| `select_opponent_permanents_by_dp_budget(budget, prompt, filter, callback)` | `DpBudget { remaining_dp, picked }` | `selections.rs:487` | Pick zero-or-more opponent permanents whose total effective DP stays under `budget`. Used by BT19-075-style "delete opponent's Digimon with N DP or less in total." |
+| `select_own_breeding_permanent(prompt, filter, callback)` | `BreedingPermanent` | `selections.rs:536` | Pick the source-controller's breeding-area permanent. |
+| `select_effect_choice(prompt, labels, callback)` | `EffectChoice` | `selections.rs:602` | N-label branch chooser. Each label becomes an `EffectChoiceEntry`; the callback receives the chosen index. |
+| `select_reveal(prompt, is_optional, filter, callback)` | `Reveal` | `selections.rs:674` | Pick from `Game::revealed_cards`. |
+| `select_reveal_buckets(buckets, callback)` | `RevealBucket { bucket_index, min, max, picked }` | `selections.rs:738` | Multi-bucket reveal flow — used by "reveal N from deck, sort into add-to-hand bucket vs. bottom-of-deck bucket" cards. Each bucket parks its own selection with min/max bounds. |
+| `select_security(of_player, prompt, is_optional, filter, callback)` | `Security` | `selections.rs:798` | Pick a card from a player's security stack. |
+| `select_union_zone(of_player, zones, prompt, is_optional, filter, callback)` | `UnionZone { zones }` | `selections.rs:886` | Cross-zone single pick (hand or trash or material). See §"Phase 4 — select_union_zone." |
+| `select_ordered_permutation(items, prompt, callback)` | `OrderedPermutation { remaining }` | `selections.rs:1006` | Place N items in player-chosen order. See §"Phase 4 — select_ordered_permutation." |
+| `select_count_capped_multi(of_player, zone, max, prompt, is_optional_zero, filter, callback)` | `CountCappedMultiSelect { max, picked }` | `selections.rs:1087` | Pick up-to-N from a single zone (hand, trash, or specific permanent's materials). See §"Phase 4 — select_count_capped_multi." |
+| `search_own_security_stack(prompt, is_optional, filter, on_select)` / `(... on_no_match)` overload | `Security` | `selections.rs:1241` | Sugar over `select_security(self.player, …)` for own-security single-pick. Used by TS Olympos archetype cards. |
+
+The opponent-as-selector scope (`ctx.as_selecting_player(opp).select_*`) is
+documented in §"as_selecting_player builder" below. It forwards
+`select_own_permanent`, `select_opponent_permanent`, `select_effect_choice`,
+`select_hand`, `select_trash`, `select_union_zone`,
+`select_count_capped_multi`, and `select_ordered_permutation`
+(`selections.rs:1455-1697`).
 
 ### Cross-card effect refiring
 
@@ -180,7 +370,19 @@ ctx.refire_target_effect(
     selecting_player: PlayerId,
     bypass_once_per_turn: bool,
 ) -> bool
+
+ctx.refire_effect_from_permanent(
+    target: PermanentHandle,
+    timing_filter: TimingFilter,
+    selecting_player: PlayerId,
+    bypass_once_per_turn: bool,
+) -> bool
 ```
+
+`refire_target_effect` and the lower-level `refire_effect_from_permanent`
+both live in `effect_context/mod.rs:653-720`. Use the `target_effect` variant
+for printed text like Homeros — it installs an `EffectChoice` if the target
+has ≥2 eligible effects.
 
 Use this for printed text such as BT24-102 Homeros: "activate 1 [On Play] or
 [When Digivolving] effect of 1 of your [Olympos XII] trait Digimon." This is
@@ -229,11 +431,46 @@ existing effect once immediately.
 
 ```rust
 ctx.add_dp_modifier(target: PermanentHandle, value: i32, expiry: Expiry)
+ctx.add_declarative_dp_modifier(target, value, expiry)              // marks as declarative materializer
 ctx.add_modifier(target, modifier: ModifierType, value: i32, expiry: Expiry)
+ctx.add_declarative_modifier(target, modifier, value, expiry)
+ctx.add_modifier_with_until_condition(target, modifier, value, predicate)
 ctx.grant_keyword(target, keyword: Keyword, expiry: Expiry)
+ctx.grant_declarative_keyword(target, keyword, expiry)
+ctx.grant_keyword_with_until_condition(target, keyword, predicate)
+ctx.add_declarative_player_modifier(target_player, modifier, value, expiry)
+ctx.add_effect_immunity_modifier(target, source_kind, controller_filter, expiry) -> bool
+ctx.grant_zone_return_immunity_to_opponent_effects(target, expiry)
+ctx.ignore_option_color_requirement(target_player, expiry)
 ```
 
-See §5 for `ModifierType` and `Expiry` values.
+See §5 for `ModifierType` and `Expiry` values. The `add_declarative_*` /
+`grant_declarative_*` variants tag the modifier as **declarative
+materializer** so `tick_declarative_effects` re-applies it during
+continuous-controller cycles; use these from aura process bodies and avoid
+them from one-shot triggered processes.
+
+`add_modifier_with_until_condition` and `grant_keyword_with_until_condition`
+(`effect_context/mod.rs:3663-3722`) install a runtime predicate alongside the
+modifier; the controller marks the entry dirty on field/zone/orientation
+changes and re-evaluates after the current observer drain. See §5 `Expiry`
+for the full re-evaluation contract.
+
+### Scheduled effects
+
+```rust
+ctx.schedule_delayed(when: EffectTiming, body: Effect)
+ctx.schedule_delayed_with_runtime(when, body, captured_bindings)
+ctx.place_self_as_delay_option_permanent()
+```
+
+`schedule_delayed_*` (`effect_context/mod.rs:835-865`) parks a one-shot effect
+on `Game.scheduled_effects` keyed to a future timing
+(`EndOfYourTurn`, `EndOfOpponentsTurn`, `EndOfYourNextTurn`,
+`EndOfOpponentsNextTurn`, etc.). The runtime variant captures DSL bindings
+so result-bound predicates inside the body resolve against the original
+selections after the schedule drains. Use this for "at the end of your next
+turn, …" and Delay Option bodies.
 
 ### OnDeletion cause accessors
 
@@ -557,38 +794,260 @@ When a card effect needs to refer to the permanent it came from:
 
 ## 5. Key enums
 
+### `SelectionKind` (full taxonomy)
+
+Defined in `code/digimon-engine/src/selection.rs:85-149`. Every player choice
+parks a `PendingSelection` carrying one of these variants. Cite the engine
+file for the authoritative shape; the table below is for quick lookup.
+
+| Variant | Payload | Action range reused | Use |
+|---|---|---|---|
+| `Target` | — | target-select range | Pick a Digimon (side unspecified). |
+| `OwnField` | — | own-field range | Pick from controller's battle area. |
+| `OppField` | — | opp-field range | Pick from opponent's battle area. |
+| `Hand` | — | hand range | Pick a hand card. |
+| `Trash` | — | trash range | Pick a trash card. |
+| `Material` | — | material range | Pick a digivolution source under a permanent. |
+| `Reveal` | — | reveal range | Pick from `Game::revealed_cards`. |
+| `RevealBucket` | `{ bucket_index, min, max, picked }` | reveal range | Multi-bucket reveal flow with per-bucket min/max. |
+| `Security` | — | security range | Pick a security stack slot. |
+| `EffectChoice` | — | effect-choice range | Pick one of N labeled branches. |
+| `Source` | — | source range | Pick a specific source card in a stack. |
+| `TriggerOrder` | — | effect-choice range | Order/decline simultaneous trigger bundles. |
+| `UnionZone` | `{ zones: UnionZoneSet }` | hand + trash + material ranges | Cross-zone single pick (HAND | TRASH | MATERIAL). |
+| `OrderedPermutation` | `{ remaining: u8 }` | reveal range | Place N items in player-chosen order; re-installs per slot. |
+| `CountCappedMultiSelect` | `{ max, picked }` | zone range | Pick up-to-N from a zone, one-pick-at-a-time. |
+| `Replacement` | — | effect-choice ACCEPT + PASS | Optional replacement accept/decline. |
+| `SourceMulti` | `{ min, max, picked }` | source range | Pick min..=max source cards across own permanents. |
+| `DpBudget` | `{ remaining_dp, picked }` | opp-field range | Pick opponent permanents whose total DP stays under a budget. |
+| `BreedingPermanent` | — | own-field range, breeding sentinel | Pick the source-controller's breeding permanent. |
+
+`UnionZoneSet` is a u8 bitset (`selection.rs:23-61`) — `HAND` = 0b001,
+`TRASH` = 0b010, `MATERIAL` = 0b100; OR them with `|` to build a multi-zone
+filter.
+
+`PendingSelection` itself carries 11 fields including `selecting_player`,
+`previous_phase`, `valid_action_ids`, `is_optional`, `prompt`,
+`effect_choices`, `source_card`, `source_permanent`, `source_kind`,
+`callback`, and `on_decline` (`selection.rs:165-199`). The non-callback
+subset is mirrored as a `Clone`-able `PendingSelectionView` for FFI and UI
+consumers (`selection.rs:222-249`).
+
+### `TriggerSource` (full taxonomy)
+
+Defined in `selection.rs:335-479`. Every observer fire-site picks the
+variant that describes where the trigger is firing from; the queue drainer
+then enumerates the matching zone path. Card scripts never construct these
+directly — `enqueue_triggered` consumes them.
+
+| Variant | Fan-out path | Carries |
+|---|---|---|
+| `Permanent(handle)` | This permanent's effects only | — |
+| `PlayerBattleArea(player)` | Every permanent in `player`'s battle area | — |
+| `PlayerBreedingArea(player)` | The breeding sentinel permanent only | — |
+| `SecurityRevealed { defender, card }` | Revealed security card's own `SecuritySkill` effects | Defender, revealed card |
+| `SecurityStackCard { player, card }` | Specific card still in security stack (turn-boundary `[Security]` timing) | Player, card |
+| `OnSecurityCheck { attacker, defender, revealed_card, was_face_up }` | Defender's battle area | Attacker, defender, revealed card, face-up bit |
+| `MovedFromBreeding { player, permanent, card }` | Moving player's battle area | Moved perm/card |
+| `Digivolved { player, permanent, card, effect_initiated, dna_origin }` | All battle areas | Digivolved perm/card + origin flags |
+| `EnteredField { player, permanent, card, effect_initiated }` | All battle areas | Entering perm/card + origin flag |
+| `OptionPlaced { player, permanent, linked_host, card }` | All battle areas | Placed Option's perm or host |
+| `OptionTrashed { player, card, cause, last_state }` | All battle areas | Trashed Option's last lifecycle state |
+| `EventObserved { player, permanent, card }` | Generic per-permanent observer (suspend watchers, etc.) | Carrier perm/card |
+| `AttackTargetChanged { player, attacker, card, old_target, new_target, reason }` | All battle areas | Attacker + old/new target + retarget reason |
+| `SourceTrashedFromStack { player, host, host_card, card, cause }` | All battle areas | Host perm + trashed source + cause |
+| `SecurityRemoved { affected_player, observer_player, source_player, card, cause }` | `observer_player`'s battle area + breeding | Affected player + cause + removed card |
+| `SecurityPlaced { affected_player, source_player, card, cause }` | Affected player's battle area + breeding | Placed card + cause |
+| `SecurityDiscarded { affected_player, source_player, card, cause }` | Discarded security card's own observers | Discarded card + cause |
+
+### `TriggerContext` (event payload — Track A)
+
+Defined in `trigger_context.rs:114-139`. Fields publish what happened in the
+event, distinct from the observer carrying the triggered effect. Card scripts
+read these via the `event_*` and `attack_target_change` accessors on
+`EffectContext`/`EffectReadContext`.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `subject` | `Option<EventSubject>` | Typed event subject (permanent / card-in-zone / player). |
+| `target_permanent` / `target_card` | `Option<PermanentHandle>` / `Option<CardHandle>` | Legacy target fields. |
+| `event_permanent` / `event_card` | Same | Primary perm/card involved in the event. |
+| `event_source_card` | `Option<CardHandle>` | For source-trash events: the trashed source card. |
+| `event_host_card` / `event_host_permanent` | `Option<CardHandle>` / `Option<PermanentHandle>` | Host card / permanent for source-trash events. |
+| `affected_player` | `Option<PlayerId>` | Player whose zone changed. |
+| `source_player` | `Option<PlayerId>` | Player whose effect caused the event. |
+| `cause` | `Option<EventCause>` | Coarse event-cause taxonomy. |
+| `source_effect` | `Option<EffectAttribution>` | Card/perm/controller that caused the event. |
+| `selected_results` | `Vec<ResultBinding>` | Named bindings from selections within this event. |
+| `moved_card_sets` | `Vec<MovedCardSet>` | Batches of cards moved together. |
+| `effect_initiated` | `bool` | Set when play/digivolve came from an effect. |
+| `dna_origin` | `bool` | Set when digivolve came from DNA/Jogress. |
+| `deleted_object` | `Option<DeletedObjectSnapshot>` | Pre-removal snapshot for OnDeletion observers. |
+| `attack_target_change` | `Option<AttackTargetChange>` | Old/new target + reason for `OnAttackTargetChange`. |
+| `old_attack_target` / `new_attack_target` | `Option<AttackTarget>` | Legacy mirror of the above. |
+| `provenance_token` | `Option<ProvenanceToken>` | Stable token for effect-created plays/digivolutions. |
+| `was_security_skill` | `bool` | Compatibility marker for security-originated effects. |
+| `option_last_field_state` | `Option<OptionFieldState>` | Last lifecycle state for `OnOptionTrashed`. |
+
+`EventSubject` (`trigger_context.rs:67-72`):
+
+```rust
+enum EventSubject {
+    Permanent(PermanentHandle),
+    Card { card: CardHandle, zone: Zone },
+    Player(PlayerId),
+}
+```
+
+`EventCause` (`trigger_context.rs:37-50`) — coarse cause taxonomy:
+
+```rust
+enum EventCause {
+    BattleDeletion,       // DP-loss in combat
+    EffectDeletion,       // generic effect-driven deletion (legacy/own/opp split below)
+    OwnEffect,            // controller's own effect caused the event
+    OpponentEffect,       // opponent's effect caused it
+    Overclock,            // <Overclock> sacrifice deletion
+    Return,               // return-to-hand/deck observer cause
+    DeckBottom,           // sent to deck bottom
+    SecurityPlacement,    // card placed into security
+    SecurityRemoval,      // card removed from security (effect or attack)
+    Cost,                 // cost-payment trash/suspend
+    Rule,                 // rule-driven event (turn rotation, hatch, etc.)
+}
+```
+
+`From<ReplacementCause>` is implemented at the fire-site
+(`trigger_context.rs:52-63`); card scripts read the result, never compute it.
+
+`EffectAttribution` (`trigger_context.rs:77-82`):
+
+```rust
+struct EffectAttribution {
+    controller: PlayerId,
+    source_card: Option<CardHandle>,
+    source_permanent: Option<PermanentHandle>,
+}
+```
+
+`ResultBinding` (`trigger_context.rs:85-90`) — one named binding from an
+earlier selection within the same event:
+
+```rust
+struct ResultBinding {
+    name: &'static str,
+    permanent: Option<PermanentHandle>,
+    card: Option<CardHandle>,
+}
+```
+
+`MovedCardSet` (`trigger_context.rs:94-99`):
+
+```rust
+struct MovedCardSet {
+    cards: Vec<CardHandle>,
+    from: Option<Zone>,
+    to: Option<Zone>,
+}
+```
+
+`DeletedObjectSnapshot` (`trigger_context.rs:103-112`) — captured before a
+permanent leaves the board for OnDeletion observers reading post-removal:
+
+```rust
+struct DeletedObjectSnapshot {
+    former_controller: PlayerId,
+    top_card: CardHandle,
+    card_kind: CardKind,
+    traits: Vec<String>,
+    level: Option<u8>,
+    dp: Option<i32>,
+    cause: EventCause,
+}
+```
+
+`ProvenanceToken` (`trigger_context.rs:27-34`) is a `u64` keyed to a specific
+`CardSource` instance, not the battle-area slot. Use
+`Game::resolve_provenance_token` (or the `EffectContext` wrapper) to find the
+current `EventSubject` after zone movement or battle-area compaction.
+
 ### `EffectTiming`
 
+Source of truth: `enums.rs:178-363`. Full enumeration follows; refer back to
+that file for any timing not described elsewhere in this doc.
+
 ```
+// Standard
 OnPlay, WhenDigivolving, OnAttack, OnDeletion, WhenAttacking, OnBlock,
-SecurityEffect, CounterEffect,
-StartOfYourTurn, StartOfOpponentsTurn, EndOfYourTurn, EndOfOpponentsTurn, EndOfAttack,
+SecuritySkill, OnSecurityCheck, OnLoseSecurity, OnDiscardSecurity, CounterEffect
+
+// Turn-based
+StartOfYourTurn, StartOfOpponentsTurn, StartOfYourMainPhase,
+EndOfYourTurn, EndOfOpponentsTurn, EndOfYourNextTurn, EndOfOpponentsNextTurn,
+UntilNextUnsuspend, EndOfAttack, EndOfBattle
+
+// Event-triggered
 OnAllyAttack, OnOpponentAttack, OnDrawCard, OnTrash, OnReturn, OnSuspend, OnUnsuspend,
-OnAddToHand, OnReveal, OnPlaceSecurity,
-OnEnterField, OnEnterFieldAnyone, OnLeaveField,
-BeforePayCost, WhenPlayedFromHand,
-OnDigivolve, OnDnaDigivolve, OnDigiXros,
-AlwaysActive, Declarative,
-OptionMain, OptionSecurity,
+OnAddToHand, OnReveal, OnPlaceSecurity, OnAttackTargetChange
+
+// Entry/exit
+OnEnterField, OnEnterFieldAnyone, OnAllyPlayed, OnLeaveField, OnHatch, OnMove
+
+// Cost/play
+BeforePayCost, WhenPlayedFromHand
+
+// Digivolve
+OnDigivolve, OnDnaDigivolve, OnDigiXros
+
+// Phase 7 "Would*" replacement timings
+WhenWouldBeDeleted, WhenWouldLeaveBattleArea, WhenWouldBeReturnedToHand,
+WhenWouldBeReturnedToDeck, WhenWouldBeTrashed, WhenWouldBeDeDigivolved,
+WhenWouldLoseSecurity, WhenWouldDraw, WhenWouldPlaceInSecurity,
+WhenPermanentWouldDigivolve, WhenPermanentWouldPlay, WhenWouldLink,
+WhenWouldAttack, WhenWouldBeAttackTarget   // reserved — Phase 9 wires dispatch
+
+// Deletion observer
+OnAnyDeletion
+
+// Continuous / passive
+AlwaysActive, Declarative
+
+// Option / Plug-In / Training (Phase 8 + Track I)
+OptionMain, OptionSecurity, OnUseOption, OnOptionPlaced, OnOptionTrashed,
+DelayEffect, OnLink, OnLinkedCardTrashed, OnUnlink, OnTrainingTrash
+
+// [Main] activated effects — zone-scoped
+MainFromHand, MainOnField, MainFromTrash
+
+// Archetype observers
+OnOpponentSecurityRemoved, OnOwnSecurityRemoved, OnDigivolutionCardTrashed
+
 None
 ```
 
 ### `Expiry`
 
+Source: `enums.rs:765-785`.
+
 ```
-Permanent             # never expires on its own
-EndOfTurn             # cleared at the end of any turn
-EndOfOpponentsTurn    # cleared at the end of the source-player's opponent's turn
-EndOfYourTurn         # cleared at the end of the source player's own turn (mirror of above)
-EndOfAttack           # cleared when the current attack resolves
-EndOfBattle           # cleared when the current battle resolution finishes
-UntilLeaveField       # cleared when the source permanent leaves the field
-UntilCondition        # active while a per-entry boolean predicate holds; re-evaluated
-                      # by the continuous controller after mutation-event drains
-OnceUsed(u32)         # the value is the limit; consume_use(...) advances a per-entry
-                      # counter and the entry expires once the counter reaches the limit.
-                      # Reserved variant — consumption tracking is a follow-up to the
-                      # taxonomy publication.
+Permanent                   # never expires on its own
+EndOfTurn                   # cleared at the end of any turn
+EndOfOpponentsTurn          # cleared at the end of the source player's opponent's turn
+EndOfYourTurn               # cleared at the end of the source player's own turn
+EndOfOpponentsNextTurn      # Track H — "until the end of their next turn" (EX1-068, AD1-014)
+                            # Persists through one end-of-source-turn AND one end-of-opp-turn,
+                            # then expires at the SECOND end-of-opp-turn after install.
+                            # Tracked via a `pending_skips` counter on `ModifierEntry`.
+EndOfYourNextTurn           # Track H — symmetric mirror, "until the end of your next turn"
+EndOfAttack                 # cleared when the current attack resolves
+EndOfBattle                 # cleared when the current battle resolution finishes
+UntilLeaveField             # cleared when the source permanent leaves the field
+UntilCondition              # active while a per-entry boolean predicate holds; re-evaluated
+                            # by the continuous controller after mutation-event drains
+OnceUsed(u32)               # the value is the limit; consume_use(...) advances a per-entry
+                            # counter and the entry expires once the counter reaches the limit.
+                            # Reserved variant — consumption tracking is a follow-up to the
+                            # taxonomy publication.
 ```
 
 `ModifierEntry` now carries both the legacy scalar `value: i32` and a typed
@@ -758,12 +1217,44 @@ exercise this.
 
 ### `Keyword`
 
+Source: `enums.rs:376-482`. The full enum:
+
 ```
-Blocker, SecurityAttackPlus(i8), SecurityAttackMinus(i8),
-Rush, Jamming, Piercing, Reboot, DeDigivolve(u8), DrawX(u8),
-Blitz, Armor, Raid, Alliance, Blast, Save, Fortitude, Overclock,
-Barrier, Decoy, Material, Partition
+Blocker
+SecurityAttackPlus(i8), SecurityAttackMinus(i8)
+Rush, Jamming, Piercing, Reboot
+DeDigivolve(u8), DrawX(u8)
+Blitz, Raid, Alliance
+BlastDigivolve
+Save
+MaterialSave(u8)              # active skill — move up to N digivolution sources under another permanent
+DigiBurst(u8)                 # active-effect cost marker; body authored via DSL `digi_burst`
+Fortitude
+Overclock
+Barrier
+Decoy(u8)                     # u8 = printed CardColor bitmask (0 = no color filter)
+Partition
+Vortex
+Collision
+Evade
+Fragment(u8)                  # Phase D — auto-installs WhenWouldBeDeleted with N-source cost
+Decode
+ArmorPurge
+Progress                      # blocks defender's SecuritySkill while attacker has it
+Retaliation                   # mandatory OnDeletion-by-battle delete-the-winner (RULES_CONTEXT 16-12)
+Scapegoat                     # WhenWouldBeDeleted substitute — divert non-own-effect deletion
+Execute                       # EndOfYourTurn: may attack including unsuspended (Track F)
+Iceclad                       # compare digivolution-card count instead of DP in battle
+MindLink                      # Tamer active skill — place self under a Digimon (Track F)
+Training                      # active skill — suspend self + place top deck card under self face-down
+ArtsDigivolve                 # DUAL Option-use keyword — optional digivolve onto a target
 ```
+
+Parameterised keywords carry their printed parameter in the variant:
+`Decoy(u8)` encodes a color bitmask (bit `n` set ⇒ allies of `CardColor`
+value `n` are eligible; `0` = no color filter); `DigiBurst(N)` carries the
+printed N for the cost marker; `Fragment(N)` carries the number of sources
+required to cancel the deletion; `MaterialSave(N)` carries the source cap.
 
 ---
 
@@ -2254,22 +2745,28 @@ See `tests/combat/phase9_end_to_end.rs` for the canonical Counter + Raid + Colli
 
 ---
 
-## 9. Known gaps (as of Phase 6)
+## 9. Known gaps
 
-These are documented in `docs/RUST_ENGINE_GAPS.md`. DSL-only vocabulary and lowering gaps live in `qa/dsl-vocab-gaps.md`. Notable items:
+**Live tracker:** [`docs/RUST_ENGINE_GAPS.md`](RUST_ENGINE_GAPS.md). The
+at-a-glance status table there is the single source of truth for "is this
+engine primitive landed yet?" — consult it before assuming a primitive does
+or does not exist. DSL-only vocabulary and lowering gaps live separately in
+[`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md).
 
-- **Block / Counter / Alliance interrupt phases** are wired through the state machine; trait-gated Alliance is incomplete.
-- **OnSecurityCheck** / **OnStartBattle** / **OnEndBattle** / **OnEndAttack** timings — OnSecurityCheck is wired in the attack path; OnStartBattle/OnEndBattle are not yet fired.
-- **Security effects** — basic SecuritySkill dispatch is wired; re-entrant selections mid-security-resolve are not (blocks most real security cards with selection effects).
-- **BeforePayCost cost reduction scanning** — landed in Phase 5. See §Phase 5 above.
-- **Option cards** — full play-flow landed in Phase 8. See §Phase 8 above.
-- **Flood-gate + restriction modifiers** (player-scoped) — landed in Phase 6. See §Phase 6 above. Several variants are DORMANT pending enforcement-site wiring.
-- **"Would" replacement timings** (Barrier, Evade, Partition, Armor Purge) — landed in Phase 7. See §Phase 7 above.
+When implementing a card that needs a missing primitive, log the gap in the
+appropriate tracker, mark the test `#[ignore = "pending: <gap-id>"]`, and
+pick a safe fallback. **Do not stub the primitive**; the no-approximations
+policy applies identically in Rust (working rule 17).
 
-When implementing a card that needs one of these, log the gap and pick a safe fallback.
+For a comprehensive Rust ↔ Python divergence catalog with severity and fix
+order, see [`RUST_PYTHON_PARITY.md`](RUST_PYTHON_PARITY.md).
 
-For a comprehensive Rust ↔ Python divergence catalog with severity and fix order,
-see [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md).
+The historical "Phase 5 / 6 / 7 / 8 / 9 / 10" appendices below preserve the
+phase-by-phase landing context (cost-reduction hooks, flood gates,
+would-replacement framework, Option play flow, combat-interrupt completion,
+tokens + de-digivolve N). Tracks A–K substrate landed on top of those phases
+and is summarized in the "Tracks A–K Substrate Quick Reference" section near
+the top of this doc.
 
 ### Cross-boundary shape drift — detection pattern
 

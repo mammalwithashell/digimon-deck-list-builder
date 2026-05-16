@@ -827,6 +827,14 @@ fn compile_alt_path(
             })
             .unwrap_or_default(),
         marker: ap.marker,
+        condition: ap.condition.as_ref().map(|p| {
+            Box::new(compile_predicate(
+                p,
+                &format!("{prefix}.condition"),
+                card_id,
+                errors,
+            ))
+        }),
     }
 }
 

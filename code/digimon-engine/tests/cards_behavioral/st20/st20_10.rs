@@ -45,10 +45,12 @@
 //! - **G-ALT-PATH-DIRECTION-INTO** (NEW) — `AltPathSpec` describes sources
 //!   that can digivolve INTO the carrier card. There is no inverse form for
 //!   "this card grants ITSELF the ability to digivolve into card X in hand."
-//! - **G-ALT-PATH-CONDITION** (already filed for BT24-016) — `AltPathSpec`
-//!   has no `condition:` field, so the "while opp has 10000+ DP Digimon OR
-//!   your Tamers have 3+ colours" gate cannot be attached even if the
-//!   inverse direction in the previous gap existed.
+//! - ~~**G-ALT-PATH-CONDITION**~~ RESOLVED 2026-05-15 — `AltPathSpec`
+//!   now carries a `condition:` field (consumed by the Digivolve route
+//!   in `dna_digivolve.rs`). The "while opp has 10000+ DP Digimon OR
+//!   your Tamers have 3+ colours" gate can now be attached, but the
+//!   inverse-direction blocker below still prevents authoring the
+//!   warp-into clause as a whole.
 //! - **G-DSL-DISTINCT-TAMER-COLORS** (NEW; sibling of
 //!   G-DSL-DISTINCT-TAMER-COLORS-FORMULA filed for BT21-102) — there is no
 //!   BoolPredicate leaf for "you have N or more distinct Tamer colours on
@@ -124,9 +126,10 @@ fn st20_10_identity_matches_printed_card() {
 ///   2. Alt-source from Lv2 with ADVENTURE or Hero trait, cost 0 (xros_req box).
 ///
 /// A third, "warp into WarGreymon" alt_path is BLOCKED on stacked DSL gaps
-/// (see file header). When G-ALT-PATH-DIRECTION-INTO + G-ALT-PATH-CONDITION
-/// + G-DSL-DISTINCT-TAMER-COLORS all close, a third alt_path will be added
-/// and this assertion bumped to 3.
+/// (see file header). When G-ALT-PATH-DIRECTION-INTO +
+/// G-DSL-DISTINCT-TAMER-COLORS both close, a third alt_path will be added
+/// and this assertion bumped to 3. (G-ALT-PATH-CONDITION was RESOLVED
+/// 2026-05-15 — no longer a blocker.)
 #[test]
 fn st20_10_has_two_alt_paths_today() {
     let card = compiled("ST20-10");
@@ -135,7 +138,7 @@ fn st20_10_has_two_alt_paths_today() {
         2,
         "expected exactly 2 alt_paths (standard Lv2 Black + xros_req Lv2 ADVENTURE/Hero) today; \
          got {}. Note: warp-into-WarGreymon clause is blocked on \
-         G-ALT-PATH-DIRECTION-INTO / G-ALT-PATH-CONDITION / G-DSL-DISTINCT-TAMER-COLORS.",
+         G-ALT-PATH-DIRECTION-INTO / G-DSL-DISTINCT-TAMER-COLORS (G-ALT-PATH-CONDITION resolved 2026-05-15).",
         card.alt_paths.len()
     );
 }
@@ -327,7 +330,7 @@ fn st20_10_top_card_inherited_reboot_does_not_apply_to_itself_today() {
 /// can digivolve ST20-10 into that WarGreymon for cost 4, ignoring
 /// digivolution requirements.
 #[test]
-#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO + G-ALT-PATH-CONDITION + G-PRED-DP-LTE — \
+#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO + G-PRED-DP-LTE — \
             warp-into-WarGreymon path cannot be authored on ST20-10's YAML today"]
 fn st20_10_warp_into_wargreymon_via_opp_dp_disjunct() {
     // Scaffolding (to be filled once gaps close):
@@ -351,42 +354,42 @@ fn st20_10_warp_into_wargreymon_via_opp_dp_disjunct() {
     //   let top = runner.game.players[0].battle_area[0].top_card();
     //   assert_eq!(top.card_id, "ST20-11", "top card is WarGreymon");
     //   assert_eq!(memory_before - runner.memory(), 4, "warp cost was 4");
-    todo!("G-ALT-PATH-DIRECTION-INTO + G-ALT-PATH-CONDITION + G-PRED-DP-LTE must land first");
+    todo!("G-ALT-PATH-DIRECTION-INTO + G-PRED-DP-LTE must land first");
 }
 
 /// Positive: same as above, but using the Tamer-colour disjunct (3+ distinct
 /// Tamer colours on own field, opponent has no big Digimon).
 #[test]
-#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO + G-ALT-PATH-CONDITION + G-DSL-DISTINCT-TAMER-COLORS"]
+#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO + G-DSL-DISTINCT-TAMER-COLORS"]
 fn st20_10_warp_into_wargreymon_via_tamer_colours_disjunct() {
     // Scaffolding: place ST20-10 + 3 Tamers of distinct colours; assert warp
     // succeeds. Requires the 3-tamer-colour BoolPredicate (G-DSL-DISTINCT-TAMER-COLORS).
-    todo!("G-ALT-PATH-DIRECTION-INTO + G-ALT-PATH-CONDITION + G-DSL-DISTINCT-TAMER-COLORS must land first");
+    todo!("G-ALT-PATH-DIRECTION-INTO + G-DSL-DISTINCT-TAMER-COLORS must land first");
 }
 
 /// Negative: when neither disjunct is satisfied (no opp ≥10000 Digimon AND
 /// fewer than 3 Tamer colours), the warp path must NOT be available.
 #[test]
-#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO + G-ALT-PATH-CONDITION"]
+#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO"]
 fn st20_10_warp_into_wargreymon_blocked_when_neither_disjunct_satisfied() {
     // Scaffolding: ST20-10 + WarGreymon in hand + no qualifying opponent or
     // Tamers. Assert the activated_digivolve action is NOT in the action mask.
-    todo!("G-ALT-PATH-DIRECTION-INTO + G-ALT-PATH-CONDITION must land first");
+    todo!("G-ALT-PATH-DIRECTION-INTO must land first");
 }
 
 /// Negative: warp clause is gated on `[Your Turn]`. On the opponent's turn
 /// the warp must NOT be available even if both disjuncts are satisfied.
 #[test]
-#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO + G-ALT-PATH-CONDITION"]
+#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO"]
 fn st20_10_warp_into_wargreymon_blocked_on_opponents_turn() {
-    todo!("G-ALT-PATH-DIRECTION-INTO + G-ALT-PATH-CONDITION must land first");
+    todo!("G-ALT-PATH-DIRECTION-INTO must land first");
 }
 
 /// Negative: warp clause requires self to be on field (DCGO
 /// `IsExistOnBattleArea`). When ST20-10 is in hand (not on field), the warp
 /// alt-path must not be exposed via has-card-in-hand alone.
 #[test]
-#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO + G-ALT-PATH-CONDITION"]
+#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO"]
 fn st20_10_warp_into_wargreymon_requires_self_on_field() {
-    todo!("G-ALT-PATH-DIRECTION-INTO + G-ALT-PATH-CONDITION must land first");
+    todo!("G-ALT-PATH-DIRECTION-INTO must land first");
 }

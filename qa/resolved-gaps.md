@@ -916,3 +916,596 @@ Resolved by Group 3:
 - **G-MULTI-SELECT-OPP-DP-SUM DP-budget slice (2026-04-29):** resolved by `EffectContext::select_opponent_permanents_by_dp_budget`, `SelectionKind::DpBudget`, and DSL `select_opponent_dp_budget` / `delete_bound_permanents`. Count-capped non-DP sibling shapes remain open where called out above.
 - **G-BREEDING-PERMANENT-SELECTION (2026-04-29):** resolved by `EffectContext::select_own_breeding_permanent`, `SelectionKind::BreedingPermanent`, phase-scoped `encode_breeding_select`, and DSL `select_own_breeding_permanent`.
 - **G-SELECT-EMPTY-OUTER-TAIL selection regression (2026-04-29):** covered by `empty_select_material_runs_outer_tail_synchronously` and `empty_select_own_sources_runs_outer_tail_synchronously`.
+
+---
+
+## 2026-05-15 Hygiene Sweep Relocations
+
+The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE_GAPS.md` during the 2026-05-15 tracker hygiene sweep, per the audit in [`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md). Each entry's body is preserved verbatim; a brief "Audit closure note (2026-05-15)" paragraph at the bottom cites the audit doc and the closing PRs.
+
+## Engine Gap: Global `OnAnyDigimonPlayed` / `OnAnyDeletion` observer timings — RESOLVED 2026-05-15 (PRs #449, #451, #472)
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** EX8-074 MedievalGallantmon ("When Digimon are played"), BT21-029 Medusamon ("When any of your opponent's Digimon are deleted"), BT21-026 WarGreymon ("When any of your opponent's Digimon are deleted") — DNA Omnimon adds: BT22-005 Tsumemon (trait-filtered OnPlayed observer), EX9-066 Tai Kamiya & Matt Ishida (suspend-self cost on any ally played), BT17-081 Tai Kamiya & Matt Ishida (observer on ally played or digivolves), EX9-019 WereGarurumon: Sagittarius Mode / EX9-012 MetalGreymon: Alterous Mode / AD1-001 Greymon / AD1-010 Garurumon (hand-resident observers on ally played or digivolves — expands the fan-out target from "battle area" to "hand"), EX4-061 Matt Ishida & Tai Kamiya — Rocks adds: BT8-094 Digimon Emperor (cross-side `OnAnyDeletion` gated on level ≤5 with suspend-self cost + draw), EX11-065 Close (OnAnyDigimonPlayed trait-filtered) — Dark Masters adds: ST6-14 Matt Ishida, BT8-094 Digimon Emperor, BT13-102 Keenan Crier, EX9-068 Analogman, RB1-035 Hokuto Amanokawa, BT19-075 MoonMillenniummon
+- **Effect text:** "[All Turns] [Once Per Turn] When Digimon are played, you may activate…" / "When any of your opponent's Digimon are deleted, this Digimon may unsuspend."
+- **Resolution:** Both fire sites wired in `digimon-engine` — see `fire_on_enter_field_anyone()` in `code/digimon-engine/src/game_actions.rs` (called after OnPlay from `play_from_hand_with_cost` and `play_from_trash_with_cost`) and `fire_on_any_deletion()` in `code/digimon-engine/src/combat.rs` (called from `delete_permanent_with_effects`). Builders: `Effect::on_enter_field_anyone(card)` and `Effect::on_any_deletion(card)` in `code/digimon-engine/src/effect.rs`. Track A added `effect_initiated` bit on `TriggerContext` and DSL `event_is_effect_initiated`. PUPPETS-G011 closure (2026-05-08) added deleted-object snapshot predicates `event_target_kind`/`event_target_trait_has`/`event_permanent_is_source`/`source_is_unsuspended`. Effect-played token plays now also queue `OnEnterFieldAnyone` / `OnAllyPlayed` with an `EnteredField` payload. Card-shaped consumers exercised by BT22-002, BT22-088, EX9-033, EX11-023, ST19-14, BT16-028, BT20-083.
+- **Audit closure note (2026-05-15):** Per [`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md), every dispatch/payload piece called out by the entry has shipped through Phase 1 (PR #449), Track A (PR #451), and PUPPETS-G011 consumer adoption (PR #472). Remaining work is card-shaped authoring, not engine substrate.
+
+## Engine Gap: Phase-granular turn timings (`StartOfYourTurn`, `StartOfYourMainPhase`, `WhenAttacking`, `EndOfAttack`, `EndOfBattle`) — RESOLVED 2026-05-15 (PR #449)
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** BT21-081 Owen Dreadnought, BT24-016 Lamiamon, LM-021 Agumon – Bond of Bravery, BT23-014 Gallantmon, BT17-018 Gallantmon: Crimson Mode, BT21-029 Medusamon, EX11-012 Medusamon, BT21-015 Cyclonemon, plus DNA Omnimon, Rocks, and Dark Masters card lists from the original entry.
+- **Effect text:** Various — "[Start of Your Main Phase] …", "[When Attacking] …", "[End of Attack] …", "[Security] At the end of the battle …"
+- **Resolution:** All five timings wired in `digimon-engine` — see `fire_start_of_your_turn()` in `begin_turn` (before unsuspend), `fire_start_of_your_main_phase()` in `enter_main_phase`, `fire_on_attack()` and `fire_when_attacking()` in `combat::fire_on_attack`, `fire_end_of_attack()` in `cleanup_attack`, and `fire_end_of_battle()` in `resolve_battle` (Digimon-vs-Digimon only). Builders: `Effect::start_of_your_turn/start_of_your_main_phase/when_attacking/end_of_attack/end_of_battle(card)` in `code/digimon-engine/src/effect.rs`. Track A (2026-05-08) added breeding fan-out for `StartOfYourMainPhase` via `enqueue_from_breeding_permanent` and the stable `BREEDING_TARGET` source handle. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- start_of_your_main_phase_fans_out_to_battle_and_breeding_once_each --nocapture`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, all five timings shipped in Phase 1 (PR #449) plus breeding fan-out in Track A; the entry has not had a new substrate ask since 2026-04-19. Remaining breeding observer work is timing-specific event fan-out, not phase timing itself, and is tracked by its own entries where applicable.
+
+## Engine Gap: Observer timings tied to specific events (`OnDigivolve` trait-filter, `OnSuspend`, `OnAttackTargetChange`, `[When Moving]`, `OnHatch`, `OnAllyAttack`/`OnOpponentAttack`) — RESOLVED 2026-05-15 (PRs #449, #450, #451)
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** BT24-082 Owen Dreadnought (`OnDigivolve` trait-filtered, with DP + extra-attack riders), BT24-089 Unique Emblem: Blazing Conductor (`OnSuspend` of named card), BT21-025 Lamiamon (`OnAttackTargetChange`), P-137 Flamedramon (`OnAttackTargetSwitched`), EX11-008 Elizamon (`[When Moving]` breeding→battle), BT16-082 Ukkomon (`[When Moving]` observer); plus DNA Omnimon, Rocks, and Dark Masters card lists from the original entry.
+- **Effect text:** Various — "When any of your Digimon digivolve into a [Reptile] or [Dragonkin] Digimon, …" / "When any of your [Owen Dreadnought]s suspend, …" / "[When Moving] [On Play] …"
+- **Resolution:** All six observer variants wired in `digimon-engine` — `Effect::on_digivolve/on_suspend/on_unsuspend/on_hatch/on_attack_target_change/on_move` builders, with `fire_on_digivolve()` / `fire_on_suspend()`/`fire_on_unsuspend()` / `fire_on_hatch()` / `fire_on_attack_target_change()` dispatch sites in `combat.rs` and `game_actions.rs`. `OnAllyAttack`/`OnOpponentAttack` fire-sites in `combat::fire_on_attack`. DSL `event_target_trait_has`, `event_card_trait_has`, `event_permanent_is_source`, and `event_is_effect_initiated` predicates all wired. DNA-origin context bit (Track A 2026-05-08), prompted retarget (2026-05-08), self-scoped predicate (2026-05-08) all landed.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, the "Status (2026-05-07)/(2026-05-08)" prose in the original entry lists every sub-piece as already shipped (Phase 1 PR #449, Track A PR #451, Track D combat centralization PR #450). All six variants are wired end-to-end.
+
+## Engine Gap: `WhenWouldBeDeleted` / leave-field replacement-effect framework — RESOLVED 2026-05-15 (PRs #449 Track B; Phase C + Phase D)
+
+- **Severity:** ✅ RESOLVED / TRACK B VERIFIED
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** BT24-018 Styracomon, EX11-012 Medusamon, BT24-012 Dimetromon, P-137 Flamedramon, BT20-016 Paildramon, plus DNA Omnimon, Rocks (all Fragment instances), and Dark Masters card lists from the original entry.
+- **Effect text:** "When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion." (and other leave-field replacement variants)
+- **Resolution:** Phase C (2026-04-25) + Phase D (2026-04-25) + Track B closeout (2026-05-08) shipped all replacement primitives. `Game.parked_replacement`, `cancel_leave`/`handle_replacement`/`redirect_replacement`/`substitute_replacement` outcome setters, all seven alpha-tier keyword auto-installs (Fragment / ArmorPurge / Save / Decoy / Fortitude / Partition / MaterialSave). Generic DSL cross-permanent replacement authoring, named pre-move windows (`WhenPermanentWouldDigivolve`, `WhenPermanentWouldPlay`, `WhenWouldLink`), inherited replacement scanning, cross-permanent subject guards, Delay-as-prevention, native/inherited Barrier, Armor Purge, Scapegoat, Fragment, color-gated Decoy, Decode/material play, Partition source enforcement, source-scoped immunity short-circuiting, Overclock cause propagation, and Counter Blast DNA/security-loss replacement are all covered by framework and card-shaped tests.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, the entry already prefixed ✅ RESOLVED / TRACK B VERIFIED but the at-a-glance row still read 🔴; this relocation aligns headline severity with the per-entry prose. Track B (PR #449) is cited as the closing PR.
+
+## Engine Gap: `OnPlaceSecurity` / `OnAddedToSecurity` observer timing dispatch — RESOLVED 2026-05-15 (PR #451 Track A)
+
+- **Severity:** 🟡 PARTIAL
+- **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** BT14-033 Patamon (inherited "[Your Turn] [Once Per Turn] When a card is added to your security stack, gain 1 memory.") — Dark Masters adds: BT8-090 Kari Kamiya ("[Your Turn] When a card is added to your security stack, you may suspend this Tamer to gain 1 memory.")
+- **Effect text:** "When a card is added to your security stack, gain 1 memory."
+- **Resolution:** Track A (2026-05-08) landed the full dispatcher with payload (`event_card`, `affected_player`, `source_player`, `EventCause::SecurityPlacement`, moved-card set). `EffectTiming::OnPlaceSecurity` fires from `place_on_security` commits and `on_added_to_security` is an alias. `effect.rs:512` builder exists. DSL `when: on_place_security` and `when: on_added_to_security` both lower to the same dispatcher. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_place_security_fires_once_with_security_placement_payload` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_place_security_event_card_trait_predicate_matches_placed_card`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, the 🟡 severity was overstated for an engine entry whose only "open" item is card test coverage; remaining setup/recovery multi-card additions are card-shaped proof work, not engine substrate. Track A (PR #451) cited as the closing PR.
+
+## Engine Gap: Forced opponent hand reduction primitive (`ctx.trash_opponent_hand_to_count`) — RESOLVED 2026-05-15 (PR #454 Track E)
+
+- **Severity:** 🟢 CLOSED (2026-05-08, Track E)
+- **Discovered in:** Dark Masters (2026-04-18)
+- **Card(s):** BT19-075 MoonMillenniummon
+- **Effect text:** "Your opponent trashes cards in their hand until they have 5 left."
+- **Resolution:** `EffectContext::trash_opponent_hand_to_count(opponent, target_count) -> bool` shipped in `code/digimon-engine/src/effect_context/mod.rs`. Installs a `select_count_capped_multi` selection on the opponent's hand with `selecting_player = opponent` (the affected side picks, per the no-approximations rule), `max = current_hand_size - target_count`, and `is_optional_zero = false` (cannot PASS without picking). The callback trashes each chosen card by stable `CardHandle` (so hand-index shifts between picks don't invalidate the reference). No-op if hand is already at or below `target_count`. DSL closed 2026-05-09: YAML can author `trash_opponent_hand_to_count: { opponent: opponent, target_count: 5 }`. Covered by `cargo test … --test zone_manipulation -- trash_opponent_hand_to_count` plus `cargo test --manifest-path code/digimon-dsl/Cargo.toml --test parse_zone_movement_steps` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl zone_movement_verbs`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already labeled closed in the prose — relocated here to clean up the open-gap list. Track E (PR #454) cited as the closing PR.
+
+## Engine Gap: De-Digivolve N primitive (single + mass) — RESOLVED 2026-05-15 (Phase 10)
+
+- **Severity:** 🟢 CLOSED
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** EX9-013 BlitzGreymon, BT9-112 DeathXmon, plus DNA Omnimon, Rocks, and Dark Masters card lists from the original entry.
+- **Effect text:** "`<De-Digivolve N>` 1 of your opponent's Digimon. (Trash up to N cards from the top. You can't trash past level 3 cards.)"
+- **Resolution:** `EffectContext::de_digivolve` at `effect_context/mod.rs:1966`. Closed in Phase 10 (2026-04-21, plan [`docs/superpowers/plans/2026-04-21-rust-engine-phase-10-tokens-and-dedigivolve.md`](../docs/superpowers/plans/2026-04-21-rust-engine-phase-10-tokens-and-dedigivolve.md)). Generalized signature: `ctx.de_digivolve(target, stop_at_level: Option<u8>, amount: Option<u8>) -> u8`. TS Olympos Ikkakumon-style unbounded pop expressible as `(None, None)`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already labeled closed in the prose — relocated here to clean up the open-gap list.
+
+## Engine Gap: `OnDiscardSecurity` — effect-driven security-card trash trigger — RESOLVED 2026-05-15 (PR #451 Track A)
+
+- **Severity:** 🟢 CLOSED for base dispatch
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT13-106 Odin's Breath
+- **Effect text:** "When an effect trashes this card from the security stack, activate this card's [Main] effect."
+- **Resolution:** Added `EffectTiming::OnDiscardSecurity`, `Effect::on_discard_security`, DSL `when: on_discard_security`, and `TriggerSource::SecurityDiscarded`. Effect-driven `trash_top_security` now fires the trashed security card's own timing with `event_card`, `affected_player`, `source_player`, `event_cause`, and a security-to-trash moved-card set; normal attack security checks do not fire it. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- discard_security`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_discard_security_event_cause_predicate_matches_effect_trash`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt13_106`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already labeled closed in the prose — relocated here to clean up the open-gap list. Track A (PR #451) cited as the closing PR.
+
+## Engine Gap: Global `OnOpponentSecurityRemoved` observer timing — RESOLVED 2026-05-15 (PRs #449 Phase 1, Track A 2026-05-06/05-08)
+
+- **Severity:** 🔴 BLOCKING (closed core; card-local authoring remains card-shaped follow-up)
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** BT21-008 Elizamon, BT21-017 Dimetromon, BT21-025 Lamiamon, BT24-018 Styracomon, BT24-016 Lamiamon, BT21-001 Gigimon, BT24-008 Elizamon, BT18-087 Owen Dreadnought, BT21-093 Raging Serpentine, BT21-029 Medusamon, EX11-008 Elizamon, P-189 Dimetromon, BT24-012 Dimetromon, BT24-001 Gigimon, BT14-001 Koromon — DNA Omnimon adds: BT22-013 WarGreymon, BT17-015 WarGreymon, EX4-073 Omnimon Alter-B — Rocks adds: EX10-036 Magneticdramon, BT20-055 Invisimon — Dark Masters adds: BT4-097 Kari Kamiya (own-side mirror), BT24-001 Gigimon.
+- **Effect text:** "[Your Turn] [Once Per Turn] When your opponent's security stack is removed from, gain 1 memory." (and many archetype variants)
+- **Resolution:** Phase 1 (2026-04-19) + 2026-05-06 typed-payload sweep + 2026-05-08 breeding fan-out all landed. `combat.rs:2613,2629` dispatches both `OnOpponentSecurityRemoved` and `OnOwnSecurityRemoved` with `TriggerSource::SecurityRemoved` payload (`affected_player`, `source_player`, `event_card`, `EventCause`, moved-card set). Battle and effect-driven security removal both covered; breeding-resident observers covered by `enqueue_from_breeding_permanent`. Builder `Effect::on_opponent_security_removed(card)` in `code/digimon-engine/src/effect.rs`. Covered by `on_own_security_removed_fires_for_defender_with_battle_payload`, `bt4_097_*`, BT24-001 inherited security-removal fixture, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_opponent_security_removed_fans_out_to_breeding_inherited_once_with_payload`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, the prose explicitly says "remaining work under this heading is card-local authoring/selection behavior" — that's not an engine gap. Severity 🔴 → ✅ RESOLVED with card-local authoring + non-battle-zone setup/Recovery fan-out as card-shaped follow-ups.
+
+## Engine Gap: Global `OnOwnSecurityRemoved` observer timing (mirror of `OnOpponentSecurityRemoved`) — RESOLVED 2026-05-15 (Track A 2026-05-06)
+
+- **Severity:** 🔴 BLOCKING (closed)
+- **Discovered in:** Dark Masters (2026-04-18)
+- **Card(s):** BT4-097 Kari Kamiya, BT8-090 Kari Kamiya
+- **Effect text:** "[All Turns] When a card is removed from your security stack, by suspending this Tamer, gain 1 memory." / "[Your Turn] When a card is added to your security stack, you may suspend this Tamer to gain 1 memory."
+- **Resolution:** `EffectTiming::OnOwnSecurityRemoved` exists (enums.rs:355), fire-site in `combat.rs:2613`, builder `Effect::on_own_security_removed` at `effect.rs:495`. Resolved as part of the same dispatch as `OnOpponentSecurityRemoved`; the 2026-05-06 typed-payload sweep wired both directions with `TriggerSource::SecurityRemoved`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, the prose did not reflect the closure but the dispatch already shipped. Relocated here alongside the opponent-side entry.
+
+## Engine Gap: Selection: ordered permutation (place N cards in any order) — RESOLVED 2026-05-15 (Phase 4)
+
+- **Severity:** 🔴 BLOCKING (closed)
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** P-035 Red Memory Boost!, P-151 Digimon Liberator, BT21-008 Elizamon, BT24-018 Styracomon, P-103 Offense Training, P-206 Digital Gate Open, EX7-074 Vortex Resonance, BT16-082 Ukkomon plus DNA Omnimon, Rocks, and Dark Masters card lists from the original entry.
+- **Effect text:** "Return the rest to the bottom of the deck in any order." / "Place the remaining cards at the bottom of your deck in any order."
+- **Resolution:** Closed by Phase 4 (2026-04-20) — helper `select_ordered_permutation` in `code/digimon-engine/src/effect_context/selections.rs`, surfaces as `SelectionKind::OrderedPermutation` / `GamePhase::SelectPermutation`. Sequential pick-by-pick with accumulator; empty items call fires immediately; singleton still installs a 1-choice selection. See `docs/RUST_ENGINE_API.md` §Phase 4.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, status block already says "Closed by Phase 4"; relocated here to clean up the open-gap list.
+
+## Engine Gap: Token creation + `CardKind::Token` + Petrification Token definition — RESOLVED 2026-05-15 (Phase 10)
+
+- **Severity:** 🟢 CLOSED
+- **Discovered in:** Medusamon (2026-04-17)
+- **Card(s):** BT24-017 Medusamon, BT21-029 Medusamon, EX11-012 Medusamon
+- **Effect text:** "they play 1 [Petrification] Token. (Digimon/White/3000 DP/[Your Turn] This Digimon can't suspend. [On Deletion] Trash your top security card.)"
+- **Resolution:** Closed in Phase 10 (2026-04-21, plan [`docs/superpowers/plans/2026-04-21-rust-engine-phase-10-tokens-and-dedigivolve.md`](../docs/superpowers/plans/2026-04-21-rust-engine-phase-10-tokens-and-dedigivolve.md)). Introduces `CardKind::Token` + `TokenRegistry`. `ctx.play_token(controller, token_id) -> Option<PermanentHandle>` creates a synthetic `CardSource`, places a `Permanent`, fires `OnPlay`. Ships Petrification Token data + `CardEffect` (CannotSuspend [Your Turn] + OnDeletion → `trash_top_security`). Familiar Token's [On Deletion] clause still requires the opponent-permanent selection primitive — deferred.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already 🟢 closed; relocated here to clean up the open-gap list.
+
+## Engine Gap: Native printed keyword parsing (Rush, Raid, Piercing, Blocker, Reboot, Jamming, Blitz, Vortex, Alliance, Security A.±N, Fragment, Save, Collision, Retaliation) — RESOLVED 2026-05-15 (PRs Phase 3 + #457 Track G + Group 6)
+
+- **Severity:** ✅ RESOLVED
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** 17+ cards in Medusamon alone plus DNA Omnimon, Rocks, and Dark Masters card lists from the original entry.
+- **Effect text:** `<Rush>`, `<Raid>`, `<Piercing>`, `<Blocker>`, `<Reboot>`, `<Jamming>`, `<Blitz>`, `<Vortex>`, `<Alliance>`, `<Security A. +N>` printed on the card face
+- **Resolution:** Phase 3 (2026-04-19) closed native keyword parsing — see `CardData::keywords` (code/digimon-engine/src/card_data.rs) and `Game::has_keyword` unified query (code/digimon-engine/src/game.rs). All 14 keyword check sites migrated. Group 6 Task 4 (2026-05-02) closed core combat keywords `Collision`, `Piercing`, `Reboot`, and `Retaliation` end-to-end through runtime consumers. Track G (PR #457, 2026-05-10) backfilled Evade printed-semantics, Decoy color-filter, Progress card-shape backfill.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED at entry level; relocated here to clean up the open-gap list. Phase 3 + Group 6 + Track G (PR #457) cited as the closing work.
+
+## Engine Gap: `<Progress>` keyword + `ImmunityToOpponentEffects` modifier — RESOLVED 2026-05-15 (Group 6 + Track G)
+
+- **Severity:** ✅ RESOLVED for core Progress/opponent-effect mutation gates
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** BT21-025 Lamiamon, BT24-018 Styracomon, BT24-017 Medusamon, BT21-029 Medusamon, EX11-012 Medusamon, P-189 Dimetromon, plus DNA Omnimon, Rocks, and Dark Masters card lists from the original entry.
+- **Effect text:** "`<Progress>` (While attacking, your opponent's effects don't affect this Digimon.)"
+- **Resolution:** Closed by Group 6 for the core Progress/opponent-effect mutation contract. `Keyword::Progress` is parsed as a combat keyword, and opponent-effect mutation gates cover delete, DP changes, suspend/unsuspend, attack restrictions, security-attack changes, return-to-hand, return-to-deck, and de-digivolve while preserving own effects, battle, costs, and rule cleanup. Track G Phase F (2026-05-10) backfilled inherited Progress test coverage. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- source_scoped_immunity --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_phase_f -- progress`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: `<Armor Purge>` keyword (leave-field replacement variant) — RESOLVED 2026-05-15 (Phase D 2026-04-25; Track B 2026-05-08)
+
+- **Severity:** ✅ RESOLVED (2026-04-25)
+- **Discovered in:** Medusamon (2026-04-17)
+- **Card(s):** BT24-018 Styracomon, P-137 Flamedramon
+- **Effect text:** "`<Armor Purge>` (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)"
+- **Resolution:** Phase D `ctx.armor_purge_top(perm)` primitive landed (commit f08d5eca, fires `OnDigivolutionCardTrashed`); `Keyword::ArmorPurge` auto-install wired in `keyword_to_auto_effect` (commit e07031d5); docstring updated (56e48afc). Gate: `card_sources.len() >= 2`; no player selection — top-swap is forced. Track B update 2026-05-08: Royal Knights Armor Purge consumers authored/tested through the replacement framework. `BT23-054` and `BT21-037` expose the optional accept/decline prompt, trash the top source on accept, and only cancel the pending deletion that was paid for.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: `<Barrier>` keyword (battle-only leave-field replacement with security-trash cost) — RESOLVED 2026-05-15 (Track B 2026-05-08)
+
+- **Severity:** ✅ RESOLVED / TRACK B VERIFIED
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** P-194 Aegiomon (face + inherited), BT24-034 Aegiomon (face + inherited), BT24-035 Gatomon (inherited), BT24-062 MasterBlimpmon (face), P-165 ShoeShoemon (inherited), BT24-039 Piximon (face), BT24-033 Salamon (inherited), EX11-019 Shoemon (inherited), BT24-024 Submarimon (face)
+- **Effect text:** "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion.)"
+- **Resolution:** `Keyword::Barrier` now installs a battle-deletion-only optional replacement, pays by trashing the top card of the controller's security stack, and declines or no-security cases let the original deletion proceed. Printed inherited Barrier is synthesized through `Game::effects_for_card`, so buried-source Barrier keeps source attribution while protecting the carrier. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- printed_barrier_keyword` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_019_inherited_barrier`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED at entry level; relocated here.
+
+## Engine Gap: `<Collision>` keyword (attack-scoped opposing Blocker aura + must-block enforcement) — RESOLVED 2026-05-15 (Group 6 Task 4)
+
+- **Severity:** ✅ RESOLVED for core printed/granted Collision mask + decode enforcement
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT24-063 Locomon (face + inherited)
+- **Effect text:** "＜Collision＞ (During this Digimon's attack, all of your opponent's Digimon gain ＜Blocker＞, and must block if possible.)"
+- **Resolution:** `Keyword::Collision` is available through native printed parsing and `Game::has_keyword` consumers. The block interrupt mask removes `SEL_REPLACEMENT_PASS` only while a legal blocker exists, and decode rejects block-decline while Collision makes blocking mandatory. Granted Collision shares the same keyword read path as printed Collision. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords collision_mandatory piercing_security reboot_unsuspend --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords --nocapture`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED at entry level; relocated here.
+
+## Engine Gap: `Keyword::Decoy` color-filter parameter + replacement-framework wiring — RESOLVED 2026-05-15 (Phase D + Track G PR #457)
+
+- **Severity:** ✅ RESOLVED (2026-04-25)
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** ST12-12 Sistermon Blanc
+- **Effect text:** "this Digimon gains ＜Decoy (Red/Black)＞ (When your other Red or Black Digimon would be deleted by an opponent's effect, you may delete this Digimon to prevent 1 of those Digimon's deletion.)"
+- **Resolution:** Phase D `Keyword::Decoy` auto-install wired in `keyword_to_auto_effect` (commit 3a6b70a5). Track G (PR #457, 2026-05-10) added color-filter parameter — `Keyword::Decoy(u8)` in `enums.rs:416` with color bitmask. Parser at `card_data.rs::decoy_color_mask_from_paren`. Auto-install at `cards/keyword_effects.rs::keyword_to_auto_effect`. Track B 2026-05-08: `ST12-12` encodes Decoy (Red/Black) as an explicit replacement clause with a red/black subject predicate and the delete-self cost. Trait-filter remainder documented as a separate per-card override pattern, not an engine gap.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED for color filter; trait-filter is per-card override pattern.
+
+## Engine Gap: Trash all digivolution cards of a permanent (unbounded stack-peel) — RESOLVED 2026-05-15 (2026-05-03)
+
+- **Severity:** 🔴 BLOCKING (closed)
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT24-040 Venusmon
+- **Effect text:** "Trash all digivolution cards of 1 of your opponent's Digimon."
+- **Resolution:** `EffectContext::trash_all_sources` at `effect_context/mod.rs:3211`. DSL `trash_all_sources` lowers (dsl_cards/step/permanent_mutations.rs:143). Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- source_stack_aggregates --nocapture` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_040 --nocapture`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, entry footer says "slice is implemented and verified for BT24-040"; relocated here.
+
+## Engine Gap: `<Reboot>` keyword enforcement in opponent's unsuspend phase — RESOLVED 2026-05-15 (Group 6 Task 4)
+
+- **Severity:** ✅ RESOLVED for core Reboot unsuspend enforcement
+- **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** BT24-058 Blimpmon (inherited `<Reboot>`) — Dark Masters adds: BT15-062 Gigadramon, EX10-010 BlackWarGreymon, BT16-046 GranKuwagamon, BT21-051 Puppetmon
+- **Effect text:** "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)"
+- **Resolution:** Printed Reboot parsing and opponent-unsuspend-phase enforcement route through `Game::has_keyword`. A suspended Reboot Digimon unsuspends during the opponent's unsuspend phase, once for that phase. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords collision_mandatory piercing_security reboot_unsuspend --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords --nocapture`. Reboot-suppression variants such as "can't unsuspend during your opponent's next unsuspend phase" remain separate card/effect behavior.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: Fixed attack target — `CannotBeRedirectedAsAttackTarget` / `CannotSwitchAttackTarget` modifiers — RESOLVED 2026-05-15 (Track C + Track D 2026-05-06/07)
+
+- **Severity:** ✅ RESOLVED across Block, Raid, and the unified substitution API (2026-05-07)
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT24-062 MasterBlimpmon (inherited "[Your Turn] This Digimon's attack target can't change.")
+- **Effect text:** "[Your Turn] This Digimon's attack target can't change."
+- **Resolution:** Track C taxonomy publishes the target/attacker lock modifiers (2026-05-06) and Track D wires the consult sites (2026-05-07). `CannotSwitchAttackTarget` early-returns from `try_enter_block`, `try_enter_raid_retarget`, and `apply_attack_target_substitution`. `CannotBeRedirectedAsAttackTarget` filtered from Block / Raid retarget candidates and rejected by substitution API. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat track_c_modifiers --nocapture` (8 tests covering Block + Raid + player-target paths).
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED at entry level; relocated here.
+
+## Engine Gap: Raid target-switch interrupt (scripting-surface, not mask-only) + effect-driven attack redirect — RESOLVED 2026-05-15 (Track D 2026-05-08)
+
+- **Severity:** ✅ RESOLVED for core Raid / redirect attack-flow surfaces
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** BT24-017 Medusamon, BT24-011 Cyclonemon, EX11-012 Medusamon, P-137 Flamedramon, BT21-025 Lamiamon plus DNA Omnimon, Rocks, and Dark Masters card lists from the original entry.
+- **Effect text:** "`<Raid>` (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)"
+- **Resolution:** Core Raid is now a printed mid-attack interrupt. Non-Vortex attacks transition `Declared -> RaidOpen -> AllianceOpen`, and `RaidOpen` installs an optional `PendingSelection` for the attacker's controller when an opponent has unsuspended Digimon tied for highest DP. PASS keeps the declared target, selecting a target rewrites `effective_target`, and successful switches fire `OnAttackTargetChange` with `reason = Raid`. The post-Block invalid-target rider routes through `Game::validate_attack_redirect_target`. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- raid_retarget`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED at entry level; relocated here.
+
+## Engine Gap: `<Delay>` keyword + placement-turn gating for Option cards — RESOLVED 2026-05-15 (Group 5 2026-05-02)
+
+- **Severity:** ✅ RESOLVED (Group 5, 2026-05-02)
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** P-103 Offense Training, LM-027 Red Scramble, BT24-089 Unique Emblem, P-035 Red Memory Boost!, BT21-093 Raging Serpentine, P-206 Digital Gate Open, plus DNA Omnimon, Rocks, and Dark Masters card lists from the original entry.
+- **Effect text:** "`<Delay>` (By trashing this card after the placing turn, activate the effect below.)"
+- **Resolution:** Group 5 closes the reusable Delay lifecycle: delayed Options persist on the battle area, are gated by placement turn, fire at end/start/event windows, trash themselves through the replacement-aware cost path, resume after nested pending selections, and preserve outer scan/drain state. BT17-097 Return to the Primogenitor's Delay-as-replacement prevention is owned by the Group 3 Task 5 handoff (`docs/superpowers/plans/2026-04-30-gap-group-3-task-5-delay-replacement.md`). Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay link`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_option_placed`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: Scheduled end-of-turn effect queue (for transient Options) — RESOLVED 2026-05-15 (Group 5 Task 7)
+
+- **Severity:** ✅ RESOLVED
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Dark Masters (2026-04-18)
+- **Card(s):** BT1-090 Gravity Crush — Dark Masters adds: EX10-012 / EX10-020 / EX10-035 / EX10-057 / EX10-061
+- **Effect text:** "[Main] Gain 2 memory. At end of turn, lose 2 memory."
+- **Resolution:** `EffectContext::schedule_delayed_with_runtime` captures the source card, source permanent, source kind, controller, bindings, schedule turn, and runtime; `Game::fire_end_of_your_turn` drains `EndOfYourTurn` and `EndOfYourNextTurn` scheduled entries after printed observers, so Standard Options can schedule replay bodies that still run after the Option has been trashed. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- transient_option_scheduled_end_of_turn_effect_replays_with_option_source`. Provenance-anchored "delete the Digimon this effect played" cleanup remains tracked separately.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: Effect re-firing / cross-timing self-trigger — RESOLVED 2026-05-15 (Task 9 2026-05-03; Track K 2026-05-10)
+
+- **Severity:** ✅ RESOLVED (Task 9, 2026-05-03)
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Dark Masters (2026-04-18)
+- **Card(s):** EX8-074 MedievalGallantmon
+- **Effect text:** "[All Turns] [Once Per Turn] When Digimon are played, you may activate 1 of this Digimon's [When Digivolving] effects."
+- **Resolution:** `EffectContext::refire_effect_from_permanent(source, "when_digivolving")` enumerates safe refireable effects on the selected permanent, queues the exact effect slot through the normal `QueuedEffect` path, preserves `source_card` / `source_permanent` identity, and reuses existing once-per-turn accounting. DSL authors can use `refire_effect: { source: <binding>, timing: when_digivolving, optional: true|false }`. `BT22-040` and `BT22-042` provide self-refire fixtures combining deleted-object payload predicates with the refire primitive. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- effect_refiring --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- effect_refiring --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_040 --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_042 --nocapture`. BT15-102-style foreign-card `[On Play]` activation is still tracked separately under "Cross-card effect re-firing — activate a foreign card's [On Play] effect attributed to the source".
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: Effect-initiated digivolve from non-hand source zones — RESOLVED 2026-05-15 (Group 4 2026-05-02)
+
+- **Severity:** ✅ RESOLVED (Group 4, 2026-05-02)
+- **Discovered in:** Chaos Control (2026-04-28); TS Olympos (2026-04-18)
+- **Card(s):** EX11-005 Yaamon, EX11-069 Yuuki, BT21-100 The Digimon I Designed, BT24-080 Megidramon; security-stack variant previously surfaced by BT14-033 Patamon.
+- **Effect text:** "This Digimon may digivolve into a [Dark Dragon] or [Evil Dragon] trait Digimon card in the trash..."
+- **Resolution:** `CardSourceRef` now supports hand, trash, deck top, security, material-stack, and reveal sources; `Game::effect_initiated_digivolve_from_source` removes/restores the selected card without hand transit, pays the effect cost, and fires the normal digivolve observers. The DSL keeps legacy `from_hand` and adds source-parametric `source`. Regression coverage: `effect_digivolve_from_zones::{effect_digivolve_from_trash_moves_exact_card_to_target_top,effect_digivolve_from_security_moves_selected_card_and_preserves_neighbors,effect_digivolve_from_material_moves_exact_source_out_of_stack,failed_effect_digivolve_restores_source_zone}` and `dsl::group4_zone_movement_effect_digivolve_step_uses_card_binding_live_source`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: Force-follow-up-attack / "may attack without suspending" script helpers — RESOLVED 2026-05-15 (2026-05-08)
+
+- **Severity:** 🟡 PARTIAL (closed; persistent variants tracked under player-scoped-modifier registry)
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18)
+- **Card(s):** BT21-081 Owen Dreadnought, BT24-082 Owen Dreadnought, BT20-016 Paildramon, BT20-102 Omnimon (X Antibody), BT21-072 Arresterdramon: Superior Mode, EX9-013 BlitzGreymon, BT24-037 Silphymon, plus DNA Omnimon and Rocks card lists from the original entry.
+- **Effect text:** Variants of "it may attack" / "attack without suspending" immediately following another effect.
+- **Resolution:** Immediate in-effect attack prompts are implemented via `EffectContext::may_attack_now(...)` / `may_attack_now_optional(...)` and DSL `may_attack_now`. `EffectContext::force_opponent_attack(...)` and DSL `force_attack` install a mandatory prompt. `AttackOpen.cost_upgrade` plus DSL `cost_upgrade` apply printed attack-only DP/security riders. DSL predicate `binding_owner: { binding, of }` lets continuations test the controller of a previously selected permanent. Card-shaped coverage for BT20-102, BT21-072, BT24-082, BT20-016, BT21-081, EX9-013, AD1-009, BT22-015, BT24-037, and BT24-047. Persistent player-scoped grants such as `MayAttackPlayerOnly` are covered by the player-scoped modifier / granted-triggered-ability entries.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, the prose explicitly says "no separate core combat primitive remains open for Raid target switching or effect-driven redirects" — the persistent variants are owned by the player-scoped-modifier entry. Relocated here.
+
+## Engine Gap: Granted triggered ability — attach an `Effect` to another permanent — RESOLVED 2026-05-15 (PR #467 Track H)
+
+- **Severity:** 🟡 PARTIAL (closed for substrate)
+- **Discovered in:** DNA Omnimon (2026-04-17); Rocks (2026-04-18)
+- **Card(s):** EX1-068 Ice Wall! ("All of your opponent's Digimon gain \"[When Attacking] lose 2 memory\" until the end of their next turn.") — Rocks adds: EX10-034 Blastmon; BT21-095 Wind Guardians.
+- **Effect text:** As above.
+- **Resolution:** Full Track H closure (2026-05-10, PR #467). `EffectContext::grant_triggered_effect(carrier, timing, expiry, body)` registers a closure-bodied granted effect on the carrier's `ModifierRegistry` slot. `Game::fire_granted_triggered_effects(handle, timing)` iterates and runs each body inline. Cleanup: `clear_permanent` evicts on carrier-leave; `expire_end_of_turn` evicts on turn-bound expiry. Multi-timing dispatch wired centrally via `pending_granted_fires`. `Expiry::EndOfOpponentsNextTurn`/`EndOfYourNextTurn` + `pending_skips` for mid-opp-turn installs. Queue-based granted-body dispatch with selection support via `QueuedEffect.granted_effect_id`. Typed `AuraScope`/`AuraGrant`/`AuraBuilder` API in `code/digimon-engine/src/aura.rs`. DSL `grant_triggered_effect` step lowers. EX1-068 Ice Wall! ships as raw_rust *and* DSL fixture. Dead-body registry cleanup on carrier leave is a memory-overhead nit (~16 bytes/granted body), not a behavioral bug.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, both YAML and raw_rust authoring paths now have full typed surfaces; the residual is small polish. Track H (PR #467) cited as the closing PR.
+
+## Engine Gap: Named-target declarative aura (DP / keyword grants filtered by name/trait/level) — RESOLVED 2026-05-15 (Group 6 + Track H §9)
+
+- **Severity:** 🟡 PARTIAL (closed for tick-driven path)
+- **Discovered in:** DNA Omnimon (2026-04-17); Dark Masters (2026-04-18)
+- **Card(s):** BT22-084 Nokia Shiramine, BT5-093 Tai Kamiya & Matt Ishida, ST21-13 Matt Ishida & T.K. Takaishi — Dark Masters adds: EX10-061 Apocalymon, EX2-046 ADR-02 Searcher.
+- **Effect text:** "[All Turns] All your Digimon with [Greymon], [Garurumon] or [Omnimon] in their names get +1000 DP." etc.
+- **Resolution:** Group 6 + Track H §9 (2026-05-10) closure. `kind: aura` scans matching battle-area permanents and installs `dp_modifier`, `grant_keyword`, and named permanent `modifier` entries. Card-shaped fixtures landed under `code/digimon-engine/tests/dsl/group6_auras.rs` for Holy +1000 DP filter aura, cross-side opponent -2000 DP, and named-target keyword aura "Royal Knight gain Rush" via `name_contains`. Tick refresh does not duplicate materialized modifiers, and source-leave refresh removes stale materialized modifiers. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- group6_auras --nocapture`. Query-time aura recomputation remains the more faithful long-term shape and is tracked as a separate ergonomics gap.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, the tick-driven path is closed end-to-end; relocated here.
+
+## Engine Gap: Declarative aura sourced from security zone — RESOLVED 2026-05-15 (Track H §5 PR #467)
+
+- **Severity:** 🟡 PARTIAL (closed for consult-via-modifier-registry path)
+- **Discovered in:** DNA Omnimon (2026-04-17); Dark Masters (2026-04-18)
+- **Card(s):** ST20-15 Island of Adventure, BT21-095 Wind Guardians
+- **Effect text:** "[Security] [All Turns] All of your level 3 or higher Digimon get +2000 DP."
+- **Resolution:** Track H §5 (2026-05-10) wired `tick_declarative_effects` to iterate face-up security cards. `kind: aura, scope: security` body shipped. ST20-15 / BT21-095 representative slices proven. DP modifiers, keyword grants, security-attack grants, and named-modifier grants all flow through the same path. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- security_zone_aura`. Tensor/mask pre-compute from `SecuritySource` remains a separate ergonomics follow-up.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, the consult-via-modifier-registry path is closed; remaining tensor scaffolding is a separate "Aura tensor pre-compute" follow-up. Track H (PR #467) cited as the closing PR.
+
+## Engine Gap: `EndOfOpponentsTurn` effect timing not dispatched — RESOLVED 2026-05-15 (Phase 1 PR #449)
+
+- **Severity:** 🔴 BLOCKING (closed)
+- **Discovered in:** Dark Masters (2026-04-18)
+- **Card(s):** BT15-066 Machinedramon, BT15-079 Piedmon, BT9-112 DeathXmon, BT15-031 MetalSeadramon
+- **Effect text:** "[End of Opponent's Turn] Delete this Digimon. Then, you may play 1 Digimon card with the [Dark Masters] trait..."
+- **Resolution:** Fire site wired in `digimon-engine` — see `fire_end_of_opponents_turn()` called in `rotate_turn_player()` (between EndOfYourTurn drain and turn advance). Dispatches to the non-ending player's battle area. Builder: `Effect::end_of_opponents_turn(card)` in `code/digimon-engine/src/effect.rs`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, the 🔴 header was contradicted by its own closure footer; relocated here.
+
+## Engine Gap: Inherited triggered-effect dispatch: `enqueue_from_permanent` must walk digivolution stack — RESOLVED 2026-05-15 (2026-05-06)
+
+- **Severity:** 🟢 CLOSED for battle-area stack dispatch
+- **Discovered in:** Dark Masters (2026-04-18)
+- **Card(s):** BT3-006 DemiMeramon, BT24-001 Gigimon, BT16-006 Cupimon, BT15-006 DemiMeramon, BT17-001 Gigimon, BT14-001 Koromon
+- **Effect text:** "Inherited Effect [On Deletion] <Draw 1>. Then, trash 1 card in your hand." etc.
+- **Resolution:** `enqueue_from_permanent` walks the stack with the top-card vs inherited-source discriminator, preserving the under-card `source_card` while the carrier permanent remains the event host. BT24-001 proves the stack path end-to-end: inherited `OnOpponentSecurityRemoved` fires from the carrier, exposes an optional delete selection, deletes after acceptance, declines cleanly, and enforces same-turn OPT lockout. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt24_001`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already 🟢 closed; relocated here.
+
+## Engine Gap: `CannotAttackPlayer` modifier enforcement (mask + combat) — RESOLVED 2026-05-15 (Track D 2026-05-08)
+
+- **Severity:** ✅ RESOLVED for mask + shared combat entry enforcement
+- **Discovered in:** Dark Masters (2026-04-18)
+- **Card(s):** BT9-103 Kongou, EX2-046 ADR-02 Searcher
+- **Effect text:** "until the end of your opponent's turn, your opponent's Digimon with play costs of 7 or less can't attack players"
+- **Resolution:** `action/mask.rs` hides direct-player attack bits for attackers carrying `CannotAttackPlayer`, including effect-created attack masks that reuse the attack target ranges. `combat::begin_attack_open` also rejects forced player targets under the same modifier before paying suspend cost or opening `PendingAttack`. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- cannot_attack_player_blocks_mask_and_shared_attack_entry`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: Cross-permanent count-capped multi-select (single-source and up-to-N across own stacks) — RESOLVED 2026-05-15 (Group 2 2026-04-29)
+
+- **Severity:** ✅ RESOLVED
+- **Discovered in:** Rocks (2026-04-18)
+- **Card(s):** EX10-032 Proganomon, EX10-028 Landramon, EX8-070 Zofr Kabus, EX10-036 Magneticdramon, EX11-044 Pyramidimon, EX10-033 Pyramidimon, EX8-055 Pyramidimon
+- **Effect text:** "By trashing any 1 [Mineral] or [Rock] trait card from your Digimon's digivolution cards, …"
+- **Resolution:** Cross-permanent source selection now reuses the existing source action range (`2000..2167`) through `encode_source_select` and `SelectionKind::SourceMulti`. `EffectContext::select_own_sources` installs a stable `SourceSelectionRef` list, exact-N selections complete automatically, up-to-N selections expose PASS only after the minimum, and DSL `select_own_sources` / `trash_selected_sources` binds and consumes source refs. Covered by `source_multi::exact_two_sources_can_be_selected_across_own_battle_area`, `source_multi::up_to_sources_enables_pass_only_after_minimum_is_met`, `source_multi_mask_only_exposes_selecting_players_pending_actions`, `select_own_sources_binds_source_refs_for_trashing`, and `empty_select_own_sources_runs_outer_tail_synchronously`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: `.pay_cost()` builder hook for triggered non-cost-reduction effects — RESOLVED 2026-05-15 (Group 3)
+
+- **Severity:** ✅ RESOLVED (Group 3)
+- **Discovered in:** Rocks (2026-04-18)
+- **Card(s):** EX8-067 Close, P-169 Close, EX11-065 Close, EX10-063 Close, BT8-094 Digimon Emperor, P-130 Lui Ohwada, BT23-059 Justimon: Blitz Arm, BT4-072 Gogmamon, EX10-003 Tumblemon
+- **Effect text:** Triggered ability bodies paying a cost before running their reward, where the cost is not a cost-reduction on play/digivolve.
+- **Resolution:** Triggered effect costs may install pending selections and resume process only after cost payment; optional cost decline skips process without hidden auto-selection. Regression coverage: `code/digimon-engine/tests/cost_hooks/pay_cost_selection.rs`; `code/digimon-engine/tests/replacements/attack_cancel.rs`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: Source-scoped return-immunity modifiers (`CannotBeReturnedToHand` / `CannotBeReturnedToDeck` / `CannotBeDeDigivolved` by-opponent-effects-only) — RESOLVED 2026-05-15
+
+- **Severity:** ✅ RESOLVED for covered Rust consumers
+- **Discovered in:** Rocks (2026-04-18)
+- **Card(s):** EX8-070 Zofr Kabus, P-215 Icemon, BT18-064 Mercurymon
+- **Effect text:** "opponent's effects can't return it to hands or decks" etc.
+- **Resolution:** Implemented for production `EffectContext::return_to_hand`, `EffectContext::return_to_deck`, and `EffectContext::de_digivolve` fire-sites, including card effects resolving during security checks. Queued card effects supply `effect_source_player`, so default passive cause filters block opponent effects and allow own effects; security battle/rule cleanup without a resolving effect remains `SecurityCheck`. `EffectContext::grant_zone_return_immunity_to_opponent_effects` installs the narrow three-modifier bundle without broad `CannotBeAffected` substitution. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- source_scoped_immunity --nocapture`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: Effect-driven attack cancellation (`ctx.end_pending_attack()`) — RESOLVED 2026-05-15 (Group 3 + Track D 2026-05-07/08)
+
+- **Severity:** ✅ RESOLVED (Group 3)
+- **Discovered in:** Rocks (2026-04-18)
+- **Card(s):** EX10-003 Tumblemon ("Inherited Effect [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks, by trashing 3 [Mineral] or [Rock] trait cards from this Digimon's digivolution cards, end that attack.")
+- **Effect text:** As above.
+- **Resolution:** Effects can end a pending attack after a printed cost resolves, using the same triggered pay-cost continuation path. `ctx.cancel_attack()` rejects cancellation once the Counter window has opened with `AttackError::InvalidPhase`. DSL `cancel_attack: {}` lowers to `ctx.cancel_pending_attack()`. EX10-003 has production YAML using `select_own_sources { from: source, filter: ... }`, `trash_selected_sources`, and `cancel_attack`. Regression coverage: `code/digimon-engine/tests/replacements/attack_cancel.rs`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- cancel_attack`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex10_003`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: DigiXros name alias (`treated as [X] for DigiXros`) — RESOLVED 2026-05-15 (Group 8 2026-05-02)
+
+- **Severity:** ✅ RESOLVED (Group 8, 2026-05-02)
+- **Discovered in:** Rocks (2026-04-18)
+- **Card(s):** BT21-021 OmniShoutmon ("This card is also treated as [Shoutmon] for DigiXros.")
+- **Effect text:** As above.
+- **Resolution:** Implemented as `CardData::digixros_aliases`, parsed from printed "also treated as [X] for DigiXros", "for a DigiXros", and prefix-scoped "When you would DigiXros, ... also treated as [X]" card text, including multiple bracketed aliases in one scoped phrase, and compiled DSL `digixros_aliases`. DigiXros material matching unions printed names with these aliases, while generic name predicates remain overlay-blind so the alias does not leak into unrelated name-sensitive effects. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- digixros`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dna_digivolve_user_action -- digixros_matching_accepts_scoped_alias_but_generic_name_checks_do_not`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: `<Fragment (N)>` keyword — leave-field replacement via N-source self-trash — RESOLVED 2026-05-15 (Phase D 2026-04-25)
+
+- **Severity:** ✅ RESOLVED (2026-04-25)
+- **Discovered in:** Rocks (2026-04-18)
+- **Card(s):** EX10-036 Magneticdramon, EX8-051 Proganomon, EX10-033 Pyramidimon, EX8-055 Pyramidimon, EX10-034 Blastmon, EX11-044 Pyramidimon
+- **Effect text:** "`<Fragment (N)>` (When this Digimon would be deleted, by trashing any N of its digivolution cards, it isn't deleted.)"
+- **Resolution:** Phase D `Keyword::Fragment(N)` auto-install wired in `keyword_to_auto_effect` (commit d4fd09a0 + fixup db47ca35). Uses `CountCappedZone::Material(perm)` (Task 0, commit 41b6eac2) and `ctx.trash_card_source` (Task 4 review fixup db47ca35). Gate: `card_sources.len() >= N+1`. Implementation reality: Fragment(N) is mandatory (no `.optional()` call), faithfully matching DCGO `Fragment.cs:38` `canNoSelect: () => false`. Save (5c072623), Fortitude (e57ae55e), Partition (5b18d355), and MaterialSave(N) (d353013a) also resolved in Phase D.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: `<Piercing>` combat-time security continuation after a winning battle — RESOLVED 2026-05-15 (Group 6 Task 4)
+
+- **Severity:** ✅ RESOLVED for core Piercing security continuation
+- **Discovered in:** Rocks (2026-04-18)
+- **Card(s):** EX10-032 Proganomon (grants `<Piercing>`), EX8-051 Proganomon (native `<Piercing>`), EX8-070 Zofr Kabus (grants `<Piercing>`)
+- **Effect text:** "`<Piercing>` (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)"
+- **Resolution:** Printed Piercing parsing and battle resolution route through `Game::has_keyword`. After a Digimon-vs-Digimon battle where the Piercing attacker deletes the opposing Digimon and survives, combat performs the normal security check continuation once. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords collision_mandatory piercing_security reboot_unsuspend --nocapture`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_parsing -- parses_group6_core_combat_keywords --nocapture`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: `ModifierType::GrantCollision` + `combat::try_enter_block` honoring granted Collision — RESOLVED 2026-05-15 (Group 6 Task 4)
+
+- **Severity:** ✅ RESOLVED for `grant_keyword`/`Game::has_keyword` consumers
+- **Discovered in:** Rocks (2026-04-18)
+- **Card(s):** EX10-032 Proganomon (grants `<Collision>`), EX8-070 Zofr Kabus (grants `<Collision>`), EX10-034 Blastmon (native `<Collision>`)
+- **Effect text:** "1 of your such Digimon gains `<Collision>`, `<Piercing>` and +3000 DP until your opponent's turn ends."
+- **Resolution:** `ctx.grant_keyword(target, Keyword::Collision, expiry)` stores a granted keyword, and `combat::try_enter_block` consumes `Game::has_keyword(attacker, Keyword::Collision)`, so native printed and granted sources share the same read path. No separate `ModifierType::GrantCollision` variant is required for this consumer; DSL declaratives should use keyword grants that lower through `Keyword::Collision`. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- group6_keywords collision_mandatory piercing_security reboot_unsuspend --nocapture`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: Ace Overflow: inherited memory penalty on zone-change from field / under-card — RESOLVED 2026-05-15 (Group 8 2026-05-02)
+
+- **Severity:** ✅ RESOLVED (Group 8, 2026-05-02)
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Dark Masters (2026-04-18)
+- **Card(s):** EX10-010 BlackWarGreymon, EX9-013 BlitzGreymon, BT17-018 Gallantmon: Crimson Mode, LM-021 Agumon – Bond of Bravery — DNA Omnimon adds: BT17-078 Omnimon, BT17-095 Miraculous Mega Knight, ST20-11 WarGreymon — Dark Masters adds: LM-043 Darkdramon, BT16-026 Vikemon, EX8-026 MetalSeadramon, EX10-074 Beelzemon, BT16-046 GranKuwagamon, BT21-051 Puppetmon, BT19-064 Justimon: Blitz Arm
+- **Effect text:** "Ace Overflow `<-N>` (As this card moves from the field or under a card to an area other than those, lose N memory.)"
+- **Resolution:** Implemented with `CardData::ace_overflow: Option<i32>` populated from raw card data and compiled DSL card data. The runtime applies the memory penalty when an ACE top card leaves a battle-area stack and when an ACE source leaves from under a stack through source-trash, return-to-hand, or return-to-deck paths. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test ace_overflow`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- dsl_ace_overflow_populates_runtime_card_data`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_018_ace_overflow_is_minus_5`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: Dynamic cost reduction at `BeforePayCost` (closure-valued + selection-gated + suspend/self-return as cost) — RESOLVED 2026-05-15 (Group 3)
+
+- **Severity:** ✅ RESOLVED (Group 3)
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** BT8-097 Crimson Blaze, BT9-112 DeathXmon, BT21-026 WarGreymon, EX8-074 MedievalGallantmon, plus DNA Omnimon, Rocks, and Dark Masters card lists from the original entry.
+- **Effect text:** "Reduce the memory cost of this card in your hand by 1 for each Digimon your opponent has in play." etc.
+- **Resolution:** Implemented for Group 3 cost/replacement coverage. Stacked optional would-play cost reducers can apply before memory is paid (including AD1-025 Omnimon with both `[Royal Knight]` and `[ADVENTURE]` reducers). Triggered pay costs can park pending selections before process execution, optional cost decline skips process without hidden auto-selection, and replacement cause/controller predicates participate before prevention choices are offered. Regression coverage: `code/digimon-engine/tests/cost_hooks/stacked_would_play_reducers.rs`; `code/digimon-engine/tests/cost_hooks/pay_cost_selection.rs`; `code/digimon-engine/tests/replacements/context_predicates.rs`; `code/digimon-engine/tests/replacements/partition.rs`; `code/digimon-engine/tests/option_flow/replacement_integration.rs::bt17_097_delay_prevents_deletion_and_digivolves_from_hand`; `code/digimon-engine/tests/replacements/attack_cancel.rs`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: `<Scapegoat>` keyword (leave-field replacement with "delete another own Digimon" cost) — RESOLVED 2026-05-15 (Track B 2026-05-08)
+
+- **Severity:** ✅ RESOLVED / TRACK B VERIFIED
+- **Discovered in:** Dark Masters (2026-04-18)
+- **Card(s):** LM-043 Darkdramon
+- **Effect text:** "<Scapegoat> (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, prevent that deletion.)"
+- **Resolution:** `Keyword::Scapegoat` is parsed, auto-installs an optional `WhenWouldBeDeleted` replacement, suppresses the outer accept prompt when no other own Digimon can be deleted, rejects own-effect deletion via `cause != OwnEffect`, and routes the delete-another-Digimon cost through `PendingSelection`. EX11 card fixtures also encode the exact replacement body where DSL keyword granting is still card-local. Verified by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- scape_goat` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_023_scapegoat`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: `<Evade>` printed semantics — suspend-and-cancel, NOT redirect-to-deck — RESOLVED 2026-05-15 (Track G PR #457)
+
+- **Severity:** ✅ RESOLVED
+- **Discovered in:** Track G keyword-library audit (2026-05-10)
+- **Card(s):** Every printed `<Evade>` Digimon (e.g. BT5-105 Beelzemon Blast Mode, BT11-098 Mervamon, P-067 Thomas H. Norstein)
+- **Effect text:** "When this Digimon would be deleted, you may suspend it to prevent that deletion."
+- **Resolution:** Auto-install now suspends the carrier (firing `OnSuspend` observers) and calls `rctx.cancel()` to cancel the deletion. Gate at candidate-collection time on `!is_suspended` — an already-suspended carrier cannot pay the cost (DCGO `CanActivatePermanentSuspendCostEffect`). Self-scope and re-check guards in the body match the Fragment / ArmorPurge precedents. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_phase_d -- evade` (6 passing) + `cargo test --manifest-path code/digimon-engine/Cargo.toml --test replacements -- evade printed_evade_keyword_suspends` (2 passing).
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: `<Progress>` card-shaped test backfill — RESOLVED 2026-05-15 (Track G PR #457)
+
+- **Severity:** ✅ RESOLVED — engine consult was already implemented; only test coverage was missing.
+- **Discovered in:** Track G keyword-library audit (2026-05-10)
+- **Card(s):** Every printed `<Progress>` Digimon (BT21-025 Lamiamon, BT24-018 Styracomon, BT24-017 Medusamon, etc.) plus modifier-granted forms.
+- **Resolution:** `code/digimon-engine/tests/keyword_phase_f/progress.rs` adds 9 card-shaped cases covering native printed Progress, modifier-granted Progress, inherited Progress at multiple stack positions, top-only card exclusion, `Expiry::EndOfTurn` modifier-granted Progress expiry, own-effect non-exclusion, dormant non-attacking carrier, and Tamer-source inherited Progress. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test keyword_phase_f -- progress` (9 passing).
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: Inherited Token/Puppet leave-prevention replacement dispatch — RESOLVED 2026-05-15 (Track B 2026-05-08)
+
+- **Severity:** 🟡 PARTIALLY RESOLVED (closed for named cards)
+- **Discovered in:** Puppets Batch 5 (2026-05-04)
+- **Card(s):** `EX9-032`, `BT22-036`, `EX11-022`; also related to `EX7-027` and `ST19-11`
+- **Effect text:** "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, prevent it from leaving."
+- **Resolution:** Shared replacement candidate collection now scans inherited source effects under the carrier, preserving buried source attribution and carrier subject identity. `BT22-036`, `EX11-022`, `EX9-032`, `EX7-027`, and `ST19-11` production YAML now expose the optional accept prompt plus Token/other-Puppet cost selection and pass focused behavioral coverage. Verified with `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_036_inherited_replacement`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_022_inherited_leave_prevention`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_032_inherited_prevents`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex7_027_inherited`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- st19_11_inherited`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, CLOSED for the named cards; relocated here.
+
+## Engine Gap: Effect-played permanent cleanup provenance — RESOLVED 2026-05-15 (Track A PR #451)
+
+- **Severity:** 🟢 ENGINE-DONE (Track A 2026-05-08), DSL/card-side authoring still pending
+- **Discovered in:** Puppets Batch 5 (2026-05-04)
+- **Card(s):** `EX11-022`, `EX11-061`, and other effect-played cleanup riders
+- **Effect text:** "At turn end, delete the Digimon this effect played."
+- **Resolution:** Provenance token system shipped at the engine layer: `ctx.play_from_hand_free_with_provenance`, `Game::provenance_token_for_card`, `Game::resolve_provenance_token`, `Game::delete_permanent_with_effects`. Lookup is by `CardHandle`, not by position, so it is robust to battle-area index shifts. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- provenance_tokens::effect_play_provenance_token_survives_field_shift_and_zone_move`. DSL verb authoring (`bind_played_provenance`, `delete_provenance_token`) remains as DSL-side follow-up.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, engine substrate ✅ DONE; relocated here. DSL/card-side authoring tracked separately in `qa/dsl-vocab-gaps.md`.
+
+## Engine Gap: Suspend-this-Tamer deletion observer with Overclock cause branch — RESOLVED 2026-05-15 (2026-05-06)
+
+- **Severity:** ✅ CLOSED
+- **Discovered in:** Puppets Batch 6 (2026-05-04)
+- **Card(s):** `EX11-060` Arisa Kinosaki
+- **Effect text:** "[All Turns] When any of your Tokens or [Puppet] trait Digimon are deleted, by suspending this Tamer, <Draw 1>. If this effect was activated by <Overclock>, you may play 1 level 4 or lower [Puppet] trait Digimon card from your hand without paying the cost."
+- **Resolution:** `EX11-060` is now authored with `when: on_any_deletion` over the deleted-object snapshot, an explicit activation choice before suspending Arisa, `<Draw 1>`, and an `event_cause: overclock` branch that exposes the optional level 4 or lower Puppet hand-play only for Overclock-caused deletions. Overclock cost deletion now preserves `ReplacementCause::Cost` for replacement windows while tagging the observer payload with `EventCause::Overclock`, and the Overclock attack resumes after any observer selections by re-finding the source card rather than trusting a stale battle-area slot. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex11_060`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- event_context`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ CLOSED; relocated here.
+
+## Engine Gap: Trash-resident observer with effect digivolve from trash — RESOLVED 2026-05-15 (2026-05-06)
+
+- **Severity:** ✅ CLOSED
+- **Discovered in:** Puppets Batch 8 (2026-05-04)
+- **Card(s):** `BT20-084` Sistermon Ciel (Awakened)
+- **Effect text:** "[Trash] [All Turns] When any of your Digimon are played, 1 of your [Sistermon Ciel]s may digivolve into this card without paying the cost."
+- **Resolution:** `EffectTiming::OnAllyPlayed` now dispatches from play emitters with `TriggerSource::EnteredField`, scanning the playing player's battle area and top-level trash observers exactly once. `Effect::on_ally_played` and DSL `when: on_ally_played` lower to that engine timing. The existing source-parametric effect-digivolve path can consume a trash `CardSource`; its DSL `ignore_requirements` path now allows name-filtered alt-path effects such as BT20-084. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- trash_resident_on_ally_played_observer_sees_played_subject_once`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_084`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ CLOSED; relocated here.
+
+## Engine Gap: Effect-driven play of a Digimon from hand to an empty breeding-area slot (without paying cost) — RESOLVED 2026-05-15 (Group 4)
+
+- **Severity:** 🔴 BLOCKING (closed)
+- **Discovered in:** Dark Masters (2026-04-18)
+- **Card(s):** BT15-062 Gigadramon, BT15-077 LadyDevimon, BT15-027 Scorpiomon, BT15-050 Cherrymon
+- **Effect text:** "By deleting 1 of your Digimon, you may play 1 Digimon card with the [Dark Masters] trait from your hand to an empty space in your breeding area without paying the cost."
+- **Resolution:** `play_to_breeding_from_hand` exists (mod.rs:2840) — Group 4 added it. The real breeding slot is used, source stacks stay intact, and movement observers fire. Covered by `breeding_zone_movement::play_to_breeding_from_hand_uses_real_breeding_slot_and_rejects_occupied_slot`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, CLOSED but tracker was stale; relocated here.
+
+## Engine Gap: `ModifierType::CannotAddSecurityByEffect` (player-scoped opponent-security-placement block) — RESOLVED 2026-05-15 (Track C/D 2026-05-08)
+
+- **Severity:** 🔴 BLOCKING (closed)
+- **Discovered in:** Rocks (2026-04-18)
+- **Card(s):** BT9-103 Kongou
+- **Effect text:** "cards can't be added to security stacks by your opponent's effects"
+- **Resolution:** `CannotAddSecurityByEffect` in `enums.rs:612`; `CannotAddSecurity` (player-scoped variant) at enums.rs:654. Consult sites wired (Track C/D 2026-05-08 — `EffectContext::place_on_security` checks `CannotAddSecurityByEffect` then `CannotAddSecurity`).
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, CLOSED; relocated here.
+
+## Engine Gap: Search-own-security-stack primitive (reveal full stack + select by filter) — RESOLVED 2026-05-15 (Track E 2026-05-09)
+
+- **Severity:** 🔴 BLOCKING (closed)
+- **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** BT14-033 Patamon — Dark Masters adds: P-216 WaruMonzaemon
+- **Effect text:** "Search your security stack."
+- **Resolution:** `search_own_security_stack` at `effect_context/selections.rs:1241`. DSL verb landed Track E 2026-05-09.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, CLOSED; relocated here.
+
+## Engine Gap: Effect-initiated digivolve from security stack (free, trait-filtered) — RESOLVED 2026-05-15 (Group 4)
+
+- **Severity:** 🔴 BLOCKING (closed)
+- **Discovered in:** TS Olympos (2026-04-18)
+- **Card(s):** BT14-033 Patamon
+- **Effect text:** "This Digimon may digivolve into a yellow Digimon card with the [Vaccine] trait among them [= searched security stack] without paying the cost."
+- **Resolution:** `effect_initiated_digivolve_from_source` (mod.rs:3437) accepts security source per the "Effect-initiated digivolve from non-hand source zones" closure (Group 4).
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, CLOSED; relocated here.
+
+## Engine Gap: In-effect branch-choice selector (`select_effect_choice` / "choose one of N effects") — RESOLVED 2026-05-15
+
+- **Severity:** 🔴 BLOCKING (closed)
+- **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** P-195 Inori Misono, EX4-051 BlitzGreymon
+- **Effect text:** "[On Play] Activate 1 of the effects below..."
+- **Resolution:** `select_effect_choice` at `effect_context/selections.rs:602`. `SelectionKind::EffectChoice` in `selection.rs:112`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, CLOSED; relocated here.
+
+## Engine Gap: Counter window + `<Blast Digivolve>` activation flow ([Hand][Counter] play path) — RESOLVED 2026-05-15 (Track D 2026-05-08)
+
+- **Severity:** 🟡 PARTIALLY CLOSED for engine substrate
+- **Discovered in:** Dark Masters (2026-04-18); DNA Omnimon (2026-04-28)
+- **Card(s):** EX10-010 BlackWarGreymon, BT16-026 Vikemon, EX8-026 MetalSeadramon, LM-043 Darkdramon, EX10-074 Beelzemon, BT16-046 GranKuwagamon, BT21-051 Puppetmon, BT19-064 Justimon: Blitz Arm, BT17-078 Omnimon, EX6-011 RagnaLoardmon, BT20-045 Examon, BT20-060 Alphamon: Ouryuken.
+- **Effect text:** "[Hand] [Counter] <Blast Digivolve>" / "[Hand] [Counter] Blast DNA Digivolve ([WarGreymon] + [MetalGarurumon])"
+- **Resolution:** Resolved for the reusable Track D Counter / Blast DNA selection machinery. CounterTiming is now an attack interrupt window for defender hand/field Counter candidates. The Counter window is live for single-base Blast Digivolve, hand Counter Options, field Counter abilities, and Blast DNA cards whose printed route uses one defender field Digimon plus one named hand material. DSL `kind: blast_dna_digivolve` ships. Native printed `Keyword::BlastDigivolve` auto-installs the Counter marker. Card-specific printed bodies after the Blast DNA evolution resolves remain as card-shaped follow-ups, not Counter-window substrate gaps. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- counter native_blast_digivolve_keyword_installs_counter_candidate`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, CLOSED for engine substrate; relocated here. Generic `ctx.prompt_blast_digivolve(...)` / `ctx.prompt_blast_dna_digivolve(...)` raw_rust helpers are tracked as a small ergonomic follow-up.
+
+## Engine Gap: OnDeletion cause discriminator ("if deleted by an effect" / "by battle" / "by your own effects") — RESOLVED 2026-05-15 (Phase B 2026-04-24)
+
+- **Severity:** ✅ RESOLVED (2026-04-24)
+- **Discovered in:** Dark Masters (2026-04-18)
+- **Card(s):** BT17-068 Mephistomon
+- **Effect text:** "[On Deletion] If deleted by an effect, you may play 1 [Gulfmon] or 1 level 6 Digimon with the [Dark Masters] trait from your hand or trash without paying the cost."
+- **Resolution:** `EffectContext::deletion_cause() -> Option<ReplacementCause>` / `was_deleted_by_effect() -> bool` / `was_deleted_by_opponent() -> bool` landed in Phase B (commit 17b9875b). `Game::current_deletion_cause` is populated by the deletion fire-site (commit cf400d4f) and read on the `OnDeletion` `EffectContext` so `.condition` closures can branch on cause without installing a replacement effect.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, already ✅ RESOLVED; relocated here.
+
+## Engine Gap: Permanent-scoped modifier to suppress effect activation by timing — RESOLVED 2026-05-15 (Track C 2026-05-06)
+
+- **Severity:** 🔴 BLOCKING (closed)
+- **Discovered in:** TS Olympos (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** BT10-042 Venusmon, BT24-040 Venusmon, BT19-093 Queen Device
+- **Effect text:** "can't activate [When Attacking] and [When Digivolving] effects" / "can't suspend or activate [When Digivolving] effects"
+- **Resolution:** `ModifierType::DisableEffect` in `enums.rs:684`; `disable_effect_timing` on `ModifierEntry`; `permanent_activation_blocked_for_timing` consult site (Track C 2026-05-06). Mirrors DCGO `DisableEffectClass.cs`. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test modifier_disable_effect --nocapture`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, CLOSED; relocated here.
+
+## Engine Gap: `<Digi-Burst N>` keyword — RESOLVED 2026-05-15 (Track G PR #457)
+
+- **Severity:** 🟡 PARTIAL — closed by design as intentional no-auto-install (printed keyword token is a cost prefix only)
+- **Discovered in:** Rocks (2026-04-18)
+- **Card(s):** BT4-072 Gogmamon (`<Digi-Burst 1>`)
+- **Effect text:** "`<Digi-Burst N>` (You may trash N of this Digimon's digivolution cards to activate the effect below.)"
+- **Resolution:** DSL `digi_burst: { count: N, then: [...] }` shipped; `Keyword::DigiBurst(N)` parsed from card text. Native `keyword_to_auto_effect` install for `Keyword::DigiBurst(N)` is intentionally absent (Track G close 2026-05-10) — the printed keyword token is a cost prefix for a per-card `[Main]` body that can't be synthesized from the keyword alone, matching DCGO's per-card cost+body inlining. Cards from `cards.json` carrying printed `<Digi-Burst N>` without a DSL spec silently no-op, but `Keyword::DigiBurst(N)` is still produced for tensor / mask / filter predicates. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt4_072`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- digi_burst_two_selects_exact_self_sources_and_fires_source_trash_per_card`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, intentional-design closure rationale; relocated here.
+
+## Engine Gap: `OnAllyAttack` / `OnOpponentAttack` observer timing context — RESOLVED 2026-05-15 (2026-04-29 substrate; DSL predicate spin-off)
+
+- **Severity:** 🔴 BLOCKING (closed for engine substrate)
+- **Discovered in:** Dark Masters (2026-04-18)
+- **Card(s):** BT15-008 Muchomon
+- **Effect text:** "[Your Turn] [Once Per Turn] When one of your red Digimon attacks a player, <Draw 1>."
+- **Resolution:** Battle-area declared-attack observers dispatch from the real combat state machine. `OnAllyAttack` scans the attacker's controller battle area and excludes the attacking permanent; `OnOpponentAttack` scans the defending player's battle area before Alliance/Counter/Block windows. `EffectReadContext` / `EffectContext` expose `attack_attacker()` and `attack_target()` over the live pending attack. `PendingAttack::declaration_committed` separates optional pre-declaration replacement resumes from post-declaration observer resumes. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- declared_attack_fires_ally_and_opponent_observers_with_attack_context`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test combat -- on_ally_attack on_opponent_attack`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, CLOSED for engine substrate + payload accessors; attack-target-kind DSL predicate is a separate `qa/dsl-vocab-gaps.md` follow-up. Relocated here.
+
+## Engine Gap: `OnDigivolutionCardTrashed` observer timing — RESOLVED 2026-05-15 (Phase 1 PR #449; 2026-05-07 routing fan-out)
+
+- **Severity:** 🔴 BLOCKING (closed for substrate)
+- **Discovered in:** Rocks (2026-04-18)
+- **Card(s):** EX10-032 Proganomon, P-167 Landramon, EX8-047 Sunarizamon, EX8-048 Landramon, EX8-005 Tumblemon, BT21-055 Sunarizamon, EX8-051 Proganomon, EX10-025 Sunarizamon, EX10-028 Landramon, EX11-038 Sunarizamon, EX10-063 Close, P-169 Close, EX11-044 Pyramidimon, plus any future Rocks card whose inherited text starts with "When effects trash this card from a [Mineral]/[Rock] Digimon's digivolution cards"
+- **Effect text:** "When effects trash this card from a [Mineral] or [Rock] trait Digimon's digivolution cards, <payoff>." etc.
+- **Resolution:** Observer timing wired in `digimon-engine` — see `fire_on_digivolution_card_trashed()` in `code/digimon-engine/src/game_actions.rs`. Builder: `Effect::on_digivolution_card_trashed(card)` in `code/digimon-engine/src/effect.rs`. Fires in each player's battle area to notify Tamer observers. Payload carries the trashed card (`event_card` / `event_source_card`), host card/permanent snapshot, affected/source player, `EventCause`, and a moved-card set from battle area to trash. Return-to-deck source disposition, de-digivolve, Armor Purge, Fragment / `trash_card_source`, `trash_top_source`, and Mind Link below-top disposal all route through the same helper. Coverage: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- on_digivolution_card_trashed_return_to_deck_carries_host_and_trashed_source on_digivolution_card_trashed_de_digivolve_carries_host_and_trashed_source` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex8_051_inherited_source_trash_dedigivolves_after_host_return_to_deck`.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, substrate ✅ CLOSED; additional card-local source-trash producer fixtures are card test coverage, not engine work. Relocated here.
+
+## Engine Gap: Zone-manipulation play-from-hand / trash without paying cost (+ cost override) — RESOLVED 2026-05-15 (Phase 2 PR; Track A 2026-05-08)
+
+- **Severity:** 🔴 BLOCKING (closed for headline primitive; narrow sub-shape follow-ups spun off)
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** Many — see original entry; archetype-wide.
+- **Effect text:** "you may play 1 [X] from your hand without paying the cost" / "play 1 [X] from your trash without paying the cost" / "play 1 Tamer card … with the play cost reduced by 4"
+- **Resolution:** Phase 2 (2026-04-19) landed `EffectContext::play_from_hand_with_cost` (mod.rs:2453) + `play_from_trash_with_cost` (mod.rs:2717) covering free and cost-delta variants via `CostDelta::Reduce(printed_cost)` / `CostDelta::Reduce(delta)`. Track A (2026-05-08) added `play_from_hand_free_with_provenance` (mod.rs:2491). `OnPlay` is fired through the standard effect queue in both paths.
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, headline primitive ✅ RESOLVED; remaining sub-shape gaps `play_from_revealed_free` (EX8-050 Gogmamon) and `play_from_security_at(index)` (BT13-012 GeoGreymon, BT14-033 Patamon) are spun off as their own narrow entries in `docs/RUST_ENGINE_GAPS.md`.
+
+## Engine Gap: Zone-manipulation effect-initiated digivolve (free / reduced / with trait filter / ignore requirements / DNA / Blast / detect-DNA-origin) — RESOLVED 2026-05-15 (Phase 2; Track A/C 2026-05-08/09)
+
+- **Severity:** 🔴 BLOCKING (closed for headline primitive; narrow sub-shape spun off)
+- **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18); Dark Masters (2026-04-18)
+- **Card(s):** Many — see original entry.
+- **Effect text:** "1 of your Digimon may digivolve into a [X] trait Digimon card in the hand with the digivolution cost reduced by N" (and "without paying the cost" variants)
+- **Resolution:** Phase 2 landed `effect_initiated_digivolve` (mod.rs:3384), `_ignore_requirements` (mod.rs:3402), `_with_provenance` (mod.rs:3418), `_from_source` (mod.rs:3437), `_from_source_ignore_requirements` (mod.rs:3455), `effect_initiated_dna_digivolve` (mod.rs:3509), `_dna_digivolve_with_provenance` (mod.rs:3572). DNA-origin context bit in Track A. Blast DNA via `execute_blast_dna_digivolve` in combat.rs:1630. BeforePayCost cost reduction in modifier scan is wired (Track C deferred-payload wave, 2026-05-09).
+- **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, headline primitive ✅ RESOLVED; BT17-095-style "DNA digivolve with field+hand material pair" is spun off as its own narrow card-shape gap in `docs/RUST_ENGINE_GAPS.md` if it remains blocking after the existing helpers are tried.
+
+## DSL Gap: `AltPathSpec.condition` field for alt-digivolve activation gates — RESOLVED 2026-05-15 (Phase 1)
+
+- **Status:** Closed for the schema + Digivolve consumer route. First reported 2026-04-27 (BT24-016 batch-implement-cards-rust-dsl) as `G-ALT-PATH-CONDITION`.
+- **Discovered in:** BT24-016 Lamiamon — `[Hand] [Main] If you have [Owen Dreadnought], by placing 1 [Dimetromon] from your trash as any of your [Elizamon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements.` The "If you have [Owen Dreadnought]" gate could not be expressed on `AltPathSpec`, so the activated alt-path was available whenever the source filter (Elizamon on field) and the `extra_cost` (Dimetromon in trash) were satisfied, regardless of Owen presence.
+- **DSL surface:** `condition: Option<PredicateSpec>` on `AltPathSpec` in `code/digimon-dsl/src/alt_path.rs`. Compiles to `condition: Option<Box<CompiledPredicate>>` on `CompiledAltPath` in `code/digimon-dsl/src/compiled.rs` via `compile_alt_path` in `code/digimon-dsl/src/compile.rs`.
+- **Lowers to engine API:** Consumed in `code/digimon-engine/src/dna_digivolve.rs::find_matching_alt_path` after the source-filter check passes (Digivolve route). The condition predicate is evaluated with `PredicateSubject::Permanent(base_handle)`. Skipped (treated as pass) when `condition` is `None`.
+- **YAML shape:**
+  ```yaml
+  alt_paths:
+    - kind: activated_digivolve
+      condition:
+        all_of:
+          - exists: { of: you, zone: [battle_area], kind: tamer, name_contains: "Owen Dreadnought" }
+      from: { name_contains: "Elizamon" }
+      cost: 3
+      ignore_requirements: true
+      extra_cost: ...
+  ```
+- **Evidence:** `cargo test --manifest-path code/digimon-dsl/Cargo.toml` (parse round-trip); `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage` (variant-coverage lint).
+- **Card-side authoring follow-up:** BT24-016's YAML still leaves the Owen gate unenforced; populating `condition:` on the activated_digivolve path is card-local work, not substrate. Other alt-path routes (`DigiXros`, `BurstDigivolve`, `Assembly`, `AppFusion`, etc.) do not yet read the field — extend per-route as cards need them.

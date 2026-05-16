@@ -35,10 +35,15 @@
 //!   firing is not wired up; behavioral tests for clause 4 are `#[ignore]`.
 //! - **G-OPT-TRIGGERED**: OPT lockout enforcement on clause 3 not wired;
 //!   lockout tests are `#[ignore]`.
-//! - **G-ALT-PATH-CONDITION**: `AltPathSpec` has no `condition:` field;
-//!   the Owen-Dreadnought gate cannot be expressed in DSL. The
-//!   `activated_digivolve` path is available whenever an Elizamon and a
-//!   Dimetromon-in-trash are present, regardless of Owen presence.
+//!
+//! # Known card-local gaps
+//! - **Owen Dreadnought gate not wired.** `G-ALT-PATH-CONDITION` is
+//!   RESOLVED (2026-05-15) — `AltPathSpec.condition` exists and is
+//!   consumed by the Digivolve route. BT24-016's YAML does not yet
+//!   populate `condition:` on the activated_digivolve path, so the path
+//!   is currently available whenever an Elizamon and a Dimetromon-in-
+//!   trash are present, regardless of Owen presence. Card-local
+//!   authoring follow-up.
 
 #![allow(dead_code, unused_imports)]
 

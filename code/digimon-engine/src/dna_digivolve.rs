@@ -219,6 +219,19 @@ impl Game {
                 if !eval_predicate(from, &rctx, PredicateSubject::Permanent(base_handle)) {
                     continue;
                 }
+                // G-ALT-PATH-CONDITION: alt-paths may carry an extra
+                // activation predicate (e.g. "if you have [Owen
+                // Dreadnought]") evaluated on top of the source-filter
+                // and material/extra-cost gates.
+                if let Some(condition) = path.condition.as_ref() {
+                    if !eval_predicate(
+                        condition,
+                        &rctx,
+                        PredicateSubject::Permanent(base_handle),
+                    ) {
+                        continue;
+                    }
+                }
 
                 let treated_as_cost = if let Some(profile) = path.source_treated_as.as_deref() {
                     let Some(profile) = parse_treated_as_profile(profile) else {

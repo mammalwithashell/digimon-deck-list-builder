@@ -2,11 +2,18 @@
 
 **Audience:** AI agents (and humans) writing tests for DSL-defined Digimon card effects in `digimon-engine`.
 
+**Last refreshed: 2026-05-15** — Tracks A–K substrate sweep. Added §15
+(replacement / aura / granted-triggered / breeding-area / RevealBucket
+test patterns) and refreshed the DebugRunner method index against the
+shipping runner. See `docs/RUST_ENGINE_API.md` for the matching engine API
+refresh.
+
 This document is the canonical reference for how Rust-side card tests are structured. Read alongside:
 
 - [`docs/RUST_ENGINE_API.md`](RUST_ENGINE_API.md) — `EffectContext` API surface, `CardEffect` trait, engine primitives.
 - [`docs/superpowers/specs/2026-04-21-card-scripting-dsl.md`](superpowers/specs/2026-04-21-card-scripting-dsl.md) — DSL syntax, compile pipeline, vocabulary.
 - [`docs/RUST_PYTHON_PARITY.md`](RUST_PYTHON_PARITY.md) — cross-engine divergences. Check before assuming a behavior carries across.
+- [`docs/RUST_ENGINE_GAPS.md`](RUST_ENGINE_GAPS.md) — live engine-primitive gap tracker. Use the gap-id when marking a test `#[ignore]`.
 
 The `/batch-implement-cards-rust-dsl` skill cites this document directly. Every per-card test the skill authors must conform to the patterns described here.
 
@@ -112,7 +119,12 @@ When a test could plausibly live in two buckets, prefer per-card. Mechanic tests
 
 ## 3. DebugRunner DSL test surface
 
-Tests drive the engine through `DebugRunner`. The DSL-aware additions to the runner are listed below. Helpers marked **(spec)** describe behavior the runner must implement; treat the signature as the contract.
+Tests drive the engine through `DebugRunner`
+(`code/digimon-engine/src/debug_runner.rs`). The DSL-aware additions to the
+runner are listed below. The original spec used **(spec)** annotations for
+methods that had not yet landed; as of 2026-05-15 every method below is
+implemented — see `debug_runner.rs` for signatures and `tests/debug_runner_dsl.rs`
+for the self-tests. Treat the **(spec)** markers as historical context only.
 
 ### Loading a card
 
@@ -997,7 +1009,245 @@ The translation is rarely 1:1. Port what each Python test *proves*, not its asse
 
 ---
 
-## 14. Cross-references
+## 14. Tracks A–K test patterns
+
+The Tracks A–K substrate landed several new behaviors that per-card and
+mechanic tests now exercise. The patterns below are stable idioms; reach
+for them in the corresponding situations.
+
+### 14.1 Replacement effects (Track B / Phase 7)
+
+Cards with `<Barrier>`, `<Evade>`, `<Decode>`, `<Fragment(N)>`, `<Save>`,
+`<Decoy>`, `<Partition>`, `<MaterialSave(N)>`, `<ArmorPurge>`, or custom
+`WhenWouldBe*` clauses produce a `SelectionKind::Replacement` prompt. The
+prompt is **always optional** when `.optional()` is set on the effect
+builder — the test must drive both the accept and decline branches.
+
+```rust
+use digimon_engine::selection::SelectionKind;
+use digimon_engine::action::space::PASS;
+
+// Setup: an attacker about to delete a `<Barrier>`-tagged defender.
+let _ = runner.attack_digimon(atk, def, false);
+
+// Replacement prompt parks for the defender's controller.
+assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
+assert!(runner.pending_is_optional(),
+    "Barrier is `(may)` — both accept and decline must surface");
+let view = runner.pending_selection_view().unwrap();
+assert_eq!(view.valid_action_ids.len(), 1, "exactly one ACCEPT entry");
+
+// Drive the accept branch:
+runner.execute_action(view.valid_action_ids[0]).unwrap();
+runner.auto_resolve().unwrap();
+
+// In a separate test, drive the decline branch via PASS:
+//   runner.execute_action(PASS).unwrap();
+```
+
+Per-replacement-kind canonical regression locations:
+
+- `tests/replacements/native_keywords.rs` — Barrier / Evade / Decode auto-installs.
+- `tests/replacements/nested_select_fragment.rs`, `nested_select_save.rs`, `nested_select_decoy.rs` — selection-bearing keyword pattern.
+- `tests/replacements/partition.rs` — Partition source-pair pick.
+- `tests/replacements/passive_modifier_migration.rs` — `CannotBeReturnedToHand` / `CannotBeReturnedToDeck` / `CannotBeDeDigivolved` / `CannotBeTrashedByEffect` automatic mandatory cancels.
+- `tests/replacements/source_scoped_immunity.rs` — `cause_filter`-bearing modifier entries.
+
+### 14.2 Aura effects (Track H)
+
+Cards with declarative `kind: aura` install per-permanent modifiers each
+controller tick. Tests assert the modifier presence on currently-matching
+permanents and absence on currently-non-matching ones.
+
+```rust
+// Aura source is on the field; an ally Digimon should be buffed.
+let aura = runner.place_on_field(0, "BT11-042", Some(0));   // Angewomon aura source
+let ally = runner.place_on_field(0, "ST1-03", Some(0));
+runner.game_mut().tick_declarative_effects();
+
+let dp_delta = runner.modifiers().sum(ally, ModifierType::ChangeDp);
+assert_eq!(dp_delta, 1000);
+
+// Remove the aura source — the modifier evaporates on next tick.
+runner.execute_action(/* delete aura */).unwrap();
+runner.game_mut().tick_declarative_effects();
+assert_eq!(runner.modifiers().sum(ally, ModifierType::ChangeDp), 0);
+```
+
+For formula-backed `dp_modifier_fn` / `security_attack_fn` auras, assert via
+`runner.effective_dp(handle)` and security-check counts — formula auras do
+not materialize into the modifier registry, they are continuously
+recomputed at query time. See `tests/dsl/group6_auras.rs` and
+`tests/dsl/group6_dynamic_formulas.rs`.
+
+### 14.3 Granted-triggered effects (Track H)
+
+Cards using `grant_triggered_effect` install a body that fires on every
+matching `timing` event until `expiry`. Tests must drive the trigger event
+twice to confirm persistence — distinct from `refire_effect` which is
+one-shot.
+
+```rust
+// EX10-040-style grant: target gains "[End of Your Turn]: gain 1 memory"
+runner.play(0, hand_index_of_grantor).unwrap();
+runner.auto_resolve().unwrap();
+let target = /* ... */;
+runner.end_turn();  // first fire
+runner.end_turn();  // returns to grantor's turn
+let m_before_second = runner.memory();
+runner.end_turn();  // second fire
+assert_eq!(runner.memory(), m_before_second + 1, "granted body must persist past one fire");
+```
+
+### 14.4 OPT triggered with shared hash across copies (Track C / E)
+
+When two copies of the same card share an OPT hash, activating one must
+lock the other. Drive both activations in the same turn and assert no
+selection installs on the second:
+
+```rust
+let copy_a = runner.place_on_field(0, "BT21-029", Some(0));   // Medusamon
+let copy_b = runner.place_on_field(0, "BT21-029", Some(0));
+// Fire copy_a's [On Play] / [Main] trigger and resolve.
+// ... drive the selection ...
+
+// Now try copy_b in the same turn — OPT must lock it.
+runner.fire_on_play(0, copy_b.index as usize);
+assert!(runner.pending_selection().is_none(),
+    "shared OPT hash blocks copy_b after copy_a fired");
+```
+
+### 14.5 Breeding-area observer (`BreedingPermanent`)
+
+`StartOfYourMainPhase`, `OnHatch`, and several Tamer turn-boundary timings
+scan the breeding area as a distinct trigger source. Tests that exercise
+breeding observers must place a permanent in breeding via
+`runner.place_in_breeding(player, card_id)` and assert the observer fires:
+
+```rust
+runner.place_in_breeding(0, "BT15-003");          // egg under breeding
+runner.end_turn();
+runner.end_turn();                                 // back to player 0; Main phase enters
+runner.auto_resolve().unwrap();
+// Assert the egg's StartOfYourMainPhase observer fired …
+```
+
+`SelectionKind::BreedingPermanent` is the prompt installed by
+`select_own_breeding_permanent` — used by cards that target the egg
+permanent. The mask for this kind reuses the own-field range plus the
+breeding sentinel.
+
+### 14.6 RevealBucket flows
+
+Cards with two-pass reveal text (e.g. BT18-060 Vemmon, BT15-077 LadyDevimon)
+install `SelectionKind::RevealBucket { bucket_index, min, max, picked }`.
+Each bucket parks its own selection; tests drive each bucket independently
+and assert `bucket_index` advances:
+
+```rust
+runner.play(0, 0).unwrap();   // reveal-top-N effect
+let view1 = runner.pending_selection_view().unwrap();
+assert!(matches!(view1.kind,
+    SelectionKind::RevealBucket { bucket_index: 0, .. }));
+runner.execute_action(view1.valid_action_ids[0]).unwrap();
+// runner re-installs the prompt with picked += 1 …
+
+// Once bucket 0 is satisfied (picked >= min), PASS commits and bucket 1 opens:
+runner.execute_action(PASS).unwrap();
+let view2 = runner.pending_selection_view().unwrap();
+assert!(matches!(view2.kind,
+    SelectionKind::RevealBucket { bucket_index: 1, .. }));
+```
+
+See `tests/selection/reveal_buckets.rs` for the canonical multi-bucket
+template.
+
+### 14.7 DpBudget selection
+
+Cards with text like "delete opponent's Digimon with a total of N DP or less"
+install `SelectionKind::DpBudget { remaining_dp, picked }`. Each pick
+decrements `remaining_dp` by the picked permanent's effective DP; PASS
+commits the accumulated set. The mask masks out any opponent permanent
+whose DP exceeds the remaining budget.
+
+```rust
+let view = runner.pending_selection_view().unwrap();
+let SelectionKind::DpBudget { remaining_dp, picked } = view.kind else {
+    panic!("expected DpBudget");
+};
+assert_eq!(picked, 0);
+assert!(remaining_dp >= 5000);
+```
+
+See `tests/selection/dp_budget.rs`.
+
+### 14.8 Action-mask assertions for new SelectionKind variants
+
+When a test cares about *which* action IDs are exposed (not just that a
+selection installed), use `runner.pending_selection_view().valid_action_ids`
+and the `digimon_engine::action::space::*` constants:
+
+```rust
+use digimon_engine::action::space::{SEL_HAND_START, SEL_TRASH_START, PASS};
+
+let view = runner.pending_selection_view().unwrap();
+// Hand picks present, trash picks excluded:
+assert!(view.valid_action_ids.iter().any(|&a| a >= SEL_HAND_START && a < SEL_TRASH_START));
+assert!(!view.valid_action_ids.iter().any(|&a| a >= SEL_TRASH_START));
+// PASS gated by is_optional:
+assert_eq!(view.valid_action_ids.contains(&PASS), runner.pending_is_optional());
+```
+
+### 14.9 Event-log assertions (Track A)
+
+Track A established the `TriggerContext` payload contract: deletion observers
+read `deleted_object`, attack-target-change observers read
+`attack_target_change`, source-trash observers read `event_host_*`. Tests
+verifying these payloads use the event log:
+
+```rust
+let cp = runner.event_checkpoint();
+runner.attack_digimon(atk, def, false);
+runner.auto_resolve().unwrap();
+
+let events = runner.events_since(cp);
+let deletion = events.iter().find(|e| matches!(e.kind, GameEventKind::OnAnyDeletion { .. }));
+assert!(deletion.is_some(), "OnAnyDeletion must fire after battle");
+```
+
+Track-A-shaped tests live across `tests/effects/`, `tests/replacements/`,
+and `tests/combat/deletion_cause_observer.rs`. Use `events_of_kind` when you
+want all events of a specific discriminant since a checkpoint.
+
+### 14.10 Worked examples directory
+
+Curated DSL fixtures used as docs and infra examples live in
+`code/digimon-engine/cards/_examples/`. As of 2026-05-15:
+
+| Card ID | Demonstrates |
+|---|---|
+| `BT15-003.yaml` | Inherited When Attacking + OPT + EffectChoice (top/bottom) |
+| `BT17-007.yaml` | Conditional DP buff + trait gate |
+| `BT17-015.yaml` | Two-way branch + EndOfAttack DP buff |
+| `BT18-019.yaml`, `BT18-102.yaml` | Track-A event-payload-bound observers |
+| `BT22-084.yaml` | Tamer play-4 anchor (start-of-main) |
+| `BT11-042.yaml` | Declarative aura with target predicate |
+| `BT5-093.yaml`, `BT7-107.yaml`, `BT9-092.yaml` | Search / trash-to-hand recursion |
+| `BT12-112.yaml` | DigiXros source play |
+| `BT13-007.yaml`, `BT13-060.yaml` | Cost-reduction patterns |
+| `BT20-083.yaml` | also-treated-as alias |
+| `EX6-072.yaml` | Mega Digimon Assembly |
+| `EX11-027.yaml` | 3-way branch + WhenRemoveField link selection |
+| `AD1-025.yaml`, `BT10-111.yaml`, `ST2-13.yaml` | Generic patterns |
+| `TST_DNA_TRIGGER.yaml` | DNA digivolve trigger payload |
+
+Tests under `tests/dsl/real_cards_json.rs` and `tests/dsl/parse_*.rs` exercise
+each example through the embedded pack loader. When adding a new pattern,
+prefer adding a worked example here over writing inline YAML in a test file.
+
+---
+
+## 15. Cross-references
 
 - `RUST_ENGINE_API.md` — `EffectContext`, `Effect`, `CardEffect`, modifier types, timing enums.
 - `2026-04-21-card-scripting-dsl.md` — DSL spec, vocabulary, compile pipeline.
