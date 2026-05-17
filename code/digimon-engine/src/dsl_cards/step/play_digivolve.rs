@@ -119,12 +119,21 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::PlayFromHandFree { of: _, hand_index } => {
+        CompiledStep::PlayFromHandFree {
+            of: _,
+            hand_index,
+            bind_as,
+        } => {
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
                 if let Some(played) = ctx.play_from_hand_free(owner, i as usize) {
                     bindings.record_played(played);
+                    // G-PLAY-FROM-HAND-FREE-BIND-AS: expose the played
+                    // permanent's handle to subsequent steps in the same body.
+                    if let Some(name) = bind_as {
+                        bindings.insert_permanent(name, played);
+                    }
                 }
             }
             true

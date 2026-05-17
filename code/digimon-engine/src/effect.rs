@@ -526,6 +526,23 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::BeforePayCost)
     }
 
+    /// Sibling of `before_pay_cost` for observer-style triggered bodies
+    /// at the same dispatch point. Unlike `before_pay_cost`, this builder
+    /// is NOT for cost reduction (do not attach `cost_reduction_fn` or
+    /// `pay_cost_fn`); instead attach a `process` closure (typically the
+    /// lowering chain from a triggered clause's `process:` steps).
+    ///
+    /// Dispatched alongside cost-reduction scan in `play_from_hand` /
+    /// `digivolve_*` cost-calc; the observer's process fires once per
+    /// candidate per dispatch, with the cost target threaded into the
+    /// `EffectReadContext` (so `cost_target: { ... }` predicates and
+    /// `event_digivolve_target_*` checks can fire faithfully).
+    ///
+    /// G-BEFORE-PAY-COST-GAIN-MEMORY (Phase 2 Track H closure).
+    pub fn before_pay_cost_observe(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::BeforePayCostObserve)
+    }
+
     // ── Phase 7 "Would*" replacement-effect constructors ─────────────────
     // Dispatch via Game::try_replace lands in Task 2. These are pure
     // builder entry points for now; attach a `.replacement_process(...)`

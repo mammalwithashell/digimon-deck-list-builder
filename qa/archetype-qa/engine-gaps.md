@@ -323,12 +323,11 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Workaround:** None needed for current script-facing redirects and current Blocker/Raid retargets.
 
 ### `play_from_hand_free` Missing `bind_as` PermanentHandle Output  [G-PLAY-FROM-HAND-FREE-BIND-AS]
+- **Status: RESOLVED 2026-05-17** (Phase 2 Track H). See `qa/resolved-gaps.md` § "Phase 2 Track H closure — 2026-05-17" for the full closure details.
+- **Surface landed:** `PlayFromHandFreeArgs` (new struct distinct from `PlayFromHandArgs`) carries `bind_as: Option<String>`; `CompiledStep::PlayFromHandFree` carries the same. Execute path in `play_digivolve.rs` inserts the just-played permanent handle into the bindings under the configured name. BT16-085 YAML clause 0 now expresses the full free-play + scheduled delayed-return.
 - **Discovered in:** BT16-085 Davis Motomiya & Ken Ichijoji implementation (2026-05-04)
-- **Card(s):** BT16-085 — "[Start of Your Main Phase] You may play 1 [Veemon] or [Wormmon] from your hand without paying the cost. At the next end of your opponent's turn, return it to the hand."
-- **Effect text:** "return it to the hand" — the "it" refers to the permanent that was just played free.
-- **What's missing:** `CompiledStep::PlayFromHandFree` has no `bind_as` field. When `execute_play_from_hand_free` runs in `play_digivolve.rs`, the returned `Option<PermanentHandle>` is discarded. The `schedule_delayed` step clones bindings at schedule time, so if the just-played permanent's handle were inserted into bindings via `bind_as`, a subsequent `return_to_hand: { target: played }` in the delayed body could reference it. Without `bind_as`, the delayed return step cannot be expressed — `return_to_hand` requires a bound `PermanentHandle`.
-- **Suggested change:** Add `bind_as: Option<String>` to `PlayFromHandFreeArgs` in `digimon-dsl/src/step.rs` and `CompiledStep::PlayFromHandFree` in `compiled.rs`. In `execute_play_from_hand_free` (or its caller in `step.rs`), if the play succeeded and `bind_as` is set, call `bindings.insert_permanent(name, handle)` so the resulting permanent is available for downstream steps (including `schedule_delayed` body steps).
-- **Workaround:** None — the delayed-return sub-clause of BT16-085 Clause 0 is omitted from the YAML. The test `bt16_085_start_of_main_played_digimon_returns_at_opponent_eot` is `#[ignore = "BLOCKED: G-PLAY-FROM-HAND-FREE-BIND-AS"]`.
+- **Card(s) unblocked:** BT16-085 clause 0 (free-play + delayed return at next opponent's EOT).
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt16::bt16_085::bt16_085_start_of_main_played_digimon_returns_at_opponent_eot`.
 
 ### `event_card_color_has` Predicate Missing (Color-Gate on Digivolve/Enter Observer)  [G-EVENT-CARD-COLOR-IS]
 - **Discovered in:** BT16-085 Davis Motomiya & Ken Ichijoji implementation (2026-05-04)

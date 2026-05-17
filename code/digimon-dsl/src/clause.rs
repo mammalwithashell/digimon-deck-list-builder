@@ -128,6 +128,15 @@ pub enum Timing {
     MainFromTrash,
     Counter,
     BeforePayCost,
+    /// Sibling of `before_pay_cost` for observer-style triggered bodies
+    /// (e.g. "[Your Turn] When this Digimon would DNA digivolve into a
+    /// green Digimon card, gain 1 memory."). Fires at the same dispatch
+    /// point as `before_pay_cost` but runs the clause's `process:` body
+    /// instead of accumulating cost reduction. Pair with
+    /// `cost_target: { ... }` predicates inside `active_when:` to gate on
+    /// the digivolve-target card's traits/colors/level/name.
+    /// G-BEFORE-PAY-COST-GAIN-MEMORY (Phase 2 Track H closure).
+    BeforePayCostObserve,
     Delayed,
 }
 

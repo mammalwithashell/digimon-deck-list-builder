@@ -220,6 +220,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::MainFromTrash => CompiledTiming::MainFromTrash,
         S::Counter => CompiledTiming::Counter,
         S::BeforePayCost => CompiledTiming::BeforePayCost,
+        S::BeforePayCostObserve => CompiledTiming::BeforePayCostObserve,
         S::Delayed => CompiledTiming::Delayed,
     }
 }
@@ -693,6 +694,15 @@ fn compile_predicate(
             ))
         }),
         has_alt_path: p.has_alt_path.clone(),
+        cost_target: p.cost_target.as_ref().map(|b| {
+            Box::new(compile_predicate(
+                b,
+                &format!("{prefix}.cost_target"),
+                card_id,
+                errors,
+            ))
+        }),
+        source_is_cost_target_permanent: p.source_is_cost_target_permanent,
     }
 }
 
@@ -1585,6 +1595,7 @@ fn compile_step(
         S::PlayFromHandFree(a) => CompiledStep::PlayFromHandFree {
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
+            bind_as: a.bind_as.clone(),
         },
         // PlayFromTrash reuses PlayFromHandArgs but the compiled form uses `trash_index`
         S::PlayFromTrash(a) => CompiledStep::PlayFromTrash {

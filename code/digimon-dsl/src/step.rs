@@ -105,7 +105,7 @@ pub enum StepSpec {
 
     // Play / digivolve
     PlayFromHand(PlayFromHandArgs),
-    PlayFromHandFree(PlayFromHandArgs),
+    PlayFromHandFree(PlayFromHandFreeArgs),
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
     PlayFromSecurity(PlayFromSecurityArgs),
@@ -1051,6 +1051,23 @@ pub struct PlayFromHandArgs {
     pub hand_index: BindingRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_delta: Option<CostDelta>,
+}
+
+/// Free-play-from-hand args. Adds `bind_as` so the just-played permanent
+/// handle can be referenced by subsequent steps (e.g. `schedule_delayed`
+/// returning the played card at next opponent end turn).
+/// G-PLAY-FROM-HAND-FREE-BIND-AS (Phase 2 Track H closure).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayFromHandFreeArgs {
+    pub of: PlayerRef,
+    pub hand_index: BindingRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_delta: Option<CostDelta>,
+    /// Bind the resulting permanent handle for use in later steps in the
+    /// same body. None (the default) preserves prior behavior.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
