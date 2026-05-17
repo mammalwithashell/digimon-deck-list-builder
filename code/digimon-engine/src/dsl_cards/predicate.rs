@@ -1443,6 +1443,39 @@ fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle
     rctx.game.can_digivolve(candidate, source_permanent)
 }
 
+/// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true if `perm`'s top
+/// card or any digivolution source carries any `OnDeletion`-timed effect.
+/// Consulted by `has_on_deletion_effect: <bool>` predicate.
+///
+/// Walks both the registry-bound hand-written `CardEffect` impl and the
+/// compiled DSL clauses (returned together by `Game::effects_for_card`)
+/// and returns true on the first OnDeletion hit. Per printed text the
+/// gate is on the existence of the printed timing, not on whether the
+/// effect is currently runtime-active — `effects_for_card` already
+/// expands keyword-derived auto-effects (Save, MaterialSave, Decoy,
+/// etc.) so cards whose On Deletion text is keyword-shaped (e.g.
+/// `<Save>`) also surface here.
+fn permanent_has_on_deletion_effect(
+    perm: &crate::permanent::Permanent,
+    rctx: &EffectReadContext<'_>,
+) -> bool {
+    use crate::enums::EffectTiming;
+    let data = rctx.card_data();
+    for source in &perm.card_sources {
+        let card_id = source.card_id(data);
+        let Some(effects) = rctx.game.effects_for_card(card_id, source.handle()) else {
+            continue;
+        };
+        if effects
+            .iter()
+            .any(|e| matches!(e.timing, EffectTiming::OnDeletion) || e.on_deletion)
+        {
+            return true;
+        }
+    }
+    false
+}
+
 fn distinct_color_count(colors: &[CardColor]) -> usize {
     let mut seen = Vec::new();
     for color in colors {
@@ -1654,6 +1687,12 @@ fn eval_permanent_fields(
             return false;
         };
         if !rctx.game.has_keyword(handle, kw) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.has_on_deletion_effect {
+        let observed = permanent_has_on_deletion_effect(perm, rctx);
+        if observed != want {
             return false;
         }
     }

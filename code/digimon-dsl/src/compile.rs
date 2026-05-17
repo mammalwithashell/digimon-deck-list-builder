@@ -550,6 +550,7 @@ fn compile_predicate(
         is_suspended: p.is_suspended,
         is_unsuspended: p.is_unsuspended,
         has_keyword: p.has_keyword.clone(),
+        has_on_deletion_effect: p.has_on_deletion_effect,
         self_color_count_gte: p.self_color_count_gte,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
@@ -871,6 +872,14 @@ fn compile_alt_path(
                 errors,
             ))
         }),
+        direction: match ap.direction {
+            crate::alt_path::AltPathDirection::From => {
+                crate::compiled::CompiledAltPathDirection::From
+            }
+            crate::alt_path::AltPathDirection::Into => {
+                crate::compiled::CompiledAltPathDirection::Into
+            }
+        },
     }
 }
 
@@ -1506,6 +1515,12 @@ fn compile_step(
         S::GainMemory(n) => CompiledStep::GainMemory(*n),
         S::LoseMemory(n) => CompiledStep::LoseMemory(*n),
         S::SetMemory(n) => CompiledStep::SetMemory(*n),
+        S::GainMemoryFn(a) => CompiledStep::GainMemoryFn {
+            formula: compile_formula(&a.formula, &format!("{prefix}.gain_memory_fn"), card_id, errors),
+        },
+        S::LoseMemoryFn(a) => CompiledStep::LoseMemoryFn {
+            formula: compile_formula(&a.formula, &format!("{prefix}.lose_memory_fn"), card_id, errors),
+        },
 
         S::Draw(a) => CompiledStep::Draw {
             of: compile_player_ref(a.of),
@@ -1643,6 +1658,9 @@ fn compile_step(
         },
         S::PlaceAsBottomSource(a) => CompiledStep::PlaceAsBottomSource {
             source: compile_binding_ref(&a.source),
+            target: compile_binding_ref(&a.target),
+        },
+        S::PlaceTopSourceAsBottom(a) => CompiledStep::PlaceTopSourceAsBottom {
             target: compile_binding_ref(&a.target),
         },
         S::TrashTopSource(a) => CompiledStep::TrashTopSource {

@@ -52,11 +52,11 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT13-012 | GeoGreymon | I | PARTIAL (dsl) | 12/16 | Security-search BLOCKED on G-PLAY-SELECTED-SECURITY-CARD |
 | BT15-020 | Gabumon | I | IMPLEMENTED | 14/14 | Start-of-main grant Blocker + draw |
 | BT15-101 | MetalGarurumon | I | PARTIAL (dsl) | 11/12 | G-ALT-PATH-CONDITION + G-DSL-EVENT-TARGET-IS-SELF |
-| BT16-082 | Ukkomon | AP | AUDITED-DRIFT | 5/16 | Stale placeholder; G-ON-MOVE now resolved |
+| BT16-082 | Ukkomon | AP | IMPLEMENTED | 16/18 | Phase 2 Track F: tracker drift cleanup. G-ON-MOVE reveal+hatch path passes all active tests. |
 | BT17-007 | Agumon | AE | AUDITED-OK | 13/13 | Faithful _examples YAML |
-| BT17-015 | WarGreymon | AE | AUDITED-DRIFT (dsl) | 13/16 | NEW G-DSL-SOURCE-NAME-CONTAINS + G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET |
+| BT17-015 | WarGreymon | AE | PARTIAL (dsl) | 14/16 | Phase 2 Track F: G-EFFECT-INITIATED-DIGIVOLVE-...-PERM-TARGET resolved (phantom). Remaining: G-DSL-SOURCE-NAME-CONTAINS |
 | BT17-019 | Gabumon | I | IMPLEMENTED | 12/12 | Sister to BT17-007 |
-| BT17-027 | MetalGarurumon | I | PARTIAL (dsl) | 11/13 | Branch-1 digivolve BLOCKED on G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET |
+| BT17-027 | MetalGarurumon | I | PARTIAL (dsl) | 12/13 | Phase 2 Track F: branch-1 digivolve test now active (G-EFFECT-INITIATED-DIGIVOLVE-...-PERM-TARGET resolved phantom). Remaining: inherited Omnimon-name gate. |
 | BT17-078 | Omnimon | I | IMPLEMENTED | 12/12 | Blast DNA Counter route, DNA-origin gate, selected-level bottom-deck, and follow-up delete prompt covered |
 | BT17-081 | Tai/Matt Tamer | I | IMPLEMENTED | 19/20 | All-Turns observer + EOT may-attack |
 | BT17-093 | Tai/Kari Tamer | I | IMPLEMENTED | 11/11 | on_hatch + EOT return-to-deck draw |
@@ -66,21 +66,21 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT21-102 | Tai Kamiya | I | IMPLEMENTED | 10/10 | Main OPT play cap now uses formula-valued `play_cost_lte` with `distinct_colors_count`; all active tests pass |
 | BT22-005 | Tsumemon | I | PARTIAL (engine) | 11/14 | DigiEgg G-INHERITED-DISPATCH |
 | BT22-008 | Agumon | I | IMPLEMENTED | 12/12 | Sister to BT17-007 |
-| BT22-013 | WarGreymon | I | PARTIAL (dsl) | 10/15 | 4 known-gap branches BLOCKED |
+| BT22-013 | WarGreymon | I | PARTIAL (dsl) | 11/15 | Phase 2 Track F: branch-0 digivolve test now active. Remaining: G-DSL-SOURCE-NAME-CONTAINS. |
 | BT22-015 | Omnimon | I | PARTIAL (dsl) | 14/15 | Decode color-gated source play RESOLVED; same-level pair bottom-deck RESOLVED; lowest-DP predicate remains blocked |
 | BT22-017 | Gabumon | I | IMPLEMENTED | 14/15 | NEW G-DSL-PREDICATE-TEXT-CONTAINS approximated |
-| BT22-026 | MetalGarurumon | I | PARTIAL (dsl) | 11/15 | Sister to BT22-013 |
+| BT22-026 | MetalGarurumon | I | PARTIAL (dsl) | 12/15 | Phase 2 Track F: sister to BT22-013; branch-0 digivolve test now active. |
 | BT22-084 | Nokia Shiramine | AE | AUDITED-OK | 17/19 | Faithful _examples YAML |
 | BT22-089 | Mirei Mikagura | I | PARTIAL (dsl) | 10/12 | NEW G-PLAY-COST-GTE; count_gte over-fires |
 | BT22-094 | Yuugo Kamishiro | I | IMPLEMENTED | 12/12 | select_reveal_buckets + cost_reduction with pay_cost |
 | BT22-099 | Kuremi Detective Agency | I | IMPLEMENTED | 11/11 | flood_gate color bypass + Delay |
-| BT23-008 | Greymon | I | PARTIAL (dsl) | 11/16 | NEW G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM |
-| BT23-018 | Garurumon | I | PARTIAL (dsl) | 11/16 | Sister to BT23-008 |
+| BT23-008 | Greymon | I | IMPLEMENTED | 13/13 | Phase 2 Track F: G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM closed. [Main][OPT] place-top-as-bottom + play Gabumon/Nokia clause authored. |
+| BT23-018 | Garurumon | I | IMPLEMENTED | 13/13 | Phase 2 Track F: sister to BT23-008. [Main][OPT] clause authored with play-Agumon/Nokia variant. |
 | BT23-096 | Comet Hammer | I | PARTIAL (dsl) | 11/12 | [Your Turn] CS-attack Delay BLOCKED on G-DSL-ON-ALLY-ATTACK-TIMING + NEW G-DSL-DELAY-ON-ATTACK-EVENT |
 | BT5-092 | Nokia Shiramine | I | PARTIAL (dsl) | 8/15 | Cost reduction BLOCKED on missing when_*_digivolves_into form |
 | BT5-093 | Tai/Matt Tamer | AE | AUDITED-DRIFT (hybrid) | 12/15 | YAML BUG `target.of`→`target.owner`; ENGINE GAP G-AURA-GRANTED-SECURITY-KEYWORD |
 | BT8-097 | Crimson Blaze | AP | AUDITED-OK (engine) | 20/21 | Faithful; 1 ignored on G-FOR-EACH-DELETE-INDEX-SHIFT |
-| EX1-021 | MetalGarurumon | I | PARTIAL (dsl) | 7/14 | NEW G-DSL-GAIN-MEMORY-FN + G-DSL-HAS-ON-DELETION-EFFECT |
+| EX1-021 | MetalGarurumon | I | IMPLEMENTED | 13/13 | Phase 2 Track F: G-DSL-GAIN-MEMORY-FN + G-DSL-HAS-ON-DELETION-EFFECT both closed. Both clauses authored faithfully. |
 | EX1-068 | Ice Wall! | I | PARTIAL (dsl) | 6/6 | NEW G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT |
 | EX10-010 | BlackWarGreymon | AP | AUDITED-DRIFT | 20/24 | YAML missing play_cost_lte: 7; stale gap comments |
 | EX4-003 | Tsunomon | I | PARTIAL (hybrid) | 9/12 | DigiEgg G-INHERITED-DISPATCH + NEW G-DSL-EVENT-TARGET-IS-OTHER |
@@ -96,11 +96,11 @@ Pipeline: batch-implement-cards-rust-dsl
 | EX9-066 | Tai/Matt Tamer | I | IMPLEMENTED | 25/25 | All 25 pass via faithful workaround. NEW G-DSL-BIND-PRESENT + G-COUNT-GTE-NOT-EVALUATED |
 | LM-034 | Wisteria Memory Boost! | I | IMPLEMENTED | 12/12 | Sister to BT22-099 |
 | P-123 | Ukkomon | I | IMPLEMENTED | 13/15 | on_move trigger |
-| P-182 | WarGreymon | I | PARTIAL (dsl) | 5/12 | NEW G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA |
+| P-182 | WarGreymon | I | PARTIAL (dsl) | 8/12 | Phase 2 Track F: G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA verified shipped; [All Turns] aura authored. Remaining: G-FORMULA-SOURCE-DP for [When Digivolving]. |
 | P-206 | Digital Gate Open | AP | AUDITED-DRIFT | 18/28 | G-COLOR-MATCH-AGAINST-BOARD primitive resolved but YAML not yet wired |
 | ST21-13 | Matt/T.K. Tamer | I | IMPLEMENTED | 17/17 | All 17 pass; cost_reduction + Rush aura |
 | ST2-13 | Hammer Spark | AE | AUDITED-OK | 14/14 | Trivial Option |
-| ST20-10 | Agumon | I | PARTIAL (dsl) | 8/13 | Warp-into-WarGreymon BLOCKED on NEW G-ALT-PATH-DIRECTION-INTO |
+| ST20-10 | Agumon | I | PARTIAL (dsl) | 8/13 | Phase 2 Track F: G-ALT-PATH-DIRECTION-INTO substrate closed; warp YAML still pending companion G-DSL-DISTINCT-TAMER-COLORS predicate leaf. |
 | ST20-11 | WarGreymon | I | PARTIAL (dsl) | 8/15 | Tamer-color immunity BLOCKED on G-DSL-DISTINCT-TAMER-COLORS-FORMULA |
 | ST20-15 | Island of Adventure | I | PARTIAL (dsl) | 7/14 | Main security swap now uses `place_self_option_at_security`; security-aura gate still blocked on NEW G-PRED-NO-FACE-UP-SECURITY-NAMED + G-SECURITY-ZONE-AURA-SOURCE |
 
@@ -136,20 +136,20 @@ Pipeline: batch-implement-cards-rust-dsl
 - G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (BT22-015) — closed 2026-05-07 via color/level-gated `select_material` plus `play_from_materials`; verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_015_decode`
 - G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET (BT22-015) — closed 2026-05-07 via formula-bound `select_count_capped_multi` plus battle-area permanent-list picks. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_015_when_digivolving_bottom_decks_n_opp_digimon_per_same_level_pair`.
 - G-FORMULA-SOURCE-DP (BT17-102, P-182) — formula reading source permanent's DP
-- G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA (P-182) — broader scope than tamer-only variant
+- G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA (P-182) — RESOLVED 2026-05-17 (Phase 2 Track F) — substrate verified already-shipped; P-182 [All Turns] aura authored. See [resolved-gaps.md](../../resolved-gaps.md) "Phase 2 Track F closure".
 - G-DYNAMIC-NAME-ALIAS-FROM-STACK (BT17-102) — declaratives derive name set from current materials
 - G-BIND-SELECTED-PROPERTY-FOR-EACH (BT17-078) — closed: `bind_permanent_property` + `level_eq_binding` cover the selected-level for-each pattern. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- parse_bind_permanent_level_property_step bind_permanent_level_filters_for_each_same_level_permanents` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078`.
 - G-BLAST-DNA-DIGIVOLVE (BT17-078) — resolved for field+hand Counter Blast DNA. `blast_dna_digivolve` carries exact printed materials; BT17-078 proves WarGreymon + MetalGarurumon and rejects broad Greymon/Garurumon names. Additional printed field+hand Blast DNA fixtures now cover BT20-045, BT20-076, BT20-081, EX6-011, and EX6-029. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078_counter_blast_dna`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_045_counter_blast_dna bt20_076_counter_blast_dna bt20_081_counter_blast_dna ex6_029_counter_blast_dna`.
 - G-DSL-UNION-PLAY-FREE (BT17-095) — `select_union_zone` binding doesn't feed `play_from_*_free`
 - G-DSL-DNA-FROM-HAND-PARTNER (BT17-095) — DNA digivolve where 2nd material lives in hand
-- G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH (EX5-015) — inherited replacement with trash-cost-then-cancel
+- G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH (EX5-015) — inherited replacement with trash-cost-then-cancel (Phase 2 Track F: DEFERRED — entangled with G-SELECT-MULTI-MIN and G-ZONE-TRASH-TO-DECK sub-gaps; pulling this single tag would require a 3-way bundle; follow-up needed.)
 - G-MULTI-SELECT-OPP-PLAY-COST-SUM (EX4-073) — sibling of resolved DP-budget for play-cost
 - G-DSL-SELECT-OWN-SOURCES-FILTER (EX4-073) — resolved 2026-05-08; remaining EX4-073 blockers are play-cost aggregate/count-binding work.
 - G-PLAY-COST-AGGREGATE (EX4-073) — `lowest_play_cost` aggregate predicate
 - G-EVENT-CARD-TAMER-PLAY (AD1-010, EX9-012) — event_card population for tamer plays unconfirmed
 - G-DSL-EVENT-TARGET-IS-OTHER (EX4-003, EX4-039) — no `event_target_is_other` predicate
 - G-PRED-NO-FACE-UP-SECURITY-NAMED (ST20-15) — no predicate for "no face-up named security card"
-- G-ALT-PATH-DIRECTION-INTO (ST20-10) — alt-path inverse: card grants itself ability to digivolve INTO X
+- G-ALT-PATH-DIRECTION-INTO (ST20-10) — RESOLVED 2026-05-17 (Phase 2 Track F) — `AltPathSpec.direction: into` schema + route threading ships. ST20-10 production YAML still pending its companion `G-DSL-DISTINCT-TAMER-COLORS` predicate-leaf gap (Tamer-colour disjunct). See [resolved-gaps.md](../../resolved-gaps.md) "Phase 2 Track F closure".
 
 ### Engine gaps
 - G-MOD-CANNOT-CHANGE-ATTACK-TARGET (AD1-012) — resolved 2026-05-08 via `ModifierType::CanNotSwitchAttackTarget` self inherited aura; covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ad1_012_inherited_blocks_attack_target_change_during_your_turn`

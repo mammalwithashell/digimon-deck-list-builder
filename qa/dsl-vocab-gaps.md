@@ -57,6 +57,33 @@ This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine h
 > bilateral player-scoped passive modifier shape (Rocks) remain open
 > from the 2026-05-10 sweep.
 
+> **Tracker hygiene sweep — 2026-05-17 (Phase 2 Track F):** Five DNA
+> Omnimon DSL/substrate gaps closed; full closure summaries in
+> [resolved-gaps.md](resolved-gaps.md) under "Phase 2 Track F closure":
+>
+> - `G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM` — new deterministic verb;
+>   BT23-008 / BT23-018 production YAML authored.
+> - `G-DSL-GAIN-MEMORY-FN` — formula-valued memory mutation step.
+> - `G-DSL-HAS-ON-DELETION-EFFECT` — new permanent predicate
+>   consulting `effects_for_card` for `OnDeletion` timing. EX1-021
+>   both clauses authored.
+> - `G-ALT-PATH-DIRECTION-INTO` — `AltPathSpec.direction: into` schema
+>   extension + route-resolution threading. Substrate only; ST20-10
+>   warp YAML pending its companion `G-DSL-DISTINCT-TAMER-COLORS`
+>   predicate leaf.
+> - `G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET` —
+>   resolved as **phantom**; the chain dispatcher already worked.
+>   5 tests (BT16-040 / BT17-015 / BT17-027 / BT22-013 / BT22-026)
+>   un-ignored.
+>
+> Plus `G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA` verified as
+> already-shipped upstream; regression coverage added + P-182
+> [All Turns] aura authored.
+>
+> Still open from Track F's plan: `G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH`
+> (deferred — entangled with `G-SELECT-MULTI-MIN` and
+> `G-ZONE-TRASH-TO-DECK` sub-gaps). EX5-015 Clause C remains BLOCKED.
+
 ## Track C modifier payload YAML shape (2026-05-09) — rich payload parser pending
 
 The Rust engine now has typed `ModifierPayload` storage and consult sites for
@@ -842,7 +869,15 @@ Format per entry:
 - Gap kind: hybrid (Rust engine modifier registry needs a typed grant slot; DSL needs the verb + lowering).
 - First reported: 2026-05-03 (EX1-068 Ice Wall!, batch-implement-cards-rust-dsl)
 
-## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN]
+## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN] — RESOLVED 2026-05-17 (Phase 2 Track F)
+
+See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track F closure" entry for
+the closure summary. `gain_memory_fn: { formula: ... }` + `lose_memory_fn`
+ship; EX1-021 production YAML authored.
+
+[ORIGINAL ENTRY BELOW]
+
+## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN] (legacy)
 - Effect text: EX1-021 MetalGarurumon — "[When Digivolving] Gain 1 memory for every 4 cards in your hand." DCGO: `count() = card.Owner.HandCards.Count / 4; AddMemory(count())`.
 - Status: OPEN (filed 2026-05-03 during EX1-021 batch-implement-cards-rust-dsl).
 - Missing DSL verb / step kind / predicate: `StepSpec::GainMemory(i32)` (`code/digimon-dsl/src/step.rs` line 67) is literal-only. There is no `gain_memory_fn:` variant that consumes a `FormulaSpec`. The same shape already exists for cost-reduction declarative bodies (`amount_fn:` on `kind: cost_reduction`, see BT8-097 / BT21-026 / BT24-017) — this gap is about extending the pattern to imperative `process:` steps.
@@ -861,7 +896,14 @@ Format per entry:
 - Gap kind: dsl. Engine has `add_memory` and formula evaluation; only the DSL surface is missing.
 - First reported: 2026-05-03 (EX1-021 MetalGarurumon, batch-implement-cards-rust-dsl)
 
-## EX1-021 — `has_on_deletion_effect` permanent predicate  [G-DSL-HAS-ON-DELETION-EFFECT]
+## EX1-021 — `has_on_deletion_effect` permanent predicate  [G-DSL-HAS-ON-DELETION-EFFECT] — RESOLVED 2026-05-17 (Phase 2 Track F)
+
+See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track F closure" entry.
+EX1-021 production YAML authored.
+
+[ORIGINAL ENTRY BELOW]
+
+## EX1-021 — `has_on_deletion_effect` permanent predicate  [G-DSL-HAS-ON-DELETION-EFFECT] (legacy)
 - Effect text: EX1-021 MetalGarurumon — "[When Attacking] If you have 8 or more cards in your hand and a Tamer in play, return 1 of your opponent's Digimon **that has an [On Deletion] effect** to the bottom of its owners deck." DCGO: `permanent.HasOnDeletionEffect`.
 - Status: OPEN (filed 2026-05-03 during EX1-021 batch-implement-cards-rust-dsl).
 - Missing DSL verb / step kind / predicate: `PredicateSpec` has no leaf that asks "does this permanent's top card (or any card in its digivolution stack) carry a triggered effect with `EffectTiming::OnDeletion`?" The closest existing leaf is `has_keyword` (which inspects `Keyword` modifiers on the permanent, not effect timings on the underlying card data).
@@ -1004,7 +1046,17 @@ Format per entry:
 - Gap kind: closed for the Track E verb.
 - First reported: 2026-05-03 (EX9-021 Omnimon Alter-S, batch-implement-cards-rust-dsl). Sibling clause tracked at `G-PLACE-SELF-AT-SECURITY-BOTTOM` (EX4-060).
 
-## ST20-10 — Inverse alt-path direction: "this card may digivolve INTO X"  [G-ALT-PATH-DIRECTION-INTO]
+## ST20-10 — Inverse alt-path direction: "this card may digivolve INTO X"  [G-ALT-PATH-DIRECTION-INTO] — RESOLVED 2026-05-17 (Phase 2 Track F)
+
+See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track F closure" entry.
+Schema + lowering + route resolution all ship. ST20-10's warp clause
+remains BLOCKED on the companion `G-DSL-DISTINCT-TAMER-COLORS` predicate
+leaf (the Tamer-colour disjunct of its condition); the opp-DP disjunct
+is satisfiable today.
+
+[ORIGINAL ENTRY BELOW]
+
+## ST20-10 — Inverse alt-path direction (legacy)
 - Effect text: ST20-10 Agumon — "[Your Turn] While your opponent has a Digimon with 10000 DP or more, or your Tamers have 3 or more total colors, this Digimon can digivolve into [WarGreymon] in the hand for a digivolution cost of 4, ignoring digivolution requirements." Other warp-style printed effects with the "this Digimon can digivolve into [Card] in the hand" shape are likely siblings (DCGO grep for `cardCondition: ... CardSource.EqualsCardName(...)` paired with `permanentCondition: ... == card.PermanentOfThisCard()` inside `AddSelfDigivolutionRequirementStaticEffect`).
 - Status: OPEN (filed 2026-05-03 during ST20-10 batch-implement-cards-rust-dsl).
 - Missing DSL verb / step kind / predicate: `AltPathSpec` (in `digimon-dsl/src/alt_path.rs`) is implicitly source-directed — `from:` filters the SOURCE permanent / hand card that may digivolve INTO the carrier. There is no inverse form for "this card grants ITSELF the ability to digivolve into card X in hand." Authoring the alt-path on the destination card (WarGreymon's YAML) would over-broadcast: every Lv3 Agumon-named card on the field would be presented the path, and the destination YAML would have to enumerate every "warp into me" effect across the card pool. Authoring on the source (ST20-10) is the natural printed-text home but the DSL has no syntax for it.
@@ -1302,7 +1354,17 @@ Format per entry:
 
 ---
 
-## BT16-040 — effect-initiated digivolve from hand with permanent-target chain  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET]
+## BT16-040 — chained selection → effect_initiated_digivolve  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET] — RESOLVED 2026-05-17 (Phase 2 Track F)
+
+Resolved as **phantom** — see [resolved-gaps.md](resolved-gaps.md)
+"Phase 2 Track F closure". The chain dispatcher
+(`run_tail_preserving_trigger_context`) was already driving the chain
+to completion; the prior tests asserted mid-chain state and panicked
+on the auto-resolved post-state. 5 tests now active.
+
+[ORIGINAL ENTRY BELOW]
+
+## BT16-040 — effect-initiated digivolve chain (legacy)
 
 - Effect text: "[Start of Your Main Phase] [On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Insectoid] or [Free] trait in your trash with the digivolution cost reduced by 1." — process chain: select_own_permanent → select_trash_card → effect_initiated_digivolve.
 - Card first discovered in: BT16-040 Wormmon (Digimon, Lv.3, Green/White). Same gap blocks BT17-015, BT17-027 clause 0.

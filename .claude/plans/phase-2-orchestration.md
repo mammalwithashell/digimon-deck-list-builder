@@ -17,7 +17,7 @@ This document coordinates the eight Phase 2 tracks in `.claude/plans/phase-2-tra
 | **C** | [phase-2-track-c-opt-slot-triggered-enforcement.md](phase-2-track-c-opt-slot-triggered-enforcement.md) | medium | 1–2 days | ~40 | Medusamon (huge), DNA Omnimon |
 | **D** | [phase-2-track-d-inherited-stack-dispatch.md](phase-2-track-d-inherited-stack-dispatch.md) | medium-high | 1–2 days | ~25 standalone + ~10 with C | Medusamon, DNA Omnimon |
 | **E** | [phase-2-track-e-rocks-pilot-completion.md](phase-2-track-e-rocks-pilot-completion.md) | low | 1–2 days | (authoring) | Rocks (~25 cards) |
-| **F** | [phase-2-track-f-dna-omnimon-pilot-completion.md](phase-2-track-f-dna-omnimon-pilot-completion.md) | medium | 2–3 days | ~30 | DNA Omnimon (~15 cards) |
+| **F** | [phase-2-track-f-dna-omnimon-pilot-completion.md](phase-2-track-f-dna-omnimon-pilot-completion.md) — **closed 2026-05-17** (6 of 7 gaps; INHERITED-SUBSTITUTE deferred). 4 cards IMPLEMENTED (BT23-008 / BT23-018 / EX1-021 / BT16-040), 4 advanced PARTIAL (BT17-015 / BT17-027 / BT22-013 / BT22-026 / P-182). | medium | 2–3 days | ~30 | DNA Omnimon (~15 cards) |
 | **G** | [phase-2-track-g-medusamon-pilot-completion.md](phase-2-track-g-medusamon-pilot-completion.md) | medium | 1–2 days | residual after C+D | Medusamon (~12 cards) |
 | **H** | [phase-2-track-h-bg-imperial-pilot-completion.md](phase-2-track-h-bg-imperial-pilot-completion.md) | medium | 1–2 days | ~20 | BG Imperial (~12 cards) |
 | **I** | [phase-2-track-i-puppets-pilot-completion.md](phase-2-track-i-puppets-pilot-completion.md) | medium-high | 2–3 days | ~25 + 2 UNCLEAR closures | Puppets (~15 cards) |

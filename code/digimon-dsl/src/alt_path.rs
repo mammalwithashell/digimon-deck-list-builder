@@ -55,6 +55,39 @@ pub struct AltPathSpec {
     /// material availability. Closes G-ALT-PATH-CONDITION (BT24-016).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub condition: Option<PredicateSpec>,
+
+    /// Phase 2 Track F (G-ALT-PATH-DIRECTION-INTO) — flips the
+    /// AltPathSpec semantic. The default (`From`) keeps the legacy
+    /// reading: the alt-path lives on the **destination** card and
+    /// `from:` filters the candidate source. The `Into` variant flips
+    /// it: the alt-path lives on the **source** card (carrier
+    /// permanent) and `from:` filters the candidate destination
+    /// (typically a hand card). Used by ST20-10 Agumon's
+    /// "[Your Turn] this Digimon can digivolve into [WarGreymon] in
+    /// the hand for cost 4" shape. DCGO models both directions via the
+    /// same `AddSelfDigivolutionRequirementStaticEffect`; the DSL
+    /// surface needed an explicit flag to disambiguate. Defaults to
+    /// `From` for back-compat with existing YAML.
+    #[serde(default, skip_serializing_if = "is_default_direction")]
+    pub direction: AltPathDirection,
+}
+
+fn is_default_direction(d: &AltPathDirection) -> bool {
+    matches!(d, AltPathDirection::From)
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum AltPathDirection {
+    /// Legacy direction: the alt-path is registered on the
+    /// destination card; `from:` filters the source permanent /
+    /// hand-card candidate.
+    #[default]
+    From,
+    /// New direction (Phase 2 Track F): the alt-path is registered on
+    /// the source card; `from:` filters the destination hand-card
+    /// candidate. ST20-10-shape "this card may digivolve into X".
+    Into,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]

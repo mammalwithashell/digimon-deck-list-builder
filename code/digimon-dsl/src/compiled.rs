@@ -126,6 +126,20 @@ pub struct CompiledAltPath {
     /// Closes G-ALT-PATH-CONDITION (BT24-016).
     #[serde(default)]
     pub condition: Option<Box<CompiledPredicate>>,
+    /// Phase 2 Track F (G-ALT-PATH-DIRECTION-INTO) — direction flip.
+    /// `From` (default): legacy reading; alt-path is registered on the
+    /// destination card and `from:` filters the source candidate.
+    /// `Into`: alt-path is registered on the source card and `from:`
+    /// filters the destination hand-card candidate. ST20-10 warp-shape.
+    #[serde(default)]
+    pub direction: CompiledAltPathDirection,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+pub enum CompiledAltPathDirection {
+    #[default]
+    From,
+    Into,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -202,6 +216,12 @@ pub struct CompiledPredicate {
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
     pub has_keyword: Option<String>,
+    /// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true if the
+    /// candidate permanent carries any `EffectTiming::OnDeletion`-timed
+    /// triggered effect via a compiled DSL clause or a hand-written
+    /// `CardEffect` impl. EX1-021 MetalGarurumon's [When Attacking] arm
+    /// gates target selection on this predicate.
+    pub has_on_deletion_effect: Option<bool>,
     pub self_color_count_gte: Option<u8>,
     pub zone: Vec<CompiledZone>,
     pub owner: Option<CompiledPlayerRef>,
@@ -687,6 +707,12 @@ pub enum CompiledStep {
     GainMemory(i32),
     LoseMemory(i32),
     SetMemory(i32),
+    /// Phase 2 Track F (G-DSL-GAIN-MEMORY-FN): formula-valued memory
+    /// mutation. Evaluated at resolution time via `formula_eval` and
+    /// fed to the engine's signed `add_memory` helper. Mirror of the
+    /// literal `GainMemory(i32)` with runtime-computed magnitude.
+    GainMemoryFn { formula: CompiledFormula },
+    LoseMemoryFn { formula: CompiledFormula },
     Draw {
         of: CompiledPlayerRef,
         count: u8,
@@ -809,6 +835,15 @@ pub enum CompiledStep {
     },
     PlaceAsBottomSource {
         source: CompiledBindingRef,
+        target: CompiledBindingRef,
+    },
+    /// Phase 2 Track F (2026-05-17) — deterministic "top stacked card →
+    /// bottom" source-stack rotation. Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM
+    /// for BT23-008 / BT23-018 / BT24-079 / BT24-082-shape costs that read
+    /// "By placing this Digimon's top stacked card as its bottom digivolution
+    /// card …". The verb does NOT surface a player choice — printed text
+    /// pins the top source as the moved card.
+    PlaceTopSourceAsBottom {
         target: CompiledBindingRef,
     },
     TrashTopSource {

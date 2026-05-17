@@ -89,6 +89,15 @@ pub struct PredicateSpec {
     pub is_unsuspended: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_keyword: Option<String>,
+    /// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true when the
+    /// permanent's top card (or any card in its digivolution stack) has a
+    /// triggered effect with `EffectTiming::OnDeletion` either via a
+    /// compiled DSL clause or a hand-written `CardEffect` impl. Used by
+    /// EX1-021 MetalGarurumon's "[When Attacking] return 1 opponent
+    /// Digimon **that has an [On Deletion] effect** to the bottom of
+    /// deck." DCGO `permanent.HasOnDeletionEffect`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_on_deletion_effect: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_color_count_gte: Option<u8>,
 

@@ -417,10 +417,8 @@ fn bt22_026_when_digivolving_branch_1_only_lowest_level_is_a_legal_target() {
 /// FROM-HAND-WITH-PERMANENT-TARGET. Same gap as BT17-015 branch 1 /
 /// BT22-013 branch 0.
 #[test]
-#[ignore = "BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — \
-            select_own_permanent + select_hand + effect_initiated_digivolve(target: <binding>) \
-            chain terminates after the permanent pick; the hand-pick prompt never installs. \
-            Same gap blocks BT17-015 branch 1 and BT22-013 branch 0."]
+// Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
+// WITH-PERMANENT-TARGET resolved as phantom (see BT17-015 sister test).
 fn bt22_026_when_digivolving_branch_0_digivolves_agumon_into_wargreymon_free() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)

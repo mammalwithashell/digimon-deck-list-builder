@@ -503,11 +503,13 @@ fn bt17_015_on_play_branch_0_cannot_target_dp_above_8000() {
 /// `select_hand` → `effect_initiated_digivolve` with `target: <binding>`.
 /// Logged as DSL-GAP G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET.
 #[test]
-#[ignore = "BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — \
-            select_own_permanent + select_hand + effect_initiated_digivolve(target: <binding>) \
-            chain terminates after the permanent pick; the hand-pick prompt never installs \
-            and the digivolve verb never executes (observed 2026-05-03 with current cards.pack). \
-            Compare BT21-013 which uses target: self and works."]
+// Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
+// WITH-PERMANENT-TARGET re-investigation showed the chain has been
+// working — `run_tail_preserving_trigger_context` correctly drives
+// `select_own_permanent → select_hand → effect_initiated_digivolve`
+// to completion. The previously-suspected hang was an artefact of an
+// auto_resolve assertion checking mid-chain state. Gap resolved; this
+// end-state test now runs.
 fn bt17_015_on_play_branch_1_digivolves_gabumon_into_metalgarurumon_free() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-015")

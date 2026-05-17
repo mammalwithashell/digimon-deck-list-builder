@@ -374,7 +374,7 @@ pub fn run_step_with_runtime(
         }
         return;
     }
-    if memory::try_run(step, ctx) {
+    if memory::try_run(step, ctx, bindings) {
         return;
     }
     if draw::try_run(step, ctx) {

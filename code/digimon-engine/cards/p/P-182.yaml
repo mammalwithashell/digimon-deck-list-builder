@@ -230,39 +230,35 @@ effects:
   #         prompt: "Delete 1 opp Digimon (DP ≤ this Digimon)"
   #     - delete_permanent: { target: tgt }
 
-  # ─── Clause 4 — [All Turns] +1000 DP per distinct color  [BLOCKED] ──────────
+  # ─── Clause 4 — [All Turns] +1000 DP per distinct color ────────────────────
   #
   # Printed text:
   #   "[All Turns] This Digimon gets +1000 DP for each color Digimon and Tamers
   #    have."
   #
+  # Phase 2 Track F (2026-05-17): the gap previously filed as
+  # G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA had already been closed in
+  # substrate (the `DistinctColorsCount(CardCountInZoneSpec)` PerSelector
+  # variant accepts `of: any` to evaluate the union of both players'
+  # permanents). Regression coverage added under
+  # `distinct_colors_count_formula_counts_both_players_battle_area_union`.
+  #
   # DCGO P_182.cs lines 147-181: ChangeSelfDPStaticEffect(changeValue: count, ...)
   # at EffectTiming.None, where count() is a live closure evaluating
   # `Combinations.GetDifferenetColorCardCount(cards) * 1000` over BOTH players'
   # battle-area Digimon + Tamers.
-  #
-  # BLOCKED: G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA — see header docs.
-  # `kind: aura` + `dp_modifier_fn` (Group 6 RESOLVED) provides the dynamic
-  # continuous DP shell, but the `PerSelector` enum has no `distinct_colors_count`
-  # variant over a zone+filter+player. Omitted entirely rather than represented
-  # partially — a static `dp_modifier: 1000` (single-color baseline) would
-  # under-claim, and any larger fixed value would over-claim.
-  #
-  # Stub (commented — uncomment when G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA
-  # closes):
-  #
-  # - kind: aura
-  #   target: {}
-  #   active_when: { all_turns: true }
-  #   dp_modifier_fn:
-  #     base: 0
-  #     per:
-  #       distinct_colors_count:
-  #         of: any                          # NEW: both players
-  #         zone: [battle_area]
-  #         filter:
-  #           any_of:
-  #             - kind: digimon
-  #             - kind: tamer
-  #     delta: 1000
-  #   summary: "[All Turns] +1000 DP per distinct color across both players' Digimon+Tamers"
+  - kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier_fn:
+      base: 0
+      per:
+        distinct_colors_count:
+          of: any
+          zone: battle_area
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+      delta: 1000
+    summary: "[All Turns] +1000 DP per distinct color across both players' Digimon+Tamers"

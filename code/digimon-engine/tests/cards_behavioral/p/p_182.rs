@@ -172,6 +172,25 @@ fn make_own_tamer(id: &str, name: &str) -> CardData {
     c
 }
 
+/// Phase 2 Track F: a Tamer/Digimon helper that sets an explicit single
+/// color, used by the [All Turns] +1000 DP per distinct color tests.
+fn make_colored_tamer(id: &str, name: &str, color: digimon_engine::enums::CardColor) -> CardData {
+    let mut c = make_own_tamer(id, name);
+    c.colors = vec![color];
+    c
+}
+
+fn make_colored_opp_digimon(
+    id: &str,
+    name: &str,
+    dp: i32,
+    color: digimon_engine::enums::CardColor,
+) -> CardData {
+    let mut c = make_opp_digimon(id, name, dp);
+    c.colors = vec![color];
+    c
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 1 — Structural assertions
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -319,14 +338,11 @@ fn p_182_has_zero_triggered_clauses_today() {
     );
 }
 
-/// P-182 must NOT publish a static `dp_modifier` aura — the [All Turns]
-/// clause is a *dynamic* per-color computation. A static modifier (e.g. a
-/// constant `dp_modifier: 1000`) would silently misrepresent the printed
-/// effect (only correct when exactly 1 color is on the field, wrong
-/// otherwise). The aura clause is omitted entirely until a faithful formula
-/// can be authored.
+/// Phase 2 Track F (2026-05-17): the distinct-colors-both-players formula
+/// is available; P-182's [All Turns] +1000 DP per distinct color now
+/// publishes a DYNAMIC aura via `dp_modifier_fn`.
 #[test]
-fn p_182_does_not_publish_static_dp_modifier_aura_today() {
+fn p_182_publishes_dynamic_dp_modifier_fn_aura() {
     let runner = wargreymon_runner();
     let card = runner.compiled_card("P-182").expect("compiled");
 
@@ -341,11 +357,8 @@ fn p_182_does_not_publish_static_dp_modifier_aura_today() {
         })
         .count();
     assert_eq!(
-        aura_count, 0,
-        "P-182 must not publish a static aura — [All Turns] +1000 DP per color \
-         requires the missing distinct_colors_count formula primitive (BLOCKED \
-         on G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA). Static substitutes would \
-         under/over-claim DP and violate no-approximations."
+        aura_count, 1,
+        "P-182's [All Turns] +1000 DP-per-color clause must compile to one aura"
     );
 }
 
@@ -553,24 +566,24 @@ fn p_182_when_digivolving_deletes_nothing_when_no_opp_digimon_within_dp() {
 /// proposal and DCGO reference. When the formula primitive lands, uncomment
 /// the YAML stub and activate this test.
 #[test]
-#[ignore = "BLOCKED: G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA — PerSelector has no \
-            distinct_colors_count variant over zone+filter+player. Sibling of \
-            G-DSL-DISTINCT-TAMER-COLORS-FORMULA (referenced as a companion in \
-            qa/dsl-vocab-gaps.md line 892), but scoped more broadly to BOTH PLAYERS' \
-            Digimon AND Tamers (vs. just YOUR Tamers). Without the primitive, the \
-            [All Turns] +1000 DP per color clause cannot be authored faithfully and \
-            is omitted from the YAML to preserve no-approximations."]
+// Phase 2 Track F (2026-05-17): distinct_colors_count formula is available
+// via `of: any`. Active.
 fn p_182_all_turns_gets_1000_dp_per_distinct_color_on_field() {
     // Setup: own field has P-182 (Red Digimon) + a Blue Tamer; opp field has
     // a Yellow Digimon. Distinct colors across (own ∪ opp) Digimon ∪ Tamers
     // = {Red, Blue, Yellow} = 3. P-182 base DP = 12000. Expected effective
     // DP = 12000 + 3 * 1000 = 15000.
-    let mut blue_tamer = make_own_tamer("BLU-TAMER", "Blue Tamer");
-    // The default test card has no color set; we'd need to force a color
-    // bit for the distinct-color computation. Once the formula primitive
-    // lands, the `distinct_colors_count` evaluator MUST consult
-    // `card_data.colors` — exposing whichever helper the DSL ships for that.
-    let mut yellow_opp = make_opp_digimon("YEL-OPP", "Yellow Opp", 4000);
+    let blue_tamer = make_colored_tamer(
+        "BLU-TAMER",
+        "Blue Tamer",
+        digimon_engine::enums::CardColor::Blue,
+    );
+    let yellow_opp = make_colored_opp_digimon(
+        "YEL-OPP",
+        "Yellow Opp",
+        4000,
+        digimon_engine::enums::CardColor::Yellow,
+    );
 
     let mut runner = DebugRunner::builder()
         .dsl_card("P-182")
@@ -597,7 +610,8 @@ fn p_182_all_turns_gets_1000_dp_per_distinct_color_on_field() {
 /// is in play; expected DP = 12000 (base) + 1 * 1000 = 13000. Locked in as
 /// the lower-bound case for the formula.
 #[test]
-#[ignore = "BLOCKED: G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA — see positive test"]
+// Phase 2 Track F (2026-05-17): distinct_colors_count formula is available
+// via `of: any`. Active.
 fn p_182_all_turns_single_color_yields_1000_dp_buff() {
     let mut runner = wargreymon_runner();
     runner.game.turn_count = 1;
@@ -617,11 +631,17 @@ fn p_182_all_turns_single_color_yields_1000_dp_buff() {
 /// Even with only P-182 on the field, the formula must count P-182's own
 /// color (Red) → at minimum +1000.
 #[test]
-#[ignore = "BLOCKED: G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA — see positive test"]
+// Phase 2 Track F (2026-05-17): distinct_colors_count formula is available
+// via `of: any`. Active.
 fn p_182_all_turns_dynamic_dp_recomputes_when_field_changes() {
     // Initially only P-182 on the field; when an opp Digimon of a NEW color
     // enters, P-182's DP must recompute live (continuous aura semantics).
-    let mut yellow_opp = make_opp_digimon("YEL2", "Yellow2", 5000);
+    let yellow_opp = make_colored_opp_digimon(
+        "YEL2",
+        "Yellow2",
+        5000,
+        digimon_engine::enums::CardColor::Yellow,
+    );
     let mut runner = DebugRunner::builder()
         .dsl_card("P-182")
         .expect("P-182 in embedded DSL pack")

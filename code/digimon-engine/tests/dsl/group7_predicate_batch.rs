@@ -227,6 +227,80 @@ effects:
 }
 
 #[test]
+fn has_on_deletion_effect_predicate_matches_save_keyword_carriers() {
+    // Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — EX1-021's
+    // [When Attacking] target filter selects "Digimon that has an
+    // [On Deletion] effect". The Save keyword auto-installs an
+    // OnDeletion-timed effect, so a Save-carrying card must match;
+    // a plain card must not.
+    let mut save_card = make_test_card("SAVE-PERM", "Save Permanent");
+    save_card.keywords.push(Keyword::Save);
+    save_card.card_kind = CardKind::Digimon;
+    save_card.dp = Some(5000);
+    let mut plain_card = make_test_card("PLAIN-PERM", "Plain Permanent");
+    plain_card.card_kind = CardKind::Digimon;
+    plain_card.dp = Some(5000);
+    let src_card_data = make_test_card("PRED-SRC", "Pred Src");
+
+    let mut runner = DebugRunner::builder()
+        .add_card(src_card_data)
+        .add_card(save_card)
+        .add_card(plain_card)
+        .hand(0, &["PRED-SRC"])
+        .build();
+    let save_perm = runner.place_on_field(0, "SAVE-PERM", None);
+    let plain_perm = runner.place_on_field(0, "PLAIN-PERM", None);
+    let src = runner.game.players[0].hand[0].handle();
+    let rctx = EffectReadContext::new(&runner.game, src, None, 0);
+
+    let pred_true = CompiledPredicate {
+        has_on_deletion_effect: Some(true),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(
+            &pred_true,
+            &rctx,
+            PredicateSubject::Permanent(save_perm),
+            None
+        ),
+        "Save keyword carrier matches has_on_deletion_effect: true"
+    );
+    assert!(
+        !eval_predicate_with_bindings(
+            &pred_true,
+            &rctx,
+            PredicateSubject::Permanent(plain_perm),
+            None
+        ),
+        "plain Digimon does not match has_on_deletion_effect: true"
+    );
+
+    let pred_false = CompiledPredicate {
+        has_on_deletion_effect: Some(false),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(
+            &pred_false,
+            &rctx,
+            PredicateSubject::Permanent(plain_perm),
+            None
+        ),
+        "plain Digimon matches has_on_deletion_effect: false"
+    );
+    assert!(
+        !eval_predicate_with_bindings(
+            &pred_false,
+            &rctx,
+            PredicateSubject::Permanent(save_perm),
+            None
+        ),
+        "Save keyword carrier does not match has_on_deletion_effect: false"
+    );
+}
+
+#[test]
 fn has_keyword_predicate_matches_permanent_keywords() {
     let mut runner = runner_with_dp_cards();
     let low = runner.place_on_field(0, "LOW-DP", None);

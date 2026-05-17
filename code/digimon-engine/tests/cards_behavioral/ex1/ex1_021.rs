@@ -62,6 +62,18 @@ fn make_opp_digimon(id: &str, name: &str, dp: i32) -> CardData {
     c
 }
 
+/// Phase 2 Track F: an opp Digimon with the Save keyword, which the engine
+/// auto-installs as an OnDeletion-timed effect. Required for tests that
+/// gate target selection on `has_on_deletion_effect: true`.
+fn make_opp_save_digimon(id: &str, name: &str) -> CardData {
+    let mut c = make_test_card(id, name);
+    c.dp = Some(5000);
+    c.level = Some(5);
+    c.card_kind = CardKind::Digimon;
+    c.keywords.push(digimon_engine::enums::Keyword::Save);
+    c
+}
+
 fn make_tamer(id: &str, name: &str) -> CardData {
     let mut c = make_test_card(id, name);
     c.card_kind = CardKind::Tamer;
@@ -78,6 +90,7 @@ fn metal_garurumon_runner() -> DebugRunner {
         .add_card(make_filler("HAND-FILLER", "HandFiller"))
         .add_card(make_tamer("OWN-TAMER", "OwnTamer"))
         .add_card(make_opp_digimon("OPP-DIGI", "OppDigimon", 5000))
+        .add_card(make_opp_save_digimon("OPP-SAVE", "OppSave"))
         .memory(12)
         .build()
 }
@@ -197,7 +210,7 @@ fn ex1_021_total_triggered_clause_count_is_two() {
 // would currently see no memory change at all.
 
 #[test]
-#[ignore = "BLOCKED: G-DSL-GAIN-MEMORY-FN / G-COUNT-GTE-NOT-EVALUATED -- gain_memory_fn formula variant missing AND count_gte not evaluated; process: [] pending"]
+// Phase 2 Track F (2026-05-17): G-DSL-GAIN-MEMORY-FN closed. Active.
 fn ex1_021_when_digivolving_hand_lt_4_gains_no_memory() {
     let mut r = metal_garurumon_runner();
     let perm = r.place_on_field(0, "EX1-021", Some(0));
@@ -220,7 +233,7 @@ fn ex1_021_when_digivolving_hand_lt_4_gains_no_memory() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-DSL-GAIN-MEMORY-FN / G-COUNT-GTE-NOT-EVALUATED -- process: [] pending"]
+// Phase 2 Track F (2026-05-17): G-DSL-GAIN-MEMORY-FN closed. Active.
 fn ex1_021_when_digivolving_hand_eq_4_gains_one_memory() {
     let mut r = metal_garurumon_runner();
     let perm = r.place_on_field(0, "EX1-021", Some(0));
@@ -243,7 +256,7 @@ fn ex1_021_when_digivolving_hand_eq_4_gains_one_memory() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-DSL-GAIN-MEMORY-FN / G-COUNT-GTE-NOT-EVALUATED -- process: [] pending"]
+// Phase 2 Track F (2026-05-17): G-DSL-GAIN-MEMORY-FN closed. Active.
 fn ex1_021_when_digivolving_hand_eq_8_gains_two_memory() {
     let mut r = metal_garurumon_runner();
     let perm = r.place_on_field(0, "EX1-021", Some(0));
@@ -266,7 +279,7 @@ fn ex1_021_when_digivolving_hand_eq_8_gains_two_memory() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-DSL-GAIN-MEMORY-FN / G-COUNT-GTE-NOT-EVALUATED -- process: [] pending"]
+// Phase 2 Track F (2026-05-17): G-DSL-GAIN-MEMORY-FN closed. Active.
 fn ex1_021_when_digivolving_hand_eq_7_gains_one_memory() {
     let mut r = metal_garurumon_runner();
     let perm = r.place_on_field(0, "EX1-021", Some(0));
@@ -288,32 +301,10 @@ fn ex1_021_when_digivolving_hand_eq_7_gains_one_memory() {
     );
 }
 
-// Negative behavioral check that DOES pass today: with `process: []` the
-// trigger fires but no memory changes. This locks in the current "no-op
-// faithful-to-process-[]" behavior so a regression that accidentally adds
-// memory gain (e.g. a future implementer wires the chained-`if` workaround
-// without realizing G-COUNT-GTE-NOT-EVALUATED breaks it) is caught.
-#[test]
-fn ex1_021_when_digivolving_currently_does_not_change_memory() {
-    let mut r = metal_garurumon_runner();
-    let perm = r.place_on_field(0, "EX1-021", Some(0));
-
-    set_hand_size(&mut r, 0, 8);
-
-    let mem_before = r.memory();
-    r.game.enqueue_triggered(
-        EffectTiming::WhenDigivolving,
-        TriggerSource::Permanent(perm),
-    );
-    r.game.drain_effect_queue();
-    let _ = r.auto_resolve();
-
-    assert_eq!(
-        r.memory(),
-        mem_before,
-        "Body is process: [] pending G-DSL-GAIN-MEMORY-FN; no memory change should occur"
-    );
-}
+// Phase 2 Track F (2026-05-17): the previous guard locking in
+// `process: []` behavior is obsolete — gain_memory_fn now adds memory
+// per the printed text. Removed in favor of the active hand-bucket
+// tests above.
 
 // ─── SECTION 3 — [When Attacking] body behavioral (BLOCKED) ──────────────────
 //
@@ -322,9 +313,10 @@ fn ex1_021_when_digivolving_currently_does_not_change_memory() {
 // `#[ignore]`'d tests become live.
 
 #[test]
-fn ex1_021_when_attacking_currently_installs_no_selection() {
-    // Pre-condition: with process: [], trigger fires but body installs
-    // nothing -- regression guard against accidental over-selection.
+fn ex1_021_when_attacking_does_not_install_selection_when_opp_has_no_on_deletion_target() {
+    // Phase 2 Track F: the [On Deletion] filter now correctly excludes
+    // plain Digimon. When the opponent has no [On Deletion] target on
+    // field, the selection must not install.
     let mut r = metal_garurumon_runner();
     let perm = r.place_on_field(0, "EX1-021", Some(0));
     let _tamer = r.place_on_field(0, "OWN-TAMER", Some(0));
@@ -337,17 +329,19 @@ fn ex1_021_when_attacking_currently_installs_no_selection() {
     r.game.drain_effect_queue();
     assert!(
         r.pending_selection().is_none(),
-        "Body is process: [] pending G-DSL-HAS-ON-DELETION-EFFECT; no selection should install"
+        "OPP-DIGI has no [On Deletion] effect so the candidate set is empty; no selection installs"
     );
 }
 
 #[test]
-#[ignore = "BLOCKED: G-DSL-HAS-ON-DELETION-EFFECT / G-COUNT-GTE-NOT-EVALUATED -- process: [] pending; selection install requires both gaps closed"]
+// Phase 2 Track F (2026-05-17): G-DSL-HAS-ON-DELETION-EFFECT closed. Active.
 fn ex1_021_when_attacking_installs_selection_when_all_conditions_met() {
     let mut r = metal_garurumon_runner();
     let perm = r.place_on_field(0, "EX1-021", Some(0));
     let _tamer = r.place_on_field(0, "OWN-TAMER", Some(0));
-    let _opp = r.place_on_field(1, "OPP-DIGI", None);
+    // Use a Save-keyword Digimon: Save auto-installs an OnDeletion-timed
+    // effect, satisfying the `has_on_deletion_effect: true` filter.
+    let _opp = r.place_on_field(1, "OPP-SAVE", None);
 
     set_hand_size(&mut r, 0, 8);
 
@@ -361,7 +355,7 @@ fn ex1_021_when_attacking_installs_selection_when_all_conditions_met() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-DSL-HAS-ON-DELETION-EFFECT / G-COUNT-GTE-NOT-EVALUATED -- process: [] pending"]
+// Phase 2 Track F (2026-05-17): G-DSL-HAS-ON-DELETION-EFFECT closed. Active.
 fn ex1_021_when_attacking_blocks_when_hand_lt_8() {
     // Once gaps close, this test must verify the hand-size gate prevents
     // the selection from installing when hand < 8.
@@ -382,12 +376,12 @@ fn ex1_021_when_attacking_blocks_when_hand_lt_8() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-DSL-HAS-ON-DELETION-EFFECT / G-COUNT-GTE-NOT-EVALUATED -- process: [] pending"]
+// Phase 2 Track F (2026-05-17): G-DSL-HAS-ON-DELETION-EFFECT closed. Active.
 fn ex1_021_when_attacking_returns_selected_digimon_to_deck_bottom() {
     let mut r = metal_garurumon_runner();
     let attacker = r.place_on_field(0, "EX1-021", Some(0));
     let _tamer = r.place_on_field(0, "OWN-TAMER", Some(0));
-    let target = r.place_on_field(1, "OPP-DIGI", None);
+    let target = r.place_on_field(1, "OPP-SAVE", None);
 
     set_hand_size(&mut r, 0, 8);
 

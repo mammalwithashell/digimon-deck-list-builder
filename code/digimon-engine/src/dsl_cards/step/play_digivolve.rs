@@ -371,6 +371,15 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let _ = ctx.place_as_bottom_source(source_ref, target_handle);
             true
         }
+        CompiledStep::PlaceTopSourceAsBottom { target } => {
+            let Some(ResolvedBinding::Permanent(target_handle)) =
+                resolve_binding_ref(target, ctx, bindings)
+            else {
+                return true;
+            };
+            let _ = ctx.place_top_source_as_bottom(target_handle);
+            true
+        }
         CompiledStep::TrashTopSource { target } => {
             if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
             {

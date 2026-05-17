@@ -461,11 +461,8 @@ fn bt17_027_on_play_branch_0_can_target_opp_tamer() {
 /// prompt never installs and the digivolve verb never executes.
 /// Logged as G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET.
 #[test]
-#[ignore = "BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — \
-            select_own_permanent + select_hand + effect_initiated_digivolve(target: <binding>) \
-            chain terminates after the permanent pick; the hand-pick prompt never installs \
-            and the digivolve verb never executes (carried over from BT17-015 audit). \
-            Compare BT21-013 which uses target: self and works."]
+// Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
+// WITH-PERMANENT-TARGET resolved as phantom (see BT17-015 sister test).
 fn bt17_027_on_play_branch_1_digivolves_agumon_into_wargreymon_free() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-027")

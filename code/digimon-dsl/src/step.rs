@@ -67,6 +67,17 @@ pub enum StepSpec {
     GainMemory(i32),
     LoseMemory(i32),
     SetMemory(i32),
+    /// Phase 2 Track F (G-DSL-GAIN-MEMORY-FN) — formula-valued gain.
+    /// Mirrors the literal `gain_memory: N` shape but accepts a
+    /// `FormulaSpec` evaluated at resolution time. Use for printed text
+    /// like "[When Digivolving] Gain 1 memory for every 4 cards in your
+    /// hand." (EX1-021 MetalGarurumon).
+    GainMemoryFn(FormulaStepArgs),
+    /// Symmetric of `GainMemoryFn` — kept for completeness so author-facing
+    /// API doesn't surprise (literal `lose_memory: N` has a `lose_memory_fn`
+    /// sibling). No known card uses it as of 2026-05-17 but adding both
+    /// halves at once keeps the eval-arm coverage matrix uniform.
+    LoseMemoryFn(FormulaStepArgs),
 
     // Draw / deck / hand / trash
     Draw(DrawArgs),
@@ -111,6 +122,14 @@ pub enum StepSpec {
     PlaceOnSecurity(PlaceOnSecurityArgs),
     PlayToken(PlayTokenArgs),
     PlaceAsBottomSource(PlaceAsBottomSourceArgs),
+    /// Phase 2 Track F (2026-05-17): move `target`'s top stacked card (the
+    /// digivolution source immediately beneath the active top card) to the
+    /// bottom of its own stack. Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM
+    /// (BT23-008 / BT23-018-shape "place top stacked card as bottom" costs).
+    /// Per the no-approximations policy this is a deterministic source pick
+    /// — the printed text identifies a singular top source, so no
+    /// `select_material` choice is exposed.
+    PlaceTopSourceAsBottom(TargetArg),
     TrashTopSource(TargetArg),
     TrashAllSources(TargetArg),
     TrashSelectedSources(TrashSelectedSourcesArgs),
@@ -235,6 +254,8 @@ impl Serialize for StepSpec {
             StepSpec::GainMemory(v) => kv!(s, "gain_memory", v),
             StepSpec::LoseMemory(v) => kv!(s, "lose_memory", v),
             StepSpec::SetMemory(v) => kv!(s, "set_memory", v),
+            StepSpec::GainMemoryFn(v) => kv!(s, "gain_memory_fn", v),
+            StepSpec::LoseMemoryFn(v) => kv!(s, "lose_memory_fn", v),
             // Draw / deck / hand / trash
             StepSpec::Draw(v) => kv!(s, "draw", v),
             StepSpec::TrashFromTop(v) => kv!(s, "trash_from_top", v),
@@ -265,6 +286,7 @@ impl Serialize for StepSpec {
             StepSpec::PlaceOnSecurity(v) => kv!(s, "place_on_security", v),
             StepSpec::PlayToken(v) => kv!(s, "play_token", v),
             StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
+            StepSpec::PlaceTopSourceAsBottom(v) => kv!(s, "place_top_source_as_bottom", v),
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
             StepSpec::TrashAllSources(v) => kv!(s, "trash_all_sources", v),
             StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
@@ -414,6 +436,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "gain_memory" => StepSpec::GainMemory(map.next_value()?),
             "lose_memory" => StepSpec::LoseMemory(map.next_value()?),
             "set_memory" => StepSpec::SetMemory(map.next_value()?),
+            "gain_memory_fn" => StepSpec::GainMemoryFn(map.next_value()?),
+            "lose_memory_fn" => StepSpec::LoseMemoryFn(map.next_value()?),
 
             // Draw / deck / hand / trash
             "draw" => StepSpec::Draw(map.next_value()?),
@@ -446,6 +470,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_on_security" => StepSpec::PlaceOnSecurity(map.next_value()?),
             "play_token" => StepSpec::PlayToken(map.next_value()?),
             "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
+            "place_top_source_as_bottom" => StepSpec::PlaceTopSourceAsBottom(map.next_value()?),
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
             "trash_all_sources" => StepSpec::TrashAllSources(map.next_value()?),
             "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
@@ -567,6 +592,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "gain_memory",
                         "lose_memory",
                         "set_memory",
+                        "gain_memory_fn",
+                        "lose_memory_fn",
                         "draw",
                         "trash_from_top",
                         "add_to_hand_from_deck",
@@ -595,6 +622,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "place_on_security",
                         "play_token",
                         "place_as_bottom_source",
+                        "place_top_source_as_bottom",
                         "trash_top_source",
                         "trash_all_sources",
                         "trash_selected_sources",
@@ -1061,6 +1089,18 @@ pub struct DeDigivolveArgs {
     pub amount: Option<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stop_at_level: Option<u8>,
+}
+
+/// Phase 2 Track F (G-DSL-GAIN-MEMORY-FN): args for formula-valued
+/// memory mutations (`gain_memory_fn:` / `lose_memory_fn:`). The single
+/// `formula:` field evaluates at resolution time and the result is fed
+/// to `EffectContext::add_memory` (signed) — exactly the shape the
+/// existing literal `gain_memory: N` step uses, just with a runtime
+/// integer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct FormulaStepArgs {
+    pub formula: crate::formula::FormulaSpec,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

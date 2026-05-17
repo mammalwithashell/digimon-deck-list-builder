@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-05-10",
+  "last_updated": "2026-05-17",
   "cards": {
     "BT21-093": {
       "card_name": "Raging Serpentine",
@@ -560,9 +560,9 @@
     },
     "BT16-082": {
       "card_name": "Ukkomon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-DRIFT",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-f-dna-omnimon",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt16/BT16-082.yaml",
@@ -571,7 +571,7 @@
       "patterns": [
         "B3"
       ],
-      "notes": "YAML body is stale placeholder despite G-ON-MOVE RESOLVED 2026-04-29. Ready to be re-IMPLEMENTed in a follow-up."
+      "notes": "Phase 2 Track F (2026-05-17): tracker drift cleanup. YAML uses G-ON-MOVE (RESOLVED 2026-04-29) reveal-buckets + hatch. 16 pass / 2 ignored."
     },
     "BT21-007": {
       "card_name": "Agumon",
@@ -1174,9 +1174,9 @@
     },
     "BT17-015": {
       "card_name": "WarGreymon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-DRIFT",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-f-dna-omnimon",
+      "status": "PARTIAL",
       "gap_kind": "dsl",
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/_examples/BT17-015.yaml",
@@ -1187,7 +1187,7 @@
         "D2",
         "G2"
       ],
-      "notes": "Cost reduction + branch-choice OnPlay implemented. NEW DSL-GAP G-DSL-SOURCE-NAME-CONTAINS (predicate parses but evaluator doesn't read it; inherited Omnimon-name clause over-fires). NEW G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET (digivolve branch chains through select_own_permanent + select_hand but never installs hand prompt)."
+      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved; Branch 1 digivolve test active. Inherited Omnimon-name negative gate still BLOCKED on G-DSL-SOURCE-NAME-CONTAINS."
     },
     "BT17-019": {
       "card_name": "Gabumon",
@@ -1207,8 +1207,8 @@
     },
     "BT17-027": {
       "card_name": "MetalGarurumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-f-dna-omnimon",
       "status": "PARTIAL",
       "gap_kind": "dsl",
       "archetype": "DNA Omnimon",
@@ -1219,7 +1219,7 @@
         "E1",
         "D2"
       ],
-      "notes": "Cost reduction + branch-choice OnPlay. Branch 1 digivolve BLOCKED on G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET; inherited Omnimon-name negative gate BLOCKED on G-DSL-SOURCE-NAME-CONTAINS."
+      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved; Branch 1 digivolve test active. Inherited Omnimon-name negative gate still BLOCKED on G-DSL-SOURCE-NAME-CONTAINS."
     },
     "BT17-078": {
       "card_name": "Omnimon",
@@ -1483,8 +1483,8 @@
     },
     "BT22-013": {
       "card_name": "WarGreymon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-f-dna-omnimon",
       "status": "PARTIAL",
       "gap_kind": "dsl",
       "archetype": "DNA Omnimon",
@@ -1495,7 +1495,7 @@
         "E1",
         "G2"
       ],
-      "notes": "10 pass / 5 ignored on G-ALT-PATH-CONDITION, G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET, G-PRED-DP-LTE, G-DSL-SOURCE-NAME-CONTAINS."
+      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved. Branch 0 digivolve test active. G-ALT-PATH-CONDITION/G-PRED-DP-LTE also resolved upstream. Remaining: G-DSL-SOURCE-NAME-CONTAINS."
     },
     "BT22-015": {
       "card_name": "Omnimon",
@@ -1532,8 +1532,8 @@
     },
     "BT22-026": {
       "card_name": "MetalGarurumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-f-dna-omnimon",
       "status": "PARTIAL",
       "gap_kind": "dsl",
       "archetype": "DNA Omnimon",
@@ -1544,7 +1544,7 @@
         "E1",
         "G2"
       ],
-      "notes": "Sister to BT22-013. Branch 1 lowest-level bounce works. 11 pass / 4 ignored on G-ALT-PATH-CONDITION, G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET, G-DSL-SOURCE-NAME-CONTAINS."
+      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved. Branch 0 digivolve test active. Remaining: G-ALT-PATH-CONDITION/G-DSL-SOURCE-NAME-CONTAINS."
     },
     "BT22-099": {
       "card_name": "Kuremi Detective Agency",
@@ -1564,10 +1564,10 @@
     },
     "BT23-008": {
       "card_name": "Greymon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-f-dna-omnimon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-008.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_008.rs",
@@ -1576,14 +1576,14 @@
         "H9",
         "D4"
       ],
-      "notes": "Raid + alt-paths + inherited +2000 DP implemented. [Main][OPT] place-top-as-bottom + play-from-hand BLOCKED on NEW G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM. 11 pass / 5 ignored."
+      "notes": "Phase 2 Track F (2026-05-17): G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM closed. [Main][OPT] place-top-as-bottom + play Gabumon/Nokia clause authored. 13 pass / 0 ignored."
     },
     "EX1-021": {
       "card_name": "MetalGarurumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-f-dna-omnimon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/ex1/EX1-021.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex1/ex1_021.rs",
@@ -1591,14 +1591,14 @@
       "patterns": [
         "D4"
       ],
-      "notes": "Both bodies omitted (process: []). NEW G-DSL-GAIN-MEMORY-FN + G-DSL-HAS-ON-DELETION-EFFECT. 7 pass / 7 ignored."
+      "notes": "Phase 2 Track F (2026-05-17): G-DSL-GAIN-MEMORY-FN + G-DSL-HAS-ON-DELETION-EFFECT closed. Both clauses authored faithfully (gain_memory_fn with floor_div/card_count_in_zone formula; count_gte hand>=8 + has_on_deletion_effect target filter). 13 pass / 0 ignored."
     },
     "BT23-018": {
       "card_name": "Garurumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-f-dna-omnimon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-018.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_018.rs",
@@ -1607,7 +1607,7 @@
         "H2",
         "D4"
       ],
-      "notes": "Sister to BT23-008. Jamming + alt-paths + inherited [Opp Turn] +2000 DP implemented. [Main][OPT] BLOCKED on G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM. 11 pass / 5 ignored."
+      "notes": "Phase 2 Track F (2026-05-17): G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM closed. [Main][OPT] place-top-as-bottom + play Agumon/Nokia clause authored. 13 pass / 0 ignored."
     },
     "BT23-096": {
       "card_name": "Comet Hammer",
@@ -1822,8 +1822,8 @@
     },
     "P-182": {
       "card_name": "WarGreymon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-f-dna-omnimon",
       "status": "PARTIAL",
       "gap_kind": "dsl",
       "archetype": "DNA Omnimon",
@@ -1834,7 +1834,7 @@
         "H4",
         "H5"
       ],
-      "notes": "Keywords + alt-paths. Both bodies BLOCKED: WhenDigivolving on G-FORMULA-SOURCE-DP, [All Turns] on G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA (NEW)."
+      "notes": "Phase 2 Track F (2026-05-17): G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA verified (substrate already shipped, regression-tested). [All Turns] +1000 DP-per-color aura authored. [When Digivolving] delete-opp-DP-le-self still BLOCKED on G-FORMULA-SOURCE-DP. 8 pass / 4 ignored."
     },
     "ST2-13": {
       "card_name": "Hammer Spark",
@@ -1977,14 +1977,14 @@
     },
     "BT16-040": {
       "card_name": "Wormmon",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-f-dna-omnimon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt16/BT16-040.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_040.rs",
-      "notes": "Effect-initiated digivolve from trash chain blocked"
+      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved as phantom — chain already worked. End-state test now active."
     },
     "BT12-047": {
       "card_name": "Wormmon",

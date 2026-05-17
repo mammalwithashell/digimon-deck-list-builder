@@ -2922,6 +2922,37 @@ impl<'a> EffectContext<'a> {
         self.game.place_permanent_as_bottom_sources(source, target)
     }
 
+    /// Move `target`'s **top stacked card** (the card immediately beneath its
+    /// active top card — `card_sources[len - 2]`) to the bottom of its own
+    /// digivolution stack. Returns `false` if the target has no stacked card
+    /// beneath the top (i.e. `card_sources.len() < 2`), in which case the
+    /// printed-cost cannot be paid; callers should gate the activating step
+    /// with a `materials_count_gte: 1` (or equivalent) predicate.
+    ///
+    /// Closes `G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM` for the deterministic
+    /// "top stacked card → bottom" cost shape that DCGO encodes as
+    /// `card.PermanentOfThisCard().TopCard` followed by
+    /// `AddDigivolutionCardsBottom`. Per the no-approximations policy this
+    /// path does NOT surface a player choice over which source moves — the
+    /// printed text identifies a singular "top" source.
+    pub fn place_top_source_as_bottom(&mut self, target: PermanentHandle) -> bool {
+        let stack_size = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .map(|p| p.card_sources.len())
+            .unwrap_or(0);
+        if stack_size < 2 {
+            return false;
+        }
+        let top_stacked_idx = stack_size - 2;
+        self.place_as_bottom_source(
+            crate::enums::CardSourceRef::Material(target, top_stacked_idx),
+            target,
+        )
+    }
+
     /// Move `player`'s real breeding permanent into the battle area by effect.
     pub fn move_from_breeding_by_effect(&mut self, player: PlayerId) -> bool {
         self.game.move_from_breeding_by_effect(player)
