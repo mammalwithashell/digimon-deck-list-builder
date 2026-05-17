@@ -233,6 +233,28 @@ fn compile_stack_position(p: crate::step::StackPosition) -> CompiledStackPositio
     }
 }
 
+fn compile_remainder_destination(
+    d: crate::step::RemainderDestination,
+) -> CompiledRemainderDestination {
+    use crate::step::RemainderDestination as S;
+    match d {
+        S::DeckTop => CompiledRemainderDestination::DeckTop,
+        S::DeckBottom => CompiledRemainderDestination::DeckBottom,
+    }
+}
+
+fn compile_reveal_destination(d: &crate::step::RevealDestination) -> CompiledRevealDestination {
+    use crate::step::RevealDestination as S;
+    match d {
+        S::Hand => CompiledRevealDestination::Hand,
+        S::DeckTop => CompiledRevealDestination::DeckTop,
+        S::DeckBottom => CompiledRevealDestination::DeckBottom,
+        S::BottomSourceOf { target } => {
+            CompiledRevealDestination::BottomSourceOf(compile_binding_ref(target))
+        }
+    }
+}
+
 fn compile_distinct_by(d: crate::alt_path::DistinctBy) -> CompiledDistinctBy {
     use crate::alt_path::DistinctBy as S;
     match d {
@@ -1512,6 +1534,44 @@ fn compile_step(
             of: compile_player_ref(a.of),
             position: compile_stack_position(a.position),
         },
+        S::ChooseFromReveal(a) => CompiledStep::ChooseFromReveal {
+            of: compile_player_ref(a.of),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.choose_from_reveal.filter"), card_id, errors),
+            destination: compile_reveal_destination(&a.destination),
+            bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+            prompt_key: a.prompt_key.clone(),
+            optional: a.optional,
+        },
+        S::OrderRemainder(a) => {
+            if a.destinations.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.order_remainder.destinations"),
+                    message: "order_remainder requires at least one destination".to_string(),
+                });
+            }
+            if a.destinations.len() > 2 {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.order_remainder.destinations"),
+                    message: format!(
+                        "order_remainder supports at most 2 destinations (got {}); printed text variants beyond [deck_top, deck_bottom] are not modelled",
+                        a.destinations.len()
+                    ),
+                });
+            }
+            CompiledStep::OrderRemainder {
+                of: compile_player_ref(a.of),
+                destinations: a
+                    .destinations
+                    .iter()
+                    .map(|d| compile_remainder_destination(*d))
+                    .collect(),
+                prompt: a.prompt.clone(),
+                prompt_key: a.prompt_key.clone(),
+            }
+        }
 
         S::DeletePermanent(a) => CompiledStep::DeletePermanent {
             target: compile_binding_ref(&a.target),

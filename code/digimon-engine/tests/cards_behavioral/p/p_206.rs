@@ -806,12 +806,14 @@ fn p_206_inherited_security_cost_filter_excludes_high_cost_digimon() {
 
 /// Behavioral: add this card to hand after security resolves.
 ///
-/// G-ADD-OPTION-SELF-TO-HAND: no DSL step verb for returning the played Option
-/// to hand post-security resolution. raw_rust stub handles this.
+/// G-ADD-OPTION-SELF-TO-HAND closed 2026-05-17 (Phase 2 Track E) — P-206 now
+/// uses native DSL `add_this_option_to_hand: {}` (was raw_rust shim). The
+/// behavioral assertion is still gated on DebugRunner's security-effect
+/// integration, so this test remains ignored under a different rationale.
 #[test]
-#[ignore = "pending: G-ADD-OPTION-SELF-TO-HAND — no DSL step verb for adding resolved Option to hand after security"]
+#[ignore = "pending: DebugRunner security-effect integration (G-ADD-OPTION-SELF-TO-HAND resolved 2026-05-17)"]
 fn p_206_inherited_security_adds_self_to_hand_after_play() {
-    todo!("implement when G-ADD-OPTION-SELF-TO-HAND is resolved");
+    todo!("implement when DebugRunner security-effect integration lands");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

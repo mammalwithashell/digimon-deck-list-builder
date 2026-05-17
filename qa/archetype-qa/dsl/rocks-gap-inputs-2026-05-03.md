@@ -47,32 +47,41 @@ The remaining blocker is mostly authored card coverage plus a smaller set of reu
 
 ## Reusable Gaps For Cross-Archetype Spec
 
-### G-ROCKS-REVEAL-ORDERING
+### G-ROCKS-REVEAL-ORDERING — CLOSED (Phase 2 Track E, 2026-05-17)
 
+- **Status:** CLOSED. Author-facing residual landed via Phase 2 Track E.
 - **Type:** DSL / engine action-surface gap
-- **Blocks Rocks cards:** `P-167`, `EX8-047`, `P-107`, `P-039`, `P-206`, `EX7-074`, `BT16-082`
-- **Cross-archetype reuse:** memory boosts, Trainings, searchers, and cards that say "return the rest to the top/bottom of the deck in any order"
-- **Printed shape:** reveal top N, choose one or more matching cards for hand/source/play, then return the rest to top or bottom in any order
-- **Current evidence:** `docs/RUST_ENGINE_GAPS.md` tracks "Selection: ordered permutation"; current Rocks shell still needs faithful ordering for reveal remainders, especially `P-167` top-or-bottom ordering
-- **Required capability:** a reusable ordered-selection primitive for a small revealed set, with the chosen order exposed through pending selection/action masks
-- **Suggested DSL shape:**
+- **Blocked Rocks cards (now unblocked):** `P-167`, `EX8-047`, plus general
+  expressibility for `P-107`, `P-039`, `P-206`, `EX7-074`, `BT16-082`
+- **Cross-archetype reuse:** memory boosts, Trainings, searchers, and cards
+  that say "return the rest to the top/bottom of the deck in any order"
+- **Resolution:** two new DSL verbs ship as wrappers over the already-shipped
+  `select_reveal` / `select_effect_choice` / `select_ordered_permutation` /
+  `place_remainder_on_deck` engine helpers.
+- **Realised DSL shape:**
 
   ```yaml
-  - reveal:
-      count: 3
-      bind_as: revealed
+  - reveal_top_deck:    { of: you, count: 3, bind_as: revealed }
   - choose_from_reveal:
-      from: revealed
-      count: 1
-      filter: { trait_any: [Mineral, Rock] }
-      destination: hand
+      of: you
+      filter: { any_of: [trait_has: Mineral, trait_has: Rock] }
+      destination: hand          # | deck_top | deck_bottom | { bottom_source_of: { target: this } }
+      bind_as: picked
+      optional: true
+      prompt: "Add 1 Mineral or Rock card to your hand"
   - order_remainder:
-      from: revealed
-      destination:
-        choose_one: [deck_top, deck_bottom]
+      of: you
+      destinations: [deck_top, deck_bottom]   # 1 entry = direct placement; 2 = player effect-choice
   ```
 
-- **First test:** `P-167` reveals three cards, chooses one legal Mineral/Rock card, then exposes an ordering choice for the remaining cards and preserves that exact order on top or bottom.
+- **Closure evidence:**
+  - DSL flow tests: `code/digimon-engine/tests/dsl/track_e_reveal_ordering.rs` (6 behavioral + 2 YAML round-trip)
+  - P-167 authored: `code/digimon-engine/cards/p/P-167.yaml` `[Start of Your Main Phase][When Digivolving]` clause
+  - EX8-047 authored: `code/digimon-engine/cards/ex8/EX8-047.yaml` `[On Play]` reveal+two-pick clause
+- **First test (now passing):** `track_e_reveal_ordering::p_167_style_reveal_choose_order_full_flow`
+  reveals three cards, picks one Mineral/Rock to hand, then exposes a
+  player effect-choice for top-vs-bottom AND a full ordered-permutation
+  selection for the remainder.
 
 ### G-ROCKS-DELAY-EVENT-DIGIVOLVE
 
@@ -120,43 +129,65 @@ The remaining blocker is mostly authored card coverage plus a smaller set of reu
 
 - **First test:** Use `EX10-032` to trash exactly one selected Mineral/Rock source from a non-source Digimon, then assert only that source card's inherited de-digivolve effect fires and unrelated sources in the same host do not trigger.
 
-### G-ROCKS-OPTION-SELF-DISPOSITION
+### G-ROCKS-OPTION-SELF-DISPOSITION — CLOSED (Phase 2 Track E, 2026-05-17)
 
+- **Status:** CLOSED for all six target cards.
 - **Type:** DSL ergonomics / raw-Rust removal gap
-- **Blocks Rocks cards:** `P-206`, `EX7-074`, `P-107`, `P-039`, `LM-031`, `EX10-069`
-- **Cross-archetype reuse:** Trainings, Memory Boosts, Scrambles, Unique Emblems, Vortex/Resonance-style Options
-- **Printed shape:** after resolving a Main or Security effect, the Option moves itself to battle area, hand, trash, or other configured destination
-- **Current evidence:** `place_self_as_delay_option` and `add_this_option_to_hand` support exist, but older YAML still uses raw-Rust hooks and comments from before those primitives landed
-- **Required capability:** production DSL examples and card tests for every self-disposition mode used by option cards, with no raw-Rust fallback for standard flows
-- **Suggested DSL shape:**
+- **Blocked Rocks cards (now unblocked):** `P-206`, `EX7-074`, `P-107`,
+  `P-039`, `LM-031`, `EX10-069`
+- **Cross-archetype reuse:** Trainings, Memory Boosts, Scrambles, Unique
+  Emblems, Vortex/Resonance-style Options
+- **Resolution:** P-206's `raw_rust { fn: p_206_add_self_to_hand }` was
+  replaced with native DSL `add_this_option_to_hand: {}` (both call the
+  identical `EffectContext::add_pending_security_to_hand` helper — modernization
+  is behaviourally a no-op). The dead `p_206_add_self_to_hand` function was
+  removed from `code/digimon-engine/src/cards/raw_rust/mod.rs`. EX7-074,
+  P-107, P-039, LM-031, EX10-069 were already DSL-clean at the 2026-05-10
+  hygiene sweep (no remaining raw_rust calls) — re-audited and confirmed.
+- **DSL shapes (now production):**
 
   ```yaml
-  - place_self_as_delay_option: {}
-  - add_this_option_to_hand: {}
-  - trash_this_option: {}
+  - place_self_as_delay_option: {}     # auto-placement via Delay clause detection
+  - add_this_option_to_hand: {}        # post-security "add this card to hand" tail
   ```
 
-- **First test:** Modernize `P-206` or `EX7-074` to use DSL-only self-disposition and verify Main and Security paths move the option to the printed destination.
+  `trash_this_option` was scoped on plan-write but no card in the
+  modernization list requires it — Option auto-trash is already handled by
+  the engine's `classify_option_subtype` + `dispose_option` for cards
+  without a Delay clause. Defer until a card with explicit printed "trash
+  this card" semantics surfaces.
+- **Closure evidence:**
+  - P-206 YAML modernization: `code/digimon-engine/cards/p/P-206.yaml`
+  - Removed raw_rust: `code/digimon-engine/src/cards/raw_rust/mod.rs`
+  - Behavioral regression: P-206 18-test suite still all-green (no
+    regression from raw_rust → native DSL).
 
-### G-ROCKS-PLAYER-SCOPED-PASSIVE-MODIFIERS
+### G-ROCKS-PLAYER-SCOPED-PASSIVE-MODIFIERS — CLOSED (Phase 2 Track E, 2026-05-17)
 
+- **Status:** CLOSED for BT9-103. No new substrate proved necessary —
+  BT9-103 authors cleanly with the existing `add_player_modifier` step,
+  `for_each` over a play-cost-filtered opponent battle-area predicate, and
+  `add_modifier { CannotAttackPlayer }` per Digimon (BT14-009 / ST13-08
+  pattern adapted from declarative `kind: flood_gate` to triggered Main
+  process).
 - **Type:** engine / DSL gap
-- **Blocks Rocks cards:** `BT9-103`
+- **Blocked Rocks cards (now unblocked):** `BT9-103`
 - **Cross-archetype reuse:** floodgates and global player-scoped restrictions
-- **Printed shape:** while this permanent is in play, restrict a player or both players from playing/reducing/attacking under a condition
-- **Current evidence:** `BT14-009` and `ST13-08` production YAML now cover bilateral player-scoped flood gates with behavioral tests; `BT9-103` still needs card-level authoring if the printed shape is in scope.
-- **Required capability:** author production YAML for player-scoped passive modifiers with controller/opponent/both-player scope and revalidate masks at every affected action point
-- **Suggested DSL shape:**
-
-  ```yaml
-  - kind: passive_modifier
-    modifier: cannot_play_digimon_by_effect
-    applies_to: both_players
-    filter:
-      play_cost_gte: 5
-  ```
-
-- **First test:** `BT9-103` in battle area blocks the printed player-scoped restriction while preserving unrelated legal actions.
+- **Realised YAML:** `code/digimon-engine/cards/bt9/BT9-103.yaml` — Main and
+  Security mirror clauses both install `CannotAddSecurityByEffect` on the
+  opponent (via `add_player_modifier`) and apply `CannotAttackPlayer` to
+  every opponent Digimon with `play_cost_lte: 7` (via `for_each` +
+  `add_modifier`), both expiring at `end_of_opponents_turn`.
+- **Closure evidence:**
+  - Behavioral test:
+    `code/digimon-engine/tests/cards_behavioral/bt9/bt9_103.rs::bt9_103_main_installs_modifiers_on_opponent_and_low_cost_digimon`
+    verifies opponent gains `CannotAddSecurityByEffect`, opponent Digimon
+    cost ≤ 7 gain `CannotAttackPlayer`, opponent Digimon cost > 7 do not.
+  - Structural test asserts both the player-modifier and per-Digimon
+    `for_each + add_modifier` arms are present in the compiled clause.
+- **Tracker note:** the validated_cards_dsl.json `BT9-103` entry was
+  marked BLOCKED (yaml_path: null) at the 2026-05-04 pool pass — the YAML
+  + test land here; tracker advanced to IMPLEMENTED in this PR.
 
 ## Rocks-Local Authoring And Test Gaps
 

@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-10
+Last updated: 2026-05-17
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,68 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## Phase 2 Track E closure (2026-05-17) — Rocks pilot reveal-ordering + option self-disposition
+
+Three reusable Rocks-flagged gaps closed in a single PR.
+
+### G-ROCKS-REVEAL-ORDERING — RESOLVED 2026-05-17
+- **DSL surface:** two new verbs.
+  - `choose_from_reveal: { of, filter, destination, bind_as?, optional?, prompt }`
+    where `destination` is one of: `hand`, `deck_top`, `deck_bottom`,
+    `{ bottom_source_of: { target: <binding> } }`.
+  - `order_remainder: { of, destinations: [deck_top, deck_bottom?], prompt? }`
+    — single destination = direct placement; two destinations = player
+    effect-choice → ordered-permutation chain.
+- **Lowers to engine API:** `EffectContext::select_reveal` +
+  `add_to_hand_from_reveal` / `return_to_deck_from_reveal` /
+  `place_as_bottom_source` (with `CardSourceRef::Reveal`) for
+  `choose_from_reveal`; `select_effect_choice` +
+  `select_ordered_permutation` + the `place_remainder_on_deck` placement
+  loop for `order_remainder`.
+- **Semantics:** Both verbs surface every authored choice as a player-visible
+  pending selection — no auto-determinism (CLAUDE.md Working Rule §17).
+  `choose_from_reveal { optional: true }` lets the player decline when no
+  candidate matches the filter; `order_remainder` with an empty reveal pool
+  is a silent no-op (tail runs synchronously).
+- **Authored cards:** P-167 `[Start of Your Main Phase][When Digivolving]`
+  reveal/source-placement clause; EX8-047 `[On Play]` reveal/two-pick
+  clause.
+- **Evidence:**
+  - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl track_e_reveal_ordering` (8 tests pass)
+  - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_167 ex8_047` (8 tests pass)
+  - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage` (variant-coverage lint passes)
+
+### G-ROCKS-OPTION-SELF-DISPOSITION — RESOLVED 2026-05-17
+- **DSL surface:** existing `add_this_option_to_hand: {}` and
+  `place_self_as_delay_option: {}` verbs are now the sole path used by all
+  six Rocks Option modernization targets (P-206, EX7-074, P-107, P-039,
+  LM-031, EX10-069). P-206's `raw_rust { fn: p_206_add_self_to_hand }` was
+  replaced with native DSL; the helper itself remains
+  (`EffectContext::add_pending_security_to_hand`) — both paths called the
+  same engine method.
+- **Removed raw_rust:** `p_206_add_self_to_hand` in
+  `code/digimon-engine/src/cards/raw_rust/mod.rs`.
+- **Deferred:** `trash_this_option` DSL verb (no card in the modernization
+  list requires it; Option auto-trash is handled by
+  `classify_option_subtype` + `dispose_option` for non-Delay Options).
+- **Evidence:** P-206's 18-test suite remains all-green post-modernization.
+
+### G-ROCKS-PLAYER-SCOPED-PASSIVE-MODIFIERS — RESOLVED 2026-05-17
+- **DSL surface:** existing `add_player_modifier` (for
+  `CannotAddSecurityByEffect`) + `for_each` + `add_modifier` (for
+  `CannotAttackPlayer`) patterns. No new substrate proved necessary.
+- **Authored card:** BT9-103 Kongou (Main + Security mirror).
+- **Evidence:**
+  `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt9_103`
+  (3 tests pass, including behavioral verification that opponent gains
+  `CannotAddSecurityByEffect`, opponent Digimon cost ≤ 7 gain
+  `CannotAttackPlayer`, opponent Digimon cost > 7 do not).
+
+### Also-closed in this PR
+- **G-ADD-OPTION-SELF-TO-HAND** (from P-206 test comments) — closed by the
+  same DSL modernization above. The `add_this_option_to_hand` step verb
+  already existed and now has no raw_rust shadow in the Rocks pool.
 
 ## DSL Gap: `refire_effect` On Play / When Digivolving timing filter — RESOLVED 2026-05-10
 
