@@ -23,7 +23,13 @@ alt_paths:
 # Inherited [Your Turn] opponent security DP aura:
 # "All of your opponent's Security Digimon get -3000 DP."
 #
-# BLOCKED: same Puppet gap as ST19-03/EX7-025. The engine has
-# `EffectBuilder::applies_to_opponent_security_dp()`, but YAML DSL has no bridge
-# for an inherited opponent-security-Digimon DP aura. Omitted rather than
-# approximated.
+# PUPPETS-G008: lowers via `applies_to_opponent_security_dp: true` to
+# `EffectBuilder::applies_to_opponent_security_dp()` so the -3000 DP rides
+# under the attacker's stack during the security battle.
+effects:
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    dp_modifier: -3000
+    applies_to_opponent_security_dp: true
+    summary: "[Inherited][Your Turn] All opponent security Digimon get -3000 DP"

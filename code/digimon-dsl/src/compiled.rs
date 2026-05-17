@@ -475,6 +475,11 @@ pub enum CompiledDeclarativeClause {
         /// `Expiry::UntilCondition` carrying this predicate. Eviction is
         /// final per PR #458 (`false → true` does not re-install).
         while_condition: Option<CompiledPredicate>,
+        /// PUPPETS-G008 — when true, the lowered effect calls
+        /// `EffectBuilder::applies_to_opponent_security_dp()` so the
+        /// `dp_modifier` rides as an attacker-side security-DP adjustment
+        /// during the security battle (rather than as a battle-area aura).
+        applies_to_opponent_security_dp: bool,
         summary: Option<String>,
         summary_key: Option<String>,
     },

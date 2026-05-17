@@ -7,7 +7,7 @@
 //! required optional return-this-Tamer cost without auto-resolution.
 
 use digimon_dsl::compiled::{
-    CompiledBindingRef, CompiledCardKind, CompiledClause, CompiledColor, CompiledPredicate,
+    CompiledCardKind, CompiledClause, CompiledColor, CompiledPredicate,
     CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_engine::card_data::CardData;
@@ -67,7 +67,7 @@ fn bt22_088_exposes_security_and_token_or_puppet_played_observer() {
     let condition = observer
         .condition
         .as_ref()
-        .expect("observer needs event-target and source-cost preflight gates");
+        .expect("observer needs event-target gates");
     assert!(
         predicate_has_event_target_kind(condition, CompiledCardKind::Token)
             && predicate_has_event_target_kind(condition, CompiledCardKind::Digimon),
@@ -78,16 +78,8 @@ fn bt22_088_exposes_security_and_token_or_puppet_played_observer() {
         "Digimon branch must require Puppet"
     );
     assert!(
-        condition.source_is_unsuspended == Some(true)
-            || condition
-                .all_of
-                .iter()
-                .any(|child| child.source_is_unsuspended == Some(true)),
-        "suspend-this-Tamer preflight must be source-bound"
-    );
-    assert!(
-        steps_draw_after_suspending_source(&observer.process),
-        "accepting the visible cost should suspend this Tamer and Draw 1"
+        steps_lead_with_activation_cost_suspend_self_then_draw(&observer.process),
+        "body must lead with activation_cost: suspend_self then draw"
     );
 }
 
@@ -142,18 +134,11 @@ fn bt22_088_all_turns_token_or_puppet_played_suspends_this_tamer_to_draw() {
     let arisa = runner.place_on_field(0, "BT22-088", Some(0));
 
     runner.play(0, 0).expect("own Puppet plays");
-    let choice = runner
-        .pending_selection_view()
-        .expect("own Puppet play should offer Arisa activation");
-    assert_eq!(choice.kind, SelectionKind::EffectChoice);
-    runner
-        .execute_action(choice.selecting_player, choice.valid_action_ids[0])
-        .expect("accept suspend-this-Tamer cost");
-    runner.auto_resolve().expect("finish Draw 1");
+    runner.auto_resolve().expect("finish activation_cost + Draw 1");
 
     assert!(
         runner.game.player(0).battle_area[arisa.index as usize].is_suspended,
-        "BT22-088 must suspend as the visible cost"
+        "BT22-088 must suspend as the activation cost"
     );
     assert_eq!(runner.hand_size(0), 1, "Draw 1 adds the deck card to hand");
     assert_eq!(runner.deck_size(0), 0, "Draw 1 consumes one deck card");
@@ -170,12 +155,6 @@ fn bt22_088_token_played_by_effect_can_trigger_draw_observer() {
     ctx.play_token(0, "familiar")
         .expect("effect should play Familiar Token");
 
-    let choice = runner
-        .pending_selection_view()
-        .expect("own Token play should offer Arisa activation");
-    runner
-        .execute_action(choice.selecting_player, choice.valid_action_ids[0])
-        .expect("accept Token observer");
     runner.auto_resolve().expect("finish Token observer");
 
     assert!(
@@ -187,25 +166,20 @@ fn bt22_088_token_played_by_effect_can_trigger_draw_observer() {
 }
 
 #[test]
-fn bt22_088_played_observer_can_be_declined() {
+fn bt22_088_played_observer_silently_skips_when_arisa_already_suspended() {
     let mut runner = observer_runner(&["PUPPET-HAND-BT22-088"], &["DRAW-BT22-088"]);
     let arisa = runner.place_on_field(0, "BT22-088", Some(0));
+    runner.game.player_mut(0).battle_area[arisa.index as usize].is_suspended = true;
 
     runner.play(0, 0).expect("own Puppet plays");
-    let choice = runner
-        .pending_selection_view()
-        .expect("own Puppet play should offer Arisa activation");
-    runner
-        .execute_action(choice.selecting_player, choice.valid_action_ids[1])
-        .expect("decline suspend-this-Tamer cost");
-    runner.auto_resolve().expect("finish declined observer");
+    runner.auto_resolve().expect("finish trigger");
 
     assert!(
-        !runner.game.player(0).battle_area[arisa.index as usize].is_suspended,
-        "declining must not suspend BT22-088"
+        runner.game.player(0).battle_area[arisa.index as usize].is_suspended,
+        "pre-suspended Arisa stays suspended (cost cannot be paid again)"
     );
-    assert_eq!(runner.hand_size(0), 0, "declining must not draw");
-    assert_eq!(runner.deck_size(0), 1, "declining leaves the deck untouched");
+    assert_eq!(runner.hand_size(0), 0, "cost failure must not draw");
+    assert_eq!(runner.deck_size(0), 1, "cost failure leaves the deck untouched");
 }
 
 #[test]
@@ -233,18 +207,12 @@ fn bt22_088_played_observer_rejects_non_puppet_and_opponent_puppet() {
 
 #[test]
 fn bt22_088_suspend_cost_preflight_is_bound_to_this_tamer() {
-    let mut runner = observer_runner(&["PUPPET-HAND-BT22-088"], &["DRAW-BT22-088"]);
+    let mut runner = observer_runner(&["PUPPET-HAND-BT22-088"], &["DRAW-BT22-088", "DRAW-BT22-088"]);
     let suspended = runner.place_on_field(0, "BT22-088", Some(0));
     let unsuspended = runner.place_on_field(0, "BT22-088", Some(1));
     runner.game.player_mut(0).battle_area[suspended.index as usize].is_suspended = true;
 
     runner.play(0, 0).expect("own Puppet plays");
-    let choice = runner
-        .pending_selection_view()
-        .expect("the unsuspended BT22-088 should offer the activation");
-    runner
-        .execute_action(choice.selecting_player, choice.valid_action_ids[0])
-        .expect("accept the source-bound activation");
     runner.auto_resolve().expect("finish source-bound activation");
 
     assert!(
@@ -258,6 +226,11 @@ fn bt22_088_suspend_cost_preflight_is_bound_to_this_tamer() {
     assert!(
         runner.pending_selection_view().is_none(),
         "only the source that can pay the suspend cost should trigger"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "exactly one Arisa pays the cost and draws once"
     );
 }
 
@@ -338,35 +311,20 @@ fn predicate_has_event_target_trait(predicate: &CompiledPredicate, trait_name: &
             .any(|child| predicate_has_event_target_trait(child, trait_name))
 }
 
-fn steps_draw_after_suspending_source(steps: &[CompiledStep]) -> bool {
-    let mut saw_source_suspend = false;
-    for step in steps {
-        match step {
-            CompiledStep::Suspend { target, .. } if target == &CompiledBindingRef::Source => {
-                saw_source_suspend = true;
-            }
-            CompiledStep::Draw { count, .. } if *count == 1 && saw_source_suspend => {
-                return true;
-            }
-            CompiledStep::If {
-                then, else_branch, ..
-            } => {
-                if steps_draw_after_suspending_source(then)
-                    || steps_draw_after_suspending_source(else_branch)
-                {
-                    return true;
-                }
-            }
-            CompiledStep::AsSelectingPlayer { body, .. }
-            | CompiledStep::ForEach { body, .. }
-            | CompiledStep::PerSelected { body, .. }
-            | CompiledStep::ScheduleDelayed { body, .. } => {
-                if steps_draw_after_suspending_source(body) {
-                    return true;
-                }
-            }
-            _ => {}
-        }
+fn steps_lead_with_activation_cost_suspend_self_then_draw(steps: &[CompiledStep]) -> bool {
+    use digimon_dsl::compiled::CompiledActivationCostKind;
+    let mut iter = steps.iter();
+    let leads_with_suspend_self = matches!(
+        iter.next(),
+        Some(CompiledStep::ActivationCost {
+            kind: CompiledActivationCostKind::SuspendSelf
+        })
+    );
+    if !leads_with_suspend_self {
+        return false;
     }
-    false
+    matches!(
+        iter.next(),
+        Some(CompiledStep::Draw { count: 1, .. })
+    )
 }

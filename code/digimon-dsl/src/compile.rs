@@ -1188,6 +1188,7 @@ fn compile_declarative(
             while_condition: a.while_condition.as_ref().map(|p| {
                 compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
             }),
+            applies_to_opponent_security_dp: a.applies_to_opponent_security_dp.unwrap_or(false),
             summary,
             summary_key,
         },

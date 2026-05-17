@@ -30,16 +30,40 @@ alt_paths:
 # variants" (`Expiry::EndOfOpponentsNextTurn` / target-anchored next-turn
 # modifier expiry).
 
-# BLOCKED: the printed [End of Attack] chain is omitted rather than
-# approximated:
+# ─── Clause 2 — [End of Attack] self-delete + opp delete + Recovery + hatch ──
 #
-# "[End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and
-# <Recovery +1 (Deck)>. Then, if you have a Tamer in play, hatch 1 Digi-Egg
-# card to an empty space in your breeding area."
+# Printed text:
+#   "[End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and
+#    <Recovery +1 (Deck)>. Then, if you have a Tamer in play, hatch 1 Digi-Egg
+#    card to an empty space in your breeding area."
 #
-# The individual verbs exist for parts of the chain (`delete_permanent`,
-# `select_opponent_permanent`, `recover`, `hatch`), but this card needs a
-# PUPPETS-G031 fidelity pass for mandatory continuation when no opponent
-# target exists, deleting the resolving source while preserving the rest of the
-# chain, and gating the hatch tail on "you have a Tamer in play" without
-# exposing a no-op hatch branch.
+# Audit (2026-05-15) flagged the chain as UNCLEAR — "All individual verbs
+# exist; the EX4-074 mandatory chain likely works with existing primitives
+# but needs proof via behavioral test." This clause is the first-test target.
+#
+# Mandatory-continuation note: the opp Digimon delete is mandatory but
+# `select_opponent_permanent` with no candidates would stall. The card text
+# is ambiguous on what happens with no opp target — official rulings treat
+# mandatory targets-as-much-as-possible (rule 7.6) so the rest of the chain
+# still resolves. `optional: true` on the select step lets it pass cleanly
+# when no targets exist while still requiring a choice when targets do.
+effects:
+  - when: end_of_attack
+    summary: "[End of Attack] Self-delete, delete 1 opp Digimon, Recovery +1, hatch if Tamer in play"
+    process:
+      - delete_permanent: { target: source }
+      - select_opponent_permanent:
+          bind_as: opp_target
+          optional: true
+          filter:
+            kind: digimon
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: opp_target }
+      - recover: { of: you, count: 1 }
+      - if:
+          condition:
+            all_of:
+              - any_field_permanent: { of: you, kind: tamer }
+              - can_hatch: you
+          then:
+            - hatch: { of: you }

@@ -19,11 +19,48 @@ alt_paths:
     ignore_requirements: true
 
 effects:
-  # [On Play] [When Digivolving] delete-cost self-digivolve is omitted.
-  # Current DSL/runtime loses a stable `self` binding if the selected cost body
-  # is before this permanent in battle-area order, and the process may still
-  # prompt without a legal cost body. Keep ignored tests in ex9_032.rs until
-  # the costed self-digivolve sequence has stable source-permanent provenance.
+  # ─── Clause 1 — [On Play] [When Digivolving] costed free Puppet hand digivolve ─
+  #
+  # Printed text:
+  #   "[On Play] [When Digivolving] By deleting 1 of your Tokens or other
+  #    [Puppet] trait Digimon, this Digimon may digivolve into a Digimon card
+  #    with the [Puppet] trait in the hand without paying the cost."
+  #
+  # The cost body deletion can shift battle-area indices before
+  # `effect_initiated_digivolve { target: source }` resolves. Audit (2026-05-15)
+  # flagged the substrate as UNCLEAR — write the body and unignore tests in
+  # ex9_032.rs to confirm whether `ctx.source_permanent` stays stable across
+  # the cost-payment deletion, or to surface the concrete failure mode.
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[OnPlay/WhenDigivolving] Delete 1 Token/other Puppet, free-digivolve into a Puppet hand card"
+    process:
+      - select_own_permanent:
+          bind_as: cost_body
+          optional: true
+          filter:
+            all_of:
+              - other: true
+              - any_of:
+                  - kind: token
+                  - all_of:
+                      - kind: digimon
+                      - trait_has: Puppet
+          prompt: "Delete 1 of your Tokens or other Puppet Digimon"
+      - delete_permanent: { target: cost_body }
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Puppet
+          prompt: "Free-digivolve into a Puppet Digimon card"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
 
   - kind: replacement
     scope: inherited

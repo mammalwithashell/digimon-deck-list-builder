@@ -2,6 +2,34 @@
 
 Last updated: 2026-05-17
 
+## Phase 2 Track I closure — 2026-05-17
+
+### DSL Gap: PUPPETS-G008 / G-OPPONENT-SECURITY-DP-AURA — RESOLVED 2026-05-17 (Track I)
+
+- **Status:** Closed. New `applies_to_opponent_security_dp: Option<bool>` field on `AuraBody` (`code/digimon-dsl/src/clause.rs`) lowers through `CompiledDeclarativeClause::Aura.applies_to_opponent_security_dp: bool` (`code/digimon-dsl/src/compiled.rs`) to a special-case in `lower_aura::lower_all` (`code/digimon-engine/src/dsl_cards/lower_aura.rs`) that builds an `Effect::declarative(card).inherited().dp_modifier(N).applies_to_opponent_security_dp()`. The engine substrate's existing `attacker_security_dp_adjustment` consult site (`code/digimon-engine/src/combat.rs:260`) walks the attacker's stack at security-battle time and sums any `applies_to_opponent_security_dp` flags' `dp_modifier`.
+- **YAML shape:**
+  ```yaml
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    dp_modifier: -3000
+    applies_to_opponent_security_dp: true
+  ```
+- **Migrated:** [`ST19-03`](../code/digimon-engine/cards/st19/ST19-03.yaml) (IMPLEMENTED with full behavioral coverage in [`code/digimon-engine/tests/cards_behavioral/st19/st19_03.rs`](../code/digimon-engine/tests/cards_behavioral/st19/st19_03.rs)) and [`EX7-024`](../code/digimon-engine/cards/ex7/EX7-024.yaml) (substrate authored — `todo!()` test bodies in `ex7_024.rs` ready to un-fill when card-author work picks it up).
+- **Behavioral evidence:** `st19_03_inherited_security_dp_debuff_lets_8000_attacker_survive_9000_security_digimon` and `st19_03_inherited_security_dp_debuff_without_shoemon_in_stack_loses_battle` together prove the -3000 swing flips a security battle outcome between `AttackerDeletedBySecurity` and `SecurityCheckSurvived`.
+- **Out of scope:** the aura is intentionally inherited-only — it rides under the attacker's stack. `[Your Turn]` printed text is functionally redundant because security battles only happen during the attacker's turn; the consult site is turn-agnostic but practically equivalent.
+
+### Engine Gap: End-of-attack mandatory self-delete chain with recovery and conditional hatch — RESOLVED 2026-05-17 (Track I)
+
+- **Status:** Closed. Existing DSL primitives (`delete_permanent { target: source }`, `select_opponent_permanent { optional: true }`, `recover`, `if { all_of: [any_field_permanent: { of: you, kind: tamer }, can_hatch: you] } then hatch`) compose into a faithful End-of-Attack chain for EX4-074 ShineGreymon: Ruin Mode under the no-approximations policy.
+- **Card YAML:** [`code/digimon-engine/cards/ex4/EX4-074.yaml`](../code/digimon-engine/cards/ex4/EX4-074.yaml) Clause 2.
+- **Behavioral test:** [`code/digimon-engine/tests/cards_behavioral/ex4/ex4_074.rs::ex4_074_end_of_attack_self_deletes_opponent_delete_recovers_and_hatches_with_tamer`](../code/digimon-engine/tests/cards_behavioral/ex4/ex4_074.rs).
+- **Mandatory-continuation note:** the printed text reads "Delete this Digimon and 1 of your opponent's Digimon" — mandatory targeting. The DSL primitive `select_opponent_permanent { optional: true }` is the faithful shape: with at least one legal opp Digimon present the player is forced to choose one (auto-resolve picks the only legal target in the test); with no legal opp Digimon present the step PASSes cleanly and the rest of the mandatory chain (Recovery, hatch) still resolves, matching official mandatory-targets-as-much-as-possible rulings.
+- **Self-delete-mid-chain note:** the `delete_permanent { target: source }` first step works because subsequent steps don't reference `source` again — Recovery and hatch are player-scoped, not source-scoped. The `effect_queue::run_queued_effect_inner` flow correctly continues processing after the source permanent has left the field (Track B's `run_queued_effect_process_tail_after_activation_cost` is the related primitive).
+- **Hatch gating note:** `any_field_permanent: { of: you, kind: tamer }` checks "you have a Tamer in play"; `can_hatch: you` covers both "breeding area empty" and "digitama deck non-empty" per `code/digimon-engine/src/dsl_cards/predicate.rs:123`. Combined under `all_of`, hatch only fires when the printed condition holds AND a hatch is mechanically possible — no no-op hatch action surfaces to the action space.
+- **Out of scope:** The same card's `[When Digivolving] [On Deletion]` opponent-Digimon DP debuff remains BLOCKED on `Expiry::EndOfOpponentsNextTurn` (separate tracked gap — modifier next-turn-of-target-player expiry).
+- **Audit predecessor:** This entry was flagged UNCLEAR by the 2026-05-15 audit with a "first-test write recommended" footer; the first test was written 2026-05-17 and passed without engine changes. See [`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md).
+
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
 - [qa/archetype-qa/engine-gaps.md](archetype-qa/engine-gaps.md)

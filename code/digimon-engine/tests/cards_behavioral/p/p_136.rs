@@ -11,12 +11,9 @@
 //!
 //! Implemented YAML slices:
 //! - [On Play] optional exact [Shoemon] hand play.
+//! - [Your Turn][OPT] Puppet-digivolve observer with source-bound suspend cost
+//!   via Track B's `activation_cost: { suspend_self: true }`.
 //! - [Security] play this Tamer.
-//!
-//! Omitted slice:
-//! - [Your Turn][OPT] Puppet-digivolve observer with source-bound suspend cost.
-//!   This needs reusable observer preflight that only offers the trigger when
-//!   this exact Tamer can suspend as the printed cost.
 
 use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledColor, CompiledTiming};
 use digimon_engine::action::space::PASS;
@@ -99,8 +96,8 @@ fn p_136_has_printed_metadata_and_supported_clauses() {
     assert!(
         triggered
             .iter()
-            .all(|clause| !clause.when.contains(&CompiledTiming::OnDigivolve)),
-        "Puppet-digivolve observer must be omitted until source-bound suspend-cost preflight is supported"
+            .any(|clause| clause.when.contains(&CompiledTiming::OnDigivolve)),
+        "Puppet-digivolve observer is authored via activation_cost: suspend_self"
     );
 }
 
@@ -275,28 +272,162 @@ fn p_136_security_plays_itself_without_paying_cost() {
     );
 }
 
+fn puppet_top(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(5000);
+    card.play_cost = 5;
+    card.colors = vec![CardColor::Yellow];
+    card.traits = vec!["Puppet".to_string()];
+    card
+}
+
+fn non_puppet_top(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(5000);
+    card.play_cost = 5;
+    card.colors = vec![CardColor::Yellow];
+    card.traits = vec![];
+    card
+}
+
+fn non_puppet_base(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(3);
+    card.dp = Some(3000);
+    card.play_cost = 3;
+    card.colors = vec![CardColor::Yellow];
+    card.traits = vec![];
+    card
+}
+
+fn fire_on_digivolve(
+    runner: &mut DebugRunner,
+    permanent: digimon_engine::permanent::PermanentHandle,
+) {
+    let event_card = runner.top_card(permanent);
+    runner.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::OnDigivolve,
+        digimon_engine::selection::TriggerSource::Digivolved {
+            player: permanent.player,
+            permanent,
+            card: event_card,
+            effect_initiated: false,
+            dna_origin: false,
+        },
+    );
+    runner.game.drain_effect_queue();
+}
+
 #[test]
-#[ignore = "pending: PUPPETS-G023 — source-bound suspend-cost preflight for event observers"]
 fn p_136_your_turn_observer_suspends_this_tamer_and_gains_memory_on_puppet_digivolve() {
-    // Required behavior once the reusable gap closes:
-    // - trigger only on your turn when one of your Digimon digivolves into a
-    //   Digimon whose current top card has the [Puppet] trait;
-    // - offer/resolve the trigger only if this exact P-136 is unsuspended;
-    // - accepting suspends this P-136 and gains exactly 1 memory.
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-136")
+        .expect("P-136 YAML loads")
+        .add_card(non_puppet_base("BASE-OWN"))
+        .add_card(puppet_top("PUPPET-EVO"))
+        .memory(0)
+        .start();
+    let arisa = runner.place_on_field(0, "P-136", Some(0));
+    let stack = runner.place_stack(0, &["BASE-OWN", "PUPPET-EVO"]);
+
+    let memory_before = runner.memory();
+    fire_on_digivolve(&mut runner, stack);
+    runner.auto_resolve().expect("resolve observer");
+
+    assert!(
+        runner.game.player(0).battle_area[arisa.index as usize].is_suspended,
+        "Arisa suspends as activation cost"
+    );
+    assert_eq!(
+        runner.memory(),
+        memory_before + 1,
+        "+1 memory after paying the suspend-self cost"
+    );
 }
 
 #[test]
-#[ignore = "pending: PUPPETS-G023 — event observer must preflight exact source Tamer suspend cost"]
-fn p_136_your_turn_observer_does_not_trigger_when_this_tamer_is_suspended() {
-    // Required negative coverage: a suspended source Tamer cannot pay the
-    // printed "by suspending this Tamer" cost and must not install a prompt.
+fn p_136_your_turn_observer_does_not_gain_memory_when_this_tamer_is_already_suspended() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-136")
+        .expect("P-136 YAML loads")
+        .add_card(non_puppet_base("BASE-OWN"))
+        .add_card(puppet_top("PUPPET-EVO"))
+        .memory(0)
+        .start();
+    let arisa = runner.place_on_field(0, "P-136", Some(0));
+    runner.game.player_mut(0).battle_area[arisa.index as usize].is_suspended = true;
+    let stack = runner.place_stack(0, &["BASE-OWN", "PUPPET-EVO"]);
+
+    let memory_before = runner.memory();
+    fire_on_digivolve(&mut runner, stack);
+    runner.auto_resolve().expect("resolve observer");
+
+    assert!(
+        runner.game.player(0).battle_area[arisa.index as usize].is_suspended,
+        "already-suspended Arisa stays suspended"
+    );
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "cost cannot be paid; +1 memory must not fire"
+    );
 }
 
 #[test]
-#[ignore = "pending: PUPPETS-G023 — exact OnDigivolve event trait/owner predicates plus source-bound cost"]
-fn p_136_your_turn_observer_filters_non_puppet_or_opponent_digivolves() {
-    // Required negative coverage:
-    // - your Digimon digivolving into a non-[Puppet] Digimon does not trigger;
-    // - opponent Digimon digivolving into [Puppet] does not trigger;
-    // - opponent's turn does not trigger.
+fn p_136_your_turn_observer_does_not_trigger_when_evo_is_non_puppet() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-136")
+        .expect("P-136 YAML loads")
+        .add_card(non_puppet_base("BASE-OWN"))
+        .add_card(non_puppet_top("NON-PUPPET-EVO"))
+        .memory(0)
+        .start();
+    let arisa = runner.place_on_field(0, "P-136", Some(0));
+    let stack = runner.place_stack(0, &["BASE-OWN", "NON-PUPPET-EVO"]);
+
+    let memory_before = runner.memory();
+    fire_on_digivolve(&mut runner, stack);
+    runner.auto_resolve().expect("resolve observer");
+
+    assert!(
+        !runner.game.player(0).battle_area[arisa.index as usize].is_suspended,
+        "Arisa should not suspend for non-Puppet digivolve"
+    );
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "non-Puppet digivolve must not gain memory"
+    );
+}
+
+#[test]
+fn p_136_your_turn_observer_does_not_trigger_when_opponent_digivolves_into_puppet() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-136")
+        .expect("P-136 YAML loads")
+        .add_card(non_puppet_base("BASE-OPP"))
+        .add_card(puppet_top("PUPPET-EVO-OPP"))
+        .memory(0)
+        .start();
+    let arisa = runner.place_on_field(0, "P-136", Some(0));
+    let opp_stack = runner.place_stack(1, &["BASE-OPP", "PUPPET-EVO-OPP"]);
+
+    let memory_before = runner.memory();
+    fire_on_digivolve(&mut runner, opp_stack);
+    runner.auto_resolve().expect("resolve observer");
+
+    assert!(
+        !runner.game.player(0).battle_area[arisa.index as usize].is_suspended,
+        "Arisa should not suspend for opponent's Puppet digivolve"
+    );
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "opponent digivolve must not gain memory"
+    );
 }
