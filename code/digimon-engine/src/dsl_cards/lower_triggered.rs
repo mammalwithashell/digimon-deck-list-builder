@@ -4,7 +4,8 @@
 use std::sync::Arc;
 
 use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledPredicate, CompiledScope, CompiledStep, CompiledTriggeredClause,
+    CompiledActivationCostKind, CompiledCardKind, CompiledPredicate, CompiledScope, CompiledStep,
+    CompiledTriggeredClause,
 };
 
 use crate::card_source::CardHandle;
@@ -64,7 +65,19 @@ pub fn lower_with_raw_and_option_use_requirement_for_kind(
             engine_timing = EffectTiming::OptionMain;
         }
 
-        let process_steps = Arc::new(clause.process.clone());
+        // Phase 2 Track B — lift a leading `CompiledStep::ActivationCost`
+        // out of the body and bind it onto `EffectBuilder::activation_cost(...)`.
+        // The compile-side validator guarantees the step only appears as
+        // the first body step of a triggered clause; mid-body uses are
+        // rejected. Remaining steps form the process body.
+        let (activation_cost_kind, body_steps): (Option<CompiledActivationCostKind>, Vec<CompiledStep>) =
+            match clause.process.split_first() {
+                Some((CompiledStep::ActivationCost { kind }, rest)) => {
+                    (Some(*kind), rest.to_vec())
+                }
+                _ => (None, clause.process.clone()),
+            };
+        let process_steps = Arc::new(body_steps);
         let active_when = clause.active_when.clone().map(Arc::new);
         let condition = clause.condition.clone().map(Arc::new);
         let scope = clause.scope;
@@ -143,6 +156,18 @@ pub fn lower_with_raw_and_option_use_requirement_for_kind(
                 .with_dna_origin(ctx.game.current_dna_origin);
             run_steps_with_runtime(process_steps.as_slice(), ctx, &mut bindings, &runtime);
         });
+
+        // Phase 2 Track B — wire the lifted activation-cost kind onto the
+        // builder so `effect_queue::run_queued_effect_inner` consults the
+        // closure between the condition gate and the body process.
+        if let Some(kind) = activation_cost_kind {
+            builder = builder.activation_cost(move |ctx| match kind {
+                CompiledActivationCostKind::SuspendSelf => ctx.suspend_self_as_cost(),
+                CompiledActivationCostKind::ReturnSelfToDeckBottom => {
+                    ctx.return_self_to_deck_bottom_as_cost()
+                }
+            });
+        }
 
         out.push(builder.build());
     }

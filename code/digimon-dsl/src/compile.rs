@@ -961,6 +961,24 @@ fn compile_triggered(
         TimingSet::Single(x) => vec![compile_timing(*x)],
         TimingSet::Multi(v) => v.iter().map(|x| compile_timing(*x)).collect(),
     };
+    // Phase 2 Track B — `activation_cost:` is only valid as the FIRST
+    // step of a triggered clause body. The lowering on the engine side
+    // lifts it onto `EffectBuilder::activation_cost(...)`; mid-body uses
+    // would silently no-op at runtime, so reject at compile time.
+    for (i, s) in t.process.iter().enumerate() {
+        if i == 0 {
+            continue;
+        }
+        if matches!(s, crate::step::StepSpec::ActivationCost(_)) {
+            errors.push(ValidationError {
+                card_id: card_id.to_string(),
+                path: format!("{prefix}.process[{i}]"),
+                message:
+                    "activation_cost must be the first step of a triggered clause body — it is lifted onto Effect::activation_cost and cannot appear mid-body"
+                        .to_string(),
+            });
+        }
+    }
     CompiledTriggeredClause {
         when,
         scope: compile_scope(t.scope),
@@ -2223,6 +2241,37 @@ fn compile_step(
             consumes: r.consumes.clone(),
             binds: r.binds.clone(),
         },
+        S::ActivationCost(a) => {
+            let kind = match (a.suspend_self, a.return_self_to_deck_bottom) {
+                (true, false) => Some(crate::compiled::CompiledActivationCostKind::SuspendSelf),
+                (false, true) => {
+                    Some(crate::compiled::CompiledActivationCostKind::ReturnSelfToDeckBottom)
+                }
+                (false, false) => {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{}.activation_cost", prefix),
+                        message:
+                            "activation_cost requires exactly one cost kind: suspend_self or return_self_to_deck_bottom"
+                                .to_string(),
+                    });
+                    None
+                }
+                (true, true) => {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{}.activation_cost", prefix),
+                        message:
+                            "activation_cost: suspend_self and return_self_to_deck_bottom are mutually exclusive"
+                                .to_string(),
+                    });
+                    None
+                }
+            };
+            CompiledStep::ActivationCost {
+                kind: kind.unwrap_or(crate::compiled::CompiledActivationCostKind::SuspendSelf),
+            }
+        }
     }
 }
 
