@@ -279,7 +279,6 @@ fn bt21_015_on_play_deletes_selected_opponent_digimon() {
 /// so the selection installs unconditionally regardless of target DP.
 /// Tracked as engine gap — unblock when `eval_card_fields` gains dp checks.
 #[test]
-#[ignore = "pending: dp_lte filter not evaluated in eval_card_fields (predicate.rs)"]
 fn bt21_015_on_play_no_selection_when_no_eligible_target() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(CYCLONEMON_YAML)
@@ -339,7 +338,6 @@ fn bt21_015_on_play_targets_4000_dp_exactly_at_boundary() {
 /// The 5000 DP Digimon is not filtered from the selection candidates because `eval_card_fields`
 /// does not evaluate `pred.dp_lte`. Unblock when predicate.rs gains DP evaluation.
 #[test]
-#[ignore = "pending: dp_lte filter not evaluated in eval_card_fields (predicate.rs)"]
 fn bt21_015_on_play_filters_ineligible_targets_correctly() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(CYCLONEMON_YAML)

@@ -390,11 +390,6 @@ fn bt22_015_on_play_no_opp_digimon_does_not_panic() {
 /// evaluator does not yet honor `dp_lte` on permanents; the prompt offers
 /// both. Sister gap as BT24-017, BT22-013.
 #[test]
-#[ignore = "BLOCKED: G-PRED-DP-LTE — dp_lte predicate (with aggregate lowest_dp) parses and \
-            compiles but is not evaluated for permanents in code/digimon-engine/src/dsl_cards/predicate.rs; \
-            the lowest-DP filter degenerates to 'any opp Digimon'. Same gap blocks BT24-017 \
-            (`bt24_017_delete_targets_only_lowest_dp_digimon`) and BT22-013 \
-            (`bt22_013_when_digivolving_branch_1_only_lowest_dp_is_a_legal_target`)."]
 fn bt22_015_on_play_only_lowest_dp_is_a_legal_target() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
