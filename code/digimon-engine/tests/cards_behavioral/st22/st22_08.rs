@@ -109,7 +109,6 @@ fn st22_08_color_requirement_enforced_without_tamer() {
 // ---------------------------------------------------------------------------
 
 #[test]
-#[ignore = "BLOCKED: G-PRED-DP-LTE — dp_lte predicate not evaluated in eval_permanent_fields; see engine-gaps.md"]
 fn st22_08_security_presents_selection_for_lowest_dp_digimon() {
     // Setup: opponent has two Digimon (3000 DP, 5000 DP).
     // Expected: selection offers only the 3000 DP Digimon (lowest).
@@ -117,7 +116,6 @@ fn st22_08_security_presents_selection_for_lowest_dp_digimon() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-PRED-DP-LTE — dp_lte predicate not evaluated"]
 fn st22_08_security_no_selection_when_no_opp_digimon() {
     // Setup: opponent has no Digimon.
     // Expected: selection is skipped (or empty candidates → no selection installed).
@@ -125,7 +123,6 @@ fn st22_08_security_no_selection_when_no_opp_digimon() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-PRED-DP-LTE — deletion is mandatory (canNoSelect: false in DCGO)"]
 fn st22_08_security_delete_is_mandatory_when_candidates_exist() {
     // DCGO: canNoSelect: false for SecurityEffect selection.
     // Expected: pending_is_optional() == false when opponent has Digimon.

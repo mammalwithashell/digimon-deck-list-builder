@@ -1307,6 +1307,36 @@ fn eval_card_fields(
             return false;
         }
     }
+    // Card-subject DP filter. Cards in trash/hand/security carry their printed
+    // DP via `CardData.dp`; permanents on the field route through
+    // `eval_dp_constraints` against `effective_dp`. Options and other
+    // non-Digimon cards have `dp = None` and cannot satisfy a DP constraint.
+    if pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some() {
+        let Some(dp) = data.dp else {
+            return false;
+        };
+        let perm_target = formula_target.or(rctx.source_permanent).unwrap_or(
+            crate::permanent::PermanentHandle {
+                player: rctx.player,
+                index: 0,
+            },
+        );
+        if let Some(want) = &pred.dp_eq {
+            if dp != eval_dp_constraint(want, rctx, perm_target, bindings) {
+                return false;
+            }
+        }
+        if let Some(cap) = &pred.dp_lte {
+            if dp > eval_dp_constraint(cap, rctx, perm_target, bindings) {
+                return false;
+            }
+        }
+        if let Some(floor) = &pred.dp_gte {
+            if dp < eval_dp_constraint(floor, rctx, perm_target, bindings) {
+                return false;
+            }
+        }
+    }
     if let Some(want) = pred.can_digivolve_from_source {
         if can_card_digivolve_from_source(rctx, card) != want {
             return false;

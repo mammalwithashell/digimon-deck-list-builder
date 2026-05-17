@@ -475,7 +475,6 @@ fn ex8_074_when_digivolving_delete_removes_opp_digimon() {
 /// 8000 + 3000 = 11000. Requires `ex8_074_suspended_dp_cap` raw_rust formula.
 /// Until registered, dp_lte formula returns 0 and this test cannot pass.
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE behavioral target filtering for dynamic DP cap"]
 fn ex8_074_dp_cap_scales_with_other_suspended_digimon() {
     // When resolved: set up 2 own Digimon (one pre-suspended), fire WD on EX8-074,
     // verify that the delete selection shows opponents with DP <= 11000 only.
@@ -484,7 +483,6 @@ fn ex8_074_dp_cap_scales_with_other_suspended_digimon() {
 
 /// With 0 other suspended Digimon, the DP cap should be 8000 (base only).
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE behavioral target filtering for dynamic DP cap"]
 fn ex8_074_dp_cap_base_8000_no_other_suspended() {
     let _ = compiled_ex8_074();
 }

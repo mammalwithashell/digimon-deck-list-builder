@@ -574,7 +574,6 @@ fn lm_030_security_no_selection_when_trash_is_empty() {
 /// (trash selection). Large Digimon currently appear as valid targets until the
 /// reusable predicate gap is closed. Test is #[ignore]'d until fixed.
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — dp_lte filter not evaluated by select_trash for card-zone subjects"]
 fn lm_030_security_no_selection_when_only_large_green_digimon_in_trash() {
     let large = make_large_green_digimon("LM030-LARGE-GREEN");
 

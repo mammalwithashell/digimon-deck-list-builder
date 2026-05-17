@@ -618,14 +618,6 @@ fn bt22_026_inherited_when_attacking_opt_blocks_second_activation() {
 /// activated_digivolve path. Substrate is ready (G-ALT-PATH-CONDITION
 /// RESOLVED 2026-05-15); same authoring gap as BT22-013 / BT24-016.
 #[test]
-#[ignore = "PENDING card-local authoring: BT22-026.yaml does not populate \
-            `condition:` on the activated_digivolve alt-path to gate on Nokia \
-            Shiramine. Substrate is ready (G-ALT-PATH-CONDITION RESOLVED \
-            2026-05-15 — AltPathSpec.condition field + consumer wired in \
-            dna_digivolve.rs). Until the YAML is updated, the alt-path is \
-            offered whenever a Gabumon is on field, regardless of Nokia \
-            presence (over-permissive). Same authoring gap blocks BT22-013 \
-            and BT24-016."]
 fn bt22_026_activated_digivolve_blocked_without_nokia_tamer() {
     // Setup: Gabumon on field, BT22-026 in hand, NO Nokia Shiramine tamer.
     // The activated_digivolve alt-path MUST NOT be offered as a play option.
@@ -661,8 +653,6 @@ fn bt22_026_activated_digivolve_blocked_without_nokia_tamer() {
 /// gate test. Once the gap closes, this becomes the positive sister of the
 /// negative test above.
 #[test]
-#[ignore = "Pending G-ALT-PATH-CONDITION — see negative-case sibling above. Once the gap closes, \
-            promote this to active and add the corresponding action-introspection assertion."]
 fn bt22_026_activated_digivolve_available_with_nokia_and_gabumon() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)

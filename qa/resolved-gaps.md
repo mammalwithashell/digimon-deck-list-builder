@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-10
+Last updated: 2026-05-17
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,20 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## Phase 2 Track A closure — 2026-05-17
+
+### DSL Gap: `dp_eq` / `dp_lte` / `dp_gte` on card subjects — RESOLVED 2026-05-17 [G-PRED-DP-LTE]
+
+- **Status:** Closed. `eval_dp_constraints` (permanent path) was wired in PR #405; `eval_card_fields` now consults `dp_eq` / `dp_lte` / `dp_gte` against `CardData.dp` for card-zone subjects (hand / trash / security / deck). Non-Digimon cards (`data.dp == None`) fail any DP constraint.
+- **Engine surface:** `code/digimon-engine/src/dsl_cards/predicate.rs::eval_card_fields` — new branch after `play_cost_lte` (PR #475 → Track A).
+- **Note:** The `predicate_has_card_zone_unsupported_leaf` filter in `formula_eval.rs` still classifies `dp_*` as permanent-only for the `FilteredCardCountInZoneScoped` aggregate (separate code path with its own tests). That is a follow-up; the per-selection card-zone filter route (`select_trash` / `select_hand` / `select_security`) does honor `dp_lte`.
+- **Evidence:** un-ignored 13 `#[ignore]`'d tests now pass: `bt13_012_dp_lte_filter_excludes_high_dp_targets`, `bt18_087_clause2_skips_delete_when_target_is_above_4000dp`, `bt22_013_when_digivolving_branch_1_only_lowest_dp_is_a_legal_target`, `bt22_015_on_play_only_lowest_dp_is_a_legal_target`, `bt24_001_high_dp_digimon_not_eligible_for_delete`, `bt24_017_delete_targets_only_lowest_dp_digimon`, `lm_030_security_no_selection_when_only_large_green_digimon_in_trash`, `st20_11_when_digivolving_only_offers_lowest_dp_opponent`, `st20_11_when_digivolving_offers_all_tied_lowest_dp_opponents`, `bt21_015_on_play_no_selection_when_no_eligible_target`, `bt21_015_on_play_filters_ineligible_targets_correctly`, plus structural placeholders in `ex8_074` and `st22_08`. LM-027 remained ignored — pending card-local YAML authoring (the YAML never authored `dp_lte: 2000` in its `select_trash` filter); the substrate is ready.
+
+### DSL Gap: `AltPathSpec.condition` post-resolution sweep — RESOLVED 2026-05-15 (annotations) [G-ALT-PATH-CONDITION]
+
+- **Status:** Substrate closure landed in PR #475 (Phase 1) — `AltPathSpec.condition: Option<PredicateSpec>` field + consumer wiring in `dna_digivolve.rs::find_matching_alt_path`. Phase 2 Track A removed the stale `#[ignore = "Pending G-ALT-PATH-CONDITION"]` annotations on existing placeholder-body tests so the regression-scaffold tests run.
+- **Un-ignored placeholder tests:** `bt22_013_activated_digivolve_blocked_without_nokia_tamer`, `bt22_013_activated_digivolve_available_with_nokia_and_agumon`, `bt22_026_activated_digivolve_blocked_without_nokia_tamer`, `bt22_026_activated_digivolve_available_with_nokia_and_gabumon`. These have no assertions yet — they pass trivially as scaffolds. Promoting them to active assertions is card-local follow-up (the BT22-013 / BT22-026 / BT22-042 YAML files do not yet populate `condition:` on their activated_digivolve alt-paths to gate on Nokia Shiramine / Arisa Kinosaki).
 
 ## DSL Gap: `refire_effect` On Play / When Digivolving timing filter — RESOLVED 2026-05-10
 
