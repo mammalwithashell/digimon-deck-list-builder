@@ -14,7 +14,8 @@ use std::sync::Arc;
 
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledCountBound, CompiledFieldSelector, CompiledPlayerRef,
-    CompiledPredicate, CompiledStep, CompiledZone,
+    CompiledPredicate, CompiledRemainderDestination, CompiledRevealDestination, CompiledStep,
+    CompiledZone,
 };
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
@@ -603,6 +604,52 @@ pub fn try_install(
                 InstallResult::Continue
             }
         }
+        // Phase 2 Track E (2026-05-17): pick one revealed card, route to a
+        // typed destination. Lowers as a single `select_reveal` install whose
+        // callback dispatches to the destination's engine helper.
+        CompiledStep::ChooseFromReveal {
+            of,
+            filter,
+            destination,
+            bind_as,
+            prompt,
+            optional,
+            ..
+        } => {
+            if install_choose_from_reveal(
+                ctx,
+                *of,
+                filter.clone(),
+                destination.clone(),
+                bind_as.clone(),
+                prompt.clone(),
+                *optional,
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            ) {
+                InstallResult::Parked
+            } else {
+                InstallResult::Continue
+            }
+        }
+        // Phase 2 Track E (2026-05-17): place reveal pool back onto deck. When
+        // multiple destinations are listed, prompt the player to choose; the
+        // permutation is always exposed (no auto-determinism, Working Rule §17).
+        CompiledStep::OrderRemainder {
+            of,
+            destinations,
+            prompt,
+            ..
+        } => install_order_remainder(
+            ctx,
+            *of,
+            destinations.clone(),
+            prompt.clone(),
+            tail.to_vec(),
+            bindings,
+            runtime.clone(),
+        ),
         _ => InstallResult::NotSelection,
     }
 }
@@ -1834,4 +1881,329 @@ fn install_select_union_zone(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+}
+
+// ───────────────────────────────────────────────────────────────────────────
+// Phase 2 Track E (2026-05-17): reveal-ordering DSL verbs.
+//
+// `choose_from_reveal` and `order_remainder` are the author-facing combo for
+// the "reveal N, pick one matching to <destination>, place rest top-or-bottom
+// in any order" pattern that recurs across Rocks searchers (P-167 et al) and
+// every Training / Memory Boost / search effect. Both lower as selection
+// installs that consume the existing `select_reveal` / `select_effect_choice`
+// / `select_ordered_permutation` engine surface — no new substrate hooks.
+// ───────────────────────────────────────────────────────────────────────────
+
+fn revealed_owner_matches_for_choose(
+    of: CompiledPlayerRef,
+    owner: u8,
+    player: u8,
+    game: &crate::game::Game,
+) -> bool {
+    revealed_owner_matches(of, owner, player, game)
+}
+
+/// Install a `select_reveal`-style pick that routes the chosen revealed card
+/// to a typed destination on success.
+///
+/// Returns `true` iff a `PendingSelection` was installed (i.e. the install
+/// did NOT short-circuit because no candidate revealed cards matched the
+/// filter / `of`-owner constraint).
+#[allow(clippy::too_many_arguments)]
+fn install_choose_from_reveal(
+    ctx: &mut EffectContext<'_>,
+    of: CompiledPlayerRef,
+    filter: CompiledPredicate,
+    destination: CompiledRevealDestination,
+    bind_as: Option<String>,
+    prompt: String,
+    optional: bool,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) -> bool {
+    let target_player = resolve_player(ctx, of);
+    // For BottomSourceOf, resolve the target permanent now so we can short-
+    // circuit later. If resolution fails (binding missing or wrong kind),
+    // routing silently no-ops on the destination — matching the 2b/2c missing-
+    // binding convention used elsewhere in this module.
+    let target_permanent = match &destination {
+        CompiledRevealDestination::BottomSourceOf(binding_ref) => {
+            match resolve_binding_ref(binding_ref, ctx, &bindings) {
+                Some(ResolvedBinding::Permanent(h)) => Some(h),
+                _ => None,
+            }
+        }
+        _ => None,
+    };
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
+    let destination_for_callback = destination;
+    ctx.select_reveal(
+        &prompt,
+        optional,
+        move |game, idx| {
+            let Some(card) = game.revealed_cards.get(idx) else {
+                return false;
+            };
+            if !revealed_owner_matches_for_choose(of, card.owner, player, game) {
+                return false;
+            }
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::RevealedCard(card.handle()),
+                Some(&filter_bindings),
+            )
+        },
+        move |cb_ctx, idx| {
+            let mut b = bindings.clone();
+            // Resolve the picked reveal index to a stable CardHandle and
+            // route it to the destination. If the index has gone stale
+            // (reveal pool mutated mid-resolution), silently skip routing —
+            // bindings are best-effort per the 2b/2c convention.
+            let picked = cb_ctx.game.revealed_cards.get(idx).map(|c| c.handle());
+            if let Some(handle) = picked {
+                if let Some(name) = &bind_as {
+                    b.insert_card(name, handle);
+                }
+                route_chosen_reveal(
+                    cb_ctx,
+                    target_player,
+                    handle,
+                    &destination_for_callback,
+                    target_permanent,
+                );
+            }
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+        },
+    )
+}
+
+/// Route a single chosen revealed card to its destination. Pure dispatch —
+/// the engine helpers handle the actual zone movement and event emission.
+fn route_chosen_reveal(
+    ctx: &mut EffectContext<'_>,
+    player: crate::enums::PlayerId,
+    handle: crate::card_source::CardHandle,
+    destination: &CompiledRevealDestination,
+    target_permanent: Option<PermanentHandle>,
+) {
+    use crate::enums::StackPosition;
+    use crate::CardSourceRef;
+    match destination {
+        CompiledRevealDestination::Hand => {
+            ctx.add_to_hand_from_reveal(player, handle);
+        }
+        CompiledRevealDestination::DeckTop => {
+            ctx.return_to_deck_from_reveal(player, handle, StackPosition::Top);
+        }
+        CompiledRevealDestination::DeckBottom => {
+            ctx.return_to_deck_from_reveal(player, handle, StackPosition::Bottom);
+        }
+        CompiledRevealDestination::BottomSourceOf(_) => {
+            if let Some(perm) = target_permanent {
+                let _ = ctx.place_as_bottom_source(CardSourceRef::Reveal(handle), perm);
+            }
+        }
+    }
+}
+
+/// Install `order_remainder` — drives placement of the entire reveal pool back
+/// onto the controller's deck, surfacing an ordered-permutation selection for
+/// the cards and (when multiple destinations are listed) a destination
+/// effect-choice. Empty reveal pool → silent no-op (no selection installed).
+fn install_order_remainder(
+    ctx: &mut EffectContext<'_>,
+    of: CompiledPlayerRef,
+    destinations: Vec<CompiledRemainderDestination>,
+    prompt: Option<String>,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) -> InstallResult {
+    let target_player = resolve_player(ctx, of);
+    // Empty reveal pool → silent no-op; tail proceeds inline.
+    if ctx.game.revealed_cards.is_empty() {
+        return InstallResult::Continue;
+    }
+    // Defensive: compile validated 1..=2 destinations, but treat empty as no-op.
+    if destinations.is_empty() {
+        return InstallResult::Continue;
+    }
+
+    // Single destination → equivalent to `place_remainder_on_deck` (which
+    // surfaces ordering directly via select_ordered_permutation).
+    if destinations.len() == 1 {
+        let position = remainder_destination_position(destinations[0]);
+        // Snapshot remainder + install ordered permutation with the placement
+        // closure AND tail-run. Cannot delegate to `place_remainder_on_deck`
+        // because we need to chain the tail onto the same selection callback.
+        return install_remainder_permutation_with_tail(
+            ctx,
+            target_player,
+            position,
+            tail,
+            bindings,
+            runtime,
+        );
+    }
+
+    // Multi-destination → prompt for top vs bottom, then install ordered
+    // permutation with chosen position. Both selections are surfaced as
+    // separate action-mask windows per Working Rule §17.
+    let labels: Vec<String> = destinations
+        .iter()
+        .map(|d| remainder_destination_label(*d).to_string())
+        .collect();
+    let prompt = prompt.unwrap_or_else(|| {
+        "Place remaining cards on top or bottom of the deck?".to_string()
+    });
+    let destinations_capture: Vec<CompiledRemainderDestination> = destinations;
+    let tail_arc = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    ctx.select_effect_choice(&prompt, labels, move |cb_ctx, idx| {
+        let position = remainder_destination_position(destinations_capture[idx]);
+        // The select_effect_choice callback runs in a fresh selection scope
+        // (pending_selection is now None). Install the ordered permutation
+        // with the tail, exactly as the single-destination path does.
+        let _ = install_remainder_permutation_with_tail(
+            cb_ctx,
+            target_player,
+            position,
+            (*tail_arc).clone(),
+            bindings.clone(),
+            runtime.clone(),
+        );
+        // Preserve trigger context across the inner install + tail.
+        cb_ctx.game.current_trigger_context = trigger_context.clone();
+    });
+    if ctx.game.pending_selection.is_some() {
+        InstallResult::Parked
+    } else {
+        InstallResult::Continue
+    }
+}
+
+fn remainder_destination_position(d: CompiledRemainderDestination) -> crate::enums::StackPosition {
+    match d {
+        CompiledRemainderDestination::DeckTop => crate::enums::StackPosition::Top,
+        CompiledRemainderDestination::DeckBottom => crate::enums::StackPosition::Bottom,
+    }
+}
+
+fn remainder_destination_label(d: CompiledRemainderDestination) -> &'static str {
+    match d {
+        CompiledRemainderDestination::DeckTop => "Top of deck",
+        CompiledRemainderDestination::DeckBottom => "Bottom of deck",
+    }
+}
+
+/// Install an ordered-permutation selection over the current reveal pool that,
+/// on resolution, places each card at `position` (top or bottom of `player`'s
+/// deck) per the `place_remainder_on_deck` order rules, then runs `tail`.
+fn install_remainder_permutation_with_tail(
+    ctx: &mut EffectContext<'_>,
+    player: crate::enums::PlayerId,
+    position: crate::enums::StackPosition,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) -> InstallResult {
+    use crate::card_source::CardHandle;
+    let remainder: Vec<CardHandle> = ctx
+        .game
+        .revealed_cards
+        .iter()
+        .map(|cs| cs.handle())
+        .collect();
+    if remainder.is_empty() {
+        return InstallResult::Continue;
+    }
+    debug_assert!(
+        remainder.len() <= 10,
+        "order_remainder: reveal pool has {} cards; select_ordered_permutation is capped at 10",
+        remainder.len()
+    );
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    ctx.select_ordered_permutation(
+        remainder,
+        "Place remaining cards on deck in any order",
+        move |cb_ctx, ordered_vec| {
+            place_remainder_in_order(cb_ctx, player, &ordered_vec, position);
+            let mut b = bindings.clone();
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+        },
+    );
+    if ctx.game.pending_selection.is_some() {
+        InstallResult::Parked
+    } else {
+        // Empty / capped — selection completed synchronously; tail already ran.
+        InstallResult::TailAlreadyRan
+    }
+}
+
+/// Replicate `EffectContext::place_remainder_on_deck`'s placement loop
+/// directly (we control the surrounding selection install ourselves).
+///
+/// - `Top`: reverse-iterate so `ordered_vec[0]` lands at the highest deck
+///   index (drawn first).
+/// - `Bottom`: forward-iterate with bottom inserts so `ordered_vec[0]` ends up
+///   at the highest index among the placed group (drawn first of the bottom
+///   group).
+/// - `Random`: forward-iterate placing each at a random position. The order
+///   selection is still surfaced (Working Rule §17) even though placement is
+///   non-deterministic.
+fn place_remainder_in_order(
+    ctx: &mut EffectContext<'_>,
+    player: crate::enums::PlayerId,
+    ordered: &[crate::card_source::CardHandle],
+    position: crate::enums::StackPosition,
+) {
+    use crate::enums::StackPosition;
+    match position {
+        StackPosition::Top => {
+            for handle in ordered.iter().rev() {
+                let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Top);
+                debug_assert!(
+                    placed,
+                    "place_remainder_in_order: handle {:?} not found in revealed_cards",
+                    handle
+                );
+            }
+        }
+        StackPosition::Bottom => {
+            for handle in ordered.iter() {
+                let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Bottom);
+                debug_assert!(
+                    placed,
+                    "place_remainder_in_order: handle {:?} not found in revealed_cards",
+                    handle
+                );
+            }
+        }
+        StackPosition::Random => {
+            for handle in ordered.iter() {
+                let placed = ctx.game.return_to_deck_from_reveal(player, *handle, StackPosition::Random);
+                debug_assert!(
+                    placed,
+                    "place_remainder_in_order: handle {:?} not found in revealed_cards",
+                    handle
+                );
+            }
+        }
+    }
 }

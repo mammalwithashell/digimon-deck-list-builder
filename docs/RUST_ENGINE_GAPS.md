@@ -89,6 +89,24 @@ Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`),
 > Royal Knights, TS Olympos, Zephagamon). All reusable primitives
 > called out by those documents are already represented by an entry
 > in this file or as an open verb in `qa/dsl-vocab-gaps.md`.
+>
+> **Tracker hygiene sweep — Phase 2 Track E (2026-05-17):** Rocks-pilot
+> author-facing residual closures. The Rocks gap-input doc's
+> `G-ROCKS-REVEAL-ORDERING`, `G-ROCKS-OPTION-SELF-DISPOSITION`, and
+> `G-ROCKS-PLAYER-SCOPED-PASSIVE-MODIFIERS` entries are all closed by a
+> single PR. The new `choose_from_reveal` + `order_remainder` DSL verbs
+> (see `qa/dsl-vocab-gaps.md` "Phase 2 Track E (2026-05-17)" block and
+> `qa/resolved-gaps.md` "Phase 2 Track E closure" block) lower onto the
+> already-shipped `select_reveal` / `select_effect_choice` /
+> `select_ordered_permutation` / `place_remainder_on_deck` engine
+> helpers — no new engine substrate. The "Selection: ordered
+> permutation" headline (already RESOLVED 2026-05-15 in
+> `qa/resolved-gaps.md`) stays closed; this PR consumes the substrate
+> through an author-facing DSL surface. Authored card drivers:
+> P-167 (full reveal/source-placement clause via the new verbs), EX8-047
+> (two-pick reveal clause), BT9-103 (Main + Security mirror via
+> `add_player_modifier` + `for_each` + `add_modifier`); P-206 raw_rust
+> shim removed in favour of native `add_this_option_to_hand`.
 
 There are two related assessment workflows:
 

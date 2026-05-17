@@ -2307,19 +2307,19 @@
     },
     "BT9-103": {
       "card_name": "Kongou",
-      "validated_date": "2026-05-04",
-      "report": "rocks-rust-dsl-pool-pass",
-      "status": "BLOCKED",
-      "gap_kind": "engine-gap",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-e-rocks-pilot-completion",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Rocks",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/bt9/BT9-103.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt9/bt9_103.rs",
+      "test_count": 3,
       "patterns": [
         "TEMP-ATTACK-RESTRICTION",
         "SECURITY-STACK-LOCK"
       ],
-      "notes": "Pass complete: needs faithful opponent Digimon attack-player restriction by play cost and security-add lock validation."
+      "notes": "Phase 2 Track E (2026-05-17): Main + Security mirror authored via add_player_modifier (CannotAddSecurityByEffect on opponent) + for_each + add_modifier (CannotAttackPlayer on opponent Digimon play_cost_lte: 7). Behavioral test verifies low-cost (5) gains modifier, high-cost (10) does not. G-ROCKS-PLAYER-SCOPED-PASSIVE-MODIFIERS closed."
     },
     "EX10-003": {
       "card_name": "Tumblemon",
@@ -2563,19 +2563,20 @@
     },
     "EX8-047": {
       "card_name": "Sunarizamon",
-      "validated_date": "2026-05-04",
-      "report": "rocks-rust-dsl-pool-pass",
-      "status": "PARTIAL",
-      "gap_kind": "dsl-gap",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-e-rocks-pilot-completion",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/ex8/EX8-047.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex8/ex8_047.rs",
-      "test_count": 2,
+      "test_count": 4,
       "patterns": [
         "SOURCE-TRASH-CONTEXT",
-        "DELETE-PLAY-COST-LTE"
+        "DELETE-PLAY-COST-LTE",
+        "REVEAL-SEARCH"
       ],
-      "notes": "Inherited source-trash delete implemented; reveal two-pick search remains gap-routed."
+      "notes": "Phase 2 Track E (2026-05-17): [On Play] reveal/two-pick clause authored via the new choose_from_reveal + order_remainder verbs. Behavioral test verifies a Mineral/Rock pick and a LIBERATOR pick both route to hand; remainder returns to deck bottom. Inherited source-trash delete unchanged."
     },
     "EX8-048": {
       "card_name": "Landramon",
@@ -2754,19 +2755,21 @@
     },
     "P-167": {
       "card_name": "Landramon",
-      "validated_date": "2026-05-04",
-      "report": "rocks-rust-dsl-pool-pass",
-      "status": "PARTIAL",
-      "gap_kind": "dsl-gap",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-e-rocks-pilot-completion",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/p/P-167.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_167.rs",
-      "test_count": 2,
+      "test_count": 4,
       "patterns": [
         "SOURCE-TRASH-CONTEXT",
-        "DE-DIGIVOLVE"
+        "DE-DIGIVOLVE",
+        "REVEAL-SEARCH",
+        "SOURCE-PLACEMENT"
       ],
-      "notes": "Inherited source-trash De-Digivolve implemented; reveal search/source placement remains gap-routed."
+      "notes": "Phase 2 Track E (2026-05-17): [Start of Your Main Phase][When Digivolving] cost-then-reveal clause authored via select_own_sources + the new choose_from_reveal (with hand and bottom_source_of routings in if-branches) + order_remainder ([deck_top, deck_bottom]). Behavioral test exercises the full reveal+choose+order flow. Inherited source-trash De-Digivolve unchanged."
     },
     "P-169": {
       "card_name": "Close",

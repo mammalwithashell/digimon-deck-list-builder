@@ -12,10 +12,76 @@ alt_paths:
     from: { level_eq: 3, color_is: black }
     cost: 2
 
-# Printed [Start of Your Main Phase]/[When Digivolving] source-trash reveal
-# search/source-placement clause is not authored in this pass.
-
+# ─── Clause 0: [Start of Your Main Phase] [When Digivolving] reveal/search ──
+#
+# "[Start of Your Main Phase] [When Digivolving] By trashing 1 [Mineral] or
+# [Rock] trait card from any of your Digimon's digivolution cards, reveal
+# the top 3 cards of your deck. Among them, add 1 [Mineral] or [Rock] trait
+# card to the hand, or place 1 such card as this Digimon's bottom
+# digivolution card. Return the rest to the top or bottom of the deck."
+#
+# Phase 2 Track E (2026-05-17): authored using the new `choose_from_reveal`
+# and `order_remainder` verbs. The source-trash cost selects 1 Mineral/Rock
+# source via `select_own_sources` (target unrestricted — any own permanent's
+# digivolution cards qualify). The reveal-and-route step uses
+# `select_effect_choice` to pick hand-vs-source-placement, then dispatches
+# to `choose_from_reveal` with the appropriate destination. The remainder is
+# placed on the top OR bottom of the deck via `order_remainder` with both
+# destinations — the player chooses where, then orders the cards. Both the
+# destination and the ordering are surfaced through pending selections per
+# Working Rule §17 (no auto-determinism).
 effects:
+  - when: [start_of_your_main_phase, when_digivolving]
+    optional: true
+    summary: "[Start of Your Main Phase][When Digivolving] Trash 1 Mineral/Rock source; reveal 3, route 1 to hand or as bottom source, order rest"
+    process:
+      - select_own_sources:
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          min: 1
+          max: 1
+          bind_as: cost_sources
+          prompt: "Trash 1 Mineral or Rock source from any of your Digimon"
+          then:
+            - trash_selected_sources: { source_refs: cost_sources }
+            - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+            - select_effect_choice:
+                labels: ["Add to hand", "Place as bottom digivolution card"]
+                bind_as: dest_choice
+                prompt: "Add the chosen card to your hand or place it as this Digimon's bottom digivolution card?"
+            - if:
+                condition: { equals: [dest_choice, 0] }
+                then:
+                  - choose_from_reveal:
+                      of: you
+                      filter:
+                        any_of:
+                          - trait_has: Mineral
+                          - trait_has: Rock
+                      destination: hand
+                      bind_as: picked
+                      prompt: "Add 1 Mineral or Rock card to your hand"
+                      optional: true
+            - if:
+                condition: { equals: [dest_choice, 1] }
+                then:
+                  - choose_from_reveal:
+                      of: you
+                      filter:
+                        any_of:
+                          - trait_has: Mineral
+                          - trait_has: Rock
+                      destination:
+                        bottom_source_of: { target: this }
+                      bind_as: picked
+                      prompt: "Place 1 Mineral or Rock card as this Digimon's bottom digivolution card"
+                      optional: true
+            - order_remainder:
+                of: you
+                destinations: [deck_top, deck_bottom]
+
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:
