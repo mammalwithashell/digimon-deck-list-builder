@@ -443,7 +443,6 @@ fn bt18_087_clause2_deletes_eligible_opponent_digimon() {
 /// Negative eligibility gate — opponent has a 5000 DP Digimon.
 /// G-PRED-DP-LTE: dp_lte filter not yet evaluated; this test is #[ignore]'d.
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — dp_lte filter not evaluated in eval_permanent_fields (predicate.rs)"]
 fn bt18_087_clause2_skips_delete_when_target_is_above_4000dp() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(OWEN_YAML)

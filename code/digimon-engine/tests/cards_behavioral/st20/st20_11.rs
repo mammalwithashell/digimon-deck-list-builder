@@ -374,7 +374,6 @@ fn st20_11_when_digivolving_deletes_chosen_opponent_digimon() {
 /// Digimon at different DPs, only the lower-DP one should be a valid target —
 /// when the gap closes this test should pass; until then both are offered.
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — `dp_lte` predicate not evaluated for permanents in eval_permanent_fields; lowest-DP filter is currently over-permissive (any opp Digimon eligible)"]
 fn st20_11_when_digivolving_only_offers_lowest_dp_opponent() {
     let mut runner = wargreymon_runner()
         .add_card(make_digimon("OPP-LOW", 4, 4000))
@@ -406,7 +405,6 @@ fn st20_11_when_digivolving_only_offers_lowest_dp_opponent() {
 /// the field, those higher-DP ones must NOT be eligible. Until the gap
 /// closes, this test fails because all four Digimon are offered.
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — see above; ties at lowest DP must include all tied permanents and exclude higher-DP ones"]
 fn st20_11_when_digivolving_offers_all_tied_lowest_dp_opponents() {
     let mut runner = wargreymon_runner()
         .add_card(make_digimon("OPP-TIE-A", 4, 4000))

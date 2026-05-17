@@ -266,7 +266,6 @@ fn bt24_017_when_digivolving_no_opp_digimon_does_not_panic() {
 /// ONLY the lowest-DP Digimon.
 /// BLOCKED by G-PRED-DP-LTE: dp_lte predicate not evaluated for permanents.
 #[test]
-#[ignore = "pending gap: G-PRED-DP-LTE — dp_lte predicate not evaluated for permanents"]
 fn bt24_017_delete_targets_only_lowest_dp_digimon() {
     let mut low_dp = make_test_card("OPP-LOW", "OppLow");
     low_dp.dp = Some(3000);

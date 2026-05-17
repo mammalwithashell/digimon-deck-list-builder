@@ -611,8 +611,6 @@ fn bt13_012_opt_lockout_blocks_second_activation_in_same_turn() {
 /// non-security zones (same caveat as BT18-087 clause and BT9-112 / EX8-074
 /// formula DP caps documented in qa/dsl-vocab-gaps.md).
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE (qa/dsl-vocab-gaps.md) — \
-            dp_lte filter compiled but not evaluated on battle_area permanents"]
 fn bt13_012_dp_lte_filter_excludes_high_dp_targets() {
     let mut runner = fresh_runner(vec![
         make_tamer("RED-TAMER", vec![CardColor::Red]),
