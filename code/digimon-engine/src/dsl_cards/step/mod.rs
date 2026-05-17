@@ -402,6 +402,16 @@ pub fn run_step_with_runtime(
         ctx.place_self_as_delay_option_permanent();
         return;
     }
+    // Phase 2 Track B — `CompiledStep::ActivationCost` is normally lifted
+    // out of the body by `lower_triggered::lower_with_raw...` and bound to
+    // `Effect::activation_cost(...)`. The compile-side validator rejects
+    // mid-body uses, so reaching this arm at runtime indicates a
+    // lowering bug; no-op silently. This arm also satisfies the
+    // dsl_eval_arm_coverage lint which scans for a textual reference to
+    // every `CompiledStep` variant.
+    if matches!(step, CompiledStep::ActivationCost { .. }) {
+        return;
+    }
     if try_run_link_step(step, ctx) {
         return;
     }

@@ -2165,6 +2165,65 @@ impl<'a> EffectContext<'a> {
         self.game.suspend(target);
     }
 
+    /// Pay the source permanent's suspend-self activation cost.
+    ///
+    /// Used as the closure body for [`crate::effect::EffectBuilder::activation_cost`]
+    /// on Tamer triggered abilities like "by suspending this Tamer, gain 1
+    /// memory" (BT4-097 / BT8-090 / BT13-101 family). Returns `false` if
+    /// the source permanent is gone (extremely unlikely mid-trigger) or
+    /// is already suspended — in which case the body silently aborts and
+    /// the OPT slot is consumed by the queue dispatcher. Returns `true`
+    /// after delegating to [`Self::suspend`] (which fires `OnSuspend`
+    /// observers and the canonical single-target chokepoint).
+    ///
+    /// No-approximations note: this helper does NOT prompt — the player's
+    /// "may you accept" prompt belongs to [`crate::effect::EffectBuilder::optional`]
+    /// and runs BEFORE the cost. The cost is intrinsic to the trigger,
+    /// not a player decision (Working Rule 17).
+    pub fn suspend_self_as_cost(&mut self) -> bool {
+        let Some(handle) = self.source_permanent else {
+            return false;
+        };
+        let already_suspended = self
+            .source_permanent()
+            .map(|perm| perm.is_suspended)
+            .unwrap_or(true);
+        if already_suspended {
+            return false;
+        }
+        self.suspend(handle);
+        true
+    }
+
+    /// Pay the source permanent's return-self-to-deck-bottom activation
+    /// cost.
+    ///
+    /// Used as the closure body for
+    /// [`crate::effect::EffectBuilder::activation_cost`] on Tamer
+    /// triggered abilities like "By returning this Tamer to the bottom
+    /// of the deck..." (BT22-088 / BT22-094 / BT17-093 / EX11-071
+    /// family). Moves the top card of the source permanent to the
+    /// controller's deck bottom, trashes the rest of the digivolution
+    /// stack per standard return-to-deck rules, and fires
+    /// `OnLeaveField`. Returns `false` if the source permanent is gone
+    /// (extremely unlikely mid-trigger but possible if a prior chain
+    /// destroyed it).
+    pub fn return_self_to_deck_bottom_as_cost(&mut self) -> bool {
+        let Some(handle) = self.source_permanent else {
+            return false;
+        };
+        if self.source_permanent().is_none() {
+            return false;
+        }
+        // Use the top-card-only return path: the source's top card moves
+        // to its owner's deck bottom; any remaining digivolution sources
+        // are trashed by `Game::return_to_deck`. Mirrors the
+        // `return_to_deck { include_sources: false, position: bottom }`
+        // DSL step shape applied to `source`.
+        self.game
+            .return_to_deck(handle, crate::enums::StackPosition::Bottom)
+    }
+
     /// Unsuspend a permanent and fire `OnUnsuspend` observers.
     /// Delegates to `Game::unsuspend` — the canonical single-target chokepoint.
     pub fn unsuspend(&mut self, target: PermanentHandle) {

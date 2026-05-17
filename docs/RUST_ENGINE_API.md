@@ -141,6 +141,8 @@ Key rules:
 - `.dp_modifier_fn(|ctx, target| Some(n))` — live DP formula/query contribution for declarative aura effects; `None` means the aura does not apply to that target.
 - `.security_attack_fn(|ctx, target| Some(n))` — live Security Attack check count formula for declarative aura effects; `None` preserves the normal base check when no formula applies.
 - `.cost_reduction(n)` — static cost reduction.
+- `.pay_cost_fn(|ctx| bool)` — custom cost-payment logic. For `BeforePayCost` timing this hooks into play/digivolve cost calculation; for other triggered timings it runs in `run_queued_effect_inner` between the condition gate and the body. Distinct from `.activation_cost` below — the failure semantics differ. See `effect.rs` docstring.
+- `.activation_cost(|ctx| bool)` — Phase 2 Track B. Declarative activation-cost hook for triggered abilities like "by suspending this Tamer" or "by returning this Tamer to the bottom of the deck". Runs AFTER condition + `.optional()` accept but BEFORE the body `process`. Returning `false` collapses the body silently AND consumes the OPT slot (no decline-vs-fail elision, Working Rule 17). Pair with `EffectContext::suspend_self_as_cost` / `return_self_to_deck_bottom_as_cost` for the two printed cost shapes.
 - `.build()` — finalize into `Effect`.
 
 ---
@@ -257,6 +259,26 @@ ctx.trash_opponent_hand_to_count(opponent, target_count) -> bool   // forced-red
 ctx.trash_top_n_digivolution_cards_of_each(target_player, n) -> usize
 ctx.return_all_trash_to_deck_bottom(player) -> Vec<CardHandle>
 ```
+
+### Activation-cost helpers (Phase 2 Track B)
+
+Used as the closure body for [`EffectBuilder::activation_cost`] on Tamer
+triggered abilities. Failure (return `false`) collapses the body silently
+and consumes the OPT slot for the same activation key. No prompts —
+player visibility belongs to `.optional()` which runs BEFORE the cost.
+
+```rust
+ctx.suspend_self_as_cost() -> bool                  // "by suspending this Tamer..."
+ctx.return_self_to_deck_bottom_as_cost() -> bool    // "by returning this Tamer to the bottom of the deck..."
+```
+
+- `suspend_self_as_cost` returns `false` if the source permanent is gone
+  or already suspended; otherwise suspends it (firing `OnSuspend`
+  observers) and returns `true`.
+- `return_self_to_deck_bottom_as_cost` returns `false` if the source has
+  already left the field; otherwise routes through `Game::return_to_deck`
+  (top card to owner's deck bottom, digivolution sources trashed per
+  standard return-to-deck rules, fires the leave-field observer chain).
 
 The `*_and_cancel_current_replacement` siblings are for replacement-body
 authors that need to commit a state change AND set the replacement outcome

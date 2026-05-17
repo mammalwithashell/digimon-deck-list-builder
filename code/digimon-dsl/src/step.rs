@@ -191,6 +191,12 @@ pub enum StepSpec {
 
     // Escape hatch (step-level)
     RawRust(RawRustStep),
+
+    // Phase 2 Track B — declarative activation-cost step. Only valid as
+    // the first step of a triggered clause body; lifted onto
+    // `EffectBuilder::activation_cost(...)` at lowering time. The
+    // compile-side validator rejects mid-body uses.
+    ActivationCost(ActivationCostArgs),
 }
 
 // ── Custom Serialize for StepSpec ──────────────────────────────────────
@@ -348,6 +354,7 @@ impl Serialize for StepSpec {
             StepSpec::SubstituteReplacement(v) => kv!(s, "substitute_replacement", v),
             // Escape hatch
             StepSpec::RawRust(v) => kv!(s, "raw_rust", v),
+            StepSpec::ActivationCost(v) => kv!(s, "activation_cost", v),
         }
     }
 }
@@ -532,6 +539,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Escape hatch
             "raw_rust" => StepSpec::RawRust(map.next_value()?),
 
+            // Phase 2 Track B
+            "activation_cost" => StepSpec::ActivationCost(map.next_value()?),
+
             other => {
                 return Err(de::Error::unknown_variant(
                     other,
@@ -639,6 +649,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "redirect_replacement",
                         "substitute_replacement",
                         "raw_rust",
+                        "activation_cost",
                     ],
                 ));
             }
@@ -713,6 +724,35 @@ pub struct PlayerArg {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]
 #[serde(deny_unknown_fields)]
 pub struct EmptyArgs {}
+
+/// Args for the `activation_cost:` DSL step. Phase 2 Track B.
+///
+/// YAML shape (only one variant key may be set):
+/// ```yaml
+/// - activation_cost:
+///     suspend_self: true
+/// ```
+/// or
+/// ```yaml
+/// - activation_cost:
+///     return_self_to_deck_bottom: true
+/// ```
+///
+/// Only valid as the FIRST step of a triggered clause body — the
+/// validator rejects mid-body uses. The lowering lifts it onto
+/// `EffectBuilder::activation_cost(...)`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]
+#[serde(deny_unknown_fields)]
+pub struct ActivationCostArgs {
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub suspend_self: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub return_self_to_deck_bottom: bool,
+}
+
+fn is_false(b: &bool) -> bool {
+    !*b
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]

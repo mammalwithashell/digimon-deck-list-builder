@@ -1837,9 +1837,127 @@ impl Game {
             }
         }
 
+        // Activation-cost hook — distinct from pay_cost_fn (Phase 2 Track B).
+        // Runs on triggered-ability resolution between the condition gate
+        // and the body process closure. Failure path:
+        //   - body process does NOT run
+        //   - OPT slot IS consumed for the same activation key, so a card
+        //     that can't pay its cost this trigger doesn't get to retry on
+        //     a fresh trigger event in the same turn (Working Rule 17 — no
+        //     silent retries; Track C may reshape OPT keying in a follow-up
+        //     but the semantic is "cost-failed firings count toward the OPT
+        //     cap identically to successful firings").
+        // Success path: the body MUST run even when the activation cost
+        // legitimately removed the source permanent (e.g. "return this
+        // Tamer to the bottom of the deck"). The standard source-liveness
+        // re-check in `run_queued_effect_process_tail` would reject this
+        // case, so we route through
+        // `run_queued_effect_process_tail_after_activation_cost` which
+        // keeps OPT bookkeeping but skips the source-is-live gate (the
+        // cost just established that the trigger fired and the source
+        // intentionally left).
+        let mut activation_cost_paid = false;
+        if effect.activation_cost_fn.is_some() {
+            let max_per_turn = effect.max_per_turn;
+            // Re-lookup is necessary because invoking the closure needs
+            // `&mut self`, which conflicts with the borrow into `effects`.
+            let cost_outcome = {
+                let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+                    return;
+                };
+                let Some(effect) = effects.get(qe.effect_slot as usize) else {
+                    return;
+                };
+                let Some(activation_cost) = &effect.activation_cost_fn else {
+                    return;
+                };
+                let mut ctx = EffectContext::new_with_source_kind(
+                    self,
+                    qe.attribution_source_card.unwrap_or(qe.source_card),
+                    qe.source_permanent,
+                    qe.attribution_source_kind.unwrap_or(qe.source_kind),
+                    qe.controller,
+                );
+                activation_cost(&mut ctx)
+            };
+            if !cost_outcome {
+                if max_per_turn > 0 && !qe.bypass_once_per_turn {
+                    if let Some(perm_handle) = qe.source_permanent {
+                        self.record_source_permanent_activation(
+                            perm_handle,
+                            qe.source_card,
+                            qe.effect_slot,
+                        );
+                    }
+                }
+                return;
+            }
+            activation_cost_paid = true;
+        }
+
         let event_delay_source = self.event_gated_delay_source(&qe);
-        self.run_queued_effect_process_tail(&qe);
+        if activation_cost_paid {
+            self.run_queued_effect_process_tail_after_activation_cost(&qe);
+        } else {
+            self.run_queued_effect_process_tail(&qe);
+        }
         self.trash_event_gated_delay_after_activation(event_delay_source);
+    }
+
+    /// Variant of [`Self::run_queued_effect_process_tail`] used after a
+    /// successful `activation_cost_fn`. Skips the source-liveness re-check
+    /// because the cost may have intentionally removed the source (e.g.
+    /// `return_self_to_deck_bottom_as_cost`); OPT bookkeeping is preserved
+    /// so a successful firing counts toward the cap.
+    fn run_queued_effect_process_tail_after_activation_cost(&mut self, qe: &QueuedEffect) {
+        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+            return;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return;
+        };
+        if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
+            if let Some(perm_handle) = qe.source_permanent {
+                let Some(activation_count) = self.source_permanent_activation_count(
+                    perm_handle,
+                    qe.source_card,
+                    qe.effect_slot,
+                ) else {
+                    // Source removed by the cost — OPT bookkeeping not
+                    // applicable, body still runs.
+                    if let Some(process) = &effect.process {
+                        let mut ctx = EffectContext::new_with_source_kind(
+                            self,
+                            qe.attribution_source_card.unwrap_or(qe.source_card),
+                            qe.source_permanent,
+                            qe.attribution_source_kind.unwrap_or(qe.source_kind),
+                            qe.controller,
+                        );
+                        process(&mut ctx);
+                    }
+                    return;
+                };
+                if activation_count >= effect.max_per_turn {
+                    return;
+                }
+                self.record_source_permanent_activation(
+                    perm_handle,
+                    qe.source_card,
+                    qe.effect_slot,
+                );
+            }
+        }
+
+        if let Some(process) = &effect.process {
+            let mut ctx = EffectContext::new_with_source_kind(
+                self,
+                qe.attribution_source_card.unwrap_or(qe.source_card),
+                qe.source_permanent,
+                qe.attribution_source_kind.unwrap_or(qe.source_kind),
+                qe.controller,
+            );
+            process(&mut ctx);
+        }
     }
 
     fn run_queued_effect_process_tail(&mut self, qe: &QueuedEffect) {
