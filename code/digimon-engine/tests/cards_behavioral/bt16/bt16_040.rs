@@ -451,25 +451,29 @@ fn bt16_040_inherited_when_attacking_opt_blocks_second_attack_same_turn() {
     );
 }
 
-/// OPT resets after a turn cycle.
-/// NOTE: Affected by G-OPT-RESET-VIA-ATTACK-CYCLE — inherited [When Attacking]
-/// OPT may not re-fire after a full P0→P1→P0 turn cycle (observed on BT17-015).
+/// OPT resets after a turn cycle. Phase 2 Track C closure: OPT slot
+/// enforcement and reset already work in the engine substrate; this test
+/// was previously masked by missing deck/security setup (`begin_turn` for
+/// the next player tripped a deck-out and ended the game before
+/// `new_turn` could clear the carrier's `effect_activations` HashMap).
 #[test]
-#[ignore = "BLOCKED: G-OPT-RESET-VIA-ATTACK-CYCLE — inherited [When Attacking][OPT] may \
-            not re-fire on a fresh attack after a full P0→P1→P0 turn cycle (same structural \
-            gap observed on BT17-015). Verify and remove ignore once the gap closes."]
 fn bt16_040_inherited_when_attacking_opt_resets_after_turn_cycle() {
     let mut runner = wormmon_base()
         .add_card(make_own_digimon("CARRIER"))
         .add_card(make_opp_digimon("OPP1"))
         .add_card(make_opp_digimon("OPP2"))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(0, &["FILLER"; 10])
+        .deck(1, &["FILLER"; 10])
+        .security(0, &["FILLER"; 5])
+        .security(1, &["FILLER"; 5])
         .memory(20)
         .start();
     runner.game.turn_count = 1;
 
     let carrier = runner.place_stack(0, &["BT16-040", "CARRIER"]);
     let opp1 = runner.place_on_field(1, "OPP1", Some(0));
-    let opp2 = runner.place_on_field(1, "OPP2", Some(0));
+    let _opp2 = runner.place_on_field(1, "OPP2", Some(0));
 
     // First attack this turn.
     runner.attack_digimon(carrier, opp1, false);
@@ -482,8 +486,19 @@ fn bt16_040_inherited_when_attacking_opt_resets_after_turn_cycle() {
     // Unsuspend carrier.
     runner.game.players[0].battle_area[carrier.index as usize].is_suspended = false;
 
+    // Re-resolve opp2 handle in case battle_area shifted after combat
+    // deleted opp1.
+    let opp2_after = {
+        let battle = &runner.game.players[1].battle_area;
+        assert!(
+            !battle.is_empty(),
+            "opp2 must survive into the next-turn assertion"
+        );
+        runner.perm_handle(1, battle.len() - 1)
+    };
+
     // Second attack (fresh turn): OPT should have reset.
-    runner.attack_digimon(carrier, opp2, false);
+    runner.attack_digimon(carrier, opp2_after, false);
     assert!(
         runner.pending_selection().is_some(),
         "OPT must reset after a full turn cycle"

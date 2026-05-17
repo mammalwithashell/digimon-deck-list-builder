@@ -9,6 +9,29 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
 
+## Phase 2 Track C closure — 2026-05-17
+
+### Engine Gap: G-OPT-TRIGGERED — already-closed (no engine fix shipped)
+
+- **Status:** Substrate verified correct as of pre-PR Phase 2 baseline (commit `2b083c5a`). The `Effect::max_per_turn` gate at `effect_queue.rs::run_queued_effect_inner` reads `Permanent::activation_count((source_card_handle, effect_slot))` on the carrier permanent and skips the body when the count is at the cap; the success-path tail (`run_queued_effect_process_tail`) records the activation via `Permanent::record_activation` before invoking the body process. Track B (commit `2c2c4632`) added the parallel post-`activation_cost`-failure record so a cost-failed firing also consumes the slot. The path was therefore complete by the time this track ran.
+- **What the 26 BLOCKED tests' ignore reasons claimed:** "max_per_turn is not enforced in `run_queued_effect_inner`". This was stale — the gate had been wired earlier in the Rust pivot and the once-per-turn enforcement already worked for both top-card and inherited-source effects. 18 of the 26 tests passed verbatim when un-ignored; the remaining 8 were `unimplemented!()` / `todo!()` stubs with no body to verify (those stay ignored with a clarified reason).
+- **Slot key:** `(carrier_permanent_handle's HashMap) × (source_card_handle, effect_slot)`. The HashMap is stored on `Permanent::effect_activations` and is fully cleared by `Permanent::new_turn` (`permanent.rs:412-416`), which is called once per begin-turn for every battle-area permanent of the new turn-player. No collision between top-card and inherited-source slots — both live in the same per-carrier map and are distinguished by the `source_card` half of the key.
+
+### Engine Gap: G-OPT-RESET-VIA-ATTACK-CYCLE — CLOSED (test-setup fix only)
+
+- **Status:** Misdiagnosed in the original tracker note. The suspected "OPT key persists across turn boundaries when carrier permanent's source identity differs from trigger source" was not happening — the HashMap is cleared wholesale at `Permanent::new_turn`, so divergence between carrier identity and trigger source is irrelevant.
+- **Actual failure mode in the canonical BT16-040 / BT17-015 / BT17-018 reset tests:** the test setup did not populate decks or security for either player, so the first `end_turn()` would rotate to P1 → `begin_turn()` → empty-deck draw → `game_over=true`. `Permanent::new_turn` therefore never fired a second time for P0's carrier, and the OPT slot stayed populated.
+- **Fix shipped:** test-setup adjustments only — decks + security for both players, low-DP defenders where digimon-vs-digimon combat would otherwise destroy the attacker before the second cycle. No engine-side change.
+- **Evidence:** diagnostic harness `diag_bt16_040_opt_reset` (deleted before commit) confirmed that with decks/security present, `effect_activations` went `{}` → `{(BT16-040.handle, 2): 1}` → `{}` (P0's `new_turn` after the second `end_turn`) → `{(BT16-040.handle, 2): 1}` (after a second attack), and `pending_selection` correctly installed `OppField` for both attacks. Direct-`enqueue_triggered` harness reproduced the same trajectory.
+- **Tests un-ignored / re-tagged in this PR:**
+  - 18 directly-passing OPT-tagged tests (no test-body changes): ad1_012 cross-timing OPT, bt13_012 OPT lockout, bt14_001 inherited OPT, bt17_018 same-turn OPT block, bt21_001 OPT block + reset, bt21_025 clause-2 OPT block + reset, bt22_005 inherited OPT, ex10_002 attack-target-change OPT, ex4_038 inherited OPT, ex8_074 [All Turns] OPT, lm_021 [When Attacking] OPT block + reset, p_123 OnMove OPT block + reset, p_137 clause-c OPT block + reset.
+  - 4 tests un-ignored after small test-setup fixes (decks + security added; low-DP defender for BT17-018): bt16_040 reset-after-turn-cycle, bt17_015 reset-after-end-turn, bt17_018 reset-after-end-turn, bt21_017 inherited OPT block (also dropped `memory(10)` → `memory(5)` — root cause unrelated to OPT, future investigation).
+  - 1 test un-ignored from non-`G-OPT-TRIGGERED` ignore-reason variant: ex11_008 inherited OPT block (reason: "engine gap: OPT not enforced for triggered effects via queue").
+  - 1 test (ad1_025 `*_all_turns_observer_opt_blocks_*`) kept `#[ignore]`'d — the DRIFT 2 YAML drift is the real residual blocker; reason simplified to drop the OPT half.
+  - 6 combined-tag tests where the OPT half closed but another gap (`G-INHERITED-DISPATCH`, `G-AS-SELECTING-PLAYER`) still blocks — kept `#[ignore]`'d, OPT half trimmed from the reason: bt24_016 (×2), p_189 (×2), bt21_025 clause-3 stub, ad1_025 [All Turns] observer.
+- **Net `#[ignore]` count:** 566 → 543 (drop of 23). Tests that remain `#[ignore]`'d with OPT mentions are all `unimplemented!()` / `todo!()` stubs or other-gap-blocked combined-tag entries (Track D's territory for the inherited-dispatch half).
+- **Source priority cross-check (Working Rule 17):** OPT lockout failure drops silently — no hidden retry prompt surfaces to the player. The behavior matches DCGO (`OncePerTurn` hash check before SetUpActivateClass) and the Comprehensive Rules Manual (§16-36 once-per-turn family).
+
 ## Phase 2 Track A closure — 2026-05-17
 
 ### DSL Gap: `dp_eq` / `dp_lte` / `dp_gte` on card subjects — RESOLVED 2026-05-17 [G-PRED-DP-LTE]

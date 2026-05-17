@@ -592,7 +592,6 @@ fn p_123_does_not_fire_on_opponent_turn_move() {
 /// re-fire the clause. Blocked by G-OPT-TRIGGERED — `once_per_turn` is
 /// emitted by the compiler but not enforced at runtime for triggered effects.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — once_per_turn not enforced at runtime for triggered effects"]
 fn p_123_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -629,7 +628,6 @@ fn p_123_opt_blocks_second_trigger_same_turn() {
 /// OPT counter clears after end_turn — clause fires again next turn.
 /// Blocked by G-OPT-TRIGGERED.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — once_per_turn not enforced at runtime for triggered effects"]
 fn p_123_opt_resets_after_turn_cycle() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)

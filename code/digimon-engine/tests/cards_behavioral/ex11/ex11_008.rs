@@ -520,7 +520,6 @@ fn ex11_008_inherited_does_not_fire_when_not_your_turn() {
 /// tracks `activation_count` during queue drain, this test would fire twice.
 /// Tracked in qa/dsl-vocab-gaps.md.
 #[test]
-#[ignore = "engine gap: OPT not enforced for triggered effects via queue"]
 fn ex11_008_inherited_opt_blocks_second_trigger_same_turn() {
     let (mut runner, _elizamon_h) = build_runner_with_elizamon_on_field(|b| {
         // P1 needs 3+ security to trigger twice.

@@ -374,7 +374,6 @@ fn p_137_clause_c_no_pending_selection_after_fire() {
 /// Blocked by G-OPT-TRIGGERED: `once_per_turn` emitted by compiler but not
 /// enforced in `run_queued_effect_inner`.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — once_per_turn not enforced at runtime for triggered effects"]
 fn p_137_clause_c_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(P_137_YAML)
@@ -413,7 +412,6 @@ fn p_137_clause_c_opt_blocks_second_trigger_same_turn() {
 ///
 /// Blocked by G-OPT-TRIGGERED.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — once_per_turn not enforced at runtime for triggered effects"]
 fn p_137_clause_c_opt_resets_after_turn_end() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(P_137_YAML)

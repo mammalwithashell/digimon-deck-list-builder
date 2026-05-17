@@ -364,7 +364,6 @@ fn bt21_001_selecting_permanent_then_hand_card_triggers_digivolve_cost_minus_1()
 /// BLOCKED: G-OPT-TRIGGERED — once_per_turn not enforced for triggered effects.
 /// BLOCKED: G-INHERITED-DISPATCH — stack inherited dispatch not wired.
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-DISPATCH + G-OPT-TRIGGERED — stack dispatch and OPT enforcement both missing"]
 fn bt21_001_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-001")
@@ -409,7 +408,6 @@ fn bt21_001_opt_blocks_second_trigger_same_turn() {
 ///
 /// BLOCKED: G-INHERITED-DISPATCH + G-OPT-TRIGGERED.
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-DISPATCH + G-OPT-TRIGGERED — stack dispatch and OPT enforcement both missing"]
 fn bt21_001_opt_resets_after_end_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-001")

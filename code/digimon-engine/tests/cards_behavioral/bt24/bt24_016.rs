@@ -242,7 +242,7 @@ fn bt24_016_activated_path_extra_cost_has_two_steps() {
 /// place a card, and their top security is trashed. Requires WhenDigivolving
 /// dispatch, as_selecting_player, place_on_security + trash_top_security.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED (WhenDigivolving dispatch) + G-AS-SELECTING-PLAYER"]
+#[ignore = "pending: G-AS-SELECTING-PLAYER (test body not written; OPT closed in Phase 2 Track C)"]
 fn bt24_016_when_digivolving_opponent_places_and_top_security_trashed() {
     // Scaffolding (to be filled once the gaps close):
     //
@@ -342,7 +342,7 @@ fn bt24_016_inherited_does_not_fire_after_source_leaves_field() {
 /// OPT lockout on inherited clause: must not fire a second time in the same
 /// turn even if the opponent loses multiple security cards.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH + G-OPT-TRIGGERED"]
+#[ignore = "pending: G-INHERITED-DISPATCH (test body not written; OPT closed in Phase 2 Track C)"]
 fn bt24_016_inherited_clause_opt_fires_at_most_once_per_turn() {
     todo!("implement once G-INHERITED-DISPATCH + G-OPT-TRIGGERED land");
 }

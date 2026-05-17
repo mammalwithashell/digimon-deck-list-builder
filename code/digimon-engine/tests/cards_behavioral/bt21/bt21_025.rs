@@ -341,7 +341,6 @@ fn bt21_025_clause2_noop_when_opponent_has_no_security() {
 /// Blocked by G-OPT-TRIGGERED: `once_per_turn` is emitted by the compiler but
 /// not enforced in `run_queued_effect_inner`.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — once_per_turn not enforced at runtime"]
 fn bt21_025_clause2_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT21_025_YAML)
@@ -372,7 +371,6 @@ fn bt21_025_clause2_opt_blocks_second_trigger_same_turn() {
 ///
 /// Blocked by G-OPT-TRIGGERED.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — once_per_turn not enforced at runtime"]
 fn bt21_025_clause2_opt_resets_after_turn_end() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT21_025_YAML)
@@ -486,9 +484,10 @@ fn bt21_025_clause3_decline_does_nothing() {
 
 /// OPT lockout for clause 3.
 ///
-/// Blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED.
+/// Blocked by G-INHERITED-DISPATCH (Track D). OPT half closed in
+/// Phase 2 Track C.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH + G-OPT-TRIGGERED"]
+#[ignore = "pending: G-INHERITED-DISPATCH (test body not written; Track D unblocks)"]
 fn bt21_025_clause3_opt_blocks_second_activation() {
-    todo!("implement once G-INHERITED-DISPATCH and G-OPT-TRIGGERED are resolved");
+    todo!("implement once G-INHERITED-DISPATCH resolves");
 }

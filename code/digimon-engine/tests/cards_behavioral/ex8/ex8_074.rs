@@ -520,7 +520,6 @@ fn ex8_074_all_turns_opt_fires_on_enter_field_anyone() {
 /// [All Turns][OPT] — OPT lockout: the clause must not fire a second time
 /// in the same turn.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — OPT not enforced for triggered effects in run_queued_effect_inner"]
 fn ex8_074_all_turns_opt_lockout_same_turn() {
     let mut runner = runner_with_ex8_074();
 

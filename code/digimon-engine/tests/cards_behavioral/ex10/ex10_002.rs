@@ -176,7 +176,6 @@ fn ex10_002_does_not_draw_without_koromon_source() {
 }
 
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — once_per_turn enforcement for triggered effects is covered as a shared engine gap"]
 fn ex10_002_opt_blocks_second_attack_target_change_same_turn() {
     let mut runner = koromon_runner();
     let carrier = place_koromon_as_source(&mut runner);
