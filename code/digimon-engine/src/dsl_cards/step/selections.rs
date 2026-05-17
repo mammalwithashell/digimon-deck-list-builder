@@ -847,6 +847,14 @@ fn install_select_trash(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Clone state for the decline path before the success callback consumes
+    // them. G-OPTIONAL-SELECTION-CONTINUE-TAIL — declining an optional
+    // trash selection must still run the outer tail so subsequent
+    // mandatory steps (e.g. `add_this_option_to_hand`) execute.
+    let tail_for_decline = Arc::clone(&tail);
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
     ctx.select_trash(
         target_player,
         &prompt,
@@ -882,6 +890,28 @@ fn install_select_trash(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Attach decline-tail callback for optional selections.
+    if optional {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx,
+                    trigger_for_decline.clone(),
+                    &tail_for_decline,
+                    &mut b,
+                    &runtime_for_decline,
+                );
+            }));
+        }
+    }
 }
 
 fn install_select_own_permanent(

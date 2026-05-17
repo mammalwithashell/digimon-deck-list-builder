@@ -390,23 +390,22 @@ Format per entry:
 - First reported: 2026-04-28
 ---
 
-## BT23-005 — [Your Turn] cost reduction when digivolving into Reptile/Dragonkin
-- Effect text: "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1."
-- Missing DSL verb / step kind / predicate: `CostReductionBody` in `digimon-dsl/src/clause.rs` has no `when_this_digivolves_into` + `target_trait_has` trigger form. Existing variants are `when_playing_this: bool` and `when_any_ally_played: Option<PredicateSpec>`. Neither captures "THIS permanent is the digivolution source AND the target Digimon card has trait X".
-- Companion engine gap: `scan_before_pay_cost_reduction` in `game_actions.rs` constructs `EffectReadContext` from the source permanent only — no reference to the digivolution-target hand card is threaded to the condition closure, so a predicate cannot inspect the target's traits.
-- Lowers to engine API: `BeforePayCost` timing exists; fixed-amount cost reduction exists. Missing: trigger-predicate variant + target-card threading in `scan_before_pay_cost_reduction`.
-- Suggested DSL syntax:
+## BT23-005 — [Your Turn] cost reduction when digivolving into Reptile/Dragonkin  [G-BEFORE-PAY-COST-DIGIVOLVE-TARGET]
+- **Status: RESOLVED 2026-05-17** (Phase 2 Track H). See `qa/resolved-gaps.md` § "Phase 2 Track H closure — 2026-05-17" for the substrate landed (`cost_target` + `source_is_cost_target_permanent` predicates, digivolve-cost-calc target threading).
+- Authoring pattern:
   ```yaml
-  - scope: own
-    kind: cost_reduction
+  - kind: cost_reduction
     reduction_timing: before_pay_cost
-    when_this_digivolves_into:
-      target_trait_has: [Reptile, Dragonkin]
-    active_when: { your_turn: true }
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { trait_has: [Reptile, Dragonkin] }
     amount: 1
   ```
+- Card-authoring note: BT23-005 YAML still needs to be updated to use the new pattern; P-117 has been migrated as the proof-of-substrate (`code/digimon-engine/cards/p/P-117.yaml`).
 - First reported: 2026-04-27 (BT23-005 batch-implement-cards-rust-dsl)
-- Also blocks: P-117 clause 0 — "[Your Turn][OPT] When this Digimon would digivolve into a card with the [Free] trait, if you have a Tamer, reduce the digivolution cost by 1." Same structural gap: need `target_trait_has: Free` in a `when_this_digivolves_into` trigger form. Cross-listed 2026-05-04.
+- Also blocks (now resolvable): P-117 clause 0 — "[Your Turn][OPT] When this Digimon would digivolve into a card with the [Free] trait, if you have a Tamer, reduce the digivolution cost by 1." Migrated and validated 2026-05-17.
 
 ---
 
@@ -1240,24 +1239,21 @@ Format per entry:
 
 ## BT12-022 — BeforePayCost triggered gain_memory for "would DNA digivolve into" target  [G-BEFORE-PAY-COST-GAIN-MEMORY]
 
-- Effect text: "[Your Turn] When this Digimon would DNA digivolve into a green Digimon card, gain 1 memory." (BT12-022 ExVeemon)
-- Missing DSL verb / step kind / predicate: The DSL `kind: cost_reduction` with `reduction_timing: before_pay_cost` models only cost reductions (integer decrements to `memory_cost`). There is no triggered declarative form for `gain_memory` at `BeforePayCost` timing. DCGO uses `EffectTiming.BeforePayCost` with `CanTriggerWhenPermanentWouldDigivolveOfCard + IsJogress` + `card.Owner.AddMemory(1)` — the memory gain is an arbitrary effect (not a cost reduction) triggered at pre-pay-cost time.
-- Companion gap: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (already in qa/dsl-vocab-gaps.md) — the target-card threading (checking the would-digivolve-into card's color) is also missing. Both gaps must close before BT12-022 clause 0 can be implemented.
-- Companion note on `on_dna_digivolve` alternative: `on_dna_digivolve` timing fires AFTER DNA digivolve completes, so it could not faithfully model the "would" semantics. Also, no `event_card_color_is` predicate exists in `PredicateSpec` for filtering by the result card's color.
-- Lowers to engine API: `BeforePayCost` timing dispatch exists in `scan_before_pay_cost_reduction`; the gap is that it only updates `cost_delta`, not an arbitrary `gain_memory` side effect. A new DSL form (e.g., `kind: before_pay_cost_trigger`) with a `process:` body (not a `CostReductionBody`) would be needed.
-- Suggested DSL syntax (once G-BEFORE-PAY-COST-DIGIVOLVE-TARGET also closes):
+- **Status: RESOLVED 2026-05-17** (Phase 2 Track H). See `qa/resolved-gaps.md` § "Phase 2 Track H closure — 2026-05-17" for the substrate landed (sibling `Effect::before_pay_cost_observe` builder + `EffectTiming::BeforePayCostObserve` + `scan_before_pay_cost_observers` dispatch).
+- Authoring pattern:
   ```yaml
-  - scope: own
-    kind: before_pay_cost_trigger       # NEW form — triggered effect at BeforePayCost
-    when_this_digivolves_into:
-      target_color_is: green            # NEW predicate (needs G-BEFORE-PAY-COST-DIGIVOLVE-TARGET)
-      dna_only: true
-    active_when: { your_turn: true }
+  - when: before_pay_cost_observe
+    active_when:
+      all_of:
+        - your_turn: true
+        - dna_origin: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { color_is: green, kind: digimon }
     process:
       - gain_memory: 1
   ```
-- Gap kind: hybrid (engine-side: BeforePayCost dispatch handles only cost_delta; DSL-side: no `before_pay_cost_trigger` kind with process body).
-- Cards blocked: BT12-022 clause 0 (BLOCKED, omitted from YAML).
+- Cards implemented and validated: BT12-022 ExVeemon (clause 0), BT12-050 Stingmon (clause 0).
+- Companion gap (also resolved): G-BEFORE-PAY-COST-DIGIVOLVE-TARGET — see entry above.
 - First reported: 2026-05-04 (BT12-022 batch-implement-cards-rust-dsl)
 - First reported: 2026-05-04 (BT3-002 DemiVeemon DSL implementation)
 

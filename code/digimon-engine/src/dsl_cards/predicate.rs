@@ -136,6 +136,32 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    // G-BEFORE-PAY-COST-DIGIVOLVE-TARGET: when a `cost_target` sub-
+    // predicate is present, evaluate it as a Card predicate against the
+    // card whose cost is currently being inspected. Fails outside any
+    // BeforePayCost cost-calc dispatch (`cost_target_card == None`).
+    if let Some(inner) = &pred.cost_target {
+        let Some(target) = rctx.cost_target_card else {
+            return false;
+        };
+        if !eval_predicate_with_bindings(
+            inner,
+            rctx,
+            PredicateSubject::Card(target),
+            bindings,
+        ) {
+            return false;
+        }
+    }
+    // G-BEFORE-PAY-COST-DIGIVOLVE-TARGET: gate to "THIS permanent is
+    // the digivolve target" — fires when the effect's source_permanent
+    // is one of the digivolve target permanents (single entry for
+    // normal digivolve, both materials for DNA).
+    if let Some(want) = pred.source_is_cost_target_permanent {
+        if rctx.source_is_cost_target_permanent() != want {
+            return false;
+        }
+    }
     if !eval_event_fields(pred, rctx, subject) {
         return false;
     }

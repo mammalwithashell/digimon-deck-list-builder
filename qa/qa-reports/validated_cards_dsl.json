@@ -1933,25 +1933,25 @@
     },
     "P-117": {
       "card_name": "Veemon",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-h-bg-imperial-pilot-completion",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/p/P-117.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_117.rs",
-      "notes": "Cost reduction omitted; color-count condition omitted"
+      "notes": "Phase 2 Track H closed G-BEFORE-PAY-COST-DIGIVOLVE-TARGET. Clause 0 cost reduction now uses cost_target + source_is_cost_target_permanent."
     },
     "BT12-022": {
       "card_name": "ExVeemon",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-h-bg-imperial-pilot-completion",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt12/BT12-022.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_022.rs",
-      "notes": "Cost reduction + grant_keyword active_when both blocked"
+      "notes": "Phase 2 Track H closed G-BEFORE-PAY-COST-GAIN-MEMORY + G-BEFORE-PAY-COST-DIGIVOLVE-TARGET. Clause 0 uses before_pay_cost_observe + cost_target + dna_origin + source_is_cost_target_permanent."
     },
     "EX1-014": {
       "card_name": "ExVeemon",
@@ -1999,14 +1999,14 @@
     },
     "BT12-050": {
       "card_name": "Stingmon",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-h-bg-imperial-pilot-completion",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt12/BT12-050.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_050.rs",
-      "notes": "Sister to BT12-022 — same gaps"
+      "notes": "Phase 2 Track H — sister of BT12-022 with green→blue swap. Same substrate (before_pay_cost_observe, cost_target, source_is_cost_target_permanent, dna_origin)."
     },
     "ST9-09": {
       "card_name": "Stingmon",
@@ -2138,14 +2138,14 @@
     },
     "BT16-085": {
       "card_name": "Davis Motomiya & Ken Ichijoji",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-h-bg-imperial-pilot-completion",
       "status": "PARTIAL",
-      "gap_kind": "engine",
+      "gap_kind": "dsl",
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt16/BT16-085.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_085.rs",
-      "notes": "Free-play ships; delayed return + DNA trash blocked (3 new gaps)"
+      "notes": "Phase 2 Track H closed G-PLAY-FROM-HAND-FREE-BIND-AS. Clause 0 free-play + delayed-return now fully implemented via bind_as. Clause 1's blue-or-green digivolve gate (G-EVENT-CARD-COLOR-IS) and DNA-only opponent source trash (G-SELECT-OPPONENT-SOURCES) remain blocked."
     },
     "BT3-103": {
       "card_name": "Hidden Potential Discovered!",
@@ -2171,14 +2171,14 @@
     },
     "LM-030": {
       "card_name": "Green Scramble",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-h-bg-imperial-pilot-completion",
       "status": "PARTIAL",
       "gap_kind": "hybrid",
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/lm/LM-030.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_030.rs",
-      "notes": "Main + Security ship; Delay clause blocked (4 known gaps)"
+      "notes": "Phase 2 Track H closed G-OPTIONAL-SELECTION-CONTINUE-TAIL — declining the optional security trash play now still adds the option to hand. Delay clause remains blocked (G-ZONE-SELECTED-TRASH-TO-DECK-TOP)."
     },
     "BT14-009": {
       "card_name": "Gotsumon",

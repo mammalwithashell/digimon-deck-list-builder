@@ -234,6 +234,39 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_alt_path: Option<String>,
 
+    /// BeforePayCost target card predicate. When present, the inner
+    /// predicate is evaluated against the card whose cost is currently
+    /// being computed (`cost_target_card` on the effect read context),
+    /// treated as a `Card` subject. Fails when no cost target is active
+    /// (i.e., outside `BeforePayCost` cost-calc dispatch). Use the full
+    /// card-shape vocabulary inside: `trait_has`, `color_is`,
+    /// `name_contains`, `level_eq`/`_lte`/`_gte`, `kind`, etc.
+    ///
+    /// Example: a cost-reduction clause that fires only when the card
+    /// being digivolved into has the [Free] trait:
+    ///
+    /// ```yaml
+    /// active_when:
+    ///   your_turn: true
+    ///   cost_target: { trait_has: Free }
+    /// ```
+    ///
+    /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_target: Option<Box<PredicateSpec>>,
+
+    /// True when the effect's `source_permanent` is the (or one of the)
+    /// permanent(s) being digivolved by the action whose cost is being
+    /// computed. Use to gate "When THIS Digimon would digivolve into …"
+    /// printed semantics so the observer / cost reducer only fires when
+    /// its carrier permanent is actually the digivolution target. Single
+    /// entry for normal digivolve; both DNA materials for DNA digivolve.
+    /// Always false outside cost-calc dispatch and for effects whose
+    /// `source_permanent` is `None`.
+    /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_is_cost_target_permanent: Option<bool>,
+
     /// Captures unrecognized fields for controlled extension. Validator
     /// (Task 12) checks this for typos in inline predicate positions.
     #[serde(flatten)]

@@ -120,6 +120,14 @@ pub struct EffectReadContext<'a> {
     /// `None` outside play/digivolve cost calculation.
     pub cost_target_card: Option<CardHandle>,
     pub cost_target_from_hand: bool,
+    /// Permanent(s) being digivolved or otherwise mutated by the play/
+    /// digivolve action whose cost is currently being computed. Single
+    /// entry for a normal digivolve (the digivolve-target permanent),
+    /// two for DNA digivolve (both materials), empty for play-from-hand
+    /// or option use. Consumed by the `source_is_cost_target_permanent`
+    /// predicate to gate effects scoped to "when THIS Digimon would
+    /// digivolve" (printed semantics — G-BEFORE-PAY-COST-DIGIVOLVE-TARGET).
+    pub cost_target_permanents: Vec<PermanentHandle>,
 }
 
 impl<'a> EffectReadContext<'a> {
@@ -151,6 +159,7 @@ impl<'a> EffectReadContext<'a> {
             replacement_subject_controller: None,
             cost_target_card: None,
             cost_target_from_hand: false,
+            cost_target_permanents: Vec::new(),
         }
     }
 
@@ -174,7 +183,29 @@ impl<'a> EffectReadContext<'a> {
             replacement_subject_controller: None,
             cost_target_card: Some(cost_target_card),
             cost_target_from_hand,
+            cost_target_permanents: Vec::new(),
         }
+    }
+
+    /// Attach the digivolve target permanents (one for normal digivolve,
+    /// two for DNA, empty for play-from-hand). Chains after
+    /// `new_with_cost_target`. Consumed by the
+    /// `source_is_cost_target_permanent` predicate.
+    /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
+    pub fn with_cost_target_permanents(mut self, perms: Vec<PermanentHandle>) -> Self {
+        self.cost_target_permanents = perms;
+        self
+    }
+
+    /// True if this effect's `source_permanent` is one of the permanents
+    /// being digivolved by the action whose cost is currently being
+    /// computed. Returns `false` outside cost dispatch or when this
+    /// effect has no source permanent.
+    pub fn source_is_cost_target_permanent(&self) -> bool {
+        let Some(source) = self.source_permanent else {
+            return false;
+        };
+        self.cost_target_permanents.iter().any(|h| *h == source)
     }
 
     pub fn with_replacement_context(
@@ -1736,6 +1767,7 @@ impl<'a> EffectContext<'a> {
             replacement_subject_controller: None,
             cost_target_card: self.cost_target_card,
             cost_target_from_hand: self.cost_target_from_hand,
+            cost_target_permanents: Vec::new(),
         }
     }
 

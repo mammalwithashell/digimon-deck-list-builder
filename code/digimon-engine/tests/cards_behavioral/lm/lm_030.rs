@@ -662,11 +662,11 @@ fn lm_030_security_adds_card_to_hand_and_plays_small_green_digimon() {
 
 /// add-this-option-to-hand must still fire when the player DECLINES the optional
 /// trash play. The selected Digimon must remain in trash while the mandatory
-/// tail ("Then, add this card to the hand") continues. This remains covered by
-/// G-OPTIONAL-SELECTION-CONTINUE-TAIL for optional card-zone selections.
-/// When G-OPTIONAL-SELECTION-CONTINUE-TAIL is resolved, this test should pass.
+/// tail ("Then, add this card to the hand") continues.
+/// G-OPTIONAL-SELECTION-CONTINUE-TAIL — closed by Phase 2 Track H
+/// (install_select_trash now attaches an on_decline tail-runner for optional
+/// selections, mirroring the 2026-04-29 select_material / select_own_sources fix).
 #[test]
-#[ignore = "pending: G-OPTIONAL-SELECTION-CONTINUE-TAIL — optional trash-selection decline must continue mandatory add_this_option_to_hand tail without playing the trash card"]
 fn lm_030_security_adds_card_to_hand_even_when_trash_play_declined() {
     let small = make_small_green_digimon("LM030-SMALL-DECL");
     let mut attacker = make_filler("LM030-ATTACKER-DECL");

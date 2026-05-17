@@ -167,7 +167,21 @@ impl CardEffect for DslCardEffect {
                         if !timing_ok {
                             continue 'clause;
                         }
-                        if !*when_playing_this && when_any_ally_played.is_none() {
+                        // Originally this short-circuit required either
+                        // `when_playing_this` or `when_any_ally_played` so authors
+                        // could not register an unscoped global reducer by accident.
+                        // Phase 2 Track H expands the supported trigger surface to
+                        // include "when this permanent is being digivolved into"
+                        // via `cost_target: { ... }` + `source_is_cost_target_permanent`
+                        // inside `active_when`. Authors using that pattern set
+                        // neither flag, so the short-circuit must defer to
+                        // `active_when` instead of dropping the clause silently.
+                        // (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET.)
+                        if !*when_playing_this
+                            && when_any_ally_played.is_none()
+                            && active_when.is_none()
+                            && condition.is_none()
+                        {
                             continue 'clause;
                         }
                         let amount_formula = amount_fn.clone().or_else(|| {

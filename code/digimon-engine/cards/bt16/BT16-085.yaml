@@ -122,11 +122,14 @@ effects:
   # matching hand cards. If no qualifying card exists the trigger silently
   # declines — consistent with sister tamers BT22-089 and AD1-010.
   #
-  # PARTIAL: free-play is implemented; delayed return is OMITTED pending
-  # G-PLAY-FROM-HAND-FREE-BIND-AS (see header note).
+  # IMPLEMENTED (Phase 2 Track H): free-play AND delayed return.
+  # `bind_as` on `play_from_hand_free` (G-PLAY-FROM-HAND-FREE-BIND-AS)
+  # exposes the just-played permanent handle so a follow-up
+  # `schedule_delayed` body can `return_to_hand` the same card at the
+  # end of the opponent's next turn.
   - when: start_of_your_main_phase
     optional: true
-    summary: "[SoMP][OPT] Free-play 1 Veemon or Wormmon from hand (return at opp EOT OMITTED: G-PLAY-FROM-HAND-FREE-BIND-AS)"
+    summary: "[SoMP][OPT] Free-play 1 Veemon or Wormmon from hand; return at next opp EOT"
     condition:
       count_gte:
         filter:
@@ -147,16 +150,14 @@ effects:
               - name_contains: "Veemon"
               - name_contains: "Wormmon"
           prompt: "Play 1 [Veemon] or [Wormmon] from your hand without paying the cost"
-      # Play the selected card for free.
-      - play_from_hand_free: { of: you, hand_index: pick }
-      # OMITTED: schedule_delayed for return_to_hand at end_of_opponents_next_turn.
-      # Requires G-PLAY-FROM-HAND-FREE-BIND-AS to be closed first.
-      # Intended YAML once fixed:
-      #   - schedule_delayed:
-      #       when: end_of_opponents_next_turn
-      #       body:
-      #         - return_to_hand: { target: played }
-      # where `played` would be bound by play_from_hand_free's bind_as field.
+      # Play the selected card for free and bind its permanent handle so the
+      # scheduled return below can target the exact permanent that was just played.
+      - play_from_hand_free: { of: you, hand_index: pick, bind_as: played }
+      # Return that same permanent to hand at the next end-of-opponent's-turn.
+      - schedule_delayed:
+          when: end_of_opponents_next_turn
+          body:
+            - return_to_hand: { target: { permanent: played } }
 
   # ─── Clause 1 — [Your Turn] digivolve observer; suspend tamer → +1 memory ───
   #
