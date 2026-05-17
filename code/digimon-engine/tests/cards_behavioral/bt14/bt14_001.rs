@@ -289,7 +289,6 @@ fn bt14_001_inherited_fires_draws_one_card_on_your_turn() {
 /// for triggered effects. Also depends on G-INHERITED-DISPATCH (the clause must
 /// fire at all before OPT can be tested).
 #[test]
-#[ignore = "BLOCKED: G-OPT-TRIGGERED (and G-INHERITED-DISPATCH prerequisite) — OPT not enforced for triggered effects in queue drain path"]
 fn bt14_001_inherited_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(KOROMON_YAML)

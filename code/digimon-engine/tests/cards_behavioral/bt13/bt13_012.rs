@@ -563,8 +563,6 @@ fn bt13_012_does_not_fire_for_own_green_or_purple_tamer() {
 /// wired in `run_queued_effect_inner`. Same caveat as BT24-018 clause (f) and
 /// BT17-018 clause(s) marked in their YAML files.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED (qa/archetype-qa/engine-gaps.md) — \
-            once_per_turn flag compiled but not enforced for triggered observers"]
 fn bt13_012_opt_lockout_blocks_second_activation_in_same_turn() {
     let mut runner = fresh_runner(vec![
         make_tamer("RED-TAMER-A", vec![CardColor::Red]),
