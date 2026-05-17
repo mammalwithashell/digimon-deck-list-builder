@@ -154,7 +154,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 | `PUPPETS-G005` | engine-gap / test-gap | partially resolved | `EX9-067`, `EX11-061` | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G006` | test-gap | partially resolved | security end-of-battle play effects | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G007` | test-gap | closed | no current Puppet aura/Rush cards in the resolved pool | none |
-| `PUPPETS-G008` | dsl-gap | open | `ST19-03`, `EX7-024`, other inherited opponent-security DP auras | `qa/dsl-vocab-gaps.md` |
+| `PUPPETS-G008` | dsl-gap | **closed** (Track I 2026-05-17) | `ST19-03` (IMPLEMENTED), `EX7-024` (substrate ready, test bodies pending), other inherited opponent-security DP auras | `qa/dsl-vocab-gaps.md`, `qa/resolved-gaps.md` |
 | `PUPPETS-G009` | engine-gap | open | `P-037`, `P-105`, `LM-035`, `LM-037`, `LM-054`, `BT22-098`, standard Memory Boost/Training/Scramble Delay options | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G010` | dsl-gap | open | `BT15-003`, top/bottom security-cost effects | `qa/archetype-qa/engine-gaps.md` |
 | `PUPPETS-G011` | engine-gap | closed | `BT22-002`, `EX9-033`, `EX11-023`, `EX11-060`, Token/Puppet/other-Digimon deletion observers | `docs/RUST_ENGINE_GAPS.md` |
@@ -258,16 +258,13 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 - **First test:** Closed by `st19_14_effect_played_token_may_gain_rush_by_suspending_arisa` and `st19_14_effect_played_puppet_may_gain_rush_by_suspending_arisa`.
 - **Implementation hint:** Keep this as a card-level regression suite rather than a new engine primitive unless the test uncovers missing mask or aura scope behavior.
 
-### PUPPETS-G008: Inherited Opponent Security Digimon DP Aura DSL Bridge
+### PUPPETS-G008: Inherited Opponent Security Digimon DP Aura DSL Bridge — RESOLVED 2026-05-17 (Track I)
 
 - **Type:** `dsl-gap`
-- **Status:** open
-- **Blocks:** `ST19-03`, `EX7-024`, and any inherited effect that modifies all opponent security Digimon DP during your turn.
-- **Effect text:** "[Your Turn] All of your opponent's security Digimon get -3000 DP."
-- **Why it matters:** The Rust engine has an `EffectBuilder::applies_to_opponent_security_dp` targeting hook, but production YAML has no declarative vocabulary that lowers an inherited aura into that builder path.
-- **Evidence:** `ST19-03` can faithfully ship its On Play reveal search, but its inherited text is omitted rather than approximated. The reusable vocabulary gap is tracked in `qa/dsl-vocab-gaps.md` as `G-OPPONENT-SECURITY-DP-AURA`.
-- **First test:** Stack `ST19-03` under an attacking Digimon, reveal an opponent security Digimon during your turn, and assert the security Digimon's battle DP is reduced by 3000 without affecting battle-area Digimon.
-- **Implementation hint:** Add an inherited aura DSL shape that lowers to `EffectBuilder::applies_to_opponent_security_dp()` plus a turn-scoped DP modifier.
+- **Status:** **resolved** (Track I, 2026-05-17)
+- **Closed via:** New `applies_to_opponent_security_dp: Option<bool>` field on `AuraBody` (DSL) + matching field on `CompiledDeclarativeClause::Aura` + special-case in `lower_aura::lower_all` that lowers to `Effect::declarative(card).inherited().dp_modifier(N).applies_to_opponent_security_dp()`. Cards authored as `kind: aura, scope: inherited, active_when: { your_turn: true }, dp_modifier: -3000, applies_to_opponent_security_dp: true` now lower through the engine substrate's existing `attacker_security_dp_adjustment` consult site (`combat.rs:260`).
+- **Migrated:** `ST19-03` (with behavioral test pair `st19_03_inherited_security_dp_debuff_lets_8000_attacker_survive_9000_security_digimon` and its negative twin) and `EX7-024` (test body un-filled — substrate ready; populate when card-author work picks it up).
+- **Notes:** The aura is intentionally inherited-only — the flag rides under the attacker's stack. The "[Your Turn]" tag in printed text is functionally redundant because security battles only happen when YOU attack; the engine substrate is turn-agnostic on this consult site but practically equivalent.
 
 ### PUPPETS-G009: Standard Delay Activation as a Visible Main-Phase Action
 

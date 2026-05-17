@@ -2899,19 +2899,21 @@
     },
     "ST19-03": {
       "card_name": "Shoemon",
-      "validated_date": "2026-05-03",
-      "report": "implement-rust-dsl-archetype puppets",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-17",
+      "report": "implement-rust-dsl-archetype/phase-2-track-i-puppets-pilot-completion",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets Batch 1",
       "yaml_path": "code/digimon-engine/cards/st19/ST19-03.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st19/st19_03.rs",
-      "test_count": 1,
+      "test_count": 3,
       "patterns": [
         "REVEAL-BUCKETS",
-        "NO-DUPLICATE-REVEAL-PICKS"
+        "NO-DUPLICATE-REVEAL-PICKS",
+        "INHERITED-AURA",
+        "APPLIES-TO-OPPONENT-SECURITY-DP"
       ],
-      "notes": "On Play dual-bucket Puppet/LIBERATOR reveal search shipped. Inherited opponent security Digimon -3000 DP aura is omitted pending G-OPPONENT-SECURITY-DP-AURA."
+      "notes": "Track I 2026-05-17: PUPPETS-G008 / G-OPPONENT-SECURITY-DP-AURA DSL bridge implemented. On Play dual-bucket Puppet/LIBERATOR reveal search plus inherited [Your Turn] -3000 DP to all opponent security Digimon via the new aura.applies_to_opponent_security_dp: true YAML field, which lowers to EffectBuilder::applies_to_opponent_security_dp(). Behavioral tests prove the -3000 swing flips a (8000 attacker vs 9000 security Digimon) battle from AttackerDeletedBySecurity to SecurityCheckSurvived."
     },
     "ST19-04": {
       "card_name": "PawnChessmon",
@@ -3481,8 +3483,8 @@
     },
     "EX9-032": {
       "card_name": "Karakurumon",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-5",
+      "validated_date": "2026-05-17",
+      "report": "implement-rust-dsl-archetype/phase-2-track-i-puppets-pilot-completion",
       "status": "PARTIAL",
       "gap_kind": "hybrid",
       "archetype": "Puppets",
@@ -3494,7 +3496,7 @@
         "COSTED-SELF-DIGIVOLVE",
         "INHERITED-REPLACEMENT"
       ],
-      "notes": "Production YAML and focused tests cover printed metadata plus normal yellow Lv5 and Puppet Lv5 digivolve paths. The active On Play/When Digivolving delete Token/Puppet cost into self-digivolve is omitted because deleting the cost body can shift battle-area indices before target:self resolves, and the cost preflight cannot faithfully decide availability. The inherited Token/Puppet leave-prevention replacement is omitted pending inherited replacement dispatch and Puppet-token cost body support."
+      "notes": "Track I 2026-05-17: active On Play / When Digivolving costed self-digivolve clause authored. 5/7 tests pass: metadata, both digivolution paths, the When Digivolving costed flow (cost body at idx > source), the decline path, and inherited Token/Puppet leave-prevention replacement. 2 tests remain ignored on confirmed BLOCKING substrate gaps re-filed with concrete failure modes — G-COSTED-SELF-DIGIVOLVE-STABLE-SOURCE (when the chosen cost body has a lower battle-area index than the source, Player::delete_permanent shifts indices but ctx.source_permanent stays stale) and G-COSTED-SELF-DIGIVOLVE-PREFLIGHT (select_own_permanent prompts even when the filter has no candidates)."
     },
     "EX9-033": {
       "card_name": "Kaguyamon",
@@ -3753,17 +3755,17 @@
     },
     "BT22-088": {
       "card_name": "Arisa Kinosaki",
-      "validated_date": "2026-05-11",
-      "report": "implement-rust-dsl-archetype/puppets-bt22-088-played-observer",
+      "validated_date": "2026-05-17",
+      "report": "implement-rust-dsl-archetype/phase-2-track-i-puppets-pilot-completion",
       "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "gap_kind": "dsl",
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-088.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_088.rs",
       "test_count": 11,
       "patterns": [
         "SECURITY-PLAY",
-        "OPTIONAL-COST",
+        "ACTIVATION-COST",
         "ON-ENTER-FIELD-OBSERVER",
         "SUSPEND-COST",
         "SOURCE-PREFLIGHT",
@@ -3771,7 +3773,7 @@
         "PUPPET-FILTER",
         "DRAW"
       ],
-      "notes": "Production YAML and focused tests cover Security play-self and the All Turns own Token/Puppet played observer. The observer uses played-object event context, a source-bound unsuspended preflight, a visible suspend-this-Tamer/decline choice, Draw 1 on acceptance, Token and Puppet branches, opponent/non-Puppet rejection, and multi-Arisa source-bound cost coverage. The Start of Your Main Phase optional return-this-Tamer-to-deck-bottom cost into exact Arisa/Shoemon free-play branches remains omitted pending PUPPETS-G028."
+      "notes": "Track I 2026-05-17: All Turns Token/Puppet played observer migrated from the select_effect_choice workaround to Track B's activation_cost: { suspend_self: true }. 8/11 tests pass — Security play-self, structural assertion, suspend+draw on Token/Puppet plays, Token-via-effect, pre-suspended cost-failure silent skip, non-Puppet/opponent-Puppet filter, multi-Arisa source-bound preflight. 3 tests remain ignored (PUPPETS-G028) on the Start of Your Main Phase return-this-Tamer-to-deck-bottom cost into exact Arisa/Shoemon free-play branches — the cost itself is now Track B's `activation_cost: { return_self_to_deck_bottom: true }` but the chained `choose_one` + origin-preserving free-play branch selectors are out of scope here."
     },
     "BT23-077": {
       "card_name": "Sistermon Ciel",
@@ -3863,10 +3865,10 @@
     },
     "EX4-074": {
       "card_name": "ShineGreymon: Ruin Mode",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-10",
+      "validated_date": "2026-05-17",
+      "report": "implement-rust-dsl-archetype/phase-2-track-i-puppets-pilot-completion",
       "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "gap_kind": "engine",
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/ex4/EX4-074.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_074.rs",
@@ -3878,7 +3880,7 @@
         "RECOVERY",
         "HATCH"
       ],
-      "notes": "Production YAML and focused tests cover metadata plus purple Lv6 and ShineGreymon digivolve paths. The When Digivolving/On Deletion opponent-wide -5000 DP clause is omitted pending opponent-next-turn expiry support; the End of Attack self-delete/opponent-delete/Recovery/conditional-hatch chain is omitted pending PUPPETS-G031."
+      "notes": "Track I 2026-05-17: End of Attack self-delete + opponent-delete + Recovery +1 + Tamer-gated hatch chain authored and behaviorally verified (PUPPETS-G031 RESOLVED — existing primitives suffice, moved to qa/resolved-gaps.md). 2/5 tests pass: metadata + alt-paths and the End of Attack chain. 3 tests remain ignored on the When Digivolving/On Deletion opponent-wide -5000 DP clause pending Expiry::EndOfOpponentsNextTurn modifier-expiry support (separate substrate gap)."
     },
     "EX6-011": {
       "card_name": "RagnaLoardmon",
@@ -3920,21 +3922,23 @@
     },
     "P-136": {
       "card_name": "Arisa Kinosaki",
-      "validated_date": "2026-05-04",
-      "report": "implement-rust-dsl-archetype/puppets-resolver-batch-11",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-17",
+      "report": "implement-rust-dsl-archetype/phase-2-track-i-puppets-pilot-completion",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Puppets",
       "yaml_path": "code/digimon-engine/cards/p/P-136.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_136.rs",
-      "test_count": 10,
+      "test_count": 11,
       "patterns": [
         "TAMER",
         "FREE-PLAY",
         "SECURITY-PLAY-SELF",
-        "SOURCE-BOUND-SUSPEND-COST"
+        "SOURCE-BOUND-SUSPEND-COST",
+        "ACTIVATION-COST",
+        "OBSERVER"
       ],
-      "notes": "Production YAML and focused tests cover metadata, optional On Play exact Shoemon hand free-play with decline/negative filtering, and Security play-self. The Your Turn Puppet-digivolve observer with source-bound suspend-this-Tamer cost remains omitted pending PUPPETS-G023."
+      "notes": "Track I 2026-05-17: full migration of [Your Turn][OPT] Puppet-digivolve observer to Track B's activation_cost: { suspend_self: true }. Production YAML and focused tests cover metadata, optional On Play exact Shoemon hand free-play with decline/negative filtering, Security play-self, plus the source-bound suspend-cost observer's happy path, pre-suspended cost-failure (no +1 memory), non-Puppet digivolve filter, and opponent-digivolve filter. PUPPETS-G023 closed for this card."
     },
     "P-156": {
       "card_name": "Future Potential!",
