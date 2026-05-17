@@ -188,6 +188,7 @@ fn new_builder(card: CardHandle, timing: EffectTiming) -> EffectBuilder {
         EffectTiming::OnDeletion => Effect::on_deletion(card),
         EffectTiming::SecuritySkill => Effect::security(card),
         EffectTiming::BeforePayCost => Effect::before_pay_cost(card),
+        EffectTiming::BeforePayCostObserve => Effect::before_pay_cost_observe(card),
         EffectTiming::OptionMain => Effect::on_play(card).option_main(),
         EffectTiming::WhenAttacking => Effect::when_attacking(card),
         EffectTiming::EndOfAttack => Effect::end_of_attack(card),

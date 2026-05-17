@@ -266,6 +266,17 @@ pub struct CompiledPredicate {
     pub host_permanent_trait_has: Option<String>,
     pub trashed_source_trait_has: Option<String>,
     pub trashed_source_card_id_is: Option<String>,
+    /// BeforePayCost cost-target sub-predicate. Evaluated as a `Card`
+    /// subject against the cost target (`cost_target_card` on the read
+    /// context). Fails when no cost target is active. Used by
+    /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
+    pub cost_target: Option<Box<CompiledPredicate>>,
+    /// True when the effect's `source_permanent` is one of the
+    /// digivolve-target permanents on the read context's
+    /// `cost_target_permanents`. Used to gate
+    /// "When THIS Digimon would digivolve into ..." printed semantics.
+    /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
+    pub source_is_cost_target_permanent: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -618,6 +629,13 @@ pub enum CompiledTiming {
     MainFromTrash,
     Counter,
     BeforePayCost,
+    /// Sibling of `BeforePayCost` for observer-style triggered bodies
+    /// (e.g. "When this would DNA digivolve into a green Digimon card,
+    /// gain 1 memory."). Lowers to `EffectTiming::BeforePayCostObserve`
+    /// and fires its `process` body at the same dispatch point as
+    /// `BeforePayCost` cost reducers without coupling to cost-reduction
+    /// fields. G-BEFORE-PAY-COST-GAIN-MEMORY (Phase 2 Track H closure).
+    BeforePayCostObserve,
     Delayed,
 }
 
@@ -779,6 +797,10 @@ pub enum CompiledStep {
     PlayFromHandFree {
         of: CompiledPlayerRef,
         hand_index: CompiledBindingRef,
+        /// Bind the just-played permanent handle for use in later steps.
+        /// `None` preserves prior behavior (no binding insert).
+        /// G-PLAY-FROM-HAND-FREE-BIND-AS (Phase 2 Track H closure).
+        bind_as: Option<String>,
     },
     PlayFromTrash {
         of: CompiledPlayerRef,

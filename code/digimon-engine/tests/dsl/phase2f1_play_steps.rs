@@ -177,6 +177,7 @@ fn play_from_hand_free_step_consumes_hand_and_keeps_memory() {
     let step = CompiledStep::PlayFromHandFree {
         of: CompiledPlayerRef::You,
         hand_index: CompiledBindingRef::Named("idx".into()),
+        bind_as: None,
     };
 
     {
@@ -220,6 +221,7 @@ fn play_from_hand_free_step_uses_bound_hand_owner() {
     let step = CompiledStep::PlayFromHandFree {
         of: CompiledPlayerRef::You,
         hand_index: CompiledBindingRef::Named("idx".into()),
+        bind_as: None,
     };
 
     {

@@ -1,6 +1,85 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-10
+Last updated: 2026-05-17
+
+## Phase 2 Track H closure — 2026-05-17
+
+BG Imperial pilot-archetype substrate closures (`.claude/plans/phase-2-track-h-bg-imperial-pilot-completion.md`).
+
+### G-BEFORE-PAY-COST-DIGIVOLVE-TARGET — RESOLVED
+
+- **Surface:** Two new `CompiledPredicate` fields:
+  - `cost_target: Option<Box<CompiledPredicate>>` — evaluates the inner predicate against the digivolve-target card (as a `Card` subject) using `EffectReadContext::cost_target_card`. Fails outside cost-calc dispatch.
+  - `source_is_cost_target_permanent: Option<bool>` — true when the effect's `source_permanent` is one of the permanents being digivolved (single entry for normal digivolve, both materials for DNA).
+- **Engine substrate:**
+  - `EffectReadContext` gained `cost_target_permanents: Vec<PermanentHandle>` and a `source_is_cost_target_permanent()` helper.
+  - `game_actions.rs::scan_before_pay_cost_reduction_with_target` threads `CostTargetContext { card, from_hand, target_permanents }` through every digivolve cost-calc site (normal, breeding, DNA stage-2, effect-initiated). All four sites pass the digivolve-target permanent(s).
+  - `lower_cost_reduction`'s `lower` dispatcher (in `dsl_cards/mod.rs`) was relaxed to accept clauses gated only by `active_when` / `condition` (previously required `when_playing_this` or `when_any_ally_played`).
+- **DSL surface example:**
+  ```yaml
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { trait_has: Free }
+        - any_field_permanent: { of: you, kind: tamer }
+    once_per_turn: true
+    amount: 1
+  ```
+- **Cards unblocked:** P-117 Veemon (clause 0), BT23-005 Elizamon (pattern proven; YAML update pending).
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p::p_117` (3 new cost-reduction tests pass).
+
+### G-BEFORE-PAY-COST-GAIN-MEMORY — RESOLVED
+
+- **Surface:** New sibling builder `Effect::before_pay_cost_observe(card)` paired with `EffectTiming::BeforePayCostObserve` and `CompiledTiming::BeforePayCostObserve`. Triggered clauses with `when: before_pay_cost_observe` lower to this timing and fire their `process:` body at BeforePayCost cost-calc dispatch — without coupling to the cost-reduction path.
+- **Engine substrate:**
+  - `game_actions.rs::scan_before_pay_cost_observers` walks observer effect sources (battle area + breeding + the target hand card for `when_playing_this`) and fires `process` closures after the cost-reduction scan and before `pay_memory`.
+  - DNA digivolve stage-2 wraps the observer scan in `current_dna_origin = Some(true)` so `dna_origin: true` predicates pass at cost-calc time.
+- **DSL surface example:**
+  ```yaml
+  - when: before_pay_cost_observe
+    active_when:
+      all_of:
+        - your_turn: true
+        - dna_origin: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { color_is: green, kind: digimon }
+    process:
+      - gain_memory: 1
+  ```
+- **Scope:** observer body MUST NOT install a pending selection in v1 (no-approximations §17 mandate — supporting selection-popping observer bodies is planned future work; BG Imperial's six initial refs all have scalar bodies).
+- **Cards unblocked:** BT12-022 ExVeemon (clause 0), BT12-050 Stingmon (clause 0).
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt12::bt12_022 bt12::bt12_050` (6 new observer tests pass).
+
+### G-OPTIONAL-SELECTION-CONTINUE-TAIL — RESOLVED (select_trash slice)
+
+- **Surface:** `install_select_trash` in `dsl_cards/step/selections.rs` now attaches an `on_decline` callback for optional selections. Declining (PASS) drops the binding insert but still runs the outer tail with the captured `trigger_context`, mirroring the 2026-04-29 pattern landed for `select_material` and `select_own_sources`.
+- **Scope:** Only `select_trash` is touched in this closure. Audit of other `select_*` install fns (`install_select_hand`, `install_select_own_permanent`, `install_select_opp_permanent`, `install_select_any_permanent`) found they share the same `on_decline: None` hardcoding in their underlying `select_*` constructors; extending the fix to those is a follow-up.
+- **Cards unblocked:** LM-030 Green Scramble — declining the optional security-trash play now still adds the option to hand.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- lm::lm_030::lm_030_security_adds_card_to_hand_even_when_trash_play_declined`.
+
+### G-PLAY-FROM-HAND-FREE-BIND-AS — RESOLVED
+
+- **Surface:** New `PlayFromHandFreeArgs` struct (replacing the shared `PlayFromHandArgs` for the Free variant) with an optional `bind_as: Option<String>` field. Lowered to `CompiledStep::PlayFromHandFree { of, hand_index, bind_as }`.
+- **Engine substrate:** `dsl_cards/step/play_digivolve.rs` calls `bindings.insert_permanent(name, played)` when `bind_as` is set, exposing the just-played permanent handle to subsequent steps in the same body (e.g. `schedule_delayed` with `return_to_hand: { target: { permanent: played } }`).
+- **DSL surface example:**
+  ```yaml
+  - play_from_hand_free: { of: you, hand_index: pick, bind_as: played }
+  - schedule_delayed:
+      when: end_of_opponents_next_turn
+      body:
+        - return_to_hand: { target: { permanent: played } }
+  ```
+- **Cards unblocked:** BT16-085 Davis Motomiya & Ken Ichijoji (clause 0 — delayed return at next opponent EOT).
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt16::bt16_085::bt16_085_start_of_main_played_digimon_returns_at_opponent_eot`.
+
+### G-COST-REDUCE-ALLY-DIGIVOLVE — DEFERRED (per discovery rider)
+
+- **Status:** open. BT3-103 Hidden Potential Discovered! is blocked on three composite substrate gaps (G-COST-REDUCE-ALLY-DIGIVOLVE + G-COST-REDUCE-NEXT-SINGLE-FIRE + G-PAY-COST-SELECT-ARBITRARY-SUSPEND). Closing requires (a) turn-scoped armed observer install, (b) single-fire/auto-cleanup semantics, (c) selectable suspend cost via `select_own_permanent` inside `pay_cost:` — substantially more invasive than the rest of the Phase 2 Track H deliverables. Per the plan's discovery rider, deferred to a follow-up rather than ship the rest with a half-baked observer-arming primitive.
+
+
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
