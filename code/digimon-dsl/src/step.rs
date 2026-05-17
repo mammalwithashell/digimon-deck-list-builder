@@ -85,6 +85,20 @@ pub enum StepSpec {
     ShuffleSecurity(PlayerArg),
     RevealTopDeck(RevealArgs),
     PlaceRemainderOnDeck(PlaceRemainderArgs),
+    /// Phase 2 Track E (2026-05-17): pick one card from the current reveal
+    /// pool and route it to a single typed destination. Ergonomic combo of
+    /// `select_reveal` + `{add_to_hand_from_reveal,return_to_deck_from_reveal,
+    /// place_as_bottom_source}`. Pair with `order_remainder` for the
+    /// "reveal N, choose 1 to hand/source, place rest top-or-bottom in any
+    /// order" pattern that recurs across Rocks searchers and general training
+    /// effects.
+    ChooseFromReveal(ChooseFromRevealArgs),
+    /// Phase 2 Track E (2026-05-17): place all remaining revealed cards onto
+    /// the controller's deck. Unlike `place_remainder_on_deck`, the
+    /// destination (top vs bottom) can itself be a player choice when the
+    /// printed text reads "top or bottom" (P-167 et al). Always surfaces the
+    /// `select_ordered_permutation` ordering selection per Working Rule §17.
+    OrderRemainder(OrderRemainderArgs),
 
     // Field / permanent
     DeletePermanent(TargetArg),
@@ -232,6 +246,8 @@ impl Serialize for StepSpec {
             StepSpec::ShuffleSecurity(v) => kv!(s, "shuffle_security", v),
             StepSpec::RevealTopDeck(v) => kv!(s, "reveal_top_deck", v),
             StepSpec::PlaceRemainderOnDeck(v) => kv!(s, "place_remainder_on_deck", v),
+            StepSpec::ChooseFromReveal(v) => kv!(s, "choose_from_reveal", v),
+            StepSpec::OrderRemainder(v) => kv!(s, "order_remainder", v),
             // Field / permanent
             StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
             StepSpec::DeleteBoundPermanents(v) => kv!(s, "delete_bound_permanents", v),
@@ -409,6 +425,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "shuffle_security" => StepSpec::ShuffleSecurity(map.next_value()?),
             "reveal_top_deck" => StepSpec::RevealTopDeck(map.next_value()?),
             "place_remainder_on_deck" => StepSpec::PlaceRemainderOnDeck(map.next_value()?),
+            "choose_from_reveal" => StepSpec::ChooseFromReveal(map.next_value()?),
+            "order_remainder" => StepSpec::OrderRemainder(map.next_value()?),
 
             // Field / permanent
             "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
@@ -555,6 +573,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "shuffle_security",
                         "reveal_top_deck",
                         "place_remainder_on_deck",
+                        "choose_from_reveal",
+                        "order_remainder",
                         "delete_permanent",
                         "delete_bound_permanents",
                         "return_to_hand",
@@ -909,6 +929,88 @@ pub struct RevealArgs {
 pub struct PlaceRemainderArgs {
     pub of: PlayerRef,
     pub position: StackPosition,
+}
+
+/// Phase 2 Track E (2026-05-17): args for `choose_from_reveal`.
+///
+/// Picks one card from the current `revealed_cards` pool (optionally
+/// filtered) and routes it to a typed destination. Supersedes the explicit
+/// `select_reveal` → `add_to_hand_from_reveal` / `place_as_bottom_source`
+/// combo for the common Rocks search shape.
+///
+/// ```yaml
+/// - choose_from_reveal:
+///     of: you
+///     filter: { any_of: [trait_has: Mineral, trait_has: Rock] }
+///     destination: hand
+///     optional: true
+///     prompt: "Add a Mineral or Rock card to your hand"
+/// ```
+///
+/// The `destination` field is a tagged enum (see `RevealDestination`)
+/// supporting hand, deck-top, deck-bottom, and bottom-source-of routings.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ChooseFromRevealArgs {
+    pub of: PlayerRef,
+    pub filter: PredicateSpec,
+    pub destination: RevealDestination,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
+}
+
+/// Destination kinds supported by `choose_from_reveal`. Untagged for compact
+/// YAML: a bare scalar (`hand`, `deck_top`, `deck_bottom`) or a mapping
+/// (`bottom_source_of: { permanent: target }`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum RevealDestination {
+    Hand,
+    DeckTop,
+    DeckBottom,
+    /// Place the picked card as the bottom digivolution card of `target`.
+    BottomSourceOf { target: BindingRef },
+}
+
+/// Phase 2 Track E (2026-05-17): args for `order_remainder`.
+///
+/// Places every card currently in the reveal pool onto the controller's
+/// deck. If `destinations` lists a single position, behaves like
+/// `place_remainder_on_deck`. If two destinations are listed
+/// (`[deck_top, deck_bottom]`), surfaces an `effect_choice` so the player
+/// picks where to place the remainder; the ordered permutation is exposed
+/// either way (no auto-determinism — Working Rule §17).
+///
+/// ```yaml
+/// - order_remainder:
+///     of: you
+///     destinations: [deck_top, deck_bottom]
+/// ```
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct OrderRemainderArgs {
+    pub of: PlayerRef,
+    pub destinations: Vec<RemainderDestination>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RemainderDestination {
+    DeckTop,
+    DeckBottom,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

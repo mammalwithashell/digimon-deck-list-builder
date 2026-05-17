@@ -92,6 +92,39 @@ modifiers, e.g.:
 Until that parser lands, cards needing string/list/profile payloads should use
 `raw_rust` install hooks rather than hidden scalar encodings.
 
+## Phase 2 Track E (2026-05-17) — reveal-ordering DSL verbs landed
+
+The author-facing residual from `G-ROCKS-REVEAL-ORDERING` has landed: two
+new DSL verbs lower onto the already-shipped `select_reveal` /
+`select_effect_choice` / `select_ordered_permutation` / `place_remainder_on_deck`
+engine helpers. Together with the existing `reveal_top_deck` they express
+the canonical "reveal N, choose 1 to hand or as source, place rest top or
+bottom in any order" pattern that recurs across Rocks search effects and
+every general-purpose Training / Memory Boost / search clause.
+
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl track_e_reveal_ordering`
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_167 ex8_047 bt9_103`
+
+| DSL verb | Engine target | Card drivers |
+|---|---|---|
+| `choose_from_reveal: { of, filter, destination, bind_as?, optional?, prompt }` | `EffectContext::select_reveal` + routing to `add_to_hand_from_reveal` / `return_to_deck_from_reveal` / `place_as_bottom_source` | P-167 (hand and `bottom_source_of`), EX8-047 (two sequential hand picks) |
+| `order_remainder: { of, destinations: [deck_top, deck_bottom?] }` | `EffectContext::select_effect_choice` (when two destinations) + `select_ordered_permutation` + the `place_remainder_on_deck` placement loop | P-167 (player choice), EX8-047 (single `[deck_bottom]`) |
+
+The `destination` enum for `choose_from_reveal` accepts the bare scalars
+`hand`, `deck_top`, `deck_bottom`, or the mapping
+`bottom_source_of: { target: <binding> }` — matching the four routing
+shapes Rocks printed text actually requires. Other Rocks-flavoured
+"choose-to-play-free" destinations were not seen on any pool card and are
+deferred until they appear.
+
+Closure scope: `G-ROCKS-REVEAL-ORDERING` from
+`qa/archetype-qa/dsl/rocks-gap-inputs-2026-05-03.md` §50 is closed.
+`G-ROCKS-OPTION-SELF-DISPOSITION` §123 has its single remaining raw_rust
+target removed (P-206 → native `add_this_option_to_hand`; the other five
+target YAML files were already DSL-clean by 2026-05-10). The
+`G-ADD-OPTION-SELF-TO-HAND` DSL entry called out in P-206 test comments is
+also closed.
+
 ## Track E (2026-05-08) — engine helpers shipped, DSL verbs landed
 
 Track E shipped 8 zone-movement helpers + the owner-routing fix at the engine layer. The ten deferred DSL verbs now parse, validate, compile, and lower into the corresponding helpers. Evidence:

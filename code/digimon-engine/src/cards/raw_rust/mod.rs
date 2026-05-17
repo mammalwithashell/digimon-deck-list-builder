@@ -839,21 +839,6 @@ fn lm_027_add_self_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings
     ctx.add_pending_security_to_hand();
 }
 
-/// P-206 Digital Gate Open — [Inherited][Security] "Then, add this card to the hand."
-///
-/// Printed effect: "[Security] You may play 1 Digimon card with a play cost of 3 or
-/// less from your hand or trash without paying the cost. Then, add this card to the hand."
-///
-/// DCGO analysis (P_206.cs, EffectTiming.SecuritySkill):
-///   `CardEffectCommons.AddThisCardToHand(card, activateClass)` — moves the
-///   currently-resolving Option card from security-resolution staging into the
-///   controller's hand instead of routing it to trash.
-///
-/// Legacy raw-rust shim; prefer native DSL `add_this_option_to_hand: {}`.
-fn p_206_add_self_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    ctx.add_pending_security_to_hand();
-}
-
 /// BT21-093 Raging Serpentine — cost reduction formula.
 ///
 /// Returns 4 if the opponent has ≤3 security cards (per printed text); else 0.
@@ -1094,7 +1079,8 @@ pub fn build_registry() -> EngineRawRustRegistry {
         lm_027_delay_start_of_turn_noop,
     );
     r.register_step("lm_027_add_self_to_hand", lm_027_add_self_to_hand);
-    r.register_step("p_206_add_self_to_hand", p_206_add_self_to_hand);
+    // p_206_add_self_to_hand was removed 2026-05-17 (Phase 2 Track E) —
+    // P-206 now uses native DSL `add_this_option_to_hand`.
     r.register_formula(
         "bt21_093_cost_reduction_amount",
         bt21_093_cost_reduction_amount,

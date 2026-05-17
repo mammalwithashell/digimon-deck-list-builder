@@ -723,6 +723,31 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         position: CompiledStackPosition,
     },
+    /// Phase 2 Track E (2026-05-17): pick one revealed card matching `filter`
+    /// and route it to `destination`. Lowers as a single selection install
+    /// whose callback routes the picked card to the typed destination. The
+    /// optional `bind_as` records the picked CardHandle for downstream
+    /// reference.
+    ChooseFromReveal {
+        of: CompiledPlayerRef,
+        filter: CompiledPredicate,
+        destination: CompiledRevealDestination,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional: bool,
+    },
+    /// Phase 2 Track E (2026-05-17): place the entire reveal pool onto the
+    /// controller's deck. When `destinations.len() == 1` behaves like
+    /// `place_remainder_on_deck`. When `destinations.len() == 2` surfaces a
+    /// player effect-choice over the entries before placing. Ordering is
+    /// always exposed via `select_ordered_permutation` (Working Rule §17).
+    OrderRemainder {
+        of: CompiledPlayerRef,
+        destinations: Vec<CompiledRemainderDestination>,
+        prompt: Option<String>,
+        prompt_key: Option<String>,
+    },
     DeletePermanent {
         target: CompiledBindingRef,
     },
@@ -1195,6 +1220,24 @@ pub enum CompiledStackPosition {
     Top,
     Bottom,
     Random,
+}
+
+/// Phase 2 Track E (2026-05-17): compiled form of `RevealDestination` — the
+/// typed routing for the `choose_from_reveal` step.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CompiledRevealDestination {
+    Hand,
+    DeckTop,
+    DeckBottom,
+    BottomSourceOf(CompiledBindingRef),
+}
+
+/// Phase 2 Track E (2026-05-17): compiled form of `RemainderDestination`
+/// — only `DeckTop` / `DeckBottom` are meaningful for `order_remainder`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledRemainderDestination {
+    DeckTop,
+    DeckBottom,
 }
 
 #[cfg(test)]
