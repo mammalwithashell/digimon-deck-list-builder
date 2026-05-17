@@ -159,17 +159,27 @@ Format per entry:
 ```
 
 ## Royal Knights — filtered breeding permanent target  [RK-G001]
+- Status 2026-05-17: **CLOSED for substrate** by Phase 2 Track J PR 1.
+  `SelectOwnBreedingPermanentArgs::filter: PredicateSpec` is now wired
+  through compile → lowering → install: the predicate is evaluated against
+  `PredicateSubject::BreedingPermanent` before `select_own_breeding_permanent`
+  opens, so a non-matching breeding permanent short-circuits the step
+  instead of opening a misleading prompt. The companion `BreedingPermanentRef`
+  binding now resolves to a sentinel `PermanentHandle { index: BREEDING_TARGET }`,
+  which `place_as_bottom_source_observed` already recognizes — so the
+  printed shape "place a hand card under a [King Drasil_7D6] in breeding"
+  is expressible end-to-end. Proof: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2g_breeding_selection::select_own_breeding_permanent_filter`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2f1_placement_steps::place_as_bottom_source_accepts_breeding_permanent_target_from_hand_source`.
+  Card authoring for BT13-093 / BT20-083 / BT13-110 / EX11-053 lands in
+  Phase 2 Track J PR 2.
 - Effect text: BT13-093: "[On Deletion] Place 1 Digimon card with the [Royal Knight] trait from your hand under a [King Drasil_7D6] in the breeding area as its bottom digivolution card." BT20-083: "[On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area."
-- Missing DSL verb / step kind / predicate: `select_own_breeding_permanent` has no `filter` field, so YAML cannot require that the selected breeding permanent is actually `[King Drasil_7D6]`.
-- Lowers to engine API: existing breeding pending-selection and `place_as_bottom_source` flow once the selected breeding permanent can be filtered by top-card name/card id.
-- Suggested DSL syntax:
+- DSL surface (production form):
   ```yaml
   - select_own_breeding_permanent:
       bind_as: kd
       filter: { name_is: "King Drasil_7D6" }
       prompt: "Choose your [King Drasil_7D6]"
       then:
-        - place_as_bottom_source: { source: ..., target: kd }
+        - place_as_bottom_source: { source: <hand-binding>, target: kd }
   ```
 - First reported: 2026-05-05 Royal Knights batch 1 implementation pass.
 

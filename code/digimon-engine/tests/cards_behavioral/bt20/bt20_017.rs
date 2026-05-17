@@ -10,6 +10,6 @@ fn bt20_017_loads_with_gap_stub() {
         .start();
 }
 
-#[ignore = "pending: G-TOKEN-ATHO-RENE-POR and G-ALLY-PLAYED-MAY-ATTACK — token registration plus other-Digimon-played delete/attack"]
+#[ignore = "pending: G-ALLY-PLAYED-MAY-ATTACK — other-Digimon-played delete/may-attack observer (G-TOKEN-ATHO-RENE-POR closed by Phase 2 Track J PR 1: Atho/René/Por now in token_registry)"]
 #[test]
 fn bt20_017_token_and_other_played_attack_observer() {}

@@ -1050,6 +1050,11 @@ pub enum CompiledStep {
     SelectOwnBreedingPermanent {
         bind_as: Option<String>,
         prompt: String,
+        /// Predicate the breeding permanent must satisfy before the
+        /// selection prompt opens. `CompiledPredicate::default()` is the
+        /// "accept any breeding permanent" carrier matching the historical
+        /// behavior; a populated predicate filters by name, level, etc.
+        filter: CompiledPredicate,
         then: Vec<CompiledStep>,
     },
     TrashSelectedSources {

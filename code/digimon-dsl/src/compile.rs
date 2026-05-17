@@ -2009,6 +2009,7 @@ fn compile_step(
         S::SelectOwnBreedingPermanent(a) => CompiledStep::SelectOwnBreedingPermanent {
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             then: a
                 .then
                 .iter()

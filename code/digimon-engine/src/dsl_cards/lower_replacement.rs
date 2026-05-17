@@ -376,8 +376,17 @@ fn required_selection_step_has_candidate(
             min_picks,
             ..
         } => *min_picks == 0 || has_opponent_dp_budget_candidate(ctx, *dp_budget),
-        CompiledStep::SelectOwnBreedingPermanent { .. } => {
-            ctx.game.player(ctx.player).breeding_area.is_some()
+        CompiledStep::SelectOwnBreedingPermanent { filter, .. } => {
+            if ctx.game.player(ctx.player).breeding_area.is_none() {
+                false
+            } else {
+                eval_predicate_with_bindings(
+                    filter,
+                    ctx,
+                    PredicateSubject::BreedingPermanent(ctx.player),
+                    Some(bindings),
+                )
+            }
         }
         CompiledStep::SelectUnionZone { of, zones, .. } => zones.iter().any(|zone| match zone {
             CompiledZone::Hand => !ctx

@@ -174,6 +174,72 @@ fn place_as_bottom_source_uses_bound_hand_owner() {
     );
 }
 
+/// Royal Knights (BT13-093, BT23-072, EX11-053) need to place a hand card
+/// as the bottom digivolution source of the breeding-area permanent (e.g.
+/// [King Drasil_7D6]). The breeding permanent binding must resolve as a
+/// sentinel `PermanentHandle` (`index == BREEDING_TARGET`) and the
+/// `place_as_bottom_source` lowering must take that path. Proves the
+/// substrate close of "hand-Main bottom-source placement".
+#[test]
+fn place_as_bottom_source_accepts_breeding_permanent_target_from_hand_source() {
+    use digimon_engine::selection::BreedingPermanentSelectionRef;
+
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("KING-DRASIL", "King Drasil_7D6"))
+        .add_card(make_test_card("RK-CARD", "Some Royal Knight"))
+        .hand(0, &["RK-CARD"])
+        .memory(5)
+        .start();
+
+    let breeding = runner.place_in_breeding(0, "KING-DRASIL");
+    let src_handle = runner.game.players[0].hand[0].handle();
+    let hand_before = runner.game.players[0].hand.len();
+    let stack_before = runner
+        .game
+        .player(0)
+        .breeding_area
+        .as_ref()
+        .unwrap()
+        .stack_size();
+
+    let mut bindings = Bindings::new();
+    bindings.insert_hand_index("src", 0, 0);
+    bindings.insert_breeding_permanent_ref(
+        "kd",
+        BreedingPermanentSelectionRef {
+            player: breeding.player,
+            card: breeding.card,
+        },
+    );
+
+    let step = CompiledStep::PlaceAsBottomSource {
+        source: CompiledBindingRef::Named("src".into()),
+        target: CompiledBindingRef::Named("kd".into()),
+    };
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_handle, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        hand_before - 1,
+        "hand card consumed"
+    );
+    let breeding_after = runner.game.player(0).breeding_area.as_ref().unwrap();
+    assert_eq!(
+        breeding_after.stack_size(),
+        stack_before + 1,
+        "breeding stack grew by 1"
+    );
+    assert_eq!(
+        breeding_after.card_sources[0].handle(),
+        src_handle,
+        "hand card landed at the bottom of the breeding stack"
+    );
+}
+
 #[test]
 fn place_on_security_uses_bound_trash_owner() {
     let mut runner = DebugRunner::builder()

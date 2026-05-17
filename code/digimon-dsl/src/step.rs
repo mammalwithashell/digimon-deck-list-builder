@@ -1551,6 +1551,12 @@ pub struct SelectOwnBreedingPermanentArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,
+    /// Optional predicate the selected breeding permanent must satisfy.
+    /// Used by Royal Knights cards like BT13-093 that require the
+    /// breeding permanent to be a specific named host (e.g.
+    /// `[King Drasil_7D6]`) before authoring a placement clause.
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
     #[serde(default)]
     pub then: Vec<StepSpec>,
 }

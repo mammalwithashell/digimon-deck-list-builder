@@ -521,9 +521,10 @@ pub fn try_install(
         CompiledStep::SelectOwnBreedingPermanent {
             bind_as,
             prompt,
+            filter,
             then,
         } => {
-            if !has_own_breeding_candidate(ctx) {
+            if !has_own_breeding_candidate_matching(ctx, filter, Some(&bindings)) {
                 return InstallResult::Continue;
             }
             let mut inner_tail = then.clone();
@@ -705,8 +706,24 @@ fn has_opponent_dp_budget_candidates(ctx: &EffectContext<'_>, dp_budget: i32) ->
         })
 }
 
-fn has_own_breeding_candidate(ctx: &EffectContext<'_>) -> bool {
-    ctx.game.player(ctx.player).breeding_area.is_some()
+/// The breeding area must be non-empty AND the breeding permanent must
+/// satisfy the predicate. An empty predicate passes everything,
+/// matching the historical contract.
+fn has_own_breeding_candidate_matching(
+    ctx: &EffectContext<'_>,
+    filter: &CompiledPredicate,
+    bindings: Option<&Bindings>,
+) -> bool {
+    if ctx.game.player(ctx.player).breeding_area.is_none() {
+        return false;
+    }
+    let read = ctx.as_read();
+    eval_predicate_with_bindings(
+        filter,
+        &read,
+        PredicateSubject::BreedingPermanent(ctx.player),
+        bindings,
+    )
 }
 
 fn resolve_count_bound(
