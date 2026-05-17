@@ -510,6 +510,10 @@ fn compile_predicate(
             .play_cost_lte
             .as_ref()
             .map(|d| compile_dp_constraint(d, &format!("{prefix}.play_cost_lte"), card_id, errors)),
+        play_cost_gte: p
+            .play_cost_gte
+            .as_ref()
+            .map(|d| compile_dp_constraint(d, &format!("{prefix}.play_cost_gte"), card_id, errors)),
         can_digivolve_from_source: p.can_digivolve_from_source,
         dp_eq: p
             .dp_eq

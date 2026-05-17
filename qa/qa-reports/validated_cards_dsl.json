@@ -3973,18 +3973,19 @@
     },
     "BT13-093": {
       "card_name": "Omekamon",
-      "validated_date": "2026-05-05",
-      "report": "implement-rust-dsl-archetype/royal-knights-batch-1",
-      "status": "PARTIAL",
-      "gap_kind": "dsl-gap",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-j-royal-knights-pr2",
+      "status": "IMPLEMENTED",
+      "gap_kind": "none",
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-093.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_093.rs",
-      "test_count": 3,
+      "test_count": 6,
       "patterns": [
-        "ON-PLAY-DRAW"
+        "ON-PLAY-DRAW",
+        "ON-DELETION-PLACE-UNDER-KING-DRASIL"
       ],
-      "notes": "On Play Draw 1 implemented and tested. On Deletion hand Royal Knight source placement under King Drasil is stubbed with an ignored regression pending RK-G001 filtered select_own_breeding_permanent support."
+      "notes": "Both clauses authored under Phase 2 Track J. On Play Draw 1 plus On Deletion: pick a [Royal Knight]-traited Digimon from hand and place it under [King Drasil_7D6] in breeding as the bottom digivolution source. Uses RK-G001 filter (Phase 2 Track J PR 1) plus the BreedingPermanentRef → PermanentHandle{BREEDING_TARGET} resolver. Short-circuits gracefully when no King Drasil is in breeding or no Royal Knight is in hand."
     },
     "BT20-083": {
       "card_name": "Omekamon",
@@ -4004,19 +4005,21 @@
     },
     "EX11-071": {
       "card_name": "Cool Boy",
-      "validated_date": "2026-05-05",
-      "report": "implement-rust-dsl-archetype/royal-knights-batch-1",
-      "status": "PARTIAL",
-      "gap_kind": "dsl-gap",
+      "validated_date": "2026-05-17",
+      "report": "phase-2-track-j-royal-knights-pr2",
+      "status": "IMPLEMENTED",
+      "gap_kind": "none",
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-071.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex11/ex11_071.rs",
-      "test_count": 2,
+      "test_count": 3,
       "patterns": [
         "REVEAL-BUCKETS",
-        "ON-PLAY-SEARCH"
+        "ON-PLAY-SEARCH",
+        "ACTIVATION-COST-RETURN-SELF-TO-DECK-BOTTOM",
+        "PLAY-FROM-HAND-REDUCED-COST"
       ],
-      "notes": "On Play dual-bucket reveal top 3 search is authored and tested with no-duplicate-card bucket semantics and bottom remainder. Main return-this-Tamer cost into reduced-cost hand play is stubbed pending RK-G002."
+      "notes": "Both clauses authored under Phase 2 Track J PR 2 (RK-G002 closure). On Play dual-bucket reveal top 3 search authored. [Main] activates the Phase 2 Track B `activation_cost: { return_self_to_deck_bottom: true }` (lifts onto `EffectBuilder::activation_cost(ctx.return_self_to_deck_bottom_as_cost)`); the chained body then opens a hand selection filtered by `play_cost_gte: 4` + Royal Knight/LIBERATOR trait and plays with `cost_delta: { reduce: 2 }`. The `play_cost_gte` predicate is the dual of `play_cost_lte` and lands in this PR."
     },
     "BT20-060": {
       "card_name": "Alphamon: Ouryuken",

@@ -8,17 +8,38 @@ dp: 4000
 traits: [Puppet, X Antibody]
 attribute: Data
 
-# Printed [On Deletion] is intentionally omitted.
+# Printed: "[On Deletion] Place 1 Digimon card with the [Royal Knight] trait
+# from your hand under a [King Drasil_7D6] in the breeding area as its
+# bottom digivolution card."
 #
-# It needs a filtered breeding-area permanent target:
-#   select own breeding permanent where name is [King Drasil_7D6]
-# then place a selected [Royal Knight] Digimon card from hand as the bottom
-# source. `select_own_breeding_permanent` currently has no filter field, so
-# authoring this clause would allow targeting a non-King-Drasil breeding
-# permanent in nonstandard states. Tracked as RK-G001.
+# Clause uses the RK-G001 substrate (Phase 2 Track J PR 1): the filter on
+# `select_own_breeding_permanent` short-circuits to a noop if no
+# [King Drasil_7D6] is in the breeding area, matching the printed
+# conditional. The inner `select_hand` short-circuits if no [Royal Knight]
+# Digimon is in hand.
 
 effects:
   - when: on_play
     summary: "[On Play] Draw 1"
     process:
       - draw: { of: you, count: 1 }
+
+  - when: on_deletion
+    summary: "[On Deletion] Place 1 Royal Knight Digimon from hand under your King Drasil_7D6 in breeding"
+    process:
+      - select_own_breeding_permanent:
+          bind_as: kd
+          filter: { name_is: "King Drasil_7D6" }
+          prompt: "Choose your [King Drasil_7D6] in the breeding area"
+          then:
+            - select_hand:
+                of: you
+                bind_as: rk
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Royal Knight"
+                prompt: "Choose a [Royal Knight] Digimon card to place under King Drasil"
+            - place_as_bottom_source:
+                source: rk
+                target: kd
