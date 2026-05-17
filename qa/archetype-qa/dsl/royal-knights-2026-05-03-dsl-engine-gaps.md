@@ -1,5 +1,25 @@
 # Royal Knights Rust DSL/Engine Gap Rollup
 
+> **Phase 2 Track J PR 1 — 2026-05-17:** Substrate enabler PR landed.
+> Closures: **RK-G001** (filter on `select_own_breeding_permanent` +
+> `BreedingPermanentRef` surfaced as a `Permanent(BREEDING_TARGET)`
+> handle, unblocking hand-Main bottom-source placement under King Drasil).
+> **Atho, René & Por** registered in `token_registry` with printed stats
+> (White, 6000 DP, Reboot/Blocker/Decoy(Red/Black)). The token-registration
+> half of `bt20_017_token_and_other_played_attack_observer` and
+> `bt23_013_token_sistermon_union_play_and_attack_observer` is now closed;
+> remaining halves (`G-ALLY-PLAYED-MAY-ATTACK`, `G-UNION-HAND-TRASH-NAME-EXCLUSION`)
+> are independent gaps tracked separately. **RK-G003** audit confirmed
+> closed for current Track B consumers (BT23-054, BT20-091, BT20-100) —
+> the remaining BT23-058 ignored test stays parked on
+> `G-SELF-ON-SUSPEND + G-PLAY-COST-AGGREGATE`, which are out of Track J
+> scope. **BT17-077** already fully implemented (20 passing tests) —
+> bulk trash-to-deck, returned-card binding (via pre-check workaround
+> equivalent to "all-of-chosen-trash"), and by-cost return-opp-Digimon
+> +unsuspend all working through existing primitives. Card authoring
+> for BT13-093, BT13-110, BT20-083, EX11-053, EX11-071, BT20-017,
+> BT23-013, and the Examon trio lands in Track J PR 2 / PR 3.
+
 > **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
 > #449–#458. Track E DSL verbs landed (PR #454) so `raw_rust` carve-outs
 > for the ten zone-movement verbs in `qa/dsl-vocab-gaps.md` are now
