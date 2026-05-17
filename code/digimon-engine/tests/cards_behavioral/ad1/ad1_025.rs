@@ -659,10 +659,11 @@ fn ad1_025_all_turns_observer_routes_security_to_opp_trash() {
 /// once, a second opp-Digimon-leave on the same turn must NOT install a
 /// new selection or trash a second security card.
 ///
-/// IGNORED — depends on DRIFT 2 being fixed AND on G-OPT-TRIGGERED being
-/// covered for the OnLeaveField dispatch path.
+/// IGNORED — depends on DRIFT 2 (YAML drift). Phase 2 Track C closure:
+/// OPT enforcement and reset are no longer blocking; the residual failure
+/// is the DRIFT 2 fix only.
 #[test]
-#[ignore = "pending YAML drift fix (DRIFT 2) + G-OPT-TRIGGERED on OnLeaveField dispatch path. See top-of-file."]
+#[ignore = "pending YAML drift fix (DRIFT 2). See top-of-file. OPT half closed in Phase 2 Track C."]
 fn ad1_025_all_turns_observer_opt_blocks_second_trigger_same_turn() {
     let mut runner = omnimon_runner();
     let _omni = runner.place_on_field(0, "AD1-025", Some(0));

@@ -571,10 +571,7 @@ fn bt21_017_inherited_does_not_fire_on_opponents_turn() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// OPT: second security removal in the same turn must NOT gain another memory.
-///
-/// BLOCKED: G-INHERITED-DISPATCH + G-OPT-TRIGGERED both apply.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH + G-OPT-TRIGGERED — inherited dispatch and OPT enforcement not wired"]
 fn bt21_017_inherited_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(DIMETROMON_YAML)
@@ -584,8 +581,9 @@ fn bt21_017_inherited_opt_blocks_second_trigger_same_turn() {
         .add_card(make_filler("SEC-2"))
         .add_card(make_filler("FILLER-DECK"))
         .security(1, &["SEC-1", "SEC-2"])
-        .deck(0, &["FILLER-DECK"])
-        .memory(10)
+        .deck(0, &["FILLER-DECK"; 10])
+        .deck(1, &["FILLER-DECK"; 10])
+        .memory(5)
         .start();
 
     let carrier_handle = runner.place_on_field(0, "CARRIER", Some(0));

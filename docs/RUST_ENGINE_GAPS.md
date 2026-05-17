@@ -183,6 +183,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Reveal-zone overlay (declarative type/level synthesized while card is in deck or being revealed)](#reveal-zone-overlay-declarative-typelevel-synthesized-while-card-is-in-deck-or-being-revealed) | 🔴 | 1 | `effect.rs`, `card_source.rs` |
 | [Effect-initiated play from face-up security stack (search-then-play-free)](#effect-initiated-play-from-face-up-security-stack-search-then-play-free) | 🔴 | 5+ | `effect_context.rs` |
 | ~~Generic `.activation_cost(...)` builder hook for triggered abilities~~ — RESOLVED 2026-05-17 (Phase 2 Track B) | ✅ | — | — |
+| ~~Once-per-turn enforcement for triggered effects (`G-OPT-TRIGGERED`)~~ — RESOLVED 2026-05-17 (Phase 2 Track C: diagnosed as already-closed; 23 stale `#[ignore]` annotations removed, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~OPT slot reset across turn cycle (`G-OPT-RESET-VIA-ATTACK-CYCLE`)~~ — RESOLVED 2026-05-17 (Phase 2 Track C: misdiagnosis; test-setup-only fix, see `qa/resolved-gaps.md`) | ✅ | — | — |
 | [Per-N-suspended scaling threshold residual (count-bound multi-select + formula downstream filter)](#per-n-suspended-scaling-threshold-for-deletion--damage-effects-count-bounded-multi-select-with-derived-threshold) | 🟡 | 1 | `effect_context.rs` |
 | [Player-scope mass `CannotSuspend` aura on opponent (condition-gated)](#player-scope-mass-cannotsuspend-aura-on-opponent-condition-gated-and--or-stack-depth-filtered) | 🔴 | 2 | `modifiers.rs`, `effect.rs` |
 | [Conditional security-in-stack trigger residual: start-of-turn / start-of-opponent-turn variants](#conditional-security-in-stack-trigger-security-end-of-opponents-turn--security-start-of-your-turn-etc) | 🟡 | 1 | `enums.rs`, `effect_queue.rs` |

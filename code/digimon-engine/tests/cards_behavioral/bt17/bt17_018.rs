@@ -75,6 +75,9 @@ fn runner_with_p1_security() -> DebugRunner {
         .expect("BT17-018 YAML loads")
         .add_card(sec)
         .add_card(trash_filler)
+        .deck(0, &["TRASH-FILLER"; 10])
+        .deck(1, &["TRASH-FILLER"; 10])
+        .security(0, &["SEC-FILLER"; 5])
         .security(
             1,
             &[
@@ -365,7 +368,6 @@ fn bt17_018_when_attacking_security_trash_fires_events() {
 // --- Section 5: OPT enforcement (BLOCKED) ---
 
 #[test]
-#[ignore = "BLOCKED: G-OPT-TRIGGERED -- once_per_turn not enforced for triggered effects (see qa/archetype-qa/engine-gaps.md)"]
 fn bt17_018_when_attacking_opt_blocks_second_activation_same_turn() {
     let mut r = runner_with_p1_security();
     let attacker = r.place_on_field(0, "BT17-018", Some(0));
@@ -389,14 +391,23 @@ fn bt17_018_when_attacking_opt_blocks_second_activation_same_turn() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-OPT-TRIGGERED -- once_per_turn not enforced for triggered effects"]
 fn bt17_018_when_attacking_opt_resets_after_end_turn() {
     let mut r = runner_with_p1_security();
+    // BT17-018 has 15000 DP; attacking another BT17-018 would mutually
+    // delete in combat and leave the captured `attacker` handle stale by
+    // the second attack. Use a low-DP defender so the attacker survives
+    // the turn cycle and the OPT-reset assertion is reachable.
+    let mut weak_def = make_test_card("WEAK-DEF", "WeakDef");
+    weak_def.card_kind = digimon_engine::enums::CardKind::Digimon;
+    weak_def.dp = Some(1000);
+    weak_def.level = Some(3);
+    r.game_mut().card_data.push(weak_def);
+
     let attacker = r.place_on_field(0, "BT17-018", Some(0));
 
     add_n_trash(&mut r, 0, 10);
 
-    let defender1 = r.place_on_field(1, "BT17-018", None);
+    let defender1 = r.place_on_field(1, "WEAK-DEF", None);
     r.attack_digimon(attacker, defender1, false);
     let _ = r.auto_resolve();
     let sec_after_first = r.security_count(1);
@@ -406,7 +417,7 @@ fn bt17_018_when_attacking_opt_resets_after_end_turn() {
 
     add_n_trash(&mut r, 0, 10);
 
-    let defender2 = r.place_on_field(1, "BT17-018", None);
+    let defender2 = r.place_on_field(1, "WEAK-DEF", None);
     r.attack_digimon(attacker, defender2, false);
     let _ = r.auto_resolve();
 

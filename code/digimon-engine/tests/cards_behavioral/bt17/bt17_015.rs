@@ -671,19 +671,13 @@ fn bt17_015_inherited_when_attacking_opt_blocks_second_activation() {
 
 /// OPT resets after end_turn → opponent turn → back to controller.
 ///
-/// **BLOCKED (observed)**: under current attack/turn cycling in the engine,
-/// the second-turn attack does not produce a second security-trash even
-/// after a full P0 → P1 → P0 cycle. Either the inherited OPT activation
-/// counter is not reset on `end_turn`, or the attacker / inherited dispatch
-/// is not re-armed across the cycle. Sibling: bt21_008 covers the reset
-/// path via direct `enqueue_triggered` rather than a live attack, so the
-/// reset itself works at the queue level — the gap is the attack-driven
-/// re-fire on turn N+1. Logged as G-OPT-RESET-VIA-ATTACK-CYCLE.
+/// Phase 2 Track C closure: the engine's OPT slot reset works correctly
+/// (`Permanent::new_turn` clears `effect_activations` for the new
+/// turn-player's permanents at `begin_turn`). The earlier test
+/// failure was masked by missing decks/security for both players —
+/// `begin_turn` for P1 would deck-out and end the game before
+/// rotation reached P0 a second time.
 #[test]
-#[ignore = "BLOCKED: G-OPT-RESET-VIA-ATTACK-CYCLE — inherited [When Attacking][OPT] does not \
-            re-fire on a fresh attack after a full P0→P1→P0 cycle, even though the queue-level \
-            reset works (see bt21_008 sibling). Distinct from the OPT-lockout same-turn test \
-            (bt17_015_inherited_when_attacking_opt_blocks_second_activation), which passes."]
 fn bt17_015_inherited_when_attacking_opt_resets_after_end_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-015")
@@ -692,6 +686,9 @@ fn bt17_015_inherited_when_attacking_opt_resets_after_end_turn() {
         .add_card(make_filler_digimon("DEF-1"))
         .add_card(make_filler_digimon("DEF-2"))
         .add_card(make_test_card("SEC-FILLER", "SecFiller"))
+        .deck(0, &["SEC-FILLER"; 10])
+        .deck(1, &["SEC-FILLER"; 10])
+        .security(0, &["SEC-FILLER"; 5])
         .security(
             1,
             &[

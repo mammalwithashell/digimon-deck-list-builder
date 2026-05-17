@@ -358,20 +358,20 @@ fn p_189_security_free_play_fires_on_play_event() {
 
 /// OPT lockout: second firing in the same turn must be gated.
 ///
-/// BLOCKED: G-INHERITED-DISPATCH + G-OPT-TRIGGERED.
+/// BLOCKED: G-INHERITED-DISPATCH only (OPT closed in Phase 2 Track C).
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH + G-OPT-TRIGGERED"]
+#[ignore = "pending: G-INHERITED-DISPATCH (test body not written; OPT closed in Phase 2 Track C)"]
 fn p_189_inherited_opt_blocks_second_activation_same_turn() {
-    todo!("Implement when both gaps are resolved");
+    todo!("Implement when G-INHERITED-DISPATCH closes");
 }
 
 /// OPT lockout clears after end_turn.
 ///
-/// BLOCKED: G-INHERITED-DISPATCH + G-OPT-TRIGGERED.
+/// BLOCKED: G-INHERITED-DISPATCH only (OPT closed in Phase 2 Track C).
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH + G-OPT-TRIGGERED"]
+#[ignore = "pending: G-INHERITED-DISPATCH (test body not written; OPT closed in Phase 2 Track C)"]
 fn p_189_inherited_opt_clears_after_end_turn() {
-    todo!("Implement when both gaps are resolved");
+    todo!("Implement when G-INHERITED-DISPATCH closes");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

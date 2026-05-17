@@ -605,7 +605,6 @@ fn bt22_005_inherited_does_not_fire_on_cs_tamer_play() {
 /// G-INHERITED-DISPATCH (the clause must fire at all before OPT can be
 /// tested).
 #[test]
-#[ignore = "BLOCKED: G-OPT-TRIGGERED (and G-INHERITED-DISPATCH prerequisite) — OPT not enforced for triggered effects in queue drain path"]
 fn bt22_005_inherited_opt_blocks_second_trigger_same_turn() {
     let mut runner = tsumemon_runner();
     let _carrier = place_tsumemon_as_source(&mut runner);
