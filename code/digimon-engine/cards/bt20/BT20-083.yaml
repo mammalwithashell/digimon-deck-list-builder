@@ -8,16 +8,23 @@ dp: 5000
 traits: [Puppet, X Antibody, LIBERATOR]
 attribute: Data
 
-# Printed clauses omitted rather than approximated:
+# Printed clauses still gap-routed:
 #
-# - [On Deletion] You may place this card as the bottom digivolution card of
-#   your [King Drasil_7D6] in the breeding area. This needs RK-G001: filtered
-#   select_own_breeding_permanent so the target is actually King Drasil.
+# - [On Deletion] You may place this card as the bottom digivolution card
+#   of your [King Drasil_7D6] in the breeding area. RK-G001 filter shipped
+#   in Phase 2 Track J PR 1 — but the surrounding "you may" optionality
+#   needs an `optional: bool` field on `select_own_breeding_permanent`
+#   (or a wrapper that exposes decline before opening the prompt). Today's
+#   `select_own_breeding_permanent` is hardcoded `is_optional: false`, so
+#   authoring the body would silently turn the printed "you may" into
+#   "you must". Tracked as a follow-up to RK-G001.
 #
 # - Inherited [Breeding][Opponent's Turn] security-removed trigger: by
-#   suspending the carrier, play 1 [Omekamon] from this Digimon's sources for
-#   free. This is blocked by breeding inherited observer fan-out
-#   (G-BREEDING-TRIGGER-DISPATCH) and source-play-from-materials support.
+#   suspending the carrier, play 1 [Omekamon] from this Digimon's sources
+#   for free. The fan-out timing wired 2026-05-08, but the printed body
+#   (suspend the breeding carrier as a cost and play [Omekamon] from
+#   that breeding stack's materials without paying the cost) still needs
+#   card-local plumbing.
 
 effects:
   - kind: grant_keyword

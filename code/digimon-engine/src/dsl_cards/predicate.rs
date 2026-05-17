@@ -751,6 +751,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.name_in.is_none()
         && pred.card_number_is.is_none()
         && pred.play_cost_lte.is_none()
+        && pred.play_cost_gte.is_none()
         && pred.self_color_count_gte.is_none()
         && pred.dp_eq.is_none()
         && pred.dp_lte.is_none()
@@ -1330,6 +1331,11 @@ fn eval_card_fields(
     }
     if let Some(cap) = &pred.play_cost_lte {
         if i32::from(data.play_cost) > eval_int_constraint(cap, rctx, formula_target, bindings) {
+            return false;
+        }
+    }
+    if let Some(floor) = &pred.play_cost_gte {
+        if i32::from(data.play_cost) < eval_int_constraint(floor, rctx, formula_target, bindings) {
             return false;
         }
     }
