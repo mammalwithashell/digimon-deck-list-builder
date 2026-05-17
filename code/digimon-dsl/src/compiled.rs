@@ -1146,6 +1146,32 @@ pub enum CompiledStep {
         consumes: Vec<String>,
         binds: Vec<String>,
     },
+    /// Phase 2 Track B — declarative activation-cost step for triggered
+    /// abilities. The DSL lowering MUST lift this step out of the
+    /// process body and bind it to `EffectBuilder::activation_cost(...)`
+    /// at clause-construction time; the validator rejects `activation_cost`
+    /// appearing anywhere except as the first step of a triggered clause
+    /// body. This variant is therefore unreachable at runtime — present
+    /// for variant-coverage and lowering-time inspection only.
+    ActivationCost {
+        kind: CompiledActivationCostKind,
+    },
+}
+
+/// Concrete activation-cost shapes recognized by the DSL. Extensible —
+/// new printed cost shapes (return-self-to-trash, return-self-to-hand)
+/// can be added without changing the queue-side dispatch.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledActivationCostKind {
+    /// "by suspending this Tamer / Digimon ..." — pays the cost by
+    /// suspending the source permanent. Fails if the source is already
+    /// suspended; failure consumes the OPT slot.
+    SuspendSelf,
+    /// "by returning this Tamer to the bottom of the deck ..." — pays
+    /// the cost by moving the source permanent's top card to its
+    /// owner's deck bottom (digivolution sources trashed per standard
+    /// rules). Fails if the source has already left the field.
+    ReturnSelfToDeckBottom,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

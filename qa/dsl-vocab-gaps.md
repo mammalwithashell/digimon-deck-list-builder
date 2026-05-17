@@ -142,6 +142,7 @@ Format per entry:
 
 ## Royal Knights — source-bound return-self cost into reduced-cost hand play  [RK-G002]
 - Effect text: EX11-071: "[Main] By returning this Tamer to the bottom of the deck, you may play 1 play cost 4 or higher [Royal Knight] or [LIBERATOR] trait card from your hand with the play cost reduced by 2."
+- Status 2026-05-17: the **return-self-cost half** of this gap closed under Phase 2 Track B (Engine Gap: Generic `.activation_cost(...)` builder hook for triggered abilities, see `qa/resolved-gaps.md`). DSL `activation_cost: { return_self_to_deck_bottom: true }` lifts onto `EffectBuilder::activation_cost(ctx.return_self_to_deck_bottom_as_cost)`; the chained body fires after the source Tamer has left the field. The remaining **reduced-cost hand play half** is card-author DSL: stitch the existing hand selection + `play_from_hand: { cost: { reduce: 2 } }` after the activation-cost step.
 - Missing DSL verb / step kind / predicate: a Main-phase activation that pays a source-bound `return_to_deck { target: source, position: bottom }` cost and then opens a player-visible hand play selection whose actual payment is reduced by 2.
 - Lowers to engine API: existing source permanent binding, hand selection, and pay-cost flow need a reusable action/pending-selection wrapper so the return cost and reduced play payment stay one legal choice.
 - Suggested DSL syntax:
@@ -1013,8 +1014,9 @@ Format per entry:
 ## BT13-101 / P-136 — event predicates with suspend-this-Tamer cost  [PUPPETS-G023]
 
 - Effect text: `BT13-101`: "[All Turns] When you play a 2-color black/yellow Digimon, by suspending this Tamer, <Draw 1> and gain 1 memory." `P-136`: "[Your Turn] [Once Per Turn] When one of your Digimon digivolves into a Digimon with the [Puppet] trait, by suspending this Tamer, gain 1 memory."
+- Status 2026-05-17: the **activation-cost half** of this gap closed under Phase 2 Track B. DSL `activation_cost: { suspend_self: true }` lifts onto `EffectBuilder::activation_cost(ctx.suspend_self_as_cost)`; cost failure (already-suspended source) consumes the OPT slot and skips the body silently (no decline-vs-fail elision). The **event-card colour predicates half** remains open: `BT13-101` still needs `event_card_color_only` / `event_card_color_count` to gate the All Turns observer faithfully. The three BT13-101 All Turns behavioural tests (`bt13_101_all_turns_*`) remain `#[ignore]` until those predicates land. See `qa/resolved-gaps.md` § Engine Gap: Generic `.activation_cost(...)` builder hook for triggered abilities for the substrate closure.
 - Missing DSL verb / step kind / predicate: event-card predicates for exact color sets and color count, event-target owner/trait predicates for digivolve observers where needed, plus declarative source-bound triggered activation costs.
-- Companion engine state: the generic triggered activation-cost hook is tracked in `docs/RUST_ENGINE_GAPS.md`; DSL must be able to bind it to "suspend this Tamer" and preflight availability before exposing a prompt.
+- Companion engine state: the generic triggered activation-cost hook is now resolved (`qa/resolved-gaps.md`); DSL `activation_cost: { suspend_self: true }` is wired and preflight comes for free via `EffectContext::suspend_self_as_cost` returning `false` on already-suspended sources.
 - Suggested DSL syntax:
   ```yaml
   condition:
@@ -1103,8 +1105,9 @@ Format per entry:
 ## BT22-088 — return-this-Tamer cost before branch free-play  [PUPPETS-G028]
 
 - Effect text: "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] with a different card number in your hand without paying the cost, or play 1 [Shoemon] from your hand or trash without paying the cost."
+- Status 2026-05-17: the **return-self-cost half** of this gap closed under Phase 2 Track B. DSL `activation_cost: { return_self_to_deck_bottom: true }` lifts onto `EffectBuilder::activation_cost(ctx.return_self_to_deck_bottom_as_cost)`; the engine queue's source-liveness check after the cost is now bypassed so the chained free-play branch can fire even though the source Tamer has left the field. The **branch selector half** remains open: BT22-088 still needs the `choose_one` body shape with origin-preserving hand/trash play consumers (exact-name Arisa from hand, exact-name Shoemon from hand-or-trash). The three BT22-088 Start-of-Main behavioural tests remain `#[ignore]` until that branch selector lands.
 - Missing DSL verb / step kind / predicate: optional triggered activation cost that moves the source permanent to the bottom of deck, then an in-effect branch selector with origin-preserving hand/trash play consumers.
-- Companion engine state: the generic triggered activation-cost hook is tracked in `docs/RUST_ENGINE_GAPS.md`; this card also needs a source-zone move as the cost and a follow-on branch selector.
+- Companion engine state: the generic triggered activation-cost hook is now resolved (`qa/resolved-gaps.md`); the source-zone move helper lives on `EffectContext::return_self_to_deck_bottom_as_cost`. The chained branch selector with hand/trash consumers is still card-author DSL surface.
 - Suggested DSL syntax:
   ```yaml
   activation_cost:
