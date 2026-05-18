@@ -90,6 +90,61 @@ Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`),
 > called out by those documents are already represented by an entry
 > in this file or as an open verb in `qa/dsl-vocab-gaps.md`.
 >
+> **Tracker hygiene sweep — Phase 2 rollup (2026-05-17, Tracks A–J, PR #480):**
+> The Phase 2 pilot-archetype unblock work landed as 10 tracks in PR #480
+> (`claude/musing-ishizaka-c4b355` against `main`). Substrate items closed:
+>
+> - **Track B (commit `2c2c4632`)** — `Effect::activation_cost(...)` builder
+>   hook + `ctx.suspend_self_as_cost()` / `ctx.return_self_to_deck_bottom_as_cost()`
+>   helpers. Cost failure consumes the OPT slot per Working Rule §17. Already
+>   marked in the at-a-glance table at line 185.
+> - **Track C (commit `dd9b8a46`)** — `G-OPT-TRIGGERED` and
+>   `G-OPT-RESET-VIA-ATTACK-CYCLE` diagnosed as already-closed; substrate
+>   verified correct, 23 stale `#[ignore]` annotations removed. Already
+>   marked in the at-a-glance table at lines 186–187.
+> - **Track D (commit `bc852640`)** — Inherited triggered-effect dispatch
+>   walk in `enqueue_from_permanent` completed. The 2026-05-15 sweep had
+>   already redirected the entry to `qa/resolved-gaps.md` (see line 684
+>   below); Track D added the dedicated regression test in
+>   `tests/timing_dispatch.rs` and un-ignored 18 dependent tests.
+> - **Track F (commit `5cae5006`)** — `EffectContext::place_top_source_as_bottom`
+>   helper (substrate); chained `select_own_permanent → select_* →
+>   effect_initiated_digivolve` dispatcher confirmed already-correct
+>   (phantom gap); `AltPathSpec.direction: into` schema for warp-shape
+>   alt-paths. Closes G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET
+>   without engine code changes (just tests un-ignored).
+> - **Track G (commit `48e1255f`)** — `opponent_security_count_lte` /
+>   `_gte` predicates, Plug-In Link DSL surface (consuming Track I's
+>   substrate), Medusamon card-author sweep. EX11-054 [All Turns] clause
+>   migrated to Track B's `activation_cost`. **Killed the long-standing
+>   `ex11_054` Medusamon flake.**
+> - **Track H (commit `2b083c5a`)** — BeforePayCost substrate extensions:
+>   `cost_target` + `source_is_cost_target_permanent` predicates (digivolve
+>   target predicate evaluation), `Effect::before_pay_cost_observe(card)`
+>   sibling builder for BeforePayCost gain-memory clauses,
+>   `select_trash` declined-optional outer-tail continuation,
+>   `PlayFromHandFreeArgs.bind_as` for delayed-return clauses. DEFERRED:
+>   G-COST-REDUCE-ALLY-DIGIVOLVE per Track H's discovery rider.
+> - **Track I (commit `26e27ccc`)** — `applies_to_opponent_security_dp`
+>   inherited aura flag (PUPPETS-G008 / G-OPPONENT-SECURITY-DP-AURA);
+>   Plug-In re-link substrate (`Game::orphan_linked_plug_in`,
+>   `Game::relink_plug_in`, `OptionFieldState::LinkedPlugIn` /
+>   `OrphanedPlugIn`); end-of-attack mandatory self-delete chain (already
+>   marked in table line 198); PUPPETS-G009 Delay [Main] action — see
+>   "Standard Delay main-phase activation action" §346 below, now closed.
+> - **Track J (commits `48fbfd76` + `3a6aaee1`)** — RK-G001 breeding
+>   permanent target predicate filter
+>   (`SelectOwnBreedingPermanentArgs::filter`); RK-G002 via Track B's
+>   `activation_cost`; RK-G003 via existing replacement framework + Armor
+>   Purge keyword. Token registry entries for Atho / Rene / Por.
+>
+> **Tracks A, E, F (DSL), G (DSL), H (some), I (some)** lowered to DSL-only
+> sweeps tracked in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md).
+>
+> **Net cumulative test deltas:** `cards_behavioral` 2355 pass / 0 fail /
+> 355 ignored — was ~2300 / 1 pre-existing flake / 596 ignored.
+> See `qa/resolved-gaps.md` for full per-track closure details.
+
 > **Tracker hygiene sweep — Phase 2 Track E (2026-05-17):** Rocks-pilot
 > author-facing residual closures. The Rocks gap-input doc's
 > `G-ROCKS-REVEAL-ORDERING`, `G-ROCKS-OPTION-SELF-DISPOSITION`, and
@@ -185,6 +240,12 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | ~~Generic `.activation_cost(...)` builder hook for triggered abilities~~ — RESOLVED 2026-05-17 (Phase 2 Track B) | ✅ | — | — |
 | ~~Once-per-turn enforcement for triggered effects (`G-OPT-TRIGGERED`)~~ — RESOLVED 2026-05-17 (Phase 2 Track C: diagnosed as already-closed; 23 stale `#[ignore]` annotations removed, see `qa/resolved-gaps.md`) | ✅ | — | — |
 | ~~OPT slot reset across turn cycle (`G-OPT-RESET-VIA-ATTACK-CYCLE`)~~ — RESOLVED 2026-05-17 (Phase 2 Track C: misdiagnosis; test-setup-only fix, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~Inherited triggered-effect dispatch (`enqueue_from_permanent` digivolution-stack walk)~~ — RESOLVED 2026-05-17 (Phase 2 Track D: substrate completion + regression test + 18 tests un-ignored, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~Standard Delay main-phase activation action (`PUPPETS-G009`)~~ — RESOLVED 2026-05-17 (Phase 2 Track I, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~BeforePayCost cost-target predicate + sibling observer builder (`G-BEFORE-PAY-COST-DIGIVOLVE-TARGET` + `G-BEFORE-PAY-COST-GAIN-MEMORY`)~~ — RESOLVED 2026-05-17 (Phase 2 Track H, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~`play_from_hand_free` `bind_as` PermanentHandle output (`G-PLAY-FROM-HAND-FREE-BIND-AS`)~~ — RESOLVED 2026-05-17 (Phase 2 Track H, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~Inherited aura `applies_to_opponent_security_dp` (`PUPPETS-G008` / `G-OPPONENT-SECURITY-DP-AURA`)~~ — RESOLVED 2026-05-17 (Phase 2 Track I, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~Filtered breeding permanent target selection (`RK-G001`)~~ — RESOLVED 2026-05-17 (Phase 2 Track J PR 1, see `qa/resolved-gaps.md`) | ✅ | — | — |
 | [Per-N-suspended scaling threshold residual (count-bound multi-select + formula downstream filter)](#per-n-suspended-scaling-threshold-for-deletion--damage-effects-count-bounded-multi-select-with-derived-threshold) | 🟡 | 1 | `effect_context.rs` |
 | [Player-scope mass `CannotSuspend` aura on opponent (condition-gated)](#player-scope-mass-cannotsuspend-aura-on-opponent-condition-gated-and--or-stack-depth-filtered) | 🔴 | 2 | `modifiers.rs`, `effect.rs` |
 | [Conditional security-in-stack trigger residual: start-of-turn / start-of-opponent-turn variants](#conditional-security-in-stack-trigger-security-end-of-opponents-turn--security-start-of-your-turn-etc) | 🟡 | 1 | `enums.rs`, `effect_queue.rs` |
@@ -343,14 +404,13 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 ### `<Delay>` keyword + placement-turn gating for Option cards
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-delay-keyword--placement-turn-gating-for-option-cards--resolved-2026-05-15-group-5-2026-05-02) by the 2026-05-15 hygiene sweep.
 
-### Standard Delay main-phase activation action
-- **Severity:** 🟡 PARTIAL
+### Standard Delay main-phase activation action — RESOLVED 2026-05-17 (Phase 2 Track I)
+- **Status:** Closed. PUPPETS-G009 closure shipped in Track I (commit `26e27ccc`). Standard `<Delay>` Options on the field now expose a `[Main]` activation action through the normal main-phase action mask after the placing turn — the action trashes the Option as cost, then runs the stored Delay body. Pass/decline leaves the Option in the battle area for later legal activation. No `ACTION_SPACE_SIZE` change (Working Rule §1). Full closure details in `qa/resolved-gaps.md` § "Phase 2 Track I closure".
+- **Severity (legacy):** 🟡 PARTIAL
 - **Discovered in:** Puppets (2026-05-03 batch implementation)
 - **Card(s):** P-037 Yellow Memory Boost!, P-105 Physical Training, LM-035 Physical Training, LM-037 Yellow Scramble, LM-054 Treadmill Training; also standard Memory Boost/Training/Scramble cards whose `<Delay>` text is activated by the controller during a later main phase.
 - **Effect text:** "`<Delay>` (By trashing this card after the placing turn, activate the effect below.)"
-- **What's missing:** The Group 5 Delay lifecycle supports persistent delayed Options, placement-turn gating, start/end/event drains, and replacement-aware self-trash costs. Standard main-phase Delay cards are still modeled in DSL/YAML as scheduled automatic effects such as `end_of_your_next_turn`, which hides the player's later `[Main]` decision to activate or decline the Delay effect after the placing turn. Batch 7 added `P-105` and `LM-054` with this partial scheduled workaround and ignored action-mask tests for the true later Main-phase activation.
-- **Suggested API shape:** Expose delayed Option field effects through the normal main-phase action mask after the placing turn. Choosing the action trashes the Option as cost, then runs the stored Delay body; passing/declining must leave the Option in the battle area for a later legal activation. The action should reuse existing field-effect or pending-selection surfaces without expanding `ACTION_SPACE_SIZE`.
-- **Workaround:** Scheduled automatic activation is acceptable only for PARTIAL card YAML while this gap is open; it is not faithful enough for full IMPLEMENT status.
+- **What was missing (legacy):** The Group 5 Delay lifecycle supports persistent delayed Options, placement-turn gating, start/end/event drains, and replacement-aware self-trash costs. Standard main-phase Delay cards were still modeled in DSL/YAML as scheduled automatic effects such as `end_of_your_next_turn`, which hid the player's later `[Main]` decision to activate or decline the Delay effect after the placing turn.
 - **Related:** `PUPPETS-G009` in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`; Option card play flow; Group 5 Delay lifecycle.
 
 ### Raid target-switch interrupt (scripting-surface, not mask-only) + effect-driven attack redirect
@@ -682,7 +742,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-forced-opponent-hand-reduction-primitive-ctxtrash_opponent_hand_to_count--resolved-2026-05-15-pr-454-track-e) by the 2026-05-15 hygiene sweep.
 
 ### Inherited triggered-effect dispatch: `enqueue_from_permanent` must walk digivolution stack
-> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-inherited-triggered-effect-dispatch-enqueue_from_permanent-must-walk-digivolution-stack--resolved-2026-05-15-2026-05-06) by the 2026-05-15 hygiene sweep.
+> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-inherited-triggered-effect-dispatch-enqueue_from_permanent-must-walk-digivolution-stack--resolved-2026-05-15-2026-05-06) by the 2026-05-15 hygiene sweep. **Phase 2 Track D (commit `bc852640`) completed the closure** with a dedicated regression test (`tests/timing_dispatch.rs`) and 18 dependent tests un-ignored across `cards_behavioral` (BT22-005, BT24-012, BT24-016, BT21-025, BT16-040, BT17-015, BT17-018, BT21-001, BT21-017, BT22-005, P-189, EX4-003, EX11-008, BT14-001 + others). G-WHEN-DIGIVOLVING-DISPATCH absorbed by the same walk. See `qa/resolved-gaps.md` § "Phase 2 Track D closure" for full closure details.
 
 ### `CannotAttackPlayer` modifier enforcement (mask + combat)
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-cannotattackplayer-modifier-enforcement-mask--combat--resolved-2026-05-15-track-d-2026-05-08) by the 2026-05-15 hygiene sweep.

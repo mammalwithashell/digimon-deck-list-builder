@@ -57,6 +57,76 @@ This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine h
 > bilateral player-scoped passive modifier shape (Rocks) remain open
 > from the 2026-05-10 sweep.
 
+> **Tracker hygiene sweep — 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480):**
+> The Phase 2 pilot-archetype unblock work landed as 10 tracks in PR #480
+> (`claude/musing-ishizaka-c4b355` against `main`). All sub-entries below
+> have been swept; the per-track sweep paragraphs that follow cover Tracks
+> F and G in detail. Closure pointers for the other tracks:
+>
+> - **Track A** — DSL eval-arm sweep (commit `b91816b5`). Closes
+>   `G-PRED-DP-LTE` (card-zone subjects via `eval_card_fields`),
+>   `G-COUNT-GTE-NOT-EVALUATED`, `G-FORMULA-SOURCE-DP`,
+>   `G-DSL-DISTINCT-TAMER-COLORS` + `G-DSL-DISTINCT-TAMER-COLORS-FORMULA`
+>   (paired BoolPredicate + formula), and `G-ALT-PATH-CONDITION` stale
+>   placeholder-test sweep. 13+ tests un-ignored. Full entry in
+>   `qa/resolved-gaps.md` § "Phase 2 Track A closure".
+> - **Track B** — `activation_cost(...)` builder (commit `2c2c4632`).
+>   Engine substrate: `EffectBuilder::activation_cost`,
+>   `ctx.suspend_self_as_cost()`,
+>   `ctx.return_self_to_deck_bottom_as_cost()`. DSL:
+>   `CompiledStep::ActivationCost { kind: SuspendSelf |
+>   ReturnSelfToDeckBottom }`. Cost-failure consumes OPT slot per Working
+>   Rule §17. Downstream consumers: BT4-097, BT8-090, ST6-14, BT8-094,
+>   EX9-068, BT13-102, RB1-035, P-136, BT22-094, BT17-093, EX11-071.
+>   Full entry in `qa/resolved-gaps.md` § "Phase 2 Track B closure".
+> - **Track C** — G-OPT-TRIGGERED (commit `dd9b8a46`). Substrate was
+>   already correct; the gap proved phantom. 23 stale `#[ignore]`
+>   annotations removed; slot-key semantics documented (per-carrier
+>   HashMap keyed by `(source_card_handle, effect_slot)`, fully cleared
+>   on `Permanent::new_turn`). G-OPT-RESET-VIA-ATTACK-CYCLE was a
+>   test-setup misdiagnosis (deck-out before second turn cycle); fixed
+>   in test files only.
+> - **Track D** — G-INHERITED-DISPATCH (commit `bc852640`).
+>   `enqueue_from_permanent` now walks `permanent.card_sources` so
+>   inherited triggered effects fire from below-the-top cards. Stable
+>   slot keying via the existing `(source_card_handle, effect_slot)`
+>   shape — no OPT collision. `G-WHEN-DIGIVOLVING-DISPATCH` absorbed.
+>   Regression test in `tests/timing_dispatch.rs`. 18 tests un-ignored.
+> - **Track E** — Rocks pilot reveal-ordering (commit `bac197ea`).
+>   Detailed in "Phase 2 Track E (2026-05-17)" §149 below.
+> - **Track H** — BG Imperial substrate (commit `2b083c5a`). Closes
+>   `G-BEFORE-PAY-COST-DIGIVOLVE-TARGET` (cost-target predicate +
+>   `source_is_cost_target_permanent`), `G-BEFORE-PAY-COST-GAIN-MEMORY`
+>   (`Effect::before_pay_cost_observe` sibling builder),
+>   `G-OPTIONAL-SELECTION-CONTINUE-TAIL` (select_trash slice only —
+>   other `select_*` installers remain follow-up), `G-PLAY-FROM-HAND-FREE-BIND-AS`.
+>   **DEFERRED:** `G-COST-REDUCE-ALLY-DIGIVOLVE` (per Track H's discovery
+>   rider; entangled with armed-observer + suspend-cost sub-gaps).
+> - **Track I** — Puppets pilot (commit `26e27ccc`). Closes
+>   `PUPPETS-G008` / `G-OPPONENT-SECURITY-DP-AURA` (inherited aura with
+>   `applies_to_opponent_security_dp`), `PUPPETS-G009` (Delay [Main]
+>   action), `PUPPETS-G003` (ProvenanceToken cleanup), end-of-attack
+>   mandatory self-delete chain. EX4-074 ShineGreymon: Ruin Mode
+>   IMPLEMENTED.
+> - **Track J** — Royal Knights substrate + cards (commits `48fbfd76` +
+>   `3a6aaee1`). Closes `RK-G001` (filtered breeding permanent target),
+>   `RK-G002` (source-bound return-self cost into reduced-cost hand
+>   play — leverages Track B's `activation_cost`), `RK-G003` (Delay/
+>   keyword leave-prevention replacements). Plus token registry entries
+>   for Atho / Rene / Por.
+>
+> **Net cumulative test deltas (vs. pre-wave-1 baseline post-PR #475):**
+> `cards_behavioral` 2355 pass / 0 fail / 355 ignored — was ~2300 / 1
+> pre-existing flake / 596 ignored. **Phase 2 killed the long-standing
+> `ex11_054` Medusamon flake** as part of Track G's `[All Turns]`
+> entering-permanent observer migration.
+>
+> See `qa/resolved-gaps.md` for full per-track closure details. The
+> entries below that match these closure tags have been annotated
+> inline with "RESOLVED 2026-05-17 (Phase 2 Track X)" pointers; legacy
+> entry bodies are preserved for reference but the heading line carries
+> the closure stamp.
+
 > **Tracker hygiene sweep — 2026-05-17 (Phase 2 Track F):** Five DNA
 > Omnimon DSL/substrate gaps closed; full closure summaries in
 > [resolved-gaps.md](resolved-gaps.md) under "Phase 2 Track F closure":
@@ -792,10 +862,11 @@ test was already passing through the `count_lte` aggregate over
 - Gap kind: resolved DSL timing surface. Card-local YAML can now use the faithful timing token instead of the `when_attacking` workaround.
 - First reported: 2026-05-03 (BT21-102 Tai Kamiya, batch-implement-cards-rust-dsl)
 
-## BT21-102 / BT15-096 — `play_cost_lte` formula-valued / binding-relative variant
+## BT21-102 / BT15-096 — `play_cost_lte` formula-valued / binding-relative variant  [G-DSL-DISTINCT-TAMER-COLORS-FORMULA]
 - Effect text: BT21-102 Tai Kamiya — "[Main] [Once Per Turn] You may play 1 [ADVENTURE] or [Hero] trait card with a play cost of 2 or less from your hand without paying the cost. For each of your Tamers' colors, add 1 to this effect's play cost maximum."
 - Effect text: BT15-096 Supreme Connection! — "[Delay] 1 of your Digimon with the [Machine] or [Cyborg] trait may play 1 Digimon card with a play cost less than or equal to that Digimon's play cost from your hand with the play cost reduced by 3."
-- Status: RESOLVED on 2026-05-10. `PredicateSpec::play_cost_lte` now accepts either the legacy literal threshold or `{ formula: ... }`. Formula thresholds compile through `CompiledDpConstraint`, evaluate during selection-mask construction, and can read `binding_play_cost` from a previously selected card/permanent binding. BT21-102's color-scaled cap is also covered by `distinct_colors_count`.
+- **Status: RESOLVED 2026-05-17** (Phase 2 Track A finalization; formula primitive landed 2026-05-10). Phase 2 Track A swept stale references and confirmed coverage in `tests/dsl/group7_predicate_batch.rs` + `tests/dsl/group7_formula_batch.rs`. The companion BoolPredicate wrapping `G-DSL-DISTINCT-TAMER-COLORS` (ST20-10 disjunct) is closed by the same formula leaf — `play_cost_lte: { formula: { distinct_colors_count: ... } }` covers both shapes.
+- Status (legacy): RESOLVED on 2026-05-10. `PredicateSpec::play_cost_lte` now accepts either the legacy literal threshold or `{ formula: ... }`. Formula thresholds compile through `CompiledDpConstraint`, evaluate during selection-mask construction, and can read `binding_play_cost` from a previously selected card/permanent binding. BT21-102's color-scaled cap is also covered by `distinct_colors_count`.
 - Lowers to engine API: `card.play_cost <= rctx.eval_formula(formula)` — engine already has formula evaluation and per-card play_cost reads.
 - DSL syntax:
   ```yaml
@@ -843,9 +914,10 @@ test was already passing through the `count_lte` aggregate over
 - Workaround used in EX9-066: drop the binding-result check entirely; present a binary `select_effect_choice [Return / Draw]` so the player explicitly picks the branch up front. The Return branch's inner `select_trash` is `optional: true` so it degrades gracefully when no eligible cards exist. Case C (no eligible card + player picked Return) becomes a no-op rather than a forced draw — diverges from DCGO but the action mask still surfaces the Decline → Draw alternative, so a faithful RL agent learns to pick Decline in case C. No auto-selection is performed on the agent's behalf; the no-approximations policy is preserved.
 - First reported: 2026-05-03 (EX9-066 Tai Kamiya & Matt Ishida, batch-implement-cards-rust-dsl)
 
-## BT24-008 / EX9-066 — General `count_gte` / `count_lte` predicate not evaluated  [G-COUNT-GTE-NOT-EVALUATED]
+## BT24-008 / EX9-066 — General `count_gte` / `count_lte` predicate not evaluated  [G-COUNT-GTE-NOT-EVALUATED] — RESOLVED 2026-05-17 (Phase 2 Track A)
+- **Status:** Closed. `eval_predicate_with_bindings` now consults `count_gte` / `count_lte` via a generalized `count_matching_in_zone` walker. See `qa/resolved-gaps.md` § "Phase 2 Track A closure" for full details. BT24-008 / EX9-066 / EX1-021 chained-`if` workarounds are now substrate-correct.
 - Effect text: BT24-008 Lv4 Reptile/Dragonkin/LIBERATOR — "[On Play] By trashing 1 card with the [Reptile], [Dragonkin] or [LIBERATOR] trait from your hand, <Draw 2>." (condition gates on `count_gte` over hand). EX9-066 — needs gating on `count_gte` over trash zone for the trash-or-draw branch.
-- Status: OPEN (filed 2026-05-03 during EX9-066 batch-implement-cards-rust-dsl). Previously documented inline in BT24-008.yaml header but not as a standalone gap entry.
+- Status (legacy): OPEN (filed 2026-05-03 during EX9-066 batch-implement-cards-rust-dsl). Previously documented inline in BT24-008.yaml header but not as a standalone gap entry.
 - Missing engine evaluation: `PredicateSpec::count_gte: Option<CountAggregate>` and `count_lte: Option<CountAggregate>` parse correctly into `CompiledPredicate.count_gte` / `count_lte` (`compiled.rs` lines 223-224), but `dsl_cards/predicate.rs::eval_predicate_with_bindings` does NOT consult these fields — only the specialized `security_count_gte` / `security_count_lte` (predicate.rs lines 73-82) and `materials_count_gte` / `materials_count_lte` (predicate.rs lines 834-842) are wired. So `condition: { count_gte: { filter: ..., n: 1 } }` is a no-op that always evaluates as TRUE, which means `if count_gte ≥ 1 then [...] else [...]` always takes the `then` branch regardless of the actual card count.
 - Lowers to engine API: needs a generic `count_matching_in_zone` walker that takes a `CompiledPredicate` filter (with `zone:` constraints) and counts matches across the named player's hand / trash / battle_area / security / deck. The existing `existential_any` walker (predicate.rs:279) only iterates `battle_area` and stops at first match — needs to be generalized to iterate the requested zones and count instead of short-circuit.
 - Suggested DSL syntax (already accepted by the parser — only evaluation is missing):
@@ -1116,9 +1188,10 @@ is satisfiable today.
 - Gap kind: dsl. Engine substrate already exists (DCGO uses the same `AddSelfDigivolutionRequirementStaticEffect` factory regardless of direction).
 - First reported: 2026-05-03 (ST20-10 Agumon, batch-implement-cards-rust-dsl). Originally paired with `G-ALT-PATH-CONDITION` (BT24-016); that companion gap was RESOLVED 2026-05-15, so the inverse-direction hole is now the sole substrate blocker on this clause.
 
-## ST20-10 — Distinct-Tamer-colours-on-field BoolPredicate  [G-DSL-DISTINCT-TAMER-COLORS]
+## ST20-10 — Distinct-Tamer-colours-on-field BoolPredicate  [G-DSL-DISTINCT-TAMER-COLORS] — RESOLVED 2026-05-17 (Phase 2 Track A)
+- **Status:** Closed. The BoolPredicate wrapping is now covered by the formula leaf `play_cost_lte: { formula: { distinct_colors_count: { of: you, zone: battle_area, filter: { kind: tamer } } } }` shape. Phase 2 Track A swept stale references; the ST20-10 warp clause remains BLOCKED on its other companion gap `G-ALT-PATH-DIRECTION-INTO`'s ST20-specific YAML authoring (which has substrate but no card YAML yet) — but the Tamer-color disjunct itself is no longer the blocker.
 - Effect text: ST20-10 Agumon — "...or your Tamers have 3 or more total colors..." (gating disjunct of the [Your Turn] warp clause). Sibling form of BT21-102 Tai Kamiya's "For each of your Tamers' colors, add 1 to this effect's play cost maximum" — both reference the same per-colour-count computation, but BT21-102 needs the value as a `FormulaSpec::per` aggregate (tracked under `G-DSL-DISTINCT-TAMER-COLORS-FORMULA`) while ST20-10 needs it as a BoolPredicate threshold ("3 or more").
-- Status: OPEN (filed 2026-05-03 during ST20-10 batch-implement-cards-rust-dsl).
+- Status (legacy): OPEN (filed 2026-05-03 during ST20-10 batch-implement-cards-rust-dsl).
 - Missing DSL verb / step kind / predicate: no `distinct_tamer_colors_gte: <N>` (or generalised `distinct_colors_count_gte: <N>` over a controller / kind / zone selector) BoolPredicate leaf on `PredicateSpec`. The existing `distinct_colors_count` (added under `G-DSL-DISTINCT-TAMER-COLORS-FORMULA`) is only available inside `FormulaSpec::per` — it cannot appear as a standalone boolean condition. `color_only` / `color_is` filter individual permanents by colour but do not aggregate colour counts across a permanent set.
 - Lowers to engine API: DCGO's `Combinations.GetDifferenetColorCardCount(tamerCards) >= 3` returns the count of distinct colours present across the supplied permanent set, then thresholds. The engine's `eval_aggregate` (already used by `FormulaSpec::per: distinct_colors_count`) covers the count primitive — only the BoolPredicate wrapping is missing.
 - Suggested DSL syntax (option A — dedicated leaf):
