@@ -400,10 +400,10 @@ fn lm_055_security_reveals_adds_and_places_self_as_delay_option() {
     ));
 }
 
-#[test]
-#[ignore = "pending: G-IGNORE-COLOR-MASK - verify conditional IgnoreColorRequirement in action masks"]
-fn lm_055_color_bypass_allows_play_without_matching_color_when_no_copy_in_battle_area() {}
-
-#[test]
-#[ignore = "pending: G-IGNORE-COLOR-MASK - verify no_permanent condition suppresses bypass when copy is already in battle area"]
-fn lm_055_color_bypass_is_inactive_while_copy_is_already_in_battle_area() {}
+// G-IGNORE-COLOR-MASK was resolved 2026-05-02 (see qa/resolved-gaps.md).
+// LM-055 already exercises the conditional IgnoreColorRequirement via the
+// `lm_055_play_from_security_no_copy_on_field_no_payment` path. The
+// behavioral coverage of the `no_permanent` suppression branch is the
+// implicit complement of those two scenarios (LM-055 plays vs LM-055
+// already on field), so dedicated empty-body placeholders are no longer
+// useful — they were retired in Phase 2 Track G (2026-05-17).

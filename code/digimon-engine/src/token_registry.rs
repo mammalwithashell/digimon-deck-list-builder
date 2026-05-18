@@ -16,7 +16,7 @@
 use std::collections::HashMap;
 
 use crate::card_data::CardData;
-use crate::enums::{CardColor, CardKind};
+use crate::enums::{CardColor, CardKind, Keyword};
 
 /// Declarative token metadata. No closures live here — printed abilities
 /// live on the `CardEffect` implementation registered against
@@ -34,6 +34,10 @@ pub struct TokenDef {
     pub dp: Option<i32>,
     pub level: Option<u8>,
     pub traits: Vec<String>,
+    /// Static printed keywords (e.g. `<Reboot> <Blocker> <Decoy (Red/Black)>`).
+    /// Mirrors `CardData::keywords`. Defaults to empty for tokens with no
+    /// printed keywords.
+    pub keywords: Vec<Keyword>,
 }
 
 impl TokenDef {
@@ -56,7 +60,7 @@ impl TokenDef {
             inherited_text: String::new(),
             security_text: String::new(),
             effect_class_name: self.card_id.clone(),
-            keywords: Vec::new(),
+            keywords: self.keywords.clone(),
             index: 0,
             norm_id: 0.0,
             ace_overflow: None,
@@ -105,7 +109,8 @@ impl TokenRegistry {
 }
 
 /// Build the default token registry. Currently: Petrification (Medusamon),
-/// Familiar (TS Olympos). Additional tokens land as their archetypes are
+/// Familiar (TS Olympos), Atho/René/Por (Royal Knights — BT20-017 Jesmon,
+/// BT23-013 Jesmon CS). Additional tokens land as their archetypes are
 /// ported.
 pub fn build_registry() -> TokenRegistry {
     let mut r = TokenRegistry::new();
@@ -117,6 +122,7 @@ pub fn build_registry() -> TokenRegistry {
         dp: Some(3000),
         level: None,
         traits: Vec::new(),
+        keywords: Vec::new(),
     });
     r.insert(TokenDef {
         name: "familiar".to_string(),
@@ -126,6 +132,24 @@ pub fn build_registry() -> TokenRegistry {
         dp: Some(3000),
         level: None,
         traits: Vec::new(),
+        keywords: Vec::new(),
+    });
+    // [Atho, René & Por] — printed stats and keywords from BT20-017 Jesmon:
+    // "(Digimon/White/6000 DP/<Reboot> <Blocker> <Decoy (Red/Black)>)".
+    // Decoy color bitmask: bit 0 (Red) | bit 5 (Black) == 0b0010_0001 == 33.
+    r.insert(TokenDef {
+        name: "atho_rene_por".to_string(),
+        card_id: "TOKEN_ATHO_RENE_POR".to_string(),
+        card_name: "Atho, René & Por".to_string(),
+        colors: vec![CardColor::White],
+        dp: Some(6000),
+        level: None,
+        traits: Vec::new(),
+        keywords: vec![
+            Keyword::Reboot,
+            Keyword::Blocker,
+            Keyword::Decoy((1u8 << CardColor::Red as u8) | (1u8 << CardColor::Black as u8)),
+        ],
     });
     r
 }
@@ -170,5 +194,30 @@ mod tests {
     fn unknown_name_returns_none() {
         let r = build_registry();
         assert!(r.get("no-such-token-lol").is_none());
+    }
+
+    #[test]
+    fn atho_rene_por_registered_with_printed_stats_and_keywords() {
+        let r = build_registry();
+        let def = r.get("atho_rene_por").expect("Atho, René & Por missing");
+        assert_eq!(def.card_id, "TOKEN_ATHO_RENE_POR");
+        assert_eq!(def.card_name, "Atho, René & Por");
+        assert_eq!(def.colors, vec![CardColor::White]);
+        assert_eq!(def.dp, Some(6000));
+        assert!(def.keywords.contains(&Keyword::Reboot));
+        assert!(def.keywords.contains(&Keyword::Blocker));
+        let red_black = (1u8 << CardColor::Red as u8) | (1u8 << CardColor::Black as u8);
+        assert!(def.keywords.contains(&Keyword::Decoy(red_black)));
+    }
+
+    #[test]
+    fn atho_rene_por_card_data_carries_keywords() {
+        let r = build_registry();
+        let def = r.get("atho_rene_por").unwrap();
+        let cd = def.to_card_data();
+        assert_eq!(cd.card_kind, CardKind::Token);
+        assert_eq!(cd.dp, Some(6000));
+        assert!(cd.keywords.contains(&Keyword::Reboot));
+        assert!(cd.keywords.contains(&Keyword::Blocker));
     }
 }

@@ -770,8 +770,6 @@ fn ex4_038_inherited_does_not_fire_when_carrier_self_digivolves() {
 /// is not yet enforced by the engine queue-drain path. Ignored pending
 /// engine fix.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED (engine queue-drain does not enforce \
-            same-turn lockout for triggered clauses)"]
 fn ex4_038_inherited_once_per_turn_locks_out_second_trigger() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)

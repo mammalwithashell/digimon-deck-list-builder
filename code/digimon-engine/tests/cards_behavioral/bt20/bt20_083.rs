@@ -6,10 +6,15 @@
 //!   Digimon into [Omnimon (X Antibody)] in hand ignoring requirements/free.
 //!
 //! Gap-routed:
-//! - [On Deletion] place this card under [King Drasil_7D6] in breeding needs a
-//!   filtered breeding permanent target.
-//! - Inherited [Breeding][Opponent's Turn] security-removed trigger needs
-//!   breeding inherited observer dispatch plus source-play from materials.
+//! - [On Deletion] place this card under [King Drasil_7D6] in breeding — the
+//!   RK-G001 filter shipped in Phase 2 Track J PR 1, but the printed "you may"
+//!   optionality needs an `optional: bool` field on
+//!   `select_own_breeding_permanent` (today hardcoded `is_optional: false`),
+//!   so authoring would silently make the trigger mandatory.
+//! - Inherited [Breeding][Opponent's Turn] security-removed trigger needs the
+//!   printed body (suspend the breeding carrier as a cost and play [Omekamon]
+//!   from that breeding stack's materials without paying the cost). The
+//!   fan-out timing already fires per `bt20_083_inherited_breeding_security_removed_fans_out_once_with_payload`.
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledCostDelta, CompiledDeclarativeClause,
@@ -162,9 +167,9 @@ fn bt20_083_has_blocker_grant_and_low_security_on_play_digivolve() {
 }
 
 #[test]
-#[ignore = "pending: RK-G001 — filtered select_own_breeding_permanent target for [King Drasil_7D6]"]
+#[ignore = "pending: G-OPTIONAL-BREEDING-SELECTION — RK-G001 filter shipped (Phase 2 Track J PR 1), but `select_own_breeding_permanent` is hardcoded `is_optional: false`, so authoring the printed 'you may' clause would silently turn the trigger mandatory"]
 fn bt20_083_on_deletion_places_self_under_king_drasil_only() {
-    panic!("requires filtered breeding permanent selection before this clause can be authored");
+    panic!("requires optional select_own_breeding_permanent before the printed 'you may' clause can be authored faithfully");
 }
 
 #[test]

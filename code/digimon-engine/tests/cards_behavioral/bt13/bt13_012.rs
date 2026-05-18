@@ -563,8 +563,6 @@ fn bt13_012_does_not_fire_for_own_green_or_purple_tamer() {
 /// wired in `run_queued_effect_inner`. Same caveat as BT24-018 clause (f) and
 /// BT17-018 clause(s) marked in their YAML files.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED (qa/archetype-qa/engine-gaps.md) — \
-            once_per_turn flag compiled but not enforced for triggered observers"]
 fn bt13_012_opt_lockout_blocks_second_activation_in_same_turn() {
     let mut runner = fresh_runner(vec![
         make_tamer("RED-TAMER-A", vec![CardColor::Red]),
@@ -611,8 +609,6 @@ fn bt13_012_opt_lockout_blocks_second_activation_in_same_turn() {
 /// non-security zones (same caveat as BT18-087 clause and BT9-112 / EX8-074
 /// formula DP caps documented in qa/dsl-vocab-gaps.md).
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE (qa/dsl-vocab-gaps.md) — \
-            dp_lte filter compiled but not evaluated on battle_area permanents"]
 fn bt13_012_dp_lte_filter_excludes_high_dp_targets() {
     let mut runner = fresh_runner(vec![
         make_tamer("RED-TAMER", vec![CardColor::Red]),

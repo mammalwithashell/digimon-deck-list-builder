@@ -57,9 +57,11 @@ fn ex7_024_compiles_with_printed_stats_and_lv2_yellow_path() {
         "Shoemon must digivolve from a yellow Lv2 for cost 0"
     );
 
-    assert!(
-        compiled.effects.is_empty(),
-        "EX7-024 should not encode blocked effects as no-op or approximate DSL clauses"
+    assert_eq!(
+        compiled.effects.len(),
+        1,
+        "EX7-024 should only encode the inherited opponent-security DP aura; \
+         the source-scoped digivolve-into-trait cost reducer remains blocked"
     );
 }
 

@@ -1,6 +1,7 @@
 //! DSL test binary. Submodules (one per task group) contribute the `#[test]`
 //! functions. See `digimon-engine/Cargo.toml` for the `[[test]]` entry.
 
+mod activation_cost;
 mod cross_check;
 mod delay;
 mod digixros_aliases;
@@ -113,6 +114,7 @@ mod schema_export;
 mod security_boundary;
 mod security_stack_steps;
 mod selection_dp_extrema;
+mod track_e_reveal_ordering;
 mod source_stack_aggregates;
 mod standalone_declaratives_exit;
 mod validator;

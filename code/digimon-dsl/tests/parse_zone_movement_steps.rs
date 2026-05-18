@@ -140,6 +140,70 @@ fn permanent_and_stacked_security_verbs_compile() {
 }
 
 #[test]
+fn gain_memory_fn_parses_and_compiles() {
+    // Phase 2 Track F (G-DSL-GAIN-MEMORY-FN): formula-valued memory gain.
+    // EX1-021 shape — "Gain 1 memory for every 4 cards in your hand."
+    // The DSL formula uses BasePerDelta (base/per/delta) wrapped in
+    // `floor_div` to express N / 4.
+    let yaml = r#"      - gain_memory_fn:
+          formula:
+            floor_div:
+              - base: 0
+                per:
+                  card_count_in_zone: { of: you, zone: hand }
+                delta: 1
+              - 4
+"#;
+    let steps = compile_steps(yaml);
+    assert!(matches!(
+        &steps[0],
+        CompiledStep::GainMemoryFn { .. }
+    ));
+
+    let spec = parse_first_step(yaml);
+    assert!(matches!(spec, StepSpec::GainMemoryFn(_)));
+}
+
+#[test]
+fn lose_memory_fn_parses_and_compiles() {
+    let steps = compile_steps(
+        r#"      - lose_memory_fn:
+          formula: 3
+"#,
+    );
+    assert!(matches!(
+        &steps[0],
+        CompiledStep::LoseMemoryFn { .. }
+    ));
+}
+
+#[test]
+fn place_top_source_as_bottom_parses_and_compiles() {
+    // Phase 2 Track F (G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM): the verb takes
+    // a single `target:` permanent binding and lowers to the deterministic
+    // engine helper (no player choice exposed).
+    let steps = compile_steps(
+        r#"      - place_top_source_as_bottom:
+          target: source
+"#,
+    );
+    assert_eq!(
+        steps[0],
+        CompiledStep::PlaceTopSourceAsBottom {
+            target: digimon_dsl::compiled::CompiledBindingRef::Source,
+        }
+    );
+
+    // Round-trip through StepSpec preserves identity.
+    let spec = parse_first_step(
+        r#"      - place_top_source_as_bottom:
+          target: source
+"#,
+    );
+    assert!(matches!(spec, StepSpec::PlaceTopSourceAsBottom(_)));
+}
+
+#[test]
 fn bulk_trash_and_hand_verbs_compile_formulas() {
     let steps = compile_steps(
         r#"      - return_all_trash_to_deck_bottom: { of: you }

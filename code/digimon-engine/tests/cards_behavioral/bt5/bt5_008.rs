@@ -173,9 +173,7 @@ fn bt5_008_has_your_turn_aura_clause_shape() {
 /// predicate is also not enforced (see separate test). Both gaps must close for the
 /// full behavioral contract to be satisfied.
 #[test]
-#[ignore = "pending: G-DECLARATIVE-KEYWORD — EffectTiming::Declarative is never enqueued or fired by \
-            the engine; filtered aura process closure (ctx.add_dp_modifier) is never called; \
-            ChangeDp modifier is compiled but not installed at runtime"]
+#[ignore = "pending: declarative tick not invoked from place_on_field; test setup needs explicit Game::tick_declarative_effects call (G-DECLARATIVE-KEYWORD substrate closed 2026-05-02)"]
 fn bt5_008_aura_buffs_other_gaossmon_on_your_turn() {
     let mut runner = gaossmon_runner();
 

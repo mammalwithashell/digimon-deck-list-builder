@@ -119,12 +119,21 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::PlayFromHandFree { of: _, hand_index } => {
+        CompiledStep::PlayFromHandFree {
+            of: _,
+            hand_index,
+            bind_as,
+        } => {
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
                 if let Some(played) = ctx.play_from_hand_free(owner, i as usize) {
                     bindings.record_played(played);
+                    // G-PLAY-FROM-HAND-FREE-BIND-AS: expose the played
+                    // permanent's handle to subsequent steps in the same body.
+                    if let Some(name) = bind_as {
+                        bindings.insert_permanent(name, played);
+                    }
                 }
             }
             true
@@ -360,6 +369,15 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 return true;
             };
             let _ = ctx.place_as_bottom_source(source_ref, target_handle);
+            true
+        }
+        CompiledStep::PlaceTopSourceAsBottom { target } => {
+            let Some(ResolvedBinding::Permanent(target_handle)) =
+                resolve_binding_ref(target, ctx, bindings)
+            else {
+                return true;
+            };
+            let _ = ctx.place_top_source_as_bottom(target_handle);
             true
         }
         CompiledStep::TrashTopSource { target } => {

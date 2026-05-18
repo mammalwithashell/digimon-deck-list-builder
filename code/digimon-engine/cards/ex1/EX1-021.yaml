@@ -123,18 +123,48 @@ alt_paths:
 effects:
   # ─── Clause 1 — [When Digivolving] Gain 1 memory per 4 hand cards ──────────
   #
-  # `process: []` per BLOCKED convention until G-DSL-GAIN-MEMORY-FN OR
-  # G-COUNT-GTE-NOT-EVALUATED closes (either suffices to express the
-  # printed text faithfully). Behavioral memory-gain tests are `#[ignore]`'d
-  # in tests/cards_behavioral/ex1/ex1_021.rs.
+  # Phase 2 Track F (2026-05-17) closes G-DSL-GAIN-MEMORY-FN. The formula
+  # evaluates floor(hand_count / 4) at resolution time and gains memory by
+  # the result. DCGO `count() = card.Owner.HandCards.Count / 4`.
   - when: when_digivolving
-    summary: "[When Digivolving] Gain 1 memory per 4 hand cards (BLOCKED: G-DSL-GAIN-MEMORY-FN / G-COUNT-GTE-NOT-EVALUATED)"
-    process: []
+    summary: "[When Digivolving] Gain 1 memory per 4 hand cards"
+    process:
+      - gain_memory_fn:
+          formula:
+            floor_div:
+              - base: 0
+                per:
+                  card_count_in_zone: { of: you, zone: hand }
+                delta: 1
+              - 4
 
   # ─── Clause 2 — [When Attacking] return opp [On Deletion] Digimon ──────────
   #
-  # `process: []` per BLOCKED convention until G-DSL-HAS-ON-DELETION-EFFECT
-  # closes (and G-COUNT-GTE-NOT-EVALUATED for the hand-size gate).
+  # Phase 2 Track F (2026-05-17) closes G-DSL-HAS-ON-DELETION-EFFECT.
+  # `count_gte` is wired through `eval_predicate_with_bindings` (older
+  # YAML commentary about G-COUNT-GTE-NOT-EVALUATED is stale; the
+  # evaluator at predicate.rs:336 consults the field).
+  #
+  # Gates: hand >= 8 cards AND own Tamer in play AND target has [On Deletion].
   - when: when_attacking
-    summary: "[When Attacking] If hand>=8 and Tamer in play, return 1 opp [On Deletion] Digimon to deck bottom (BLOCKED: G-DSL-HAS-ON-DELETION-EFFECT / G-COUNT-GTE-NOT-EVALUATED)"
-    process: []
+    summary: "[When Attacking] If hand>=8 and Tamer in play, return 1 opp [On Deletion] Digimon to deck bottom"
+    condition:
+      all_of:
+        - count_gte:
+            filter: { zone: [hand], owner: you }
+            n: 8
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - has_on_deletion_effect: true
+          prompt: "Return 1 opponent Digimon with an [On Deletion] effect to the bottom of its owner's deck"
+      - return_to_deck:
+          target: target
+          position: bottom

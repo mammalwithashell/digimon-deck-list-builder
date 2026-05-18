@@ -120,6 +120,14 @@ pub struct EffectReadContext<'a> {
     /// `None` outside play/digivolve cost calculation.
     pub cost_target_card: Option<CardHandle>,
     pub cost_target_from_hand: bool,
+    /// Permanent(s) being digivolved or otherwise mutated by the play/
+    /// digivolve action whose cost is currently being computed. Single
+    /// entry for a normal digivolve (the digivolve-target permanent),
+    /// two for DNA digivolve (both materials), empty for play-from-hand
+    /// or option use. Consumed by the `source_is_cost_target_permanent`
+    /// predicate to gate effects scoped to "when THIS Digimon would
+    /// digivolve" (printed semantics — G-BEFORE-PAY-COST-DIGIVOLVE-TARGET).
+    pub cost_target_permanents: Vec<PermanentHandle>,
 }
 
 impl<'a> EffectReadContext<'a> {
@@ -151,6 +159,7 @@ impl<'a> EffectReadContext<'a> {
             replacement_subject_controller: None,
             cost_target_card: None,
             cost_target_from_hand: false,
+            cost_target_permanents: Vec::new(),
         }
     }
 
@@ -174,7 +183,29 @@ impl<'a> EffectReadContext<'a> {
             replacement_subject_controller: None,
             cost_target_card: Some(cost_target_card),
             cost_target_from_hand,
+            cost_target_permanents: Vec::new(),
         }
+    }
+
+    /// Attach the digivolve target permanents (one for normal digivolve,
+    /// two for DNA, empty for play-from-hand). Chains after
+    /// `new_with_cost_target`. Consumed by the
+    /// `source_is_cost_target_permanent` predicate.
+    /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
+    pub fn with_cost_target_permanents(mut self, perms: Vec<PermanentHandle>) -> Self {
+        self.cost_target_permanents = perms;
+        self
+    }
+
+    /// True if this effect's `source_permanent` is one of the permanents
+    /// being digivolved by the action whose cost is currently being
+    /// computed. Returns `false` outside cost dispatch or when this
+    /// effect has no source permanent.
+    pub fn source_is_cost_target_permanent(&self) -> bool {
+        let Some(source) = self.source_permanent else {
+            return false;
+        };
+        self.cost_target_permanents.iter().any(|h| *h == source)
     }
 
     pub fn with_replacement_context(
@@ -1736,6 +1767,7 @@ impl<'a> EffectContext<'a> {
             replacement_subject_controller: None,
             cost_target_card: self.cost_target_card,
             cost_target_from_hand: self.cost_target_from_hand,
+            cost_target_permanents: Vec::new(),
         }
     }
 
@@ -2163,6 +2195,65 @@ impl<'a> EffectContext<'a> {
             return;
         }
         self.game.suspend(target);
+    }
+
+    /// Pay the source permanent's suspend-self activation cost.
+    ///
+    /// Used as the closure body for [`crate::effect::EffectBuilder::activation_cost`]
+    /// on Tamer triggered abilities like "by suspending this Tamer, gain 1
+    /// memory" (BT4-097 / BT8-090 / BT13-101 family). Returns `false` if
+    /// the source permanent is gone (extremely unlikely mid-trigger) or
+    /// is already suspended — in which case the body silently aborts and
+    /// the OPT slot is consumed by the queue dispatcher. Returns `true`
+    /// after delegating to [`Self::suspend`] (which fires `OnSuspend`
+    /// observers and the canonical single-target chokepoint).
+    ///
+    /// No-approximations note: this helper does NOT prompt — the player's
+    /// "may you accept" prompt belongs to [`crate::effect::EffectBuilder::optional`]
+    /// and runs BEFORE the cost. The cost is intrinsic to the trigger,
+    /// not a player decision (Working Rule 17).
+    pub fn suspend_self_as_cost(&mut self) -> bool {
+        let Some(handle) = self.source_permanent else {
+            return false;
+        };
+        let already_suspended = self
+            .source_permanent()
+            .map(|perm| perm.is_suspended)
+            .unwrap_or(true);
+        if already_suspended {
+            return false;
+        }
+        self.suspend(handle);
+        true
+    }
+
+    /// Pay the source permanent's return-self-to-deck-bottom activation
+    /// cost.
+    ///
+    /// Used as the closure body for
+    /// [`crate::effect::EffectBuilder::activation_cost`] on Tamer
+    /// triggered abilities like "By returning this Tamer to the bottom
+    /// of the deck..." (BT22-088 / BT22-094 / BT17-093 / EX11-071
+    /// family). Moves the top card of the source permanent to the
+    /// controller's deck bottom, trashes the rest of the digivolution
+    /// stack per standard return-to-deck rules, and fires
+    /// `OnLeaveField`. Returns `false` if the source permanent is gone
+    /// (extremely unlikely mid-trigger but possible if a prior chain
+    /// destroyed it).
+    pub fn return_self_to_deck_bottom_as_cost(&mut self) -> bool {
+        let Some(handle) = self.source_permanent else {
+            return false;
+        };
+        if self.source_permanent().is_none() {
+            return false;
+        }
+        // Use the top-card-only return path: the source's top card moves
+        // to its owner's deck bottom; any remaining digivolution sources
+        // are trashed by `Game::return_to_deck`. Mirrors the
+        // `return_to_deck { include_sources: false, position: bottom }`
+        // DSL step shape applied to `source`.
+        self.game
+            .return_to_deck(handle, crate::enums::StackPosition::Bottom)
     }
 
     /// Unsuspend a permanent and fire `OnUnsuspend` observers.
@@ -2829,6 +2920,37 @@ impl<'a> EffectContext<'a> {
         target: PermanentHandle,
     ) -> bool {
         self.game.place_permanent_as_bottom_sources(source, target)
+    }
+
+    /// Move `target`'s **top stacked card** (the card immediately beneath its
+    /// active top card — `card_sources[len - 2]`) to the bottom of its own
+    /// digivolution stack. Returns `false` if the target has no stacked card
+    /// beneath the top (i.e. `card_sources.len() < 2`), in which case the
+    /// printed-cost cannot be paid; callers should gate the activating step
+    /// with a `materials_count_gte: 1` (or equivalent) predicate.
+    ///
+    /// Closes `G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM` for the deterministic
+    /// "top stacked card → bottom" cost shape that DCGO encodes as
+    /// `card.PermanentOfThisCard().TopCard` followed by
+    /// `AddDigivolutionCardsBottom`. Per the no-approximations policy this
+    /// path does NOT surface a player choice over which source moves — the
+    /// printed text identifies a singular "top" source.
+    pub fn place_top_source_as_bottom(&mut self, target: PermanentHandle) -> bool {
+        let stack_size = self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .map(|p| p.card_sources.len())
+            .unwrap_or(0);
+        if stack_size < 2 {
+            return false;
+        }
+        let top_stacked_idx = stack_size - 2;
+        self.place_as_bottom_source(
+            crate::enums::CardSourceRef::Material(target, top_stacked_idx),
+            target,
+        )
     }
 
     /// Move `player`'s real breeding permanent into the battle area by effect.

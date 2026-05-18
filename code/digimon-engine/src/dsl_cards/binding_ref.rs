@@ -93,7 +93,17 @@ pub(crate) fn resolve_named(name: &str, bindings: &Bindings) -> Option<ResolvedB
         BindingValue::PermanentList(v) => Some(ResolvedBinding::PermanentList(v)),
         BindingValue::CardList(v) => Some(ResolvedBinding::CardList(v)),
         BindingValue::SourceRefs(_) => None,
-        BindingValue::BreedingPermanentRef(_) => None,
+        // Surface a breeding permanent binding as a sentinel `PermanentHandle`
+        // (`index = BREEDING_TARGET`). Engine APIs that accept
+        // `PermanentHandle` and operate on breeding permanents already
+        // recognize this sentinel (e.g. `place_as_bottom_source_observed`,
+        // `effective_dp`). Consumers that mean only "battle-area permanent"
+        // already filter by `h.index != BREEDING_TARGET as u8`. This unblocks
+        // `place_as_bottom_source: { target: <breeding-binding> }`.
+        BindingValue::BreedingPermanentRef(r) => Some(ResolvedBinding::Permanent(PermanentHandle {
+            player: r.player,
+            index: crate::action::space::BREEDING_TARGET as u8,
+        })),
     }
 }
 

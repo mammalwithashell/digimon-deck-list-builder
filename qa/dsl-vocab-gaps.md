@@ -57,6 +57,60 @@ This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine h
 > bilateral player-scoped passive modifier shape (Rocks) remain open
 > from the 2026-05-10 sweep.
 
+> **Tracker hygiene sweep — 2026-05-17 (Phase 2 Track F):** Five DNA
+> Omnimon DSL/substrate gaps closed; full closure summaries in
+> [resolved-gaps.md](resolved-gaps.md) under "Phase 2 Track F closure":
+>
+> - `G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM` — new deterministic verb;
+>   BT23-008 / BT23-018 production YAML authored.
+> - `G-DSL-GAIN-MEMORY-FN` — formula-valued memory mutation step.
+> - `G-DSL-HAS-ON-DELETION-EFFECT` — new permanent predicate
+>   consulting `effects_for_card` for `OnDeletion` timing. EX1-021
+>   both clauses authored.
+> - `G-ALT-PATH-DIRECTION-INTO` — `AltPathSpec.direction: into` schema
+>   extension + route-resolution threading. Substrate only; ST20-10
+>   warp YAML pending its companion `G-DSL-DISTINCT-TAMER-COLORS`
+>   predicate leaf.
+> - `G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET` —
+>   resolved as **phantom**; the chain dispatcher already worked.
+>   5 tests (BT16-040 / BT17-015 / BT17-027 / BT22-013 / BT22-026)
+>   un-ignored.
+>
+> Plus `G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA` verified as
+> already-shipped upstream; regression coverage added + P-182
+> [All Turns] aura authored.
+>
+> Still open from Track F's plan: `G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH`
+> (deferred — entangled with `G-SELECT-MULTI-MIN` and
+> `G-ZONE-TRASH-TO-DECK` sub-gaps). EX5-015 Clause C remains BLOCKED.
+
+> **Tracker hygiene sweep — 2026-05-17 (Phase 2 Track G):** Medusamon
+> pilot completion. One new DSL predicate substrate ships
+> (`G-OPP-SECURITY-COUNT-LTE`), closure summary in
+> [resolved-gaps.md](resolved-gaps.md) under "Phase 2 Track G closure".
+> Five Track G plan-named DSL gaps (G-EVENT-TARGET-OWNER,
+> G-PLACE-SELF-AS-OPTION-PERMANENT, G-ADD-OPTION-SELF-TO-HAND,
+> G-DSL-LINK-VERB, G-DSL-LINKED-SCOPE, G-MAY-ATTACK-NOW) were already
+> resolved by earlier upstream substrate work; Track G's role for those
+> was the test-tree sweep — stale `#[ignore]` annotations retagged from
+> "BLOCKED: G-XYZ" to "card-local body not authored; substrate closed"
+> across BT21-024 / BT21-025 / BT21-026 / BT21-029 / BT24-016 /
+> BT24-082 / LM-055 / EX11-054. The BT21-026 deletion arm migrated to
+> live YAML using `event_target_owner: opponent`; the BT21-093
+> cost-reduction clause migrated from a `count_lte` aggregate over
+> opponent security to the new native `opponent_security_count_lte`
+> predicate (raw_rust formula `bt21_093_cost_reduction_amount`
+> removed); EX11-054 [All Turns] clause migrated to Track B's
+> `activation_cost: { suspend_self: true }` so the suspend-as-cost
+> semantics gate the body correctly per the engine's single-trigger
+> drainer model. **12 Medusamon cards advanced PARTIAL → IMPLEMENTED.**
+>
+> Still open from Track G's plan: G-AURA-DP-FORMULA (BT21-072 formula
+> AuraBody DP), G-DELAY-SUSPEND-CONDITION (BT24-089 OnSuspend Delay),
+> G-ZONE-TRASH-TO-DECK (BT24-017 trash-to-deck verb), G-AS-SELECTING-PLAYER
+> (BT24-016 cross-permanent select-on-behalf), G-PRED-DP-LTE-AGGREGATE
+> (BT21-093 highest-DP delete).
+
 ## Track C modifier payload YAML shape (2026-05-09) — rich payload parser pending
 
 The Rust engine now has typed `ModifierPayload` storage and consult sites for
@@ -92,6 +146,39 @@ modifiers, e.g.:
 Until that parser lands, cards needing string/list/profile payloads should use
 `raw_rust` install hooks rather than hidden scalar encodings.
 
+## Phase 2 Track E (2026-05-17) — reveal-ordering DSL verbs landed
+
+The author-facing residual from `G-ROCKS-REVEAL-ORDERING` has landed: two
+new DSL verbs lower onto the already-shipped `select_reveal` /
+`select_effect_choice` / `select_ordered_permutation` / `place_remainder_on_deck`
+engine helpers. Together with the existing `reveal_top_deck` they express
+the canonical "reveal N, choose 1 to hand or as source, place rest top or
+bottom in any order" pattern that recurs across Rocks search effects and
+every general-purpose Training / Memory Boost / search clause.
+
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl track_e_reveal_ordering`
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_167 ex8_047 bt9_103`
+
+| DSL verb | Engine target | Card drivers |
+|---|---|---|
+| `choose_from_reveal: { of, filter, destination, bind_as?, optional?, prompt }` | `EffectContext::select_reveal` + routing to `add_to_hand_from_reveal` / `return_to_deck_from_reveal` / `place_as_bottom_source` | P-167 (hand and `bottom_source_of`), EX8-047 (two sequential hand picks) |
+| `order_remainder: { of, destinations: [deck_top, deck_bottom?] }` | `EffectContext::select_effect_choice` (when two destinations) + `select_ordered_permutation` + the `place_remainder_on_deck` placement loop | P-167 (player choice), EX8-047 (single `[deck_bottom]`) |
+
+The `destination` enum for `choose_from_reveal` accepts the bare scalars
+`hand`, `deck_top`, `deck_bottom`, or the mapping
+`bottom_source_of: { target: <binding> }` — matching the four routing
+shapes Rocks printed text actually requires. Other Rocks-flavoured
+"choose-to-play-free" destinations were not seen on any pool card and are
+deferred until they appear.
+
+Closure scope: `G-ROCKS-REVEAL-ORDERING` from
+`qa/archetype-qa/dsl/rocks-gap-inputs-2026-05-03.md` §50 is closed.
+`G-ROCKS-OPTION-SELF-DISPOSITION` §123 has its single remaining raw_rust
+target removed (P-206 → native `add_this_option_to_hand`; the other five
+target YAML files were already DSL-clean by 2026-05-10). The
+`G-ADD-OPTION-SELF-TO-HAND` DSL entry called out in P-206 test comments is
+also closed.
+
 ## Track E (2026-05-08) — engine helpers shipped, DSL verbs landed
 
 Track E shipped 8 zone-movement helpers + the owner-routing fix at the engine layer. The ten deferred DSL verbs now parse, validate, compile, and lower into the corresponding helpers. Evidence:
@@ -126,22 +213,33 @@ Format per entry:
 ```
 
 ## Royal Knights — filtered breeding permanent target  [RK-G001]
+- Status 2026-05-17: **CLOSED for substrate** by Phase 2 Track J PR 1.
+  `SelectOwnBreedingPermanentArgs::filter: PredicateSpec` is now wired
+  through compile → lowering → install: the predicate is evaluated against
+  `PredicateSubject::BreedingPermanent` before `select_own_breeding_permanent`
+  opens, so a non-matching breeding permanent short-circuits the step
+  instead of opening a misleading prompt. The companion `BreedingPermanentRef`
+  binding now resolves to a sentinel `PermanentHandle { index: BREEDING_TARGET }`,
+  which `place_as_bottom_source_observed` already recognizes — so the
+  printed shape "place a hand card under a [King Drasil_7D6] in breeding"
+  is expressible end-to-end. Proof: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2g_breeding_selection::select_own_breeding_permanent_filter`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2f1_placement_steps::place_as_bottom_source_accepts_breeding_permanent_target_from_hand_source`.
+  Card authoring for BT13-093 / BT20-083 / BT13-110 / EX11-053 lands in
+  Phase 2 Track J PR 2.
 - Effect text: BT13-093: "[On Deletion] Place 1 Digimon card with the [Royal Knight] trait from your hand under a [King Drasil_7D6] in the breeding area as its bottom digivolution card." BT20-083: "[On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area."
-- Missing DSL verb / step kind / predicate: `select_own_breeding_permanent` has no `filter` field, so YAML cannot require that the selected breeding permanent is actually `[King Drasil_7D6]`.
-- Lowers to engine API: existing breeding pending-selection and `place_as_bottom_source` flow once the selected breeding permanent can be filtered by top-card name/card id.
-- Suggested DSL syntax:
+- DSL surface (production form):
   ```yaml
   - select_own_breeding_permanent:
       bind_as: kd
       filter: { name_is: "King Drasil_7D6" }
       prompt: "Choose your [King Drasil_7D6]"
       then:
-        - place_as_bottom_source: { source: ..., target: kd }
+        - place_as_bottom_source: { source: <hand-binding>, target: kd }
   ```
 - First reported: 2026-05-05 Royal Knights batch 1 implementation pass.
 
 ## Royal Knights — source-bound return-self cost into reduced-cost hand play  [RK-G002]
 - Effect text: EX11-071: "[Main] By returning this Tamer to the bottom of the deck, you may play 1 play cost 4 or higher [Royal Knight] or [LIBERATOR] trait card from your hand with the play cost reduced by 2."
+- Status 2026-05-17: the **return-self-cost half** of this gap closed under Phase 2 Track B (Engine Gap: Generic `.activation_cost(...)` builder hook for triggered abilities, see `qa/resolved-gaps.md`). DSL `activation_cost: { return_self_to_deck_bottom: true }` lifts onto `EffectBuilder::activation_cost(ctx.return_self_to_deck_bottom_as_cost)`; the chained body fires after the source Tamer has left the field. The remaining **reduced-cost hand play half** is card-author DSL: stitch the existing hand selection + `play_from_hand: { cost: { reduce: 2 } }` after the activation-cost step.
 - Missing DSL verb / step kind / predicate: a Main-phase activation that pays a source-bound `return_to_deck { target: source, position: bottom }` cost and then opens a player-visible hand play selection whose actual payment is reduced by 2.
 - Lowers to engine API: existing source permanent binding, hand selection, and pay-cost flow need a reusable action/pending-selection wrapper so the return cost and reduced play payment stay one legal choice.
 - Suggested DSL syntax:
@@ -356,23 +454,22 @@ Format per entry:
 - First reported: 2026-04-28
 ---
 
-## BT23-005 — [Your Turn] cost reduction when digivolving into Reptile/Dragonkin
-- Effect text: "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1."
-- Missing DSL verb / step kind / predicate: `CostReductionBody` in `digimon-dsl/src/clause.rs` has no `when_this_digivolves_into` + `target_trait_has` trigger form. Existing variants are `when_playing_this: bool` and `when_any_ally_played: Option<PredicateSpec>`. Neither captures "THIS permanent is the digivolution source AND the target Digimon card has trait X".
-- Companion engine gap: `scan_before_pay_cost_reduction` in `game_actions.rs` constructs `EffectReadContext` from the source permanent only — no reference to the digivolution-target hand card is threaded to the condition closure, so a predicate cannot inspect the target's traits.
-- Lowers to engine API: `BeforePayCost` timing exists; fixed-amount cost reduction exists. Missing: trigger-predicate variant + target-card threading in `scan_before_pay_cost_reduction`.
-- Suggested DSL syntax:
+## BT23-005 — [Your Turn] cost reduction when digivolving into Reptile/Dragonkin  [G-BEFORE-PAY-COST-DIGIVOLVE-TARGET]
+- **Status: RESOLVED 2026-05-17** (Phase 2 Track H). See `qa/resolved-gaps.md` § "Phase 2 Track H closure — 2026-05-17" for the substrate landed (`cost_target` + `source_is_cost_target_permanent` predicates, digivolve-cost-calc target threading).
+- Authoring pattern:
   ```yaml
-  - scope: own
-    kind: cost_reduction
+  - kind: cost_reduction
     reduction_timing: before_pay_cost
-    when_this_digivolves_into:
-      target_trait_has: [Reptile, Dragonkin]
-    active_when: { your_turn: true }
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { trait_has: [Reptile, Dragonkin] }
     amount: 1
   ```
+- Card-authoring note: BT23-005 YAML still needs to be updated to use the new pattern; P-117 has been migrated as the proof-of-substrate (`code/digimon-engine/cards/p/P-117.yaml`).
 - First reported: 2026-04-27 (BT23-005 batch-implement-cards-rust-dsl)
-- Also blocks: P-117 clause 0 — "[Your Turn][OPT] When this Digimon would digivolve into a card with the [Free] trait, if you have a Tamer, reduce the digivolution cost by 1." Same structural gap: need `target_trait_has: Free` in a `when_this_digivolves_into` trigger form. Cross-listed 2026-05-04.
+- Also blocks (now resolvable): P-117 clause 0 — "[Your Turn][OPT] When this Digimon would digivolve into a card with the [Free] trait, if you have a Tamer, reduce the digivolution cost by 1." Migrated and validated 2026-05-17.
 
 ---
 
@@ -442,7 +539,17 @@ Format per entry:
 
 ---
 
-## BT21-024 — Opponent security count condition  [G-OPP-SECURITY-COUNT-LTE]
+## ~~BT21-024 — Opponent security count condition  [G-OPP-SECURITY-COUNT-LTE]~~ — RESOLVED 2026-05-17 (Phase 2 Track G)
+
+See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track G closure" entry.
+`PredicateSpec.opponent_security_count_lte: Option<DpConstraint>` and the
+`_gte` sibling now compile through `CompiledPredicate` and evaluate
+against `rctx.security_count(rctx.opponent_id())`. BT21-093 cost-reduction
+clause migrated to use the new predicate; BT21-024's negative-condition
+test was already passing through the `count_lte` aggregate over
+`{ zone: [security], owner: opponent }`.
+
+[ORIGINAL ENTRY BELOW]
 
 - Effect text: "[On Play][When Digivolving] If your opponent has 5 or fewer security cards, they place 1 card from their hand as the bottom security card. Then, trash their top security card."
 - Missing DSL verb / step kind / predicate: `opponent_security_count_lte` — a `PredicateSpec` / `BoolPredicate` leaf that checks the OPPONENT's (not controller's) security stack count. The existing `security_count_lte: u8` field in `PredicateSpec` evaluates `rctx.security_count(rctx.player)` (controller's security). No `of:` field exists on the predicate to redirect the player lookup. A separate `opponent_security_count_lte: Option<u8>` field is needed.
@@ -799,7 +906,15 @@ Format per entry:
 - Gap kind: hybrid (Rust engine modifier registry needs a typed grant slot; DSL needs the verb + lowering).
 - First reported: 2026-05-03 (EX1-068 Ice Wall!, batch-implement-cards-rust-dsl)
 
-## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN]
+## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN] — RESOLVED 2026-05-17 (Phase 2 Track F)
+
+See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track F closure" entry for
+the closure summary. `gain_memory_fn: { formula: ... }` + `lose_memory_fn`
+ship; EX1-021 production YAML authored.
+
+[ORIGINAL ENTRY BELOW]
+
+## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN] (legacy)
 - Effect text: EX1-021 MetalGarurumon — "[When Digivolving] Gain 1 memory for every 4 cards in your hand." DCGO: `count() = card.Owner.HandCards.Count / 4; AddMemory(count())`.
 - Status: OPEN (filed 2026-05-03 during EX1-021 batch-implement-cards-rust-dsl).
 - Missing DSL verb / step kind / predicate: `StepSpec::GainMemory(i32)` (`code/digimon-dsl/src/step.rs` line 67) is literal-only. There is no `gain_memory_fn:` variant that consumes a `FormulaSpec`. The same shape already exists for cost-reduction declarative bodies (`amount_fn:` on `kind: cost_reduction`, see BT8-097 / BT21-026 / BT24-017) — this gap is about extending the pattern to imperative `process:` steps.
@@ -818,7 +933,14 @@ Format per entry:
 - Gap kind: dsl. Engine has `add_memory` and formula evaluation; only the DSL surface is missing.
 - First reported: 2026-05-03 (EX1-021 MetalGarurumon, batch-implement-cards-rust-dsl)
 
-## EX1-021 — `has_on_deletion_effect` permanent predicate  [G-DSL-HAS-ON-DELETION-EFFECT]
+## EX1-021 — `has_on_deletion_effect` permanent predicate  [G-DSL-HAS-ON-DELETION-EFFECT] — RESOLVED 2026-05-17 (Phase 2 Track F)
+
+See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track F closure" entry.
+EX1-021 production YAML authored.
+
+[ORIGINAL ENTRY BELOW]
+
+## EX1-021 — `has_on_deletion_effect` permanent predicate  [G-DSL-HAS-ON-DELETION-EFFECT] (legacy)
 - Effect text: EX1-021 MetalGarurumon — "[When Attacking] If you have 8 or more cards in your hand and a Tamer in play, return 1 of your opponent's Digimon **that has an [On Deletion] effect** to the bottom of its owners deck." DCGO: `permanent.HasOnDeletionEffect`.
 - Status: OPEN (filed 2026-05-03 during EX1-021 batch-implement-cards-rust-dsl).
 - Missing DSL verb / step kind / predicate: `PredicateSpec` has no leaf that asks "does this permanent's top card (or any card in its digivolution stack) carry a triggered effect with `EffectTiming::OnDeletion`?" The closest existing leaf is `has_keyword` (which inspects `Keyword` modifiers on the permanent, not effect timings on the underlying card data).
@@ -961,7 +1083,17 @@ Format per entry:
 - Gap kind: closed for the Track E verb.
 - First reported: 2026-05-03 (EX9-021 Omnimon Alter-S, batch-implement-cards-rust-dsl). Sibling clause tracked at `G-PLACE-SELF-AT-SECURITY-BOTTOM` (EX4-060).
 
-## ST20-10 — Inverse alt-path direction: "this card may digivolve INTO X"  [G-ALT-PATH-DIRECTION-INTO]
+## ST20-10 — Inverse alt-path direction: "this card may digivolve INTO X"  [G-ALT-PATH-DIRECTION-INTO] — RESOLVED 2026-05-17 (Phase 2 Track F)
+
+See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track F closure" entry.
+Schema + lowering + route resolution all ship. ST20-10's warp clause
+remains BLOCKED on the companion `G-DSL-DISTINCT-TAMER-COLORS` predicate
+leaf (the Tamer-colour disjunct of its condition); the opp-DP disjunct
+is satisfiable today.
+
+[ORIGINAL ENTRY BELOW]
+
+## ST20-10 — Inverse alt-path direction (legacy)
 - Effect text: ST20-10 Agumon — "[Your Turn] While your opponent has a Digimon with 10000 DP or more, or your Tamers have 3 or more total colors, this Digimon can digivolve into [WarGreymon] in the hand for a digivolution cost of 4, ignoring digivolution requirements." Other warp-style printed effects with the "this Digimon can digivolve into [Card] in the hand" shape are likely siblings (DCGO grep for `cardCondition: ... CardSource.EqualsCardName(...)` paired with `permanentCondition: ... == card.PermanentOfThisCard()` inside `AddSelfDigivolutionRequirementStaticEffect`).
 - Status: OPEN (filed 2026-05-03 during ST20-10 batch-implement-cards-rust-dsl).
 - Missing DSL verb / step kind / predicate: `AltPathSpec` (in `digimon-dsl/src/alt_path.rs`) is implicitly source-directed — `from:` filters the SOURCE permanent / hand card that may digivolve INTO the carrier. There is no inverse form for "this card grants ITSELF the ability to digivolve into card X in hand." Authoring the alt-path on the destination card (WarGreymon's YAML) would over-broadcast: every Lv3 Agumon-named card on the field would be presented the path, and the destination YAML would have to enumerate every "warp into me" effect across the card pool. Authoring on the source (ST20-10) is the natural printed-text home but the DSL has no syntax for it.
@@ -1013,8 +1145,9 @@ Format per entry:
 ## BT13-101 / P-136 — event predicates with suspend-this-Tamer cost  [PUPPETS-G023]
 
 - Effect text: `BT13-101`: "[All Turns] When you play a 2-color black/yellow Digimon, by suspending this Tamer, <Draw 1> and gain 1 memory." `P-136`: "[Your Turn] [Once Per Turn] When one of your Digimon digivolves into a Digimon with the [Puppet] trait, by suspending this Tamer, gain 1 memory."
+- Status 2026-05-17: the **activation-cost half** of this gap closed under Phase 2 Track B. DSL `activation_cost: { suspend_self: true }` lifts onto `EffectBuilder::activation_cost(ctx.suspend_self_as_cost)`; cost failure (already-suspended source) consumes the OPT slot and skips the body silently (no decline-vs-fail elision). The **event-card colour predicates half** remains open: `BT13-101` still needs `event_card_color_only` / `event_card_color_count` to gate the All Turns observer faithfully. The three BT13-101 All Turns behavioural tests (`bt13_101_all_turns_*`) remain `#[ignore]` until those predicates land. See `qa/resolved-gaps.md` § Engine Gap: Generic `.activation_cost(...)` builder hook for triggered abilities for the substrate closure.
 - Missing DSL verb / step kind / predicate: event-card predicates for exact color sets and color count, event-target owner/trait predicates for digivolve observers where needed, plus declarative source-bound triggered activation costs.
-- Companion engine state: the generic triggered activation-cost hook is tracked in `docs/RUST_ENGINE_GAPS.md`; DSL must be able to bind it to "suspend this Tamer" and preflight availability before exposing a prompt.
+- Companion engine state: the generic triggered activation-cost hook is now resolved (`qa/resolved-gaps.md`); DSL `activation_cost: { suspend_self: true }` is wired and preflight comes for free via `EffectContext::suspend_self_as_cost` returning `false` on already-suspended sources.
 - Suggested DSL syntax:
   ```yaml
   condition:
@@ -1103,8 +1236,9 @@ Format per entry:
 ## BT22-088 — return-this-Tamer cost before branch free-play  [PUPPETS-G028]
 
 - Effect text: "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] with a different card number in your hand without paying the cost, or play 1 [Shoemon] from your hand or trash without paying the cost."
+- Status 2026-05-17: the **return-self-cost half** of this gap closed under Phase 2 Track B. DSL `activation_cost: { return_self_to_deck_bottom: true }` lifts onto `EffectBuilder::activation_cost(ctx.return_self_to_deck_bottom_as_cost)`; the engine queue's source-liveness check after the cost is now bypassed so the chained free-play branch can fire even though the source Tamer has left the field. The **branch selector half** remains open: BT22-088 still needs the `choose_one` body shape with origin-preserving hand/trash play consumers (exact-name Arisa from hand, exact-name Shoemon from hand-or-trash). The three BT22-088 Start-of-Main behavioural tests remain `#[ignore]` until that branch selector lands.
 - Missing DSL verb / step kind / predicate: optional triggered activation cost that moves the source permanent to the bottom of deck, then an in-effect branch selector with origin-preserving hand/trash play consumers.
-- Companion engine state: the generic triggered activation-cost hook is tracked in `docs/RUST_ENGINE_GAPS.md`; this card also needs a source-zone move as the cost and a follow-on branch selector.
+- Companion engine state: the generic triggered activation-cost hook is now resolved (`qa/resolved-gaps.md`); the source-zone move helper lives on `EffectContext::return_self_to_deck_bottom_as_cost`. The chained branch selector with hand/trash consumers is still card-author DSL surface.
 - Suggested DSL syntax:
   ```yaml
   activation_cost:
@@ -1204,24 +1338,21 @@ Format per entry:
 
 ## BT12-022 — BeforePayCost triggered gain_memory for "would DNA digivolve into" target  [G-BEFORE-PAY-COST-GAIN-MEMORY]
 
-- Effect text: "[Your Turn] When this Digimon would DNA digivolve into a green Digimon card, gain 1 memory." (BT12-022 ExVeemon)
-- Missing DSL verb / step kind / predicate: The DSL `kind: cost_reduction` with `reduction_timing: before_pay_cost` models only cost reductions (integer decrements to `memory_cost`). There is no triggered declarative form for `gain_memory` at `BeforePayCost` timing. DCGO uses `EffectTiming.BeforePayCost` with `CanTriggerWhenPermanentWouldDigivolveOfCard + IsJogress` + `card.Owner.AddMemory(1)` — the memory gain is an arbitrary effect (not a cost reduction) triggered at pre-pay-cost time.
-- Companion gap: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (already in qa/dsl-vocab-gaps.md) — the target-card threading (checking the would-digivolve-into card's color) is also missing. Both gaps must close before BT12-022 clause 0 can be implemented.
-- Companion note on `on_dna_digivolve` alternative: `on_dna_digivolve` timing fires AFTER DNA digivolve completes, so it could not faithfully model the "would" semantics. Also, no `event_card_color_is` predicate exists in `PredicateSpec` for filtering by the result card's color.
-- Lowers to engine API: `BeforePayCost` timing dispatch exists in `scan_before_pay_cost_reduction`; the gap is that it only updates `cost_delta`, not an arbitrary `gain_memory` side effect. A new DSL form (e.g., `kind: before_pay_cost_trigger`) with a `process:` body (not a `CostReductionBody`) would be needed.
-- Suggested DSL syntax (once G-BEFORE-PAY-COST-DIGIVOLVE-TARGET also closes):
+- **Status: RESOLVED 2026-05-17** (Phase 2 Track H). See `qa/resolved-gaps.md` § "Phase 2 Track H closure — 2026-05-17" for the substrate landed (sibling `Effect::before_pay_cost_observe` builder + `EffectTiming::BeforePayCostObserve` + `scan_before_pay_cost_observers` dispatch).
+- Authoring pattern:
   ```yaml
-  - scope: own
-    kind: before_pay_cost_trigger       # NEW form — triggered effect at BeforePayCost
-    when_this_digivolves_into:
-      target_color_is: green            # NEW predicate (needs G-BEFORE-PAY-COST-DIGIVOLVE-TARGET)
-      dna_only: true
-    active_when: { your_turn: true }
+  - when: before_pay_cost_observe
+    active_when:
+      all_of:
+        - your_turn: true
+        - dna_origin: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { color_is: green, kind: digimon }
     process:
       - gain_memory: 1
   ```
-- Gap kind: hybrid (engine-side: BeforePayCost dispatch handles only cost_delta; DSL-side: no `before_pay_cost_trigger` kind with process body).
-- Cards blocked: BT12-022 clause 0 (BLOCKED, omitted from YAML).
+- Cards implemented and validated: BT12-022 ExVeemon (clause 0), BT12-050 Stingmon (clause 0).
+- Companion gap (also resolved): G-BEFORE-PAY-COST-DIGIVOLVE-TARGET — see entry above.
 - First reported: 2026-05-04 (BT12-022 batch-implement-cards-rust-dsl)
 - First reported: 2026-05-04 (BT3-002 DemiVeemon DSL implementation)
 
@@ -1260,7 +1391,17 @@ Format per entry:
 
 ---
 
-## BT16-040 — effect-initiated digivolve from hand with permanent-target chain  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET]
+## BT16-040 — chained selection → effect_initiated_digivolve  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET] — RESOLVED 2026-05-17 (Phase 2 Track F)
+
+Resolved as **phantom** — see [resolved-gaps.md](resolved-gaps.md)
+"Phase 2 Track F closure". The chain dispatcher
+(`run_tail_preserving_trigger_context`) was already driving the chain
+to completion; the prior tests asserted mid-chain state and panicked
+on the auto-resolved post-state. 5 tests now active.
+
+[ORIGINAL ENTRY BELOW]
+
+## BT16-040 — effect-initiated digivolve chain (legacy)
 
 - Effect text: "[Start of Your Main Phase] [On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Insectoid] or [Free] trait in your trash with the digivolution cost reduced by 1." — process chain: select_own_permanent → select_trash_card → effect_initiated_digivolve.
 - Card first discovered in: BT16-040 Wormmon (Digimon, Lv.3, Green/White). Same gap blocks BT17-015, BT17-027 clause 0.

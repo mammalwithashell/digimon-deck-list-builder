@@ -251,6 +251,14 @@ pub enum EffectTiming {
 
     // Cost/play modification
     BeforePayCost,
+    /// Sibling of `BeforePayCost`, but for observer-style triggered bodies
+    /// (e.g. "[Your Turn] When this Digimon would DNA digivolve into a green
+    /// Digimon card, gain 1 memory."). Fires at the same dispatch point as
+    /// `BeforePayCost` (before memory deduction), but runs the effect's
+    /// `process` body instead of accumulating cost reduction. Keeps the
+    /// hot cost-reduction path uncoupled from observer bodies.
+    /// G-BEFORE-PAY-COST-GAIN-MEMORY (Phase 2 Track H closure).
+    BeforePayCostObserve,
     WhenPlayedFromHand,
 
     // Digivolution

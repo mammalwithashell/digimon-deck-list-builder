@@ -18,15 +18,17 @@ traits: [LIBERATOR]
 #
 # Supported faithfully:
 # - Security plays this Tamer without paying the cost.
-# - All Turns own Token/Puppet played observer with a visible suspend-this-Tamer
-#   activation choice before Draw 1.
+# - All Turns own Token/Puppet played observer with a Track B
+#   `activation_cost: { suspend_self: true }` cost-pay before Draw 1.
 #
 # Omitted rather than approximated:
-# - The start-of-main clause needs a visible optional activation before the
-#   return-this-Tamer-to-bottom-deck cost is paid. Current single optional
-#   triggered effects auto-fire, and `optional` process bodies do not expose a
-#   decline choice, so paying the cost would be hidden/forced
-#   (G-OPTIONAL-TRIGGER-COST).
+# - The start-of-main clause needs the chained `choose_one` + origin-
+#   preserving free-play branch selectors that Track B's substrate does
+#   not yet provide (per the Track B PR description: PUPPETS-G028 needs
+#   "chained choose_one + origin-preserving free-play branch selectors
+#   that are out of scope here"). The return-self-to-deck-bottom cost
+#   itself is now available via Track B but the surrounding hand/trash
+#   exact-name branches still need DSL plumbing.
 
 effects:
   - when: on_security
@@ -40,19 +42,11 @@ effects:
     condition:
       all_of:
         - event_target_owner: you
-        - source_is_unsuspended: true
         - any_of:
             - event_target_kind: token
             - all_of:
                 - event_target_kind: digimon
                 - event_target_trait_has: Puppet
     process:
-      - select_effect_choice:
-          labels: ["Suspend this Tamer", "Decline"]
-          bind_as: arisa_choice
-          prompt: "Suspend Arisa Kinosaki to Draw 1?"
-      - if:
-          condition: { equals: [arisa_choice, 0] }
-          then:
-            - suspend: { target: source }
-            - draw: { of: you, count: 1 }
+      - activation_cost: { suspend_self: true }
+      - draw: { of: you, count: 1 }

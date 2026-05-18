@@ -62,6 +62,8 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub play_cost_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub play_cost_gte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub can_digivolve_from_source: Option<bool>,
 
     // Leaf — permanent-only
@@ -87,6 +89,15 @@ pub struct PredicateSpec {
     pub is_unsuspended: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_keyword: Option<String>,
+    /// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true when the
+    /// permanent's top card (or any card in its digivolution stack) has a
+    /// triggered effect with `EffectTiming::OnDeletion` either via a
+    /// compiled DSL clause or a hand-written `CardEffect` impl. Used by
+    /// EX1-021 MetalGarurumon's "[When Attacking] return 1 opponent
+    /// Digimon **that has an [On Deletion] effect** to the bottom of
+    /// deck." DCGO `permanent.HasOnDeletionEffect`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_on_deletion_effect: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_color_count_gte: Option<u8>,
 
@@ -125,6 +136,10 @@ pub struct PredicateSpec {
     pub security_count_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub security_count_gte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opponent_security_count_lte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opponent_security_count_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub your_turn: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -233,6 +248,39 @@ pub struct PredicateSpec {
     // Misc contextual predicates
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_alt_path: Option<String>,
+
+    /// BeforePayCost target card predicate. When present, the inner
+    /// predicate is evaluated against the card whose cost is currently
+    /// being computed (`cost_target_card` on the effect read context),
+    /// treated as a `Card` subject. Fails when no cost target is active
+    /// (i.e., outside `BeforePayCost` cost-calc dispatch). Use the full
+    /// card-shape vocabulary inside: `trait_has`, `color_is`,
+    /// `name_contains`, `level_eq`/`_lte`/`_gte`, `kind`, etc.
+    ///
+    /// Example: a cost-reduction clause that fires only when the card
+    /// being digivolved into has the [Free] trait:
+    ///
+    /// ```yaml
+    /// active_when:
+    ///   your_turn: true
+    ///   cost_target: { trait_has: Free }
+    /// ```
+    ///
+    /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_target: Option<Box<PredicateSpec>>,
+
+    /// True when the effect's `source_permanent` is the (or one of the)
+    /// permanent(s) being digivolved by the action whose cost is being
+    /// computed. Use to gate "When THIS Digimon would digivolve into …"
+    /// printed semantics so the observer / cost reducer only fires when
+    /// its carrier permanent is actually the digivolution target. Single
+    /// entry for normal digivolve; both DNA materials for DNA digivolve.
+    /// Always false outside cost-calc dispatch and for effects whose
+    /// `source_permanent` is `None`.
+    /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_is_cost_target_permanent: Option<bool>,
 
     /// Captures unrecognized fields for controlled extension. Validator
     /// (Task 12) checks this for typos in inline predicate positions.

@@ -220,6 +220,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::MainFromTrash => CompiledTiming::MainFromTrash,
         S::Counter => CompiledTiming::Counter,
         S::BeforePayCost => CompiledTiming::BeforePayCost,
+        S::BeforePayCostObserve => CompiledTiming::BeforePayCostObserve,
         S::Delayed => CompiledTiming::Delayed,
     }
 }
@@ -230,6 +231,28 @@ fn compile_stack_position(p: crate::step::StackPosition) -> CompiledStackPositio
         S::Top => CompiledStackPosition::Top,
         S::Bottom => CompiledStackPosition::Bottom,
         S::Random => CompiledStackPosition::Random,
+    }
+}
+
+fn compile_remainder_destination(
+    d: crate::step::RemainderDestination,
+) -> CompiledRemainderDestination {
+    use crate::step::RemainderDestination as S;
+    match d {
+        S::DeckTop => CompiledRemainderDestination::DeckTop,
+        S::DeckBottom => CompiledRemainderDestination::DeckBottom,
+    }
+}
+
+fn compile_reveal_destination(d: &crate::step::RevealDestination) -> CompiledRevealDestination {
+    use crate::step::RevealDestination as S;
+    match d {
+        S::Hand => CompiledRevealDestination::Hand,
+        S::DeckTop => CompiledRevealDestination::DeckTop,
+        S::DeckBottom => CompiledRevealDestination::DeckBottom,
+        S::BottomSourceOf { target } => {
+            CompiledRevealDestination::BottomSourceOf(compile_binding_ref(target))
+        }
     }
 }
 
@@ -487,6 +510,10 @@ fn compile_predicate(
             .play_cost_lte
             .as_ref()
             .map(|d| compile_dp_constraint(d, &format!("{prefix}.play_cost_lte"), card_id, errors)),
+        play_cost_gte: p
+            .play_cost_gte
+            .as_ref()
+            .map(|d| compile_dp_constraint(d, &format!("{prefix}.play_cost_gte"), card_id, errors)),
         can_digivolve_from_source: p.can_digivolve_from_source,
         dp_eq: p
             .dp_eq
@@ -523,6 +550,7 @@ fn compile_predicate(
         is_suspended: p.is_suspended,
         is_unsuspended: p.is_unsuspended,
         has_keyword: p.has_keyword.clone(),
+        has_on_deletion_effect: p.has_on_deletion_effect,
         self_color_count_gte: p.self_color_count_gte,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
@@ -554,6 +582,22 @@ fn compile_predicate(
         }),
         security_count_gte: p.security_count_gte.as_ref().map(|d| {
             compile_dp_constraint(d, &format!("{prefix}.security_count_gte"), card_id, errors)
+        }),
+        opponent_security_count_lte: p.opponent_security_count_lte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.opponent_security_count_lte"),
+                card_id,
+                errors,
+            )
+        }),
+        opponent_security_count_gte: p.opponent_security_count_gte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.opponent_security_count_gte"),
+                card_id,
+                errors,
+            )
         }),
         your_turn: p.your_turn,
         opponents_turn: p.opponents_turn,
@@ -693,6 +737,15 @@ fn compile_predicate(
             ))
         }),
         has_alt_path: p.has_alt_path.clone(),
+        cost_target: p.cost_target.as_ref().map(|b| {
+            Box::new(compile_predicate(
+                b,
+                &format!("{prefix}.cost_target"),
+                card_id,
+                errors,
+            ))
+        }),
+        source_is_cost_target_permanent: p.source_is_cost_target_permanent,
     }
 }
 
@@ -835,6 +888,14 @@ fn compile_alt_path(
                 errors,
             ))
         }),
+        direction: match ap.direction {
+            crate::alt_path::AltPathDirection::From => {
+                crate::compiled::CompiledAltPathDirection::From
+            }
+            crate::alt_path::AltPathDirection::Into => {
+                crate::compiled::CompiledAltPathDirection::Into
+            }
+        },
     }
 }
 
@@ -939,6 +1000,24 @@ fn compile_triggered(
         TimingSet::Single(x) => vec![compile_timing(*x)],
         TimingSet::Multi(v) => v.iter().map(|x| compile_timing(*x)).collect(),
     };
+    // Phase 2 Track B — `activation_cost:` is only valid as the FIRST
+    // step of a triggered clause body. The lowering on the engine side
+    // lifts it onto `EffectBuilder::activation_cost(...)`; mid-body uses
+    // would silently no-op at runtime, so reject at compile time.
+    for (i, s) in t.process.iter().enumerate() {
+        if i == 0 {
+            continue;
+        }
+        if matches!(s, crate::step::StepSpec::ActivationCost(_)) {
+            errors.push(ValidationError {
+                card_id: card_id.to_string(),
+                path: format!("{prefix}.process[{i}]"),
+                message:
+                    "activation_cost must be the first step of a triggered clause body — it is lifted onto Effect::activation_cost and cannot appear mid-body"
+                        .to_string(),
+            });
+        }
+    }
     CompiledTriggeredClause {
         when,
         scope: compile_scope(t.scope),
@@ -1138,6 +1217,7 @@ fn compile_declarative(
             while_condition: a.while_condition.as_ref().map(|p| {
                 compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
             }),
+            applies_to_opponent_security_dp: a.applies_to_opponent_security_dp.unwrap_or(false),
             summary,
             summary_key,
         },
@@ -1451,6 +1531,12 @@ fn compile_step(
         S::GainMemory(n) => CompiledStep::GainMemory(*n),
         S::LoseMemory(n) => CompiledStep::LoseMemory(*n),
         S::SetMemory(n) => CompiledStep::SetMemory(*n),
+        S::GainMemoryFn(a) => CompiledStep::GainMemoryFn {
+            formula: compile_formula(&a.formula, &format!("{prefix}.gain_memory_fn"), card_id, errors),
+        },
+        S::LoseMemoryFn(a) => CompiledStep::LoseMemoryFn {
+            formula: compile_formula(&a.formula, &format!("{prefix}.lose_memory_fn"), card_id, errors),
+        },
 
         S::Draw(a) => CompiledStep::Draw {
             of: compile_player_ref(a.of),
@@ -1512,6 +1598,44 @@ fn compile_step(
             of: compile_player_ref(a.of),
             position: compile_stack_position(a.position),
         },
+        S::ChooseFromReveal(a) => CompiledStep::ChooseFromReveal {
+            of: compile_player_ref(a.of),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.choose_from_reveal.filter"), card_id, errors),
+            destination: compile_reveal_destination(&a.destination),
+            bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+            prompt_key: a.prompt_key.clone(),
+            optional: a.optional,
+        },
+        S::OrderRemainder(a) => {
+            if a.destinations.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.order_remainder.destinations"),
+                    message: "order_remainder requires at least one destination".to_string(),
+                });
+            }
+            if a.destinations.len() > 2 {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.order_remainder.destinations"),
+                    message: format!(
+                        "order_remainder supports at most 2 destinations (got {}); printed text variants beyond [deck_top, deck_bottom] are not modelled",
+                        a.destinations.len()
+                    ),
+                });
+            }
+            CompiledStep::OrderRemainder {
+                of: compile_player_ref(a.of),
+                destinations: a
+                    .destinations
+                    .iter()
+                    .map(|d| compile_remainder_destination(*d))
+                    .collect(),
+                prompt: a.prompt.clone(),
+                prompt_key: a.prompt_key.clone(),
+            }
+        }
 
         S::DeletePermanent(a) => CompiledStep::DeletePermanent {
             target: compile_binding_ref(&a.target),
@@ -1552,6 +1676,9 @@ fn compile_step(
             source: compile_binding_ref(&a.source),
             target: compile_binding_ref(&a.target),
         },
+        S::PlaceTopSourceAsBottom(a) => CompiledStep::PlaceTopSourceAsBottom {
+            target: compile_binding_ref(&a.target),
+        },
         S::TrashTopSource(a) => CompiledStep::TrashTopSource {
             target: compile_binding_ref(&a.target),
         },
@@ -1585,6 +1712,7 @@ fn compile_step(
         S::PlayFromHandFree(a) => CompiledStep::PlayFromHandFree {
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
+            bind_as: a.bind_as.clone(),
         },
         // PlayFromTrash reuses PlayFromHandArgs but the compiled form uses `trash_index`
         S::PlayFromTrash(a) => CompiledStep::PlayFromTrash {
@@ -1920,6 +2048,7 @@ fn compile_step(
         S::SelectOwnBreedingPermanent(a) => CompiledStep::SelectOwnBreedingPermanent {
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             then: a
                 .then
                 .iter()
@@ -2163,6 +2292,37 @@ fn compile_step(
             consumes: r.consumes.clone(),
             binds: r.binds.clone(),
         },
+        S::ActivationCost(a) => {
+            let kind = match (a.suspend_self, a.return_self_to_deck_bottom) {
+                (true, false) => Some(crate::compiled::CompiledActivationCostKind::SuspendSelf),
+                (false, true) => {
+                    Some(crate::compiled::CompiledActivationCostKind::ReturnSelfToDeckBottom)
+                }
+                (false, false) => {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{}.activation_cost", prefix),
+                        message:
+                            "activation_cost requires exactly one cost kind: suspend_self or return_self_to_deck_bottom"
+                                .to_string(),
+                    });
+                    None
+                }
+                (true, true) => {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{}.activation_cost", prefix),
+                        message:
+                            "activation_cost: suspend_self and return_self_to_deck_bottom are mutually exclusive"
+                                .to_string(),
+                    });
+                    None
+                }
+            };
+            CompiledStep::ActivationCost {
+                kind: kind.unwrap_or(crate::compiled::CompiledActivationCostKind::SuspendSelf),
+            }
+        }
     }
 }
 

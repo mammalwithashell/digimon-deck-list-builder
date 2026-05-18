@@ -95,6 +95,98 @@ fn set_memory_step_sets_absolute_value() {
     assert_eq!(runner.game.memory, 5);
 }
 
+// ── Phase 2 Track F (G-DSL-GAIN-MEMORY-FN) — formula-valued memory steps ─────
+
+#[test]
+fn gain_memory_fn_evaluates_formula_and_adds_to_memory() {
+    // Seed P0 with a 4-card hand and a literal-4 gain. The formula evaluator
+    // accepts any FormulaSpec — the trivial Literal case proves wiring.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("F", "F"))
+        .hand(0, &["F", "F", "F", "F"])
+        .build();
+    let before = runner.game.memory;
+    {
+        let card = runner.game.players[0].hand[0].handle();
+        let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
+        let mut b = Bindings::new();
+        run_step(
+            &CompiledStep::GainMemoryFn {
+                formula: digimon_dsl::compiled::CompiledFormula::Literal(4),
+            },
+            &mut ctx,
+            &mut b,
+        );
+    }
+    assert_eq!(
+        runner.game.memory,
+        before + 4,
+        "gain_memory_fn(literal:4) adds 4 to memory"
+    );
+}
+
+#[test]
+fn gain_memory_fn_with_floor_div_and_card_count_yields_quotient() {
+    // EX1-021 shape: gain memory == floor(hand_count / 4). With 5 cards
+    // in P0's hand, expect +1; with 8 cards, expect +2.
+    use digimon_dsl::compiled::{
+        CompiledFormula, CompiledPerSelector, CompiledPlayerRef, CompiledZone,
+    };
+
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("F", "F"))
+        .hand(0, &["F", "F", "F", "F", "F"])
+        .build();
+    let before = runner.game.memory;
+
+    let formula = CompiledFormula::FloorDiv(vec![
+        CompiledFormula::BasePerDelta {
+            base: 0,
+            per: CompiledPerSelector::CardCountInZoneScoped {
+                zone: CompiledZone::Hand,
+                of: CompiledPlayerRef::You,
+            },
+            delta: 1,
+        },
+        CompiledFormula::Literal(4),
+    ]);
+
+    {
+        let card = runner.game.players[0].hand[0].handle();
+        let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
+        let mut b = Bindings::new();
+        run_step(
+            &CompiledStep::GainMemoryFn { formula },
+            &mut ctx,
+            &mut b,
+        );
+    }
+    assert_eq!(
+        runner.game.memory,
+        before + 1,
+        "5 cards / 4 == 1 → +1 memory"
+    );
+}
+
+#[test]
+fn lose_memory_fn_evaluates_formula_and_subtracts_from_memory() {
+    let mut runner = fresh_runner();
+    let before = runner.game.memory;
+    {
+        let card = runner.game.players[0].hand[0].handle();
+        let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
+        let mut b = Bindings::new();
+        run_step(
+            &CompiledStep::LoseMemoryFn {
+                formula: digimon_dsl::compiled::CompiledFormula::Literal(3),
+            },
+            &mut ctx,
+            &mut b,
+        );
+    }
+    assert_eq!(runner.game.memory, before - 3);
+}
+
 // ── Task 5: Draw/trash/shuffle steps ─────────────────────────────────────────
 
 #[test]

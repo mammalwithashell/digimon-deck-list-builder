@@ -453,7 +453,6 @@ fn ad1_012_opt_blocks_second_on_play_in_same_turn() {
 /// Pending: G-OPT-TRIGGERED — DSL `once_per_turn` lowering may not yet enforce
 /// shared OPT across distinct timings within the same multi-timing clause.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — cross-timing OPT lockout for shared multi-timing clauses"]
 fn ad1_012_opt_blocks_when_attacking_after_on_play_same_turn() {
     let mut runner = cresgarurumon_runner();
 

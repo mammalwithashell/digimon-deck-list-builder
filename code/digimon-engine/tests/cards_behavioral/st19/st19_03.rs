@@ -2,12 +2,13 @@
 //! Printed text: [On Play] Reveal the top 3 cards of your deck. Add 1 card with
 //! the [Puppet] trait and 1 card with the [LIBERATOR] trait among them to the
 //! hand. Return the rest to the bottom of the deck.
-//!
-//! Inherited security-DP text is tracked separately because the DSL cannot yet
-//! express EffectBuilder::applies_to_opponent_security_dp().
+//! Inherited: [Your Turn] All of your opponent's security Digimon get -3000 DP.
 
 use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
+use digimon_engine::card_source::CardSource;
+use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::CardKind;
 
 #[test]
 fn st19_03_on_play_adds_puppet_and_liberator_without_double_picking_dual_match() {
@@ -87,4 +88,76 @@ fn zone_ids(
         .iter()
         .map(|card| card.card_id(data).to_string())
         .collect()
+}
+
+fn attacker_lv4(id: &str, dp: i32) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(dp);
+    card.play_cost = 5;
+    card
+}
+
+fn digimon_security_card(id: &str, dp: i32) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(dp);
+    card
+}
+
+#[test]
+fn st19_03_inherited_security_dp_debuff_lets_8000_attacker_survive_9000_security_digimon() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST19-03")
+        .expect("ST19-03 YAML loads")
+        .add_card(attacker_lv4("ATK", 8000))
+        .add_card(digimon_security_card("SEC", 9000))
+        .security(1, &["SEC"])
+        .start();
+
+    let atk = runner.place_on_field(0, "ATK", Some(0));
+    {
+        let game = runner.game_mut();
+        let data_idx = game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "ST19-03")
+            .expect("ST19-03 registered");
+        let next = game.next_card_index();
+        let perm = &mut game.players[atk.player as usize].battle_area[atk.index as usize];
+        let mut src = CardSource::new(data_idx, atk.player, next);
+        src.card_index = next;
+        perm.card_sources.insert(0, src);
+    }
+
+    let result = runner.attack_player(atk, 1, false);
+    assert_eq!(
+        result,
+        AttackResult::SecurityCheckSurvived,
+        "8000 DP attacker survives after Shoemon's -3000 drops 9000 security Digimon to 6000"
+    );
+    assert_eq!(runner.battle_area_size(0), 1);
+}
+
+#[test]
+fn st19_03_inherited_security_dp_debuff_without_shoemon_in_stack_loses_battle() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST19-03")
+        .expect("ST19-03 YAML loads")
+        .add_card(attacker_lv4("ATK", 8000))
+        .add_card(digimon_security_card("SEC", 9000))
+        .security(1, &["SEC"])
+        .start();
+
+    let atk = runner.place_on_field(0, "ATK", Some(0));
+
+    let result = runner.attack_player(atk, 1, false);
+    assert_eq!(
+        result,
+        AttackResult::AttackerDeletedBySecurity,
+        "without ST19-03 in stack, 8000 attacker loses to 9000 security Digimon"
+    );
+    assert_eq!(runner.battle_area_size(0), 0);
 }

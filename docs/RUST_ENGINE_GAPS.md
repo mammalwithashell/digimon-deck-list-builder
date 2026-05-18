@@ -89,6 +89,24 @@ Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`),
 > Royal Knights, TS Olympos, Zephagamon). All reusable primitives
 > called out by those documents are already represented by an entry
 > in this file or as an open verb in `qa/dsl-vocab-gaps.md`.
+>
+> **Tracker hygiene sweep — Phase 2 Track E (2026-05-17):** Rocks-pilot
+> author-facing residual closures. The Rocks gap-input doc's
+> `G-ROCKS-REVEAL-ORDERING`, `G-ROCKS-OPTION-SELF-DISPOSITION`, and
+> `G-ROCKS-PLAYER-SCOPED-PASSIVE-MODIFIERS` entries are all closed by a
+> single PR. The new `choose_from_reveal` + `order_remainder` DSL verbs
+> (see `qa/dsl-vocab-gaps.md` "Phase 2 Track E (2026-05-17)" block and
+> `qa/resolved-gaps.md` "Phase 2 Track E closure" block) lower onto the
+> already-shipped `select_reveal` / `select_effect_choice` /
+> `select_ordered_permutation` / `place_remainder_on_deck` engine
+> helpers — no new engine substrate. The "Selection: ordered
+> permutation" headline (already RESOLVED 2026-05-15 in
+> `qa/resolved-gaps.md`) stays closed; this PR consumes the substrate
+> through an author-facing DSL surface. Authored card drivers:
+> P-167 (full reveal/source-placement clause via the new verbs), EX8-047
+> (two-pick reveal clause), BT9-103 (Main + Security mirror via
+> `add_player_modifier` + `for_each` + `add_modifier`); P-206 raw_rust
+> shim removed in favour of native `add_this_option_to_hand`.
 
 There are two related assessment workflows:
 
@@ -164,7 +182,9 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Cross-card effect re-firing — foreign-card source-card variant (BT15-102)](#cross-card-effect-re-firing--activate-a-foreign-cards-on-play-effect-attributed-to-the-source) | 🟡 | 1 | `effect_context.rs` |
 | [Reveal-zone overlay (declarative type/level synthesized while card is in deck or being revealed)](#reveal-zone-overlay-declarative-typelevel-synthesized-while-card-is-in-deck-or-being-revealed) | 🔴 | 1 | `effect.rs`, `card_source.rs` |
 | [Effect-initiated play from face-up security stack (search-then-play-free)](#effect-initiated-play-from-face-up-security-stack-search-then-play-free) | 🔴 | 5+ | `effect_context.rs` |
-| [Generic `.activation_cost(...)` builder hook for triggered abilities](#generic-activation_cost-builder-hook-for-triggered-abilities-suspend-self--pay-as-cost-on-triggered-abilities) | 🔴 | 7+ | `effect.rs`, `effect_context.rs` |
+| ~~Generic `.activation_cost(...)` builder hook for triggered abilities~~ — RESOLVED 2026-05-17 (Phase 2 Track B) | ✅ | — | — |
+| ~~Once-per-turn enforcement for triggered effects (`G-OPT-TRIGGERED`)~~ — RESOLVED 2026-05-17 (Phase 2 Track C: diagnosed as already-closed; 23 stale `#[ignore]` annotations removed, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~OPT slot reset across turn cycle (`G-OPT-RESET-VIA-ATTACK-CYCLE`)~~ — RESOLVED 2026-05-17 (Phase 2 Track C: misdiagnosis; test-setup-only fix, see `qa/resolved-gaps.md`) | ✅ | — | — |
 | [Per-N-suspended scaling threshold residual (count-bound multi-select + formula downstream filter)](#per-n-suspended-scaling-threshold-for-deletion--damage-effects-count-bounded-multi-select-with-derived-threshold) | 🟡 | 1 | `effect_context.rs` |
 | [Player-scope mass `CannotSuspend` aura on opponent (condition-gated)](#player-scope-mass-cannotsuspend-aura-on-opponent-condition-gated-and--or-stack-depth-filtered) | 🔴 | 2 | `modifiers.rs`, `effect.rs` |
 | [Conditional security-in-stack trigger residual: start-of-turn / start-of-opponent-turn variants](#conditional-security-in-stack-trigger-security-end-of-opponents-turn--security-start-of-your-turn-etc) | 🟡 | 1 | `enums.rs`, `effect_queue.rs` |
@@ -172,10 +192,10 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Global `OnOptionCardTrashed` observer residual: legacy Option trash paths](#global-onoptioncardtrashed-observer-timing) | 🟡 | 1 | `effect_queue.rs`, `game.rs` |
 | [Plug-In re-link from battle area source zone residual](#plug-in-re-link-from-battle-area-source-zone) | 🟡 | 1 | `effect_context.rs` |
 | [`ctx.move_from_breeding()` optional level-filtered prompt wrapper](#ctxmove_from_breeding-effectcontext-helper) | 🟡 | 1 | `effect_context.rs` |
-| [Costed self-digivolve stable source binding (UNCLEAR)](#costed-self-digivolve-stable-source-binding) | 🔴 | 1 | unclear |
+| [Costed self-digivolve stable source binding](#costed-self-digivolve-stable-source-binding) | 🔴 | 1 | `effect_context.rs`, `binding_ref.rs` |
 | [Narrow opponent-effect protection for DP reduction and De-Digivolve](#narrow-opponent-effect-protection-for-dp-reduction-and-de-digivolve) | 🔴 | 1 | `modifiers.rs`, `effect.rs` |
 | [Effect play with played-Digimon On Play suppression](#effect-play-with-played-digimon-on-play-suppression) | 🔴 | 3+ | `effect_context.rs`, `game.rs` |
-| [End-of-attack mandatory self-delete chain (UNCLEAR — EX4-074)](#end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch) | 🔴 | 1 | unclear |
+| ~~End-of-attack mandatory self-delete chain (EX4-074)~~ | ✅ | — | RESOLVED 2026-05-17 (Track I first-test confirmed existing primitives suffice) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine-gap-end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch--resolved-2026-05-17-track-i) |
 
 **Group 5 contract note (2026-05-02):** Group 5 did not change ACTION_SPACE_SIZE or TENSOR_SIZE. New Link/Delay choices reuse existing pending-selection masks.
 
@@ -630,14 +650,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-global-onownsecurityremoved-observer-timing-mirror-of-onopponentsecurityremoved--resolved-2026-05-15-track-a-2026-05-06) by the 2026-05-15 hygiene sweep.
 
 ### Generic `.activation_cost(...)` builder hook for triggered abilities (suspend-self / pay-as-cost on triggered abilities)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** Dark Masters (2026-04-18)
-- **Card(s):** BT4-097 Kari Kamiya, BT8-090 Kari Kamiya, ST6-14 Matt Ishida, BT8-094 Digimon Emperor, EX9-068 Analogman, BT13-102 Keenan Crier, RB1-035 Hokuto Amanokawa — Puppets adds: BT13-101 Miki Kurosaki & Megumi Shirakawa (suspend this Tamer cost on a color-gated play observer), P-136 Arisa Kinosaki (suspend this Tamer cost on a Puppet-digivolve observer), BT22-088 Arisa Kinosaki (return this Tamer to bottom deck as Start-of-Main activation cost).
-- **Effect text:** "by suspending this Tamer, gain 1 memory" / "by suspending this Tamer to <Draw 1>" / "by suspending this Tamer, gain 1 memory if that Digimon is level 4 or higher, and <Draw 1> if it is level 3" / "By returning this Tamer to the bottom of the deck..."
-- **What's missing:** Distinct from "Dynamic cost reduction at BeforePayCost" which lists suspend-self-as-cost only in the context of cost reduction for plays/digivolves. These cards have no cost-reduction component — the entire ability body is cost-payment-gated on suspending the source permanent itself, on a triggered ability (not on a play action). Requires (a) a generic `EffectBuilder::activation_cost(|ctx| bool)` hook usable for any triggered timing, (b) a `ctx.suspend_self_as_cost() -> bool` helper that returns false if the permanent is already suspended, (c) propagation of the cost-failure path so the body does not execute. Distinct from `.optional()` — cost-failure is not a player decline.
-- **Suggested API shape:** `EffectBuilder::activation_cost(predicate: Fn(&mut Ctx) -> bool)` — runs predicate before `process`; if it returns false the effect is consumed without firing. `ctx.suspend_self_as_cost() -> bool`. Pairs with `.optional()` (player accepts the prompt, then must successfully pay cost).
-- **Workaround:** "None — faithful." Ad-hoc inline `if !perm.suspended { suspend; gain_memory(1); }` skips the failure-on-already-suspended path and cannot be re-used across cards.
-- **Related:** "Dynamic cost reduction at BeforePayCost (closure-valued + selection-gated + suspend/self-return as cost)" (same generic `.pay_cost` builder hook in scope, currently scoped only to cost-reduction usage); "Ergonomics partials" (if-effect-didn't-resolve on-decline callback).
+> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-generic-activation_cost-builder-hook-for-triggered-abilities--resolved-2026-05-17-phase-2-track-b) by Phase 2 Track B on 2026-05-17.
 
 ### Per-N-suspended scaling threshold for deletion / damage effects (count-bounded multi-select with derived threshold)
 - **Severity:** 🟡 PARTIAL (audit 2026-05-15: narrowed; formula leaf `suspended_count` landed in `digimon-dsl/src/formula.rs:137` per Track J 2026-05-10. Residual: chained count-bound multi-select followed by formula-threshold downstream filter — the DSL/Rust shape that lets a downstream `select_opponent_permanent` consume an upstream pick count as a derived threshold.)
@@ -788,11 +801,10 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Discovered in:** Puppets Batch 5 (2026-05-04)
 - **Card(s):** `EX9-032` Karakurumon
 - **Effect text:** "[On Play] [When Digivolving] By deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon may digivolve into a [Puppet] trait Digimon card in your hand without paying the cost."
-- **What's missing:** Effect resolution needs a stable binding for the resolving source permanent before paying a deletion cost. If the chosen cost body is earlier in the battle-area vector, deleting it shifts indices before a later self-digivolve step resolves. Preflight also needs to prove that a legal Token/Puppet cost body exists while excluding the source itself.
-- **Suggested API shape:** Bind the source as a `PermanentHandle` or equivalent stable identity at trigger dispatch, evaluate cost predicates against that binding, and let effect-initiated digivolve consume the stable handle instead of `target: self` as a mutable index.
+- **What's missing:** Effect resolution needs a stable binding for the resolving source permanent across mid-body deletions. `EffectContext::source_permanent` stores a `PermanentHandle { player, index: u8 }` — an index into the controller's battle area. When a mid-body step deletes a lower-indexed permanent, `Player::delete_permanent` does `battle_area.remove(index)` (no handle adjustment), shifting all later permanents down by one, but `ctx.source_permanent` keeps the original (now stale) index. The subsequent `effect_initiated_digivolve { target: source }` resolves the stale handle and either targets the wrong slot or none. Preflight also needs to prove that a legal Token/Puppet cost body exists while excluding the source itself.
+- **Suggested API shape:** Either (a) refactor `PermanentHandle` to a stable id (e.g. `CardHandle` of the base card) with lookup helpers, or (b) maintain a `source_permanent_card: CardHandle` snapshot alongside `source_permanent`, refreshed by `binding_ref.rs::Source` resolution by searching for the carrier card-handle in the live battle area. Approach (b) is the lower-blast-radius option and matches the audit footer's "existing `ctx.source_permanent` snapshot semantics" intent.
 - **Workaround:** None faithful. Omitting the active slice is safer than hidden auto-costing or index-based self-digivolve.
-- **First test:** Trigger `EX9-032`, delete a lower-index own Puppet as the cost, and assert the original `EX9-032` stack digivolves into the selected hand Puppet.
-- **Updated 2026-05-15 (audit):** Audit (2026-05-15) flagged as UNCLEAR — write the EX9-032 first-test per the entry's own "First test" note before further engine work. The substrate may already be correct via existing `ctx.source_permanent` snapshot semantics; the EX9-032 test may need writing to confirm. See [`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md).
+- **Updated 2026-05-17 (Track I first-test):** First test [`code/digimon-engine/tests/cards_behavioral/ex9/ex9_032.rs`](../code/digimon-engine/tests/cards_behavioral/ex9/ex9_032.rs) `ex9_032_on_play_deletes_token_or_other_puppet_then_free_digivolves_into_puppet` written and confirmed failing. Repro: PUPPET-COST / PLAIN-COST / TOKEN-COST seeded into battle area, EX9-032 played to index 3; selecting PUPPET-COST (index 0) as cost deletes idx 0 — Karakurumon's live index drops to 2, but `ctx.source_permanent.index` is still 3, and the `effect_initiated_digivolve { target: source }` never lands the digivolve. **What now works without engine change:** the `when_digivolving` half (`ex9_032_when_digivolving_uses_same_cost_and_free_puppet_hand_digivolve_flow`) and the `optional`-decline path (`ex9_032_declining_on_play_cost_does_not_delete_or_digivolve`) pass against the current YAML, because they avoid the index-shift scenario (Karakurumon at idx 0, cost body at idx 1). **Still BLOCKING:** the index-shift case (above) and the no-legal-cost-preflight case (separate G-COSTED-SELF-DIGIVOLVE-PREFLIGHT).
 
 ### Inherited Token/Puppet leave-prevention replacement dispatch
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-inherited-tokenpuppet-leave-prevention-replacement-dispatch--resolved-2026-05-15-track-b-2026-05-08) by the 2026-05-15 hygiene sweep.
@@ -827,15 +839,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **First test:** Security-check `BT5-106`, select a level 3 purple Digimon from trash with a visible On Play memory-gain effect, and assert the Digimon enters play while its On Play effect does not fire.
 
 ### End-of-attack mandatory self-delete chain with recovery and conditional hatch
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** Puppets resolver Batch 10 (2026-05-04)
-- **Card(s):** `EX4-074` ShineGreymon: Ruin Mode
-- **Effect text:** "[End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and <Recovery +1 (Deck)>. Then, if you have a Tamer in play, hatch 1 Digi-Egg card to an empty space in your breeding area."
-- **What's missing:** This chain needs faithful continuation across several edge cases: deleting the resolving source while preserving the rest of the queued chain, selecting/deleting one opponent Digimon without hiding a target choice, running Recovery +1 even when no opponent target exists if rules require the mandatory chain to continue, and conditionally hatching only when the player has a Tamer and an empty breeding area. The individual movement verbs exist, but this exact mandatory chain needs a card/engine fidelity pass.
-- **Suggested API shape:** Support source-stable self-delete inside a triggered chain, mandatory target-selection continuation semantics for no-eligible-target branches, and a guarded hatch step such as `hatch_if: { condition: has_own_tamer, requires_empty_breeding: true }` that does not expose a no-op hatch action.
-- **Workaround:** None faithful. Auto-selecting the opponent Digimon or dropping later tail steps would violate no-approximations and printed mandatory sequencing.
-- **First test:** Attack with `EX4-074`, resolve End of Attack with a Tamer and a legal opponent Digimon, and assert Ruin Mode deletes itself, the chosen opponent Digimon is deleted, Recovery +1 resolves, and a Digi-Egg is hatched only when the Tamer/breeding conditions are met.
-- **Updated 2026-05-15 (audit):** Audit (2026-05-15) flagged as UNCLEAR — first-test write recommended per the entry's own "First test" note before further engine work. All individual verbs exist; the EX4-074 mandatory chain likely works with existing primitives but needs proof via behavioral test. See [`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md).
+> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch--resolved-2026-05-17-track-i) by the 2026-05-17 Track I first-test confirmation. Existing primitives (`delete_permanent { target: source }`, `select_opponent_permanent { optional: true }`, `recover`, `if { any_field_permanent + can_hatch } then hatch`) compose into a faithful chain — see `code/digimon-engine/cards/ex4/EX4-074.yaml` Clause 2 and `code/digimon-engine/tests/cards_behavioral/ex4/ex4_074.rs::ex4_074_end_of_attack_self_deletes_opponent_delete_recovers_and_hatches_with_tamer`.
 
 ## Resolved gaps
 

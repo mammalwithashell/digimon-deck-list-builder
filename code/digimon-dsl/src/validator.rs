@@ -1071,6 +1071,13 @@ fn validate_step_binding_scope(
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::SelectOwnBreedingPermanent(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
             let mut child = scope.clone();
             declare_optional_binding(&mut child, &args.bind_as);
             validate_steps_binding_scope(

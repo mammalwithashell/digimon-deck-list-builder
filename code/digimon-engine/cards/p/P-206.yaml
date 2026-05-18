@@ -121,7 +121,7 @@ cost: 4
 #       select_effect_choice: "From hand" / "From trash"
 #       if (zone_choice == 0): select_hand + play_from_hand_free
 #       if (zone_choice == 1): select_trash + play_from_trash_free
-#       raw_rust: { fn: p_206_add_self_to_hand }   ← G-ADD-OPTION-SELF-TO-HAND
+#       add_this_option_to_hand: {}  (Phase 2 Track E: previously raw_rust p_206_add_self_to_hand)
 #
 # Note: Same structural pattern as P-189's security clause, extended with the
 #       "add this card to hand" tail.
@@ -243,6 +243,8 @@ effects:
             - play_from_trash_free:
                 of: you
                 hand_index: picked_trash
-      # "Then, add this card to the hand." — G-ADD-OPTION-SELF-TO-HAND.
-      # raw_rust stub: same pattern as ex6_072_add_self_to_hand.
-      - raw_rust: { fn: p_206_add_self_to_hand }
+      # "Then, add this card to the hand."
+      # Modernized 2026-05-17 (Phase 2 Track E): raw_rust p_206_add_self_to_hand →
+      # native DSL `add_this_option_to_hand`. Same engine helper
+      # (EffectContext::add_pending_security_to_hand) — behaviorally identical.
+      - add_this_option_to_hand: {}

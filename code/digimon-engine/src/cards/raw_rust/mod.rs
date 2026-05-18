@@ -839,39 +839,6 @@ fn lm_027_add_self_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings
     ctx.add_pending_security_to_hand();
 }
 
-/// P-206 Digital Gate Open — [Inherited][Security] "Then, add this card to the hand."
-///
-/// Printed effect: "[Security] You may play 1 Digimon card with a play cost of 3 or
-/// less from your hand or trash without paying the cost. Then, add this card to the hand."
-///
-/// DCGO analysis (P_206.cs, EffectTiming.SecuritySkill):
-///   `CardEffectCommons.AddThisCardToHand(card, activateClass)` — moves the
-///   currently-resolving Option card from security-resolution staging into the
-///   controller's hand instead of routing it to trash.
-///
-/// Legacy raw-rust shim; prefer native DSL `add_this_option_to_hand: {}`.
-fn p_206_add_self_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    ctx.add_pending_security_to_hand();
-}
-
-/// BT21-093 Raging Serpentine — cost reduction formula.
-///
-/// Returns 4 if the opponent has ≤3 security cards (per printed text); else 0.
-/// Tracked under G-OPP-SECURITY-COUNT-LTE in `qa/dsl-vocab-gaps.md` — the proper
-/// fix is a new `opponent_security_count_lte` predicate, after which this raw_rust
-/// shim can be replaced by `condition: { opponent_security_count_lte: 3 }, amount: 4`.
-fn bt21_093_cost_reduction_amount(
-    rctx: &crate::effect_context::EffectReadContext<'_>,
-    _target: crate::permanent::PermanentHandle,
-) -> i32 {
-    let opponent = 1 - rctx.player;
-    if rctx.game.player(opponent).security.len() <= 3 {
-        4
-    } else {
-        0
-    }
-}
-
 /// BT21-093 Raging Serpentine — Main + Security clause: delete 1 of opponent's
 /// highest-DP Digimon (mandatory if any eligible target).
 ///
@@ -1094,11 +1061,11 @@ pub fn build_registry() -> EngineRawRustRegistry {
         lm_027_delay_start_of_turn_noop,
     );
     r.register_step("lm_027_add_self_to_hand", lm_027_add_self_to_hand);
-    r.register_step("p_206_add_self_to_hand", p_206_add_self_to_hand);
-    r.register_formula(
-        "bt21_093_cost_reduction_amount",
-        bt21_093_cost_reduction_amount,
-    );
+    // p_206_add_self_to_hand was removed 2026-05-17 (Phase 2 Track E) —
+    // P-206 now uses native DSL `add_this_option_to_hand`.
+    // bt21_093_cost_reduction_amount was removed 2026-05-17 (Phase 2 Track G)
+    // — BT21-093 now uses the native `opponent_security_count_lte: 3`
+    // predicate over the existing fixed `amount: 4` cost-reduction slot.
     r.register_step(
         "bt21_093_delete_highest_dp_opponent",
         bt21_093_delete_highest_dp_opponent,

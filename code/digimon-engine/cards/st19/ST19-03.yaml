@@ -32,6 +32,14 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: liberator_pick }
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  # Inherited [Your Turn] "All of your opponent's security Digimon get -3000 DP"
-  # needs a DSL vocabulary bridge to EffectBuilder::applies_to_opponent_security_dp.
-  # Omitted rather than approximated; tracked in the Puppets DSL QA artifact.
+  # Inherited [Your Turn] "All of your opponent's security Digimon get -3000 DP".
+  # PUPPETS-G008: lowers via `applies_to_opponent_security_dp: true` to
+  # `EffectBuilder::applies_to_opponent_security_dp()` so the -3000 DP rides
+  # under the attacker's stack and surfaces during the security battle's
+  # `attacker_security_dp_adjustment`.
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    dp_modifier: -3000
+    applies_to_opponent_security_dp: true
+    summary: "[Inherited][Your Turn] All opponent security Digimon get -3000 DP"

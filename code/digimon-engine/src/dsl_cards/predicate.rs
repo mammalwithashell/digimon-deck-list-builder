@@ -102,6 +102,20 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(cap) = &pred.opponent_security_count_lte {
+        if (rctx.security_count(rctx.opponent_id()) as i32)
+            > eval_int_constraint_read(cap, rctx, None, bindings)
+        {
+            return false;
+        }
+    }
+    if let Some(floor) = &pred.opponent_security_count_gte {
+        if (rctx.security_count(rctx.opponent_id()) as i32)
+            < eval_int_constraint_read(floor, rctx, None, bindings)
+        {
+            return false;
+        }
+    }
     if let Some(name) = &pred.binding_exists {
         if bindings.and_then(|b| b.get_ref(name)).is_none() {
             return false;
@@ -133,6 +147,32 @@ pub fn eval_predicate_with_bindings(
     }
     if let Some(want) = pred.dna_origin {
         if rctx.dna_origin() != want {
+            return false;
+        }
+    }
+    // G-BEFORE-PAY-COST-DIGIVOLVE-TARGET: when a `cost_target` sub-
+    // predicate is present, evaluate it as a Card predicate against the
+    // card whose cost is currently being inspected. Fails outside any
+    // BeforePayCost cost-calc dispatch (`cost_target_card == None`).
+    if let Some(inner) = &pred.cost_target {
+        let Some(target) = rctx.cost_target_card else {
+            return false;
+        };
+        if !eval_predicate_with_bindings(
+            inner,
+            rctx,
+            PredicateSubject::Card(target),
+            bindings,
+        ) {
+            return false;
+        }
+    }
+    // G-BEFORE-PAY-COST-DIGIVOLVE-TARGET: gate to "THIS permanent is
+    // the digivolve target" — fires when the effect's source_permanent
+    // is one of the digivolve target permanents (single entry for
+    // normal digivolve, both materials for DNA).
+    if let Some(want) = pred.source_is_cost_target_permanent {
+        if rctx.source_is_cost_target_permanent() != want {
             return false;
         }
     }
@@ -725,6 +765,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.name_in.is_none()
         && pred.card_number_is.is_none()
         && pred.play_cost_lte.is_none()
+        && pred.play_cost_gte.is_none()
         && pred.self_color_count_gte.is_none()
         && pred.dp_eq.is_none()
         && pred.dp_lte.is_none()
@@ -1307,6 +1348,41 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(floor) = &pred.play_cost_gte {
+        if i32::from(data.play_cost) < eval_int_constraint(floor, rctx, formula_target, bindings) {
+            return false;
+        }
+    }
+    // Card-subject DP filter. Cards in trash/hand/security carry their printed
+    // DP via `CardData.dp`; permanents on the field route through
+    // `eval_dp_constraints` against `effective_dp`. Options and other
+    // non-Digimon cards have `dp = None` and cannot satisfy a DP constraint.
+    if pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some() {
+        let Some(dp) = data.dp else {
+            return false;
+        };
+        let perm_target = formula_target.or(rctx.source_permanent).unwrap_or(
+            crate::permanent::PermanentHandle {
+                player: rctx.player,
+                index: 0,
+            },
+        );
+        if let Some(want) = &pred.dp_eq {
+            if dp != eval_dp_constraint(want, rctx, perm_target, bindings) {
+                return false;
+            }
+        }
+        if let Some(cap) = &pred.dp_lte {
+            if dp > eval_dp_constraint(cap, rctx, perm_target, bindings) {
+                return false;
+            }
+        }
+        if let Some(floor) = &pred.dp_gte {
+            if dp < eval_dp_constraint(floor, rctx, perm_target, bindings) {
+                return false;
+            }
+        }
+    }
     if let Some(want) = pred.can_digivolve_from_source {
         if can_card_digivolve_from_source(rctx, card) != want {
             return false;
@@ -1379,6 +1455,39 @@ fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle
         return false;
     };
     rctx.game.can_digivolve(candidate, source_permanent)
+}
+
+/// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true if `perm`'s top
+/// card or any digivolution source carries any `OnDeletion`-timed effect.
+/// Consulted by `has_on_deletion_effect: <bool>` predicate.
+///
+/// Walks both the registry-bound hand-written `CardEffect` impl and the
+/// compiled DSL clauses (returned together by `Game::effects_for_card`)
+/// and returns true on the first OnDeletion hit. Per printed text the
+/// gate is on the existence of the printed timing, not on whether the
+/// effect is currently runtime-active — `effects_for_card` already
+/// expands keyword-derived auto-effects (Save, MaterialSave, Decoy,
+/// etc.) so cards whose On Deletion text is keyword-shaped (e.g.
+/// `<Save>`) also surface here.
+fn permanent_has_on_deletion_effect(
+    perm: &crate::permanent::Permanent,
+    rctx: &EffectReadContext<'_>,
+) -> bool {
+    use crate::enums::EffectTiming;
+    let data = rctx.card_data();
+    for source in &perm.card_sources {
+        let card_id = source.card_id(data);
+        let Some(effects) = rctx.game.effects_for_card(card_id, source.handle()) else {
+            continue;
+        };
+        if effects
+            .iter()
+            .any(|e| matches!(e.timing, EffectTiming::OnDeletion) || e.on_deletion)
+        {
+            return true;
+        }
+    }
+    false
 }
 
 fn distinct_color_count(colors: &[CardColor]) -> usize {
@@ -1592,6 +1701,12 @@ fn eval_permanent_fields(
             return false;
         };
         if !rctx.game.has_keyword(handle, kw) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.has_on_deletion_effect {
+        let observed = permanent_has_on_deletion_effect(perm, rctx);
+        if observed != want {
             return false;
         }
     }

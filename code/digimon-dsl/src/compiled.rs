@@ -126,6 +126,20 @@ pub struct CompiledAltPath {
     /// Closes G-ALT-PATH-CONDITION (BT24-016).
     #[serde(default)]
     pub condition: Option<Box<CompiledPredicate>>,
+    /// Phase 2 Track F (G-ALT-PATH-DIRECTION-INTO) — direction flip.
+    /// `From` (default): legacy reading; alt-path is registered on the
+    /// destination card and `from:` filters the source candidate.
+    /// `Into`: alt-path is registered on the source card and `from:`
+    /// filters the destination hand-card candidate. ST20-10 warp-shape.
+    #[serde(default)]
+    pub direction: CompiledAltPathDirection,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+pub enum CompiledAltPathDirection {
+    #[default]
+    From,
+    Into,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -189,6 +203,7 @@ pub struct CompiledPredicate {
     pub name_in: Option<Vec<String>>,
     pub card_number_is: Option<String>,
     pub play_cost_lte: Option<CompiledDpConstraint>,
+    pub play_cost_gte: Option<CompiledDpConstraint>,
     pub can_digivolve_from_source: Option<bool>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
@@ -201,6 +216,12 @@ pub struct CompiledPredicate {
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
     pub has_keyword: Option<String>,
+    /// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true if the
+    /// candidate permanent carries any `EffectTiming::OnDeletion`-timed
+    /// triggered effect via a compiled DSL clause or a hand-written
+    /// `CardEffect` impl. EX1-021 MetalGarurumon's [When Attacking] arm
+    /// gates target selection on this predicate.
+    pub has_on_deletion_effect: Option<bool>,
     pub self_color_count_gte: Option<u8>,
     pub zone: Vec<CompiledZone>,
     pub owner: Option<CompiledPlayerRef>,
@@ -216,6 +237,8 @@ pub struct CompiledPredicate {
     pub memory_gte: Option<CompiledDpConstraint>,
     pub security_count_lte: Option<CompiledDpConstraint>,
     pub security_count_gte: Option<CompiledDpConstraint>,
+    pub opponent_security_count_lte: Option<CompiledDpConstraint>,
+    pub opponent_security_count_gte: Option<CompiledDpConstraint>,
     pub your_turn: Option<bool>,
     pub opponents_turn: Option<bool>,
     pub all_turns: Option<bool>,
@@ -266,6 +289,17 @@ pub struct CompiledPredicate {
     pub host_permanent_trait_has: Option<String>,
     pub trashed_source_trait_has: Option<String>,
     pub trashed_source_card_id_is: Option<String>,
+    /// BeforePayCost cost-target sub-predicate. Evaluated as a `Card`
+    /// subject against the cost target (`cost_target_card` on the read
+    /// context). Fails when no cost target is active. Used by
+    /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
+    pub cost_target: Option<Box<CompiledPredicate>>,
+    /// True when the effect's `source_permanent` is one of the
+    /// digivolve-target permanents on the read context's
+    /// `cost_target_permanents`. Used to gate
+    /// "When THIS Digimon would digivolve into ..." printed semantics.
+    /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
+    pub source_is_cost_target_permanent: Option<bool>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -464,6 +498,11 @@ pub enum CompiledDeclarativeClause {
         /// `Expiry::UntilCondition` carrying this predicate. Eviction is
         /// final per PR #458 (`false → true` does not re-install).
         while_condition: Option<CompiledPredicate>,
+        /// PUPPETS-G008 — when true, the lowered effect calls
+        /// `EffectBuilder::applies_to_opponent_security_dp()` so the
+        /// `dp_modifier` rides as an attacker-side security-DP adjustment
+        /// during the security battle (rather than as a battle-area aura).
+        applies_to_opponent_security_dp: bool,
         summary: Option<String>,
         summary_key: Option<String>,
     },
@@ -618,6 +657,13 @@ pub enum CompiledTiming {
     MainFromTrash,
     Counter,
     BeforePayCost,
+    /// Sibling of `BeforePayCost` for observer-style triggered bodies
+    /// (e.g. "When this would DNA digivolve into a green Digimon card,
+    /// gain 1 memory."). Lowers to `EffectTiming::BeforePayCostObserve`
+    /// and fires its `process` body at the same dispatch point as
+    /// `BeforePayCost` cost reducers without coupling to cost-reduction
+    /// fields. G-BEFORE-PAY-COST-GAIN-MEMORY (Phase 2 Track H closure).
+    BeforePayCostObserve,
     Delayed,
 }
 
@@ -663,6 +709,12 @@ pub enum CompiledStep {
     GainMemory(i32),
     LoseMemory(i32),
     SetMemory(i32),
+    /// Phase 2 Track F (G-DSL-GAIN-MEMORY-FN): formula-valued memory
+    /// mutation. Evaluated at resolution time via `formula_eval` and
+    /// fed to the engine's signed `add_memory` helper. Mirror of the
+    /// literal `GainMemory(i32)` with runtime-computed magnitude.
+    GainMemoryFn { formula: CompiledFormula },
+    LoseMemoryFn { formula: CompiledFormula },
     Draw {
         of: CompiledPlayerRef,
         count: u8,
@@ -723,6 +775,31 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         position: CompiledStackPosition,
     },
+    /// Phase 2 Track E (2026-05-17): pick one revealed card matching `filter`
+    /// and route it to `destination`. Lowers as a single selection install
+    /// whose callback routes the picked card to the typed destination. The
+    /// optional `bind_as` records the picked CardHandle for downstream
+    /// reference.
+    ChooseFromReveal {
+        of: CompiledPlayerRef,
+        filter: CompiledPredicate,
+        destination: CompiledRevealDestination,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional: bool,
+    },
+    /// Phase 2 Track E (2026-05-17): place the entire reveal pool onto the
+    /// controller's deck. When `destinations.len() == 1` behaves like
+    /// `place_remainder_on_deck`. When `destinations.len() == 2` surfaces a
+    /// player effect-choice over the entries before placing. Ordering is
+    /// always exposed via `select_ordered_permutation` (Working Rule §17).
+    OrderRemainder {
+        of: CompiledPlayerRef,
+        destinations: Vec<CompiledRemainderDestination>,
+        prompt: Option<String>,
+        prompt_key: Option<String>,
+    },
     DeletePermanent {
         target: CompiledBindingRef,
     },
@@ -762,6 +839,15 @@ pub enum CompiledStep {
         source: CompiledBindingRef,
         target: CompiledBindingRef,
     },
+    /// Phase 2 Track F (2026-05-17) — deterministic "top stacked card →
+    /// bottom" source-stack rotation. Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM
+    /// for BT23-008 / BT23-018 / BT24-079 / BT24-082-shape costs that read
+    /// "By placing this Digimon's top stacked card as its bottom digivolution
+    /// card …". The verb does NOT surface a player choice — printed text
+    /// pins the top source as the moved card.
+    PlaceTopSourceAsBottom {
+        target: CompiledBindingRef,
+    },
     TrashTopSource {
         target: CompiledBindingRef,
     },
@@ -779,6 +865,10 @@ pub enum CompiledStep {
     PlayFromHandFree {
         of: CompiledPlayerRef,
         hand_index: CompiledBindingRef,
+        /// Bind the just-played permanent handle for use in later steps.
+        /// `None` preserves prior behavior (no binding insert).
+        /// G-PLAY-FROM-HAND-FREE-BIND-AS (Phase 2 Track H closure).
+        bind_as: Option<String>,
     },
     PlayFromTrash {
         of: CompiledPlayerRef,
@@ -1003,6 +1093,11 @@ pub enum CompiledStep {
     SelectOwnBreedingPermanent {
         bind_as: Option<String>,
         prompt: String,
+        /// Predicate the breeding permanent must satisfy before the
+        /// selection prompt opens. `CompiledPredicate::default()` is the
+        /// "accept any breeding permanent" carrier matching the historical
+        /// behavior; a populated predicate filters by name, level, etc.
+        filter: CompiledPredicate,
         then: Vec<CompiledStep>,
     },
     TrashSelectedSources {
@@ -1146,6 +1241,32 @@ pub enum CompiledStep {
         consumes: Vec<String>,
         binds: Vec<String>,
     },
+    /// Phase 2 Track B — declarative activation-cost step for triggered
+    /// abilities. The DSL lowering MUST lift this step out of the
+    /// process body and bind it to `EffectBuilder::activation_cost(...)`
+    /// at clause-construction time; the validator rejects `activation_cost`
+    /// appearing anywhere except as the first step of a triggered clause
+    /// body. This variant is therefore unreachable at runtime — present
+    /// for variant-coverage and lowering-time inspection only.
+    ActivationCost {
+        kind: CompiledActivationCostKind,
+    },
+}
+
+/// Concrete activation-cost shapes recognized by the DSL. Extensible —
+/// new printed cost shapes (return-self-to-trash, return-self-to-hand)
+/// can be added without changing the queue-side dispatch.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledActivationCostKind {
+    /// "by suspending this Tamer / Digimon ..." — pays the cost by
+    /// suspending the source permanent. Fails if the source is already
+    /// suspended; failure consumes the OPT slot.
+    SuspendSelf,
+    /// "by returning this Tamer to the bottom of the deck ..." — pays
+    /// the cost by moving the source permanent's top card to its
+    /// owner's deck bottom (digivolution sources trashed per standard
+    /// rules). Fails if the source has already left the field.
+    ReturnSelfToDeckBottom,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1195,6 +1316,24 @@ pub enum CompiledStackPosition {
     Top,
     Bottom,
     Random,
+}
+
+/// Phase 2 Track E (2026-05-17): compiled form of `RevealDestination` — the
+/// typed routing for the `choose_from_reveal` step.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub enum CompiledRevealDestination {
+    Hand,
+    DeckTop,
+    DeckBottom,
+    BottomSourceOf(CompiledBindingRef),
+}
+
+/// Phase 2 Track E (2026-05-17): compiled form of `RemainderDestination`
+/// — only `DeckTop` / `DeckBottom` are meaningful for `order_remainder`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledRemainderDestination {
+    DeckTop,
+    DeckBottom,
 }
 
 #[cfg(test)]

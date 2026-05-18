@@ -67,6 +67,17 @@ pub enum StepSpec {
     GainMemory(i32),
     LoseMemory(i32),
     SetMemory(i32),
+    /// Phase 2 Track F (G-DSL-GAIN-MEMORY-FN) — formula-valued gain.
+    /// Mirrors the literal `gain_memory: N` shape but accepts a
+    /// `FormulaSpec` evaluated at resolution time. Use for printed text
+    /// like "[When Digivolving] Gain 1 memory for every 4 cards in your
+    /// hand." (EX1-021 MetalGarurumon).
+    GainMemoryFn(FormulaStepArgs),
+    /// Symmetric of `GainMemoryFn` — kept for completeness so author-facing
+    /// API doesn't surprise (literal `lose_memory: N` has a `lose_memory_fn`
+    /// sibling). No known card uses it as of 2026-05-17 but adding both
+    /// halves at once keeps the eval-arm coverage matrix uniform.
+    LoseMemoryFn(FormulaStepArgs),
 
     // Draw / deck / hand / trash
     Draw(DrawArgs),
@@ -85,6 +96,20 @@ pub enum StepSpec {
     ShuffleSecurity(PlayerArg),
     RevealTopDeck(RevealArgs),
     PlaceRemainderOnDeck(PlaceRemainderArgs),
+    /// Phase 2 Track E (2026-05-17): pick one card from the current reveal
+    /// pool and route it to a single typed destination. Ergonomic combo of
+    /// `select_reveal` + `{add_to_hand_from_reveal,return_to_deck_from_reveal,
+    /// place_as_bottom_source}`. Pair with `order_remainder` for the
+    /// "reveal N, choose 1 to hand/source, place rest top-or-bottom in any
+    /// order" pattern that recurs across Rocks searchers and general training
+    /// effects.
+    ChooseFromReveal(ChooseFromRevealArgs),
+    /// Phase 2 Track E (2026-05-17): place all remaining revealed cards onto
+    /// the controller's deck. Unlike `place_remainder_on_deck`, the
+    /// destination (top vs bottom) can itself be a player choice when the
+    /// printed text reads "top or bottom" (P-167 et al). Always surfaces the
+    /// `select_ordered_permutation` ordering selection per Working Rule §17.
+    OrderRemainder(OrderRemainderArgs),
 
     // Field / permanent
     DeletePermanent(TargetArg),
@@ -97,6 +122,14 @@ pub enum StepSpec {
     PlaceOnSecurity(PlaceOnSecurityArgs),
     PlayToken(PlayTokenArgs),
     PlaceAsBottomSource(PlaceAsBottomSourceArgs),
+    /// Phase 2 Track F (2026-05-17): move `target`'s top stacked card (the
+    /// digivolution source immediately beneath the active top card) to the
+    /// bottom of its own stack. Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM
+    /// (BT23-008 / BT23-018-shape "place top stacked card as bottom" costs).
+    /// Per the no-approximations policy this is a deterministic source pick
+    /// — the printed text identifies a singular top source, so no
+    /// `select_material` choice is exposed.
+    PlaceTopSourceAsBottom(TargetArg),
     TrashTopSource(TargetArg),
     TrashAllSources(TargetArg),
     TrashSelectedSources(TrashSelectedSourcesArgs),
@@ -105,7 +138,7 @@ pub enum StepSpec {
 
     // Play / digivolve
     PlayFromHand(PlayFromHandArgs),
-    PlayFromHandFree(PlayFromHandArgs),
+    PlayFromHandFree(PlayFromHandFreeArgs),
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
     PlayFromSecurity(PlayFromSecurityArgs),
@@ -191,6 +224,12 @@ pub enum StepSpec {
 
     // Escape hatch (step-level)
     RawRust(RawRustStep),
+
+    // Phase 2 Track B — declarative activation-cost step. Only valid as
+    // the first step of a triggered clause body; lifted onto
+    // `EffectBuilder::activation_cost(...)` at lowering time. The
+    // compile-side validator rejects mid-body uses.
+    ActivationCost(ActivationCostArgs),
 }
 
 // ── Custom Serialize for StepSpec ──────────────────────────────────────
@@ -215,6 +254,8 @@ impl Serialize for StepSpec {
             StepSpec::GainMemory(v) => kv!(s, "gain_memory", v),
             StepSpec::LoseMemory(v) => kv!(s, "lose_memory", v),
             StepSpec::SetMemory(v) => kv!(s, "set_memory", v),
+            StepSpec::GainMemoryFn(v) => kv!(s, "gain_memory_fn", v),
+            StepSpec::LoseMemoryFn(v) => kv!(s, "lose_memory_fn", v),
             // Draw / deck / hand / trash
             StepSpec::Draw(v) => kv!(s, "draw", v),
             StepSpec::TrashFromTop(v) => kv!(s, "trash_from_top", v),
@@ -232,6 +273,8 @@ impl Serialize for StepSpec {
             StepSpec::ShuffleSecurity(v) => kv!(s, "shuffle_security", v),
             StepSpec::RevealTopDeck(v) => kv!(s, "reveal_top_deck", v),
             StepSpec::PlaceRemainderOnDeck(v) => kv!(s, "place_remainder_on_deck", v),
+            StepSpec::ChooseFromReveal(v) => kv!(s, "choose_from_reveal", v),
+            StepSpec::OrderRemainder(v) => kv!(s, "order_remainder", v),
             // Field / permanent
             StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
             StepSpec::DeleteBoundPermanents(v) => kv!(s, "delete_bound_permanents", v),
@@ -243,6 +286,7 @@ impl Serialize for StepSpec {
             StepSpec::PlaceOnSecurity(v) => kv!(s, "place_on_security", v),
             StepSpec::PlayToken(v) => kv!(s, "play_token", v),
             StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
+            StepSpec::PlaceTopSourceAsBottom(v) => kv!(s, "place_top_source_as_bottom", v),
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
             StepSpec::TrashAllSources(v) => kv!(s, "trash_all_sources", v),
             StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
@@ -348,6 +392,7 @@ impl Serialize for StepSpec {
             StepSpec::SubstituteReplacement(v) => kv!(s, "substitute_replacement", v),
             // Escape hatch
             StepSpec::RawRust(v) => kv!(s, "raw_rust", v),
+            StepSpec::ActivationCost(v) => kv!(s, "activation_cost", v),
         }
     }
 }
@@ -391,6 +436,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "gain_memory" => StepSpec::GainMemory(map.next_value()?),
             "lose_memory" => StepSpec::LoseMemory(map.next_value()?),
             "set_memory" => StepSpec::SetMemory(map.next_value()?),
+            "gain_memory_fn" => StepSpec::GainMemoryFn(map.next_value()?),
+            "lose_memory_fn" => StepSpec::LoseMemoryFn(map.next_value()?),
 
             // Draw / deck / hand / trash
             "draw" => StepSpec::Draw(map.next_value()?),
@@ -409,6 +456,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "shuffle_security" => StepSpec::ShuffleSecurity(map.next_value()?),
             "reveal_top_deck" => StepSpec::RevealTopDeck(map.next_value()?),
             "place_remainder_on_deck" => StepSpec::PlaceRemainderOnDeck(map.next_value()?),
+            "choose_from_reveal" => StepSpec::ChooseFromReveal(map.next_value()?),
+            "order_remainder" => StepSpec::OrderRemainder(map.next_value()?),
 
             // Field / permanent
             "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
@@ -421,6 +470,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_on_security" => StepSpec::PlaceOnSecurity(map.next_value()?),
             "play_token" => StepSpec::PlayToken(map.next_value()?),
             "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
+            "place_top_source_as_bottom" => StepSpec::PlaceTopSourceAsBottom(map.next_value()?),
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
             "trash_all_sources" => StepSpec::TrashAllSources(map.next_value()?),
             "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
@@ -532,6 +582,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // Escape hatch
             "raw_rust" => StepSpec::RawRust(map.next_value()?),
 
+            // Phase 2 Track B
+            "activation_cost" => StepSpec::ActivationCost(map.next_value()?),
+
             other => {
                 return Err(de::Error::unknown_variant(
                     other,
@@ -539,6 +592,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "gain_memory",
                         "lose_memory",
                         "set_memory",
+                        "gain_memory_fn",
+                        "lose_memory_fn",
                         "draw",
                         "trash_from_top",
                         "add_to_hand_from_deck",
@@ -555,6 +610,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "shuffle_security",
                         "reveal_top_deck",
                         "place_remainder_on_deck",
+                        "choose_from_reveal",
+                        "order_remainder",
                         "delete_permanent",
                         "delete_bound_permanents",
                         "return_to_hand",
@@ -565,6 +622,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "place_on_security",
                         "play_token",
                         "place_as_bottom_source",
+                        "place_top_source_as_bottom",
                         "trash_top_source",
                         "trash_all_sources",
                         "trash_selected_sources",
@@ -639,6 +697,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "redirect_replacement",
                         "substitute_replacement",
                         "raw_rust",
+                        "activation_cost",
                     ],
                 ));
             }
@@ -713,6 +772,35 @@ pub struct PlayerArg {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]
 #[serde(deny_unknown_fields)]
 pub struct EmptyArgs {}
+
+/// Args for the `activation_cost:` DSL step. Phase 2 Track B.
+///
+/// YAML shape (only one variant key may be set):
+/// ```yaml
+/// - activation_cost:
+///     suspend_self: true
+/// ```
+/// or
+/// ```yaml
+/// - activation_cost:
+///     return_self_to_deck_bottom: true
+/// ```
+///
+/// Only valid as the FIRST step of a triggered clause body — the
+/// validator rejects mid-body uses. The lowering lifts it onto
+/// `EffectBuilder::activation_cost(...)`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]
+#[serde(deny_unknown_fields)]
+pub struct ActivationCostArgs {
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub suspend_self: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub return_self_to_deck_bottom: bool,
+}
+
+fn is_false(b: &bool) -> bool {
+    !*b
+}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -911,6 +999,88 @@ pub struct PlaceRemainderArgs {
     pub position: StackPosition,
 }
 
+/// Phase 2 Track E (2026-05-17): args for `choose_from_reveal`.
+///
+/// Picks one card from the current `revealed_cards` pool (optionally
+/// filtered) and routes it to a typed destination. Supersedes the explicit
+/// `select_reveal` → `add_to_hand_from_reveal` / `place_as_bottom_source`
+/// combo for the common Rocks search shape.
+///
+/// ```yaml
+/// - choose_from_reveal:
+///     of: you
+///     filter: { any_of: [trait_has: Mineral, trait_has: Rock] }
+///     destination: hand
+///     optional: true
+///     prompt: "Add a Mineral or Rock card to your hand"
+/// ```
+///
+/// The `destination` field is a tagged enum (see `RevealDestination`)
+/// supporting hand, deck-top, deck-bottom, and bottom-source-of routings.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ChooseFromRevealArgs {
+    pub of: PlayerRef,
+    pub filter: PredicateSpec,
+    pub destination: RevealDestination,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
+}
+
+/// Destination kinds supported by `choose_from_reveal`. Untagged for compact
+/// YAML: a bare scalar (`hand`, `deck_top`, `deck_bottom`) or a mapping
+/// (`bottom_source_of: { permanent: target }`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+pub enum RevealDestination {
+    Hand,
+    DeckTop,
+    DeckBottom,
+    /// Place the picked card as the bottom digivolution card of `target`.
+    BottomSourceOf { target: BindingRef },
+}
+
+/// Phase 2 Track E (2026-05-17): args for `order_remainder`.
+///
+/// Places every card currently in the reveal pool onto the controller's
+/// deck. If `destinations` lists a single position, behaves like
+/// `place_remainder_on_deck`. If two destinations are listed
+/// (`[deck_top, deck_bottom]`), surfaces an `effect_choice` so the player
+/// picks where to place the remainder; the ordered permutation is exposed
+/// either way (no auto-determinism — Working Rule §17).
+///
+/// ```yaml
+/// - order_remainder:
+///     of: you
+///     destinations: [deck_top, deck_bottom]
+/// ```
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct OrderRemainderArgs {
+    pub of: PlayerRef,
+    pub destinations: Vec<RemainderDestination>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RemainderDestination {
+    DeckTop,
+    DeckBottom,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct DeDigivolveArgs {
@@ -919,6 +1089,18 @@ pub struct DeDigivolveArgs {
     pub amount: Option<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stop_at_level: Option<u8>,
+}
+
+/// Phase 2 Track F (G-DSL-GAIN-MEMORY-FN): args for formula-valued
+/// memory mutations (`gain_memory_fn:` / `lose_memory_fn:`). The single
+/// `formula:` field evaluates at resolution time and the result is fed
+/// to `EffectContext::add_memory` (signed) — exactly the shape the
+/// existing literal `gain_memory: N` step uses, just with a runtime
+/// integer.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct FormulaStepArgs {
+    pub formula: crate::formula::FormulaSpec,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1051,6 +1233,23 @@ pub struct PlayFromHandArgs {
     pub hand_index: BindingRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_delta: Option<CostDelta>,
+}
+
+/// Free-play-from-hand args. Adds `bind_as` so the just-played permanent
+/// handle can be referenced by subsequent steps (e.g. `schedule_delayed`
+/// returning the played card at next opponent end turn).
+/// G-PLAY-FROM-HAND-FREE-BIND-AS (Phase 2 Track H closure).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayFromHandFreeArgs {
+    pub of: PlayerRef,
+    pub hand_index: BindingRef,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_delta: Option<CostDelta>,
+    /// Bind the resulting permanent handle for use in later steps in the
+    /// same body. None (the default) preserves prior behavior.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1392,6 +1591,12 @@ pub struct SelectOwnBreedingPermanentArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,
+    /// Optional predicate the selected breeding permanent must satisfy.
+    /// Used by Royal Knights cards like BT13-093 that require the
+    /// breeding permanent to be a specific named host (e.g.
+    /// `[King Drasil_7D6]`) before authoring a placement clause.
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
     #[serde(default)]
     pub then: Vec<StepSpec>,
 }

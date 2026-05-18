@@ -381,10 +381,6 @@ fn bt22_013_when_digivolving_branch_1_deletes_opp_digimon() {
 /// does not yet honor `dp_lte` on permanents, so the prompt offers ALL opp
 /// Digimon. Same gap as BT24-017's `bt24_017_delete_targets_only_lowest_dp_digimon`.
 #[test]
-#[ignore = "BLOCKED: G-PRED-DP-LTE — dp_lte predicate (with aggregate lowest_dp) is parsed and \
-            compiled but not evaluated for permanents in code/digimon-engine/src/dsl_cards/predicate.rs; \
-            the lowest-DP filter degenerates to 'any opp Digimon'. Same gap blocks the analogous \
-            BT24-017 test (`bt24_017_delete_targets_only_lowest_dp_digimon`)."]
 fn bt22_013_when_digivolving_branch_1_only_lowest_dp_is_a_legal_target() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -416,11 +412,8 @@ fn bt22_013_when_digivolving_branch_1_only_lowest_dp_is_a_legal_target() {
 /// effect_initiated_digivolve. **BLOCKED**: G-EFFECT-INITIATED-DIGIVOLVE-
 /// FROM-HAND-WITH-PERMANENT-TARGET. Same gap as BT17-015 branch 1.
 #[test]
-#[ignore = "BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — \
-            select_own_permanent + select_hand + effect_initiated_digivolve(target: <binding>) \
-            chain terminates after the permanent pick; the hand-pick prompt never installs. \
-            Same gap blocks BT17-015 branch 1 (sister WarGreymon \
-            `bt17_015_on_play_branch_1_digivolves_gabumon_into_metalgarurumon_free`)."]
+// Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
+// WITH-PERMANENT-TARGET resolved as phantom (see BT17-015 sister test).
 fn bt22_013_when_digivolving_branch_0_digivolves_gabumon_into_metalgarurumon_free() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -612,14 +605,6 @@ fn bt22_013_inherited_when_attacking_opt_blocks_second_activation() {
 /// activated_digivolve path. Substrate is ready (G-ALT-PATH-CONDITION
 /// RESOLVED 2026-05-15); same authoring gap as BT22-026 / BT24-016.
 #[test]
-#[ignore = "PENDING card-local authoring: BT22-013.yaml does not populate \
-            `condition:` on the activated_digivolve alt-path to gate on Nokia \
-            Shiramine. Substrate is ready (G-ALT-PATH-CONDITION RESOLVED \
-            2026-05-15 — AltPathSpec.condition field + consumer wired in \
-            dna_digivolve.rs). Until the YAML is updated, the alt-path is \
-            offered whenever an Agumon is on field, regardless of Nokia \
-            presence (over-permissive). Same authoring gap blocks BT22-026 \
-            and BT24-016."]
 fn bt22_013_activated_digivolve_blocked_without_nokia_tamer() {
     // Setup: Agumon on field, BT22-013 in hand, NO Nokia Shiramine tamer.
     // The activated_digivolve alt-path MUST NOT be offered as a play option.
@@ -666,8 +651,6 @@ fn bt22_013_activated_digivolve_blocked_without_nokia_tamer() {
 /// gate test. Once the gap closes, this becomes the positive sister of the
 /// negative test above.
 #[test]
-#[ignore = "Pending G-ALT-PATH-CONDITION — see negative-case sibling above. Once the gap closes, \
-            promote this to active and add the corresponding action-introspection assertion."]
 fn bt22_013_activated_digivolve_available_with_nokia_and_agumon() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)

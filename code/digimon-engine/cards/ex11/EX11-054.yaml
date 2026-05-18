@@ -32,26 +32,30 @@ effects:
       - set_memory: 3
 
   # ─── Clause 2: [All Turns] Reptile/Dragonkin observer ─────────────────────
+  #
+  # DCGO models the suspend as a COST gating the body — the player chooses
+  # whether to suspend Owen, and only on accept do the draw + DP grant fire.
+  # Track B's `activation_cost: { suspend_self: true }` runs at the gate site:
+  # `ctx.suspend_self_as_cost()` returns false if Owen is already suspended
+  # or no longer on field, which short-circuits the body (and consumes the
+  # OPT slot exactly as DCGO does on a cost-failed firing).
   - when: [on_enter_field_anyone, on_digivolve]
     active_when: { all_turns: true }
     optional: true
-    summary: "[All Turns] When your Reptile/Dragonkin is played or digivolves, suspend self -> Draw 1; Progress Digimon gets +3000 DP"
+    summary: "[All Turns] When your Reptile/Dragonkin is played or digivolves, by suspending self <Draw 1>; then a Progress Digimon gets +3000 DP"
     condition:
       all_of:
         - event_target_owner: you
         - any_of:
             - event_target_trait_has: Reptile
             - event_target_trait_has: Dragonkin
-        - any_permanent:
-            of: you
-            zone: [battle_area]
-            card_number_is: "EX11-054"
-            is_unsuspended: true
+        - source_is_unsuspended: true
     process:
-      - suspend: { target: source }
+      - activation_cost: { suspend_self: true }
       - draw: { of: you, count: 1 }
       - select_own_permanent:
           bind_as: progress_target
+          optional: true
           filter:
             all_of:
               - kind: digimon
