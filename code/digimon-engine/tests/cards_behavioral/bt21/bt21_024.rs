@@ -498,7 +498,7 @@ fn bt21_024_clause1_trashes_top_security_even_when_opponent_has_no_hand() {
 /// Clause 1 fires on WhenDigivolving (second trigger timing).
 /// Behavioral test is ignored until G-OPT-TRIGGERED / WhenDigivolving dispatch is wired.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED (WhenDigivolving dispatch through triggered queue)"]
+#[ignore = "pending: card-local fixture-driven WhenDigivolving body — G-OPT-TRIGGERED closed by Track C; sibling cards (bt14_001, bt21_001) cover dispatch"]
 fn bt21_024_clause1_fires_when_digivolving() {
     // Scaffolding (for when the gap closes):
     //
@@ -571,7 +571,7 @@ fn bt21_024_play_event_fires_on_play() {
 /// for some time; see BT21-072 for live coverage. Test body left as
 /// `todo!()` — implementing it is a fixture-authoring follow-up.
 #[test]
-#[ignore = "pending: test body not written (substrate closed; see BT21-072 for live coverage of declarative inherited DP auras)"]
+#[ignore = "pending: card-local body not authored — declarative inherited aura substrate closed by Group 6; see BT21-072 for live coverage of the same shape"]
 fn bt21_024_inherited_aura_grants_4000_dp_on_your_turn() {
     // Scaffolding (for when the gap closes):
     //
@@ -601,7 +601,7 @@ fn bt21_024_inherited_aura_grants_4000_dp_on_your_turn() {
 
 /// Negative (gap-blocked): the inherited +4000 DP aura is inactive on the opponent's turn.
 #[test]
-#[ignore = "pending: test body not written (substrate closed; see BT21-072 for live coverage of declarative inherited DP auras)"]
+#[ignore = "pending: card-local body not authored — declarative inherited aura substrate closed by Group 6; see BT21-072 for live coverage of the same shape"]
 fn bt21_024_inherited_aura_inactive_on_opponents_turn() {
     // After runner.end_turn(), effective_dp must drop back to base.
     todo!("implement once G-INHERITED-DISPATCH closes");

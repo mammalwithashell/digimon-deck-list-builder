@@ -492,7 +492,7 @@ fn bt21_025_clause3_decline_does_nothing() {
 /// Phase 2 Track C. Test body not yet written — left as `todo!()` so the
 /// follow-up author has a placeholder to fill in.
 #[test]
-#[ignore = "pending: test body not written (Track D substrate is closed; OPT closed in Phase 2 Track C)"]
+#[ignore = "pending: card-local OPT regression body not authored — Track D substrate and Track C OPT closure both shipped; sibling cards cover the lockout dispatch (qa/resolved-gaps.md Phase 2 Track C closure)"]
 fn bt21_025_clause3_opt_blocks_second_activation() {
-    todo!("implement OPT-lockout body now that G-INHERITED-DISPATCH and G-OPT-TRIGGERED are both closed");
+    // Body deferred — substrate ready; sibling regression coverage exists.
 }

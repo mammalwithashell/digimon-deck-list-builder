@@ -137,6 +137,10 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub security_count_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub opponent_security_count_lte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opponent_security_count_gte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub your_turn: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub opponents_turn: Option<bool>,

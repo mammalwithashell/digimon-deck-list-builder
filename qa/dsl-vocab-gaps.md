@@ -84,6 +84,33 @@ This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine h
 > (deferred — entangled with `G-SELECT-MULTI-MIN` and
 > `G-ZONE-TRASH-TO-DECK` sub-gaps). EX5-015 Clause C remains BLOCKED.
 
+> **Tracker hygiene sweep — 2026-05-17 (Phase 2 Track G):** Medusamon
+> pilot completion. One new DSL predicate substrate ships
+> (`G-OPP-SECURITY-COUNT-LTE`), closure summary in
+> [resolved-gaps.md](resolved-gaps.md) under "Phase 2 Track G closure".
+> Five Track G plan-named DSL gaps (G-EVENT-TARGET-OWNER,
+> G-PLACE-SELF-AS-OPTION-PERMANENT, G-ADD-OPTION-SELF-TO-HAND,
+> G-DSL-LINK-VERB, G-DSL-LINKED-SCOPE, G-MAY-ATTACK-NOW) were already
+> resolved by earlier upstream substrate work; Track G's role for those
+> was the test-tree sweep — stale `#[ignore]` annotations retagged from
+> "BLOCKED: G-XYZ" to "card-local body not authored; substrate closed"
+> across BT21-024 / BT21-025 / BT21-026 / BT21-029 / BT24-016 /
+> BT24-082 / LM-055 / EX11-054. The BT21-026 deletion arm migrated to
+> live YAML using `event_target_owner: opponent`; the BT21-093
+> cost-reduction clause migrated from a `count_lte` aggregate over
+> opponent security to the new native `opponent_security_count_lte`
+> predicate (raw_rust formula `bt21_093_cost_reduction_amount`
+> removed); EX11-054 [All Turns] clause migrated to Track B's
+> `activation_cost: { suspend_self: true }` so the suspend-as-cost
+> semantics gate the body correctly per the engine's single-trigger
+> drainer model. **12 Medusamon cards advanced PARTIAL → IMPLEMENTED.**
+>
+> Still open from Track G's plan: G-AURA-DP-FORMULA (BT21-072 formula
+> AuraBody DP), G-DELAY-SUSPEND-CONDITION (BT24-089 OnSuspend Delay),
+> G-ZONE-TRASH-TO-DECK (BT24-017 trash-to-deck verb), G-AS-SELECTING-PLAYER
+> (BT24-016 cross-permanent select-on-behalf), G-PRED-DP-LTE-AGGREGATE
+> (BT21-093 highest-DP delete).
+
 ## Track C modifier payload YAML shape (2026-05-09) — rich payload parser pending
 
 The Rust engine now has typed `ModifierPayload` storage and consult sites for
@@ -512,7 +539,17 @@ Format per entry:
 
 ---
 
-## BT21-024 — Opponent security count condition  [G-OPP-SECURITY-COUNT-LTE]
+## ~~BT21-024 — Opponent security count condition  [G-OPP-SECURITY-COUNT-LTE]~~ — RESOLVED 2026-05-17 (Phase 2 Track G)
+
+See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track G closure" entry.
+`PredicateSpec.opponent_security_count_lte: Option<DpConstraint>` and the
+`_gte` sibling now compile through `CompiledPredicate` and evaluate
+against `rctx.security_count(rctx.opponent_id())`. BT21-093 cost-reduction
+clause migrated to use the new predicate; BT21-024's negative-condition
+test was already passing through the `count_lte` aggregate over
+`{ zone: [security], owner: opponent }`.
+
+[ORIGINAL ENTRY BELOW]
 
 - Effect text: "[On Play][When Digivolving] If your opponent has 5 or fewer security cards, they place 1 card from their hand as the bottom security card. Then, trash their top security card."
 - Missing DSL verb / step kind / predicate: `opponent_security_count_lte` — a `PredicateSpec` / `BoolPredicate` leaf that checks the OPPONENT's (not controller's) security stack count. The existing `security_count_lte: u8` field in `PredicateSpec` evaluates `rctx.security_count(rctx.player)` (controller's security). No `of:` field exists on the predicate to redirect the player lookup. A separate `opponent_security_count_lte: Option<u8>` field is needed.

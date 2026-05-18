@@ -102,6 +102,20 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(cap) = &pred.opponent_security_count_lte {
+        if (rctx.security_count(rctx.opponent_id()) as i32)
+            > eval_int_constraint_read(cap, rctx, None, bindings)
+        {
+            return false;
+        }
+    }
+    if let Some(floor) = &pred.opponent_security_count_gte {
+        if (rctx.security_count(rctx.opponent_id()) as i32)
+            < eval_int_constraint_read(floor, rctx, None, bindings)
+        {
+            return false;
+        }
+    }
     if let Some(name) = &pred.binding_exists {
         if bindings.and_then(|b| b.get_ref(name)).is_none() {
             return false;

@@ -237,6 +237,8 @@ pub struct CompiledPredicate {
     pub memory_gte: Option<CompiledDpConstraint>,
     pub security_count_lte: Option<CompiledDpConstraint>,
     pub security_count_gte: Option<CompiledDpConstraint>,
+    pub opponent_security_count_lte: Option<CompiledDpConstraint>,
+    pub opponent_security_count_gte: Option<CompiledDpConstraint>,
     pub your_turn: Option<bool>,
     pub opponents_turn: Option<bool>,
     pub all_turns: Option<bool>,

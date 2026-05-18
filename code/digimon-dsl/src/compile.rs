@@ -583,6 +583,22 @@ fn compile_predicate(
         security_count_gte: p.security_count_gte.as_ref().map(|d| {
             compile_dp_constraint(d, &format!("{prefix}.security_count_gte"), card_id, errors)
         }),
+        opponent_security_count_lte: p.opponent_security_count_lte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.opponent_security_count_lte"),
+                card_id,
+                errors,
+            )
+        }),
+        opponent_security_count_gte: p.opponent_security_count_gte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.opponent_security_count_gte"),
+                card_id,
+                errors,
+            )
+        }),
         your_turn: p.your_turn,
         opponents_turn: p.opponents_turn,
         all_turns: p.all_turns,

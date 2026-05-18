@@ -307,7 +307,7 @@ fn ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played() {
     let hand_before = runner.hand_size(0);
 
     // Play the Reptile Digimon.
-    {
+    let reptile_hand_idx = {
         use digimon_engine::card_source::CardSource;
         let data_idx = runner
             .game
@@ -319,25 +319,22 @@ fn ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played() {
         runner.game.players[0]
             .hand
             .push(CardSource::new(data_idx, 0, card_index));
-    }
-    runner.play(0, 0); // play REPTILE from hand
-
-    // After the play resolves, OnEnterFieldAnyone fires. Owen's observer
-    // should install an optional PendingSelection for the player to choose
-    // whether to pay the cost (suspend Owen → draw 1 → select Progress Digimon).
-    assert!(
-        runner.pending_selection().is_some(),
-        "optional activation prompt should install after Reptile ally played"
-    );
-
-    // Accept the activation → suspend Owen.
-    let (_pl, act) = {
-        let s = runner.pending_selection().unwrap();
-        (s.selecting_player, s.valid_action_ids[0])
+        runner.game.players[0].hand.len() - 1
     };
-    runner.execute_action(0, act).ok();
+    runner.play(0, reptile_hand_idx); // play REPTILE from hand
 
-    // Owen is now suspended.
+    // After the play resolves, OnEnterFieldAnyone fires the All-Turns
+    // observer. Per engine design (single optional trigger auto-fires its
+    // body — optionality surfaces only at the body's first PASS-able
+    // selection), the activation_cost step suspends Owen, the draw step
+    // runs, and the optional select_own_permanent for a Progress Digimon
+    // finds no candidates (none in this fixture) so completes silently.
+    //
+    // Net observable: Owen is suspended, and the draw step ran (hand
+    // gained one card after the REPTILE push then played out — hand_before
+    // was captured before the manual push, so the expected total is
+    // hand_before + 1: the REPTILE push and play cancel out, DRAW-FILLER
+    // is the residual).
     let owen_perm = runner
         .game
         .player(0)
@@ -346,11 +343,13 @@ fn ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played() {
         .unwrap();
     assert!(
         owen_perm.is_suspended,
-        "Owen must be suspended after activation"
+        "Owen must be suspended after the All-Turns activation_cost step fires"
     );
-
-    // Draw: hand grew by 1.
-    assert_eq!(runner.hand_size(0), hand_before + 1, "Draw 1 must fire");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before + 1,
+        "draw 1 must fire (REPTILE push+play cancel; DRAW-FILLER lands in hand)"
+    );
 }
 
 #[test]

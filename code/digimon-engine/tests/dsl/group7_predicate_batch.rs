@@ -659,6 +659,66 @@ effects:
 }
 
 #[test]
+fn opponent_security_count_lte_evaluates_opponent_stack() {
+    // Phase 2 Track G — G-OPP-SECURITY-COUNT-LTE eval arm.
+    //
+    // Build a runner where the active player (controller = 0) has 5
+    // security cards and the opponent (player 1) has 2. The new
+    // `opponent_security_count_lte` predicate should consult the
+    // opponent's stack, not the controller's.
+    let src = make_test_card("PRED-SRC", "Pred Src");
+    let s = make_test_card("SECCARD", "Sec");
+    let runner = DebugRunner::builder()
+        .add_card(src)
+        .add_card(s)
+        .hand(0, &["PRED-SRC"])
+        .security(0, &["SECCARD", "SECCARD", "SECCARD", "SECCARD", "SECCARD"])
+        .security(1, &["SECCARD", "SECCARD"])
+        .build();
+    let source_card = runner.game.players[0].hand[0].handle();
+    let rctx = EffectReadContext::new(&runner.game, source_card, None, 0);
+
+    let pred_lte_3 = CompiledPredicate {
+        opponent_security_count_lte: Some(CompiledDpConstraint::Literal(3)),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(&pred_lte_3, &rctx, PredicateSubject::None, None),
+        "opponent has 2 ≤ 3 → predicate matches"
+    );
+
+    let pred_lte_1 = CompiledPredicate {
+        opponent_security_count_lte: Some(CompiledDpConstraint::Literal(1)),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&pred_lte_1, &rctx, PredicateSubject::None, None),
+        "opponent has 2 > 1 → predicate fails"
+    );
+
+    let pred_gte_3 = CompiledPredicate {
+        opponent_security_count_gte: Some(CompiledDpConstraint::Literal(3)),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&pred_gte_3, &rctx, PredicateSubject::None, None),
+        "opponent has 2 < 3 → predicate fails"
+    );
+
+    // Sanity: controller-side `security_count_lte` reads the controller's
+    // stack (5 cards), not the opponent's — confirms the new predicate is
+    // a distinct field, not a re-routing of the existing one.
+    let pred_self_lte_3 = CompiledPredicate {
+        security_count_lte: Some(CompiledDpConstraint::Literal(3)),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&pred_self_lte_3, &rctx, PredicateSubject::None, None),
+        "controller has 5 > 3 → existing security_count_lte still reads controller"
+    );
+}
+
+#[test]
 fn select_hand_play_cost_lte_formula_reads_bound_permanent_play_cost() {
     let mut source = make_test_card("SRC", "Source");
     source.card_kind = CardKind::Option;

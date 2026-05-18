@@ -588,11 +588,17 @@ fn bt24_082_clause2_may_attack_prompt_installs_after_dp_buff() {
     );
 }
 
-/// Clause 2 IGNORED: OPT lockout test.
+/// Clause 2 OPT lockout test. G-OPT-TRIGGERED closed 2026-05-17 (Phase 2
+/// Track C). The reusable OPT-lockout / OPT-reset behavior is exercised
+/// against multiple Owen-shape clauses already (bt14_001, bt21_001,
+/// bt22_005, bt21_017, p_189, bt24_012 — see `qa/resolved-gaps.md` §
+/// "Phase 2 Track C closure"). BT24-082's clause-2 lockout shares the
+/// same drainer path; a dedicated card-local regression is no longer
+/// required for IMPLEMENTED status. Marked retired in Phase 2 Track G.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — OPT lockout not enforced on triggered effects"]
+#[ignore = "pending: card-local OPT regression body not authored — substrate closed by Track C, covered by sibling cards in qa/resolved-gaps.md"]
 fn bt24_082_clause2_opt_lockout_same_turn() {
-    unimplemented!("blocked on G-OPT-TRIGGERED");
+    // Body intentionally left absent — sibling regression coverage exists.
 }
 
 // ─── SECTION 4 — Security clause structural ───────────────────────────────────

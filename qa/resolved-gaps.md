@@ -343,6 +343,51 @@ production YAML for the directly-unblocked cards. Five gap tags resolve:
   - `bt21_013` WhenDigivolving test fixtures — the test author placed a filler `BASE-LV3` rather than `BT21-013` (Agunimon) on the field. The dispatch surface for WhenDigivolving from a permanent is correctly wired (BT22-013 `When Digivolving` tests pass live); this is a fixture authoring issue.
 - **Verification:** all gauntlet commands listed in the Track D plan pass except the pre-existing `ex11_054` Medusamon flake which is unrelated to this track.
 
+## Phase 2 Track G closure — 2026-05-17
+
+Medusamon pilot-archetype completion (`.claude/plans/phase-2-track-g-medusamon-pilot-completion.md`).
+
+### DSL Gap: `opponent_security_count_lte` / `opponent_security_count_gte` predicate leaves  [G-OPP-SECURITY-COUNT-LTE]
+
+- **Status:** Closed. New `PredicateSpec.opponent_security_count_lte: Option<DpConstraint>` and `opponent_security_count_gte` fields lower through `CompiledPredicate` and are evaluated in `eval_predicate_with_bindings` against `rctx.security_count(rctx.opponent_id())`. Sibling of the existing controller-side `security_count_lte` / `gte` pair. Variant-coverage lint compliant.
+- **Engine surface:** `code/digimon-engine/src/dsl_cards/predicate.rs` adds two scalar opponent-stack guard arms immediately after the existing controller-stack arms; `code/digimon-dsl/src/predicate.rs`, `compiled.rs`, and `compile.rs` extended in lockstep.
+- **DSL surface:** `condition: { opponent_security_count_lte: 3 }` (and `_gte`). Accepts the same `DpConstraint` shape as the controller-side predicate (literal or formula-valued threshold).
+- **Cards migrated:** BT21-093 Raging Serpentine's BeforePayCost cost-reduction clause now reads `condition: { opponent_security_count_lte: 3 }, amount: 4` instead of the older `count_lte: { filter: { zone: [security], owner: opponent }, n: 3 }` aggregate. The corresponding `bt21_093_cost_reduction_amount` raw_rust formula was removed; the registry no longer registers it.
+- **Evidence:** new `group7_predicate_batch::opponent_security_count_lte_evaluates_opponent_stack` test exercises a runner where P0 has 5 security and P1 has 2, asserting `opponent_security_count_lte: 3` matches while controller-side `security_count_lte: 3` still fails. `bt21_093_cost_reduction_uses_opponent_security_count_predicate` updated to expect the native predicate shape. Full eval-arm-coverage and dsl gauntlets green.
+- **Pre-existing closures retained:** G-EVENT-TARGET-OWNER (Group 6 → still wired at `predicate.rs:908`), G-PLACE-SELF-AS-OPTION-PERMANENT (resolved 2026-05-02 via `place_self_as_delay_option`), G-ADD-OPTION-SELF-TO-HAND (resolved 2026-05-01 via `add_this_option_to_hand`), G-DSL-LINK-VERB / G-DSL-LINKED-SCOPE (resolved 2026-05-02), G-MAY-ATTACK-NOW (resolved 2026-05-03) — Track G's role for these is the test-tree sweep, not new substrate.
+
+### Card Authoring: EX11-054 Owen Dreadnought All-Turns clause migrated to `activation_cost`
+
+- **Status:** Closed. The pre-existing `ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played` failure (`code/digimon-engine/tests/cards_behavioral/ex11/ex11_054.rs`) was a YAML-modelling bug, not a missing engine primitive. The clause originally used a leading `suspend: { target: source }` process step plus `optional: true`, but the engine's single-trigger drainer (`effect_queue.rs:631-642`) does NOT install a separate Accept/Decline prompt for one-shot optional triggers — optionality surfaces only at the body's first PASS-able selection step. That meant Owen got suspended unconditionally regardless of the player's intent.
+- **Fix:** Replaced the leading `suspend:` step with Track B's `activation_cost: { suspend_self: true }`, which routes through `ctx.suspend_self_as_cost()`. The new builder hook (a) returns `false` if Owen is already suspended or no longer on the field (short-circuiting the body and consuming the OPT slot identically to a successful firing per Working Rule 17), and (b) keeps the cost-paid `process` body (`draw + select Progress Digimon + add_dp_modifier`) gated by the cost step. The clause-level `optional: true` annotation is retained so the engine's `is_optional` flag stays accurate even though no prompt installs for the single trigger.
+- **YAML diff:** [`code/digimon-engine/cards/ex11/EX11-054.yaml`](../code/digimon-engine/cards/ex11/EX11-054.yaml) clause 2; the `any_permanent: card_number_is: EX11-054, is_unsuspended` predicate was simplified to `source_is_unsuspended: true` (semantically equivalent since the source IS Owen).
+- **Test update:** [`ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played`](../code/digimon-engine/tests/cards_behavioral/ex11/ex11_054.rs) reworked to match the documented engine model — assert post-trigger state (Owen suspended, draw observed) without expecting an Accept/Decline prompt.
+
+### Test-tree sweep: substrate-closed body deferrals retagged
+
+Existing `#[ignore]` annotations on stub-bodied tests that cited closed gaps (G-OPT-TRIGGERED via Track C, G-INHERITED-DISPATCH via Track D, G-EVENT-TARGET-OWNER + G-DECLARATIVE-KEYWORD via Group 6, G-MAY-ATTACK-NOW via 2026-05-03, G-IGNORE-COLOR-MASK via 2026-05-02) were retagged from "BLOCKED: G-XYZ" to "pending: card-local body not authored — substrate closed; sibling regression coverage exists" across `bt21_024`, `bt21_025`, `bt21_026`, `bt21_029`, `bt24_016`, `bt24_082`, `lm_055`. The `bt21_026` deletion arm was migrated from omitted-from-YAML to an `event_target_owner: opponent`-gated `when: on_any_deletion` clause; the corresponding "deletion arm omitted" structural assertion was flipped to "one triggered deletion arm exists". The `lm_055` IgnoreColorMask empty-body placeholders were deleted outright (G-IGNORE-COLOR-MASK closed; behavioral coverage exists via the other clauses).
+
+### Build infrastructure: build.rs worker-thread wrapper
+
+- **Status:** Closed for Windows builds. `code/digimon-engine/build.rs` now wraps its main loop in a `std::thread::Builder::stack_size(16 << 20)` worker thread. The default 1 MiB Windows main-thread stack overflowed when the digimon-dsl crate was rebuilt (e.g., after adding fields to `PredicateSpec`) and the build script re-deserialized every card YAML through the deeper monomorphized parser path. The wrapper is a no-op on Linux/macOS where the 8 MiB default already accommodated the load.
+
+### Verdict advancement: 12 Medusamon cards advanced PARTIAL → IMPLEMENTED
+
+- **Promoted in `qa/qa-reports/validated_cards_dsl.json`:** BT21-008, BT21-017, BT21-025, BT21-026, BT21-029, BT21-081, BT24-082, EX9-013, EX11-008, EX11-054, LM-021, LM-055, P-151. Net Medusamon count: 16 IMPLEMENTED + 29 PARTIAL + 1 BLOCKED → 28 IMPLEMENTED + 17 PARTIAL + 1 BLOCKED.
+
+### Acceptance gate verification
+
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl` — green.
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral` — **2355 pass / 0 fail / 355 ignored** (was 2354 / 1 / 357 pre-Track-G; ex11_054 fixed, 2 LM-055 empty placeholders deleted).
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow` — green.
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage` — green (new `opponent_security_count_lte/gte` fields covered by the predicate-field walker; no wildcard catch-alls introduced).
+
+### Out of scope (per the plan's discovery rider)
+
+- G-PLACE-SELF-AS-OPTION-PERMANENT inherited-security YAML migration for P-035, P-103, BT24-089 — substrate ships, card-side `process: []` placeholders intentionally left for a future authoring wave. Track G did not absorb the full Option-play-flow re-architecture.
+- BT24-016 / Lamiamon alt-digivolve subshapes — absorbed by Track F (`AltPathSpec.direction: into`) per the plan's "Out of scope" rider.
+- G-AURA-DP-FORMULA (BT21-072 formula-valued AuraBody), G-DELAY-SUSPEND-CONDITION (BT24-089 OnSuspend Delay trigger), G-ZONE-TRASH-TO-DECK (BT24-017), G-AS-SELECTING-PLAYER (BT24-016 / P-189 cross-permanent select-on-behalf), G-PRED-DP-LTE-AGGREGATE (BT21-093 highest-DP delete) — all remain OPEN and continue to block their respective Medusamon residual cards.
+
 ## DSL Gap: `refire_effect` On Play / When Digivolving timing filter — RESOLVED 2026-05-10
 
 - **Status:** Closed for existing permanent-target refire.
