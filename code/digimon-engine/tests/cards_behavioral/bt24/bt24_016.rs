@@ -289,7 +289,7 @@ fn bt24_016_clause3_opt_fires_at_most_once_per_turn() {
 /// Positive: when the opponent's security is removed from, the controller may
 /// play a qualifying Reptile or Dragonkin Digimon (DP ≤ 5000) free from hand.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH"]
+#[ignore = "pending: test body not written (substrate closed by Phase 2 Track D)"]
 fn bt24_016_inherited_on_security_removed_play_free_positive() {
     // Scaffolding:
     //
@@ -316,7 +316,7 @@ fn bt24_016_inherited_on_security_removed_play_free_positive() {
 /// hand, the optional prompt must still install but offer no valid targets
 /// (or not install if the engine skips empty selections).
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH"]
+#[ignore = "pending: test body not written (substrate closed by Phase 2 Track D)"]
 fn bt24_016_inherited_on_security_removed_no_target_no_selection() {
     // Scaffolding:
     //
@@ -334,7 +334,7 @@ fn bt24_016_inherited_on_security_removed_no_target_no_selection() {
 /// The inherited clause must not fire when the Digimon carrying this inherited
 /// effect has left the field.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH"]
+#[ignore = "pending: test body not written (substrate closed by Phase 2 Track D)"]
 fn bt24_016_inherited_does_not_fire_after_source_leaves_field() {
     todo!("implement once G-INHERITED-DISPATCH lands");
 }
@@ -342,7 +342,7 @@ fn bt24_016_inherited_does_not_fire_after_source_leaves_field() {
 /// OPT lockout on inherited clause: must not fire a second time in the same
 /// turn even if the opponent loses multiple security cards.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH (test body not written; OPT closed in Phase 2 Track C)"]
+#[ignore = "pending: test body not written (substrate fully closed across Phase 2 Tracks C+D)"]
 fn bt24_016_inherited_clause_opt_fires_at_most_once_per_turn() {
-    todo!("implement once G-INHERITED-DISPATCH + G-OPT-TRIGGERED land");
+    todo!("write body — substrate is closed")
 }

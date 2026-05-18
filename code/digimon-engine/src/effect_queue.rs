@@ -1498,6 +1498,14 @@ impl Game {
             }
         }
 
+        // Phase 2 Track D: walk every below-top digivolution source on the
+        // carrier. `card_sources` is `[base, evo1, evo2, ..., top]`; the
+        // top-card slot was already scanned above. Each below-top source
+        // dispatches its INHERITED effects through this carrier permanent,
+        // with `source_card` set to the stacked card's handle so OPT-slot
+        // keying (Track C) and predicates that read source identity remain
+        // per-source-slot stable. `allow_below_top_liveness: true` lets the
+        // liveness gate accept the stacked source as a valid origin.
         let inherited_sources: Vec<(String, CardHandle, EffectSourceKind)> = {
             let Some(perm) = self
                 .players

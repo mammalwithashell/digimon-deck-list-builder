@@ -564,8 +564,14 @@ fn bt21_024_play_event_fires_on_play() {
 
 /// Positive (gap-blocked): Cyberdramon's inherited +4000 DP aura is active on
 /// the controller's turn when Cyberdramon is in a digivolution stack.
+///
+/// G-INHERITED-DISPATCH for *triggered* effects closed 2026-05-17 (Phase 2
+/// Track D). Declarative auras like this one read through a separate path
+/// (`source_dp_contribution` over `card_sources`) which has been passing
+/// for some time; see BT21-072 for live coverage. Test body left as
+/// `todo!()` — implementing it is a fixture-authoring follow-up.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH — inherited effects from digivolution stack not dispatched"]
+#[ignore = "pending: test body not written (substrate closed; see BT21-072 for live coverage of declarative inherited DP auras)"]
 fn bt21_024_inherited_aura_grants_4000_dp_on_your_turn() {
     // Scaffolding (for when the gap closes):
     //
@@ -595,7 +601,7 @@ fn bt21_024_inherited_aura_grants_4000_dp_on_your_turn() {
 
 /// Negative (gap-blocked): the inherited +4000 DP aura is inactive on the opponent's turn.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH"]
+#[ignore = "pending: test body not written (substrate closed; see BT21-072 for live coverage of declarative inherited DP auras)"]
 fn bt21_024_inherited_aura_inactive_on_opponents_turn() {
     // After runner.end_turn(), effective_dp must drop back to base.
     todo!("implement once G-INHERITED-DISPATCH closes");

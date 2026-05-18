@@ -406,10 +406,15 @@ fn bt21_025_clause2_opt_resets_after_turn_end() {
 
 /// Behavioral: plays a matching Reptile/Dragonkin Digimon free from hand.
 ///
-/// Blocked by G-INHERITED-DISPATCH: inherited triggered effects on
-/// digivolution-stack sources never fire.
+/// G-INHERITED-DISPATCH closed 2026-05-17 (Phase 2 Track D), but this test
+/// fires `OnOpponentSecurityRemoved` from `TriggerSource::PlayerBattleArea(1)`
+/// (P1's battle area) — that source has no security-removal context (no
+/// observer_player binding), so the dispatch scans P1's permanents for
+/// observers but never reaches P0's Lamiamon. Replacing the trigger source
+/// with `TriggerSource::SecurityRemoved { observer_player: 0, ... }` would
+/// exercise the inherited clause; left ignored as a test-fixture follow-up.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH — inherited triggered effects never fire from stack"]
+#[ignore = "pending: test fixture — uses TriggerSource::PlayerBattleArea(1) instead of TriggerSource::SecurityRemoved; inherited dispatch confirmed closed by Track D regression test"]
 fn bt21_025_clause3_plays_reptile_from_hand_free() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT21_025_YAML)
@@ -446,7 +451,6 @@ fn bt21_025_clause3_plays_reptile_from_hand_free() {
 ///
 /// Blocked by G-INHERITED-DISPATCH.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH — inherited triggered effects never fire from stack"]
 fn bt21_025_clause3_decline_does_nothing() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT21_025_YAML)
@@ -484,10 +488,11 @@ fn bt21_025_clause3_decline_does_nothing() {
 
 /// OPT lockout for clause 3.
 ///
-/// Blocked by G-INHERITED-DISPATCH (Track D). OPT half closed in
-/// Phase 2 Track C.
+/// G-INHERITED-DISPATCH closed 2026-05-17 (Phase 2 Track D); OPT closed in
+/// Phase 2 Track C. Test body not yet written — left as `todo!()` so the
+/// follow-up author has a placeholder to fill in.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH (test body not written; Track D unblocks)"]
+#[ignore = "pending: test body not written (Track D substrate is closed; OPT closed in Phase 2 Track C)"]
 fn bt21_025_clause3_opt_blocks_second_activation() {
-    todo!("implement once G-INHERITED-DISPATCH resolves");
+    todo!("implement OPT-lockout body now that G-INHERITED-DISPATCH and G-OPT-TRIGGERED are both closed");
 }

@@ -2873,3 +2873,168 @@ fn on_digivolution_card_trashed_fires_on_return_to_deck() {
         r.memory()
     );
 }
+
+// ─── Phase 2 Track D regression: inherited dispatch from deep stack ─────────
+
+/// An inherited CardEffect that gains 1 memory on OnOpponentSecurityRemoved.
+/// Records each fire's `ctx.source_card` (the resolving QueuedEffect's
+/// source-card handle) so the test can assert per-source identity.
+struct InheritedOppSecRemovedMemoryGain {
+    fires: Arc<Mutex<Vec<CardHandle>>>,
+}
+impl CardEffect for InheritedOppSecRemovedMemoryGain {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let fires = Arc::clone(&self.fires);
+        vec![Effect::inherited(card)
+            .name("inherited stack OnOpponentSecurityRemoved memory gain")
+            .timing(EffectTiming::OnOpponentSecurityRemoved)
+            .process(move |ctx| {
+                fires.lock().unwrap().push(ctx.source_card);
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+/// Track D regression: `enqueue_from_permanent` walks every below-top
+/// `card_sources` slot, not just the carrier's top card. Builds a 3-card
+/// stack (BOTTOM-D / MID-D / TOP-D) where BOTTOM-D and MID-D each carry an
+/// inherited OnOpponentSecurityRemoved observer; the TOP-D has no effect.
+/// After P0 attacks P1's security, BOTH inherited observers must fire from
+/// the single carrier permanent — confirming the dispatch walks the full
+/// digivolution stack (skipping only the top, which is scanned separately).
+#[test]
+fn inherited_stack_dispatch_fires_each_below_top_source_once() {
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::permanent::Permanent;
+
+    let filler: Vec<&str> = vec!["FD"; 10];
+    let mut atk_data = plain_digimon("ATK-D", "AttackerD", 5);
+    atk_data.level = Some(5);
+    atk_data.dp = Some(9000);
+
+    let mut r = DebugRunner::builder()
+        .add_card(atk_data)
+        .add_card(plain_digimon("BOTTOM-D", "BottomD", 3))
+        .add_card(plain_digimon("MID-D", "MidD", 4))
+        .add_card(plain_digimon("TOP-D", "TopD", 5))
+        .add_card(plain_digimon("SEC-D", "SecurityCardD", 3))
+        .add_card(plain_digimon("FD", "FD", 1))
+        .security(1, &["SEC-D"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(5)
+        .start();
+
+    let bottom_fires = Arc::new(Mutex::new(Vec::new()));
+    let mid_fires = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect(
+        "BOTTOM-D",
+        Arc::new(InheritedOppSecRemovedMemoryGain {
+            fires: Arc::clone(&bottom_fires),
+        }),
+    );
+    r.register_effect(
+        "MID-D",
+        Arc::new(InheritedOppSecRemovedMemoryGain {
+            fires: Arc::clone(&mid_fires),
+        }),
+    );
+
+    // Place the attacker for P0.
+    let atk_h = r.place_on_field(0, "ATK-D", Some(0));
+
+    // Build the 3-card stack as a separate carrier on P0's battle area.
+    // Order: card_sources = [BOTTOM-D, MID-D, TOP-D]; top is TOP-D.
+    let stack_carrier = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let bottom_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BOTTOM-D")
+            .unwrap();
+        let mid_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "MID-D")
+            .unwrap();
+        let top_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TOP-D")
+            .unwrap();
+        let i_bottom = g.next_card_index();
+        let i_mid = g.next_card_index();
+        let i_top = g.next_card_index();
+        let bottom_src = CardSource::new(bottom_idx, 0, i_bottom);
+        let mid_src = CardSource::new(mid_idx, 0, i_mid);
+        let top_src = CardSource::new(top_idx, 0, i_top);
+        let mut perm = Permanent::new(bottom_src, turn);
+        perm.card_sources.push(mid_src);
+        perm.card_sources.push(top_src);
+        g.players[0].battle_area.push(perm);
+        let idx = g.players[0].battle_area.len() - 1;
+        PermanentHandle {
+            player: 0,
+            index: idx as u8,
+        }
+    };
+
+    let before = r.memory();
+    let _ = r.attack_player(atk_h, 1, true);
+    // Two below-top inherited observers — the drainer installs a
+    // TriggerOrder prompt for the controller to pick firing order.
+    // Auto-resolve consumes the prompt and fires both in queue order.
+    let _ = r.auto_resolve();
+
+    // BOTTOM-D and MID-D are both below the top slot; the dispatch must
+    // walk both sources once each. The fires are recorded with the
+    // queued effect's source_card so we can confirm per-source identity.
+    let bottom = bottom_fires.lock().unwrap();
+    let mid = mid_fires.lock().unwrap();
+    assert_eq!(
+        bottom.len(),
+        1,
+        "BOTTOM-D inherited observer must fire exactly once \
+         from the digivolution-stack walk (got {} fires)",
+        bottom.len()
+    );
+    assert_eq!(
+        mid.len(),
+        1,
+        "MID-D inherited observer must fire exactly once \
+         from the digivolution-stack walk (got {} fires)",
+        mid.len()
+    );
+
+    // Confirm the source_card on each queued effect matches the stacked
+    // card identity, not the carrier top card. This is the keying
+    // invariant Track C relies on for OPT-slot stability.
+    let stack = &r.game.players[0].battle_area[stack_carrier.index as usize].card_sources;
+    assert_eq!(stack.len(), 3, "stack must remain 3-deep after attack");
+    assert_eq!(
+        bottom[0],
+        stack[0].handle(),
+        "BOTTOM-D fire must carry source_card = bottom stacked card handle, not carrier top"
+    );
+    assert_eq!(
+        mid[0],
+        stack[1].handle(),
+        "MID-D fire must carry source_card = middle stacked card handle, not carrier top"
+    );
+    assert_ne!(
+        bottom[0],
+        stack[2].handle(),
+        "BOTTOM-D source_card must NOT be the carrier top — Track C OPT keying relies on per-source identity"
+    );
+
+    // Memory should have grown by 2 (one per below-top inherited observer).
+    assert_eq!(
+        r.memory(),
+        before + 2,
+        "memory should grow by 2 (one per below-top inherited observer); \
+         before={before}, after={}",
+        r.memory()
+    );
+}

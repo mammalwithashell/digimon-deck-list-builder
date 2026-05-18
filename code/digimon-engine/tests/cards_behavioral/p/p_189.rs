@@ -322,22 +322,98 @@ fn p_189_on_play_no_effects_no_pending_selection() {
 /// Positive: when Dimetromon is in a digivolution stack (inherited) and the
 /// opponent's security is removed, the controller gains 1 memory.
 ///
-/// BLOCKED: G-INHERITED-DISPATCH — inherited triggered effects not dispatched
-/// from digivolution stack in the Rust engine.
+/// G-INHERITED-DISPATCH closed 2026-05-17 (Phase 2 Track D).
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH — inherited triggered effects not dispatched from digivolution stack"]
 fn p_189_inherited_gains_1_memory_on_opp_security_removed() {
-    todo!("Implement when G-INHERITED-DISPATCH is resolved");
+    use digimon_engine::card_source::CardSource;
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(P189_YAML)
+        .expect("P-189 YAML parses")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("SEC-CARD", "SecCard"))
+        .add_card(make_test_card("FILL", "Fill"))
+        .security(1, &["SEC-CARD"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(5)
+        .start();
+
+    // Place CARRIER on P0's field; insert Dimetromon as bottom source.
+    let carrier_h = runner.place_on_field(0, "CARRIER", Some(0));
+    {
+        let game = runner.game_mut();
+        let data_idx = game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "P-189")
+            .expect("P-189 registered in card_data");
+        let next = game.next_card_index();
+        let mut src = CardSource::new(data_idx, 0, next);
+        src.card_index = next;
+        let perm = &mut game.players[0].battle_area[carrier_h.index as usize];
+        perm.card_sources.insert(0, src);
+    }
+
+    let memory_before = runner.memory();
+    runner.attack_player(carrier_h, 1, false);
+    let _ = runner.auto_resolve();
+    let memory_after = runner.memory();
+
+    assert!(
+        memory_after > memory_before,
+        "Dimetromon inherited clause must gain 1 memory when opponent security removed; \
+         memory: {memory_before} -> {memory_after}"
+    );
 }
 
 /// Negative condition: inherited clause should NOT fire on opponent's turn
 /// (active_when: your_turn guards this).
-///
-/// BLOCKED: G-INHERITED-DISPATCH.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH — inherited triggered effects not dispatched from digivolution stack"]
 fn p_189_inherited_does_not_fire_on_opponents_turn() {
-    todo!("Implement when G-INHERITED-DISPATCH is resolved");
+    use digimon_engine::card_source::CardSource;
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(P189_YAML)
+        .expect("P-189 YAML parses")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("ATTACKER-P1", "AttackerP1"))
+        .add_card(make_test_card("SEC-P0", "SecP0"))
+        .add_card(make_test_card("FILL", "Fill"))
+        .security(0, &["SEC-P0"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(5)
+        .start();
+
+    let carrier_h = runner.place_on_field(0, "CARRIER", Some(0));
+    {
+        let game = runner.game_mut();
+        let data_idx = game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "P-189")
+            .expect("P-189 registered in card_data");
+        let next = game.next_card_index();
+        let mut src = CardSource::new(data_idx, 0, next);
+        src.card_index = next;
+        let perm = &mut game.players[0].battle_area[carrier_h.index as usize];
+        perm.card_sources.insert(0, src);
+    }
+
+    runner.end_turn();
+
+    let attacker = runner.place_on_field(1, "ATTACKER-P1", Some(0));
+    let memory_before = runner.memory();
+    runner.attack_player(attacker, 0, false);
+    let _ = runner.auto_resolve();
+    let memory_after = runner.memory();
+
+    assert_eq!(
+        memory_after, memory_before,
+        "Dimetromon inherited clause must NOT fire on opponent's turn; \
+         memory: {memory_before} -> {memory_after}"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -357,21 +433,129 @@ fn p_189_security_free_play_fires_on_play_event() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// OPT lockout: second firing in the same turn must be gated.
-///
-/// BLOCKED: G-INHERITED-DISPATCH only (OPT closed in Phase 2 Track C).
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH (test body not written; OPT closed in Phase 2 Track C)"]
 fn p_189_inherited_opt_blocks_second_activation_same_turn() {
-    todo!("Implement when G-INHERITED-DISPATCH closes");
+    use digimon_engine::card_source::CardSource;
+
+    // memory(5) leaves headroom for the inherited clause's +1 gain (memory
+    // is clamped to rules.memory_range = (-10, 10)). memory(10) would
+    // already be at the cap and gain_memory would clamp to 0 delta.
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(P189_YAML)
+        .expect("P-189 YAML parses")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("SEC-1", "Sec1"))
+        .add_card(make_test_card("SEC-2", "Sec2"))
+        .add_card(make_test_card("FILL", "Fill"))
+        .security(1, &["SEC-1", "SEC-2"])
+        .deck(0, &["FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(5)
+        .start();
+
+    let carrier_h = runner.place_on_field(0, "CARRIER", Some(0));
+    {
+        let game = runner.game_mut();
+        let data_idx = game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "P-189")
+            .expect("P-189 registered in card_data");
+        let next = game.next_card_index();
+        let mut src = CardSource::new(data_idx, 0, next);
+        src.card_index = next;
+        let perm = &mut game.players[0].battle_area[carrier_h.index as usize];
+        perm.card_sources.insert(0, src);
+    }
+
+    let m0 = runner.memory();
+    runner.attack_player(carrier_h, 1, false);
+    let _ = runner.auto_resolve();
+    let m1 = runner.memory();
+    let first_delta = m1 - m0;
+
+    assert!(
+        first_delta >= 1,
+        "first security removal must gain memory; delta={first_delta}"
+    );
+
+    if runner.game_over() {
+        return;
+    }
+
+    let carrier2 = runner.perm_handle(0, 0);
+    let m2 = runner.memory();
+    runner.attack_player(carrier2, 1, false);
+    let _ = runner.auto_resolve();
+    let m3 = runner.memory();
+    let second_delta = m3 - m2;
+
+    assert!(
+        second_delta < first_delta,
+        "OPT must block second inherited trigger; first_delta={first_delta}, second_delta={second_delta}"
+    );
 }
 
 /// OPT lockout clears after end_turn.
-///
-/// BLOCKED: G-INHERITED-DISPATCH only (OPT closed in Phase 2 Track C).
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH (test body not written; OPT closed in Phase 2 Track C)"]
 fn p_189_inherited_opt_clears_after_end_turn() {
-    todo!("Implement when G-INHERITED-DISPATCH closes");
+    use digimon_engine::card_source::CardSource;
+
+    // memory(5) leaves headroom for the +1 gains (see opt_blocks test).
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(P189_YAML)
+        .expect("P-189 YAML parses")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("SEC-P1-1", "SecP1A"))
+        .add_card(make_test_card("SEC-P1-2", "SecP1B"))
+        .add_card(make_test_card("FILL", "Fill"))
+        .security(1, &["SEC-P1-1", "SEC-P1-2"])
+        .deck(0, &["FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(5)
+        .start();
+
+    let carrier_h = runner.place_on_field(0, "CARRIER", Some(0));
+    {
+        let game = runner.game_mut();
+        let data_idx = game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "P-189")
+            .expect("P-189 registered in card_data");
+        let next = game.next_card_index();
+        let mut src = CardSource::new(data_idx, 0, next);
+        src.card_index = next;
+        let perm = &mut game.players[0].battle_area[carrier_h.index as usize];
+        perm.card_sources.insert(0, src);
+    }
+
+    let m0 = runner.memory();
+    runner.attack_player(carrier_h, 1, false);
+    let _ = runner.auto_resolve();
+    let first_delta = runner.memory() - m0;
+
+    if runner.game_over() {
+        return;
+    }
+
+    // End P0's turn, then P1's turn back to P0's turn.
+    runner.end_turn();
+    if runner.game_over() {
+        return;
+    }
+    runner.end_turn();
+
+    let carrier_after = runner.perm_handle(0, 0);
+    let m2 = runner.memory();
+    runner.attack_player(carrier_after, 1, false);
+    let _ = runner.auto_resolve();
+    let second_delta = runner.memory() - m2;
+
+    assert!(
+        first_delta >= 1 && second_delta >= 1,
+        "OPT must reset after turn cycle; first_delta={first_delta}, second_delta={second_delta}"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

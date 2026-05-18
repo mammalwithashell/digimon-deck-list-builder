@@ -302,6 +302,47 @@ production YAML for the directly-unblocked cards. Five gap tags resolve:
 - **Out of scope:** The same card's `[When Digivolving] [On Deletion]` opponent-Digimon DP debuff remains BLOCKED on `Expiry::EndOfOpponentsNextTurn` (separate tracked gap — modifier next-turn-of-target-player expiry).
 - **Audit predecessor:** This entry was flagged UNCLEAR by the 2026-05-15 audit with a "first-test write recommended" footer; the first test was written 2026-05-17 and passed without engine changes. See [`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md).
 
+## Phase 2 Track D closure — 2026-05-17
+
+### Engine Gap: G-INHERITED-DISPATCH — `enqueue_from_permanent` digivolution-stack walk — RESOLVED 2026-05-17 (Track D)
+
+- **Status:** Closed. The substrate walk landed during the 2026-04-29 Group 5/6 work and was claimed RESOLVED in the 2026-05-15 hygiene sweep. Track D completes the closure by adding a dedicated regression test, un-ignoring every test whose body was passing-but-still-ignored under the gap, and re-tagging the residue with the actual remaining blocker (test-fixture gaps, `todo!()` bodies, or other DSL gaps — never G-INHERITED-DISPATCH).
+- **Diagnosis verified:** `enqueue_from_permanent` (`code/digimon-engine/src/effect_queue.rs:1501-1552`) iterates `permanent.card_sources.iter().take(stack_len.saturating_sub(1))` — every below-top digivolution source — and pushes one `QueuedEffect` per `effect.inherited == true` clause matching the dispatch timing. The queued entry has `source_card` = the stacked card's handle, `source_permanent` = the carrier, `allow_below_top_liveness: true`. The liveness check at `queued_effect_source_is_live` (line 2089) accepts the stacked source via the `inherited_source_matches` branch.
+- **OPT-slot keying invariant (Track C dependency):** confirmed. The OPT key shape `(carrier_permanent.effect_activations HashMap) × (source_card_handle, effect_slot)` is per-carrier-per-stacked-card, so two different inherited sources under the same carrier do NOT collide on the OPT slot. The `Permanent::new_turn` clear (`code/digimon-engine/src/permanent.rs:412-416`) wipes the whole map at begin-turn, so OPT resets cleanly turn-over.
+- **Regression coverage added:** [`inherited_stack_dispatch_fires_each_below_top_source_once`](../code/digimon-engine/tests/timing_dispatch.rs) — a 3-card stack `[BOTTOM-D, MID-D, TOP-D]` where BOTTOM-D and MID-D both carry an inherited OnOpponentSecurityRemoved memory-gain observer. After P0's attack on P1's security, both inherited observers fire exactly once, each with `ctx.source_card` matching the stacked card's handle (not the carrier top). Auto-resolves a `TriggerOrder` prompt installed for the controller's pick-order over the multi-bundle.
+- **Tests un-ignored (substrate dispatch already worked; the `#[ignore]` annotation was stale):**
+  - `bt14_001_inherited_fires_draws_one_card_on_your_turn`
+  - `bt21_001_inherited_does_not_fire_on_opponents_turn`
+  - `bt21_001_inherited_fires_on_your_turn_and_installs_selection`
+  - `bt21_001_declining_permanent_selection_no_digivolve`
+  - `bt22_005_inherited_fires_draws_one_on_unidentified_digimon_play`
+  - `bt22_005_inherited_fires_draws_one_on_cs_digimon_play`
+  - `bt21_017_inherited_fires_when_source_under_carrier_your_turn`
+  - `bt21_017_inherited_does_not_fire_on_opponents_turn`
+  - `bt21_025_clause3_decline_does_nothing`
+- **Tests un-ignored after authoring `todo!()` bodies (substrate ready; bodies now mirror BT14-001 / BT22-005 / BT21-008 idioms):**
+  - `p_189_inherited_gains_1_memory_on_opp_security_removed`
+  - `p_189_inherited_does_not_fire_on_opponents_turn`
+  - `p_189_inherited_opt_blocks_second_activation_same_turn`
+  - `p_189_inherited_opt_clears_after_end_turn`
+  - `bt24_012_inherited_gain_memory_on_opp_security_removed`
+  - `bt24_012_inherited_clause_does_not_fire_when_not_in_stack` (documents the limit — top-card scan still fires the inherited clause when BT24-012 is face-up on its own permanent; printed "Inherited" semantic is not engine-enforceable today without a separate `G-DSL-SOURCE-IS-INHERITED` gate)
+  - `bt24_012_inherited_clause_opt_blocks_second_activation`
+  - `bt24_012_inherited_clause_opt_resets_after_turn`
+  - `bt24_012_inherited_clause_does_not_fire_on_opponent_turn`
+- **Tests re-tagged (gap closed; residual failure is non-Track-D):**
+  - `bt21_001_selecting_permanent_then_hand_card_triggers_digivolve_cost_minus_1` — depends on REPTILE-HAND fixture having valid `evo_costs`; engine substrate (selection install) confirmed working.
+  - `ex4_003_inherited_fires_draws_one_on_other_digimon_digivolve` / `ex4_003_inherited_opt_blocks_second_trigger_same_turn` — `make_lv4_digimon` returns a card with empty `evo_costs` so the digivolve action itself is rejected; the inherited dispatch substrate is ready.
+  - `bt21_013_when_digivolving_*` (×4) — test fixtures place a `BASE-LV3` filler permanent (not the Agunimon DSL card) and then enqueue WhenDigivolving on it; no Agunimon effect ever sits where the dispatch can find it. Requires per-test fixture authoring.
+  - `bt21_025_clause3_plays_reptile_from_hand_free` — uses `TriggerSource::PlayerBattleArea(1)` instead of `TriggerSource::SecurityRemoved`; the dispatch never reaches P0's Lamiamon. Requires fixture revision.
+  - `bt21_024_inherited_aura_*` / `bt24_016_inherited_*` / `bt21_025_clause3_opt_blocks_second_activation` — remain `todo!()` placeholders; substrate ready, bodies pending.
+- **Net `#[ignore]` count:** total tests-tree ignored drops 379 → 361 (-18). `cards_behavioral`-specific drop: 375 → 357 (-18). Pass count: 2336 → 2354. The one residual failure (`ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played`) is the pre-existing Medusamon flake (Track G's territory).
+- **Source priority cross-check (Working Rule 17):** the inherited-from-stack dispatch surfaces any optionality through `pending_selection` for "you may" clauses (`effect.optional` flag is threaded into `QueuedEffect.is_optional`). The drainer's `bundle.len() > 1 → install_trigger_order_selection` path keeps the controller in control of firing order when multiple stacked sources match the same timing. DCGO confirms top-down `IBattleAreaPermanent.AllEffects()` enumeration; the Rust scan visits sources base-to-top-1 (`card_sources[..n-1]`), matching the documented ordering.
+- **Discovery rider findings (documented, not patched):**
+  - `bt24_012_inherited_clause_does_not_fire_when_not_in_stack` — when a DigiEgg-shape card with an inherited triggered clause is face-up on its own permanent (carrier top), the top-card scan in `enqueue_from_permanent` does not skip inherited effects (`skip_inherited` is set only for Training option permanents). Printed text says "Inherited" semantically means "fires only as a digivolution source", but the engine fires the clause from the top-card slot too. Fixing this would require either a separate `inherited_only: bool` flag on `Effect`, or wiring `effect.inherited` into the top-card scan's filter. Not in Track D scope.
+  - `bt21_013` WhenDigivolving test fixtures — the test author placed a filler `BASE-LV3` rather than `BT21-013` (Agunimon) on the field. The dispatch surface for WhenDigivolving from a permanent is correctly wired (BT22-013 `When Digivolving` tests pass live); this is a fixture authoring issue.
+- **Verification:** all gauntlet commands listed in the Track D plan pass except the pre-existing `ex11_054` Medusamon flake which is unrelated to this track.
+
 ## DSL Gap: `refire_effect` On Play / When Digivolving timing filter — RESOLVED 2026-05-10
 
 - **Status:** Closed for existing permanent-target refire.

@@ -203,7 +203,7 @@
         "G4",
         "E2-adjacent"
       ],
-      "notes": "Single inherited clause: [Your Turn][OPT] on_opponent_security_removed draw 1. YAML authors draw: { of: you, count: 1 }. 6 active tests pass (structural x5 + your_turn gate negative), 2 ignored pending G-INHERITED-DISPATCH + G-OPT-TRIGGERED."
+      "notes": "Single inherited clause: [Your Turn][OPT] on_opponent_security_removed draw 1. YAML authors draw: { of: you, count: 1 }. 8 active tests pass (structural x5 + your_turn gate negative + inherited fire-test + OPT-lockout); 0 ignored. G-INHERITED-DISPATCH closed in Phase 2 Track D 2026-05-17; G-OPT-TRIGGERED closed in Phase 2 Track C."
     },
     "BT24-001": {
       "card_name": "Gigimon",
@@ -523,7 +523,7 @@
         "H_PROGRESS",
         "G-INHERITED-OPT"
       ],
-      "notes": "Clause 1 [Security] optional play-LIBERATOR-free-from-hand-or-trash ships via select_effect_choice + two separate if: blocks + select_hand/select_trash + play_from_hand_free/play_from_trash_free. Cost-â‰¤4 filter (G-PLAY-COST-LTE) cannot be enforced â€” play_cost_lte predicate absent from PredicateSpec; select_hand/select_trash accept-all (Phase 2b). Clause 2 Progress declarative ships structurally; modifier not installed at runtime (G-DECLARATIVE-KEYWORD). Clause 3 [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 8 active tests pass, 8 ignored. New gap reported: G-PLAY-COST-LTE."
+      "notes": "Clause 1 [Security] optional play-LIBERATOR-free-from-hand-or-trash ships via select_effect_choice + two separate if: blocks + select_hand/select_trash + play_from_hand_free/play_from_trash_free. Cost-≤4 filter (G-PLAY-COST-LTE) cannot be enforced — play_cost_lte predicate absent from PredicateSpec; select_hand/select_trash accept-all (Phase 2b). Clause 2 Progress declarative ships structurally; modifier not installed at runtime (G-DECLARATIVE-KEYWORD). Clause 3 [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory now ships live: G-INHERITED-DISPATCH closed in Phase 2 Track D 2026-05-17; G-OPT-TRIGGERED closed in Phase 2 Track C. 12 active tests pass (inherited fire + your-turn gate + OPT-lockout + OPT-reset), 4 ignored on unrelated DSL gaps (G-PLAY-COST-LTE, G-DECLARATIVE-KEYWORD, security-attack harness, Progress declarative)."
     },
     "BT24-012": {
       "card_name": "Dimetromon",
@@ -540,7 +540,7 @@
         "REPLACE-OTHER-PERM",
         "G-INHERITED-OPT"
       ],
-      "notes": "Clause (a) Blocker keyword ships and is verified by 2 active tests (keyword present + active on field, doesn't leak to allies). Clause (b) 'protect other Reptile/Dragonkin by returning self' is the most complex cross-permanent replacement in the Medusamon pool: standard kind:replacement is blocked by subject_matches guard in lower_replacement.rs; uses kind:raw_rust fn bt24_012_would_leave_replacement (registered in src/cards/raw_rust/mod.rs as declarative no-op placeholder). Full clause (b) implementation blocked by G-EVENT-TARGET-OWNER (no removal-cause attribution for 'opponent effects only' gate, no cross-permanent subject filter in replacement context). Clause (c) [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory ships structurally; behavior blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED. 6 structural tests pass, 12 ignored (6 for G-EVENT-TARGET-OWNER clause (b) + 5 for G-INHERITED-DISPATCH/G-OPT-TRIGGERED clause (c) + 1 raw_rust trait/self filter)."
+      "notes": "Clause (a) Blocker keyword ships and is verified by 2 active tests (keyword present + active on field, doesn't leak to allies). Clause (b) 'protect other Reptile/Dragonkin by returning self' is the most complex cross-permanent replacement in the Medusamon pool: standard kind:replacement is blocked by subject_matches guard in lower_replacement.rs; uses kind:raw_rust fn bt24_012_would_leave_replacement (registered in src/cards/raw_rust/mod.rs as declarative no-op placeholder). Full clause (b) implementation blocked by G-EVENT-TARGET-OWNER (no removal-cause attribution for 'opponent effects only' gate, no cross-permanent subject filter in replacement context). Clause (c) [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory now ships live: G-INHERITED-DISPATCH closed in Phase 2 Track D 2026-05-17; G-OPT-TRIGGERED closed in Phase 2 Track C. 11 active tests pass (inherited fire + your-turn gate + OPT-lockout + OPT-reset + not-in-stack documentation test), 7 ignored on G-EVENT-TARGET-OWNER (clause (b) raw_rust filters)."
     },
     "BT21-001": {
       "card_name": "Gigimon",
@@ -1453,8 +1453,8 @@
       "card_name": "Tsumemon",
       "validated_date": "2026-05-03",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-005.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_005.rs",
@@ -1463,7 +1463,7 @@
         "G4",
         "B3"
       ],
-      "notes": "DigiEgg inherited Draw 1. 11 pass, 3 ignored on G-INHERITED-DISPATCH (DigiEgg slot dispatch) + G-OPT-TRIGGERED."
+      "notes": "DigiEgg inherited Draw 1 on [Unidentified]/[CS] Digimon play. 14 pass, 0 ignored. G-INHERITED-DISPATCH closed in Phase 2 Track D 2026-05-17; G-OPT-TRIGGERED closed in Phase 2 Track C."
     },
     "BT22-008": {
       "card_name": "Agumon",

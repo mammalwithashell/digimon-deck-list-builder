@@ -23,8 +23,9 @@
 //!
 //! | Clause | Gap | Status |
 //! |--------|-----|--------|
-//! | Inherited On-Opponent-Security-Removed | G-INHERITED-DISPATCH | BLOCKED — enqueue_from_permanent does not scan digivolution stack sources for inherited triggered effects; entire behavioral firing path #[ignore]'d |
-//! | OPT lockout | G-OPT-TRIGGERED | BLOCKED — once_per_turn not enforced for triggered effects; #[ignore]'d |
+//! | Inherited On-Opponent-Security-Removed | G-INHERITED-DISPATCH | RESOLVED 2026-05-17 (Phase 2 Track D); the dispatch walks the digivolution stack and the clause fires with the stacked source's identity preserved. The 3 negative/positive/decline tests are live. |
+//! | Effect-initiated digivolve (cost-1) follow-up | (test fixture) | The fire-test for the "select permanent + card" digivolve path remains `#[ignore]`'d: REPTILE-HAND is built with empty `evo_costs`, so the engine's normal digivolve route rejects it even when the clause supplies `cost: { reduce: 1 }`. Independent of inherited dispatch. |
+//! | OPT lockout | G-OPT-TRIGGERED | Closed 2026-05-16 (Phase 2 Track C); the OPT-lockout test is live (Section 5 below). |
 //!
 //! Structural tests (compiled card shape) are unaffected by these gaps and pass.
 
@@ -173,7 +174,6 @@ fn bt21_001_inherited_clause_scope_timing_opt_flags() {
 /// the actual digivolve is interactive, but if it fires it would install a
 /// selection and block auto_resolve).
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-DISPATCH — enqueue_from_permanent does not dispatch inherited triggered effects from digivolution stack sources"]
 fn bt21_001_inherited_does_not_fire_on_opponents_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-001")
@@ -209,10 +209,7 @@ fn bt21_001_inherited_does_not_fire_on_opponents_turn() {
 
 /// Positive: on P0's turn, when P1's security is removed, the inherited
 /// clause should install a selection (optional Digimon selection).
-///
-/// BLOCKED: G-INHERITED-DISPATCH — stack inherited dispatch not yet wired.
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-DISPATCH — enqueue_from_permanent does not dispatch inherited triggered effects from digivolution stack sources"]
 fn bt21_001_inherited_fires_on_your_turn_and_installs_selection() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-001")
@@ -243,10 +240,7 @@ fn bt21_001_inherited_fires_on_your_turn_and_installs_selection() {
 // ─── Section 3: Behavioral per-branch (selection path) ──────────────────────
 
 /// When the player declines the permanent selection, no digivolve occurs.
-///
-/// BLOCKED: G-INHERITED-DISPATCH — clause never fires from stack.
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-DISPATCH — enqueue_from_permanent does not dispatch inherited triggered effects from digivolution stack sources"]
 fn bt21_001_declining_permanent_selection_no_digivolve() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-001")
@@ -294,9 +288,17 @@ fn bt21_001_declining_permanent_selection_no_digivolve() {
 /// When the player selects a Digimon and then a Reptile/Dragonkin card from
 /// hand, an effect_initiated_digivolve fires with cost reduced by 1.
 ///
-/// BLOCKED: G-INHERITED-DISPATCH — clause never fires from stack.
+/// G-INHERITED-DISPATCH was closed in Phase 2 Track D (2026-05-17); the
+/// inherited clause now fires from the stack source, installs both the
+/// own-permanent selection and the hand-card selection. The downstream
+/// effect-initiated-digivolve, however, fails to consume REPTILE-HAND in
+/// this test fixture because `make_reptile` synthesizes a Lv.4 with no
+/// `evo_costs` entries — the engine's digivolve route lookup rejects it
+/// even when the clause supplies cost: { reduce: 1 }. This is a test
+/// fixture gap (and possibly a DSL-driven-digivolve-from-hand gap when
+/// the source has empty evo_costs), not an inherited-dispatch gap.
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-DISPATCH — enqueue_from_permanent does not dispatch inherited triggered effects from digivolution stack sources"]
+#[ignore = "pending: test fixture (REPTILE-HAND has empty evo_costs so digivolve route rejects). Inherited dispatch + selection installation are both confirmed working in Track D regression"]
 fn bt21_001_selecting_permanent_then_hand_card_triggers_digivolve_cost_minus_1() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT21-001")
@@ -360,9 +362,6 @@ fn bt21_001_selecting_permanent_then_hand_card_triggers_digivolve_cost_minus_1()
 // ─── Section 5: OPT lockout ─────────────────────────────────────────────────
 
 /// Second security removal in same turn must not install a selection.
-///
-/// BLOCKED: G-OPT-TRIGGERED — once_per_turn not enforced for triggered effects.
-/// BLOCKED: G-INHERITED-DISPATCH — stack inherited dispatch not wired.
 #[test]
 fn bt21_001_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
@@ -405,8 +404,6 @@ fn bt21_001_opt_blocks_second_trigger_same_turn() {
 }
 
 /// OPT resets after end_turn.
-///
-/// BLOCKED: G-INHERITED-DISPATCH + G-OPT-TRIGGERED.
 #[test]
 fn bt21_001_opt_resets_after_end_turn() {
     let mut runner = DebugRunner::builder()
