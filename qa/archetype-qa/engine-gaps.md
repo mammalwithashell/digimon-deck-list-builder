@@ -2,8 +2,42 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-05-15
-Last sweep: 2026-05-15 (post-rebaseline audit cleanup)
+Last updated: 2026-05-17
+Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
+
+## Sweep notes (2026-05-17 — Phase 2 rollup)
+
+10 Phase 2 tracks landed in PR #480 (`claude/musing-ishizaka-c4b355` against
+`main`). The substrate-side closures in this shadow tracker:
+
+- **Track B** — `Effect::activation_cost(...)` builder hook +
+  `ctx.suspend_self_as_cost` / `ctx.return_self_to_deck_bottom_as_cost`
+  helpers landed. Cost failure consumes OPT slot per Working Rule §17.
+- **Track C** — `G-OPT-TRIGGERED` and `G-OPT-RESET-VIA-ATTACK-CYCLE`
+  diagnosed as already-closed (phantom + test-setup misdiagnosis). 23
+  stale `#[ignore]` annotations removed. The G-OPT-RESET entry below is
+  already marked CLOSED at §348.
+- **Track D** — `enqueue_from_permanent` digivolution-stack walk
+  completed (already RESOLVED 2026-05-15 per
+  `docs/RUST_ENGINE_GAPS.md`); Track D added the dedicated regression
+  test and un-ignored 18 dependent behavioral tests. G-WHEN-DIGIVOLVING-DISPATCH
+  absorbed.
+- **Track G** — EX11-054 (entering-permanent observer) migrated to
+  Track B's `activation_cost`. The G-ON-ENTER-FIELD-ANYONE-TRAIT-FILTER
+  entry below at §208 retains an updated footer for that card; the
+  underlying entering-permanent predicate gap remains open for other
+  observer cards.
+- **Track H** — BeforePayCost substrate extensions, plus
+  `G-PLAY-FROM-HAND-FREE-BIND-AS` (already marked CLOSED at §325).
+- **Track I** — PUPPETS-G009 Standard Delay [Main] activation closure
+  (substrate now exposes the `[Main]` activation action through normal
+  action mask). End-of-attack mandatory self-delete chain closed for
+  EX4-074 ShineGreymon: Ruin Mode (no engine changes — existing
+  primitives suffice).
+
+See [qa/resolved-gaps.md](../resolved-gaps.md) for full per-track closure
+details. The Phase 2 rollup also closed many DSL-only gaps tracked in
+[qa/dsl-vocab-gaps.md](../dsl-vocab-gaps.md).
 
 ## Sweep notes (2026-05-15)
 
@@ -214,6 +248,7 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Related gap:** G-ON-DIGIVOLVE-TRAIT-FILTER (same limitation for `on_digivolve`). Both share the same root cause: the trigger source variant doesn't carry the triggering permanent's handle.
 - **Suggested change:** Add `entering_permanent: Option<PermanentHandle>` to `TriggerContext` (alongside existing `target_permanent`). Populate it in `game_actions.rs::broadcast_on_enter_field_anyone` (and the digivolve broadcast) with the handle of the card that just entered/digivolved. Add a matching `entering_permanent_trait_has` DSL BoolPredicate leaf in `predicate.rs` that reads `ctx.trigger_context.entering_permanent`.
 - **Workaround:** `kind: raw_rust` no-op placeholder (`ex11_054_all_turns_noop`). See `qa/dsl-vocab-gaps.md` entry `G-ENTERING-PERMANENT-TRAIT`.
+- **Updated 2026-05-17 (Phase 2 Track G):** EX11-054 specifically migrated off the `ex11_054_all_turns_noop` workaround. The [All Turns] clause now uses Track B's `activation_cost: { suspend_self: true }` to gate the body via the single-trigger drainer model, and the previously-failing `ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played` test passes. The underlying entering-permanent trait-filter gap remains open for other observer cards that need an entering-permanent predicate beyond what `event_card_trait_has` covers; this card was unblocked through a different shape.
 - **Updated 2026-04-29:** Normal hand-played battle-area permanents now dispatch `OnEnterFieldAnyone` via `TriggerSource::EnteredField { player, permanent, card }`, and `TriggerContext.event_permanent` / `event_card` identify the entering permanent and card. `event_card_trait_has` is proven against the entering card by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_enter_field_anyone_event_card_trait_predicate_matches_entering_card`. Keep token play, option placement, play-from-trash context, and breeding-area observer fan-out as open follow-ups unless separately tested.
 - **Updated 2026-05-08:** Effect-created battle-area permanents now use `EnteredField` with `TriggerContext.effect_initiated = true`, while normal player-action play sets it false. BT16-028 proves effect-play vs normal-play gating with `event_is_effect_initiated`.
 - **Updated 2026-05-08:** Provenance-token helpers are available for effect-created play/digivolve flows. `play_from_hand_free_with_provenance`, `effect_initiated_digivolve_with_provenance`, and `effect_initiated_dna_digivolve_with_provenance` return a token keyed to the physical card instance, and `resolve_provenance_token` follows it across battle-area index shifts and zone moves. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- provenance_tokens`.
