@@ -484,12 +484,10 @@ pub fn try_install(
             let max_value = resolve_count_bound(ctx, max, &bindings);
             // Whether the carrier yields any source matching the filter at
             // install time — drives the synchronous-completion accounting
-            // (mirrors `SelectCountCappedMulti`). Note: the breeding-area
-            // `BREEDING_TARGET` sentinel resolves to a `PermanentHandle`
-            // whose `index` is out of `battle_area` bounds; the engine
-            // multi-pick then finds zero candidates and runs the tail
-            // synchronously — there is no source-select action encoding
-            // for breeding-area carriers (see RUST_ENGINE_GAPS.md).
+            // (mirrors `SelectCountCappedMulti`). Battle-area AND breeding-area
+            // (`BREEDING_TARGET` sentinel) carriers are both handled: the
+            // engine multi-pick encodes breeding sources in the
+            // `BREEDING_SOURCE_SELECT` action range (Task S1.3).
             let has_candidates = has_material_candidates(ctx, perm, filter, Some(&bindings));
             let completes_synchronously = !has_candidates || max_value == 0;
             install_select_materials(
@@ -717,10 +715,11 @@ fn has_material_candidates(
     bindings: Option<&Bindings>,
 ) -> bool {
     let read = ctx.as_read();
-    ctx.game
-        .player(perm.player)
-        .battle_area
-        .get(perm.index as usize)
+    // material_carrier_permanent branches battle-area vs. breeding-area
+    // (BREEDING_TARGET sentinel) carriers — so a King Drasil breeding
+    // carrier yields its real digivolution sources here, keeping the
+    // `completes_synchronously` accounting correct for breeding carriers.
+    crate::effect_context::material_carrier_permanent(ctx.game, perm)
         .map(|p| {
             p.card_sources
                 .iter()
@@ -1767,10 +1766,8 @@ fn install_select_material(
         &prompt,
         optional,
         move |game, src_idx| {
-            let Some(card) = game
-                .player(perm.player)
-                .battle_area
-                .get(perm.index as usize)
+            // material_carrier_permanent branches battle vs. breeding carrier.
+            let Some(card) = crate::effect_context::material_carrier_permanent(game, perm)
                 .and_then(|p| p.card_sources.get(src_idx))
             else {
                 return false;
@@ -1792,14 +1789,10 @@ fn install_select_material(
         move |cb_ctx, src_idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                let perm_owner = perm.player;
-                let perm_index = perm.index as usize;
-                if let Some(card) = cb_ctx
-                    .game
-                    .player(perm_owner)
-                    .battle_area
-                    .get(perm_index)
-                    .and_then(|p| p.card_sources.get(src_idx))
+                // material_carrier_permanent branches battle vs. breeding.
+                if let Some(card) =
+                    crate::effect_context::material_carrier_permanent(cb_ctx.game, perm)
+                        .and_then(|p| p.card_sources.get(src_idx))
                 {
                     b.insert_card(name, card.handle());
                 }
