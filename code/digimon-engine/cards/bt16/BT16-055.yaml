@@ -17,14 +17,39 @@ alt_paths:
     cost: 2
 
 effects:
-  # Printed high-security branch omitted:
-  # "If you have 3 or more security cards ... 1 of your Digimon can't have its
-  # DP reduced by your opponent's effects and isn't affected by <De-Digivolve>
-  # effects."
+  # Printed high-security branch:
+  # "If you have 3 or more security cards, until the end of your opponent's turn,
+  # 1 of your Digimon can't have its DP reduced by your opponent's effects and
+  # isn't affected by <De-Digivolve> effects."
   #
-  # Current DSL can express broad CannotBeAffected-style immunity and simple
-  # passive modifiers, but not the narrow reusable bundle that blocks only
-  # opponent DP reduction plus De-Digivolve without over-blocking other effects.
+  # PUPPETS-G024 — narrow opponent-effect protection:
+  #   - ImmuneFromDPMinus: filters negative ChangeDp modifiers in effective_dp
+  #     (combat.rs). Covers "DP reduced by your opponent's effects" — since DP
+  #     reduction is always a negative ChangeDp applied by an opponent effect in
+  #     practice, this is the correct narrow primitive.
+  #   - CannotBeDeDigivolved: already has default_passive_cause_filter returning
+  #     ReplacementCause::OpponentEffect (modifiers.rs:484), so it is inherently
+  #     opponent-scoped. Covers "isn't affected by <De-Digivolve> effects."
+  #   Both expire at end_of_opponents_turn. Selection is mandatory (printed text
+  #   says "1 of your Digimon" with no optional marker).
+  - when: [on_play, when_digivolving]
+    condition: { security_count_gte: 3 }
+    summary: "At 3 or more security, 1 of your Digimon can't have DP reduced or be De-Digivolved by opponent effects until opponent's turn ends"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to protect from DP reduction and De-Digivolve"
+      - add_modifier:
+          target: target
+          modifier: ImmuneFromDPMinus
+          value: 0
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: target
+          modifier: CannotBeDeDigivolved
+          value: 0
+          expiry: end_of_opponents_turn
 
   - when: [on_play, when_digivolving]
     condition: { security_count_lte: 3 }
