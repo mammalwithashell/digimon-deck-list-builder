@@ -195,23 +195,23 @@ fn st19_08_inherited_reduces_opponent_security_digimon_dp_during_your_turn() {
 
 /// G014 behavioral test: ST19-08 in security offers exactly the two legal
 /// [LIBERATOR]-cost-≤-4 candidates (one from hand, one from trash) and
-/// excludes illegal ones. Selecting the trash-origin card plays it for free.
+/// excludes illegal ones.
 ///
 /// Setup
 /// -----
 /// - Player 0: a 9 000-DP attacker on the field (beats ST19-08's 5 000 DP).
-/// - Player 1: ST19-08 in security; hand = [LIB_HAND (legal), NONLIB_HAND (illegal cost)];
+/// - Player 1: ST19-08 in security; hand = [LIB_HAND (legal), NONLIB_HAND (no LIBERATOR trait)];
 ///   trash = [LIB_TRASH (legal), LIB_COST5_TRASH (illegal — cost 5)].
 ///
 /// Flow
 /// ----
 /// 1. `attack_player` → security skill fires → `select_union_zone` pending →
 ///    returns `InProgress`.
-/// 2. Assert `SelectionKind::UnionZone`, optional, exactly 2 valid action IDs.
-/// 3. Identify and select the trash-origin action; `auto_resolve` completes
-///    the security pipeline.
-/// 4. Assert LIB_TRASH entered the battle area for free (trash shrank by 1,
-///    hand unchanged, memory unchanged).
+/// 2. Assert `SelectionKind::UnionZone`, optional, exactly 2 valid action IDs
+///    (LIB_HAND and LIB_TRASH).
+/// 3. Select any one valid action; `auto_resolve` completes the security pipeline.
+/// 4. Assert one card entered the battle area for free (exactly one card left
+///    the combined hand ∪ trash, memory unchanged).
 #[test]
 fn st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone() {
     // ── Build the runner ────────────────────────────────────────────────────
@@ -272,11 +272,7 @@ fn st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone() {
          NONLIB_HAND (no LIBERATOR trait) and LIB_COST5_TRASH (cost 5 > 4) must be excluded"
     );
 
-    // ── Choose the trash-origin candidate and complete the pipeline ─────────
-    // Identify which action corresponds to LIB_TRASH (trash-origin).
-    // We pick the first valid action that the engine marks as trash-origin.
-    // If the ordering differs, we accept either legal card — the important
-    // assertion is that exactly one card leaves trash OR hand, cost-free.
+    // ── Choose any valid action and complete the pipeline ───────────────────
     let selected_action = view.valid_action_ids[0];
     runner
         .execute_action(view.selecting_player, selected_action)
@@ -304,6 +300,113 @@ fn st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone() {
     );
 
     // Memory must not have changed — play_union_bound_free charges nothing.
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "play_union_bound_free must not charge the played card's play cost"
+    );
+}
+
+/// G014 behavioral test — trash-origin branch: ST19-08 in security with NO
+/// legal hand candidate forces a single trash-origin action, proving the
+/// trash branch is reached deterministically.
+///
+/// Setup
+/// -----
+/// - Player 0: a 9 000-DP attacker on the field.
+/// - Player 1: ST19-08 in security; hand = [NONLIB_HAND (no LIBERATOR trait)];
+///   trash = [LIB_TRASH (legal, cost ≤ 4)].
+///
+/// Flow
+/// ----
+/// 1. `attack_player` → security skill fires → exactly 1 valid action ID
+///    (the trash-origin LIB_TRASH).
+/// 2. Select it; `auto_resolve` completes the pipeline.
+/// 3. Assert LIB_TRASH is in the battle area (trash-origin confirmed), LIB_TRASH
+///    is no longer in the trash, hand was not touched, memory unchanged.
+#[test]
+fn st19_08_security_g014_plays_liberator_from_trash_when_no_legal_hand_candidate() {
+    // ── Build the runner ────────────────────────────────────────────────────
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST19-08")
+        .expect("ST19-08 YAML loads")
+        .add_card(strong_attacker("ATK"))
+        .add_card(liberator_cost4("LIB_TRASH"))   // legal trash candidate
+        .add_card(non_liberator("NONLIB_HAND"))   // illegal: wrong trait
+        // Player 1's hand: one wrong-trait card — no legal hand candidate.
+        .hand(1, &["NONLIB_HAND"])
+        .deck(0, &[])
+        .deck(1, &[])
+        // ST19-08 in player 1's security stack.
+        .security(1, &["ST19-08"])
+        .memory(5)
+        .start();
+
+    // Seed only the trash-origin candidate.
+    push_to_trash(&mut runner, 1, "LIB_TRASH");
+
+    let hand_before = runner.game.players[1].hand.len(); // 1
+
+    // ── Trigger the security check ──────────────────────────────────────────
+    let atk = runner.place_on_field(0, "ATK", Some(0));
+    let result = runner.attack_player(atk, 1, false);
+
+    assert_eq!(
+        result,
+        AttackResult::InProgress,
+        "on_security union-zone pick must park the security pipeline"
+    );
+
+    // ── Assert the pending selection ────────────────────────────────────────
+    let view = runner
+        .pending_selection_view()
+        .expect("union-zone selection must be pending after security reveal");
+
+    assert!(
+        matches!(view.kind, SelectionKind::UnionZone { .. }),
+        "selection kind must be UnionZone"
+    );
+    assert!(
+        runner.pending_is_optional(),
+        "printed 'You may' must surface PASS"
+    );
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "only LIB_TRASH (trash) should be legal when there is no legal hand candidate"
+    );
+
+    let memory_before = runner.memory();
+
+    // ── Select the single (trash-origin) action ─────────────────────────────
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("executing the single trash-origin action must succeed");
+    runner
+        .auto_resolve()
+        .expect("security pipeline must complete after selection");
+
+    // ── Post-resolution assertions ──────────────────────────────────────────
+    // LIB_TRASH must be in the battle area — confirms the trash-origin branch.
+    assert!(
+        in_battle_area(&runner, 1, "LIB_TRASH"),
+        "LIB_TRASH must have been played to the battle area from trash"
+    );
+    // LIB_TRASH must no longer be in the trash.
+    let lib_still_in_trash = runner.game.players[1]
+        .trash
+        .iter()
+        .any(|src| src.card_id(&runner.game.card_data) == "LIB_TRASH");
+    assert!(
+        !lib_still_in_trash,
+        "LIB_TRASH must have been removed from trash when played to the battle area"
+    );
+    // The hand must not have changed — the card came from trash, not hand.
+    assert_eq!(
+        runner.game.players[1].hand.len(),
+        hand_before,
+        "hand must be untouched — the played card came from trash"
+    );
     assert_eq!(
         runner.memory(),
         memory_before,

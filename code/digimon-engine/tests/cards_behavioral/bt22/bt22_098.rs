@@ -23,11 +23,14 @@
 //!   hand card, then effect_initiated_digivolve with cost reduced by 3.
 //!
 //! # Known gaps
-//! - G-UNION-ZONE-PLAY-FROM-ORIGIN / PUPPETS-G014: the exact hand-or-trash
-//!   [Main] play cannot be expressed as a single filtered, origin-preserving
-//!   union-zone choice yet. This file implements and tests the hand-origin slice.
-//! - PUPPETS-G009: security battle-area placement for the full Main mirror is
-//!   still not represented here.
+//! - G-UNION-ZONE-PLAY-FROM-ORIGIN / PUPPETS-G014: implemented. The [Main]
+//!   hand-or-trash union-zone play is expressed as a single filtered,
+//!   origin-preserving union-zone choice (`select_union_zone` +
+//!   `play_union_bound_free`). Both hand-origin and trash-origin branches are
+//!   covered by behavioral tests.
+//! - PUPPETS-G009: the Option pipeline's integrated resolution (pending optional
+//!   union-zone play + post-resolution battle-area placement) is not yet proven.
+//!   Tests for this flow are marked `#[ignore]`.
 
 use std::path::Path;
 
