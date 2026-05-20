@@ -986,6 +986,44 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(ref allowed) = pred.event_card_color_only {
+        // Every color of the triggering event card must appear in `allowed`.
+        let Some(card) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.event_card)
+        else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if data
+            .colors
+            .iter()
+            .any(|c| !allowed.iter().any(|a| color_matches(*a, *c)))
+        {
+            return false;
+        }
+    }
+    if let Some(want_count) = pred.event_card_color_count {
+        // The triggering event card must have exactly `want_count` distinct colors.
+        let Some(card) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.event_card)
+        else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if data.colors.len() as u8 != want_count {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_cause {
         let Some(actual) = rctx
             .game

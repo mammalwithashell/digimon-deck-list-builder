@@ -176,6 +176,18 @@ pub struct PredicateSpec {
     pub event_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_name_contains: Option<String>,
+    /// True when every color of the triggering event card is within the given
+    /// set. Used to gate observers on "the just-played card is black/yellow
+    /// only" without listing individual card names. Mirrors `color_only` but
+    /// operates on the event payload rather than the predicate subject.
+    /// PUPPETS-G023.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_color_only: Option<Vec<ColorSpec>>,
+    /// True when the triggering event card has exactly N distinct colors.
+    /// Pair with `event_card_color_only` to express "exactly 2-color
+    /// black/yellow". PUPPETS-G023.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_color_count: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_cause: Option<EventCauseSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]

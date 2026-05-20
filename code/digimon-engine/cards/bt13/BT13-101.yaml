@@ -23,13 +23,19 @@ effects:
 
   # [All Turns] When you play a 2-color black/yellow Digimon, by suspending
   # this Tamer, <Draw 1> and gain 1 memory.
-  #
-  # Omitted pending reusable event-card color predicates and a visible
-  # triggered activation-cost/preflight surface for "by suspending this
-  # Tamer". The DSL can check event owner/kind and can suspend source/draw/gain
-  # memory, but cannot faithfully express "the just played card is exactly
-  # 2-color black and yellow" or expose the source-bound suspend cost without
-  # approximating by name/trait or hidden auto-payment.
+  - when: on_any_digimon_played
+    active_when: { all_turns: true }
+    summary: "[All Turns] When you play a 2-color black/yellow Digimon, suspend this Tamer -> Draw 1 + gain 1 memory"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_card_color_only: [black, yellow]
+        - event_card_color_count: 2
+    process:
+      - activation_cost: { suspend_self: true }
+      - draw: { of: you, count: 1 }
+      - gain_memory: 1
 
   - when: on_security
     summary: "[Security] Play this card without paying the cost"

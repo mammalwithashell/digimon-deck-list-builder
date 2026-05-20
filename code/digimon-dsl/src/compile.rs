@@ -617,6 +617,11 @@ fn compile_predicate(
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
+        event_card_color_only: p
+            .event_card_color_only
+            .as_ref()
+            .map(|colors| colors.iter().copied().map(compile_color).collect()),
+        event_card_color_count: p.event_card_color_count,
         event_cause: p.event_cause.map(compile_event_cause),
         host_permanent_trait_has: p.host_permanent_trait_has.clone(),
         trashed_source_trait_has: p.trashed_source_trait_has.clone(),
