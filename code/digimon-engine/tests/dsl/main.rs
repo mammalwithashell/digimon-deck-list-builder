@@ -110,6 +110,7 @@ mod replacement_context;
 mod residual_formula_predicate_vocab;
 mod reveal_buckets;
 mod roundtrip;
+mod s2_2_union_hand_trash_name_exclusion;
 mod schema_export;
 mod security_boundary;
 mod security_stack_steps;

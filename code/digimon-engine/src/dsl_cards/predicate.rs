@@ -763,6 +763,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.name_is.is_none()
         && pred.name_contains.is_none()
         && pred.name_in.is_none()
+        && pred.name_not_shared_by_field_digimon.is_none()
         && pred.card_number_is.is_none()
         && pred.play_cost_lte.is_none()
         && pred.play_cost_gte.is_none()
@@ -1338,6 +1339,16 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(of) = pred.name_not_shared_by_field_digimon {
+        // The candidate card's effective name — an overlay name (e.g. a
+        // name-change effect) takes precedence over the printed name.
+        let candidate_name = overlay
+            .and_then(|o| o.name.as_deref())
+            .unwrap_or(data.card_name.as_str());
+        if field_digimon_has_name(rctx, of, candidate_name) {
+            return false;
+        }
+    }
     if let Some(ref cn) = pred.card_number_is {
         if data.card_id != *cn {
             return false;
@@ -1524,6 +1535,37 @@ fn card_shares_color_with_any_field_digimon(
                 .iter()
                 .any(|field_color| colors.iter().any(|card_color| card_color == field_color))
             {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// True when at least one battle-area Digimon belonging to the scoped
+/// player has the effective name `candidate_name`. Field names are read
+/// through `synth_identity`, so a `ChangeBaseCardName` overlay on a field
+/// Digimon is respected — consistent with how the `name_is` permanent
+/// predicate resolves names. Name comparison is exact (case-sensitive),
+/// matching `name_is` / `name_in`. Tamers and Options are skipped.
+/// G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2).
+fn field_digimon_has_name(
+    rctx: &EffectReadContext<'_>,
+    of: CompiledPlayerRef,
+    candidate_name: &str,
+) -> bool {
+    for player in existential_players(of, rctx) {
+        for (index, permanent) in rctx.game.player(player).battle_area.iter().enumerate() {
+            let handle = crate::permanent::PermanentHandle {
+                player,
+                index: index as u8,
+            };
+            let identity =
+                permanent.synth_identity(rctx.card_data(), &rctx.game.modifiers, handle);
+            if !kind_matches_field(CompiledCardKind::Digimon, identity.kind) {
+                continue;
+            }
+            if identity.card_name == candidate_name {
                 return true;
             }
         }

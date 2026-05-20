@@ -505,6 +505,9 @@ fn compile_predicate(
         name_is: p.name_is.clone(),
         name_contains: p.name_contains.clone(),
         name_in: p.name_in.clone(),
+        name_not_shared_by_field_digimon: p
+            .name_not_shared_by_field_digimon
+            .map(|s| compile_player_ref(s.player())),
         card_number_is: p.card_number_is.clone(),
         play_cost_lte: p
             .play_cost_lte

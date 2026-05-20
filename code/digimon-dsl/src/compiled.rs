@@ -201,6 +201,10 @@ pub struct CompiledPredicate {
     pub name_is: Option<String>,
     pub name_contains: Option<String>,
     pub name_in: Option<Vec<String>>,
+    /// G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2) —
+    /// card-subject leaf: true when no battle-area Digimon of the scoped
+    /// player shares the candidate card's name.
+    pub name_not_shared_by_field_digimon: Option<CompiledPlayerRef>,
     pub card_number_is: Option<String>,
     pub play_cost_lte: Option<CompiledDpConstraint>,
     pub play_cost_gte: Option<CompiledDpConstraint>,

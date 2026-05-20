@@ -7,9 +7,19 @@
 > **Atho, René & Por** registered in `token_registry` with printed stats
 > (White, 6000 DP, Reboot/Blocker/Decoy(Red/Black)). The token-registration
 > half of `bt20_017_token_and_other_played_attack_observer` and
-> `bt23_013_token_sistermon_union_play_and_attack_observer` is now closed;
-> remaining halves (`G-ALLY-PLAYED-MAY-ATTACK`, `G-UNION-HAND-TRASH-NAME-EXCLUSION`)
-> are independent gaps tracked separately. **RK-G003** audit confirmed
+> `bt23_013_token_sistermon_union_play_and_attack_observer` is now closed.
+> The two independent substrate halves are now both RESOLVED:
+> `G-ALLY-PLAYED-MAY-ATTACK` (Task S2.1, already-composable) and
+> `G-UNION-HAND-TRASH-NAME-EXCLUSION` (Task S2.2 — `select_union_zone`
+> lowering now applies its `filter`, plus the new
+> `name_not_shared_by_field_digimon` predicate leaf). Step 0 against
+> printed text corrected the substrate plan: only BT23-013 has the
+> hand+trash name-excluded play; BT20-017 has no union play, BT13-019
+> plays from trash-or-breeding-sources (separate
+> `G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY`), BT20-021 *places* a source
+> as a cost (separate `G-UNION-HAND-TRASH-SOURCE-COST`). Both resolved
+> gaps are detailed in [qa/resolved-gaps.md](../../resolved-gaps.md).
+> **RK-G003** audit confirmed
 > closed for current Track B consumers (BT23-054, BT20-091, BT20-100) —
 > the remaining BT23-058 ignored test stays parked on
 > `G-SELF-ON-SUSPEND + G-PLAY-COST-AGGREGATE`, which are out of Track J
@@ -153,7 +163,7 @@ Implemented / audited in these batches:
 | `BT22-025` UlforceVeedramon | `PARTIAL` | ACE metadata; [When Attacking][OPT] unsuspend self. | Blast Digivolve; modal lowest-level bottom-deck or blue Tamer play. |
 | `BT22-041` Kentaurosmon | `PARTIAL` | Blocker, Barrier, optional yellow hand-to-top-security. | Total-security play-cost reduction; self-suspend security-trash unsuspend cost. |
 | `BT22-052` Leopardmon | `PARTIAL` | ACE metadata; optional 5000 DP-or-lower hand play; own level 3+ Blocker grant; Blast Digivolve marker and other-Digimon would-leave memory observer. | Remaining gaps are outside the Track B replacement/Counter marker slice. |
-| `BT23-013` Jesmon | `PARTIAL` | Rush and Alliance. | Atho/Rene/Por token or Sistermon union play with name exclusion; other-Digimon-played may-attack observer. |
+| `BT23-013` Jesmon | `PARTIAL` | Rush and Alliance. | Card-authoring only (Track J PR 3) — the substrate is RESOLVED: Atho/Rene/Por token (PR 1), the Sistermon hand/trash union play with name exclusion (`G-UNION-HAND-TRASH-NAME-EXCLUSION`, S2.2 — `select_union_zone` filter + `name_not_shared_by_field_digimon`), and the other-Digimon-played may-attack observer (`G-ALLY-PLAYED-MAY-ATTACK`, S2.1). |
 | `BT23-035` Dynasmon | `PARTIAL` | Barrier; top-security cost into -6000 DP board debuff. | Security-removed Security A. +1 / recovery tail. |
 | `BT23-047` Examon | `PARTIAL` | Piercing, Security A. +1, and declared green Lv.5 + blue Lv.5 Partition source requirement. | Five-target suspend; next-unsuspend lock; may attack; security-removed tail. |
 | `BT23-057` Gankoomon | `BLOCKED` | Load-only gap stub. | Multi-card trash-to-deck cost reduction; Hinukamuy token; dynamic play-cost delete. |

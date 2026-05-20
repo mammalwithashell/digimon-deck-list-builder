@@ -57,6 +57,15 @@ pub struct PredicateSpec {
     pub name_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_in: Option<Vec<String>>,
+    /// Card-subject leaf: true when NO battle-area Digimon belonging to the
+    /// scoped player shares the candidate card's name. Models the printed
+    /// "This effect can't play cards with the same names as any of your
+    /// Digimon" exclusion on the Jesmon family (BT23-013) — applied as a
+    /// filter on a `select_union_zone` (hand+trash) play candidate set so
+    /// the in-play names are masked out, never auto-picked.
+    /// G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_not_shared_by_field_digimon: Option<PlayerRefSelector>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card_number_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

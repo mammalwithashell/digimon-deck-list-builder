@@ -1913,6 +1913,39 @@ The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE
 - **Card-authoring residual (NOT substrate):** authoring the production `BT20-017.yaml` / `BT23-013.yaml` is later Track J work (PR 2 / PR 3) — they also need the Atho/René/Por token (already registered, Track J PR 1) and a Union hand+trash play primitive (`G-UNION-HAND-TRASH-NAME-EXCLUSION`, Task S2.2). `BT20-017` additionally needs `select_own_permanent` + a `dp_lte: 8000` delete sub-clause (the `dp_lte` predicate landed in Track A — `G-PRED-DP-LTE`).
 - **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- effect_granted_attack` (15 pass).
 
+## Engine + DSL Gap: `G-UNION-HAND-TRASH-NAME-EXCLUSION` — RESOLVED 2026-05-20 (Phase 2 Track J Task S2.2)
+
+- **Severity:** 🟡 PARTIAL → 🟢 NONE — two genuine substrate pieces were missing and are now closed. Filed and closed in the same pass; this gap previously had no canonical entry, only a name in the Royal Knights `RK-G005` rollup and the BT23-013 test ignore string.
+- **Discovered in:** Royal Knights full-pool DSL assessment (`RK-G005`, 2026-05-05). Task S2.2 filed it properly and resolved it.
+- **Card consumers:** `BT23-013` Jesmon is the **only** genuine consumer of the exact "hand OR trash, name-restricted, exclude names already in play" shape — `[When Digivolving] [When Attacking] You may play 1 [Atho, René & Por] Token (…) or, from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.`
+- **Step 0 finding — plan-premise correction (the substrate plan misdescribed the card pool):** The plan named four cards (BT20-017 / BT23-013 / BT13-019 / BT20-021). Printed text (`data/cards.json`) shows only BT23-013 matches:
+  - **BT20-017** Jesmon — `[On Play] [When Digivolving] You may play 1 [Atho, René & Por] Token.` No hand/trash union play at all.
+  - **BT13-019** Gankoomon — plays a Sistermon `from your trash` OR a Royal Knight `from the digivolution cards of your Digimon in the breeding area`, with a **fixed** name-exclusion (`You can't play [Gankoomon] or [Omnimon]`). Zones are trash + breeding-area digivolution-sources, not hand+trash; exclusion is fixed names, not in-play names. That is the separate `G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY` gap, untouched here.
+  - **BT20-021** Jesmon GX — `By placing 1 [Royal Knight] trait card from your hand or trash as this Digimon's bottom digivolution card, delete …`. This *places a card as a digivolution source* — a **cost**, not a play — with no name-exclusion. That is the separate `G-UNION-HAND-TRASH-SOURCE-COST` gap.
+  - "Union" is informal gap-doc shorthand: there is **no printed `<Union>` keyword** (verified absent from `docs/RULES_CONTEXT.md`; the printed Jesmon keyword is `<Alliance>`, an unrelated attack-time mechanic).
+- **Step 0 finding — what was actually missing (two genuine substrate pieces):**
+  1. **The DSL `select_union_zone` lowering dropped its filter.** The DSL step `select_union_zone` (hand+trash in one prompt) parses a `filter: PredicateSpec`, and `CompiledStep::SelectUnionZone` carries a `filter` field — but the engine lowering `install_select_union_zone` in `code/digimon-engine/src/dsl_cards/step/selections.rs` destructured the step with `..` and passed a hardcoded `|_game, _card| true` accept-all closure to `EffectContext::select_union_zone`. The compiled filter was never applied. The engine helper itself already applies whatever filter it receives (proven by the pre-existing `tests/selection/union_zone.rs::filter_restricts_valid_action_ids`), so this was purely a DSL-lowering bug. Name-restriction (`name_contains: Sistermon`) was silently inoperative for every union-zone card.
+  2. **No name-exclusion predicate leaf existed.** Nothing could express "this candidate card's name is NOT shared by any of my battle-area Digimon". The `no_permanent` existential matches against fixed predicate fields and cannot reference the candidate card's own name; `color_matches_any_field_digimon` was the closest analog but for colors, not names.
+- **What was implemented:**
+  - **`name_not_shared_by_field_digimon: { of: <player> }`** — a card-subject predicate leaf added to `PredicateSpec` (`code/digimon-dsl/src/predicate.rs`), `CompiledPredicate` (`code/digimon-dsl/src/compiled.rs`), the compiler (`code/digimon-dsl/src/compile.rs`), and the engine evaluator (`code/digimon-engine/src/dsl_cards/predicate.rs` — new `field_digimon_has_name` helper, mirroring `card_shares_color_with_any_field_digimon`). True when no battle-area Digimon of the scoped player has the candidate card's effective name. Field names are read through `synth_identity` so a `ChangeBaseCardName` overlay on a field Digimon is respected; the candidate's own name respects a reveal overlay. Exact, case-sensitive comparison — consistent with `name_is` / `name_in`. Added to `eval_no_subject_fields` as a subject-only field.
+  - **The `select_union_zone` lowering now applies its `filter`.** `install_select_union_zone` builds an `EffectReadContext` per candidate and evaluates the compiled `filter` against each hand/trash `CardSource` — exactly as `install_select_hand` / `install_select_trash` already did.
+- **API shape:**
+  ```yaml
+  - select_union_zone:
+      of: you
+      zones: [hand, trash]
+      optional: true            # printed "You may …" — PASS stays legal (§17)
+      prompt: Play 1 Sistermon from hand or trash
+      filter:
+        all_of:
+          - name_contains: Sistermon
+          - name_not_shared_by_field_digimon: { of: you }
+  ```
+  The name-exclusion shapes the legal action mask; every surviving candidate from hand AND trash surfaces through `pending_selection`. Nothing auto-picks. No `ACTION_SPACE_SIZE` / tensor change — union-zone reuses the existing `PLAY_HAND` / `TRASH_EFFECT` action ranges.
+- **First failing test (TDD red):** `code/digimon-engine/tests/dsl/s2_2_union_hand_trash_name_exclusion.rs::union_zone_filter_excludes_in_play_name_across_hand_and_trash` — before the fix it offered 3 candidates (filter dropped, and `name_not_shared_by_field_digimon` silently swallowed into `PredicateSpec::extra`) instead of the 2 legal Sistermon names; the field-empty companion test offered 3 instead of 2.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- s2_2_union` (2 behavioral tests); `cargo test … --test dsl -- name_not_shared_by_field_digimon` (lowering test in `group7_predicate_batch.rs` — proves both the leaf compiles AND the union-zone `filter` survives compilation); `cargo test … --test dsl -- parse_leaf_predicates` (parse test); full DSL suite (615 → 618 pass), `cards_behavioral` (2358 pass), and full engine suite green — no regressions.
+- **Card-authoring residual (NOT substrate):** authoring production `BT23-013.yaml` is later Track J work (PR 3) — it also needs the Atho/René/Por token (registered, Track J PR 1), `<Rush>` / `<Alliance>` keyword slices, and an effect-choice between the token play and the Sistermon union play. BT13-019 / BT20-021 remain blocked on their own separate gaps named above.
+
 ## DSL Gap: `AltPathSpec.condition` field for alt-digivolve activation gates — RESOLVED 2026-05-15 (Phase 1)
 
 - **Status:** Closed for the schema + Digivolve consumer route. First reported 2026-04-27 (BT24-016 batch-implement-cards-rust-dsl) as `G-ALT-PATH-CONDITION`.
