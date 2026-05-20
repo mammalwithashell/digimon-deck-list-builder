@@ -36,31 +36,33 @@
 //!   `scope: inherited` + `when: on_security` mirrors BT22-099 Clause 3 with
 //!   the BT17-095 placement tail.
 //!
-//! # Known gaps (BLOCKED clauses)
+//! # Known gap (BLOCKED clause) — code-verified 2026-05-20
 //!
-//! - **G-DSL-ON-ALLY-ATTACK-TIMING** (existing — BT21-102, 2026-05-03):
-//!   `digimon_dsl::clause::Timing` has no `OnAllyAttack` / `OnOpponentAttack`
-//!   variants. The engine has the dispatch (`combat.rs §Phase 9 Task 8`) and
-//!   `Effect::on_ally_attack`, but no YAML token reaches them.
+//! The [Your Turn] CS-attack `<Delay>` clause is BLOCKED on
+//! **G-DSL-DELAY-ON-ATTACK-EVENT**. The two halves previously cited
+//! (G-DSL-ON-ALLY-ATTACK-TIMING, G-ATK-TRAIT-FILTER) are STALE:
+//! `digimon_dsl::clause::Timing` HAS `OnAllyAttack`/`OnAttack`/
+//! `OnOpponentAttack` (clause.rs:86-91), they map through `timing_map.rs`
+//! and `lower_triggered.rs` to `Effect::on_ally_attack`, and an
+//! `attacker_trait_has` predicate exists (predicate.rs:927). What is
+//! genuinely missing is the `<Delay>`-on-attack path:
 //!
-//! - **G-ATK-TRAIT-FILTER** (existing — BT21-025, 2026-04-27): no
-//!   `attacker_trait_has` BoolPredicate to gate observers on the attacker's
-//!   traits. `TriggerContext.source_permanent` carries the attacker handle for
-//!   `PlayerBattleArea` fan-outs, but the DSL has no predicate leaf to read it.
+//!   1. `lower_delay.rs:55-65` maps only `EndOfYourTurn`/`StartOfYourTurn`/
+//!      `EndOfYourNextTurn`/`OnSuspend`/`OnUnsuspend` to a specific
+//!      `DelayTrigger`; every other timing silently degrades to
+//!      `EndOfYourNextTurn`.
+//!   2. `effect_queue.rs:459-464` only fans out to
+//!      `enqueue_event_gated_delayed_options` for `TriggerSource::EventObserved`
+//!      / `AttackTargetChanged`, but `combat.rs:2953` dispatches `OnAllyAttack`
+//!      via `TriggerSource::PlayerBattleArea` — so attack events never reach
+//!      the event-gated-delay drainer.
+//!   3. `attacker_trait_has` resolves the attacker only via
+//!      `rctx.attack_target_change()` (unset for a plain attack); an
+//!      event-gated delay condition cannot read the attacker's traits.
 //!
-//! - **G-DSL-DELAY-ON-ATTACK-EVENT** (NEW — this card): `kind: delay` lowering
-//!   in `code/digimon-engine/src/dsl_cards/lower_delay.rs:55-65` only maps
-//!   `EndOfYourTurn` / `StartOfYourTurn` / `EndOfYourNextTurn` / `OnSuspend` /
-//!   `OnUnsuspend` to specific `DelayTrigger` variants — every other timing
-//!   silently degrades to `EndOfYourNextTurn`. Even if G-DSL-ON-ALLY-ATTACK-
-//!   TIMING closed, a `kind: delay` with `trigger: on_ally_attack` would be
-//!   silently downgraded. Closure path mirrors the OnSuspend slice landed for
-//!   BT22-098: extend the lowering arm to map `OnAttack`/`OnAllyAttack`/
-//!   `OnOpponentAttack` to `DelayTrigger::OnEvent(EffectTiming::*)`.
-//!
-//! See `code/digimon-engine/cards/bt23/BT23-096.yaml` header for the full gap
-//! analysis; the [Your Turn] Delay clause is omitted entirely until the gap
-//! stack closes. The behavioral test for that clause is `#[ignore]`'d.
+//! A faithful fix is a 3-system change (delay lowering + combat dispatch +
+//! a delay-context attacker predicate). The clause is omitted from the YAML
+//! until that substrate lands; the behavioral test is `#[ignore]`'d.
 //!
 //! # Faithfulness audit (per clause)
 //!
@@ -543,14 +545,29 @@ fn bt23_096_security_clause_shares_body_shape_with_main() {
 ///   6. Negative: have a NON-CS ally attack — verify the Delay does NOT
 ///      activate (gap-half: G-ATK-TRAIT-FILTER must reject non-CS attackers).
 #[test]
-#[ignore = "pending: G-DSL-ON-ALLY-ATTACK-TIMING + G-ATK-TRAIT-FILTER + G-DSL-DELAY-ON-ATTACK-EVENT — \
-            DSL Timing has no OnAllyAttack variant, no attacker_trait_has predicate, and \
-            kind: delay lowering doesn't map on_attack timings to DelayTrigger::OnEvent. \
-            See qa/dsl-vocab-gaps.md and BT23-096.yaml header."]
+#[ignore = "BLOCKED: G-DSL-DELAY-ON-ATTACK-EVENT — code-verified 2026-05-20. The previously \
+            cited halves are STALE: digimon_dsl::clause::Timing DOES have OnAllyAttack / \
+            OnAttack / OnOpponentAttack (clause.rs:86-91), they map through \
+            timing_map.rs:16-17 and lower_triggered.rs (Effect::on_ally_attack), so \
+            OnAllyAttack works for TRIGGERED clauses; and an `attacker_trait_has` predicate \
+            EXISTS (predicate.rs:927). The genuine, still-open blocker is the <Delay> path: \
+            (1) lower_delay.rs:55-65 maps only EndOfYourTurn/StartOfYourTurn/\
+            EndOfYourNextTurn/OnSuspend/OnUnsuspend to a specific DelayTrigger — every \
+            other timing (incl. OnAllyAttack) silently degrades to EndOfYourNextTurn; \
+            (2) even if lower_delay mapped it, effect_queue.rs:459-464 only calls \
+            enqueue_event_gated_delayed_options for TriggerSource::EventObserved / \
+            AttackTargetChanged, but combat.rs:2953 dispatches OnAllyAttack via \
+            TriggerSource::PlayerBattleArea — so attack events never reach the \
+            event-gated-delay drainer; (3) `attacker_trait_has` resolves the attacker \
+            only via rctx.attack_target_change() (predicate.rs:928), which is unset for a \
+            plain attack — an event-gated delay condition has no way to read the \
+            attacker's traits. A faithful fix is a 3-system change (delay lowering + \
+            combat dispatch fan-out to event-gated delays + a delay-context attacker \
+            predicate), not a focused card fix. The [Your Turn] CS-attack <Delay> clause \
+            is omitted from BT23-096.yaml until that substrate lands."]
 fn bt23_096_your_turn_cs_attack_delay_dedigi4_BLOCKED() {
-    unimplemented!(
-        "Three gap closures required before this clause is implementable. See yaml header."
-    );
+    // See the #[ignore] reason above for the precise, code-verified gap analysis.
+    // When the substrate lands, implement per the scaffold in the doc-comment.
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

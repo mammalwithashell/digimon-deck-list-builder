@@ -83,18 +83,17 @@ impl CardEffect for DslCardEffect {
             }
         }
         let option_use_requirement = option_use_requirement_for_card(&self.compiled);
-        'clause: for clause in &self.compiled.effects {
+        'clause: for (clause_index, clause) in self.compiled.effects.iter().enumerate() {
             match clause {
                 CompiledClause::Triggered(clause) => {
-                    out.extend(
-                        lower_triggered::lower_with_raw_and_option_use_requirement_for_kind(
-                            card,
-                            clause,
-                            self.raw.clone(),
-                            option_use_requirement.clone(),
-                            Some(self.compiled.kind),
-                        ),
-                    );
+                    out.extend(lower_triggered::lower_for_kind_with_clause_index(
+                        card,
+                        clause,
+                        self.raw.clone(),
+                        option_use_requirement.clone(),
+                        Some(self.compiled.kind),
+                        clause_index,
+                    ));
                 }
                 CompiledClause::Declarative(decl) => match decl {
                     CompiledDeclarativeClause::GrantKeyword {
@@ -156,6 +155,7 @@ impl CardEffect for DslCardEffect {
                         reduction_timing,
                         when_playing_this,
                         when_any_ally_played,
+                        when_any_ally_digivolves_into,
                         condition,
                         optional,
                         once_per_turn,
@@ -181,6 +181,7 @@ impl CardEffect for DslCardEffect {
                         // (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET.)
                         if !*when_playing_this
                             && when_any_ally_played.is_none()
+                            && when_any_ally_digivolves_into.is_none()
                             && active_when.is_none()
                             && condition.is_none()
                         {
@@ -202,6 +203,7 @@ impl CardEffect for DslCardEffect {
                                 *optional,
                                 *when_playing_this,
                                 when_any_ally_played.clone(),
+                                when_any_ally_digivolves_into.clone(),
                             ));
                         }
                     }

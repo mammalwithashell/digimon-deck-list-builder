@@ -1,0 +1,100 @@
+[
+ {
+  "card": "AD1-019",
+  "fn": "ad1_019_clause2_suspend_play_adventure",
+  "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_019.rs",
+  "tag": null,
+  "reason": "pending: formula-valued play-cost reduction \u2014 play_from_hand cost_delta accepts only a literal CostDelta, not floor_div(distinct_colors_count(your Tamers), 2); clause 2 cannot be authored faithfully without it (qa/dsl-vocab-gaps.md RK-G002 family)"
+ },
+ {
+  "card": "BT13-012",
+  "fn": "bt13_012_clause1_when_digivolving_is_blocked",
+  "file": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_012.rs",
+  "tag": "G-PLAY-SELECTED-SECURITY-CARD",
+  "reason": "pending: G-PLAY-SELECTED-SECURITY-CARD (qa/dsl-vocab-gaps.md) \u2014   select_security binds CardHandle, but no DSL verb plays a bound   security card without paying cost; add_to_hand_from_security +   play_from_hand_free chain blocked by missing Card\u2192HandIndex bridge"
+ },
+ {
+  "card": "BT13-012",
+  "fn": "bt13_012_does_not_fire_for_own_green_or_purple_tamer",
+  "file": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_012.rs",
+  "tag": "G-EVENT-TARGET-COLOR",
+  "reason": "pending: G-EVENT-TARGET-COLOR (qa/dsl-vocab-gaps.md) \u2014   no event_target_color_any_of predicate; clause over-fires on   non-red/yellow own Tamers"
+ },
+ {
+  "card": "BT17-015",
+  "fn": "bt17_015_inherited_when_attacking_wargreymon_top_does_not_trash_security",
+  "file": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_015.rs",
+  "tag": "G-DSL-SOURCE-NAME-CONTAINS",
+  "reason": "BLOCKED: G-DSL-SOURCE-NAME-CONTAINS \u2014 source_name_contains predicate is parsed and   compiled but never evaluated in code/digimon-engine/src/dsl_cards/predicate.rs;   the inherited [When Attacking] gate degenerates to true and incorrectly trashes   opp security even when top card is not Omnimon-named."
+ },
+ {
+  "card": "BT17-027",
+  "fn": "bt17_027_inherited_when_attacking_metalgarurumon_top_does_not_unsuspend",
+  "file": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_027.rs",
+  "tag": "G-DSL-SOURCE-NAME-CONTAINS",
+  "reason": "BLOCKED: G-DSL-SOURCE-NAME-CONTAINS \u2014 source_name_contains predicate is parsed and   compiled but never evaluated in code/digimon-engine/src/dsl_cards/predicate.rs;   the inherited [When Attacking] gate degenerates to true and incorrectly unsuspends   the attacker even when top card is not Omnimon-named."
+ },
+ {
+  "card": "BT17-102",
+  "fn": "bt17_102_all_turns_aliases_low_level_material_names",
+  "file": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_102.rs",
+  "tag": "G-DYNAMIC-NAME-ALIAS-FROM-STACK",
+  "reason": "BLOCKED: G-DYNAMIC-NAME-ALIAS-FROM-STACK \u2014 DSL identity layer has only static   name_aliases (zone-conditional). No clause kind / engine path derives the   carrier permanent's name set from its current material stack at name-predicate   evaluation time. DCGO uses ChangeCardNamesClass with a per-evaluation closure   scanning DigivolutionCards filtered by Level <= 3. Closure requires (1) new   declarative clause kind, (2) name-predicate evaluators that consult dynamic   aliases, (3) recompute on every stack mutation. Affects this card and every   card that name-checks it. Tracked in qa/dsl-vocab-gaps.md."
+ },
+ {
+  "card": "BT17-102",
+  "fn": "bt17_102_when_digivolving_delete_filters_to_dp_lte_self",
+  "file": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_102.rs",
+  "tag": "G-FORMULA-SOURCE-DP",
+  "reason": "BLOCKED: G-FORMULA-SOURCE-DP \u2014 no formula primitive reads ctx.source_permanent's   effective DP. binding_dp resolves NAMED bindings only; there is no `source_dp`   variant or `binding_dp: source` special-case. Sibling of G-BINDING-DP-FORMULA   (RESOLVED 2026-05-02 for user-bound permanents). Without this primitive, the   'delete opp Digimon with as much or less DP as this Digimon' sub-clause cannot be   authored faithfully and is omitted from the YAML to preserve no-approximations."
+ },
+ {
+  "card": "BT22-013",
+  "fn": "bt22_013_inherited_when_attacking_wargreymon_top_does_not_trash_security",
+  "file": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_013.rs",
+  "tag": "G-DSL-SOURCE-NAME-CONTAINS",
+  "reason": "BLOCKED: G-DSL-SOURCE-NAME-CONTAINS \u2014 source_name_contains predicate is parsed and   compiled but never evaluated in code/digimon-engine/src/dsl_cards/predicate.rs;   the inherited [When Attacking] gate degenerates to true and incorrectly trashes   opp security even when top card is not Omnimon-named. Same gap blocks BT17-015's   `bt17_015_inherited_when_attacking_wargreymon_top_does_not_trash_security`."
+ },
+ {
+  "card": "BT22-026",
+  "fn": "bt22_026_inherited_when_attacking_metalgarurumon_top_does_not_unsuspend",
+  "file": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_026.rs",
+  "tag": "G-DSL-SOURCE-NAME-CONTAINS",
+  "reason": "BLOCKED: G-DSL-SOURCE-NAME-CONTAINS \u2014 source_name_contains predicate is parsed and   compiled but never evaluated in code/digimon-engine/src/dsl_cards/predicate.rs;   the inherited [When Attacking] gate degenerates to true and incorrectly unsuspends   the attacker even when top card is not Omnimon-named. Same gap blocks BT17-015 /   BT22-013 analogous negative tests."
+ },
+ {
+  "card": "BT23-096",
+  "fn": "bt23_096_your_turn_cs_attack_delay_dedigi4_",
+  "file": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_096.rs",
+  "tag": "G-DSL-ON-ALLY-ATTACK-TIMING",
+  "reason": "pending: G-DSL-ON-ALLY-ATTACK-TIMING + G-ATK-TRAIT-FILTER + G-DSL-DELAY-ON-ATTACK-EVENT \u2014   DSL Timing has no OnAllyAttack variant, no attacker_trait_has predicate, and   kind: delay lowering doesn't map on_attack timings to DelayTrigger::OnEvent.   See qa/dsl-vocab-gaps.md and BT23-096.yaml header."
+ },
+ {
+  "card": "EX4-003",
+  "fn": "ex4_003_inherited_does_not_fire_on_own_carrier_digivolve",
+  "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_003.rs",
+  "tag": "G-DSL-EVENT-TARGET-IS-OTHER",
+  "reason": "BLOCKED: G-DSL-EVENT-TARGET-IS-OTHER \u2014 DSL has no event_target_is_other leaf to filter the digivolving permanent against the source's own host carrier; sibling of G-DSL-EVENT-TARGET-IS-SELF (BT15-101)"
+ },
+ {
+  "card": "EX4-038",
+  "fn": "ex4_038_inherited_does_not_fire_when_carrier_self_digivolves",
+  "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_038.rs",
+  "tag": "G-DSL-EVENT-TARGET-IS-SELF",
+  "reason": "pending: G-DSL-EVENT-TARGET-IS-SELF (no event_target_is_source predicate;   EX4-038 inherited clause over-fires when carrier itself digivolves)"
+ },
+ {
+  "card": "P-182",
+  "fn": "p_182_blocker_installed_on_field",
+  "file": "code/digimon-engine/tests/cards_behavioral/p/p_182.rs",
+  "tag": "G-DECLARATIVE-KEYWORD",
+  "reason": "pending: G-DECLARATIVE-KEYWORD \u2014 EffectTiming::Declarative not yet fired by engine;   grant_keyword modifier is compiled but never installed at runtime"
+ },
+ {
+  "card": "P-182",
+  "fn": "p_182_security_attack_plus_1_installed_on_field",
+  "file": "code/digimon-engine/tests/cards_behavioral/p/p_182.rs",
+  "tag": "G-DECLARATIVE-KEYWORD",
+  "reason": "pending: G-DECLARATIVE-KEYWORD \u2014 EffectTiming::Declarative not yet fired by engine;   grant_keyword modifier is compiled but never installed at runtime"
+ }
+]

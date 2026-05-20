@@ -48,6 +48,7 @@ fn multi_pick_binds_card_list_for_per_selected() {
         CompiledStep::SelectCountCappedMulti {
             of: CompiledPlayerRef::Opponent,
             zone: CompiledZone::Trash,
+            min: 0,
             max: digimon_dsl::compiled::CompiledCountBound::Literal(2),
             filter: CompiledPredicate::default(),
             bind_as: Some("picks".to_string()),
@@ -96,6 +97,7 @@ fn empty_multi_pick_runs_tail_once_synchronously() {
         CompiledStep::SelectCountCappedMulti {
             of: CompiledPlayerRef::Opponent,
             zone: CompiledZone::Trash,
+            min: 0,
             max: digimon_dsl::compiled::CompiledCountBound::Literal(2),
             filter: CompiledPredicate::default(),
             bind_as: Some("picks".to_string()),

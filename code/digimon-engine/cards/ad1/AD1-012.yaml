@@ -130,50 +130,76 @@ effects:
               prompt: "Select 1 of your suspended [Greymon] to unsuspend"
           - unsuspend: { target: greymon_pick }
 
-  # ─── Clause 4 — BLOCKED on effect DNA route ───────────────────────────────
+  # ─── Clause 4 — [Opponent's Turn][OPT] defender-side DNA + redirect ───────
   #
   # "[Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon
   #  attacks, 2 of your Digimon may DNA digivolve into [Omnimon Alter-S]
   #  in the hand. Then, you may change the attack target to 1 of your Digimon."
   #
-  # `on_opponent_attack` and `redirect_attack_target` are now first-class DSL
-  # primitives. The remaining faithful blocker is the effect-initiated DNA route
-  # into a selected [Omnimon Alter-S] in hand from a defender-side attack
-  # interrupt, including paying its printed cost and then resuming the same
-  # attack-interrupt flow before optional redirect.
+  # `on_opponent_attack` fires this clause from the defender side during the
+  # attacker's `OnOpponentAttack` fan-out (inside `fire_on_attack`, before the
+  # Alliance/Counter/Block windows). The clause parks its selections; the
+  # attack state machine pauses on `pending_selection` and resumes via
+  # `advance_pending_attack` once the process completes.
   #
-  # Once that route is available, the clause shape will be:
+  # Process:
+  #   - `select_hand` — the [Omnimon Alter-S] result card in hand. `optional`
+  #     so the player may decline the DNA leg (printed "may DNA digivolve").
+  #   - `select_dna_pair` — 2 of the controller's own Digimon as DNA materials.
+  #   - `effect_initiated_dna_digivolve` — merges the pair, topped by the
+  #     Omnimon Alter-S card (cost: 0, matching the established convention for
+  #     effect-initiated DNA into Omnimon — see EX9-013).
+  #   - `select_own_permanent` + `redirect_attack_target` — "Then, you may
+  #     change the attack target to 1 of your Digimon." `redirect_attack_target`
+  #     with no explicit `new_target` opens a defender-side target selection
+  #     scoped to the attacker's opponent's (= this controller's) Digimon.
   #
-  # - when: on_opponent_attack
-  #   active_when: { opponents_turn: true }
-  #   once_per_turn: true
-  #   optional: true
-  #   process:
-  #     # Optional DNA into Omnimon Alter-S (effect-initiated, payCost: true).
-  #     - select_hand:
-  #         of: you
-  #         bind_as: alters_card
-  #         optional: true
-  #         filter: { kind: digimon, name_is: "Omnimon Alter-S" }
-  #     - select_dna_pair:
-  #         left_filter:  { kind: digimon, of: you }
-  #         right_filter: { kind: digimon, of: you }
-  #         bind_left_as: dna_a
-  #         bind_right_as: dna_b
-  #         optional: true
-  #     - effect_initiated_dna_digivolve:
-  #         target_a: dna_a
-  #         target_b: dna_b
-  #         from_hand: alters_card
-  #         cost: 0
-  #         ignore_requirements: false
-  #     # Optional redirect of the in-flight attack to 1 own Digimon.
-  #     - select_own_permanent:
-  #         bind_as: redirect_target
-  #         optional: true
-  #         filter: { kind: digimon }
-  #         prompt: "Change the attack target to 1 of your Digimon"
-  #     - redirect_attack_target: { new_target: redirect_target }
+  # DCGO: AD1_012.cs OnOpponentAttack clause — DNADigivolve into Omnimon
+  # Alter-S then `ChangeAttackTarget`.
+  - when: on_opponent_attack
+    active_when: { opponents_turn: true }
+    once_per_turn: true
+    optional: true
+    summary: "[Opponent's Turn] When opp Digimon attacks: 2 Digimon may DNA into Omnimon Alter-S, then may redirect attack"
+    process:
+      - select_hand:
+          of: you
+          bind_as: alters_card
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Omnimon Alter-S"
+          prompt: "Select [Omnimon Alter-S] in hand to DNA digivolve into"
+      - select_dna_pair:
+          left_filter:
+            all_of:
+              - kind: digimon
+              - of: you
+          right_filter:
+            all_of:
+              - kind: digimon
+              - of: you
+          bind_left_as: dna_a
+          bind_right_as: dna_b
+          prompt: "Select 2 of your Digimon to DNA digivolve"
+          optional: true
+      - effect_initiated_dna_digivolve:
+          target_a: dna_a
+          target_b: dna_b
+          from_hand: alters_card
+          cost: 0
+          ignore_requirements: false
+      - optional:
+          - select_own_permanent:
+              bind_as: redirect_target
+              optional: true
+              filter: { kind: digimon }
+              prompt: "Change the attack target to 1 of your Digimon"
+          - redirect_attack_target:
+              new_target: redirect_target
+              optional: true
+              prompt: "Change the attack target to 1 of your Digimon"
 
   # ─── Clause 5 — Inherited [Your Turn] attack target can't change ──────────
   #

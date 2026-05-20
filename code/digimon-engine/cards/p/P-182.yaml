@@ -29,35 +29,22 @@
 # | Alt digivolve Lv.5 w/[MetalGreymon] OR [ADVENTURE] / cost 3| IMPLEMENTED (alt_paths)
 # | <Security A. +1>                                            | IMPLEMENTED (grant_keyword SecurityAttackPlus 1) — see G-DECLARATIVE-KEYWORD note
 # | <Blocker>                                                  | IMPLEMENTED (grant_keyword Blocker) — see G-DECLARATIVE-KEYWORD note
-# | [When Digivolving] delete opp Digimon ≤ self DP            | BLOCKED — G-FORMULA-SOURCE-DP
+# | [When Digivolving] delete opp Digimon ≤ self DP            | IMPLEMENTED (G-FORMULA-SOURCE-DP resolved)
 # | [All Turns] +1000 DP per distinct color across both players' Digimon+Tamers | BLOCKED — G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA
 #
-# ─── DSL-GAP — Cannot read source permanent's DP in formula  [G-FORMULA-SOURCE-DP] ──
+# ─── G-FORMULA-SOURCE-DP — `source_dp` formula primitive (RESOLVED) ─────────
 #
-# The "delete 1 opp Digimon with as much or less DP as this Digimon" clause needs
-# `dp_lte` to compare against THIS card's effective DP. The `binding_dp` formula
-# primitive (RESOLVED 2026-05-02) reads the DP of a NAMED binding (a permanent
-# captured by `bind_as` from a prior `select_*_permanent` step). It does NOT
-# accept the special tokens `source` / `self` / `carrier` that
-# `BindingRef`/`resolve_binding_ref` recognize for `target:` arguments.
-#
-# Source permanent DP IS available at runtime via `ctx.source_permanent` +
-# `ctx.game.effective_dp(handle)` — the engine has the data, the formula layer
-# just lacks a primitive that reads it. Sibling: ST22-08's G-BINDING-DP-FORMULA
-# (RESOLVED) handles user-picked bindings; this is the source-permanent variant.
-#
-# This card SHARES the gap with BT17-102 (Greymon), where the same primitive is
-# documented in detail. Suggested closure (verbatim from BT17-102.yaml):
-#
-#   dp_lte:
-#     formula:
-#       source_dp: {}        # reads ctx.source_permanent's effective_dp
-#
-# Implementation: add `SourceDp` variant to `FormulaSpec`/`CompiledFormula`;
-# evaluate as `ctx.source_permanent.and_then(|h| ctx.game.effective_dp(h)).unwrap_or(0)`.
-# Until then the delete sub-clause is OMITTED (printed text would over-fire on
-# opponents with arbitrary DP if we used `kind: digimon` alone — violates
-# no-approximations).
+# The "delete 1 opp Digimon with as much or less DP as this Digimon" clause
+# needs `dp_lte` to compare against THIS card's effective DP. RESOLVED
+# 2026-05-19: the `source_dp` formula primitive reads
+# `ctx.source_permanent`'s effective DP — `ctx.source_permanent
+# .and_then(|h| ctx.game.effective_dp(h)).unwrap_or(0)`, exactly DCGO's
+# `card.PermanentOfThisCard().DP`. YAML form `{ source_dp: {} }`. Unlike
+# `binding_dp` (which reads a named `bind_as` binding), `source_dp` reads
+# the effect's carrier permanent directly. Clause 3 uses
+# `dp_lte: { formula: { source_dp: {} } }` so only opponent Digimon with
+# DP ≤ this WarGreymon's effective DP are selectable. Shared with BT17-102
+# (Greymon).
 #
 # ─── DSL-GAP — Distinct-colors PerSelector across both players' Digimon+Tamers
 # [G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA] ───────────────────────────────
@@ -193,7 +180,7 @@ effects:
     keyword: Blocker
     summary: "<Blocker>"
 
-  # ─── Clause 3 — [When Digivolving] delete opp Digimon ≤ self DP  [BLOCKED] ─
+  # ─── Clause 3 — [When Digivolving] delete opp Digimon ≤ self DP ───────────
   #
   # Printed text:
   #   "[When Digivolving] Delete 1 of your opponent's Digimon with as much or
@@ -206,29 +193,27 @@ effects:
   #   && permanent.DP <= card.PermanentOfThisCard().DP
   # SelectPermanentEffect with maxCount: 1, canNoSelect: false, mode: Destroy.
   #
-  # BLOCKED: G-FORMULA-SOURCE-DP — see header docs. Mirrors BT17-102 Clause 1's
-  # delete sub-clause exactly. Omitted from this clause body until the gap
-  # closes; including a `kind: digimon` delete without the DP filter would
-  # over-target opponents with arbitrary DP, violating no-approximations.
-  #
-  # Stub (commented — uncomment when G-FORMULA-SOURCE-DP closes):
-  #
-  # - when: when_digivolving
-  #   summary: "[When Digivolving] Delete 1 opp Digimon with DP ≤ this Digimon"
-  #   condition:
-  #     any_permanent:
-  #       of: opponent
-  #       zone: [battle_area]
-  #       kind: digimon
-  #   process:
-  #     - select_opponent_permanent:
-  #         bind_as: tgt
-  #         filter:
-  #           all_of:
-  #             - kind: digimon
-  #             - dp_lte: { formula: { source_dp: {} } }   # NEW formula primitive
-  #         prompt: "Delete 1 opp Digimon (DP ≤ this Digimon)"
-  #     - delete_permanent: { target: tgt }
+  # G-FORMULA-SOURCE-DP (RESOLVED 2026-05-19): the `source_dp` formula
+  # primitive reads `ctx.source_permanent`'s effective DP — exactly DCGO's
+  # `card.PermanentOfThisCard().DP`. The `dp_lte` candidate filter uses it so
+  # only opponent Digimon with DP ≤ this WarGreymon's effective DP are
+  # selectable. Mirrors BT17-102 Clause 1's delete sub-clause.
+  - when: when_digivolving
+    summary: "[When Digivolving] Delete 1 opp Digimon with DP ≤ this Digimon"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "Delete 1 opp Digimon (DP ≤ this Digimon)"
+      - delete_permanent: { target: tgt }
 
   # ─── Clause 4 — [All Turns] +1000 DP per distinct color ────────────────────
   #

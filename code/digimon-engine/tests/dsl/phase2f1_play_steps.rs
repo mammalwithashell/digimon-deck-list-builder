@@ -64,7 +64,6 @@ fn play_from_hand_step_with_free_cost_delta_consumes_hand_and_keeps_memory() {
         of: CompiledPlayerRef::You,
         hand_index: CompiledBindingRef::Named("idx".into()),
         cost_delta: Some(CompiledCostDelta::Free),
-        suppress_on_play: false,
     };
 
     {
@@ -113,7 +112,6 @@ fn play_from_hand_step_parks_tail_behind_pending_cost_reducer() {
             of: CompiledPlayerRef::You,
             hand_index: CompiledBindingRef::Named("idx".into()),
             cost_delta: Some(CompiledCostDelta::Printed),
-            suppress_on_play: false,
         },
         CompiledStep::GainMemory(3),
     ];
@@ -180,7 +178,6 @@ fn play_from_hand_free_step_consumes_hand_and_keeps_memory() {
         of: CompiledPlayerRef::You,
         hand_index: CompiledBindingRef::Named("idx".into()),
         bind_as: None,
-        suppress_on_play: false,
     };
 
     {
@@ -225,7 +222,6 @@ fn play_from_hand_free_step_uses_bound_hand_owner() {
         of: CompiledPlayerRef::You,
         hand_index: CompiledBindingRef::Named("idx".into()),
         bind_as: None,
-        suppress_on_play: false,
     };
 
     {
@@ -289,7 +285,6 @@ fn play_from_trash_step_with_free_cost_delta_consumes_trash_and_keeps_memory() {
         of: CompiledPlayerRef::You,
         trash_index: CompiledBindingRef::Named("idx".into()),
         cost_delta: Some(CompiledCostDelta::Free),
-        suppress_on_play: false,
     };
 
     {
@@ -463,7 +458,6 @@ fn play_from_materials_step_extracts_source_and_plays_it_free() {
         source_index: CompiledBindingRef::Named("src_idx".into()),
         cost_delta: Some(CompiledCostDelta::Free),
         bind_as: None,
-        suppress_on_play: false,
     };
 
     {
@@ -520,6 +514,7 @@ fn play_token_step_creates_token_permanent_in_battle_area() {
     let step = CompiledStep::PlayToken {
         controller: CompiledPlayerRef::You,
         token_name: "petrification".to_string(),
+        bind_as: None,
     };
 
     {
@@ -552,8 +547,9 @@ fn play_token_step_creates_token_permanent_in_battle_area() {
 // into the `CompiledStep` variant, and that lowering it through the step
 // dispatcher actually suppresses the played permanent's [On Play] effect.
 
-/// `play_from_trash: { suppress_on_play: true }` in YAML reaches the
-/// `CompiledStep::PlayFromTrash { suppress_on_play: true }` engine flag.
+/// `play_from_trash_free: { suppress_on_play: true }` in YAML reaches the
+/// `CompiledStep::PlayFromTrashFree { suppress_on_play: true }` engine flag.
+/// PUPPETS-G030: `suppress_on_play` is honored ONLY by `play_from_trash_free`.
 #[test]
 fn suppress_on_play_flag_lowers_from_yaml_to_compiled_step() {
     let yaml = r#"
@@ -573,30 +569,29 @@ effects:
           filter:
             level_lte: 3
           prompt: "Pick a Digimon to play"
-      - play_from_trash:
+      - play_from_trash_free:
           of: you
           hand_index: revived
-          cost_delta: free
           suppress_on_play: true
 "#;
     let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("YAML parses");
     let compiled = digimon_dsl::compile::compile(&spec).expect("compiles cleanly");
 
-    let play_step = find_play_from_trash_step(&compiled);
+    let play_step = find_play_from_trash_free_step(&compiled);
     match play_step {
-        CompiledStep::PlayFromTrash {
+        CompiledStep::PlayFromTrashFree {
             suppress_on_play, ..
         } => assert!(
             *suppress_on_play,
             "suppress_on_play: true in YAML must lower to the compiled flag"
         ),
-        other => panic!("expected PlayFromTrash, got {other:?}"),
+        other => panic!("expected PlayFromTrashFree, got {other:?}"),
     }
 }
 
-/// Locate the single `PlayFromTrash` step inside a compiled card's first
+/// Locate the single `PlayFromTrashFree` step inside a compiled card's first
 /// triggered clause's `process`.
-fn find_play_from_trash_step(
+fn find_play_from_trash_free_step(
     compiled: &digimon_dsl::compiled::CompiledCard,
 ) -> &CompiledStep {
     use digimon_dsl::compiled::CompiledClause;
@@ -608,8 +603,8 @@ fn find_play_from_trash_step(
             _ => None,
         })
         .flat_map(|t| t.process.iter())
-        .find(|s| matches!(s, CompiledStep::PlayFromTrash { .. }))
-        .expect("a PlayFromTrash step is present")
+        .find(|s| matches!(s, CompiledStep::PlayFromTrashFree { .. }))
+        .expect("a PlayFromTrashFree step is present")
 }
 
 /// When `suppress_on_play` is omitted, the compiled step defaults to `false`
@@ -633,25 +628,62 @@ effects:
           filter:
             level_lte: 3
           prompt: "Pick a Digimon to play"
-      - play_from_trash:
+      - play_from_trash_free:
           of: you
           hand_index: revived
-          cost_delta: free
 "#;
     let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("YAML parses");
     let compiled = digimon_dsl::compile::compile(&spec).expect("compiles cleanly");
-    match find_play_from_trash_step(&compiled) {
-        CompiledStep::PlayFromTrash {
+    match find_play_from_trash_free_step(&compiled) {
+        CompiledStep::PlayFromTrashFree {
             suppress_on_play, ..
         } => assert!(
             !*suppress_on_play,
             "omitted suppress_on_play must default to false"
         ),
-        other => panic!("expected PlayFromTrash, got {other:?}"),
+        other => panic!("expected PlayFromTrashFree, got {other:?}"),
     }
 }
 
-/// End-to-end: the lowered `CompiledStep::PlayFromTrash { suppress_on_play:
+/// PUPPETS-G030: `suppress_on_play` is supported ONLY by `play_from_trash_free`.
+/// Authoring it on `play_from_trash` must produce a `ValidationError` so an
+/// author cannot silently expect a no-op flag to take effect.
+#[test]
+fn suppress_on_play_on_play_from_trash_is_rejected_at_compile_time() {
+    let yaml = r#"
+card: TST-BADSUP
+name: BadSuppressTest
+kind: digimon
+level: 3
+color: [purple]
+cost: 1
+dp: 3000
+effects:
+  - when: on_play
+    process:
+      - select_trash:
+          of: you
+          bind_as: revived
+          filter:
+            level_lte: 3
+          prompt: "Pick a Digimon to play"
+      - play_from_trash:
+          of: you
+          hand_index: revived
+          cost_delta: free
+          suppress_on_play: true
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("YAML parses");
+    let err = digimon_dsl::compile::compile(&spec)
+        .expect_err("suppress_on_play on play_from_trash must fail compilation");
+    assert!(
+        err.iter()
+            .any(|e| e.message.contains("suppress_on_play is only supported on play_from_trash_free")),
+        "expected a play_from_trash suppress_on_play rejection, got {err:?}"
+    );
+}
+
+/// End-to-end: the lowered `CompiledStep::PlayFromTrashFree { suppress_on_play:
 /// true }` step, run through the dispatcher, plays the trash card into the
 /// battle area but does NOT fire its [On Play] effect.
 #[test]
@@ -709,10 +741,9 @@ fn suppress_on_play_step_lowering_skips_played_permanents_on_play() {
     bindings.insert_trash_index("idx", 0, 0);
 
     // suppress_on_play = true — the [On Play] gain-7 must NOT fire.
-    let suppressed = CompiledStep::PlayFromTrash {
+    let suppressed = CompiledStep::PlayFromTrashFree {
         of: CompiledPlayerRef::You,
         trash_index: CompiledBindingRef::Named("idx".into()),
-        cost_delta: Some(CompiledCostDelta::Free),
         suppress_on_play: true,
     };
     {

@@ -234,6 +234,22 @@ pub fn try_run(
             );
             true
         }
+        CompiledStep::GrantNarrowOpponentEffectProtection { target, expiry } => {
+            let Some(expiry) =
+                resolve_expiry("grant_narrow_opponent_effect_protection", expiry)
+            else {
+                return true;
+            };
+            if let Some(h) = resolve_binding_ref(target, ctx, bindings)
+                .and_then(|b| match b {
+                    ResolvedBinding::Permanent(h) => Some(h),
+                    _ => None,
+                })
+            {
+                ctx.grant_narrow_opponent_effect_protection(h, expiry);
+            }
+            true
+        }
         _ => false,
     }
 }

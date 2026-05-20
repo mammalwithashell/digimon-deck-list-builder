@@ -5,6 +5,7 @@ mod event_gated_delay;
 mod inherited_security_option;
 mod lifecycle_state_machine;
 mod link_flow;
+mod main_phase_delay;
 mod option_placed_observers;
 mod replacement_integration;
 mod standard_flow;

@@ -69,8 +69,8 @@
 #
 # | Card-text element                                                | Status |
 # |------------------------------------------------------------------|--------|
-# | Color bypass while NO face-up [Island of Adventure] in security  | PARTIAL — see G-PRED-NO-FACE-UP-SECURITY-NAMED |
-# | [Security][All Turns] +2000 DP to own Lv3+ Digimon (security src)| BLOCKED — security-zone aura source (engine-gaps.md L294) — see G-SECURITY-ZONE-AURA-SOURCE |
+# | Color bypass while NO face-up [Island of Adventure] in security  | IMPLEMENTED — `no_face_up_security_named` predicate (G-PRED-NO-FACE-UP-SECURITY-NAMED CLOSED) |
+# | [Security][All Turns] +2000 DP to own Lv3+ Digimon (security src)| IMPLEMENTED — `kind: aura, scope: security` (G-SECURITY-ZONE-AURA-SOURCE CLOSED — see clause 1) |
 # | [Main] Add top security card to hand                              | IMPLEMENTED — `add_top_security_to_hand` |
 # | [Main] "Then, place this card face up as the top security card"   | IMPLEMENTED — `place_self_option_at_security` |
 # | [Security] (inherited) optional play 1 Tamer from hand free       | IMPLEMENTED |
@@ -171,7 +171,7 @@
 # `code/digimon-engine/tests/dsl/zone_movement_verbs.rs`; this card fixture
 # proves the production YAML uses the same printed two-step body.
 #
-# ─── ENGINE-GAP — [Security][All Turns] aura with security-zone source [G-SECURITY-ZONE-AURA-SOURCE] ──
+# ─── G-SECURITY-ZONE-AURA-SOURCE — [Security][All Turns] aura, security source (CLOSED) ──
 #
 # Printed text: "[Security] [All Turns] All of your level 3 or higher
 # Digimon get +2000 DP." The `[Security]` tag is a SOURCE-ZONE qualifier
@@ -181,42 +181,26 @@
 # `CardEffectCommons.IsExistInSecurity(card, false)` on the
 # `ChangeDPStaticEffect` `condition`, exactly the source-zone gate.
 #
-# Status: known engine gap, tracked at `qa/archetype-qa/engine-gaps.md`
-# line 294: "security-zone aura sources and the future query-time aura
-# model remain separate work; no remaining blocker for battle-area
-# tick-dispatched filtered auras covered by Group 6." Group 6 (resolved
-# 2026-05-02) only covers face-up battle-area sources — `Game::tick_declarative_effects`
-# iterates own/opponent battle-area permanents and dispatches their
-# declarative effects; it does NOT iterate face-up security cards.
+# RESOLVED (Track H §5): `Game::tick_declarative_effects` now ALSO iterates
+# every face-up security card on both players (`game.rs` ~2129) and
+# dispatches its declarative effects with `source_permanent = None`. A
+# filter-aura (`kind: aura` with a non-empty `target`) lowers to a
+# `materializes_declarative_state` process that scans the battle areas and
+# installs declarative DP modifiers — it never needs a battle-area
+# `source_permanent`, so the security-source dispatch path executes it
+# correctly. Sister fixture: BT21-095 Wind Guardians (`scope: security`
+# `grant_keyword` aura). Cleanup is automatic — each tick clears
+# materialized declaratives and re-installs only from face-up sources, so a
+# face-down flip / Recovery / trash of ST20-15 evicts the buff on the next
+# tick.
 #
-# Closing this gap requires:
-#   A. Engine: extend `Game::tick_declarative_effects` (or sister loop) to
-#      also iterate face-up security cards on both players, dispatch their
-#      declarative effects with a synthetic `TriggerSource::SecurityZone(player)`
-#      (or equivalent) so the process closure executes with `source` bound
-#      to the security card.
-#   B. Engine: extend `EffectReadContext::source_permanent` / source resolution
-#      so a security-zone source binding works (currently `source` resolves
-#      to a battle-area Permanent handle; security cards are raw `Card`).
-#      Likely needs a `SourceLocation::Security { player, idx }` variant on
-#      the source enum used during clause execution.
-#   C. DSL: probably no new verb needed — `kind: aura` with `target: { owner:
-#      you, kind: digimon, level_gte: 3 }` + `dp_modifier: +2000` is the
-#      natural shape; the gap is purely the runtime-ticker not seeing the
-#      security source.
-#
-# Workaround that would VIOLATE no-approximations: install the +2000 DP
-# modifier unconditionally at compile / on-play time (over-fires while the
-# Option sits in hand / trash). Per no-approximations the [Security][All
-# Turns] DP aura is OMITTED. Tests asserting the +2000 DP buff are
-# #[ignore]'d under this gap tag.
-#
-# Also blocks: BT5-058 X-Antibody (and several "[Security] All Turns" DP
-# / keyword auras across the card pool). DCGO grep for
-# `IsExistInSecurity(card, false)` on a `ChangeDPStaticEffect` /
-# `RushStaticEffect` / `BlockerStaticEffect` returns multiple entries.
-#
-# Filed: 2026-05-03 (ST20-15 Island of Adventure, batch-implement-cards-rust-dsl).
+# Authored below as clause 1: `kind: aura, scope: security` with
+# `target: { owner: you, kind: digimon, level_gte: 3 }` + `dp_modifier: 2000`.
+# `owner: you` resolves against the security card's controller (the aura
+# source's owner) — mirrors DCGO "All of YOUR ... Digimon" and excludes the
+# opponent's Lv3+ Digimon. No `active_when` gate: printed `[All Turns]` is
+# unconditional while the source sits face-up (the face-up gate is the
+# tick-loop's `face_up_security` membership check, not a predicate).
 
 card: ST20-15
 name: "Island of Adventure"
@@ -224,6 +208,21 @@ kind: option
 color: [white]
 cost: 2
 traits: [ADVENTURE]
+
+# Card-level Option-use requirement (G-PRED-NO-FACE-UP-SECURITY-NAMED).
+# Printed: "While you have no face-up [Island of Adventure] security cards,
+# you can ignore this card's color requirements." This is the FROM-HAND
+# play-time bypass — `use_requirement` lowers onto the [Main] clause's
+# `option_color_requirement_bypass` condition, which the action mask
+# consults in `option_use_requirement_or_color_available`. It is
+# card-scoped (only THIS card's color requirement is bypassed), mirroring
+# DCGO `IgnoreColorConditionClass.SetUpIgnoreColorConditionClass(
+# cardCondition: cardSource == card)`. The same predicate also gates the
+# field-side `flood_gate` clause below.
+use_requirement:
+  no_face_up_security_named:
+    of: you
+    card_number_is: "ST20-15"
 
 effects:
   # ─── Clause 0: Color bypass while NO face-up [Island of Adventure] in security ─
@@ -238,43 +237,41 @@ effects:
   # lives in `code/digimon-engine/src/action/mask.rs` and the same helper
   # gates `play_option_from_hand`.
   #
-  # G-PRED-NO-FACE-UP-SECURITY-NAMED workaround: `no_permanent { of: you,
-  # zone: [security], card_number_is: "ST20-15" }`. See header docs for the
-  # full failure-mode analysis (this is a both-directions over-fire and the
-  # affected behavioral assertions are #[ignore]'d under the gap tag).
+  # G-PRED-NO-FACE-UP-SECURITY-NAMED CLOSED: the `no_face_up_security_named`
+  # predicate leaf walks `Player.security` and counts only cards whose
+  # `card_index` is in `Player.face_up_security`, exactly mirroring DCGO's
+  # `!card.Owner.SecurityCards.Any(c => c.EqualsCardName("Island of
+  # Adventure") && !c.IsFlipped)`. Face-down [Island of Adventure] security
+  # cards do NOT close the gate (printed "face-up" qualifier honored).
   - kind: flood_gate
     active_when:
-      no_permanent:
+      no_face_up_security_named:
         of: you
-        zone: [security]
         card_number_is: "ST20-15"
     modifier: IgnoreColorRequirement
     target: { card_number_is: "ST20-15" }
     summary: "While no face-up [Island of Adventure] in own security, ignore color requirements for this card"
 
-  # ─── BLOCKED Clause 1: [Security][All Turns] +2000 DP to own Lv3+ Digimon ─────
+  # ─── Clause 1: [Security][All Turns] +2000 DP to own Lv3+ Digimon ─────────────
   #
   # Printed: "[Security] [All Turns] All of your level 3 or higher Digimon
   # get +2000 DP."
   #
-  # BLOCKED — G-SECURITY-ZONE-AURA-SOURCE (engine-gaps.md L294). Group 6
-  # (resolved 2026-05-02) wired declarative-aura tick dispatch only for
-  # face-up battle-area sources, not security-zone sources. Until the
-  # tick-loop iterates face-up security cards (and the source-resolution
-  # path supports a security source), this aura cannot fire even though
-  # the YAML form would compile.
-  #
-  # Per no-approximations the entire clause is OMITTED. Authoring stub
-  # (commented; uncomment when the engine gap closes):
-  #
-  # - kind: aura
-  #   active_when: {}                            # printed [All Turns] = no turn gate
-  #   target:
-  #     owner: you
-  #     kind: digimon
-  #     level_gte: 3
-  #   dp_modifier: 2000
-  #   summary: "[Security][All Turns] Own Lv3+ Digimon get +2000 DP"
+  # G-SECURITY-ZONE-AURA-SOURCE CLOSED — see gap header above. While
+  # ST20-15 sits FACE-UP in its owner's security stack, the security-zone
+  # tick path (`Game::tick_declarative_effects`) dispatches this filter-aura
+  # each tick; the materialized-declarative clear+re-install model evicts the
+  # buff automatically if the card leaves security or is flipped face-down.
+  # `owner: you` is evaluated against the aura source's controller (the
+  # security card's owner) and excludes the opponent's Digimon.
+  - kind: aura
+    scope: security
+    target:
+      owner: you
+      kind: digimon
+      level_gte: 3
+    dp_modifier: 2000
+    summary: "[Security][All Turns] Own Lv3+ Digimon get +2000 DP"
 
   # ─── Clause 2: [Main] Add top security to hand; then place self at security top face up ─
   - when: main_from_hand

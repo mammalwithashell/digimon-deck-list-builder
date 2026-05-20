@@ -108,53 +108,44 @@
 # attacker filter, and the body includes a self-trash step before the de-digi-4
 # body.
 #
-# Two reusable DSL gaps + one card-shaped gap prevent a faithful encoding:
+# BLOCKED on G-DSL-DELAY-ON-ATTACK-EVENT (code-verified 2026-05-20). The two
+# halves previously cited here are STALE:
 #
-#   G-DSL-ON-ALLY-ATTACK-TIMING (existing — first reported BT21-102 Tai
-#     Kamiya, 2026-05-03; see qa/dsl-vocab-gaps.md). The `digimon_dsl::clause::
-#     Timing` enum has no `OnAllyAttack` variant. The engine's `Effect::on_ally_
-#     attack` and combat.rs §Phase 9 Task 8 dispatch already exist; only the
-#     YAML surface is missing. Without this token, no triggered clause can
-#     observe an ally attack from YAML in a faithful (no-over-fire) form.
+#   - `digimon_dsl::clause::Timing` DOES have `OnAllyAttack` / `OnAttack` /
+#     `OnOpponentAttack` (clause.rs:86-91). They map through `timing_map.rs`
+#     and `lower_triggered.rs` to `Effect::on_ally_attack`, so OnAllyAttack
+#     works for TRIGGERED clauses. (The old "G-DSL-ON-ALLY-ATTACK-TIMING" no
+#     longer applies.)
+#   - An `attacker_trait_has` BoolPredicate EXISTS (predicate.rs:927) — so
+#     "G-ATK-TRAIT-FILTER" as a missing-predicate gap is stale TOO. The
+#     caveat: it resolves the attacker only via `rctx.attack_target_change()`,
+#     which is unset for a plain attack — so it works for the redirect-attack
+#     timing but NOT for a general on-attack observer.
 #
-#     BT21-102 worked around this by using `when: when_attacking` because its
-#     source is a TAMER (Tamers never attack, so the "ally" semantic is
-#     preserved trivially). BT23-096's source is an OPTION (also never attacks),
-#     so the same workaround is structurally valid for the trigger-fan-out half.
-#     But — see G-ATK-TRAIT-FILTER below — the ATTACKER-trait predicate half
-#     remains unsatisfiable.
+# The genuine, still-open blocker is the <Delay>-on-attack path, three pieces:
 #
-#   G-ATK-TRAIT-FILTER (existing — first reported BT21-025, 2026-04-27; see
-#     qa/dsl-vocab-gaps.md). No `attacker_trait_has` BoolPredicate exists to
-#     gate the clause on the attacking permanent's traits. Engine has the data
-#     in `TriggerContext.source_permanent` for `PlayerBattleArea(attacker_player)`
-#     fan-outs; the DSL just lacks a predicate leaf to read it. Without this,
-#     "When one of your [CS] trait Digimon attacks" cannot be expressed
-#     faithfully — only "When ANY of your Digimon attacks" can.
+#   (1) `code/digimon-engine/src/dsl_cards/lower_delay.rs` lines 55-65 maps
+#       only `EndOfYourTurn` / `StartOfYourTurn` / `EndOfYourNextTurn` /
+#       `OnSuspend` / `OnUnsuspend` to a specific `DelayTrigger`; every other
+#       CompiledTiming (incl. OnAllyAttack) silently degrades to
+#       `DelayTrigger::EndOfYourNextTurn`. Closure: extend the arm to lower
+#       `OnAttack` / `OnAllyAttack` / `OnOpponentAttack` to
+#       `DelayTrigger::OnEvent(EffectTiming::*)`.
+#   (2) `effect_queue.rs:459-464` only fans out to
+#       `enqueue_event_gated_delayed_options` for `TriggerSource::EventObserved`
+#       / `AttackTargetChanged`. But `combat.rs:2953` dispatches `OnAllyAttack`
+#       via `TriggerSource::PlayerBattleArea` — so an attack event never
+#       reaches the event-gated-delay drainer. Closure: have `fire_on_attack`
+#       (or the PlayerBattleArea arm) also feed `enqueue_event_gated_delayed
+#       _options` for the attack timings.
+#   (3) A delay-context attacker-trait predicate: `attacker_trait_has` reads
+#       `attack_target_change()` (unset for a plain attack). An event-gated
+#       delay's `active_when` cannot read the attacker's traits faithfully
+#       without exposing the attacker handle in the delay trigger context and
+#       a predicate that consults it.
 #
-#     A workaround using `any_permanent: { trait_has: CS, kind: digimon, of: you }`
-#     in `condition:` does NOT solve the over-fire problem: it would gate the
-#     clause on CS-Digimon presence on the field, but still fire when a NON-CS
-#     attacker attacks while a CS Digimon merely exists elsewhere on the field.
-#     This violates no-approximations (the De-Digivolve 4 + self-trash would
-#     resolve on attacks the printed text does not authorize).
-#
-#   G-DSL-DELAY-ON-ATTACK-EVENT (NEW — this card). `kind: delay` lowering in
-#     `code/digimon-engine/src/dsl_cards/lower_delay.rs` lines 55-65 currently
-#     maps only `EndOfYourTurn` / `StartOfYourTurn` / `EndOfYourNextTurn` /
-#     `OnSuspend` / `OnUnsuspend` to specific `DelayTrigger` variants — every
-#     other CompiledTiming silently degrades to `DelayTrigger::EndOfYourNextTurn`.
-#     A `kind: delay` with `trigger: on_ally_attack` (even if G-DSL-ON-ALLY-
-#     ATTACK-TIMING closed) would be silently downgraded to "fire at end of
-#     your next turn", violating the printed "When one of your [CS] trait
-#     Digimon attacks" semantics. Closure path: extend the lowering arm to
-#     accept `OnAttack` / `OnAllyAttack` / `OnOpponentAttack` and lower them to
-#     `DelayTrigger::OnEvent(EffectTiming::OnAllyAttack)` (etc.) — same shape
-#     as the existing `OnSuspend` event-Delay path landed for BT22-098.
-#
-# This gap stack mirrors BT24-089's analysis for an Owen-Dreadnought-suspends
-# Delay activation: same root cause (`kind: delay` only honors a fixed set of
-# trigger tokens; non-standard Delay activations need a new lowering arm).
+# A faithful fix is a 3-system change (delay lowering + combat dispatch
+# fan-out + a delay-context attacker predicate), not a focused card fix.
 #
 # Workaround: NONE that preserves no-approximations. Encoding the clause as
 # `kind: delay` with `trigger: on_ally_attack` would (a) parse-error if the

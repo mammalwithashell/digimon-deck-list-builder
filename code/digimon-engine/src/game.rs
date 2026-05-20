@@ -77,6 +77,12 @@ pub(crate) enum DelayedOptionLifecycleResumeKind {
     StartTurn,
     EndTurn { ending_player: PlayerId },
     Event { timing: crate::enums::EffectTiming },
+    /// Standard `<Delay>` activated by a player `[Main]`-phase action
+    /// (PUPPETS-G009). The Option's `DelayEffect` body installed a pending
+    /// selection; once it resolves, the Option is trashed as the activation
+    /// cost. No turn-keyed scan resumes — this kind only carries the deferred
+    /// trash of the activated Option.
+    MainPhaseActivation,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -94,8 +100,12 @@ pub(crate) struct PendingWouldPlayResume {
     pub(crate) effective_cost: u16,
     pub(crate) origin: PendingWouldPlayOrigin,
     pub(crate) effect_initiated: bool,
-    /// When `true`, the just-played permanent's [On Play] clauses are NOT
-    /// enqueued for this play event. See [`PlayOptions::suppress_on_play`].
+    /// PUPPETS-G030 — when `true`, the just-played permanent's own `[On Play]`
+    /// effects are NOT enqueued for this play event. Used by BT5-106's
+    /// [Security] clause ("Any [On Play] effects on Digimon played with this
+    /// effect don't activate."). Scoped strictly to the played permanent and
+    /// this single play event: other permanents' On Play, and every other
+    /// timing (OnEnterFieldAnyone / OnAllyPlayed), are unaffected.
     pub(crate) suppress_on_play: bool,
 }
 
@@ -112,46 +122,6 @@ pub(crate) enum PendingWouldPlayOrigin {
         permanent: PermanentHandle,
         source_index: usize,
     },
-}
-
-/// Options carried through the play-from-zone pipeline that are independent
-/// of memory cost. Bundled into one `Copy` struct so the cost-reduction
-/// continuation chain (which captures these in callbacks) stays readable.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) struct PlayOptions {
-    /// Where the played card came from — used to roll the play back to its
-    /// origin zone if a `WhenPermanentWouldPlay` replacement cancels it.
-    pub(crate) origin: PendingWouldPlayOrigin,
-    /// When `true`, the just-played permanent's [On Play] effect clauses
-    /// are NOT enqueued for this play event. This suppresses **only** the
-    /// played permanent's own [On Play] clauses — sibling permanents'
-    /// [On Play] effects (enqueued at their own play time) and observer
-    /// timings (`OnEnterFieldAnyone`, `OnAllyPlayed`) still fire normally.
-    ///
-    /// Card-text precedent: BT5-106 Demonic Disaster [Security] — "Any
-    /// [On Play] effects on Digimon played with this effect don't
-    /// activate." Royal Knights payoff cards (BT13-110/BT13-112) play
-    /// Royal Knight Digimon from digivolution sources with the same
-    /// suppression.
-    pub(crate) suppress_on_play: bool,
-}
-
-impl PlayOptions {
-    /// Default options: roll back to hand, do not suppress [On Play].
-    pub(crate) fn hand() -> Self {
-        Self {
-            origin: PendingWouldPlayOrigin::Hand,
-            suppress_on_play: false,
-        }
-    }
-
-    /// Options for a play from `origin` with default (non-suppressed) [On Play].
-    pub(crate) fn from_origin(origin: PendingWouldPlayOrigin) -> Self {
-        Self {
-            origin,
-            suppress_on_play: false,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -560,6 +530,25 @@ pub struct Game {
     pub scheduled_effects: Vec<crate::scheduled_effects::ScheduledEffect>,
     /// Continuation for a scheduled-effect drain paused by a DSL selection.
     pub scheduled_drain_tail: Option<crate::scheduled_effects::ScheduledDrainTail>,
+
+    /// PUPPETS-G003 — provenance-keyed deletions scheduled for this turn's
+    /// end. An effect that plays a Digimon and must delete *that specific
+    /// permanent* at turn end ("At turn end, delete the Digimon this effect
+    /// played") pushes one entry here, keyed by a stable `ProvenanceToken`
+    /// (the played card's identity) rather than a battle-area index that can
+    /// shift. Drained by `scheduled_effects::fire_scheduled_provenance_deletions`
+    /// from `fire_end_of_your_turn`; the queue is cleared each turn so a
+    /// played permanent that already left is a silent no-op.
+    pub scheduled_provenance_deletions:
+        Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
+    /// PUPPETS-G016 — provenance-keyed deletions scheduled for the end of the
+    /// **opponent's** turn. Mirror of `scheduled_provenance_deletions` but
+    /// drained from `rotate_turn_player` (after `EndOfOpponentsTurn` observers
+    /// and scheduled-effect drains) rather than from `fire_end_of_your_turn`.
+    /// Used by P-165 ShoeShoemon ("At the end of your opponent's turn, delete
+    /// that token").
+    pub scheduled_provenance_deletions_opp:
+        Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
     /// Continuation for a delayed-option lifecycle paused by a DelayEffect or
     /// delete/replacement selection. Re-entered from `resolve_selection`.
     pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
@@ -762,6 +751,8 @@ impl Game {
             dsl_outer_tail: None,
             scheduled_effects: Vec::new(),
             scheduled_drain_tail: None,
+            scheduled_provenance_deletions: Vec::new(),
+            scheduled_provenance_deletions_opp: Vec::new(),
             pending_delayed_option_lifecycle: None,
             pending_delayed_option_lifecycle_stack: Vec::new(),
             until_condition_dirty: false,
@@ -1320,6 +1311,28 @@ impl Game {
             return ReplacementCause::OpponentEffect;
         }
         ReplacementCause::OwnEffect
+    }
+
+    /// The observer-facing `EventCause` for the deletion currently being
+    /// finalized, applying override-first precedence:
+    ///   1. `current_deletion_event_cause_override` (a keyword route like
+    ///      Overclock refining the payload), else
+    ///   2. `current_deletion_cause` converted to `EventCause`.
+    ///
+    /// `None` outside an OnDeletion / OnAnyDeletion drain. Every deletion-cause
+    /// consumer that wants an `EventCause` (the `OnAnyDeletion`
+    /// `DeletedObjectSnapshot` in `combat.rs`, the OnDeletion `TriggerContext`
+    /// in `effect_queue.rs`) must route through this so they cannot drift.
+    /// (`effect_context::observed_deletion_cause` keeps its own copy because it
+    /// returns a `ReplacementCause`, not an `EventCause`.)
+    #[doc(hidden)]
+    pub(crate) fn observed_deletion_event_cause(
+        &self,
+    ) -> Option<crate::trigger_context::EventCause> {
+        self.current_deletion_event_cause_override.or_else(|| {
+            self.current_deletion_cause
+                .map(crate::trigger_context::EventCause::from)
+        })
     }
 
     /// Generalized cause inference for non-deletion Would-replacement fire-sites
@@ -1897,6 +1910,119 @@ impl Game {
         Some(merged_handle)
     }
 
+    /// DNA digivolve where ONE material lives on the field (`target`) and the
+    /// OTHER material is a card in `hand_owner`'s hand (`partner_index`). The
+    /// merged permanent is topped with `result_index` (also a hand card —
+    /// typically the Omnimon-name level-7 result).
+    ///
+    /// This is the BT17-095-shaped DNA: the printed text "That Digimon and a
+    /// card in the hand may DNA digivolve into a Digimon card with [Omnimon]
+    /// in its name in the hand" — only one DNA material is a field permanent;
+    /// the second is materialised from hand inline. Mirrors DCGO's
+    /// `BT17_095.SuccessProcess` which builds a temporary `Permanent` from the
+    /// hand-card partner and runs `PlayCardClass.PlayCard` with `SetJogress`.
+    ///
+    /// ## Stacking order
+    ///
+    /// `target.card_sources ++ [hand_partner] ++ [result]`. `target` is the
+    /// `requirement1` material; the hand partner is `requirement2`. The merged
+    /// permanent stays at `target`'s index (no on-field permanent is removed).
+    ///
+    /// ## Triggers
+    ///
+    /// Identical to `dna_digivolve_inner`: `WhenDigivolving` → `OnDnaDigivolve`
+    /// → `OnDigivolve` (global), each followed by a queue drain, all carrying
+    /// the `dna_origin` marker.
+    ///
+    /// ## Returns
+    ///
+    /// `Some(merged_handle)` on success; `None` if `target` is out of range,
+    /// either hand index is out of range, the two hand indices coincide, or
+    /// `cost > 0` and `pay_memory` fails.
+    pub(crate) fn dna_digivolve_hand_partner_inner(
+        &mut self,
+        target: PermanentHandle,
+        hand_owner: PlayerId,
+        partner_index: usize,
+        result_index: usize,
+        cost: u16,
+        effect_initiated: bool,
+    ) -> Option<PermanentHandle> {
+        use crate::enums::EffectTiming;
+        use crate::selection::TriggerSource;
+
+        if (target.index as usize) >= self.player(target.player).battle_area.len() {
+            return None;
+        }
+        if partner_index == result_index {
+            return None;
+        }
+        let hand_len = self.player(hand_owner).hand.len();
+        if partner_index >= hand_len || result_index >= hand_len {
+            return None;
+        }
+
+        if cost > 0 && !self.pay_memory(cost) {
+            return None;
+        }
+
+        // Remove the two hand cards. Remove the higher index first so the
+        // lower index is not shifted before its removal.
+        let (first, second) = if partner_index > result_index {
+            (partner_index, result_index)
+        } else {
+            (result_index, partner_index)
+        };
+        let removed_first = self.player_mut(hand_owner).hand.remove(first);
+        let removed_second = self.player_mut(hand_owner).hand.remove(second);
+        let (partner_source, result_source) = if partner_index > result_index {
+            (removed_first, removed_second)
+        } else {
+            (removed_second, removed_first)
+        };
+
+        let turn = self.turn_count;
+        {
+            let perm = &mut self.player_mut(target.player).battle_area[target.index as usize];
+            perm.card_sources.push(partner_source);
+            perm.card_sources.push(result_source);
+            perm.turn_digivolved = turn;
+        }
+
+        let merged_handle = target;
+
+        self.enqueue_triggered(
+            EffectTiming::WhenDigivolving,
+            TriggerSource::Permanent(merged_handle),
+        );
+        self.drain_effect_queue_with_dna_origin(true);
+
+        self.enqueue_triggered(
+            EffectTiming::OnDnaDigivolve,
+            TriggerSource::Permanent(merged_handle),
+        );
+        self.drain_effect_queue_with_dna_origin(true);
+
+        let event_card = self
+            .player(merged_handle.player)
+            .battle_area
+            .get(merged_handle.index as usize)
+            .map(|perm| perm.top_card().handle())?;
+        self.enqueue_triggered(
+            EffectTiming::OnDigivolve,
+            TriggerSource::Digivolved {
+                player: merged_handle.player,
+                permanent: merged_handle,
+                card: event_card,
+                effect_initiated,
+                dna_origin: true,
+            },
+        );
+        self.drain_effect_queue();
+
+        Some(merged_handle)
+    }
+
     /// Returns `true` when `card` may digivolve onto `perm` per standard
     /// evo-cost rules: `card` has an `EvoCost` entry whose `level` matches
     /// `perm.top_card()`'s level and whose color is present on
@@ -2308,6 +2434,10 @@ impl Game {
                 }
             }
         }
+        // Fold in registry-side granted keywords (e.g. an aura's
+        // `grant_keyword: SecurityAttackPlus`). Printed keywords above come
+        // from `card_sources`; aura grants live in `Modifiers::permanent_keywords`.
+        total += self.modifiers.granted_security_attack_keyword_bonus(target);
         total
     }
 

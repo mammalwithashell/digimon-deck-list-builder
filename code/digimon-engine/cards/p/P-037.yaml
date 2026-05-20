@@ -7,6 +7,12 @@ cost: 3
 # [Main] Reveal top 4; add 1 yellow Digimon; bottom the rest in any order.
 # Then place this card in the battle area. Delay placement from hand is handled
 # by option disposition when a card has a kind: delay clause.
+#
+# The standard <Delay> body (clause below) uses `trigger: delayed`: a
+# player-visible [Main]-phase activation action (PUPPETS-G009). The controller
+# trashes the parked Option on a later main phase to activate the body — it
+# never auto-fires (RULES_CONTEXT 16-16; processing optional, not the placing
+# turn).
 effects:
   - when: main_from_hand
     optional: false
@@ -28,7 +34,7 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
 
   - kind: delay
-    trigger: end_of_your_next_turn
+    trigger: delayed
     summary: "[Main]<Delay> Gain 2 memory"
     process:
       - gain_memory: 2

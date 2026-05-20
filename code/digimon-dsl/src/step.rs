@@ -85,6 +85,12 @@ pub enum StepSpec {
     AddToHandFromDeck(HandleMoveArgs),
     AddToHandFromTrash(HandleMoveArgs),
     AddToHandFromSecurity(HandleMoveArgs),
+    /// Play a specific bound card FROM the security stack without paying its
+    /// cost. The `card` binding is a `CardHandle` (typically produced by a
+    /// prior `select_security` step). G-PLAY-SELECTED-SECURITY-CARD. Used by
+    /// BT13-012 ("you may play 1 red or yellow Tamer card among it without
+    /// paying its cost").
+    PlaySecurityCard(HandleMoveArgs),
     AddTopSecurityToHand(PlayerArg),
     MayAddTopSecurityToHand(PlayerArg),
     AddToHandFromReveal(HandleMoveArgs),
@@ -141,14 +147,19 @@ pub enum StepSpec {
     PlayFromHandFree(PlayFromHandFreeArgs),
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
+    /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
+    /// true origin zone (hand vs trash), recovered from the binding.
+    PlayUnionBoundFree(PlayUnionBoundFreeArgs),
     PlayFromSecurity(PlayFromSecurityArgs),
     PlayFromMaterials(PlayFromMaterialsArgs),
     PlaySelectedSourcesFree(TrashSelectedSourcesArgs),
     EffectInitiatedDigivolve(EffectDigivolveArgs),
     EffectInitiatedDnaDigivolve(EffectDnaDigivolveArgs),
+    EffectInitiatedDnaDigivolveHandPartner(EffectDnaDigivolveHandPartnerArgs),
 
     // Security
     TrashTopSecurity(PlayerArg),
+    TrashBottomSecurity(PlayerArg),
     TrashTopSecurityAndCancelReplacement(PlayerArg),
     BounceSelf(EmptyArgs),
     PlaceSelfAtSecurity(SelfSecurityPlacementArgs),
@@ -160,6 +171,7 @@ pub enum StepSpec {
     SecurityPlaceStackedCard(SecurityPlaceStackedCardArgs),
     SecurityPlaceTopStackedCard(SecurityPlaceTopStackedCardArgs),
     ReturnAllTrashToDeckBottom(PlayerArg),
+    ReturnTrashListToDeckBottom(ReturnTrashListToDeckBottomArgs),
     TrashTopNDigivolutionCardsOfEach(TrashTopNDigivolutionCardsOfEachArgs),
     TrashOpponentHandToCount(TrashOpponentHandToCountArgs),
     SearchOwnSecurityStack(SearchOwnSecurityStackArgs),
@@ -172,6 +184,12 @@ pub enum StepSpec {
     AddPlayerModifier(AddPlayerModifierArgs),
     GrantKeyword(GrantKeywordArgs),
     GrantEffectImmunity(GrantEffectImmunityArgs),
+    /// PUPPETS-G024 — install the narrow opponent-effect protection
+    /// bundle (ImmuneFromDPMinus opponent-scoped + CannotBeDeDigivolved
+    /// opponent-scoped). For text like BT16-055's "can't have its DP
+    /// reduced by your opponent's effects and isn't affected by
+    /// ＜De-Digivolve＞ effects".
+    GrantNarrowOpponentEffectProtection(GrantNarrowOpponentEffectProtectionArgs),
     /// Track H §3 — install a granted triggered effect on each
     /// permanent matching `target`. The granted body fires on the
     /// carrier's matching `timing` (DCGO `AddSkillClass.cs` analog).
@@ -190,6 +208,7 @@ pub enum StepSpec {
     SelectOwnSources(SelectOwnSourcesArgs),
     DigiBurst(DigiBurstArgs),
     SelectOpponentDpBudget(SelectOpponentDpBudgetArgs),
+    SelectOpponentPlayCostBudget(SelectOpponentPlayCostBudgetArgs),
     SelectOwnBreedingPermanent(SelectOwnBreedingPermanentArgs),
     SelectReveal(SelectZoneArgs),
     SelectRevealBuckets(SelectRevealBucketsArgs),
@@ -205,6 +224,8 @@ pub enum StepSpec {
     ForEach(ForEachStep),
     PerSelected(PerSelectedStep),
     ScheduleDelayed(ScheduleDelayedStep),
+    /// PUPPETS-G003 — schedule the bound permanent for deletion at turn end.
+    ScheduleDeletePlayedAtTurnEnd(ScheduleDeletePlayedAtTurnEndArgs),
     PlaceSelfAsDelayOption(EmptyArgs),
     LinkToOwnDigimon(LinkToOwnDigimonArgs),
     Optional(OptionalStep),
@@ -263,6 +284,7 @@ impl Serialize for StepSpec {
             StepSpec::AddToHandFromDeck(v) => kv!(s, "add_to_hand_from_deck", v),
             StepSpec::AddToHandFromTrash(v) => kv!(s, "add_to_hand_from_trash", v),
             StepSpec::AddToHandFromSecurity(v) => kv!(s, "add_to_hand_from_security", v),
+            StepSpec::PlaySecurityCard(v) => kv!(s, "play_security_card", v),
             StepSpec::AddTopSecurityToHand(v) => kv!(s, "add_top_security_to_hand", v),
             StepSpec::MayAddTopSecurityToHand(v) => kv!(s, "may_add_top_security_to_hand", v),
             StepSpec::AddToHandFromReveal(v) => kv!(s, "add_to_hand_from_reveal", v),
@@ -298,13 +320,18 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
             StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
+            StepSpec::PlayUnionBoundFree(v) => kv!(s, "play_union_bound_free", v),
             StepSpec::PlayFromSecurity(v) => kv!(s, "play_from_security", v),
             StepSpec::PlayFromMaterials(v) => kv!(s, "play_from_materials", v),
             StepSpec::PlaySelectedSourcesFree(v) => kv!(s, "play_selected_sources_free", v),
             StepSpec::EffectInitiatedDigivolve(v) => kv!(s, "effect_initiated_digivolve", v),
             StepSpec::EffectInitiatedDnaDigivolve(v) => kv!(s, "effect_initiated_dna_digivolve", v),
+            StepSpec::EffectInitiatedDnaDigivolveHandPartner(v) => {
+                kv!(s, "effect_initiated_dna_digivolve_hand_partner", v)
+            }
             // Security
             StepSpec::TrashTopSecurity(v) => kv!(s, "trash_top_security", v),
+            StepSpec::TrashBottomSecurity(v) => kv!(s, "trash_bottom_security", v),
             StepSpec::TrashTopSecurityAndCancelReplacement(v) => {
                 kv!(s, "trash_top_security_and_cancel_replacement", v)
             }
@@ -334,6 +361,9 @@ impl Serialize for StepSpec {
             StepSpec::ReturnAllTrashToDeckBottom(v) => {
                 kv!(s, "return_all_trash_to_deck_bottom", v)
             }
+            StepSpec::ReturnTrashListToDeckBottom(v) => {
+                kv!(s, "return_trash_list_to_deck_bottom", v)
+            }
             StepSpec::TrashTopNDigivolutionCardsOfEach(v) => {
                 kv!(s, "trash_top_n_digivolution_cards_of_each", v)
             }
@@ -348,6 +378,9 @@ impl Serialize for StepSpec {
             StepSpec::GrantKeyword(v) => kv!(s, "grant_keyword", v),
             StepSpec::GrantTriggeredEffect(v) => kv!(s, "grant_triggered_effect", v),
             StepSpec::GrantEffectImmunity(v) => kv!(s, "grant_effect_immunity", v),
+            StepSpec::GrantNarrowOpponentEffectProtection(v) => {
+                kv!(s, "grant_narrow_opponent_effect_protection", v)
+            }
             // Selection
             StepSpec::SelectOwnPermanent(v) => kv!(s, "select_own_permanent", v),
             StepSpec::SelectOpponentPermanent(v) => kv!(s, "select_opponent_permanent", v),
@@ -360,6 +393,9 @@ impl Serialize for StepSpec {
             StepSpec::SelectOwnSources(v) => kv!(s, "select_own_sources", v),
             StepSpec::DigiBurst(v) => kv!(s, "digi_burst", v),
             StepSpec::SelectOpponentDpBudget(v) => kv!(s, "select_opponent_dp_budget", v),
+            StepSpec::SelectOpponentPlayCostBudget(v) => {
+                kv!(s, "select_opponent_play_cost_budget", v)
+            }
             StepSpec::SelectOwnBreedingPermanent(v) => {
                 kv!(s, "select_own_breeding_permanent", v)
             }
@@ -376,6 +412,9 @@ impl Serialize for StepSpec {
             StepSpec::ForEach(v) => kv!(s, "for_each", v),
             StepSpec::PerSelected(v) => kv!(s, "per_selected", v),
             StepSpec::ScheduleDelayed(v) => kv!(s, "schedule_delayed", v),
+            StepSpec::ScheduleDeletePlayedAtTurnEnd(v) => {
+                kv!(s, "schedule_delete_played_at_turn_end", v)
+            }
             StepSpec::PlaceSelfAsDelayOption(v) => kv!(s, "place_self_as_delay_option", v),
             StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
@@ -447,6 +486,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_to_hand_from_deck" => StepSpec::AddToHandFromDeck(map.next_value()?),
             "add_to_hand_from_trash" => StepSpec::AddToHandFromTrash(map.next_value()?),
             "add_to_hand_from_security" => StepSpec::AddToHandFromSecurity(map.next_value()?),
+            "play_security_card" => StepSpec::PlaySecurityCard(map.next_value()?),
             "add_top_security_to_hand" => StepSpec::AddTopSecurityToHand(map.next_value()?),
             "may_add_top_security_to_hand" => StepSpec::MayAddTopSecurityToHand(map.next_value()?),
             "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
@@ -484,6 +524,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
             "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
+            "play_union_bound_free" => StepSpec::PlayUnionBoundFree(map.next_value()?),
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
             "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
             "play_selected_sources_free" => StepSpec::PlaySelectedSourcesFree(map.next_value()?),
@@ -491,9 +532,13 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "effect_initiated_dna_digivolve" => {
                 StepSpec::EffectInitiatedDnaDigivolve(map.next_value()?)
             }
+            "effect_initiated_dna_digivolve_hand_partner" => {
+                StepSpec::EffectInitiatedDnaDigivolveHandPartner(map.next_value()?)
+            }
 
             // Security
             "trash_top_security" => StepSpec::TrashTopSecurity(map.next_value()?),
+            "trash_bottom_security" => StepSpec::TrashBottomSecurity(map.next_value()?),
             "trash_top_security_and_cancel_replacement" => {
                 StepSpec::TrashTopSecurityAndCancelReplacement(map.next_value()?)
             }
@@ -519,6 +564,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "return_all_trash_to_deck_bottom" => {
                 StepSpec::ReturnAllTrashToDeckBottom(map.next_value()?)
             }
+            "return_trash_list_to_deck_bottom" => {
+                StepSpec::ReturnTrashListToDeckBottom(map.next_value()?)
+            }
             "trash_top_n_digivolution_cards_of_each" => {
                 StepSpec::TrashTopNDigivolutionCardsOfEach(map.next_value()?)
             }
@@ -534,6 +582,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "grant_keyword" => StepSpec::GrantKeyword(map.next_value()?),
             "grant_triggered_effect" => StepSpec::GrantTriggeredEffect(map.next_value()?),
             "grant_effect_immunity" => StepSpec::GrantEffectImmunity(map.next_value()?),
+            "grant_narrow_opponent_effect_protection" => {
+                StepSpec::GrantNarrowOpponentEffectProtection(map.next_value()?)
+            }
 
             // Selection
             "select_own_permanent" => StepSpec::SelectOwnPermanent(map.next_value()?),
@@ -547,6 +598,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "select_own_sources" => StepSpec::SelectOwnSources(map.next_value()?),
             "digi_burst" => StepSpec::DigiBurst(map.next_value()?),
             "select_opponent_dp_budget" => StepSpec::SelectOpponentDpBudget(map.next_value()?),
+            "select_opponent_play_cost_budget" => {
+                StepSpec::SelectOpponentPlayCostBudget(map.next_value()?)
+            }
             "select_own_breeding_permanent" => {
                 StepSpec::SelectOwnBreedingPermanent(map.next_value()?)
             }
@@ -564,6 +618,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "for_each" => StepSpec::ForEach(map.next_value()?),
             "per_selected" => StepSpec::PerSelected(map.next_value()?),
             "schedule_delayed" => StepSpec::ScheduleDelayed(map.next_value()?),
+            "schedule_delete_played_at_turn_end" => {
+                StepSpec::ScheduleDeletePlayedAtTurnEnd(map.next_value()?)
+            }
             "place_self_as_delay_option" => StepSpec::PlaceSelfAsDelayOption(map.next_value()?),
             "link_to_own_digimon" => StepSpec::LinkToOwnDigimon(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
@@ -602,6 +659,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_to_hand_from_deck",
                         "add_to_hand_from_trash",
                         "add_to_hand_from_security",
+                        "play_security_card",
                         "add_top_security_to_hand",
                         "may_add_top_security_to_hand",
                         "add_to_hand_from_reveal",
@@ -635,12 +693,15 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_from_hand_free",
                         "play_from_trash",
                         "play_from_trash_free",
+                        "play_union_bound_free",
                         "play_from_security",
                         "play_from_materials",
                         "play_selected_sources_free",
                         "effect_initiated_digivolve",
                         "effect_initiated_dna_digivolve",
+                        "effect_initiated_dna_digivolve_hand_partner",
                         "trash_top_security",
+                        "trash_bottom_security",
                         "trash_top_security_and_cancel_replacement",
                         "bounce_self",
                         "place_self_at_security",
@@ -652,6 +713,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "security_place_stacked_card",
                         "security_place_top_stacked_card",
                         "return_all_trash_to_deck_bottom",
+                        "return_trash_list_to_deck_bottom",
                         "trash_top_n_digivolution_cards_of_each",
                         "trash_opponent_hand_to_count",
                         "search_own_security_stack",
@@ -661,6 +723,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_modifier",
                         "grant_keyword",
                         "grant_effect_immunity",
+                        "grant_narrow_opponent_effect_protection",
                         "select_own_permanent",
                         "select_opponent_permanent",
                         "select_any_permanent",
@@ -672,6 +735,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "select_own_sources",
                         "digi_burst",
                         "select_opponent_dp_budget",
+                        "select_opponent_play_cost_budget",
                         "select_own_breeding_permanent",
                         "select_reveal",
                         "select_reveal_buckets",
@@ -729,6 +793,17 @@ pub enum BindingRef {
 #[serde(deny_unknown_fields)]
 pub struct DeleteBoundPermanentsArgs {
     pub binding: String,
+}
+
+/// Move a selected list of trash cards to the bottom of the deck. `cards` is
+/// the name of a card-list binding (e.g. produced by `select_count_capped_multi`).
+/// Unlike `return_all_trash_to_deck_bottom` this moves only the bound cards.
+/// G-ZONE-TRASH-TO-DECK.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnTrashListToDeckBottomArgs {
+    pub of: PlayerRef,
+    pub cards: BindingRef,
 }
 
 /// Target of an `add_modifier:` step — either a named binding (from a
@@ -804,6 +879,10 @@ pub struct ActivationCostArgs {
 
 fn is_false(b: &bool) -> bool {
     !*b
+}
+
+fn is_zero_u8(n: &u8) -> bool {
+    *n == 0
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1215,6 +1294,10 @@ fn default_player_ref_you() -> PlayerRef {
 pub struct PlayTokenArgs {
     pub controller: PlayerRef,
     pub token_name: String,
+    /// Bind the resulting permanent handle for use in later steps in the
+    /// same body. None (the default) preserves prior behavior.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1237,10 +1320,13 @@ pub struct PlayFromHandArgs {
     pub hand_index: BindingRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_delta: Option<CostDelta>,
-    /// When `true`, the played permanent's own [On Play] effects are NOT
-    /// activated for this play event. For card text like "Any [On Play]
-    /// effects on Digimon played with this effect don't activate"
-    /// (BT5-106 [Security]). Defaults to `false`.
+    /// PUPPETS-G030 — when `true`, the played Digimon's own `[On Play]`
+    /// effects do NOT activate for this play event. Only honored by
+    /// `play_from_trash_free` (BT5-106's [Security] clause: "Any [On Play]
+    /// effects on Digimon played with this effect don't activate."). The
+    /// suppression is scoped to the just-played permanent and this single
+    /// play; other permanents' On Play and every other timing are
+    /// unaffected. `false` (the default) preserves prior behavior.
     #[serde(default, skip_serializing_if = "is_false")]
     pub suppress_on_play: bool,
 }
@@ -1260,15 +1346,19 @@ pub struct PlayFromHandFreeArgs {
     /// same body. None (the default) preserves prior behavior.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
-    /// See [`PlayFromHandArgs::suppress_on_play`]. Defaults to `false`.
-    #[serde(default, skip_serializing_if = "is_false")]
-    pub suppress_on_play: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum CostDelta {
     Reduce { reduce: i32 },
+    /// Formula-valued cost REDUCTION evaluated at resolution time. YAML form:
+    /// `cost_delta: { reduce_fn: { floor_div: [ ... ] } }`. The evaluated
+    /// integer is subtracted from the printed play cost (clamped at 0), the
+    /// same semantics as `Reduce { reduce }` but with a runtime value. Used
+    /// by AD1-019 clause 2 ("reduce this effect's play cost by 1 for every 2
+    /// of your Tamers' colors"). G-FORMULA-COST-DELTA.
+    ReduceFn { reduce_fn: crate::formula::FormulaSpec },
     Keyword(CostDeltaKeyword),
     Literal(i32),
 }
@@ -1280,6 +1370,27 @@ pub enum CostDeltaKeyword {
     Printed,
 }
 
+/// `play_union_bound_free:` args — play a card previously picked by a
+/// `select_union_zone` step, **without paying its cost**, from its true
+/// origin zone (hand vs trash). `binding` names the `select_union_zone`
+/// binding (a `bind_as` from that step). The origin zone is recorded in the
+/// binding itself, so this step needs no zone parameter.
+///
+/// PUPPETS-G014 substrate. Consumed by EX11-022 / ST19-08 / BT22-098-shape
+/// "play 1 of the chosen cards … without paying the cost" effects.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayUnionBoundFreeArgs {
+    /// Name of the `select_union_zone` binding to consume. Must name a
+    /// `bind_as` declared by an earlier `select_union_zone` step — the
+    /// binding carries the origin zone the step replays the card from.
+    pub binding: String,
+    /// Bind the just-played permanent handle for use in later steps in the
+    /// same body (e.g. a Task 11 cleanup step). `None` preserves no binding.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayFromMaterialsArgs {
@@ -1289,11 +1400,6 @@ pub struct PlayFromMaterialsArgs {
     pub cost_delta: Option<CostDelta>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
-    /// See [`PlayFromHandArgs::suppress_on_play`]. Defaults to `false`.
-    /// Royal Knights BT13-110 / BT13-112 play a Digimon from a digivolution
-    /// source stack with its [On Play] effects suppressed.
-    #[serde(default, skip_serializing_if = "is_false")]
-    pub suppress_on_play: bool,
 }
 
 /// Empty args struct for `play_from_security:` — the step carries no
@@ -1325,6 +1431,26 @@ pub struct EffectDigivolveArgs {
 pub struct EffectDnaDigivolveArgs {
     pub target_a: BindingRef,
     pub target_b: BindingRef,
+    pub from_hand: BindingRef,
+    pub cost: CostDelta,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_requirements: bool,
+}
+
+/// `effect_initiated_dna_digivolve_hand_partner:` — DNA digivolve where one
+/// material is a battle-area permanent (`target`) and the other is a card in
+/// hand (`hand_partner`); the merged permanent is topped with `from_hand`
+/// (the result card, also from hand). Used by BT17-095 Clause B, whose printed
+/// text reads "That Digimon and a card in the hand may DNA digivolve into a
+/// Digimon card with [Omnimon] in its name in the hand."
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct EffectDnaDigivolveHandPartnerArgs {
+    /// The on-field DNA material (`requirement1`).
+    pub target: BindingRef,
+    /// The hand-card DNA material (`requirement2`).
+    pub hand_partner: BindingRef,
+    /// The resulting evolved card, pulled from hand and stacked on top.
     pub from_hand: BindingRef,
     pub cost: CostDelta,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
@@ -1458,11 +1584,28 @@ pub struct GrantEffectImmunityArgs {
     pub expiry: String,
 }
 
+/// PUPPETS-G024 — arguments for `grant_narrow_opponent_effect_protection`.
+/// Installs the opponent-scoped DP-reduction + De-Digivolve protection
+/// bundle on `target`. No source-kind/controller knobs: this verb is
+/// keyed to the BT16-055-style "by your opponent's effects" narrow
+/// protection and is always opponent-scoped by construction.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GrantNarrowOpponentEffectProtectionArgs {
+    pub target: BindingRef,
+    pub expiry: String,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum FieldSelector {
     LowestDp,
     HighestDp,
+    /// Restrict the selection to the candidate permanent(s) with the
+    /// lowest printed play cost. Used by EX4-073 clause C ("delete 1 of
+    /// your opponent's Digimon or Tamers with the lowest play cost").
+    /// G-PLAY-COST-AGGREGATE.
+    LowestPlayCost,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1647,6 +1790,31 @@ pub struct SelectOpponentDpBudgetArgs {
     pub then: Vec<StepSpec>,
 }
 
+/// Multi-select of opponent permanents under a running PLAY-COST budget —
+/// the play-cost analog of `SelectOpponentDpBudget`. The player picks
+/// `min_picks..N` opponent permanents whose running printed-play-cost sum
+/// never exceeds `play_cost_budget`; any single permanent whose individual
+/// play cost exceeds the budget is excluded outright. Models card text of
+/// the form "delete up to N play cost's total worth of their Digimon".
+/// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectOpponentPlayCostBudgetArgs {
+    pub play_cost_budget: i32,
+    #[serde(default)]
+    pub min_picks: u8,
+    /// Optional per-candidate predicate. Only opponent permanents satisfying
+    /// this filter are eligible (e.g. `{ kind: digimon }` for card text that
+    /// targets "their Digimon" specifically). Empty filter accepts all.
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    #[serde(default)]
+    pub then: Vec<StepSpec>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectOwnBreedingPermanentArgs {
@@ -1699,6 +1867,14 @@ pub struct SelectCountCappedArgs {
     pub of: PlayerRef,
     pub zone: Zone,
     pub max: CountBound,
+    /// Minimum number of cards that MUST be selected before the player can
+    /// finish the selection. Defaults to 0 (any number, including zero, is
+    /// acceptable — modulated further by `optional_zero`). When `min > 0` the
+    /// selection cannot complete with fewer than `min` picks; if fewer than
+    /// `min` candidates exist at all the step silently no-ops (the required
+    /// cost is unpayable). G-SELECT-MULTI-MIN.
+    #[serde(default, skip_serializing_if = "is_zero_u8")]
+    pub min: u8,
     pub filter: PredicateSpec,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
@@ -1791,6 +1967,45 @@ pub struct PerSelectedStep {
 pub struct ScheduleDelayedStep {
     pub when: super::clause::Timing,
     pub body: Vec<StepSpec>,
+}
+
+/// Which turn boundary should trigger the provenance deletion. Defaults to
+/// `your_turn` (end of the scheduling player's turn), which is the behaviour
+/// from Task 11 (EX11-022, EX11-061). P-165 ShoeShoemon needs
+/// `opponents_turn` ("at the end of your opponent's turn, delete that token").
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DeleteTurnBoundary {
+    #[default]
+    YourTurn,
+    OpponentsTurn,
+}
+
+/// `schedule_delete_played_at_turn_end:` args — PUPPETS-G003. Schedules the
+/// permanent named by `binding` to be deleted at the end of the current turn,
+/// keyed to its stable identity (it is deleted even if battle-area indices
+/// shift; a no-op if it already left). `binding` must name a `bind_as` from a
+/// preceding free-play step (`play_union_bound_free` / `play_from_hand_free`
+/// / `play_token`).
+///
+/// Consumed by "At turn end, delete the Digimon this effect played" riders
+/// (EX11-022 Karakurumon, EX11-061 Mirai Kinosaki) and by "at the end of your
+/// opponent's turn, delete that token" riders (P-165 ShoeShoemon).
+/// Use `at: opponents_turn` for the latter; omit `at` (or write `at: your_turn`)
+/// for the former — the default preserves Task 11 behaviour.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ScheduleDeletePlayedAtTurnEndArgs {
+    /// Name of the permanent binding to delete at turn end. Must name a
+    /// `bind_as` declared by an earlier free-play step in the same body.
+    pub binding: String,
+    /// Which turn boundary triggers the deletion. Defaults to `your_turn`.
+    #[serde(default, skip_serializing_if = "is_default_turn_boundary")]
+    pub at: DeleteTurnBoundary,
+}
+
+fn is_default_turn_boundary(v: &DeleteTurnBoundary) -> bool {
+    matches!(v, DeleteTurnBoundary::YourTurn)
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

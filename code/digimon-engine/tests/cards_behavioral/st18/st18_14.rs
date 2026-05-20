@@ -91,6 +91,19 @@ fn st18_14_suspends_to_redirect_attack_to_player() {
 
     let _ = runner.attack_digimon(attacker, original, false);
 
+    // The [Your Turn] clause is optional ("by suspending this Tamer, you may
+    // change the attack target") and its body's first step is a mandatory
+    // suspend, so an outer accept/decline prompt installs first
+    // (G-OUTER-OPTIONAL-NOT-INSTALLED). Accept it.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "an outer accept/decline prompt must install for the optional clause"
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
+
     let pending = runner
         .pending_selection_view()
         .expect("Shoto should offer a redirect target prompt during the attack");

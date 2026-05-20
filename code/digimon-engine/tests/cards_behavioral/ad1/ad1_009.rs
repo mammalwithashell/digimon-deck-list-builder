@@ -516,7 +516,6 @@ fn ad1_009_resolves_grants_immunity_to_both_blitz_and_chosen_garurumon() {
 /// can be PASSed. Either is acceptable; what's NOT acceptable is a mandatory
 /// prompt that locks the player.
 #[test]
-#[ignore = "pending: G-SELECT-EMPTY-OUTER-TAIL family — empty-hand select_hand inside `- optional: [...]` substep doesn't surface as a clean PASS-able pending selection in the runner-driven enqueue path. Card body is otherwise IMPLEMENTED; positive-path test ad1_009_eot_dna_with_omnimon_alter_s_in_hand_prompts_hand_selection passes."]
 fn ad1_009_eot_dna_clause_is_optional() {
     let mut runner = blitz_runner();
     let blitz = runner.place_on_field(0, "AD1-009", None);

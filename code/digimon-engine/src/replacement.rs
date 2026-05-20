@@ -132,6 +132,12 @@ impl<'g> ReplacementContext<'g> {
 pub struct ParkedReplacement {
     pub subject: ReplacementSubject,
     pub cause: ReplacementCause,
+    /// Observer-facing deletion-cause override (e.g. `Overclock`) captured
+    /// when the replacement was offered. Threaded so the deferred-decline
+    /// commit can re-establish the same `current_deletion_event_cause_override`
+    /// the synchronous fire-site would have — see `commit_deferred_outcome`.
+    /// `None` for non-deletion or unrefined deletion events.
+    pub event_cause_override: Option<crate::trigger_context::EventCause>,
     pub original_destination: Option<Zone>,
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
@@ -733,9 +739,15 @@ fn run_candidate_inner(
              also install a select_* selection. If a real card requires \
              nested-park, extend ParkedReplacement into a Vec-stack."
         );
+        // Capture the active deletion-cause override while we are still
+        // inside the synchronous fire-site scope (delete_permanent_with_cause
+        // restores it to `None` on early-return). The deferred commit replays
+        // it so OnDeletion observers see the same refined cause.
+        let event_cause_override = game.current_deletion_event_cause_override;
         game.parked_replacement = Some(ParkedReplacement {
             subject,
             cause,
+            event_cause_override,
             original_destination,
             source_card,
             source_permanent,
@@ -842,6 +854,12 @@ fn install_optional_selection(
     let source_permanent = cand.source_permanent;
     let controller = cand.source_controller;
 
+    // Capture the active deletion-cause override now — the synchronous
+    // fire-site (delete_permanent_with_cause) clears it on early-return, so
+    // the accept/decline callbacks (which fire later) must carry it forward
+    // to re-establish it around the deferred OnDeletion enqueue.
+    let event_cause_override = game.current_deletion_event_cause_override;
+
     let callback = make_accept_callback(
         card_id,
         source_card,
@@ -850,9 +868,10 @@ fn install_optional_selection(
         effect_slot,
         subject,
         cause,
+        event_cause_override,
         original_destination,
     );
-    let on_decline = make_decline_callback(subject, cause, original_destination);
+    let on_decline = make_decline_callback(subject, cause, event_cause_override, original_destination);
 
     game.pending_selection = Some(PendingSelection {
         kind: SelectionKind::Replacement,
@@ -931,6 +950,7 @@ pub(crate) fn try_drain_parked_replacement_with_guard(game: &mut crate::game::Ga
             game,
             parked.subject,
             parked.cause,
+            parked.event_cause_override,
             parked.original_destination,
             parked.outcome,
         );
@@ -955,6 +975,7 @@ fn make_accept_callback(
     effect_slot: u8,
     subject: ReplacementSubject,
     cause: ReplacementCause,
+    event_cause_override: Option<crate::trigger_context::EventCause>,
     original_destination: Option<Zone>,
 ) -> crate::selection::SelectionCallback {
     Box::new(move |game: &mut crate::game::Game, _action_id: u16| {
@@ -999,7 +1020,14 @@ fn make_accept_callback(
         // `run_commit_with_flag` is panic-safe — if anything in the commit
         // body panics, the flag is restored before the unwind propagates.
         run_commit_with_flag(game, |game| {
-            commit_deferred_outcome(game, subject, cause, original_destination, outcome);
+            commit_deferred_outcome(
+                game,
+                subject,
+                cause,
+                event_cause_override,
+                original_destination,
+                outcome,
+            );
         });
         if has_unrelated_parked_replacement {
             game.replacement_pending_outcome = None;
@@ -1015,6 +1043,7 @@ fn make_accept_callback(
 fn make_decline_callback(
     subject: ReplacementSubject,
     cause: ReplacementCause,
+    event_cause_override: Option<crate::trigger_context::EventCause>,
     original_destination: Option<Zone>,
 ) -> crate::selection::DeclineCallback {
     Box::new(move |game: &mut crate::game::Game| {
@@ -1028,6 +1057,7 @@ fn make_decline_callback(
                 game,
                 subject,
                 cause,
+                event_cause_override,
                 original_destination,
                 ReplacementOutcome::None,
             );
@@ -1048,6 +1078,7 @@ fn commit_deferred_outcome(
     game: &mut crate::game::Game,
     subject: ReplacementSubject,
     cause: ReplacementCause,
+    event_cause_override: Option<crate::trigger_context::EventCause>,
     original_destination: Option<Zone>,
     outcome: ReplacementOutcome,
 ) {
@@ -1194,8 +1225,12 @@ fn commit_deferred_outcome(
         // Deletion path — original_destination == Trash.
         (Zone::Trash, ReplacementOutcome::None) => {
             // Decline path for a deletion: actually delete now, bypassing
-            // the replacement window (already offered and declined).
-            commit_permanent_deletion_no_replace(game, perm);
+            // the replacement window (already offered and declined). The
+            // original deletion cause is re-established around the OnDeletion
+            // enqueue so `event_cause` predicates still see it — the
+            // synchronous fire-site already restored `current_deletion_cause`
+            // to `None` when it early-returned on selection install.
+            commit_permanent_deletion_no_replace(game, perm, cause, event_cause_override);
         }
         (Zone::Trash, ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled) => {
             // Already handled by process — nothing to do.
@@ -1268,15 +1303,54 @@ fn commit_deferred_outcome(
 /// cleanup, post-deletion replays drain, OnAnyDeletion) but bypasses
 /// `try_replace` because the replacement window has already been offered
 /// and declined.
-fn commit_permanent_deletion_no_replace(game: &mut crate::game::Game, handle: PermanentHandle) {
-    use crate::enums::EffectTiming;
-    use crate::selection::TriggerSource;
-
+///
+/// `cause` / `event_cause_override` are the original deletion cause carried
+/// from the synchronous fire-site. The fire-site
+/// (`delete_permanent_with_cause`) only set `current_deletion_cause` around
+/// its *own* synchronous `commit_permanent_deletion`; when an optional
+/// `WhenWouldBeDeleted` replacement parks a selection it early-returns and
+/// restores the slot to `None`, so this deferred-decline path must
+/// re-establish it (mirroring `combat.rs::delete_permanent_with_cause`'s
+/// save/restore) for `event_cause` predicates / `OnAnyDeletion` snapshots.
+fn commit_permanent_deletion_no_replace(
+    game: &mut crate::game::Game,
+    handle: PermanentHandle,
+    cause: ReplacementCause,
+    event_cause_override: Option<crate::trigger_context::EventCause>,
+) {
     let deleted_top_card = game
         .player(handle.player)
         .battle_area
         .get(handle.index as usize)
         .and_then(|permanent| permanent.card_sources.last().map(|card| card.handle()));
+
+    // Re-establish the deletion cause for the OnDeletion drain + finalize
+    // (OnAnyDeletion). Mirrors the panic-safe save/restore in
+    // `combat.rs::delete_permanent_with_cause` around `commit_permanent_deletion`.
+    let prior_cause = game.current_deletion_cause;
+    let prior_override = game.current_deletion_event_cause_override;
+    game.current_deletion_cause = Some(cause);
+    game.current_deletion_event_cause_override = event_cause_override;
+    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+        commit_permanent_deletion_no_replace_inner(game, handle, deleted_top_card);
+    }));
+    game.current_deletion_cause = prior_cause;
+    game.current_deletion_event_cause_override = prior_override;
+    if let Err(payload) = result {
+        std::panic::resume_unwind(payload);
+    }
+}
+
+/// Body of `commit_permanent_deletion_no_replace`, split out so the
+/// deletion-cause save/restore guard wraps it without obscuring the flow.
+fn commit_permanent_deletion_no_replace_inner(
+    game: &mut crate::game::Game,
+    handle: PermanentHandle,
+    deleted_top_card: Option<CardHandle>,
+) {
+    use crate::enums::EffectTiming;
+    use crate::selection::TriggerSource;
+
     // Track H §3: enqueue_from_permanent records granted-triggered fires
     // into `pending_granted_fires`; drain_effect_queue flushes them after
     // the printed-observer drain settles.

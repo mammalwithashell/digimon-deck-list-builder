@@ -37,7 +37,7 @@
 //! | Standard digivolve Lv.3 Red / cost 3                    | `alt_paths[0]` `level_eq: 3, color_is: red, cost: 3`                         | OK                    |
 //! | Alt digivolve Lv.3 w/Agumon-name / cost 2               | `alt_paths[1]` `level_eq: 3, name_contains: Agumon, cost: 2, ignore_reqs`    | OK                    |
 //! | [When Digivolving] +3000 DP if name is [Koromon]        | `condition: { self_digivolution_contains_name: Koromon }` + `add_dp_modifier`| PARTIAL — see G-DSL-SELF-NAME-IS  |
-//! | [When Digivolving] then delete opp Digimon ≤ self DP    | OMITTED (BLOCKED — G-FORMULA-SOURCE-DP)                                      | BLOCKED               |
+//! | [When Digivolving] then delete opp Digimon ≤ self DP    | `select_opponent_permanent` + `dp_lte: { formula: { source_dp: {} } }`       | OK (G-FORMULA-SOURCE-DP resolved) |
 //! | [All Turns] dynamic name aliasing from material stack   | OMITTED (BLOCKED — G-DYNAMIC-NAME-ALIAS-FROM-STACK)                          | BLOCKED               |
 //! | [On Deletion] may play Tai/Kari Tamer free OR hatch     | `when: on_deletion`, `optional: true`, `select_effect_choice` + 2 branches    | OK                    |
 //! | Inherited [On Deletion] same body                       | `scope: inherited` mirror of above                                            | OK                    |
@@ -422,18 +422,14 @@ fn bt17_102_when_digivolving_without_koromon_does_not_buff() {
 
 // ─── Section 3 — [When Digivolving] DP-comparator delete (BLOCKED) ──────────
 
-/// BLOCKED: G-FORMULA-SOURCE-DP — the "then, delete 1 opp Digimon with as much
-/// or less DP as this Digimon" sub-clause is OMITTED from the YAML because the
-/// formula vocabulary cannot read the source permanent's DP. Including a
-/// `kind: digimon` delete without the DP filter would over-target opponents
-/// with arbitrary DP.
+/// G-FORMULA-SOURCE-DP (RESOLVED 2026-05-19): the "then, delete 1 opp
+/// Digimon with as much or less DP as this Digimon" sub-clause is authored
+/// with `dp_lte: { formula: { source_dp: {} } }` — the `source_dp` formula
+/// primitive reads the carrier permanent's effective DP. The +3000 Koromon
+/// buff applies first (the test stacks [KORO, BT17-102] so the buff fires),
+/// raising effective DP to 8000; OPP-LOW (4000) is then a legal delete
+/// target and OPP-HIGH (12000) is not.
 #[test]
-#[ignore = "BLOCKED: G-FORMULA-SOURCE-DP — no formula primitive reads ctx.source_permanent's \
-            effective DP. binding_dp resolves NAMED bindings only; there is no `source_dp` \
-            variant or `binding_dp: source` special-case. Sibling of G-BINDING-DP-FORMULA \
-            (RESOLVED 2026-05-02 for user-bound permanents). Without this primitive, the \
-            'delete opp Digimon with as much or less DP as this Digimon' sub-clause cannot be \
-            authored faithfully and is omitted from the YAML to preserve no-approximations."]
 fn bt17_102_when_digivolving_delete_filters_to_dp_lte_self() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-102")
@@ -481,14 +477,23 @@ fn bt17_102_when_digivolving_delete_filters_to_dp_lte_self() {
 /// surface exists for this; static `name_aliases` are zone-conditional only and
 /// do not depend on the live stack contents.
 #[test]
-#[ignore = "BLOCKED: G-DYNAMIC-NAME-ALIAS-FROM-STACK — DSL identity layer has only static \
-            name_aliases (zone-conditional). No clause kind / engine path derives the \
-            carrier permanent's name set from its current material stack at name-predicate \
-            evaluation time. DCGO uses ChangeCardNamesClass with a per-evaluation closure \
-            scanning DigivolutionCards filtered by Level <= 3. Closure requires (1) new \
-            declarative clause kind, (2) name-predicate evaluators that consult dynamic \
-            aliases, (3) recompute on every stack mutation. Affects this card and every \
-            card that name-checks it. Tracked in qa/dsl-vocab-gaps.md."]
+#[ignore = "BLOCKED: G-DYNAMIC-NAME-ALIAS-FROM-STACK — code-verified 2026-05-20. The DSL \
+            identity layer (digimon-dsl/src/identity.rs: IdentitySpec.name_aliases) is \
+            STATIC (zone-conditional) AND has NO engine-side consumer at all — a grep of \
+            code/digimon-engine/src for name_alias / effective_name / treat_as / \
+            aliased_names returns zero hits, so even the static alias surface is currently \
+            inert. Engine name resolution (CardSource::card_name / card_names / \
+            contains_card_name in card_source.rs) reads only the printed CardData.card_name; \
+            there is no name-set query on a Permanent that consults dynamic aliases. DCGO \
+            uses ChangeCardNamesClass with a per-evaluation closure scanning \
+            DigivolutionCards filtered by Level <= 3. A faithful fix is a cross-cutting \
+            engine feature, NOT a focused card fix: it needs (1) a Permanent-level \
+            effective-name-set query, (2) every name-predicate evaluator (predicate.rs \
+            name_contains/name_is, event_target_name_contains, contains_card_name, and \
+            selection-filter name paths) reading the dynamic set, (3) a new declarative \
+            clause kind to derive the alias set from the live material stack, (4) \
+            recompute on every stack mutation. Affects this card and every card that \
+            name-checks it. Tracked in qa/dsl-vocab-gaps.md."]
 fn bt17_102_all_turns_aliases_low_level_material_names() {
     // Stack [KORO (Lv.2), AGU (Lv.3), BT17-102 (Lv.4)] with BT17-102 on top.
     // Per [All Turns] aliasing, BT17-102's effective name set should include
@@ -720,6 +725,15 @@ fn bt17_102_inherited_on_deletion_plays_tai_kamiya_when_carrier_deleted() {
         digimon_engine::replacement::ReplacementCause::OpponentEffect,
     );
     skip_trigger_order_prompts(&mut runner);
+
+    // The [On Deletion] clause is optional ("You may play ... or hatch") and
+    // its body's first step is a mandatory select_effect_choice, so an outer
+    // accept/decline prompt installs first (G-OUTER-OPTIONAL-NOT-INSTALLED).
+    if runner.pending_kind() == Some(SelectionKind::Replacement) {
+        runner
+            .accept_optional_trigger()
+            .expect("accept the outer optional-trigger prompt");
+    }
 
     let view = runner
         .pending_selection_view()

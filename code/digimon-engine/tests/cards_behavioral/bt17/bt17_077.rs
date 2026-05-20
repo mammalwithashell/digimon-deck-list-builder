@@ -405,6 +405,13 @@ fn bt17_077_when_attacking_returns_opp_digimon_and_unsuspends_self() {
     // Fire the WhenAttacking trigger.
     fire_when_attacking(&mut runner, paladin);
 
+    // The clause is optional ("By returning ... unsuspend") and its body's
+    // first step is a mandatory selection, so an outer accept/decline prompt
+    // installs first (G-OUTER-OPTIONAL-NOT-INSTALLED). Accept it.
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
+
     // A pending selection must be installed offering the opp Digimon as a target.
     let view = runner
         .pending_selection_view()

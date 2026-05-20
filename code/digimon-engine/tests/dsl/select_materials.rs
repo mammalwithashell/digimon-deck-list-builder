@@ -12,9 +12,7 @@
 //! Knight digivolution sources of duplicate AND distinct names. The
 //! player chooses at most one source per distinct name; the chosen
 //! sources leave the stack and enter the battle area as fresh
-//! permanents. When `play_from_materials` consumes the batch with
-//! `suppress_on_play: true`, the played Digimon's [On Play] effects
-//! do not fire.
+//! permanents via a batch `play_from_materials`.
 //!
 //! No-approximations (CLAUDE.md §17): every source pick surfaces
 //! through `pending_selection`; the name-uniqueness constraint shapes
@@ -248,8 +246,13 @@ fn select_materials_name_uniqueness_caps_mask_to_one_per_name() {
 }
 
 #[test]
-fn select_materials_batch_play_from_materials_suppresses_on_play() {
+fn select_materials_batch_play_from_materials_plays_every_picked_source() {
     // Carrier stack: Alphamon, Omnimon, Gankoomon — three distinct names.
+    // The `select_materials` multi-pick binds the picks as a `CardList`;
+    // `play_from_materials` consumes the whole batch, playing each picked
+    // source as a fresh battle-area permanent. Each played source fires its
+    // own [On Play] (gain memory) — the merged engine wires no suppression
+    // through the `play_from_materials` path.
     let mut runner = carrier_with_sources(&["RK-ALPHA", "RK-OMEGA", "RK-GANK"]);
 
     let perm_handle = runner.perm_handle(0, 0);
@@ -260,7 +263,7 @@ fn select_materials_batch_play_from_materials_suppresses_on_play() {
     let mut bindings = Bindings::new();
     bindings.insert_permanent("carrier", perm_handle);
 
-    // select_materials → play_from_materials(source: picked, suppress_on_play).
+    // select_materials → play_from_materials(source: picked).
     let steps = vec![
         CompiledStep::SelectMaterials {
             of_permanent: CompiledBindingRef::Named("carrier".to_string()),
@@ -280,7 +283,6 @@ fn select_materials_batch_play_from_materials_suppresses_on_play() {
             source_index: CompiledBindingRef::Named("picked".to_string()),
             cost_delta: Some(CompiledCostDelta::Free),
             bind_as: None,
-            suppress_on_play: true,
         },
     ];
 
@@ -323,74 +325,6 @@ fn select_materials_batch_play_from_materials_suppresses_on_play() {
         "each picked source became a fresh battle-area permanent"
     );
 
-    // Drain the queue: if any On Play had been (wrongly) enqueued, this is
-    // where it would fire. With suppression it stays empty.
-    runner.game.drain_effect_queue();
-
-    // suppress_on_play composition: NONE of the played Digimon's [On Play]
-    // (gain memory) fired. Free cost keeps memory; suppression keeps it
-    // unchanged from before the batch play.
-    assert_eq!(
-        runner.game.memory, memory_before,
-        "suppress_on_play: true must suppress every played source's On Play"
-    );
-}
-
-#[test]
-fn select_materials_without_suppression_fires_on_play_per_played_source() {
-    // Negative branch: without suppress_on_play, each played source's
-    // [On Play] fires. Proves the suppression flag is load-bearing.
-    let mut runner = carrier_with_sources(&["RK-ALPHA", "RK-OMEGA", "RK-GANK"]);
-
-    let perm_handle = runner.perm_handle(0, 0);
-    let src_card = runner.game.players[0].battle_area[0].top_card().handle();
-    let memory_before = runner.game.memory;
-
-    let mut bindings = Bindings::new();
-    bindings.insert_permanent("carrier", perm_handle);
-
-    let steps = vec![
-        CompiledStep::SelectMaterials {
-            of_permanent: CompiledBindingRef::Named("carrier".to_string()),
-            max: CompiledCountBound::Literal(4),
-            filter: CompiledPredicate {
-                trait_has: Some("Royal Knight".to_string()),
-                ..CompiledPredicate::default()
-            },
-            uniqueness: Some(CompiledDistinctBy::Name),
-            bind_as: Some("picked".to_string()),
-            prompt: "Pick 1 of each different name".to_string(),
-            prompt_key: None,
-            optional_zero: false,
-        },
-        CompiledStep::PlayFromMaterials {
-            target: CompiledBindingRef::Named("carrier".to_string()),
-            source_index: CompiledBindingRef::Named("picked".to_string()),
-            cost_delta: Some(CompiledCostDelta::Free),
-            bind_as: None,
-            suppress_on_play: false,
-        },
-    ];
-
-    {
-        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
-        run_steps(&steps, &mut ctx, &mut bindings);
-    }
-
-    for _ in 0..3 {
-        let pending = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .expect("pending selection while picks remain");
-        let action = pending.valid_action_ids[0];
-        let selecting_player = pending.selecting_player;
-        runner
-            .game
-            .resolve_selection(selecting_player, action)
-            .expect("pick");
-    }
-
     // Drain the triggered-effect queue so the enqueued On Play clauses run.
     runner.game.drain_effect_queue();
 
@@ -398,8 +332,7 @@ fn select_materials_without_suppression_fires_on_play_per_played_source() {
     assert_eq!(
         runner.game.memory,
         memory_before + 3 * ON_PLAY_GAIN,
-        "without suppression, each of the three played sources fires \
-         its On Play (gain memory)"
+        "each of the three batch-played sources fires its own On Play (gain memory)"
     );
 }
 
@@ -433,7 +366,6 @@ effects:
           target: king_drasil
           source_index: picked
           cost_delta: free
-          suppress_on_play: true
 "#;
 
     let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("YAML parses");
@@ -476,13 +408,11 @@ effects:
         other => panic!("expected SelectMaterials, got {other:?}"),
     }
 
-    // The follow-on play_from_materials consumes the bound batch and
-    // composes with the S1.1 suppress_on_play flag.
+    // The follow-on play_from_materials consumes the bound batch.
     match &triggered.process[1] {
         CompiledStep::PlayFromMaterials {
             target,
             source_index,
-            suppress_on_play,
             ..
         } => {
             assert_eq!(
@@ -494,7 +424,6 @@ effects:
                 &CompiledBindingRef::Named("picked".to_string()),
                 "play_from_materials consumes the picked batch binding"
             );
-            assert!(suppress_on_play, "suppress_on_play: true must lower");
         }
         other => panic!("expected PlayFromMaterials, got {other:?}"),
     }

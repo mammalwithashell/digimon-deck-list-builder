@@ -1,11 +1,19 @@
 //! Lower `CompiledDeclarativeClause::Delay` into an engine `Effect` with
 //! `timing == DelayEffect`.
 //!
-//! Phase 1 scope: map `CompiledTiming::EndOfYourTurn` →
-//! `DelayTrigger::EndOfThisTurn`; `CompiledTiming::StartOfYourTurn` maps to
-//! `DelayTrigger::StartOfYourNextTurn`; event timings map to
-//! `DelayTrigger::OnEvent`. Body `active_when` predicates are evaluated when
-//! the delayed effect fires.
+//! Trigger mapping:
+//! - `CompiledTiming::Delayed` → `DelayTrigger::MainPhaseActivated`. This is
+//!   the standard printed `<Delay>` (RULES_CONTEXT 16-16) — a player-visible
+//!   `[Main]`-phase activation action. The body never auto-fires; the
+//!   controller trashes the Option to activate it on a later main phase.
+//! - `CompiledTiming::EndOfYourTurn` → `DelayTrigger::EndOfThisTurn`.
+//! - `CompiledTiming::StartOfYourTurn` → `DelayTrigger::StartOfYourNextTurn`.
+//! - `CompiledTiming::EndOfYourNextTurn` → `DelayTrigger::EndOfYourNextTurn`
+//!   (engine-scheduled auto-fire; retained for cards not yet migrated to the
+//!   `delayed` Main-phase trigger).
+//! - event timings (`on_suspend` / `on_unsuspend`) → `DelayTrigger::OnEvent`.
+//!
+//! Body `active_when` predicates are evaluated when the delayed effect fires.
 //! Body steps run through `run_step` (Phase 2a dispatcher).
 
 use std::sync::Arc;
@@ -53,6 +61,9 @@ pub fn lower_with_raw(
     raw: Arc<EngineRawRustRegistry>,
 ) -> Effect {
     let delay_trigger = match trigger {
+        // Standard printed `<Delay>` — player-visible `[Main]`-phase
+        // activation action (PUPPETS-G009, RULES_CONTEXT 16-16).
+        CompiledTiming::Delayed => DelayTrigger::MainPhaseActivated,
         CompiledTiming::EndOfYourTurn => DelayTrigger::EndOfThisTurn,
         CompiledTiming::StartOfYourTurn => DelayTrigger::StartOfYourNextTurn,
         CompiledTiming::EndOfYourNextTurn => DelayTrigger::EndOfYourNextTurn,

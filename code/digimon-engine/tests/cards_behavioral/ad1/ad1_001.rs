@@ -874,12 +874,12 @@ fn ad1_001_all_turns_observer_fires_on_garurumon_digivolve() {
 
 /// Structurally, AD1-001's inherited Raid clause must be present (covered
 /// by ad1_001_has_inherited_raid_grant_keyword above). Behavioral
-/// installation of the `Keyword::Raid` modifier on a carrier with AD1-001
-/// in the stack is `#[ignore]`'d pending **G-DECLARATIVE-KEYWORD**: the
-/// declarative grant_keyword timing is compiled but not enqueued/fired by
-/// the engine, so the modifier never installs at runtime.
+/// installation of the `Keyword::Raid` on a carrier with AD1-001 in the
+/// stack is verified here: `game.has_keyword` walks the digivolution
+/// stack, detecting inherited `grant_keyword` declarative clauses on
+/// source cards (see `game.rs` `has_keyword` — the inherited-source
+/// loop). Mirrors the proven `st20_10_inherited_reboot_grants_to_carrier_via_stack`.
 #[test]
-#[ignore = "pending: G-DECLARATIVE-KEYWORD — declarative grant_keyword not fired by engine"]
 fn ad1_001_inherited_raid_installs_on_carrier() {
     let lv5 = make_test_card("PLAIN-LV5", "PlainLv5");
 
@@ -891,7 +891,10 @@ fn ad1_001_inherited_raid_installs_on_carrier() {
         .start();
 
     // Place AD1-001, snapshot its CardSource, then place a Lv5 over it
-    // and push AD1-001 as a digivolution source.
+    // and insert AD1-001 BENEATH it as a digivolution source. The source
+    // must sit under the carrier's top card so the inherited-keyword
+    // stack-walk in `has_keyword` (`source_index + 1 < stack_size`) sees
+    // it. Mirrors `st20_10_inherited_reboot_grants_to_carrier_via_stack`.
     let _ad1 = runner.place_on_field(0, "AD1-001", Some(0));
     let ad1_source = {
         let perm = &runner.game.players[0].battle_area[0];
@@ -902,7 +905,7 @@ fn ad1_001_inherited_raid_installs_on_carrier() {
         let game = runner.game_mut();
         game.players[0].battle_area[lv5_handle.index as usize]
             .card_sources
-            .push(ad1_source);
+            .insert(0, ad1_source);
     }
     assert!(
         runner.game.has_keyword(lv5_handle, Keyword::Raid),

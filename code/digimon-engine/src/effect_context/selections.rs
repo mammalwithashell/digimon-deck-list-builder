@@ -536,6 +536,60 @@ impl<'a> EffectContext<'a> {
         );
     }
 
+    /// Play-cost-budget analog of `select_opponent_permanents_by_dp_budget`.
+    /// The player picks `min_picks..N` opponent permanents whose running
+    /// printed-play-cost sum never exceeds `play_cost_budget`; any single
+    /// permanent whose individual play cost exceeds the budget is excluded.
+    /// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+    pub fn select_opponent_permanents_by_play_cost_budget<F, C>(
+        &mut self,
+        prompt: &str,
+        play_cost_budget: i32,
+        min_picks: u8,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, PermanentHandle) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<PermanentHandle>) + Send + Sync + 'static,
+    {
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let opponent = self.game.next_clockwise(self.player);
+        let override_pin = self.override_selecting_player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
+        let previous_phase = self.game.current_phase;
+
+        install_play_cost_budget_selection(
+            self.game,
+            opponent,
+            controller,
+            selecting_player,
+            override_pin,
+            prompt.to_string(),
+            play_cost_budget,
+            min_picks,
+            Vec::new(),
+            std::sync::Arc::new(filter),
+            source_card,
+            source_permanent,
+            source_kind,
+            previous_phase,
+            Box::new(move |game, picked| {
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                );
+                callback(&mut ctx, picked);
+            }),
+        );
+    }
+
     pub fn select_own_breeding_permanent<F, C>(&mut self, prompt: &str, filter: F, callback: C)
     where
         F: Fn(&Game, BreedingPermanentSelectionRef) -> bool + Send + Sync + 'static,
@@ -886,6 +940,12 @@ impl<'a> EffectContext<'a> {
     /// `usize` index), this helper's filter receives `&CardSource` so cross-zone
     /// predicates can inspect the card directly without branching on whether the
     /// index is a hand or trash index.
+    /// Prompt for a card from the union of `zones` (hand ∪ trash). The
+    /// `callback` receives the picked card's `CardHandle` **and** the
+    /// [`UnionZoneOrigin`](crate::selection::UnionZoneOrigin) of the zone it
+    /// came from, so a downstream consumer can act on the card's true origin
+    /// (e.g. play it back from hand vs trash). The origin is recovered from
+    /// the encoded `action_id` range (`PLAY_HAND` vs `TRASH_EFFECT`).
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: PlayerId,
@@ -896,7 +956,13 @@ impl<'a> EffectContext<'a> {
         callback: C,
     ) where
         F: Fn(&Game, &CardSource) -> bool,
-        C: FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync + 'static,
+        C: FnOnce(
+                &mut EffectContext<'_>,
+                crate::card_source::CardHandle,
+                crate::selection::UnionZoneOrigin,
+            ) + Send
+            + Sync
+            + 'static,
     {
         use crate::action::space::{
             HAND_MAIN_LIMIT, PLAY_HAND_END, PLAY_HAND_START, TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
@@ -943,7 +1009,12 @@ impl<'a> EffectContext<'a> {
         let source_permanent = self.source_permanent;
         let source_kind = self.source_kind;
         let user_callback: Box<
-            dyn FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync,
+            dyn FnOnce(
+                    &mut EffectContext<'_>,
+                    crate::card_source::CardHandle,
+                    crate::selection::UnionZoneOrigin,
+                ) + Send
+                + Sync,
         > = Box::new(callback);
 
         let previous_phase = self.game.current_phase;
@@ -965,14 +1036,21 @@ impl<'a> EffectContext<'a> {
                     "select_union_zone: action_id {} falls in gap between PLAY_HAND ({}..{}) and TRASH_EFFECT ({}..); valid_action_ids was populated incorrectly",
                     action_id, PLAY_HAND_START, PLAY_HAND_END, TRASH_EFFECT_START
                 );
-                // Disambiguate by range.
-                let handle = if action_id >= TRASH_EFFECT_START {
+                // Disambiguate by range — the action_id range also records
+                // the picked card's origin zone.
+                let (handle, origin) = if action_id >= TRASH_EFFECT_START {
                     let idx = (action_id - TRASH_EFFECT_START) as usize;
-                    game.player(of_player).trash[idx].handle()
+                    (
+                        game.player(of_player).trash[idx].handle(),
+                        crate::selection::UnionZoneOrigin::Trash,
+                    )
                 } else {
                     // PLAY_HAND_START range (0-29)
                     let idx = action_id.saturating_sub(PLAY_HAND_START) as usize;
-                    game.player(of_player).hand[idx].handle()
+                    (
+                        game.player(of_player).hand[idx].handle(),
+                        crate::selection::UnionZoneOrigin::Hand,
+                    )
                 };
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
@@ -982,7 +1060,7 @@ impl<'a> EffectContext<'a> {
                     controller,
                     override_pin,
                 );
-                user_callback(&mut ctx, handle);
+                user_callback(&mut ctx, handle, origin);
             }),
             on_decline: None,
         });
@@ -1104,7 +1182,47 @@ impl<'a> EffectContext<'a> {
             + Sync
             + 'static,
     {
+        self.select_count_capped_multi_min(
+            of_player,
+            zone,
+            0,
+            max,
+            prompt,
+            is_optional_zero,
+            distinct_by,
+            filter,
+            callback,
+        );
+    }
+
+    /// Like `select_count_capped_multi` but with a minimum-pick floor.
+    /// `min` is the number of cards that MUST be picked before the player can
+    /// finish (PASS becomes available only at `picked >= effective_min`,
+    /// where `effective_min = max(min, if is_optional_zero {0} else {1})`).
+    /// If fewer than `min` candidates pass the filter the selection silently
+    /// no-ops WITHOUT firing `callback` — the required cost is unpayable.
+    /// G-SELECT-MULTI-MIN.
+    #[allow(clippy::too_many_arguments)]
+    pub fn select_count_capped_multi_min<F, C>(
+        &mut self,
+        of_player: PlayerId,
+        zone: CountCappedZone,
+        min: u8,
+        max: u8,
+        prompt: &str,
+        is_optional_zero: bool,
+        distinct_by: Option<DistinctByMode>,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, &CardSource) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<crate::card_source::CardHandle>)
+            + Send
+            + Sync
+            + 'static,
+    {
         debug_assert!(max <= 10, "select_count_capped_multi: max must be <= 10");
+        debug_assert!(min <= max, "select_count_capped_multi: min must be <= max");
 
         use crate::action::space::{
             HAND_MAIN_LIMIT, PLAY_HAND_START, SOURCES_PER_FIELD, TRASH_EFFECT_START,
@@ -1164,7 +1282,16 @@ impl<'a> EffectContext<'a> {
             }
         }
 
+        // Fewer candidates than the required minimum → the cost is unpayable.
+        // Silently no-op WITHOUT firing the callback (no partial pick).
+        // G-SELECT-MULTI-MIN.
+        if min > 0 && candidate_indices.len() < min as usize {
+            return;
+        }
+
         // Empty filter → invoke final callback immediately; no selection installed.
+        // (Only reachable when `min == 0` — the `min > 0` short-circuit above
+        // already handled the unpayable case.)
         if candidate_indices.is_empty() {
             callback(self, Vec::new());
             return;
@@ -1200,6 +1327,7 @@ impl<'a> EffectContext<'a> {
             of_player,
             zone,
             range_start,
+            min,
             max,
             is_optional_zero,
             distinct_by,
@@ -1588,7 +1716,13 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
         callback: C,
     ) where
         F: Fn(&crate::game::Game, &crate::card_source::CardSource) -> bool,
-        C: FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync + 'static,
+        C: FnOnce(
+                &mut EffectContext<'_>,
+                crate::card_source::CardHandle,
+                crate::selection::UnionZoneOrigin,
+            ) + Send
+            + Sync
+            + 'static,
     {
         let prev = self.ctx.override_selecting_player.take();
         self.ctx.override_selecting_player = Some(self.selecting_player);
@@ -2513,6 +2647,159 @@ pub(crate) fn material_zone_geometry(game: &Game, perm: PermanentHandle) -> Opti
     Some((source_count, range_start))
 }
 
+// ── opponent play-cost-budget permanent multi-select trampoline ──────────────
+//
+// Play-cost analog of the DP-budget trampoline above. The only structural
+// differences are: the per-candidate metric is printed play cost (not
+// effective DP) and the SelectionKind variant carries `remaining_play_cost`.
+// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+
+type PlayCostBudgetFilter = std::sync::Arc<dyn Fn(&Game, PermanentHandle) -> bool + Send + Sync>;
+type PlayCostBudgetFinalCallback =
+    Box<dyn FnOnce(&mut Game, Vec<PermanentHandle>) + Send + Sync + 'static>;
+
+fn play_cost_budget_candidates(
+    game: &Game,
+    opponent: PlayerId,
+    remaining_play_cost: i32,
+    picked: &[PermanentHandle],
+    filter: &PlayCostBudgetFilter,
+) -> Vec<(u16, PermanentHandle, i32)> {
+    use crate::action::space::encode_attack;
+
+    let mut out = Vec::new();
+    for (index, perm) in game.player(opponent).battle_area.iter().enumerate() {
+        let handle = PermanentHandle {
+            player: opponent,
+            index: index as u8,
+        };
+        if picked.contains(&handle) {
+            continue;
+        }
+        if !(filter)(game, handle) {
+            continue;
+        }
+        let play_cost = i32::from(perm.top_card().play_cost(&game.card_data));
+        if play_cost <= remaining_play_cost {
+            out.push((encode_attack(0, index as u16), handle, play_cost));
+        }
+    }
+    out
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_play_cost_budget_selection(
+    game: &mut Game,
+    opponent: PlayerId,
+    controller: PlayerId,
+    selecting_player: PlayerId,
+    override_pin: Option<PlayerId>,
+    prompt: String,
+    remaining_play_cost: i32,
+    min_picks: u8,
+    picked: Vec<PermanentHandle>,
+    filter: PlayCostBudgetFilter,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    source_kind: crate::enums::EffectSourceKind,
+    previous_phase: GamePhase,
+    final_callback: PlayCostBudgetFinalCallback,
+) {
+    use crate::action::space::PASS;
+    use std::sync::{Arc, Mutex};
+
+    let candidates =
+        play_cost_budget_candidates(game, opponent, remaining_play_cost, &picked, &filter);
+    if candidates.is_empty() {
+        if picked.len() >= min_picks as usize {
+            final_callback(game, picked);
+        }
+        return;
+    }
+
+    let mut valid_action_ids: Vec<u16> = candidates
+        .iter()
+        .map(|(action_id, _, _)| *action_id)
+        .collect();
+    if picked.len() >= min_picks as usize {
+        valid_action_ids.push(PASS);
+    }
+
+    let shared_cb: Arc<Mutex<Option<PlayCostBudgetFinalCallback>>> =
+        Arc::new(Mutex::new(Some(final_callback)));
+    let shared_cb_decline = Arc::clone(&shared_cb);
+    let action_to_target = Arc::new(candidates);
+    let prompt_for_next = prompt.clone();
+    let filter_for_next = Arc::clone(&filter);
+    let picked_for_pick = picked.clone();
+    let picked_for_decline = picked.clone();
+
+    game.current_phase = GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::PlayCostBudget {
+            remaining_play_cost,
+            picked: picked.len() as u8,
+        },
+        selecting_player,
+        previous_phase,
+        valid_action_ids,
+        is_optional: picked.len() >= min_picks as usize,
+        prompt,
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        source_kind,
+        callback: Box::new(move |game: &mut Game, action_id: u16| {
+            let (_, chosen, play_cost) = action_to_target
+                .iter()
+                .find(|(candidate_action, _, _)| *candidate_action == action_id)
+                .copied()
+                .expect("play-cost-budget action must have been in valid_action_ids");
+            let mut next_picked = picked_for_pick;
+            next_picked.push(chosen);
+
+            let next_cb: PlayCostBudgetFinalCallback = Box::new(move |game, picks| {
+                let cb_opt = shared_cb.lock().unwrap().take();
+                debug_assert!(
+                    cb_opt.is_some(),
+                    "play-cost-budget final callback already consumed"
+                );
+                if let Some(cb) = cb_opt {
+                    cb(game, picks);
+                }
+            });
+
+            install_play_cost_budget_selection(
+                game,
+                opponent,
+                controller,
+                selecting_player,
+                override_pin,
+                prompt_for_next,
+                remaining_play_cost - play_cost,
+                min_picks,
+                next_picked,
+                filter_for_next,
+                source_card,
+                source_permanent,
+                source_kind,
+                previous_phase,
+                next_cb,
+            );
+        }),
+        on_decline: Some(Box::new(move |game: &mut Game| {
+            let cb_opt = shared_cb_decline.lock().unwrap().take();
+            debug_assert!(
+                cb_opt.is_some(),
+                "play-cost-budget final callback already consumed"
+            );
+            if let Some(cb) = cb_opt {
+                cb(game, picked_for_decline);
+            }
+        })),
+    });
+}
+
 // ── count-capped multi-select trampoline ─────────────────────────────────────
 
 /// Install one step of a count-capped multi-select into `game`.
@@ -2541,6 +2828,7 @@ fn install_count_capped_step(
     of_player: PlayerId,
     zone: CountCappedZone,
     range_start: u16,
+    min: u8,
     max: u8,
     is_optional_zero: bool,
     distinct_by: Option<DistinctByMode>,
@@ -2560,8 +2848,12 @@ fn install_count_capped_step(
     let picked = accum.len() as u8;
 
     // `is_optional` drives PASS gating in `resolve_generic_selection` and the
-    // mask builder. True when the player is allowed to commit early at this step.
-    let is_optional = is_optional_zero || picked >= 1;
+    // mask builder. True when the player is allowed to commit early at this
+    // step — i.e. when `picked` has reached the required floor. The floor is
+    // `min` (G-SELECT-MULTI-MIN) raised to at least 1 unless `is_optional_zero`
+    // permits a zero-pick finish.
+    let effective_min = min.max(if is_optional_zero { 0 } else { 1 });
+    let is_optional = picked >= effective_min;
 
     // Build valid_action_ids from remaining candidate indices.
     let valid_action_ids: Vec<u16> = candidate_indices
@@ -2743,6 +3035,7 @@ fn install_count_capped_step(
                 of_player,
                 zone,
                 range_start,
+                min,
                 max,
                 is_optional_zero,
                 distinct_by,

@@ -1,0 +1,88 @@
+# BT5-093 Tai Kamiya & Matt Ishida — Tamer, White, Cost 4.
+# No traits, no evo_costs.
+#
+# Printed card text (data/cards.json):
+#
+#   [Start of Your Turn] If your opponent has a level 6 or higher Digimon in
+#   play, gain 2 memory.
+#   [Your Turn] All of your Digimon with [Omnimon] in their name gain
+#   ＜Security A. +1＞ (This Digimon checks 1 additional security card.)
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT5/White/BT5_093.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartTurn` ActivateClass.
+#   `SetUpActivateClass(CanActivateCondition, ActivateCoroutine, -1, false,
+#   ...)` — `isOptional: false`, MANDATORY when the condition holds.
+#   `CanActivateCondition` = BT5-093 on field + `HasMatchConditionPermanent`
+#   for an opponent battle-area Digimon with `Level >= 6` (and `HasLevel`).
+#   `ActivateCoroutine` = `card.Owner.AddMemory(2, activateClass)`.
+#
+# Clause 2 — `EffectTiming.None` passive declarative via
+#   `CardEffectFactory.ChangeSAttackStaticEffect(changeValue: 1, ...)`.
+#   `permanentCondition` = own battle-area Digimon whose top card contains
+#   "Omnimon". `condition` = `IsExistOnBattleArea(card) && IsOwnerTurn(card)`
+#   — i.e. only active on the controller's turn. Authored as a filtered
+#   `kind: aura` with `active_when: { your_turn: true }`,
+#   `target: { owner: you, ..., name_contains: "Omnimon" }`,
+#   `grant_keyword: { keyword: SecurityAttackPlus, value: 1 }`.
+#
+# Clause 3 (Security) — `EffectTiming.SecuritySkill` →
+#   `CardEffectFactory.PlaySelfTamerSecurityEffect(card)`, the canonical
+#   "[Security] Play this card without paying the cost" Tamer idiom (sister
+#   cards BT22-084, BT22-094, BT17-093, BT9-092). Mandatory — no [Security]
+#   effect is opt-out per RULES_CONTEXT.md §16.
+#
+# ─── Authoring notes ─────────────────────────────────────────────────────────
+#
+# - The aura `target` uses `owner: you` (canonical sibling BT22-084 spelling)
+#   to scope the keyword grant to the controller's Digimon — "All of YOUR
+#   Digimon". (`BoolPredicateSpec::owner` also accepts the `of` alias.)
+# - The aura's `grant_keyword: SecurityAttackPlus(1)` installs into
+#   `Modifiers::permanent_keywords` and is consumed by the security loop via
+#   `Game::security_attack_keyword_bonus` (which now folds in
+#   `Modifiers::granted_security_attack_keyword_bonus`), so a buffed
+#   Omnimon actually checks one extra security card.
+#
+# Promoted from cards/_examples/BT5-093.yaml on 2026-05-20 (DNA Omnimon
+# missing-card authoring pass).
+
+card: BT5-093
+name: Tai Kamiya & Matt Ishida
+kind: tamer
+color: [white]
+cost: 4
+
+effects:
+  # ─── Clause 1: [Start of Your Turn] +2 memory if opp has Lv.6+ Digimon ────
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If opponent has a Lv.6+ Digimon in play, gain 2 memory"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        level_gte: 6
+    process:
+      - gain_memory: 2
+
+  # ─── Clause 2: [Your Turn] your [Omnimon] gain <Security A. +1> ───────────
+  - kind: aura
+    summary: "[Your Turn] Your [Omnimon] Digimon gain <Security A. +1>"
+    active_when: { your_turn: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      name_contains: "Omnimon"
+    grant_keyword: { keyword: SecurityAttackPlus, value: 1 }
+
+  # ─── Clause 3: [Security] play self without paying the cost ───────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

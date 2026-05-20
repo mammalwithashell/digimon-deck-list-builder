@@ -36,12 +36,13 @@
 //! - **G-OPT-TRIGGERED**: OPT lockout for triggered clauses is not yet
 //!   enforced through the queue drain. Same-turn re-fire test is `#[ignore]`d.
 //!
-//! - **G-EVENT-TARGET-NAME-CONTAINS** (this card surfaces it):
-//!   No predicate filters by the digivolving permanent's name. The YAML
-//!   uses `count_lte ≤ 1 Digimon` + `any_permanent name_contains` over the
-//!   board as a semantically-equivalent workaround (the only Digimon on
-//!   field IS "that Digimon"). Tests that exercise this path operate within
-//!   the count_lte-bounded domain.
+//! - **G-EVENT-TARGET-NAME-CONTAINS** (RESOLVED 2026-05-19):
+//!   The DSL gained an `event_target_name_contains` predicate — a
+//!   case-insensitive substring scan against the event-target permanent's
+//!   card name. Clause 2 filters by the digivolving permanent's name
+//!   directly, so the Greymon/Garurumon branch is correct regardless of
+//!   board count. Clause-2 behavioral tests fire a faithful
+//!   `TriggerSource::Digivolved` event (see `enqueue_digivolve_event_for`).
 
 #![allow(dead_code, unused_imports)]
 
@@ -111,6 +112,30 @@ fn matttai_runner() -> DebugRunner {
         .deck(1, &["FILL"])
         .memory(10)
         .start()
+}
+
+/// Fire clause 2's `on_digivolve` trigger as a faithful digivolve event:
+/// `TriggerSource::Digivolved` carries `digivolved` as the event-target
+/// (digivolving) permanent, so `event_target_name_contains` resolves to
+/// that permanent's name. Mirrors the BT24-082 `enqueue_digivolve_event_for`
+/// idiom. Use this — NOT `TriggerSource::Permanent(mt)` — so the event
+/// context reflects a real digivolution.
+fn enqueue_digivolve_event_for(runner: &mut DebugRunner, digivolved: PermanentHandle) {
+    let card = runner.game.players[digivolved.player as usize].battle_area
+        [digivolved.index as usize]
+        .top_card()
+        .handle();
+    runner.game.enqueue_triggered(
+        EffectTiming::OnDigivolve,
+        TriggerSource::Digivolved {
+            player: digivolved.player,
+            permanent: digivolved,
+            card,
+            effect_initiated: false,
+            dna_origin: false,
+        },
+    );
+    runner.game.drain_effect_queue();
 }
 
 /// Drain optional activation prompts by accepting the first non-PASS action
@@ -578,14 +603,11 @@ fn ex4_061_clause1_own_agumon_play_suspends_and_gains_memory() {
 // SECTION 4 — Clause 2 condition gating (positive + negative)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Negative gate IGNORED — `count_lte` aggregate not evaluated at runtime
-/// (G-COUNT-AGGREGATE). With >1 Digimon, the count_lte ≤ 1 leaf SHOULD
-/// gate the prompt out, but `eval_predicate_with_bindings` does not yet
-/// dispatch `count_lte` (only `security_count_lte` /
-/// `materials_count_lte` are wired). The leaf is authored faithfully so
-/// the test will start passing once the engine wires `count_lte`.
+/// Negative gate: with >1 Digimon, the `count_lte ≤ 1` leaf gates the
+/// prompt out. `eval_predicate_with_bindings` evaluates `count_lte`
+/// aggregates (`code/digimon-engine/src/dsl_cards/predicate.rs` ~409),
+/// so the printed "if you have 1 or fewer Digimon" gate is enforced.
 #[test]
-#[ignore = "pending: G-COUNT-AGGREGATE — count_lte aggregate not evaluated in eval_predicate_with_bindings"]
 fn ex4_061_clause2_blocked_when_more_than_one_digimon() {
     let mut runner = matttai_runner();
     runner
@@ -596,14 +618,13 @@ fn ex4_061_clause2_blocked_when_more_than_one_digimon() {
         .game
         .card_data
         .push(make_named_digimon("EXTRA", "PlainDigimon", 3, 3000));
-    let mt = runner.place_on_field(0, "EX4-061", Some(0));
-    runner.place_on_field(0, "GREY", Some(0));
+    runner.place_on_field(0, "EX4-061", Some(0));
+    let grey_handle = runner.place_on_field(0, "GREY", Some(0));
     runner.place_on_field(0, "EXTRA", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
-    runner.game.drain_effect_queue();
+    // The digivolving Digimon IS the Greymon — `event_target_name_contains`
+    // passes; only `count_lte` should gate the prompt out.
+    enqueue_digivolve_event_for(&mut runner, grey_handle);
 
     assert!(
         runner.pending_selection().is_none(),
@@ -620,13 +641,12 @@ fn ex4_061_clause2_blocked_when_lone_digimon_unrelated_name() {
         .game
         .card_data
         .push(make_named_digimon("PATAMON", "Patamon", 3, 3000));
-    let mt = runner.place_on_field(0, "EX4-061", Some(0));
-    runner.place_on_field(0, "PATAMON", Some(0));
+    runner.place_on_field(0, "EX4-061", Some(0));
+    let patamon_handle = runner.place_on_field(0, "PATAMON", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
-    runner.game.drain_effect_queue();
+    // The digivolving Digimon is Patamon — `event_target_name_contains`
+    // fails for both Greymon and Garurumon, so the condition is unmet.
+    enqueue_digivolve_event_for(&mut runner, patamon_handle);
 
     assert!(
         runner.pending_selection().is_none(),
@@ -645,14 +665,11 @@ fn ex4_061_clause2_installs_prompt_with_lone_greymon() {
     let mut gabu = make_named_digimon("GABU-HAND", "Gabumon", 3, 3000);
     gabu.play_cost = 0;
     runner.game.card_data.push(gabu);
-    let mt = runner.place_on_field(0, "EX4-061", Some(0));
-    runner.place_on_field(0, "GREY", Some(0));
+    runner.place_on_field(0, "EX4-061", Some(0));
+    let grey_handle = runner.place_on_field(0, "GREY", Some(0));
     push_to_hand(&mut runner, 0, "GABU-HAND");
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
-    runner.game.drain_effect_queue();
+    enqueue_digivolve_event_for(&mut runner, grey_handle);
 
     assert!(
         runner.pending_selection().is_some(),
@@ -671,14 +688,11 @@ fn ex4_061_clause2_installs_prompt_with_lone_garurumon() {
     let mut agu = make_named_digimon("AGU-HAND", "Agumon", 3, 3000);
     agu.play_cost = 0;
     runner.game.card_data.push(agu);
-    let mt = runner.place_on_field(0, "EX4-061", Some(0));
-    runner.place_on_field(0, "GARU", Some(0));
+    runner.place_on_field(0, "EX4-061", Some(0));
+    let garu_handle = runner.place_on_field(0, "GARU", Some(0));
     push_to_hand(&mut runner, 0, "AGU-HAND");
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
-    runner.game.drain_effect_queue();
+    enqueue_digivolve_event_for(&mut runner, garu_handle);
 
     assert!(
         runner.pending_selection().is_some(),
@@ -697,14 +711,11 @@ fn ex4_061_clause2_no_panic_when_no_eligible_in_hand_or_trash() {
     let mut grey = make_named_digimon("GREY", "Greymon", 4, 4000);
     grey.play_cost = 0;
     runner.game.card_data.push(grey);
-    let mt = runner.place_on_field(0, "EX4-061", Some(0));
-    runner.place_on_field(0, "GREY", Some(0));
+    runner.place_on_field(0, "EX4-061", Some(0));
+    let grey_handle = runner.place_on_field(0, "GREY", Some(0));
     // Hand empty, trash empty for player 0 — no eligible Gabumon anywhere.
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
-    runner.game.drain_effect_queue();
+    enqueue_digivolve_event_for(&mut runner, grey_handle);
 
     // Drain whatever installs without panicking.
     drain_accepting_all(&mut runner);
@@ -732,18 +743,15 @@ fn ex4_061_clause2_greymon_plays_gabumon_from_hand_free() {
     gabu.play_cost = 7; // Set high so we know free-play actually bypassed cost.
     runner.game.card_data.push(gabu);
 
-    let mt = runner.place_on_field(0, "EX4-061", Some(0));
-    runner.place_on_field(0, "GREY", Some(0));
+    runner.place_on_field(0, "EX4-061", Some(0));
+    let grey_handle = runner.place_on_field(0, "GREY", Some(0));
     push_to_hand(&mut runner, 0, "GABU-HAND");
 
     let battle_count_before = runner.game.players[0].battle_area.len();
     let hand_count_before = runner.game.players[0].hand.len();
     let memory_before = runner.memory();
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
-    runner.game.drain_effect_queue();
+    enqueue_digivolve_event_for(&mut runner, grey_handle);
 
     let accepted = drain_accepting_all(&mut runner);
     if !accepted {
@@ -793,17 +801,14 @@ fn ex4_061_clause2_garurumon_plays_agumon_from_trash_free() {
     agu.play_cost = 7;
     runner.game.card_data.push(agu);
 
-    let mt = runner.place_on_field(0, "EX4-061", Some(0));
-    runner.place_on_field(0, "GARU", Some(0));
+    runner.place_on_field(0, "EX4-061", Some(0));
+    let garu_handle = runner.place_on_field(0, "GARU", Some(0));
     push_to_trash(&mut runner, 0, "AGU-TRASH");
 
     let trash_count_before = runner.game.players[0].trash.len();
     let memory_before = runner.memory();
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(mt));
-    runner.game.drain_effect_queue();
+    enqueue_digivolve_event_for(&mut runner, garu_handle);
 
     if runner.game.pending_selection.is_none() {
         // Observer didn't install — likely a not-yet-closed engine path.
@@ -848,25 +853,124 @@ fn ex4_061_clause2_garurumon_plays_agumon_from_trash_free() {
 // SECTION 6 — IGNORED tests (gap-blocked)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Clause 2 IGNORED — OPT lockout for triggered effects (G-OPT-TRIGGERED).
-/// `once_per_turn: true` is authored on clause 2 but engine queue-drain does
-/// not yet enforce same-turn lockout. Re-firing the trigger from a test
-/// re-installs the prompt today.
+/// Clause 2 OPT lockout — printed [Once Per Turn]. The on-digivolve
+/// "may play 1 Gabumon/Agumon" clause may fire at most once per turn.
+/// Firing the digivolve event a second time in the same turn must NOT
+/// install a second prompt; the per-turn OPT reset (`Permanent::new_turn`)
+/// re-arms it.
+///
+/// OPT enforcement for permanent-sourced triggered effects is wired in
+/// `run_queued_effect_inner` (`effect_queue.rs` ~1980-2016).
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — OPT lockout not enforced on triggered effects"]
 fn ex4_061_clause2_opt_lockout_blocks_second_activation_same_turn() {
-    unimplemented!("blocked on G-OPT-TRIGGERED");
+    let mut runner = matttai_runner();
+    let mut grey = make_named_digimon("GREY", "Greymon", 4, 4000);
+    grey.play_cost = 0;
+    runner.game.card_data.push(grey);
+
+    let matttai = runner.place_on_field(0, "EX4-061", Some(0));
+    let grey_handle = runner.place_on_field(0, "GREY", Some(0));
+    // Deliberately NO eligible Gabumon in hand or trash: the clause's
+    // `count_lte ≤ 1 Digimon` gate does not check zone availability, so the
+    // prompt still installs and the body runs (consuming OPT) — but plays
+    // nothing, keeping the lone-Greymon board count at 1 so the OPT-reset
+    // re-fire isn't masked by the count gate flipping shut.
+
+    // ── First fire: lone Greymon digivolves → clause 2's prompt installs.
+    enqueue_digivolve_event_for(&mut runner, grey_handle);
+    assert!(
+        runner.pending_selection().is_some(),
+        "first digivolve must install clause 2's prompt"
+    );
+    // Resolve the whole prompt chain — the body running consumes the OPT.
+    drain_accepting_all(&mut runner);
+
+    // ── Second fire, SAME turn: OPT lockout — no prompt installs.
+    // Re-fetch the Greymon's handle (its slot index is unchanged) and fire
+    // another digivolve event for it.
+    enqueue_digivolve_event_for(&mut runner, grey_handle);
+    assert!(
+        runner.pending_selection().is_none(),
+        "OPT lockout must block the second on-digivolve activation in the same turn"
+    );
+
+    // ── OPT reset: `Permanent::new_turn()` clears `effect_activations` on the
+    // Matt & Tai Tamer — the same per-turn reset `begin_turn()` performs.
+    runner.game.players[0].battle_area[matttai.index as usize].new_turn();
+
+    enqueue_digivolve_event_for(&mut runner, grey_handle);
+    assert!(
+        runner.pending_selection().is_some(),
+        "after the per-turn OPT reset clause 2 must fire again"
+    );
 }
 
-/// Clause 2 IGNORED — `event_target_name_contains` predicate missing
-/// (G-EVENT-TARGET-NAME-CONTAINS). Filtering by the digivolving permanent's
-/// name without using the count_lte board-equivalence workaround would let
-/// us assert on multi-Digimon boards (where "that Digimon" can no longer be
-/// inferred from the only board permanent).
+/// Clause 2 faithfulness (G-EVENT-TARGET-NAME-CONTAINS, RESOLVED): the
+/// Greymon/Garurumon name gate keys on the DIGIVOLVING permanent's name —
+/// "that Digimon" — via the `event_target_name_contains` predicate, not a
+/// board-state `any_permanent` scan.
+///
+/// The clause's `count_lte ≤ 1` gate (printed "if you have 1 or fewer
+/// Digimon") forbids multi-Digimon boards, so the distinguishing test is
+/// the digivolving permanent's identity: with exactly 1 Digimon on the
+/// board, firing the digivolve event for that permanent reads ITS name.
+///   - a digivolve of an unrelated-named Digimon (Patamon) must NOT fire,
+///   - a digivolve of a Greymon-named Digimon MUST fire.
+/// The predicate resolves the event-target permanent directly rather than
+/// inferring "that Digimon" from board state — so the gate stays correct
+/// even if a future card relaxes the count constraint.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-NAME-CONTAINS — no event-target name predicate yet"]
 fn ex4_061_clause2_filters_by_digivolved_name_independent_of_count() {
-    unimplemented!("blocked on G-EVENT-TARGET-NAME-CONTAINS");
+    // ── Case A: digivolve event fires for an unrelated-named Digimon ─────
+    {
+        let mut runner = matttai_runner();
+        let mut pata = make_named_digimon("PATA", "Patamon", 3, 3000);
+        pata.play_cost = 0;
+        runner.game.card_data.push(pata);
+        let mut gabu = make_named_digimon("GABU-HAND", "Gabumon", 3, 3000);
+        gabu.play_cost = 0;
+        runner.game.card_data.push(gabu);
+
+        runner.place_on_field(0, "EX4-061", Some(0));
+        let pata_handle = runner.place_on_field(0, "PATA", Some(0));
+        push_to_hand(&mut runner, 0, "GABU-HAND");
+
+        // The digivolving Digimon is the Patamon — its name carries
+        // neither Greymon nor Garurumon, so the name gate fails.
+        enqueue_digivolve_event_for(&mut runner, pata_handle);
+
+        assert!(
+            runner.pending_selection().is_none(),
+            "digivolve of Patamon must NOT fire clause 2 — \
+             `event_target_name_contains` keys on the digivolving \
+             permanent's name, which is neither Greymon nor Garurumon"
+        );
+    }
+
+    // ── Case B: digivolve event fires for a Greymon-named Digimon ────────
+    {
+        let mut runner = matttai_runner();
+        let mut grey = make_named_digimon("GREY", "Greymon", 4, 4000);
+        grey.play_cost = 0;
+        runner.game.card_data.push(grey);
+        let mut gabu = make_named_digimon("GABU-HAND", "Gabumon", 3, 3000);
+        gabu.play_cost = 0;
+        runner.game.card_data.push(gabu);
+
+        runner.place_on_field(0, "EX4-061", Some(0));
+        let grey_handle = runner.place_on_field(0, "GREY", Some(0));
+        push_to_hand(&mut runner, 0, "GABU-HAND");
+
+        // The digivolving Digimon is the Greymon —
+        // `event_target_name_contains: Greymon` matches the event target.
+        enqueue_digivolve_event_for(&mut runner, grey_handle);
+
+        assert!(
+            runner.pending_selection().is_some(),
+            "digivolve of Greymon must fire clause 2 — \
+             `event_target_name_contains: Greymon` matches the event target"
+        );
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

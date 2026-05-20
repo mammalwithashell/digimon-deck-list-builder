@@ -18,7 +18,7 @@
 //!
 //! # Patterns this test file covers (RUST_DSL_TEST_API.md §4.3)
 //! - D4: declarative keyword grants (Raid, Piercing, Blocker)
-//! - F: board-wipe + conditional stack check (raw_rust: bt20_102_boardwipe_and_return)
+//! - F: board-wipe + conditional stack check (pure DSL: for_each + binding_absent/not_in_binding)
 //! - H3: Rush keyword grant for the turn (grant_keyword + expiry)
 //! - E2: optional end-of-turn clause (OPT gated)
 //!
@@ -29,7 +29,7 @@
 //! | (a) Raid declarative grant | G-DECLARATIVE-KEYWORD: never enqueued at runtime | compiled/structural only |
 //! | (b) Piercing declarative grant | G-DECLARATIVE-KEYWORD | compiled/structural only |
 //! | (c) Blocker declarative grant | G-DECLARATIVE-KEYWORD | compiled/structural only |
-//! | (d) [On Play][WD] boardwipe + return to deck | G-SELF-DIGIVOLUTION-CONTAINS-NAME + G-FOR-EACH-EXCLUDE-BINDING → raw_rust | PARTIAL |
+//! | (d) [On Play][WD] boardwipe + return to deck | pure DSL — condition `self_digivolution_sources_contain_name` (G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY resolved); body `for_each` + `binding_absent`/`not_in_binding` exclusion (G-FOR-EACH-EXCLUDE-BINDING resolved 2026-05-20) | PASS |
 //! | (e) [EOT][OPT] Rush grant + attack without suspending | force_attack DSL + AttackOpen without_suspending | PASS |
 //! | (e-OPT) once-per-turn lockout | G-OPT-TRIGGERED: triggered OPT not enforced | #[ignore] |
 
@@ -183,22 +183,26 @@ fn bt20_102_clause_e_is_end_of_your_turn_optional_opt() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 2 — Clause (d) boardwipe + return (raw_rust): behavioral
+// Section 2 — Clause (d) boardwipe + return (pure DSL): behavioral
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// The boardwipe clause is entirely implemented via raw_rust: bt20_102_boardwipe_and_return.
-// The DSL condition check (Omnimon / X Antibody in this Digimon's digivolution stack)
-// is performed inside the raw_rust fn, which means:
-//   - When no qualifying name is in stack: fn is a no-op (no deletion, no return).
-//   - When qualifying name IS in stack: selects 1 per player to protect, deletes all
-//     other Digimon, then (unconditionally) selects 1 opp Digimon to return to deck bottom.
+// The boardwipe clause is now PURE DSL (migrated 2026-05-20 — the raw_rust
+// escape `bt20_102_boardwipe_and_return` was removed). The clause `condition:`
+// (`self_digivolution_sources_contain_name`) gates the whole clause:
+//   - When no qualifying name is in stack: the clause never fires (no
+//     selection prompt, no deletion, no return).
+//   - When a qualifying name IS in stack: the process steps run — two
+//     `select_*_permanent` protect-picks, a `for_each` delete of every
+//     unprotected Digimon, then a `select_opponent_permanent` + `return_to_deck`
+//     bottom.
 //
-// The stack-condition check requires G-SELF-DIGIVOLUTION-CONTAINS-NAME (new hybrid gap).
-// The exclude-from-binding filter requires G-FOR-EACH-EXCLUDE-BINDING (new DSL gap).
-// Both are routed through raw_rust — behavioral tests that exercise the select-and-delete
-// path validate the raw_rust fn once it is registered.
+// The stack-condition check uses G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY
+// (resolved). The "delete all OTHER Digimon" exclusion uses a `for_each` whose
+// `over` predicate wraps each protect-binding as
+// `any_of: [{ binding_absent: <save> }, { not_in_binding: <save> }]`
+// (G-FOR-EACH-EXCLUDE-BINDING resolved 2026-05-20 — pure DSL).
 
-/// POSITIVE: [On Play] with "Omnimon" in stack — raw_rust boardwipe fn installs
+/// POSITIVE: [On Play] with "Omnimon" in stack — the DSL boardwipe clause installs
 /// a SelectOpponentField prompt (choose 1 to protect).
 ///
 /// Setup: place Omnimon (X Antibody) on field with digivolution source named "Omnimon".
@@ -241,18 +245,14 @@ fn bt20_102_on_play_with_omnimon_in_stack_installs_selection() {
     runner.place_on_field(1, "TEST-OPP-1", Some(0));
     runner.place_on_field(1, "TEST-OPP-2", Some(0));
 
-    // Place Omnimon (X Antibody) on P0 with "Omnimon" source underneath.
-    // place_on_field drops a simple permanent; for stack check we need a real digivolution.
-    // As a simplification: place the base on field, then use place_on_field for BT20-102
-    // stacked on it. The raw_rust fn checks Permanent::contains_card_name for "Omnimon"
-    // or "X Antibody" (top card name = "Omnimon (X Antibody)" contains "X Antibody").
-    //
-    // With no digivolution source, the stack contains only the top card.
-    // "Omnimon (X Antibody)" contains "X Antibody" → condition satisfied even with no source.
-    runner.place_on_field(0, "BT20-102", None);
+    // Place BT20-102 ON TOP of an "Omnimon"-named digivolution source. The
+    // clause `condition` uses `self_digivolution_sources_contain_name`, which
+    // scans ONLY the source cards beneath the carrier (NOT the carrier's own
+    // top card) — so an "Omnimon" source genuinely satisfies the condition.
+    runner.place_stack(0, &["TEST-OMNIMON-SOURCE", "BT20-102"]);
     runner.fire_on_play(0, 1); // index 1 = BT20-102 (ally is at 0)
 
-    // After fire_on_play, the boardwipe raw_rust fn should have run.
+    // After fire_on_play, the boardwipe clause should have run.
     // Since opp has 2+ Digimon, a SelectOpponentField prompt installs to choose 1 to protect.
     let kind = runner.pending_kind();
     assert!(
@@ -272,6 +272,10 @@ fn bt20_102_on_play_boardwipe_deletes_non_saved_opp_digimon() {
     opp2.level = Some(4);
     opp2.dp = Some(4000);
 
+    let mut base = make_test_card("TEST-OMNIMON-SOURCE", "Omnimon");
+    base.level = Some(6);
+    base.dp = Some(12000);
+
     let filler = make_test_card("DECK-PAD", "Filler");
 
     let mut runner = DebugRunner::builder()
@@ -279,6 +283,7 @@ fn bt20_102_on_play_boardwipe_deletes_non_saved_opp_digimon() {
         .expect("BT20-102 YAML parses")
         .add_card(opp1)
         .add_card(opp2)
+        .add_card(base)
         .add_card(filler)
         .memory(10)
         .deck(
@@ -289,7 +294,8 @@ fn bt20_102_on_play_boardwipe_deletes_non_saved_opp_digimon() {
 
     runner.place_on_field(1, "TEST-OPP-1", Some(0));
     runner.place_on_field(1, "TEST-OPP-2", Some(0));
-    runner.place_on_field(0, "BT20-102", None);
+    // BT20-102 on top of an "Omnimon" source so the clause condition holds.
+    runner.place_stack(0, &["TEST-OMNIMON-SOURCE", "BT20-102"]);
     runner.fire_on_play(0, 0); // BT20-102 at index 0
 
     // opp has 2 Digimon → first prompt = opp choose 1 to save.
@@ -299,7 +305,7 @@ fn bt20_102_on_play_boardwipe_deletes_non_saved_opp_digimon() {
         "precondition: opp has 2 Digimon"
     );
 
-    // The raw_rust fn should have installed a SelectOpponentField prompt.
+    // The boardwipe clause should have installed a SelectOpponentField prompt.
     assert!(
         runner.pending_kind().is_some(),
         "SelectOpponentField prompt must be installed"
@@ -352,12 +358,17 @@ fn bt20_102_on_play_return_to_deck_prompt_installs_after_boardwipe() {
     opp1.level = Some(4);
     opp1.dp = Some(5000);
 
+    let mut base = make_test_card("TEST-OMNIMON-SOURCE", "Omnimon");
+    base.level = Some(6);
+    base.dp = Some(12000);
+
     let filler = make_test_card("DECK-PAD", "Filler");
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-102.yaml"))
         .expect("BT20-102 YAML parses")
         .add_card(opp1)
+        .add_card(base)
         .add_card(filler)
         .memory(10)
         .deck(
@@ -367,7 +378,8 @@ fn bt20_102_on_play_return_to_deck_prompt_installs_after_boardwipe() {
         .start();
 
     runner.place_on_field(1, "TEST-OPP-1", Some(0));
-    runner.place_on_field(0, "BT20-102", None);
+    // BT20-102 on top of an "Omnimon" source so the clause condition holds.
+    runner.place_stack(0, &["TEST-OMNIMON-SOURCE", "BT20-102"]);
     runner.fire_on_play(0, 0);
 
     // With 1 opp Digimon: opp-save prompt may auto-resolve (only 1 target = auto-selected
@@ -413,30 +425,112 @@ fn bt20_102_on_play_return_to_deck_prompt_installs_after_boardwipe() {
     // No assertion fails if opp has 0 remaining: the return step simply skips.
 }
 
-// ─── SECTION 2b — Condition gating tests (G-SELF-DIGIVOLUTION-CONTAINS-NAME) ──
+// ─── SECTION 2b — Condition gating (G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY) ──
 
-/// BLOCKED: Condition "If [Omnimon] or [X Antibody] is in this Digimon's
-/// digivolution cards" requires G-SELF-DIGIVOLUTION-CONTAINS-NAME.
+/// G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY (RESOLVED 2026-05-19):
+/// the clause condition "If [Omnimon] or [X Antibody] is in this Digimon's
+/// digivolution cards" scans ONLY the digivolution source cards beneath the
+/// carrier — NOT the carrier's own top card. A BT20-102 played WITHOUT any
+/// digivolution source (its only card is the top card "Omnimon (X
+/// Antibody)") must NOT satisfy the condition: the carrier's own name is
+/// excluded from the sources-only scan. So the board-wipe must NOT fire.
 ///
-/// This test verifies that when the stack does NOT contain "Omnimon" or "X Antibody"
-/// by name (and top card name is not BT20-102), the boardwipe fn is a no-op.
-/// The raw_rust fn implements this check via Permanent::contains_card_name.
-///
-/// NOTE: Because the top card of BT20-102 IS "Omnimon (X Antibody)" which contains
-/// "X Antibody", the condition is always true for BT20-102 even with no digivolution
-/// source. The true "negative" scenario (condition fails) requires a different card
-/// that uses the same raw_rust fn — or would require placing a different card name
-/// at the top of the permanent's stack. This test is marked ignore until
-/// G-SELF-DIGIVOLUTION-CONTAINS-NAME closes and the condition becomes expressible
-/// without the always-match fallback from the top card name itself.
+/// The pre-existing `self_digivolution_contains_name` predicate scans the
+/// top card too — under it, BT20-102 ALWAYS self-matches "Omnimon" /
+/// "X Antibody" and this negative case was inexpressible. The new
+/// `self_digivolution_sources_contain_name` predicate makes it expressible.
 #[test]
-#[ignore = "pending: G-SELF-DIGIVOLUTION-CONTAINS-NAME — DSL cannot express self-stack name check; raw_rust fn always finds 'X Antibody' in top card name"]
 fn bt20_102_on_play_no_boardwipe_when_no_omnimon_in_stack() {
-    // Setup: place BT20-102 WITHOUT an Omnimon base under it. Verify no deletion happens.
-    // Currently the top card's name contains "X Antibody" so the condition is always met.
-    // Once G-SELF-DIGIVOLUTION-CONTAINS-NAME is resolved, the condition will check
-    // card_sources (not the top card) and a "bare" BT20-102 can fail the condition.
-    todo!("G-SELF-DIGIVOLUTION-CONTAINS-NAME: digivolution stack condition check not yet expressible in DSL condition closure")
+    let mut opp1 = make_test_card("TEST-OPP-1", "OppDigimon1");
+    opp1.level = Some(4);
+    opp1.dp = Some(5000);
+
+    let mut opp2 = make_test_card("TEST-OPP-2", "OppDigimon2");
+    opp2.level = Some(4);
+    opp2.dp = Some(4000);
+
+    let filler = make_test_card("DECK-PAD", "Filler");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-102.yaml"))
+        .expect("BT20-102 YAML parses")
+        .add_card(opp1)
+        .add_card(opp2)
+        .add_card(filler)
+        .memory(10)
+        .deck(
+            1,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
+        .start();
+
+    runner.place_on_field(1, "TEST-OPP-1", Some(0));
+    runner.place_on_field(1, "TEST-OPP-2", Some(0));
+    // BT20-102 placed BARE — no digivolution source. Its only card is the
+    // top card "Omnimon (X Antibody)", which the sources-only scan excludes.
+    runner.place_on_field(0, "BT20-102", None);
+    runner.fire_on_play(0, 0);
+
+    // The clause `condition` (`self_digivolution_sources_contain_name`)
+    // fails — no Omnimon / X Antibody in the (empty) source list — so the
+    // board-wipe never runs and no selection prompt installs.
+    assert!(
+        runner.pending_kind().is_none(),
+        "bare BT20-102 (no digivolution source) must NOT satisfy the \
+         'Omnimon/X Antibody in digivolution cards' condition — no board-wipe \
+         prompt should install"
+    );
+    // Both opponent Digimon must still be on the field (no deletion).
+    assert_eq!(
+        runner.game.players[1].battle_area.len(),
+        2,
+        "no opponent Digimon should be deleted when the stack condition fails"
+    );
+}
+
+/// G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY (RESOLVED): companion
+/// positive — a BT20-102 on top of a NON-Omnimon, non-X-Antibody source
+/// also fails the condition (the source name does not match either).
+#[test]
+fn bt20_102_on_play_no_boardwipe_when_unrelated_source_in_stack() {
+    let mut opp1 = make_test_card("TEST-OPP-1", "OppDigimon1");
+    opp1.level = Some(4);
+    opp1.dp = Some(5000);
+
+    let mut base = make_test_card("TEST-PLAIN-SOURCE", "WarGreymon");
+    base.level = Some(6);
+    base.dp = Some(12000);
+
+    let filler = make_test_card("DECK-PAD", "Filler");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(include_str!("../../../cards/bt20/BT20-102.yaml"))
+        .expect("BT20-102 YAML parses")
+        .add_card(opp1)
+        .add_card(base)
+        .add_card(filler)
+        .memory(10)
+        .deck(
+            1,
+            &["DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD"],
+        )
+        .start();
+
+    runner.place_on_field(1, "TEST-OPP-1", Some(0));
+    // BT20-102 on top of an unrelated "WarGreymon" source.
+    runner.place_stack(0, &["TEST-PLAIN-SOURCE", "BT20-102"]);
+    runner.fire_on_play(0, 0);
+
+    assert!(
+        runner.pending_kind().is_none(),
+        "BT20-102 with only a non-Omnimon/non-X-Antibody source must NOT \
+         satisfy the digivolution-cards condition"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area.len(),
+        1,
+        "no opponent Digimon should be deleted when the stack condition fails"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -485,6 +579,19 @@ fn bt20_102_end_of_turn_installs_selection_when_own_digimon_present() {
 
     runner.game.end_turn();
 
+    // The [End of Your Turn] clause is optional ("1 of your Digimon may gain
+    // Rush ...") and its body's first step is a mandatory select_own_permanent,
+    // so an outer accept/decline prompt installs first
+    // (G-OUTER-OPTIONAL-NOT-INSTALLED). Accept it.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "[EOT] optional clause must install an outer accept/decline prompt"
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
+
     let kind = runner.pending_kind();
     assert!(
         kind.is_some(),
@@ -502,6 +609,11 @@ fn bt20_102_end_of_turn_selected_digimon_gains_rush() {
     let mut runner = runner_with_omnimon_on_field();
 
     runner.game.end_turn();
+
+    // Accept the outer optional-trigger prompt (G-OUTER-OPTIONAL-NOT-INSTALLED).
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
 
     assert!(
         runner.pending_kind().is_some(),
@@ -550,6 +662,11 @@ fn bt20_102_end_of_turn_rush_expires_end_of_turn() {
 
     // P0 ends their turn; EOT clause fires.
     runner.game.end_turn();
+
+    // Accept the outer optional-trigger prompt (G-OUTER-OPTIONAL-NOT-INSTALLED).
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
 
     // Resolve selection: choose the ally, then attack security. The helper
     // seeds opponent security so the game stays alive long enough to observe expiry.
@@ -646,6 +763,11 @@ fn bt20_102_end_of_turn_selected_digimon_attacks_without_suspending() {
 
     runner.game.end_turn();
 
+    // Accept the outer optional-trigger prompt (G-OUTER-OPTIONAL-NOT-INSTALLED).
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
+
     let pending = runner
         .game
         .pending_selection
@@ -695,28 +817,81 @@ fn bt20_102_end_of_turn_selected_digimon_attacks_without_suspending() {
 // Section 5 — OPT lockout — BLOCKED (G-OPT-TRIGGERED)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// BLOCKED: [Once Per Turn] on clause (e) compiles to Effect::max_per_turn=1 but
-/// run_queued_effect_inner does not enforce this for triggered effects.
-/// The clause will over-fire until G-OPT-TRIGGERED closes.
+/// Clause (e) OPT lockout — printed [Once Per Turn]. The end-of-your-turn
+/// "1 of your Digimon may gain Rush" clause may fire at most once per turn.
+/// Firing `EndOfYourTurn` a second time in the same turn must NOT install a
+/// second prompt; the per-turn OPT reset (`Permanent::new_turn`) re-arms it.
+///
+/// OPT enforcement for permanent-sourced triggered effects is wired in
+/// `run_queued_effect_inner` (`effect_queue.rs` ~1980-2016).
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — once_per_turn not enforced for triggered EOT effects"]
 fn bt20_102_end_of_turn_opt_lockout() {
-    // Setup: two copies of BT20-102 on field (or simulate two OPT-eligible triggers).
-    // Each copy fires its EOT clause → OPT should block the second firing.
-    // Expected: only 1 SelectOwnField prompt installs, not 2.
-    todo!("G-OPT-TRIGGERED: triggered OPT enforcement pending")
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::TriggerSource;
+
+    let mut runner = runner_with_omnimon_on_field();
+    // BT20-102 is placed at index 0 by `runner_with_omnimon_on_field`.
+    let omnimon = PermanentHandle { player: 0, index: 0 };
+
+    // ── First fire: the EOT clause installs its outer optional prompt.
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::Permanent(omnimon),
+    );
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "first EndOfYourTurn fire must install the optional Rush prompt"
+    );
+    // Resolve the whole prompt chain (the body running consumes the OPT).
+    let mut steps = 0;
+    while runner.game.pending_selection.is_some() && steps < 12 {
+        let (player, action) = {
+            let pending = runner.game.pending_selection.as_ref().unwrap();
+            (pending.selecting_player, pending.valid_action_ids[0])
+        };
+        runner.game.resolve_selection(player, action).ok();
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+
+    // ── Second fire, SAME turn: OPT lockout — no prompt installs.
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::Permanent(omnimon),
+    );
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "OPT lockout must block the second EndOfYourTurn activation in the same turn"
+    );
+
+    // ── OPT reset: `Permanent::new_turn()` clears `effect_activations` — the
+    // same per-turn reset `begin_turn()` performs for the turn player.
+    runner.game.players[0].battle_area[omnimon.index as usize].new_turn();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::Permanent(omnimon),
+    );
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "after the per-turn OPT reset the clause must fire again"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 6 — Declarative keyword grant smoke (G-DECLARATIVE-KEYWORD)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// BLOCKED: G-DECLARATIVE-KEYWORD — EffectTiming::Declarative is compiled but never
-/// enqueued or fired. The grant_keyword modifier is not installed at runtime.
-/// Structural tests (Sections 1) validate compilation shape; this test verifies
-/// runtime keyword presence on a placed Omnimon (X Antibody) permanent.
+/// Declarative `grant_keyword` clauses (Raid, Piercing, Blocker) install
+/// at runtime: `tick_declarative_effects` runs each FaceUp declarative
+/// grant_keyword process, and `game.has_keyword` finds the installed
+/// keyword modifier. Structural tests (Section 1) validate compilation
+/// shape; this test verifies runtime keyword presence on a placed
+/// Omnimon (X Antibody) permanent.
 #[test]
-#[ignore = "pending: G-DECLARATIVE-KEYWORD — EffectTiming::Declarative never enqueued at runtime; declarative grant_keyword modifier not installed"]
 fn bt20_102_has_raid_piercing_blocker_as_runtime_keywords() {
     let filler = make_test_card("DECK-PAD", "Filler");
     let mut runner = DebugRunner::builder()

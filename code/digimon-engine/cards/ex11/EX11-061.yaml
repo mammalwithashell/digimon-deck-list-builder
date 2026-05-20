@@ -21,10 +21,56 @@ effects:
     process:
       - play_from_security: {}
 
-  # [Your Turn] when any of your Digimon digivolve into Puppet, suspend this
-  # Tamer to optionally play 1 level 3 Puppet from hand for free. At turn end,
-  # delete the Digimon this effect played.
+  # [Your Turn] When any of your Digimon digivolve into a [Puppet] trait
+  # Digimon, by suspending this Tamer, you may play 1 level 3 [Puppet] trait
+  # Digimon card from your hand without paying the cost. At turn end, delete
+  # the Digimon this effect played.
   #
-  # Omitted pending PUPPETS-G003: identity-stable provenance and turn-end
-  # cleanup for "the Digimon this effect played." A partial play-only body
-  # would leave the temporary Digimon on field and is not faithful.
+  # Pattern mirrors EX11-054: `on_digivolve` observer gated by `event_target_*`
+  # predicates; "by suspending this Tamer" is the activation cost, lifted out
+  # of the body as `activation_cost: { suspend_self: true }`. With
+  # `optional: true` the engine installs a pre-cost decline prompt — the
+  # player chooses whether to suspend the Tamer; only on accept does the body
+  # run.
+  #
+  # `[Your Turn]` scoping via `active_when: { your_turn: true }`.
+  # Condition:
+  #   - `event_target_owner: you`  — your Digimon digivolved;
+  #   - `event_target_kind: digimon` — it is a Digimon;
+  #   - `event_target_trait_has: Puppet` — it digivolved INTO a Puppet;
+  #   - `source_is_unsuspended: true` — the suspend cost must be payable.
+  #
+  # PUPPETS-G003 / Task 11 — RESOLVED: `play_from_hand_free` binds the played
+  # permanent and `schedule_delete_played_at_turn_end` deletes exactly that
+  # permanent at turn end (stable provenance identity; no-op if it left).
+  - when: on_digivolve
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] On own Digimon digivolving into a Puppet, suspend self → you may free-play a level-3 Puppet from hand; delete it at turn end"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_trait_has: Puppet
+        - source_is_unsuspended: true
+    process:
+      # Cost: suspend this Tamer (activation gate — declinable).
+      - activation_cost: { suspend_self: true }
+      # "you may play 1 level 3 [Puppet] trait Digimon card from your hand" —
+      # optional selection (the player may decline the play).
+      - select_hand:
+          of: you
+          bind_as: puppet_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Puppet
+              - level_eq: 3
+          prompt: "You may play 1 level 3 Puppet Digimon from your hand without paying the cost"
+      # Play the picked card for free and bind the played permanent.
+      - play_from_hand_free: { of: you, hand_index: puppet_pick, bind_as: puppet_played }
+      # At turn end, delete the Digimon this effect played. No-op if the
+      # optional play was declined (the binding is absent).
+      - schedule_delete_played_at_turn_end:
+          binding: puppet_played

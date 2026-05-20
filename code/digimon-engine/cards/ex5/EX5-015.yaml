@@ -62,7 +62,7 @@
 # | [On Play][When Digivolving] reveal-4 + add 2 [Garurumon]/[X Antibody]      | IMPLEMENTED via select_reveal_buckets (single bucket, max 2) |
 # | "Place the rest at the bottom of the deck"                                 | IMPLEMENTED via place_remainder_on_deck { position: bottom } |
 # | "If you added cards, trash 1 card in your hand"                            | PARTIAL — see G-DSL-BIND-PRESENT workaround below |
-# | [All Turns][OPT] inherited Substitute (return 2 trash, prevent deletion)   | OMITTED — see G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH note below |
+# | [All Turns][OPT] inherited Substitute (return 2 trash, prevent deletion)   | IMPLEMENTED — G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH CLOSED (see Clause C) |
 #
 # ─── DSL-GAP — bind-presence in conditional trash-from-hand  [G-DSL-BIND-PRESENT] ──
 #
@@ -312,9 +312,55 @@ effects:
 
   # ─── Clause C: Inherited [All Turns][OPT] Substitute on battle deletion ─────
   #
-  # OMITTED — see G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH note in header.
-  # No clause authored to avoid violating the no-approximations policy
-  # (would require auto-selection of 2 trash cards, an unenforceable min:2,
-  # or a new engine-side raw_rust shim outside the scope of this card-only
-  # DSL pass). When the gaps close, restore the suggested clause body
-  # documented in the header.
+  # Printed inherited: "[All Turns] [Once Per Turn] When this Digimon with
+  # [Garurumon] or [Omnimon] in its name would be deleted in battle, by
+  # returning 2 non-Digi-Digi-Egg cards from your trash to the bottom of the
+  # deck, prevent that deletion."
+  #
+  # G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH CLOSED. The three stacked gaps
+  # are resolved:
+  #   (a) G-SELECT-MULTI-MIN — `select_count_capped_multi` now enforces
+  #       `min: 2`; PASS is unavailable until 2 cards are picked, and the
+  #       step silently no-ops when fewer than 2 candidates exist.
+  #   (b) G-ZONE-TRASH-TO-DECK — `return_trash_list_to_deck_bottom` moves the
+  #       selected trash card list to the bottom of the deck.
+  #   (c) cost-then-cancel guard — an unpayable `min: 2` selection aborts the
+  #       whole process slice (TailAlreadyRan), so `cancel_replacement` never
+  #       fires without the cost. The optional replacement gives the player an
+  #       accept/decline window; accepting commits to the full 2-card cost
+  #       (min: 2 forbids a partial pick).
+  #
+  # Subject-filter: `name_contains` on `active_when` evaluates against the
+  # replacement subject (the host this card is stacked under), via
+  # `predicate_reads_replacement_subject`. `replacement_cause: battle` gates
+  # to battle deletion only.
+  - kind: replacement
+    scope: inherited
+    trigger: when_would_be_deleted
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - replacement_subject_is_mine: true
+        - any_of:
+            - name_contains: "Garurumon"
+            - name_contains: "Omnimon"
+        - replacement_cause: battle
+    summary: "[All Turns][OPT] Substitute on battle deletion — return 2 non-Digi-Egg trash cards to deck bottom"
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          min: 2
+          max: 2
+          bind_as: returned
+          filter:
+            none_of:
+              - kind: digi_egg
+          prompt: "Return 2 non-Digi-Egg cards from your trash to the bottom of the deck"
+          optional_zero: false
+      - return_trash_list_to_deck_bottom:
+          of: you
+          cards: returned
+      - cancel_replacement: {}

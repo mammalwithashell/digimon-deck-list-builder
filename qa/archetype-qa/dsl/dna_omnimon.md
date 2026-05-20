@@ -78,7 +78,7 @@ Pipeline: batch-implement-cards-rust-dsl
 | BT23-018 | Garurumon | I | IMPLEMENTED | 13/13 | Phase 2 Track F: sister to BT23-008. [Main][OPT] clause authored with play-Agumon/Nokia variant. |
 | BT23-096 | Comet Hammer | I | PARTIAL (dsl) | 11/12 | [Your Turn] CS-attack Delay BLOCKED on G-DSL-ON-ALLY-ATTACK-TIMING + NEW G-DSL-DELAY-ON-ATTACK-EVENT |
 | BT5-092 | Nokia Shiramine | I | PARTIAL (dsl) | 8/15 | Cost reduction BLOCKED on missing when_*_digivolves_into form |
-| BT5-093 | Tai/Matt Tamer | AE | AUDITED-DRIFT (hybrid) | 12/15 | YAML BUG `target.of`→`target.owner`; ENGINE GAP G-AURA-GRANTED-SECURITY-KEYWORD |
+| BT5-093 | Tai/Matt Tamer | AE | IMPLEMENTED | 15/15 | Promoted to cards/bt5/BT5-093.yaml (2026-05-20); aura uses `target.owner`; G-AURA-GRANTED-SECURITY-KEYWORD closed (security_attack_keyword_bonus folds in granted keywords) |
 | BT8-097 | Crimson Blaze | AP | AUDITED-OK (engine) | 20/21 | Faithful; 1 ignored on G-FOR-EACH-DELETE-INDEX-SHIFT |
 | EX1-021 | MetalGarurumon | I | IMPLEMENTED | 13/13 | Phase 2 Track F: G-DSL-GAIN-MEMORY-FN + G-DSL-HAS-ON-DELETION-EFFECT both closed. Both clauses authored faithfully. |
 | EX1-068 | Ice Wall! | I | PARTIAL (dsl) | 6/6 | NEW G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT |
@@ -153,7 +153,7 @@ Pipeline: batch-implement-cards-rust-dsl
 
 ### Engine gaps
 - G-MOD-CANNOT-CHANGE-ATTACK-TARGET (AD1-012) — resolved 2026-05-08 via `ModifierType::CanNotSwitchAttackTarget` self inherited aura; covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ad1_012_inherited_blocks_attack_target_change_during_your_turn`
-- G-AURA-GRANTED-SECURITY-KEYWORD (BT5-093) — aura-granted SecurityAttackPlus not consumed by security loop
+- G-AURA-GRANTED-SECURITY-KEYWORD (BT5-093) — RESOLVED 2026-05-20. `Game::security_attack_keyword_bonus` now folds in `Modifiers::granted_security_attack_keyword_bonus`, which sums `SecurityAttackPlus`/`Minus` keyword entries from `Modifiers::permanent_keywords` (where `lower_aura.rs`'s `grant_declarative_keyword` installs aura grants). Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt5_093_aura_buffed_omnimon_pops_extra_security_card`.
 - G-SECURITY-ZONE-AURA-SOURCE (ST20-15) — security-zone aura sources not iterated by Group 6 tick
 
 ### Hybrid gaps (engine+DSL)

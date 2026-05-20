@@ -57,9 +57,11 @@ pub fn lower(
         false,
         false,
         None,
+        None,
     )
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn lower_with_formula(
     card: CardHandle,
     scope: CompiledScope,
@@ -72,10 +74,12 @@ pub fn lower_with_formula(
     optional: bool,
     when_playing_this: bool,
     when_any_ally_played: Option<CompiledPredicate>,
+    when_any_ally_digivolves_into: Option<CompiledPredicate>,
 ) -> Effect {
     let active_when = active_when.map(Arc::new);
     let condition = condition.map(Arc::new);
     let when_any_ally_played = when_any_ally_played.map(Arc::new);
+    let when_any_ally_digivolves_into = when_any_ally_digivolves_into.map(Arc::new);
     let amount_fn = amount_fn.map(Arc::new);
     let pay_cost: Arc<[CompiledStep]> = Arc::from(pay_cost);
     let runtime = StepRuntime::new(raw);
@@ -97,6 +101,7 @@ pub fn lower_with_formula(
     let condition_active_when = active_when.clone();
     let condition_condition = condition.clone();
     let condition_when_any = when_any_ally_played.clone();
+    let condition_when_digivolve = when_any_ally_digivolves_into.clone();
     builder = builder.condition(move |rctx| {
         if let Some(aw) = &condition_active_when {
             let subject = rctx
@@ -117,6 +122,19 @@ pub fn lower_with_formula(
                 return false;
             };
             if !eval_predicate(wap, rctx, PredicateSubject::Card(target)) {
+                return false;
+            }
+        }
+        // G-COST-REDUCTION-DIGIVOLVE-INTO: fire only for a DIGIVOLVE cost
+        // whose target (the card being digivolved into) matches.
+        if let Some(wdi) = &condition_when_digivolve {
+            if !rctx.cost_is_digivolve {
+                return false;
+            }
+            let Some(target) = rctx.cost_target_card else {
+                return false;
+            };
+            if !eval_predicate(wdi, rctx, PredicateSubject::Card(target)) {
                 return false;
             }
         }
@@ -145,19 +163,52 @@ pub fn lower_with_formula(
                 return 0;
             }
         }
+        if let Some(wdi) = &when_any_ally_digivolves_into {
+            if !rctx.cost_is_digivolve {
+                return 0;
+            }
+            let Some(target) = rctx.cost_target_card else {
+                return 0;
+            };
+            if !eval_predicate(wdi, rctx, PredicateSubject::Card(target)) {
+                return 0;
+            }
+        }
         amount_fn
             .as_ref()
             .map(|f| evaluate_amount(f, rctx, amount_runtime.raw()))
             .unwrap_or(0)
     });
     if !pay_cost.is_empty() {
-        builder = builder.pay_cost_fn(move |ctx| {
-            let mut bindings = crate::dsl_cards::bindings::Bindings::new();
-            matches!(
-                run_steps_with_runtime(pay_cost.as_ref(), ctx, &mut bindings, &runtime),
-                RunOutcome::Synchronous
-            )
-        });
+        // Special-case the "by suspending this Tamer" idiom: a `pay_cost` of
+        // a single self-targeted `suspend` must FAIL when the source is
+        // already suspended (the cost is unpayable → reduction does not
+        // apply). The generic `Suspend` step always reports success, so it
+        // cannot express the gate; route through `suspend_self_as_cost`,
+        // which returns `false` for an already-suspended source.
+        // `G-COST-REDUCTION-DIGIVOLVE-INTO` (BT5-092).
+        if pay_cost_is_self_suspend(&pay_cost) {
+            builder = builder.pay_cost_fn(move |ctx| ctx.suspend_self_as_cost());
+        } else {
+            builder = builder.pay_cost_fn(move |ctx| {
+                let mut bindings = crate::dsl_cards::bindings::Bindings::new();
+                matches!(
+                    run_steps_with_runtime(pay_cost.as_ref(), ctx, &mut bindings, &runtime),
+                    RunOutcome::Synchronous
+                )
+            });
+        }
     }
     builder.build()
+}
+
+/// True when `pay_cost` is exactly a single self-targeted `suspend` step —
+/// the "by suspending this Tamer" cost idiom.
+fn pay_cost_is_self_suspend(pay_cost: &[CompiledStep]) -> bool {
+    use digimon_dsl::compiled::CompiledBindingRef;
+    matches!(
+        pay_cost,
+        [CompiledStep::Suspend { target }]
+            if matches!(target, CompiledBindingRef::Source | CompiledBindingRef::SelfRef)
+    )
 }

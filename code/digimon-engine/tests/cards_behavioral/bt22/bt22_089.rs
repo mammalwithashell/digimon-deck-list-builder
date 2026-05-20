@@ -30,14 +30,11 @@
 //!
 //! # Known gaps tagged
 //!
-//! - `G-PLAY-COST-GTE` (NEW, mirror of CLOSED G-PLAY-COST-LTE): the
-//!   `play_cost_gte: 4` filter on Clause 1's `select_hand` cannot be
-//!   expressed in `PredicateSpec` today. The disjunction structure is
-//!   preserved in the YAML but the cost gate is silently dropped, making
-//!   the `select_hand` filter over-permissive on the cost axis. Negative
-//!   tests for "cost-3 CS Tamer must NOT appear in valid actions" are
-//!   `#[ignore = "pending: G-PLAY-COST-GTE"]`. See YAML header for the
-//!   trivial mirror-of-`play_cost_lte` fix.
+//! - `G-PLAY-COST-GTE` (CLOSED, mirror of CLOSED G-PLAY-COST-LTE): the
+//!   `play_cost_gte: 4` filter on Clause 1's `select_hand` is enforced —
+//!   `eval_card_fields` checks `card_data.play_cost >= n` and the
+//!   `select_hand` Phase-2b filter consults arbitrary CompiledPredicate
+//!   leaves. A cost-3 CS Tamer is excluded from the valid-action list.
 //! - `G-OPT-TRIGGERED` — `once_per_turn` is not enforced on triggered
 //!   effects today; not relevant here (no clause carries `once_per_turn`).
 //! - The "you may decline the entire Clause 1" outer optionality is modeled
@@ -524,17 +521,13 @@ fn bt22_089_clause1_no_eligible_tamer_in_hand_still_pays_cost() {
     );
 }
 
-/// Negative-2 (G-PLAY-COST-GTE BLOCKED): a CS-trait Tamer with printed cost
+/// Negative-2 (G-PLAY-COST-GTE CLOSED): a CS-trait Tamer with printed cost
 /// 3 must NOT appear in Clause 1's `select_hand` valid actions, because the
-/// printed text caps the filter at "play cost 4 or higher". Under the
-/// current DSL the `play_cost_gte: 4` predicate cannot be expressed; the
-/// cost gate is silently dropped and the cost-3 CS Tamer over-fires into
-/// the valid-action list.
-///
-/// When G-PLAY-COST-GTE closes (mirror of CLOSED G-PLAY-COST-LTE), this
-/// test must un-`#[ignore]` and pass.
+/// printed text caps the filter at "play cost 4 or higher". The
+/// `play_cost_gte: 4` predicate excludes the cost-3 CS Tamer from the
+/// valid-action list; the inner optional `select_hand` finds no eligible
+/// candidate and resolves with no pick, leaving CS-3 in hand.
 #[test]
-#[ignore = "pending: G-PLAY-COST-GTE — `play_cost_gte` predicate not in PredicateSpec; cost-3 CS Tamer over-fires into Clause 1 valid actions"]
 fn bt22_089_clause1_blocks_cs_tamer_below_cost_4() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT22_089_YAML)
@@ -794,22 +787,12 @@ fn bt22_089_clause2_on_play_trash_angel_card_qualifies() {
 /// Asserts: Mirei plays normally, no trash-cost / draw, hand size decreases
 /// by 1 (only Mirei moves to field; no draw triggered).
 ///
-/// Same precedent gap as `bt24_008_on_play_no_eligible_card_no_prompt`:
-/// the clause-level `count_gte` aggregate over hand is parsed and lowered
-/// but `eval_predicate_with_bindings` has no match arm for non-security /
-/// non-materials `count_gte` (only `security_count_*` and
-/// `materials_count_*` are wired in `dsl_cards/predicate.rs`). The gate
-/// silently passes and the clause over-fires; the inner `select_hand`
-/// filter is also accept-all (Phase 2b), so the optional select_hand
-/// quietly resolves with no pick — but the downstream `draw 2` still
-/// fires unconditionally. Net observation: hand size −1 (Mirei played)
-/// +2 (drawn) = +1 vs. before, instead of the expected −1.
-///
-/// When `dsl-select-hand-filter-phase2c` (Phase 2c filter enforcement /
-/// generic `count_gte` evaluation) lands, un-`#[ignore]` and the gate
-/// will block the over-fire.
+/// The clause-level `count_gte` aggregate over the hand zone IS evaluated by
+/// `eval_predicate_with_bindings` (`dsl_cards/predicate.rs` — `count_matching`
+/// supports the `Hand` zone). When no card in hand carries one of the five
+/// listed traits, the gate fails, the clause does not fire, and no draw
+/// happens.
 #[test]
-#[ignore = "pending: dsl-select-hand-filter-phase2c — generic count_gte aggregate over hand is not evaluated; Clause 2 over-fires draw 2 even when no eligible trash candidate exists. Same precedent as bt24_008_on_play_no_eligible_card_no_prompt."]
 fn bt22_089_clause2_on_play_no_eligible_trait_in_hand_no_prompt() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT22_089_YAML)

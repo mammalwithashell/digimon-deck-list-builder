@@ -135,6 +135,17 @@ fn make_filler_digimon(id: &str) -> CardData {
     card
 }
 
+/// Low-DP defender (3000 DP) — used by the negative inherited test so the
+/// BT17-027 attacker (DP 11000) survives the battle and remains on the field
+/// for the post-attack `is_suspended` assertion.
+fn make_weak_defender(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(3);
+    card.dp = Some(3000);
+    card
+}
+
 // ─── Section 1 — Structural assertions ──────────────────────────────────────
 
 #[test]
@@ -538,19 +549,20 @@ fn bt17_027_inherited_when_attacking_omnimon_top_unsuspends_self() {
 }
 
 /// Negative condition: stack has only MetalGarurumon (BT17-027) at top — name
-/// gate must block the unsuspend. **BLOCKED**: under DSL-GAP
-/// G-DSL-SOURCE-NAME-CONTAINS, the predicate is parsed but never evaluated;
-/// the clause fires anyway and incorrectly unsuspends the attacker.
+/// gate must block the unsuspend. `source_name_contains` is evaluated by the
+/// engine predicate path (`predicate.rs:284`), so the inherited [When
+/// Attacking] gate correctly blocks when the top card is not Omnimon-named.
+///
+/// Uses a low-DP defender so the BT17-027 attacker (DP 11000) survives the
+/// battle and is still on the field for the post-attack `is_suspended` check
+/// — the sister BT22-026 negative test gets this for free because BT22-026
+/// has DP 12000 vs an 11000-DP filler.
 #[test]
-#[ignore = "BLOCKED: G-DSL-SOURCE-NAME-CONTAINS — source_name_contains predicate is parsed and \
-            compiled but never evaluated in code/digimon-engine/src/dsl_cards/predicate.rs; \
-            the inherited [When Attacking] gate degenerates to true and incorrectly unsuspends \
-            the attacker even when top card is not Omnimon-named."]
 fn bt17_027_inherited_when_attacking_metalgarurumon_top_does_not_unsuspend() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-027")
         .expect("BT17-027 in embedded DSL pack")
-        .add_card(make_filler_digimon("DEF-FILLER"))
+        .add_card(make_weak_defender("DEF-FILLER"))
         .memory(10)
         .start();
     runner.game.turn_count = 1;

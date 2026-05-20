@@ -34,52 +34,30 @@
 #
 #   3. RebootSelfStaticEffect — inherited <Reboot>.
 #
-# ─── Implementation status / DSL gaps ───────────────────────────────────────
+# ─── Implementation status ───────────────────────────────────────────────────
 #
-# Clauses 1 and 3 lower cleanly to the existing DSL surface.
+# All three clauses lower cleanly to the DSL surface. The three DSL gaps that
+# previously blocked clause 2 (warp into WarGreymon) are all RESOLVED:
 #
-# Clause 2 (warp into WarGreymon) is NOT expressible on ST20-10's YAML. Three
-# independent DSL gaps stack on top of each other:
+#   (A) G-ALT-PATH-DIRECTION-INTO (RESOLVED) — `AltPathSpec` gained a
+#       `direction:` field. `direction: into` flips the semantic: the
+#       alt-path lives on the SOURCE card (the carrier permanent) and `from:`
+#       filters the destination hand-card candidate. Exactly the
+#       "this card may digivolve into X in hand" shape.
 #
-#   (A) [G-ALT-PATH-DIRECTION-INTO]  — NEW gap.
-#       The DSL's `alt_paths:` block describes sources that can digivolve
-#       INTO the carrier card (predicate `from:` filters the SOURCE
-#       permanent / hand card). It has no inverse form expressing "this card
-#       grants ITSELF the ability to digivolve into card X in hand". The
-#       natural alternative — adding an alt_path entry on WarGreymon's YAML —
-#       is out of scope for this card's task, and would not survive
-#       generalisation: the printed effect lives on the Lv3 source, gates on
-#       its own controller's board state, and only applies while ST20-10 is
-#       on field. Authoring it on WarGreymon would over-broadcast the path to
-#       every Lv3 controller (or require WarGreymon's YAML to know about
-#       every "warp into me" effect across the card pool).
+#   (B) G-ALT-PATH-CONDITION (RESOLVED) — `AltPathSpec` carries a
+#       `condition:` field, consumed by the Digivolve route in
+#       `dna_digivolve.rs`. The "while opponent has 10000+ DP Digimon OR your
+#       Tamers have 3+ colours" gate attaches here.
 #
-#   (B) [G-ALT-PATH-CONDITION]  — already filed (qa/dsl-vocab-gaps.md, BT24-016
-#       entry "G-ALT-PATH-CONDITION"). `AltPathSpec` has no `condition:` field
-#       (the struct is `#[serde(deny_unknown_fields)]`). Even if the inverse
-#       direction in (A) existed, the "while opponent has 10000+ DP Digimon
-#       OR your Tamers have 3+ colours" gate could not be attached.
+#   (C) G-DSL-DISTINCT-TAMER-COLORS (RESOLVED 2026-05-19) — the
+#       `distinct_tamer_colors_gte` predicate leaf counts the distinct colors
+#       across the observer's battle-area Tamers. The 3-tamer-colour disjunct
+#       of clause 2's gate uses it directly. The 10000+ DP disjunct uses
+#       `dp_gte` inside an `any_permanent` existential (evaluated for
+#       permanents via `eval_dp_constraints`).
 #
-#   (C) [G-DSL-DISTINCT-TAMER-COLORS]  — partial sibling of
-#       G-DSL-DISTINCT-TAMER-COLORS-FORMULA (qa/dsl-vocab-gaps.md, BT21-102
-#       entry). No PredicateSpec leaf exists for "you have N or more distinct
-#       Tamer colours on the field"; the existing `distinct_colors_count` is
-#       only available inside `FormulaSpec::per`, not as a BoolPredicate. The
-#       3-tamer-colour disjunct of clause 2's gate cannot be expressed inside
-#       any predicate. (Note: the 10000+ DP disjunct is also blocked by the
-#       existing G-PRED-DP-LTE engine gap — `dp_gte` is parsed but not
-#       evaluated; see EX10-010 precedent comment.)
-#
-# Until (A), (B), (C) all close, clause 2 is intentionally omitted rather
-# than authored as a misfiring approximation. The behavioral test file
-# documents the missing branches with `#[ignore]` markers tagged to the
-# gap entries above. This follows the BT5-092 / BT23-005 precedent of
-# omitting unimplementable clauses with extensive justification rather
-# than emitting silently-wrong YAML.
-#
-# Verdict: PARTIAL — clauses 1 (xros_req alt-source) and 3 (inherited
-# <Reboot>) implemented; clause 2 (warp into WarGreymon) BLOCKED on three
-# stacked DSL gaps.
+# Verdict: IMPLEMENTED — all three clauses authored.
 
 card: ST20-10
 name: Agumon
@@ -110,6 +88,44 @@ alt_paths:
         - { level_eq: 2, trait_has: Hero }
     cost: 0
 
+  # ─── Clause 2 — [Your Turn] Warp into WarGreymon for cost 4 ──────────────
+  #
+  # Printed: "[Your Turn] While your opponent has a Digimon with 10000 DP or
+  # more, or your Tamers have 3 or more total colors, this Digimon can
+  # digivolve into [WarGreymon] in the hand for a digivolution cost of 4,
+  # ignoring digivolution requirements."
+  #
+  # DCGO ST20_10.cs "Warp Digivolution" AddSelfDigivolutionRequirementStatic-
+  # Effect: source = self (this Digimon), target hand card name "WarGreymon",
+  # digivolutionCost 4, ignoreDigivolutionRequirement true, gated on
+  # ownerTurn && self-on-field && (opp DP>=10000 || own Tamers >=3 colours).
+  #
+  # `direction: into` — the alt-path lives on the SOURCE card (ST20-10) and
+  # `from:` filters the destination HAND card (the WarGreymon). `condition:`
+  # attaches the [Your Turn] + disjunctive board-state gate. `your_turn: true`
+  # also implies self-is-on-field is satisfied by the route lookup (the path
+  # only resolves when ST20-10 is the digivolve base permanent).
+  - kind: digivolve
+    direction: into
+    from:
+      zone: [hand]
+      of: you
+      name_is: "WarGreymon"
+    cost: 4
+    ignore_requirements: true
+    condition:
+      all_of:
+        - your_turn: true
+        - any_of:
+            # "your opponent has a Digimon with 10000 DP or more"
+            - any_permanent:
+                of: opponent
+                zone: [battle_area]
+                kind: digimon
+                dp_gte: 10000
+            # "or your Tamers have 3 or more total colors"
+            - distinct_tamer_colors_gte: 3
+
 effects:
   # ─── Inherited: <Reboot> ────────────────────────────────────────────────
   #
@@ -125,37 +141,5 @@ effects:
     kind: grant_keyword
     keyword: Reboot
     summary: "Inherited <Reboot>"
-
-  # ─── Clause 2 — [Your Turn] Warp into WarGreymon for cost 4 ──────────────
-  #
-  # BLOCKED on stacked DSL gaps (A) G-ALT-PATH-DIRECTION-INTO,
-  # (B) G-ALT-PATH-CONDITION, (C) G-DSL-DISTINCT-TAMER-COLORS. See file
-  # header for full discussion.
-  #
-  # Concrete YAML shape that would lower IF the missing primitives existed
-  # (authored on ST20-10 once (A) lands, gated by (B) once `condition:` is
-  # added to AltPathSpec, with the disjunct expressed via (C)):
-  #
-  #   alt_paths:
-  #     - kind: activated_digivolve
-  #       direction: into            # NEW: requires (A) — flip default direction
-  #       into:                       # NEW: target hand card filter
-  #         zone: [hand]
-  #         of: you
-  #         name_is: "WarGreymon"
-  #       cost: 4
-  #       ignore_requirements: true
-  #       condition:                  # NEW: requires (B)
-  #         all_of:
-  #           - your_turn: true
-  #           - any_of:
-  #               - any_permanent:
-  #                   of: opponent
-  #                   zone: [battle_area]
-  #                   kind: digimon
-  #                   dp_gte: 10000   # also needs G-PRED-DP-LTE evaluation
-  #               - distinct_tamer_colours_gte: 3   # NEW: requires (C)
-  #
-  # Until those primitives exist, this clause is omitted. The behavioral
-  # test asserts the structural shape today (alt_paths.len() == 2) and
-  # carries `#[ignore]` placeholders for the warp behaviour.
+  # Clause 2 (warp into WarGreymon) is authored as the third entry in the
+  # `alt_paths:` block above (`direction: into`), not as an `effects:` clause.
