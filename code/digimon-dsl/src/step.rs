@@ -1774,20 +1774,43 @@ pub struct ScheduleDelayedStep {
     pub body: Vec<StepSpec>,
 }
 
+/// Which turn boundary should trigger the provenance deletion. Defaults to
+/// `your_turn` (end of the scheduling player's turn), which is the behaviour
+/// from Task 11 (EX11-022, EX11-061). P-165 ShoeShoemon needs
+/// `opponents_turn` ("at the end of your opponent's turn, delete that token").
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DeleteTurnBoundary {
+    #[default]
+    YourTurn,
+    OpponentsTurn,
+}
+
 /// `schedule_delete_played_at_turn_end:` args — PUPPETS-G003. Schedules the
 /// permanent named by `binding` to be deleted at the end of the current turn,
 /// keyed to its stable identity (it is deleted even if battle-area indices
 /// shift; a no-op if it already left). `binding` must name a `bind_as` from a
-/// preceding free-play step (`play_union_bound_free` / `play_from_hand_free`).
+/// preceding free-play step (`play_union_bound_free` / `play_from_hand_free`
+/// / `play_token`).
 ///
 /// Consumed by "At turn end, delete the Digimon this effect played" riders
-/// (EX11-022 Karakurumon, EX11-061 Mirai Kinosaki).
+/// (EX11-022 Karakurumon, EX11-061 Mirai Kinosaki) and by "at the end of your
+/// opponent's turn, delete that token" riders (P-165 ShoeShoemon).
+/// Use `at: opponents_turn` for the latter; omit `at` (or write `at: your_turn`)
+/// for the former — the default preserves Task 11 behaviour.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ScheduleDeletePlayedAtTurnEndArgs {
     /// Name of the permanent binding to delete at turn end. Must name a
     /// `bind_as` declared by an earlier free-play step in the same body.
     pub binding: String,
+    /// Which turn boundary triggers the deletion. Defaults to `your_turn`.
+    #[serde(default, skip_serializing_if = "is_default_turn_boundary")]
+    pub at: DeleteTurnBoundary,
+}
+
+fn is_default_turn_boundary(v: &DeleteTurnBoundary) -> bool {
+    matches!(v, DeleteTurnBoundary::YourTurn)
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

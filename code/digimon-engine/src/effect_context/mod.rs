@@ -909,6 +909,21 @@ impl<'a> EffectContext<'a> {
     /// silent no-op. A handle that does not currently point at a live
     /// permanent is ignored (nothing to schedule).
     pub fn schedule_delete_at_end_of_turn(&mut self, permanent: PermanentHandle) {
+        self.schedule_provenance_deletion(permanent, false);
+    }
+
+    /// PUPPETS-G016 — schedule a deletion of `permanent` at the end of the
+    /// **opponent's** turn, keyed to the permanent's *stable identity*.
+    ///
+    /// Used by P-165 ShoeShoemon ("At the end of your opponent's turn, delete
+    /// that token"). Analogous to `schedule_delete_at_end_of_turn` but the
+    /// deletion fires from `rotate_turn_player` rather than
+    /// `fire_end_of_your_turn`.
+    pub fn schedule_delete_at_end_of_opponents_turn(&mut self, permanent: PermanentHandle) {
+        self.schedule_provenance_deletion(permanent, true);
+    }
+
+    fn schedule_provenance_deletion(&mut self, permanent: PermanentHandle, opponents_turn: bool) {
         let Some(top) = self
             .game
             .player(permanent.player)
@@ -919,12 +934,15 @@ impl<'a> EffectContext<'a> {
             return;
         };
         let token = self.game.provenance_token_for_card(top);
-        self.game
-            .scheduled_provenance_deletions
-            .push(crate::scheduled_effects::ScheduledProvenanceDeletion {
-                token,
-                controller: self.player,
-            });
+        let entry = crate::scheduled_effects::ScheduledProvenanceDeletion {
+            token,
+            controller: self.player,
+        };
+        if opponents_turn {
+            self.game.scheduled_provenance_deletions_opp.push(entry);
+        } else {
+            self.game.scheduled_provenance_deletions.push(entry);
+        }
     }
 
     pub fn place_self_as_delay_option_permanent(&mut self) {

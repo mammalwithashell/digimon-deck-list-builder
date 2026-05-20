@@ -528,6 +528,14 @@ pub struct Game {
     /// played permanent that already left is a silent no-op.
     pub scheduled_provenance_deletions:
         Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
+    /// PUPPETS-G016 — provenance-keyed deletions scheduled for the end of the
+    /// **opponent's** turn. Mirror of `scheduled_provenance_deletions` but
+    /// drained from `rotate_turn_player` (after `EndOfOpponentsTurn` observers
+    /// and scheduled-effect drains) rather than from `fire_end_of_your_turn`.
+    /// Used by P-165 ShoeShoemon ("At the end of your opponent's turn, delete
+    /// that token").
+    pub scheduled_provenance_deletions_opp:
+        Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
     /// Continuation for a delayed-option lifecycle paused by a DelayEffect or
     /// delete/replacement selection. Re-entered from `resolve_selection`.
     pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
@@ -731,6 +739,7 @@ impl Game {
             scheduled_effects: Vec::new(),
             scheduled_drain_tail: None,
             scheduled_provenance_deletions: Vec::new(),
+            scheduled_provenance_deletions_opp: Vec::new(),
             pending_delayed_option_lifecycle: None,
             pending_delayed_option_lifecycle_stack: Vec::new(),
             until_condition_dirty: false,

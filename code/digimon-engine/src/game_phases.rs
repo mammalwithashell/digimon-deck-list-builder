@@ -297,6 +297,14 @@ impl Game {
             EffectTiming::EndOfOpponentsNextTurn,
         );
 
+        // PUPPETS-G016: drain provenance-keyed deletions scheduled for
+        // the end of the opponent's turn ("At the end of your opponent's
+        // turn, delete that token" — P-165 ShoeShoemon). Runs after the
+        // printed EndOfOpponentsTurn observers and scheduled-effect drains.
+        // Only drains entries whose controller != ending_player (i.e. effects
+        // scheduled by the ending player's opponents that fire at this boundary).
+        crate::scheduled_effects::fire_scheduled_provenance_deletions_opp(self, ending_player);
+
         if let Some(floor) = self.modifiers.end_turn_min_memory_floor(ending_player) {
             let floor = floor.clamp(i16::MIN as i32, i16::MAX as i32) as i16;
             if self.memory < floor {

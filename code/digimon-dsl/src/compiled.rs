@@ -1206,10 +1206,14 @@ pub enum CompiledStep {
         body: Vec<CompiledStep>,
     },
     /// PUPPETS-G003 — schedule the permanent named by `binding` for deletion
-    /// at the end of the current turn, keyed to its stable provenance
-    /// identity. `binding` names a `bind_as` from a preceding free-play step.
+    /// at the end of the designated turn boundary, keyed to its stable
+    /// provenance identity. `binding` names a `bind_as` from a preceding
+    /// free-play step. `at_opponents_turn` selects the opponent-turn-end drain
+    /// (P-165); `false` (default) selects the your-turn-end drain (EX11-022,
+    /// EX11-061).
     ScheduleDeletePlayedAtTurnEnd {
         binding: String,
+        at_opponents_turn: bool,
     },
     PlaceSelfAsDelayOption,
     LinkToOwnDigimon {

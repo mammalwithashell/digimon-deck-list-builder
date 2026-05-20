@@ -366,6 +366,10 @@ These step verbs are only legal inside a `kind: replacement` clause's `process:`
 
 `schedule_delete_played_at_turn_end: { binding: <name> }` — for card text "At turn end, delete the Digimon this effect played." `binding` must name a `bind_as` from a preceding free-play step (`play_union_bound_free`, `play_from_hand_free`, `play_token`, …). The deletion is keyed to the played permanent's stable provenance identity, so it hits the right permanent even after battle-area indices shift, and is a silent no-op if that permanent already left the battle area (or the optional play was declined). Drained in `end_turn` after the `EndOfYourTurn` observers, as the controller's own effect. Canonical fixtures: EX11-022 Karakurumon, EX11-061 Mirai Kinosaki.
 
+Optional `at` field selects the turn boundary:
+- `at: your_turn` (default, matches the behaviour above — omit for EX11-022 / EX11-061 style).
+- `at: opponents_turn` — deletion fires at the end of the **opponent's** turn instead (`rotate_turn_player` drain, after `EndOfOpponentsTurn` observers). Used for card text "At the end of your opponent's turn, delete that token." Canonical fixture: P-165 ShoeShoemon.
+
 ## 6. Predicate and Formula API
 
 Predicates are AND-joined by default:

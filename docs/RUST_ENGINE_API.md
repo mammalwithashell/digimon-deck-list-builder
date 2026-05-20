@@ -485,6 +485,7 @@ for the full re-evaluation contract.
 ctx.schedule_delayed(when: EffectTiming, body: Effect)
 ctx.schedule_delayed_with_runtime(when, body, captured_bindings)
 ctx.schedule_delete_at_end_of_turn(permanent: PermanentHandle)
+ctx.schedule_delete_at_end_of_opponents_turn(permanent: PermanentHandle)
 ctx.place_self_as_delay_option_permanent()
 ```
 
@@ -497,12 +498,12 @@ selections after the schedule drains. Use this for "at the end of your next
 turn, …" and Delay Option bodies.
 
 `schedule_delete_at_end_of_turn` (PUPPETS-G003) schedules a deletion of
-*exactly* `permanent` at the end of the current turn — for card text "At turn
+*exactly* `permanent` at the end of the **current** turn — for card text "At turn
 end, delete the Digimon this effect played" (EX11-022 Karakurumon, EX11-061
 Mirai Kinosaki). Pass the `PermanentHandle` returned by a free-play call
-(`play_from_hand_free`, `play_union_bound_free`, …) immediately, while the
-handle is still valid: the method captures the permanent's stable
-`ProvenanceToken` (its top card's identity) and pushes a
+(`play_from_hand_free`, `play_union_bound_free`, `play_token` bind_as, …)
+immediately, while the handle is still valid: the method captures the
+permanent's stable `ProvenanceToken` (its top card's identity) and pushes a
 `ScheduledProvenanceDeletion` onto `Game.scheduled_provenance_deletions`. The
 queue is drained by `scheduled_effects::fire_scheduled_provenance_deletions`
 from `fire_end_of_your_turn` (after the `EndOfYourTurn` observers). At drain
@@ -513,6 +514,20 @@ deletion is keyed to a provenance identity, not a battle-area index, it
 targets the right permanent even after other permanents enter or leave and
 shift indices. A handle that no longer points at a live permanent is ignored
 (nothing is scheduled).
+
+`schedule_delete_at_end_of_opponents_turn` (PUPPETS-G016) is the opponent-turn
+variant — for card text "At the end of your opponent's turn, delete that token"
+(P-165 ShoeShoemon). Pushes to `Game.scheduled_provenance_deletions_opp`; drained
+in `rotate_turn_player(ending_player)` only for entries whose `controller !=
+ending_player` (i.e., when the ending player is the controller's opponent). The
+provenance-identity guarantees are identical to the your-turn variant.
+
+In DSL YAML, use the `at:` field on `schedule_delete_played_at_turn_end`:
+```yaml
+- schedule_delete_played_at_turn_end:
+    binding: <name>
+    at: opponents_turn   # omit or write `at: your_turn` for the default
+```
 
 ### OnDeletion cause accessors
 

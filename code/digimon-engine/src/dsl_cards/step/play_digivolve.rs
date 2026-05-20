@@ -222,15 +222,18 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             true
         }
 
-        // ── Provenance-bound turn-end self-delete (PUPPETS-G003) ──────────
-        CompiledStep::ScheduleDeletePlayedAtTurnEnd { binding } => {
+        // ── Provenance-bound turn-end self-delete (PUPPETS-G003 / G016) ──
+        CompiledStep::ScheduleDeletePlayedAtTurnEnd {
+            binding,
+            at_opponents_turn,
+        } => {
             // Resolve the permanent binding produced by a preceding free-play
-            // step (`play_union_bound_free` / `play_from_hand_free` bind_as).
-            // `schedule_delete_at_end_of_turn` captures the permanent's stable
+            // step (`play_union_bound_free` / `play_from_hand_free` /
+            // `play_token` bind_as). Captures the permanent's stable
             // `ProvenanceToken` now, so the turn-end deletion hits the right
             // permanent even after battle-area indices shift. Missing /
-            // wrong-kind binding: silent no-op, per the module strictness
-            // convention (e.g. the optional play was declined).
+            // wrong-kind binding: silent no-op (e.g. the optional play was
+            // declined).
             if let Some(ResolvedBinding::Permanent(handle)) =
                 resolve_binding_ref(
                     &digimon_dsl::compiled::CompiledBindingRef::Named(binding.clone()),
@@ -238,7 +241,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     bindings,
                 )
             {
-                ctx.schedule_delete_at_end_of_turn(handle);
+                if *at_opponents_turn {
+                    ctx.schedule_delete_at_end_of_opponents_turn(handle);
+                } else {
+                    ctx.schedule_delete_at_end_of_turn(handle);
+                }
             }
             true
         }

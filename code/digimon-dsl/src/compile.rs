@@ -2209,6 +2209,7 @@ fn compile_step(
         },
         S::ScheduleDeletePlayedAtTurnEnd(a) => CompiledStep::ScheduleDeletePlayedAtTurnEnd {
             binding: a.binding.clone(),
+            at_opponents_turn: matches!(a.at, crate::step::DeleteTurnBoundary::OpponentsTurn),
         },
         S::PlaceSelfAsDelayOption(_) => CompiledStep::PlaceSelfAsDelayOption,
         S::LinkToOwnDigimon(a) => {

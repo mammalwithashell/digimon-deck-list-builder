@@ -200,6 +200,43 @@ pub fn fire_scheduled_provenance_deletions(game: &mut Game) {
     let queued = std::mem::take(&mut game.scheduled_provenance_deletions);
     let mut iter = queued.into_iter();
     while let Some(entry) = iter.next() {
+        let Some(EventSubject::Permanent(handle)) =
+            game.resolve_provenance_token(entry.token)
+        else {
+            continue;
+        };
+        game.delete_permanent_with_cause(handle, ReplacementCause::OwnEffect);
+        if game.pending_selection.is_some() {
+            game.scheduled_provenance_deletions = iter.collect();
+            return;
+        }
+    }
+}
+
+/// PUPPETS-G016 — drain provenance-keyed deletions scheduled for the end of
+/// the **opponent's** turn. Called from `rotate_turn_player(ending_player)`
+/// after `EndOfOpponentsTurn` observers and scheduled-effect drains.
+///
+/// `ending_player` is the player whose turn just ended. Only entries whose
+/// `controller != ending_player` are drained in this pass — those are the
+/// effects scheduled by non-ending players (i.e. the opponents), which fired
+/// "at the end of *your opponent's* turn" relative to those controllers.
+/// Entries belonging to the ending player itself are left queued for their
+/// own opponent's turn (i.e. the next player's turn-end).
+pub fn fire_scheduled_provenance_deletions_opp(game: &mut Game, ending_player: PlayerId) {
+    use crate::replacement::ReplacementCause;
+
+    let queued = std::mem::take(&mut game.scheduled_provenance_deletions_opp);
+    let mut still_pending: Vec<ScheduledProvenanceDeletion> = Vec::new();
+    let mut iter = queued.into_iter();
+    while let Some(entry) = iter.next() {
+        // Only fire for entries whose controller is an opponent of the ending
+        // player — i.e. entries where ending_player is the "opponent" from
+        // the controller's perspective.
+        if entry.controller == ending_player {
+            still_pending.push(entry);
+            continue;
+        }
         // Resolve the stable identity to a current battle-area permanent.
         // Anything else (card moved to trash/hand/etc., or unresolvable) is a
         // no-op — the played Digimon already left.
@@ -210,10 +247,15 @@ pub fn fire_scheduled_provenance_deletions(game: &mut Game) {
         };
         game.delete_permanent_with_cause(handle, ReplacementCause::OwnEffect);
         if game.pending_selection.is_some() {
-            // A replacement parked a selection. Preserve the not-yet-processed
-            // entries so the selection-resolution path can re-drive them.
-            game.scheduled_provenance_deletions = iter.collect();
+            // A replacement parked a selection. Preserve not-yet-processed
+            // entries (including those we deferred above) so the
+            // selection-resolution path can re-drive them.
+            still_pending.extend(iter);
+            game.scheduled_provenance_deletions_opp = still_pending;
             return;
         }
     }
+    // Restore entries that are waiting for a future opponent-turn boundary.
+    game.scheduled_provenance_deletions_opp = still_pending;
 }
+
