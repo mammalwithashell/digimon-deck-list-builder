@@ -14,8 +14,8 @@
 //! # Patterns this test covers
 //! - Option [Main] with a visible sacrifice selection.
 //! - Follow-up visible own purple Digimon unsuspend selection.
-//! - Security free-play from trash is blocked pending PUPPETS-G030 On Play
-//!   suppression provenance.
+//! - Security free-play from trash with played-Digimon [On Play] suppression
+//!   (PUPPETS-G030).
 
 use std::sync::Arc;
 
