@@ -205,7 +205,7 @@ Goal: play Digimon matches inside the headless engine to generate win/loss and p
 - Observation shape comes from the selected observation layout, not from `digimon_engine.TENSOR_SIZE`.
 - The default pilot observation layout is `standard_lite_v2`, currently `8320` floats.
 - `digimon_engine.TENSOR_SIZE` remains the `standard_compact_v1` compatibility constant, currently `1375` floats.
-- Action space comes from `digimon_engine.ACTION_SPACE_SIZE` and is currently `2168`.
+- Action space comes from `digimon_engine.ACTION_SPACE_SIZE` and is currently `2192`.
 
 ### MaskableRecurrentPPO (Custom LSTM)
 
@@ -279,7 +279,7 @@ Observation/action spaces:
 - Default selected layout: `standard_lite_v2`, currently `8320`.
 - Compact compatibility layout: `standard_compact_v1`, currently `1375`.
 - Action: `Discrete(ACTION_SPACE_SIZE)`.
-- Current `ACTION_SPACE_SIZE`: `2168`.
+- Current `ACTION_SPACE_SIZE`: `2192`.
 
 Profile metadata:
 

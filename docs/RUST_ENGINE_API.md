@@ -59,7 +59,7 @@ code/digimon-engine/
 │   ├── tensor.rs               # Compact compatibility tensor (standard_compact_v1, 1375 floats)
 │   ├── tensor_v2_lite.rs       # Default pilot observation writer (standard_lite_v2, 8320 floats)
 │   ├── tensor_profiles/        # Profile layout metadata and card/scalar positions
-│   ├── action/                 # Action space + mask (2168 actions, matches Python)
+│   ├── action/                 # Action space + mask (2192 actions, matches Python)
 │   ├── cards.rs                # CardEffectRegistry + registration glue
 │   ├── cards/test_cards.rs     # TEST-001..005 — hand-written examples
 │   └── debug_runner.rs         # Deterministic test harness
