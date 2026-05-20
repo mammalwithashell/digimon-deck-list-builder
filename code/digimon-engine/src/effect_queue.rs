@@ -630,10 +630,66 @@ impl Game {
 
             if bundle.len() == 1 {
                 let idx = bundle[0];
-                // Single trigger — auto-fire into its body. Optionality is
-                // exposed by the body's first actionable pending selection;
-                // this avoids prompting for optional effects whose filters
-                // produce no legal follow-up.
+                // Single trigger with activation_cost_fn + optional: true →
+                // expose a TriggerOrder selection (with PASS) BEFORE running
+                // the cost closure. This lets the player decline the
+                // activation cost itself (e.g. "By returning this Tamer to
+                // the bottom of the deck, you may …"). Without this branch
+                // the cost would fire automatically and the player could
+                // not avoid it.
+                //
+                // For optional triggers without activation_cost_fn,
+                // optionality is exposed by the body's first actionable
+                // pending selection; auto-fire is intentional there so we
+                // don't prompt when filters produce no legal follow-up.
+                let needs_pre_cost_prompt = {
+                    let qe = &self.effect_queue[idx];
+                    if qe.is_optional {
+                        let card_id = qe.card_id.clone();
+                        let source_card = qe.source_card;
+                        let source_permanent = qe.source_permanent;
+                        let source_kind = qe.source_kind;
+                        let controller = qe.controller;
+                        let effect_slot = qe.effect_slot as usize;
+                        if let Some(effects) = self.effects_for_card(&card_id, source_card) {
+                            if let Some(eff) = effects.get(effect_slot) {
+                                // Only install a pre-cost prompt when the
+                                // effect has an activation_cost AND the
+                                // condition (if any) currently passes. If the
+                                // condition would suppress the effect anyway,
+                                // auto-fire so it silently skips — no prompt.
+                                let has_cost = eff.activation_cost_fn.is_some();
+                                let condition_passes = if has_cost {
+                                    if let Some(cond) = &eff.condition {
+                                        let ctx = EffectContext::new_with_source_kind(
+                                            self,
+                                            source_card,
+                                            source_permanent,
+                                            source_kind,
+                                            controller,
+                                        );
+                                        cond(&ctx.as_read())
+                                    } else {
+                                        true
+                                    }
+                                } else {
+                                    false
+                                };
+                                has_cost && condition_passes
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                };
+                if needs_pre_cost_prompt {
+                    self.install_trigger_order_selection(chooser, &bundle, true);
+                    return;
+                }
                 let qe = self
                     .effect_queue
                     .remove(idx)
