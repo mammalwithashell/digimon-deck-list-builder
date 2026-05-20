@@ -928,7 +928,8 @@ impl Game {
                 }
 
                 match resume.kind {
-                    DelayedOptionLifecycleResumeKind::Event { .. } => continue,
+                    DelayedOptionLifecycleResumeKind::Event { .. }
+                    | DelayedOptionLifecycleResumeKind::MainPhaseActivation => continue,
                     _ => {
                         let triggers = Self::delay_lifecycle_triggers(resume.kind);
                         if self
@@ -968,7 +969,8 @@ impl Game {
                     self.continue_end_turn_after_delays(ending_player);
                     return;
                 }
-                DelayedOptionLifecycleResumeKind::Event { .. } => continue,
+                DelayedOptionLifecycleResumeKind::Event { .. }
+                | DelayedOptionLifecycleResumeKind::MainPhaseActivation => continue,
             }
         }
     }
@@ -980,6 +982,9 @@ impl Game {
                 &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn]
             }
             DelayedOptionLifecycleResumeKind::Event { .. } => &[],
+            DelayedOptionLifecycleResumeKind::MainPhaseActivation => {
+                &[DelayTrigger::MainPhaseActivated]
+            }
         }
     }
 
@@ -1019,8 +1024,9 @@ impl Game {
     /// given `(owner, bottom_card_index)` key and `trash_on_turn`. Returns
     /// the current `PermanentHandle` (indices may have shifted since the
     /// key was captured). Phase 8 Task 3 helper for
-    /// `resolve_delayed_options`.
-    fn find_delayed_permanent_by_key(
+    /// `resolve_delayed_options`; also used by the standard `<Delay>`
+    /// `[Main]`-phase activation path in `option_lifecycle.rs`.
+    pub(crate) fn find_delayed_permanent_by_key(
         &self,
         key: (PlayerId, u16),
         turn: u16,

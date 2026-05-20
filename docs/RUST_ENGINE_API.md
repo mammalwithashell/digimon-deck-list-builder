@@ -2115,7 +2115,7 @@ Options are *ephemeral*: they do not normally live on the field. The exceptions 
 | Subtype | Disposition | Timing(s) fired |
 |---------|-------------|-----------------|
 | **Standard** | Body drains, then self-trashes via `WhenWouldBeTrashed` (cause `Cost`). | `OnUseOption` (global) → `OptionMain` (this card) → cleanup. |
-| **Delay** | Body drains, card parks on field as `OptionState::Delayed`. At the scheduled turn end, a `DelayEffect` fires and the card trashes via `WhenWouldLeaveBattleArea` + `WhenWouldBeDeleted`. | `OnUseOption` → `OptionMain` (install delay) → later: `DelayEffect` → leave/deleted replacement windows → trash. |
+| **Delay** | Body drains, card parks on field as `OptionState::Delayed`. **Standard `<Delay>`** (`DelayTrigger::MainPhaseActivated`) is activated by a player-visible `[Main]`-phase `FIELD_EFFECT` action — `Game::activate_delayed_option_main` runs the `DelayEffect` body, then trashes the Option as the cost (PUPPETS-G009, RULES_CONTEXT 16-16). Engine-scheduled triggers (`EndOfThisTurn` / `EndOfYourNextTurn` / `StartOfYourNextTurn` / `OnEvent`) instead auto-fire at the matching turn-scan / event. The card trashes via `WhenWouldLeaveBattleArea` + `WhenWouldBeDeleted` in all cases. | `OnUseOption` → `OptionMain` (install delay) → later: `DelayEffect` (player `[Main]` action or scheduled scan) → leave/deleted replacement windows → trash. |
 | **Plug-In (Link)** | Body drains, player selects a legal host, card attaches sideways into `host.linked_cards`. `OnLink` fires globally after attach. Effects on the attached card flagged `.linked()` fire off the host's timings. | `OnUseOption` → `OptionMain` (runs `.link(cost, filter)` mask + prompt + attach) → `OnLink` (global). |
 | **Training** | Body drains, card parks on field as `OptionState::Training`. At the owner's next breeding-hatch, an `OnTrainingTrash` observer fires on the specific Training permanent being trashed, then `delete_permanent_with_cause(Cost)` routes it to the trash. | `OnUseOption` → `OptionMain` → later: `OnTrainingTrash` → deletion. |
 
@@ -2247,7 +2247,7 @@ digivolution card, performs the normal draw and rule check, then fires
 | `OnUseOption` | Global observer | Any Option card is played (both players' listeners hear it). |
 | `OnOptionTrashed` | Global observer | A persistent field Option is trashed through `Game::trash_field_option`; `EffectContext::option_last_field_state()` exposes the last lifecycle state. |
 | `OptionMain` | This Option | The played Option's own body — pre-existing variant, now dispatched. |
-| `DelayEffect` | This Option | Scheduled turn-end landing for a `Delayed` Option. |
+| `DelayEffect` | This Option | A `Delayed` Option's body. Standard `<Delay>` (`DelayTrigger::MainPhaseActivated`) fires via the controller's `[Main]`-phase activation action (`Game::activate_delayed_option_main`); scheduled triggers fire at the matching turn-scan / event. |
 | `OnLink` | Global observer | After a Plug-In attaches to its host. |
 | `OnLinkedCardTrashed` | Global observer | A linked card leaves its host via trash (host death, return-to-hand, return-to-deck). Mirrors DCGO `OnLinkCardDiscarded`. |
 | `OnUnlink` | Global observer | **Reserved** for clean unlink paths. Rust-engine-specific; DCGO folds unlinks into `OnLinkCardDiscarded` + zone checks. Not yet fired. |
@@ -2262,7 +2262,16 @@ Effect::new(card, EffectTiming::None)
     .process(|ctx| { ctx.gain_memory(2); })
     .build();
 
-// Delay Option body — trigger is EndOfThisTurn | EndOfYourNextTurn.
+// Standard <Delay> Option body — player-visible [Main]-phase activation.
+// `DelayTrigger::MainPhaseActivated` parks the Option; the controller takes a
+// FIELD_EFFECT action on a later main phase to trash it and run the body.
+Effect::new(card, EffectTiming::None)
+    .delay(DelayTrigger::MainPhaseActivated)
+    .process(|ctx| { ctx.gain_memory(2); })
+    .build();
+
+// Engine-scheduled Delay body — auto-fires at the turn-scan landing.
+// Trigger is EndOfThisTurn | EndOfYourNextTurn | StartOfYourNextTurn | OnEvent.
 Effect::new(card, EffectTiming::None)
     .delay(DelayTrigger::EndOfYourNextTurn)
     .process(|ctx| { ctx.draw(2); })

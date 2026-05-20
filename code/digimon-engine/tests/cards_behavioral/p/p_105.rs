@@ -32,7 +32,9 @@ use digimon_dsl::compiled::{
     CompiledPlayerRef, CompiledScope, CompiledStackPosition, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+use digimon_engine::action::space::{
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, PLAY_HAND_START,
+};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -322,7 +324,7 @@ fn p_105_playing_main_places_it_as_delayed_option() {
     assert!(matches!(
         placed.option_state,
         OptionState::Delayed {
-            trigger: DelayTrigger::EndOfYourNextTurn,
+            trigger: DelayTrigger::MainPhaseActivated,
             ..
         }
     ));
@@ -361,7 +363,7 @@ fn p_105_security_check_places_self_in_battle_area_as_delay_option() {
     assert!(matches!(
         placed.option_state,
         OptionState::Delayed {
-            trigger: DelayTrigger::EndOfYourNextTurn,
+            trigger: DelayTrigger::MainPhaseActivated,
             ..
         }
     ));
@@ -375,7 +377,7 @@ fn p_105_delay_clause_filters_yellow_digimon_and_reduces_cost_by_2() {
         CompiledClause::Declarative(CompiledDeclarativeClause::Delay {
             trigger, process, ..
         }) => {
-            assert_eq!(*trigger, CompiledTiming::EndOfYourNextTurn);
+            assert_eq!(*trigger, CompiledTiming::Delayed);
             process
         }
         other => panic!("clause 1 must be a standard Delay; got {other:?}"),
@@ -567,10 +569,151 @@ fn p_105_delay_target_pick_can_be_declined_with_pass() {
     );
 }
 
+/// PUPPETS-G009 — after the placing turn, P-105's `<Delay>` is a player-
+/// visible `[Main]`-phase action. The mask exposes the `FIELD_EFFECT`
+/// activation only after the placing turn; PASS stays legal. Taking the
+/// action trashes P-105 as the cost and runs the digivolve body.
 #[test]
-#[ignore = "pending: Standard Delay main-phase activation action in docs/RUST_ENGINE_GAPS.md"]
-fn p_105_delay_should_be_player_visible_main_activation_after_placing_turn() {
-    todo!(
-        "After the placing turn, P-105 should remain in battle area until its controller chooses a Main-phase Delay action from the action mask; PASS should leave it in play."
+fn p_105_delay_is_player_visible_main_activation_after_placing_turn() {
+    let yaml = p_105_yaml();
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("P-105 YAML parses")
+        .add_card(digimon("YELLOW-BASE", CardColor::Yellow, 3))
+        .add_card(yellow_evo("YELLOW-EVO", 3))
+        .add_card(filler("FILL"))
+        .hand(0, &["YELLOW-EVO"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+
+    let delay_perm = runner.place_on_field(0, "P-105", Some(0));
+    let carrier = runner.place_on_field(0, "YELLOW-BASE", Some(0));
+    // Mark P-105 as a standard <Delay> placed on the current turn.
+    let placing_turn = runner.game.turn_count;
+    runner.game.player_mut(0).battle_area[delay_perm.index as usize].option_state =
+        OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: DelayTrigger::MainPhaseActivated,
+            placed_on_turn: placing_turn,
+        };
+    let delay_idx = delay_perm.index as usize;
+    let bit = (FIELD_EFFECT_START
+        + delay_idx as u16 * EFFECTS_PER_PERMANENT
+        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize;
+
+    // Same turn it was placed: the Delay activation is NOT legal (16-16-3).
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[bit],
+        0.0,
+        "P-105 <Delay> must not be activatable on the placing turn"
     );
+
+    // Advance to the controller's next main phase.
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.game.enter_main_phase();
+    runner.game.set_memory(10);
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(mask[bit], 1.0, "P-105 <Delay> activation is a legal action");
+    assert_eq!(mask[PASS as usize], 1.0, "declining stays legal");
+
+    // Take the activation — the digivolve body installs its selections.
+    runner.game.decode_action(bit as u16, 0);
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
+    let target_action = runner.pending_selection_view().unwrap().valid_action_ids[0];
+    runner
+        .execute_action(0, target_action)
+        .expect("choose Digimon to digivolve");
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Hand));
+    let evo_action = runner.pending_selection_view().unwrap().valid_action_ids[0];
+    runner
+        .execute_action(0, evo_action)
+        .expect("choose yellow Digimon evolution card");
+    runner.game.drain_effect_queue();
+
+    // Body resolved: the carrier digivolved with cost reduced by 2. The
+    // P-105 Option was trashed as the cost, so the carrier's field index may
+    // have shifted — find it by Digimon kind rather than the stale handle.
+    let _ = carrier;
+    let carrier_top = runner
+        .game
+        .players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.is_digimon(&runner.game.card_data))
+        .expect("base Digimon remains in battle area")
+        .top_card()
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(carrier_top, "YELLOW-EVO", "Delay digivolve resolved");
+    assert_eq!(
+        runner.memory(),
+        9,
+        "printed evo cost 3 reduced by 2 pays only 1 memory"
+    );
+    // P-105 is trashed as the activation cost.
+    assert!(
+        !runner
+            .game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| matches!(p.option_state, OptionState::Delayed { .. })),
+        "P-105 is trashed as the <Delay> activation cost after the body resolves"
+    );
+}
+
+/// PUPPETS-G009 — declining (PASS) leaves a placed P-105 `<Delay>` Option on
+/// the battle area for a later turn; the body never runs.
+#[test]
+fn p_105_declining_delay_leaves_option_on_field() {
+    let yaml = p_105_yaml();
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("P-105 YAML parses")
+        .add_card(digimon("YELLOW-BASE", CardColor::Yellow, 3))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+
+    let delay_perm = runner.place_on_field(0, "P-105", Some(0));
+    runner.place_on_field(0, "YELLOW-BASE", Some(0));
+    let placing_turn = runner.game.turn_count;
+    runner.game.player_mut(0).battle_area[delay_perm.index as usize].option_state =
+        OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: DelayTrigger::MainPhaseActivated,
+            placed_on_turn: placing_turn,
+        };
+
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.game.enter_main_phase();
+
+    // Decline — pass the turn instead of activating the Delay.
+    runner.game.decode_action(PASS, 0);
+
+    assert!(
+        runner.game.player(0).battle_area.iter().any(|p| matches!(
+            p.option_state,
+            OptionState::Delayed {
+                trigger: DelayTrigger::MainPhaseActivated,
+                ..
+            }
+        )),
+        "declined P-105 <Delay> stays parked on the battle area"
+    );
+    assert_eq!(runner.trash_size(0), 0, "declined P-105 is not trashed");
 }

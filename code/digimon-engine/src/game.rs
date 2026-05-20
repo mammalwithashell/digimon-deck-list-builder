@@ -77,6 +77,12 @@ pub(crate) enum DelayedOptionLifecycleResumeKind {
     StartTurn,
     EndTurn { ending_player: PlayerId },
     Event { timing: crate::enums::EffectTiming },
+    /// Standard `<Delay>` activated by a player `[Main]`-phase action
+    /// (PUPPETS-G009). The Option's `DelayEffect` body installed a pending
+    /// selection; once it resolves, the Option is trashed as the activation
+    /// cost. No turn-keyed scan resumes — this kind only carries the deferred
+    /// trash of the activated Option.
+    MainPhaseActivation,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

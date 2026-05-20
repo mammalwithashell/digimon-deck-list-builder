@@ -524,6 +524,17 @@ Used by Scrambles, Memory Boosts, Training cards, Royal Knights options, Puppets
 Preferred shape:
 
 - `kind: delay` for Delay effects with explicit `trigger` and `process`.
+  - Standard printed `<Delay>` ("By trashing this card after the placing turn,
+    activate the effect below") uses **`trigger: delayed`** — a player-visible
+    `[Main]`-phase activation action. The Option parks on the battle area and
+    its controller chooses, on any later main phase, to trash it (the
+    activation cost) to run the body. It never auto-fires; the choice surfaces
+    through the `FIELD_EFFECT` action range, and the placing turn is gated out
+    (RULES_CONTEXT 16-16). Standard Memory Boost / Training / Scramble Options
+    take this trigger.
+  - `trigger: start_of_your_turn` / `end_of_your_turn` and event triggers
+    (`on_suspend`, …) remain engine-scheduled auto-fire Delay timings used by
+    start/end-of-turn and event-gated Delay bodies.
 - `place_self_as_delay_option` when the main effect places the resolving Option.
 - `add_this_option_to_hand` when a security Option moves itself to hand.
 - `kind: flood_gate` for color/use-requirement bypasses only when action-mask enforcement exists.

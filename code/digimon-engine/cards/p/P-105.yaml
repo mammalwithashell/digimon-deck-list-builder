@@ -22,8 +22,11 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: picked }
       - place_remainder_on_deck: { of: you, position: bottom }
 
+  # [Main] <Delay> — player-visible [Main]-phase activation (PUPPETS-G009).
+  # `trigger: delayed` parks the Option until its controller chooses to trash
+  # it on a later main phase; the body never auto-fires (RULES_CONTEXT 16-16).
   - kind: delay
-    trigger: end_of_your_next_turn
+    trigger: delayed
     summary: "[Main]<Delay> 1 of your Digimon may digivolve into a yellow Digimon in hand, cost -2"
     process:
       - select_own_permanent:

@@ -40,7 +40,9 @@ use digimon_dsl::compiled::{
     CompiledScope, CompiledStackPosition, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::{PASS, PLAY_HAND_START};
+use digimon_engine::action::space::{
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, PLAY_HAND_START,
+};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -225,8 +227,8 @@ fn lm_054_has_main_delay_and_inherited_security_clauses() {
         }) => {
             assert_eq!(
                 *trigger,
-                CompiledTiming::EndOfYourNextTurn,
-                "scheduled Delay is the current PARTIAL workaround for standard main-phase Delay"
+                CompiledTiming::Delayed,
+                "standard <Delay> compiles to the player-activated Delayed timing (PUPPETS-G009)"
             );
             assert!(
                 process
@@ -400,7 +402,7 @@ fn lm_054_playing_main_places_it_as_delayed_option() {
             && matches!(
                 permanent.option_state,
                 OptionState::Delayed {
-                    trigger: DelayTrigger::EndOfYourNextTurn,
+                    trigger: DelayTrigger::MainPhaseActivated,
                     ..
                 }
             )
@@ -468,7 +470,7 @@ fn lm_054_security_reveals_adds_matching_card_and_places_self_as_delay_option() 
     assert!(matches!(
         placed.option_state,
         OptionState::Delayed {
-            trigger: DelayTrigger::EndOfYourNextTurn,
+            trigger: DelayTrigger::MainPhaseActivated,
             ..
         }
     ));
@@ -556,22 +558,145 @@ fn lm_054_delay_body_selects_target_then_yellow_or_black_evolution_card() {
     );
 }
 
+/// PUPPETS-G009 — LM-054's standard `<Delay>` is a player-visible
+/// `[Main]`-phase activation. No activation on the placing turn; on a later
+/// own main phase the mask exposes the `FIELD_EFFECT` action. Taking it
+/// trashes LM-054 as the cost and installs the optional own-Digimon digivolve
+/// selection.
 #[test]
-#[ignore = "pending: Standard Delay main-phase activation action — docs/RUST_ENGINE_GAPS.md"]
-fn lm_054_delay_should_be_main_phase_action_after_placing_turn() {
-    // Intended behavior after the gap closes:
-    // 1. Play LM-054 and let it remain in the battle area.
-    // 2. On the same placing turn, no Delay activation action is legal.
-    // 3. On a later own main phase, the action mask exposes a field/main action
-    //    for LM-054's <Delay> activation.
-    // 4. Choosing that action trashes LM-054 as cost and then installs the
-    //    optional own-Digimon digivolve selection.
+fn lm_054_delay_is_main_phase_action_after_placing_turn() {
+    let yaml = lm_054_yaml();
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("LM-054 YAML parses")
+        .add_card(digimon("BASE", CardColor::Yellow, 3))
+        .add_card(lv4_evo("YELLOW-EVO", CardColor::Yellow, CardColor::Yellow, 3))
+        .add_card(filler("FILL"))
+        .hand(0, &["YELLOW-EVO"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(5)
+        .start();
+    let delay_perm = runner.place_on_field(0, "LM-054", Some(0));
+    runner.place_on_field(0, "BASE", Some(0));
+    let placing_turn = runner.game.turn_count;
+    runner.game.player_mut(0).battle_area[delay_perm.index as usize].option_state =
+        OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: DelayTrigger::MainPhaseActivated,
+            placed_on_turn: placing_turn,
+        };
+    let delay_idx = delay_perm.index as usize;
+    let bit = (FIELD_EFFECT_START
+        + delay_idx as u16 * EFFECTS_PER_PERMANENT
+        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize;
+
+    // Same turn it was placed: the Delay activation is NOT legal (16-16-3).
+    runner.game.enter_main_phase();
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[bit],
+        0.0,
+        "LM-054 <Delay> must not be activatable on the placing turn"
+    );
+
+    // Advance to the controller's next main phase.
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.game.enter_main_phase();
+    runner.game.set_memory(5);
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(mask[bit], 1.0, "LM-054 <Delay> activation is a legal action");
+    assert_eq!(mask[PASS as usize], 1.0, "declining stays legal");
+
+    // Take the activation — trashes LM-054 as cost, installs the digivolve.
+    runner.game.decode_action(bit as u16, 0);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OwnField),
+        "the <Delay> body installs the optional own-Digimon digivolve target pick"
+    );
+    let target_pick = runner.pending_selection_view().unwrap();
+    runner
+        .execute_action(0, target_pick.valid_action_ids[0])
+        .expect("target selection resolves");
+    let evo_pick = runner.pending_selection_view().unwrap();
+    runner
+        .execute_action(0, evo_pick.valid_action_ids[0])
+        .expect("evolution selection resolves");
+    runner.game.drain_effect_queue();
+
+    let base = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|permanent| permanent.is_digimon(&runner.game.card_data))
+        .expect("base Digimon remains in battle area");
+    assert_eq!(base.stack_size(), 2, "LM-054 <Delay> digivolved the base");
+    assert_eq!(base.top_card().card_id(&runner.game.card_data), "YELLOW-EVO");
+    assert_eq!(
+        runner.memory(),
+        4,
+        "printed evo cost 3 reduced by 2 pays only 1 memory"
+    );
+    assert!(
+        !runner
+            .game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| matches!(p.option_state, OptionState::Delayed { .. })),
+        "LM-054 is trashed as the <Delay> activation cost"
+    );
 }
 
+/// PUPPETS-G009 — declining (PASS) leaves LM-054's `<Delay>` Option parked on
+/// the battle area for a future legal activation.
 #[test]
-#[ignore = "pending: Standard Delay main-phase activation action — docs/RUST_ENGINE_GAPS.md"]
-fn lm_054_declining_delay_should_leave_option_in_battle_area() {
-    // Intended behavior after the gap closes:
-    // A player can decline to activate LM-054's <Delay> in a legal main phase,
-    // preserving the battle-area Option for a future legal activation.
+fn lm_054_declining_delay_leaves_option_in_battle_area() {
+    let yaml = lm_054_yaml();
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("LM-054 YAML parses")
+        .add_card(digimon("BASE", CardColor::Yellow, 3))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(5)
+        .start();
+    let delay_perm = runner.place_on_field(0, "LM-054", Some(0));
+    runner.place_on_field(0, "BASE", Some(0));
+    let placing_turn = runner.game.turn_count;
+    runner.game.player_mut(0).battle_area[delay_perm.index as usize].option_state =
+        OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: DelayTrigger::MainPhaseActivated,
+            placed_on_turn: placing_turn,
+        };
+
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.game.enter_main_phase();
+
+    // Decline — pass instead of activating the Delay.
+    runner.game.decode_action(PASS, 0);
+
+    assert!(
+        runner.game.player(0).battle_area.iter().any(|p| matches!(
+            p.option_state,
+            OptionState::Delayed {
+                trigger: DelayTrigger::MainPhaseActivated,
+                ..
+            }
+        )),
+        "declined LM-054 <Delay> stays parked for a future activation"
+    );
+    assert_eq!(runner.trash_size(0), 0, "declined LM-054 is not trashed");
 }

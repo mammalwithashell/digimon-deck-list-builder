@@ -1954,7 +1954,10 @@ impl Game {
             DelayTrigger::EndOfYourNextTurn | DelayTrigger::StartOfYourNextTurn => {
                 self.next_owner_turn_count(owner)
             }
-            DelayTrigger::OnEvent(_) => u16::MAX,
+            // Standard `<Delay>` is activated by a player `[Main]`-phase
+            // action, not a turn-keyed auto-trash scan. `OnEvent` likewise
+            // has no scheduled turn — both park indefinitely.
+            DelayTrigger::MainPhaseActivated | DelayTrigger::OnEvent(_) => u16::MAX,
         }
     }
 
@@ -2201,6 +2204,20 @@ impl Game {
         // `MainOnField` on the same card cannot leak through.
         if field_index == crate::action::space::BREEDING_TARGET as usize {
             return self.activate_breeding_main_training(player_id);
+        }
+
+        // PUPPETS-G009 — standard `<Delay>` `[Main]`-phase activation. A
+        // parked `DelayTrigger::MainPhaseActivated` Option whose placing turn
+        // has passed is activated by trashing it as the cost and running its
+        // stored `<Delay>` body. Dispatched before the ordinary `MainOnField`
+        // scan because the Delay body lives at `EffectTiming::DelayEffect`,
+        // not `MainOnField`.
+        let delay_handle = PermanentHandle {
+            player: player_id,
+            index: field_index as u8,
+        };
+        if self.delayed_option_main_activation_available(delay_handle) {
+            return self.activate_delayed_option_main(delay_handle);
         }
 
         // Snapshot per-source identity without holding the battle_area borrow
