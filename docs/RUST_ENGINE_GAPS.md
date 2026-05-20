@@ -256,6 +256,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Costed self-digivolve stable source binding](#costed-self-digivolve-stable-source-binding) | 🔴 | 1 | `effect_context.rs`, `binding_ref.rs` |
 | [Narrow opponent-effect protection for DP reduction and De-Digivolve](#narrow-opponent-effect-protection-for-dp-reduction-and-de-digivolve) | 🔴 | 1 | `modifiers.rs`, `effect.rs` |
 | ~~Effect play with played-Digimon On Play suppression~~ | ✅ | — | RESOLVED 2026-05-19 (Phase 2 Track J Task S1.1) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine--dsl-gap-effect-play-with-played-digimon-on-play-suppression--resolved-2026-05-19-phase-2-track-j-task-s11-puppets-g030) |
+| ~~Ally-played may-attack observer (`G-ALLY-PLAYED-MAY-ATTACK`)~~ — already-composable, no engine change | ✅ | — | RESOLVED 2026-05-20 (Phase 2 Track J Task S2.1) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine--dsl-gap-g-ally-played-may-attack--already-composable-2026-05-20-phase-2-track-j-task-s21) |
 | ~~End-of-attack mandatory self-delete chain (EX4-074)~~ | ✅ | — | RESOLVED 2026-05-17 (Track I first-test confirmed existing primitives suffice) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine-gap-end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch--resolved-2026-05-17-track-i) |
 
 **Group 5 contract note (2026-05-02):** Group 5 did not change ACTION_SPACE_SIZE or TENSOR_SIZE. New Link/Delay choices reuse existing pending-selection masks.
