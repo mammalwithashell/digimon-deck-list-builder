@@ -11,7 +11,6 @@ use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::SelectionKind;
 
 #[test]
-#[ignore = "BLOCKED: YAML on_deletion predicates cannot inspect deletion_cause to exclude battle"]
 fn ex11_020_on_deletion_may_play_shoemon_trait_from_hand_if_not_battle() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX11-020")
@@ -56,7 +55,6 @@ fn ex11_020_on_deletion_may_play_shoemon_trait_from_hand_if_not_battle() {
 }
 
 #[test]
-#[ignore = "BLOCKED: YAML on_deletion predicates cannot inspect deletion_cause to exclude battle"]
 fn ex11_020_on_deletion_can_decline_free_play() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX11-020")
@@ -80,7 +78,6 @@ fn ex11_020_on_deletion_can_decline_free_play() {
 }
 
 #[test]
-#[ignore = "BLOCKED: YAML on_deletion predicates cannot inspect deletion_cause to exclude battle"]
 fn ex11_020_on_deletion_does_not_fire_when_deleted_in_battle() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX11-020")

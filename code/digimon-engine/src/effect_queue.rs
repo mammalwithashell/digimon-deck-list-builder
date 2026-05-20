@@ -701,6 +701,10 @@ impl Game {
                 target_permanent: Some(handle),
                 target_card: self.top_card_handle(handle),
                 source_player: Some(handle.player),
+                // Thread the active deletion cause (set by delete_permanent_with_cause
+                // before enqueueing OnDeletion) so event_cause predicates in
+                // on_deletion YAML clauses can inspect it (e.g. "not battle").
+                cause: self.current_deletion_cause.map(crate::trigger_context::EventCause::from),
                 ..TriggerContext::default()
             },
             TriggerSource::PlayerBattleArea(player) => TriggerContext {
