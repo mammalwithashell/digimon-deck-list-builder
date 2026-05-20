@@ -315,6 +315,7 @@ ctx.effect_initiated_dna_digivolve_with_provenance(...) -> Option<ProvenanceToke
 
 ctx.recover_from_deck(player, count: u8) -> u8       // mod.rs:4197 — "recover N security"
 ctx.trash_top_security(player) -> bool                // mod.rs:1863
+ctx.trash_bottom_security(player) -> bool
 ctx.add_top_security_to_hand(player) -> bool          // mod.rs:2225
 ctx.add_pending_security_to_hand() -> bool            // mod.rs:2324
 ```
