@@ -1889,6 +1889,19 @@ The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE
 - **Evidence:** `cargo test --manifest-path code/digimon-dsl/Cargo.toml` (parse round-trip); `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage` (variant-coverage lint).
 - **Card-side authoring follow-up:** BT24-016's YAML still leaves the Owen gate unenforced; populating `condition:` on the activated_digivolve path is card-local work, not substrate. Other alt-path routes (`DigiXros`, `BurstDigivolve`, `Assembly`, `AppFusion`, etc.) do not yet read the field — extend per-route as cards need them.
 
+## Engine Gap: Standard Delay main-phase activation action (PUPPETS-G009) — RESOLVED 2026-05-20 (Puppets substrate sweep)
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets (2026-05-03 batch implementation)
+- **Card(s):** `P-037` Yellow Memory Boost!, `P-105` Physical Training, `LM-035` Physical Training, `LM-037` Yellow Scramble, `LM-054` Treadmill Training; also standard Memory Boost/Training/Scramble cards whose `<Delay>` text is activated by the controller during a later main phase.
+- **Effect text:** "`<Delay>` (By trashing this card after the placing turn, activate the effect below.)"
+- **What was missing:** The Group 5 Delay lifecycle supported persistent delayed Options, placement-turn gating, start/end/event drains, and replacement-aware self-trash costs. Standard main-phase Delay cards were modeled in DSL/YAML as scheduled automatic effects (e.g. `end_of_your_next_turn`), which hid the player's later `[Main]` decision to activate or decline after the placing turn. The `DelayTrigger::MainPhaseActivated` variant and the main-phase action mask activation path did not exist before this sweep. An earlier tracker entry (Track I, commit `26e27ccc`, 2026-05-17) was optimistic/incorrect — that commit did not deliver this substrate.
+- **Resolution:** `DelayTrigger::MainPhaseActivated` variant added. Standard `kind: delay` Options placed in the battle area with this trigger expose a field-effect activation slot through the normal main-phase action mask once the placing turn has passed (placement-turn gating per rule 16-16-3). Taking the activation trashes the Option as cost and runs the Delay body; PASS leaves the Option parked for a future legal activation. No `ACTION_SPACE_SIZE` change. DSL standard `<Delay>` lowers to `OptionState::Delayed { trigger: DelayTrigger::MainPhaseActivated, .. }`.
+- **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, commits `44ce72a4` + `9afdfdb7`, 2026-05-20.
+- **Evidence:** `p_105_delay_is_player_visible_main_activation_after_placing_turn`, `p_105_declining_delay_leaves_option_on_field`, `lm_054_delay_is_main_phase_action_after_placing_turn`, `lm_054_declining_delay_leaves_option_in_battle_area` — all pass without `#[ignore]`. Tests verify: (a) placing-turn mask bit is 0, (b) next own main phase bit flips to 1 with PASS legal, (c) taking the action trashes the Option and resolves the body, (d) PASS leaves the Option parked.
+- **Residual:** `BT22-098` has a distinct residual filed as `PUPPETS-G033` — the Option-card pipeline's integrated resolution (pending optional play + post-resolution battle-area placement as a Delayed Option) is not yet proven. That is a different, narrower shape from the standard `<Delay>` main-phase activation that this entry closes.
+- **Related:** `PUPPETS-G009` in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`; `PUPPETS-G033` (BT22-098 Option pipeline residual).
+
 ## Engine Gap: Effect-spawned permanent with end-of-turn deletion rider — RESOLVED 2026-05-20 (Puppets substrate sweep)
 
 - **Severity:** 🔴 BLOCKING (closed for provenance-bound cleanup substrate)
