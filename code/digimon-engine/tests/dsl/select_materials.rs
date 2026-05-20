@@ -113,7 +113,6 @@ fn source_card_ids(runner: &DebugRunner) -> Vec<String> {
 /// all play Royal-Knight sources out of "the digivolution cards of your
 /// Digimon in the breeding area".
 fn breeding_carrier_with_sources(source_ids: &[&str]) -> DebugRunner {
-    use digimon_engine::enums::PlayerId;
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("KING-DRASIL", "King Drasil_7D6"))
         .add_card(royal_knight("RK-ALPHA", "Alphamon"))
@@ -132,8 +131,7 @@ fn breeding_carrier_with_sources(source_ids: &[&str]) -> DebugRunner {
     let perm = runner.game.players[0]
         .battle_area
         .remove(handle.index as usize);
-    runner.game.players[0 as usize].breeding_area = Some(perm);
-    let _: PlayerId = 0; // doc: P0 owns the breeding carrier
+    runner.game.players[0].breeding_area = Some(perm);
     runner
 }
 
