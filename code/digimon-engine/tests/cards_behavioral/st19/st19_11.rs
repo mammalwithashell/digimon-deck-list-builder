@@ -83,7 +83,6 @@ fn st19_11_when_digivolving_reduces_one_opponent_digimon_by_3000_with_two_total_
 }
 
 #[test]
-#[ignore = "BLOCKED: subjectless DSL count_gte/threshold formula cannot faithfully express the 3+ Digimon extra -3000 branch"]
 fn st19_11_dp_reduction_increases_to_6000_with_three_or_more_total_digimon() {
     let mut runner = DebugRunner::builder()
         .dsl_card("ST19-11")
