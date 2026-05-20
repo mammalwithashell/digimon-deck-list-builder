@@ -20,13 +20,15 @@ use std::sync::{Arc, Mutex};
 
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{
-    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, REPLACEMENT_ACCEPT,
 };
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, PlayerId};
 use digimon_engine::permanent::OptionState;
+use digimon_engine::replacement::ReplacementCause;
+use digimon_engine::selection::SelectionKind;
 
 // ─── Inline test-effect helpers ──────────────────────────────────────
 
@@ -45,6 +47,40 @@ impl CardEffect for StandardDelayGain2 {
                 ctx.gain_memory(2);
             })
             .build()]
+    }
+}
+
+/// Standard `<Delay>` body that ALSO carries an optional
+/// `WhenWouldBeDeleted` replacement which parks a player selection whenever
+/// this card would be deleted as a `Cost` — i.e. when its own `[Main]`-phase
+/// activation trashes it. The replacement process sets no outcome, so the
+/// original cost trash proceeds once the selection resolves (mirrors
+/// `replacement_integration.rs::PromptThenAllowDelayCost`). Used to drive the
+/// `activate_delayed_option_main` post-delete parked-selection path.
+struct StandardDelayWithCostReplacement(Arc<Mutex<u32>>);
+impl CardEffect for StandardDelayWithCostReplacement {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let witness = self.0.clone();
+        vec![
+            Effect::on_play(card)
+                .name("Standard Delay gain 2 (with cost replacement)")
+                .delay(DelayTrigger::MainPhaseActivated)
+                .process(move |ctx| {
+                    *witness.lock().unwrap() += 1;
+                    ctx.gain_memory(2);
+                })
+                .build(),
+            Effect::when_would_be_deleted(card)
+                .name("Prompt on Cost-cause self-trash")
+                .optional()
+                .replacement_condition(|ctx, _subject| {
+                    matches!(ctx.replacement_cause(), Some(ReplacementCause::Cost))
+                })
+                // No outcome — the original cost trash proceeds on accept or
+                // decline. The window is purely a parked-selection probe.
+                .replacement_process(|_| {})
+                .build(),
+        ]
     }
 }
 
@@ -304,4 +340,112 @@ fn standard_delay_does_not_auto_fire_at_end_of_turn() {
             .any(|p| matches!(p.option_state, OptionState::Delayed { .. })),
         "the Delay Option stays parked until the player activates it"
     );
+}
+
+/// PUPPETS-G009 review regression: when the `[Main]`-phase Delay activation's
+/// cost trash itself enters a `WhenWouldBeDeleted` replacement window, the
+/// activation must park a `Replacement` selection and re-drive its
+/// continuation through `resume_pending_delayed_option_lifecycle` — exactly
+/// like the sibling turn-scan path. The activation must NOT silently complete
+/// while a parked replacement is outstanding.
+///
+/// Asserts: (a) the `<Delay>` body runs exactly once, (b) the cost trash
+/// genuinely parks a `Replacement` selection (the Option is NOT yet trashed),
+/// and (c) after resolving that parked selection the lifecycle completes
+/// faithfully — the Option is trashed and the body's effect persists.
+#[test]
+fn activating_standard_delay_re_drives_trash_replacement_window() {
+    let witness = Arc::new(Mutex::new(0u32));
+    let mut r = DebugRunner::builder()
+        .add_card(option_card("DELAY-MAIN", CardColor::Red))
+        .add_card(digimon_card("RED-MATCH", CardColor::Red))
+        .add_card(digimon_card("FILLER", CardColor::Red))
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(0)
+        .start();
+    r.register_effect(
+        "DELAY-MAIN",
+        Arc::new(StandardDelayWithCostReplacement(witness.clone())),
+    );
+    r.place_on_field(0, "RED-MATCH", Some(0));
+
+    let placing_turn = r.game.turn_count;
+    let idx = park_delayed_option(&mut r, 0, "DELAY-MAIN", placing_turn);
+
+    // Advance past the placing turn so the activation is legal.
+    r.game.enter_main_phase();
+    r.end_turn();
+    r.game.enter_main_phase();
+    r.end_turn();
+    assert_eq!(r.game.turn_player(), 0);
+    r.game.enter_main_phase();
+    r.game.set_memory(0);
+
+    let trash_before = r.trash_size(0);
+
+    // Take the [Main]-phase Delay action through the public action path.
+    r.game.decode_action(field_main_bit(idx) as u16, 0);
+
+    // (a) The Delay body ran exactly once.
+    assert_eq!(*witness.lock().unwrap(), 1, "Delay body ran exactly once");
+    assert_eq!(r.memory(), 2, "Delay body gained 2 memory");
+
+    // (b) The cost trash entered the replacement window: a Replacement
+    // selection is parked and the Option is NOT yet in the trash.
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("cost trash must park the WhenWouldBeDeleted replacement selection");
+    assert_eq!(
+        pending.kind,
+        SelectionKind::Replacement,
+        "parked selection is the cost-trash replacement window"
+    );
+    assert!(
+        pending.valid_action_ids.contains(&REPLACEMENT_ACCEPT),
+        "replacement window exposes the accept action"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before,
+        "Option is not trashed while the replacement selection is outstanding"
+    );
+    assert!(
+        r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| matches!(p.option_state, OptionState::Delayed { .. })),
+        "Delay Option still on the battle area until the replacement resolves"
+    );
+
+    // (c) Resolve the parked replacement (accept — the process sets no
+    // outcome, so the original cost trash proceeds). The lifecycle's
+    // deferred continuation must be genuinely re-driven, leaving the engine
+    // in a clean state with the Option trashed.
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("resolve the cost-trash replacement window");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no selection outstanding after the replacement resolves"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before + 1,
+        "Option is trashed as the activation cost once the replacement resolves"
+    );
+    assert!(
+        !r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| matches!(p.option_state, OptionState::Delayed { .. })),
+        "no delayed Option remains — the deferred continuation was re-driven, not dropped"
+    );
+    assert_eq!(*witness.lock().unwrap(), 1, "Delay body did not re-run");
+    assert_eq!(r.memory(), 2, "memory unchanged after the replacement resolves");
 }

@@ -401,7 +401,10 @@ impl Game {
     /// `delete_permanent_with_cause` (cause = `Cost`) so Phase 7 replacement
     /// windows still get a chance to intercept. If the body installs a
     /// pending selection, the trash is deferred behind a
-    /// `MainPhaseActivation` lifecycle resume.
+    /// `MainPhaseActivation` lifecycle resume; if the *trash itself* parks a
+    /// replacement-window selection, the lifecycle is likewise re-parked so
+    /// the resume path re-drives the deletion's continuation — keeping this
+    /// path identical to the sibling turn-scan's post-delete handling.
     pub fn activate_delayed_option_main(&mut self, option: PermanentHandle) -> bool {
         if !self.delayed_option_main_activation_available(option) {
             return false;
@@ -436,6 +439,37 @@ impl Game {
             self.find_delayed_permanent_by_key(key, u16::MAX, &[DelayTrigger::MainPhaseActivated])
         {
             self.delete_permanent_with_cause(handle, crate::replacement::ReplacementCause::Cost);
+        }
+
+        // The cost trash can itself park a `pending_selection` at a
+        // `WhenWouldLeaveBattleArea` / `WhenWouldBeDeleted` replacement window
+        // and early-return (`delete_permanent_with_cause`'s own doc: "caller
+        // re-drives"). Mirror the sibling turn-scan path
+        // (`resolve_delayed_options_matching`, `game_phases.rs`): re-park the
+        // lifecycle with `pending_delete_key: None, skip_key: Some(key)` so
+        // `resume_pending_delayed_option_lifecycle` re-drives the deletion's
+        // continuation rather than silently completing.
+        //
+        // For the `MainPhaseActivation` resume kind the re-driven continuation
+        // is currently a no-op cleanup — exactly ONE Option is activated by
+        // this action, so there are no sibling Delays to scan on resume, and
+        // the deferred-delete (`pending_delete_key`) is `None` because the
+        // delete was already attempted above. The re-park therefore costs
+        // nothing observable today, but it keeps the two post-delete fire
+        // sites (turn-scan and `[Main]`-phase activation) handling the
+        // parked-selection case IDENTICALLY, so a future change to the
+        // post-delete continuation (e.g. a faithful follow-up effect) cannot
+        // silently drop it from only the `[Main]`-phase path. None of the 5
+        // PUPPETS-G009 migrated Delay Options carry a trash-time replacement
+        // window, so this branch is latent — but the divergence from the
+        // engine's own established defensive pattern is closed regardless.
+        if self.pending_selection.is_some() {
+            self.park_delayed_option_lifecycle(DelayedOptionLifecycleResume {
+                turn: u16::MAX,
+                kind: DelayedOptionLifecycleResumeKind::MainPhaseActivation,
+                pending_delete_key: None,
+                skip_key: Some(key),
+            });
         }
         true
     }
