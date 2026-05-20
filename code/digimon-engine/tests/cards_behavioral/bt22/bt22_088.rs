@@ -239,29 +239,41 @@ fn bt22_088_start_of_main_accepts_cost_then_plays_exact_arisa_from_hand() {
     runner
         .execute_action(0, trigger_action)
         .expect("accept the trigger");
-    // After accepting, activation_cost fires: BT22-088 returns to deck bottom.
-    // Then select_hand appears for "Arisa Kinosaki".
-    runner.auto_resolve().expect("drain any intermediate steps");
+    // Accepting the TriggerOrder drains through the activation_cost
+    // (BT22-088 returns to deck bottom) and parks at the next pending
+    // selection — the select_hand for "Arisa Kinosaki". We deliberately do
+    // NOT call auto_resolve() here: auto_resolve would auto-pick the hand
+    // selection's first valid action, consuming the prompt before we can
+    // assert on the exact-name filter.
 
-    // The select_hand for Arisa Kinosaki should now be pending.
-    let sel_kind = runner.pending_kind();
-    if sel_kind == Some(SelectionKind::Hand) {
-        // Verify only the exact-name Arisa (ARISA-COPY) is valid, not NON-ARISA.
-        let valid = {
-            let pending = runner.pending_selection().unwrap();
-            pending.valid_action_ids.clone()
-        };
-        assert!(!valid.is_empty(), "ARISA-COPY must be a valid target");
+    // The select_hand for Arisa Kinosaki must now be pending. This assertion
+    // is unconditional: the exact-name-filter discrimination below only has
+    // value if the Hand selection genuinely appears, so a skipped branch must
+    // fail the test rather than silently pass.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Hand),
+        "a select_hand prompt for [Arisa Kinosaki] must appear after the cost is paid"
+    );
+    // Verify the exact-name filter: ONLY the exact-name Arisa (ARISA-COPY) is
+    // valid — the differently-named NON-ARISA-BT22088 must be excluded.
+    let valid = {
+        let pending = runner.pending_selection().unwrap();
+        pending.valid_action_ids.clone()
+    };
+    assert_eq!(
+        valid.len(),
+        1,
+        "only the exact-name [Arisa Kinosaki] copy must be valid, not [Other Tamer]; \
+         valid_action_ids count = {}",
+        valid.len()
+    );
 
-        // Pick the first valid action (Arisa copy).
-        runner
-            .execute_action(0, valid[0])
-            .expect("select Arisa Kinosaki from hand");
-        runner.auto_resolve().expect("settle Arisa play");
-    } else {
-        // No Arisa available (shouldn't happen since we put one in hand).
-        // If auto_resolve skipped the hand selection, check the field state directly.
-    }
+    // Pick the one valid action — it must be the Arisa copy.
+    runner
+        .execute_action(0, valid[0])
+        .expect("select Arisa Kinosaki from hand");
+    runner.auto_resolve().expect("settle Arisa play");
 
     // BT22-088 is NOT on field (returned as activation cost).
     let arisa_on_field = runner.game.players[0].battle_area.iter().any(|perm| {
@@ -365,42 +377,42 @@ fn bt22_088_start_of_main_no_digimon_branch_plays_exact_shoemon_from_trash() {
         sel.valid_action_ids[0]
     };
     runner.execute_action(0, trigger_action).expect("accept trigger");
-    // activation_cost fires → BT22-088 returns to deck bottom.
-    // select_hand fires (optional, no Arisa in hand → auto-PASS).
-    // if: no Digimon → select_trash fires.
-    runner.auto_resolve().expect("drain past select_hand PASS");
+    // Accepting the TriggerOrder drains through the body:
+    //   - activation_cost fires → BT22-088 returns to deck bottom;
+    //   - the optional select_hand for [Arisa Kinosaki] has no valid target
+    //     (none in hand), so it installs no prompt and is silently skipped;
+    //   - the `if: no Digimon` branch fires → select_trash for [Shoemon].
+    // The drain parks at that select_trash. We deliberately do NOT call
+    // auto_resolve() here: auto_resolve would auto-pick the trash selection's
+    // first valid action, consuming the prompt before we can assert on the
+    // exact-name filter.
 
-    // At this point the select_trash for Shoemon should be pending.
-    // (auto_resolve stops at the first non-optional or non-trivial selection)
-    if runner.pending_kind() == Some(SelectionKind::Trash) {
-        let valid = {
-            let pending = runner.pending_selection().unwrap();
-            pending.valid_action_ids.clone()
-        };
-        assert!(!valid.is_empty(), "at least Shoemon must be a valid trash target");
+    // The select_trash for Shoemon must now be pending. This assertion is
+    // unconditional: the exact-name discrimination below (Shoemon vs
+    // ShoeShoemon) only has value if the Trash selection genuinely appears,
+    // so a skipped branch must fail the test rather than silently pass.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Trash),
+        "a select_trash prompt for [Shoemon] must appear in the no-Digimon branch"
+    );
+    let valid = {
+        let pending = runner.pending_selection().unwrap();
+        pending.valid_action_ids.clone()
+    };
+    // Verify exact-name: only SHOEMON-BT22088 is valid, not
+    // OTHER-TRASH-BT22088 (named "ShoeShoemon" — a substring near-miss).
+    assert_eq!(
+        valid.len(),
+        1,
+        "only exact-name [Shoemon] must be valid, not [ShoeShoemon]; \
+         valid_action_ids count = {}",
+        valid.len()
+    );
 
-        // Verify exact-name: only SHOEMON-BT22088 should be in valid actions,
-        // not OTHER-TRASH-BT22088 (named ShoeShoemon).
-        let data = &runner.game.card_data;
-        for &action_id in &valid {
-            // Action IDs for trash start at TRASH_EFFECT_START (0); each
-            // maps to trash index. Check which cards map to the valid IDs.
-            // Since we only care that ShoeShoemon is excluded, we just
-            // verify the count: only 1 valid action (Shoemon), not 2.
-            let _ = action_id; // Suppress unused warning; checked via count below.
-        }
-        assert_eq!(
-            valid.len(),
-            1,
-            "only exact-name [Shoemon] must be valid, not [ShoeShoemon]; \
-             valid_action_ids count = {}",
-            valid.len()
-        );
-
-        // Pick Shoemon.
-        runner.execute_action(0, valid[0]).expect("select Shoemon from trash");
-        runner.auto_resolve().expect("settle Shoemon play");
-    }
+    // Pick Shoemon.
+    runner.execute_action(0, valid[0]).expect("select Shoemon from trash");
+    runner.auto_resolve().expect("settle Shoemon play");
 
     // Shoemon is now on field (played free from trash).
     let shoemon_on_field = runner.game.players[0].battle_area.iter().any(|perm| {

@@ -42,6 +42,36 @@ use crate::trigger_context::TriggerContext;
 /// chain. Matches Python's `_resolve_effect_stack` limit.
 pub const MAX_CHAIN_DEPTH: u16 = 50;
 
+/// RAII guard that installs a `TriggerContext` onto `Game.current_trigger_context`
+/// for the lifetime of the guard and restores the previous value on drop —
+/// including on panic. Used to evaluate a triggered effect's condition with the
+/// queued effect's trigger context outside the normal `run_queued_effect`
+/// drain path (e.g. the pre-cost-prompt decision in `drain_effect_queue`).
+///
+/// The guard borrows `&mut Game` for its whole lifetime, so callers reach the
+/// game through `guard.game` while the trigger context is installed. The
+/// previous value is restored on `Drop`, so an early return or panic during
+/// condition evaluation cannot leak the temporary context.
+struct TriggerContextGuard<'g> {
+    game: &'g mut Game,
+    previous: Option<TriggerContext>,
+}
+
+impl<'g> TriggerContextGuard<'g> {
+    /// Install `trigger_context`, saving whatever was there before.
+    fn install(game: &'g mut Game, trigger_context: Option<TriggerContext>) -> Self {
+        let previous = game.current_trigger_context.take();
+        game.current_trigger_context = trigger_context;
+        Self { game, previous }
+    }
+}
+
+impl Drop for TriggerContextGuard<'_> {
+    fn drop(&mut self) {
+        self.game.current_trigger_context = self.previous.take();
+    }
+}
+
 fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
     match kind {
         CardKind::Digimon | CardKind::DigiEgg | CardKind::Dual => EffectSourceKind::Digimon,
@@ -643,14 +673,29 @@ impl Game {
                 // pending selection; auto-fire is intentional there so we
                 // don't prompt when filters produce no legal follow-up.
                 let needs_pre_cost_prompt = {
-                    let qe = &self.effect_queue[idx];
-                    if qe.is_optional {
-                        let card_id = qe.card_id.clone();
-                        let source_card = qe.source_card;
-                        let source_permanent = qe.source_permanent;
-                        let source_kind = qe.source_kind;
-                        let controller = qe.controller;
-                        let effect_slot = qe.effect_slot as usize;
+                    let (
+                        is_optional,
+                        card_id,
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        controller,
+                        effect_slot,
+                        trigger_context,
+                    ) = {
+                        let qe = &self.effect_queue[idx];
+                        (
+                            qe.is_optional,
+                            qe.card_id.clone(),
+                            qe.source_card,
+                            qe.source_permanent,
+                            qe.source_kind,
+                            qe.controller,
+                            qe.effect_slot as usize,
+                            qe.trigger_context.clone(),
+                        )
+                    };
+                    if is_optional {
                         if let Some(effects) = self.effects_for_card(&card_id, source_card) {
                             if let Some(eff) = effects.get(effect_slot) {
                                 // Only install a pre-cost prompt when the
@@ -661,8 +706,24 @@ impl Game {
                                 let has_cost = eff.activation_cost_fn.is_some();
                                 let condition_passes = if has_cost {
                                     if let Some(cond) = &eff.condition {
-                                        let ctx = EffectContext::new_with_source_kind(
+                                        // The condition must see the queued
+                                        // effect's trigger context — DSL
+                                        // predicates like `event_target_owner`
+                                        // / `event_target_trait_has` and
+                                        // deleted-object snapshots read
+                                        // `current_trigger_context`. The real
+                                        // evaluation path (`run_queued_effect`
+                                        // → `run_queued_effect_inner`) sets it
+                                        // before its condition check; mirror
+                                        // that here so the pre-cost decision
+                                        // is faithful. The RAII guard restores
+                                        // the previous value even on panic.
+                                        let trigger_guard = TriggerContextGuard::install(
                                             self,
+                                            trigger_context,
+                                        );
+                                        let ctx = EffectContext::new_with_source_kind(
+                                            &mut *trigger_guard.game,
                                             source_card,
                                             source_permanent,
                                             source_kind,
@@ -730,6 +791,15 @@ impl Game {
             // Cap at HAND_MAIN_LIMIT (30) to fit the reused 30-59 action
             // range. Overflow auto-fires in collection order after the prompt
             // completes (rare; see the cap handling inside install_*).
+            //
+            // Note: the pre-cost decline prompt above is only installed for a
+            // single-trigger bundle (`bundle.len() == 1`). For a multi-copy
+            // bundle (`bundle.len() >= 2`), once the player picks the first
+            // trigger here, that trigger's `activation_cost_fn` fires inside
+            // `run_queued_effect` without a separate per-trigger decline.
+            // This is a pre-existing limitation, kept intentional: the
+            // TriggerOrder PASS bit declines the whole bundle, not a single
+            // copy mid-resolution.
             let any_mandatory = bundle.iter().any(|&i| !self.effect_queue[i].is_optional);
             self.install_trigger_order_selection(chooser, &bundle, !any_mandatory);
             return;
