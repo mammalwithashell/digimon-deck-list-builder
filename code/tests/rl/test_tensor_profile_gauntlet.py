@@ -6,6 +6,10 @@ from types import SimpleNamespace
 import pytest
 
 
+# Synthetic profile fixture used to exercise gauntlet logic in isolation
+# from the real engine layout. `card_id_slot_count` is held at a fixed
+# value so derived assertions stay self-consistent; it intentionally does
+# not track the real standard_lite_v2 layout.
 def fake_profile(profile_id: str, tensor_size: int):
     return SimpleNamespace(
         id=profile_id,
@@ -16,8 +20,8 @@ def fake_profile(profile_id: str, tensor_size: int):
         layout_hash=f"sha256:{profile_id.replace('_', '0')[:8]:0<64}",
         tensor_size=tensor_size,
         field_slots=15,
-        slot_size=96,
-        max_sources=11,
+        slot_size=99,
+        max_sources=12,
         card_id_slot_count=542,
         scalar_slot_count=tensor_size - 542,
         card_id_positions=tuple(range(542)),
@@ -68,7 +72,9 @@ def test_real_profile_resolution_includes_compact_lite_and_full():
         "standard_lite_v2",
         "standard_full_v2",
     ]
-    assert [item.profile.tensor_size for item in resolved] == [1375, 8320, 43392]
+    # Task S1.4: PERM_MAX_SOURCES 11 -> 12; lite 8320 -> 8410, full
+    # 43392 -> 43482.
+    assert [item.profile.tensor_size for item in resolved] == [1375, 8410, 43482]
 
 
 def test_resolve_profiles_records_skip_when_profile_missing(monkeypatch):

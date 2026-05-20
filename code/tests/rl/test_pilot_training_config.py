@@ -248,8 +248,8 @@ def test_train_passes_config_tensor_profile_to_held_out_eval_suite(
     layout = SimpleNamespace(
         id="standard_lite_v2",
         tensor_version=2,
-        feature_schema_version="standard_lite_v2.1",
-        tensor_size=8320,
+        feature_schema_version="standard_lite_v2.2",
+        tensor_size=8410,
         layout_hash="sha256:test",
     )
     captured = {}
@@ -323,8 +323,8 @@ def test_training_run_metadata_round_trips_tensor_profile_fields(tmp_path):
         started_at="2026-05-02T12:00:00",
         observation_profile="standard_lite_v2",
         tensor_version=2,
-        feature_schema_version="standard_lite_v2.1",
-        tensor_size=8320,
+        feature_schema_version="standard_lite_v2.2",
+        tensor_size=8410,
         tensor_layout_hash="sha256:test",
         action_space_size=2192,
         card_registry_capacity=4096,
@@ -336,8 +336,8 @@ def test_training_run_metadata_round_trips_tensor_profile_fields(tmp_path):
 
     assert loaded.observation_profile == "standard_lite_v2"
     assert loaded.tensor_version == 2
-    assert loaded.feature_schema_version == "standard_lite_v2.1"
-    assert loaded.tensor_size == 8320
+    assert loaded.feature_schema_version == "standard_lite_v2.2"
+    assert loaded.tensor_size == 8410
     assert loaded.tensor_layout_hash == "sha256:test"
     assert loaded.action_space_size == 2192
     assert loaded.card_registry_capacity == 4096
@@ -350,8 +350,8 @@ def test_train_model_kwargs_include_observation_layout(monkeypatch, tmp_path):
     layout = SimpleNamespace(
         id="standard_lite_v2",
         tensor_version=2,
-        feature_schema_version="standard_lite_v2.1",
-        tensor_size=8320,
+        feature_schema_version="standard_lite_v2.2",
+        tensor_size=8410,
         layout_hash="sha256:test",
     )
     captured = {}
