@@ -499,16 +499,17 @@ fn ex4_039_inherited_does_not_fire_on_opponent_digivolve() {
 }
 
 /// Engine behavior: the `scope: inherited` flag on a TRIGGERED clause makes
-/// the clause additionally available while the card is a source under
-/// another permanent (in addition to firing while it is on top). Printed
-/// text "When one of your other Digimon digivolves" allows EX4-039 to fire
-/// when ANOTHER permanent of the controller's digivolves — including when
-/// EX4-039 is the top card of its own permanent. Verify that path.
+/// the clause active while the card is a digivolution SOURCE sitting beneath
+/// another permanent (RULES_CONTEXT.md 15-3-1). Printed text "When one of your
+/// other Digimon digivolves" then fires EX4-039's inherited clause when ANOTHER
+/// friendly permanent digivolves. Verify that path: EX4-039 is a digivolution
+/// source under a generic top card, and a separate friendly Digimon digivolves.
 #[test]
-fn ex4_039_inherited_fires_when_top_and_other_friendly_digivolves() {
+fn ex4_039_inherited_fires_when_source_and_other_friendly_digivolves() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("EX4-039 YAML parses")
+        .add_card(make_named_digimon("CARRIER", "Carrier", 4, 4000))
         .add_card(make_named_digimon("OTHER-LV3", "OtherLv3", 3, 3000))
         .add_card(make_named_digimon("OTHER-LV4", "OtherLv4", 4, 5000))
         .add_card(make_filler("FILL"))
@@ -517,8 +518,9 @@ fn ex4_039_inherited_fires_when_top_and_other_friendly_digivolves() {
         .memory(0)
         .start();
 
-    // EX4-039 is on the field as the TOP card.
-    let _gabu = runner.place_on_field(0, "EX4-039", Some(0));
+    // EX4-039 sits as a digivolution source under a generic CARRIER top card so
+    // its inherited clause is active from its legitimate source position.
+    let _carrier_handle = runner.place_stack(0, &["EX4-039", "CARRIER"]);
     let other_handle = runner.place_on_field(0, "OTHER-LV3", Some(0));
     let memory_before = runner.memory();
 
@@ -547,13 +549,13 @@ fn ex4_039_inherited_fires_when_top_and_other_friendly_digivolves() {
     runner.game.drain_effect_queue();
     drain_accepting_all(&mut runner);
 
-    // Engine fires top-card triggered effects regardless of `inherited` flag;
-    // the clause grants +1 memory because OTHER-LV3 (a different friendly
-    // permanent) digivolved.
+    // The inherited clause is active because EX4-039 is a digivolution source;
+    // it grants +1 memory because OTHER-LV3 (a different friendly permanent)
+    // digivolved.
     assert_eq!(
         runner.memory(),
         memory_before + 1,
-        "inherited clause fires when EX4-039 is the top card and ANOTHER friendly Digimon digivolves"
+        "inherited clause fires when EX4-039 is a digivolution source and ANOTHER friendly Digimon digivolves"
     );
 }
 
