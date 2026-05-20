@@ -834,6 +834,7 @@ pub enum CompiledStep {
     PlayToken {
         controller: CompiledPlayerRef,
         token_name: String,
+        bind_as: Option<String>,
     },
     PlaceAsBottomSource {
         source: CompiledBindingRef,

@@ -513,6 +513,7 @@ fn play_token_step_creates_token_permanent_in_battle_area() {
     let step = CompiledStep::PlayToken {
         controller: CompiledPlayerRef::You,
         token_name: "petrification".to_string(),
+        bind_as: None,
     };
 
     {

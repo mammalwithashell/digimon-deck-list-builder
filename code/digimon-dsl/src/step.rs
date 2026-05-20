@@ -1211,6 +1211,10 @@ fn default_player_ref_you() -> PlayerRef {
 pub struct PlayTokenArgs {
     pub controller: PlayerRef,
     pub token_name: String,
+    /// Bind the resulting permanent handle for use in later steps in the
+    /// same body. None (the default) preserves prior behavior.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

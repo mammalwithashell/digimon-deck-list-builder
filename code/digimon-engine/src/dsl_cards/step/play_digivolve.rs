@@ -329,10 +329,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         CompiledStep::PlayToken {
             controller,
             token_name,
+            bind_as,
         } => {
             let p = resolve_player(ctx, *controller);
             if let Some(played) = ctx.play_token(p, token_name) {
                 bindings.record_played(played);
+                // G016 binding half: expose the created token's handle to
+                // subsequent steps in the same body (mirrors PlayFromHandFree).
+                if let Some(name) = bind_as {
+                    bindings.insert_permanent(name, played);
+                }
             }
             true
         }

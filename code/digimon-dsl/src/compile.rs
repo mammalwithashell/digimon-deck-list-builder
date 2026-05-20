@@ -1671,6 +1671,7 @@ fn compile_step(
         S::PlayToken(a) => CompiledStep::PlayToken {
             controller: compile_player_ref(a.controller),
             token_name: a.token_name.clone(),
+            bind_as: a.bind_as.clone(),
         },
         S::PlaceAsBottomSource(a) => CompiledStep::PlaceAsBottomSource {
             source: compile_binding_ref(&a.source),
