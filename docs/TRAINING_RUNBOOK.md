@@ -21,6 +21,20 @@ For architecture details, see `../AGENTS.md`.
 > profile additionally grew its `action_id_features` block — see
 > [TENSOR_SPEC.md](TENSOR_SPEC.md).
 
+> ## ⚠️ Observation break — 2026-05-20 (Task S1.4)
+>
+> Task S1.4 raised the v2 profiles' `PERM_MAX_SOURCES` from **11** to **12**
+> so every selectable digivolution-source slot is observable. The default
+> **`standard_lite_v2` observation tensor grew 8320 → 8410** floats
+> (`feature_schema_version` `standard_lite_v2.2`); `standard_full_v2` grew
+> **43392 → 43482** (`standard_full_v2.3`). This widens the policy/value
+> **input** layer, so **every model predating `standard_lite_v2.2` is
+> observation-incompatible and must be retrained from scratch** — bundle
+> this with the S1.3 action-space retrain above as one breaking
+> checkpoint. Rebuild the PyO3 bindings (`cd code/digimon-engine-py &&
+> maturin develop`) before retraining so `digimon_engine` reports the new
+> layout. `standard_compact_v1` (`1375`) is unchanged.
+
 ---
 
 ## 1. Quick Reference Commands

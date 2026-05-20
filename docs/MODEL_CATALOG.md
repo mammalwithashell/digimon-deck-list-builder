@@ -30,6 +30,19 @@ CLI this workflow depends on.
 > `standard_lite_v2` observation tensor is size-unchanged, but its action
 > **mask** array grows 2168 → 2192.
 
+> ## ⚠️ Observation break — 2026-05-20 (Task S1.4)
+>
+> Task S1.4 raised the v2 profiles' `PERM_MAX_SOURCES` from **11** to **12**
+> so every action-space digivolution-source slot is observable. This grows
+> the **`standard_lite_v2` observation tensor 8320 → 8410** floats
+> (`feature_schema_version` `standard_lite_v2.2`) and **`standard_full_v2`
+> 43392 → 43482** (`standard_full_v2.3`) — see
+> [TENSOR_SPEC.md](TENSOR_SPEC.md). **Models predating `standard_lite_v2.2`
+> are observation-incompatible and must be retrained** — a `standard_lite_v2`
+> policy expects an 8320-wide input layer. Bundle this retrain with the
+> S1.3 action-space break above: one breaking checkpoint covers both. The
+> `standard_compact_v1` (`1375`) profile is unchanged.
+
 ## Overview
 
 ```
