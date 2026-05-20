@@ -40,21 +40,16 @@
 //! | Alt digivolve Lv.5 [MetalGreymon] OR [ADVENTURE] / cost 3  | `alt_paths[1]` `level_eq: 5 + any_of {name_contains, trait_has}`  | OK                    |
 //! | <Security A. +1>                                           | `kind: grant_keyword, keyword: SecurityAttackPlus, value: 1`      | PARTIAL — G-DECLARATIVE-KEYWORD |
 //! | <Blocker>                                                  | `kind: grant_keyword, keyword: Blocker`                            | PARTIAL — G-DECLARATIVE-KEYWORD |
-//! | [When Digivolving] delete opp Digimon ≤ self DP            | OMITTED (BLOCKED — G-FORMULA-SOURCE-DP)                            | BLOCKED               |
-//! | [All Turns] +1000 DP per distinct color (both players' Digimon+Tamers) | OMITTED (BLOCKED — G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA) | BLOCKED               |
+//! | [When Digivolving] delete opp Digimon ≤ self DP            | `when: when_digivolving` + `dp_lte: { source_dp }`               | OK (G-FORMULA-SOURCE-DP resolved) |
+//! | [All Turns] +1000 DP per distinct color (both players' Digimon+Tamers) | `kind: aura` + `dp_modifier_fn` `distinct_colors_count` | OK             |
 //!
-//! # NEW DSL gaps logged here
+//! # Resolved DSL gaps
 //!
-//! - **G-FORMULA-SOURCE-DP** — sibling-card occurrence of the same gap first
-//!   filed for BT17-102 Greymon (see `code/digimon-engine/cards/bt17/BT17-102.yaml`
-//!   header and `tests/cards_behavioral/bt17/bt17_102.rs` Section 3 for the
-//!   full proposal). The formula vocabulary lacks a primitive that reads the
-//!   SOURCE permanent's effective DP (`ctx.source_permanent`). The engine has
-//!   the data — `Game::effective_dp(handle)` — only the formula layer is
-//!   missing a `source_dp: {}` (or `binding_dp: source` special-case)
-//!   variant. Required for "delete opp Digimon with as much or less DP as
-//!   this Digimon" clauses (this card, BT17-102, BT22-006 Greymon, BT17-078
-//!   Omnimon, BT24-101 GreyKnightmon, etc.).
+//! - **G-FORMULA-SOURCE-DP** (RESOLVED 2026-05-19) — the `source_dp` formula
+//!   primitive reads the SOURCE permanent's effective DP
+//!   (`ctx.source_permanent.and_then(|h| ctx.game.effective_dp(h))`). YAML
+//!   form `{ source_dp: {} }`. Required for "delete opp Digimon with as much
+//!   or less DP as this Digimon" clauses (this card, BT17-102, etc.).
 //!
 //! - **G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA** — generalised
 //!   distinct-colors PerSelector. The DSL `PerSelector` enum
@@ -307,17 +302,11 @@ fn p_182_declarative_keywords_are_security_attack_plus_and_blocker() {
     );
 }
 
-/// P-182 has ZERO triggered clauses today: both [When Digivolving] (delete
-/// opp ≤ self DP) and [All Turns] (+1000 DP per color) are BLOCKED on
-/// formula-vocabulary gaps (G-FORMULA-SOURCE-DP and
-/// G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA). Until those close, the YAML
-/// authors no clause body for either, and including them would violate the
-/// no-approximations policy.
-///
-/// This test locks in the omission. When either gap closes and a clause is
-/// added, this assertion must be updated.
+/// P-182 has exactly ONE triggered clause: the [When Digivolving] delete
+/// (G-FORMULA-SOURCE-DP RESOLVED 2026-05-19). The [All Turns] +1000-per-color
+/// effect is a declarative aura, not a triggered clause.
 #[test]
-fn p_182_has_zero_triggered_clauses_today() {
+fn p_182_has_one_triggered_when_digivolving_clause() {
     let runner = wargreymon_runner();
     let card = runner.compiled_card("P-182").expect("compiled");
 
@@ -329,12 +318,16 @@ fn p_182_has_zero_triggered_clauses_today() {
             _ => None,
         })
         .collect();
-    assert!(
-        triggered.is_empty(),
-        "P-182 must have NO triggered clauses today: [When Digivolving] is BLOCKED \
-         on G-FORMULA-SOURCE-DP and [All Turns] is BLOCKED on \
-         G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA. Found: {} triggered clauses",
+    assert_eq!(
+        triggered.len(),
+        1,
+        "P-182 must have exactly 1 triggered clause ([When Digivolving] delete); \
+         found {}",
         triggered.len()
+    );
+    assert!(
+        triggered[0].when.contains(&CompiledTiming::WhenDigivolving),
+        "the triggered clause must fire on [When Digivolving]"
     );
 }
 
@@ -369,15 +362,13 @@ fn p_182_publishes_dynamic_dp_modifier_fn_aura() {
 /// Playing P-182 onto the field installs `Keyword::SecurityAttackPlus(1)` on
 /// the permanent via the declarative grant_keyword clause.
 ///
-/// Skipped pending G-DECLARATIVE-KEYWORD: DSL declarative `grant_keyword`
-/// clauses compile to an `Effect::declarative(...)` with
-/// `EffectTiming::Declarative`, but `Declarative` timing is never enqueued or
-/// fired by the engine. The modifier is therefore never installed at runtime.
-/// Structural checks confirm the clause is compiled correctly (Section 1);
-/// behavioral installation must wait for the engine integration.
+/// G-DECLARATIVE-KEYWORD is closed: the DSL declarative `grant_keyword`
+/// clause lowers (`lower_grant_keyword::lower`) to an `Effect::declarative`
+/// flagged `materializes_declarative_state()` whose body calls
+/// `ctx.grant_declarative_keyword(...)`; the engine's declarative-state
+/// tick installs the keyword modifier at runtime (proven by AD1-001 /
+/// BT20-102).
 #[test]
-#[ignore = "pending: G-DECLARATIVE-KEYWORD — EffectTiming::Declarative not yet fired by engine; \
-            grant_keyword modifier is compiled but never installed at runtime"]
 fn p_182_security_attack_plus_1_installed_on_field() {
     let mut runner = wargreymon_runner();
 
@@ -421,11 +412,9 @@ fn p_182_security_attack_plus_1_installed_on_field() {
 /// Playing P-182 onto the field installs `Keyword::Blocker` on the permanent
 /// via the declarative grant_keyword clause.
 ///
-/// Skipped pending G-DECLARATIVE-KEYWORD — same root cause as the Security A.
-/// installation test above.
+/// G-DECLARATIVE-KEYWORD is closed — same wiring as the Security A.
+/// installation test above (declarative-state tick installs the keyword).
 #[test]
-#[ignore = "pending: G-DECLARATIVE-KEYWORD — EffectTiming::Declarative not yet fired by engine; \
-            grant_keyword modifier is compiled but never installed at runtime"]
 fn p_182_blocker_installed_on_field() {
     let mut runner = wargreymon_runner();
 
@@ -451,26 +440,17 @@ fn p_182_blocker_installed_on_field() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 4 — [When Digivolving] delete opp Digimon ≤ self DP  [BLOCKED]
+// Section 4 — [When Digivolving] delete opp Digimon ≤ self DP
+//                                                  (G-FORMULA-SOURCE-DP RESOLVED)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// BLOCKED: G-FORMULA-SOURCE-DP — the "delete 1 opp Digimon with as much or
-/// less DP as this Digimon" clause is OMITTED from the YAML because the
-/// formula vocabulary cannot read the source permanent's DP. Including a
-/// `kind: digimon` delete without the DP filter would over-target opponents
-/// with arbitrary DP, violating no-approximations.
+/// G-FORMULA-SOURCE-DP (RESOLVED 2026-05-19): the "delete 1 opp Digimon with
+/// as much or less DP as this Digimon" clause uses the `source_dp` formula
+/// primitive — `dp_lte: { formula: { source_dp: {} } }` — so only opponent
+/// Digimon with DP ≤ the carrier WarGreymon's effective DP are selectable.
 ///
-/// This is the same gap shape as BT17-102 Greymon's delete sub-clause —
-/// see `tests/cards_behavioral/bt17/bt17_102.rs::bt17_102_when_digivolving_delete_filters_to_dp_lte_self`.
-/// When the gap closes, uncomment the YAML stub in `cards/p/P-182.yaml` and
-/// activate this test.
+/// Same gap shape as BT17-102 Greymon's delete sub-clause.
 #[test]
-#[ignore = "BLOCKED: G-FORMULA-SOURCE-DP — no formula primitive reads ctx.source_permanent's \
-            effective DP. binding_dp resolves NAMED bindings only; there is no `source_dp` \
-            variant or `binding_dp: source` special-case. Sibling of G-BINDING-DP-FORMULA \
-            (RESOLVED 2026-05-02 for user-bound permanents). Without this primitive, the \
-            'delete opp Digimon with as much or less DP as this Digimon' clause cannot be \
-            authored faithfully and is omitted from the YAML to preserve no-approximations."]
 fn p_182_when_digivolving_deletes_opp_digimon_with_dp_lte_self() {
     let mut runner = DebugRunner::builder()
         .dsl_card("P-182")
@@ -515,13 +495,10 @@ fn p_182_when_digivolving_deletes_opp_digimon_with_dp_lte_self() {
     );
 }
 
-/// BLOCKED: companion negative test for the same G-FORMULA-SOURCE-DP gap.
-/// When opponent has only Digimon with DP > self, no permanent should be
-/// deleted (and the selection's `condition` should prevent the prompt).
-/// Currently OMITTED from YAML so the trigger no-ops anyway, but this test
-/// will become meaningful once the formula primitive lands.
+/// G-FORMULA-SOURCE-DP (RESOLVED): companion negative test. When the
+/// opponent has only Digimon with DP > self, the `dp_lte: { source_dp }`
+/// candidate filter admits no target, so nothing is deleted.
 #[test]
-#[ignore = "BLOCKED: G-FORMULA-SOURCE-DP — see positive test for full rationale"]
 fn p_182_when_digivolving_deletes_nothing_when_no_opp_digimon_within_dp() {
     let mut runner = DebugRunner::builder()
         .dsl_card("P-182")

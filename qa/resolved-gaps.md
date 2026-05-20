@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-17
+Last updated: 2026-05-20
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,114 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## Phase 2 / DNA Omnimon completion closure — 2026-05-20
+
+The `complete-dna-omnimon-archetype` change drove the DNA Omnimon archetype (64 cards)
+from a Phase A baseline of 34 IMPLEMENTED / 25 PARTIAL / 5 BLOCKED to a final ledger of
+**62 IMPLEMENTED / 2 PARTIAL / 0 BLOCKED**. Archetype verdict ledger:
+[qa/qa-reports/validated_cards_dsl.json](qa-reports/validated_cards_dsl.json). The two
+remaining PARTIAL cards (BT17-102, BT23-096) are blocked on the two still-open gaps
+recorded at the end of this section.
+
+DNA Omnimon now has 0 live `raw_rust` escapes — BT20-102's board-wipe/return migrated to
+pure DSL, AD1-025's body migrated, and the unused `bt20_102_boardwipe_and_return` fn was
+removed.
+
+### Substrate gaps CLOSED (new engine/DSL capability landed)
+
+Small DSL gaps:
+
+- **G-DSL-PREDICATE-TEXT-CONTAINS** — `effect_text_contains` predicate leaf scans a
+  candidate's printed effect/inherited/security text (BT22-017 "[Omnimon] in its text").
+- **G-EVENT-TARGET-NAME-CONTAINS** — `event_target_name_contains` predicate leaf gates
+  observer clauses on the triggering card's name.
+- **G-FORMULA-SOURCE-DP** — `source_dp` FormulaSpec variant exposes the source
+  permanent's DP to formula evaluation.
+- **G-PLAY-COST-AGGREGATE** — `LowestPlayCost` AggregateSelector / FieldSelector for
+  "the card(s) with the lowest play cost" targeting.
+- **G-SELF-DIGIVOLUTION-CONTAINS-NAME** — `self_digivolution_sources_contain_name`
+  (sources-only) predicate evaluates the source permanent's own stack for a named card.
+- **distinct_tamer_colors_gte** (G-ALT-PATH-DIRECTION-INTO companion) — `distinct_tamer_colors_gte`
+  predicate leaf counts distinct Tamer colors on the field.
+
+Medium DSL/engine gaps:
+
+- **G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH** — `min:` on `select_count_capped_multi` +
+  `return_trash_list_to_deck_bottom` step + atomic cost-then-cancel guard.
+- **G-DSL-UNION-PLAY-FREE** — `select_union_zone` widened to bind a zone-tagged index so
+  a free play can originate from either zone in the union.
+- **G-IGNORE-COLOR-MASK** — from-hand color-requirement bypass via a card-level
+  `use_requirement`.
+- **G-MULTI-SELECT-OPP-PLAY-COST-SUM** — `SelectOpponentPlayCostBudget` step +
+  `SelectionKind::PlayCostBudget` for multi-pick under an opponent-play-cost budget.
+- **G-OPT-MULTI-TIMING-SHARED-LOCKOUT** — `Effect::shared_opt_group` shared
+  once-per-turn key across multiple timings of one card.
+- **G-OUTER-OPTIONAL-NOT-INSTALLED** — outer accept/decline `PendingSelection` for a
+  lone optional triggered effect that installs no inner selection.
+- **G-PRED-NO-FACE-UP-SECURITY-NAMED** — `no_face_up_security_named` predicate leaf.
+- **G-SELECT-EMPTY-OUTER-TAIL** — `select_hand` empty-candidate path now drains the
+  outer tail so post-selection steps (e.g. `trash_top_security`) still fire.
+- **BT5-092 cost-reduction trigger** — `when_any_ally_digivolves_into` CostReductionBody
+  trigger.
+
+Deep engine gaps:
+
+- **G-DSL-DNA-FROM-HAND-PARTNER** — `effect_initiated_dna_digivolve_with_hand_partner`
+  engine API + DSL step (DNA digivolve pairing a field material with a hand partner).
+- **G-FOR-EACH-DELETE-INDEX-SHIFT** — `ForEach` re-resolves stable top-card identity per
+  iteration so index shifts during deletion do not corrupt iteration.
+- **AD1-012 defender-side effect-initiated DNA mid-attack-interrupt** — closed with no
+  engine redesign; authored on the existing interrupt substrate.
+
+Additional gaps closed during card authoring:
+
+- **G-AURA-GRANTED-SECURITY-KEYWORD** — `Modifiers::granted_security_attack_keyword_bonus`.
+- **G-FORMULA-COST-DELTA** — formula-valued `CostDelta::ReduceFn` on `play_from_hand`.
+- **G-EVENT-TARGET-COLOR** — `event_target_color_any_of` predicate leaf.
+- **G-PLAY-SELECTED-SECURITY-CARD** — `play_security_card` step +
+  `EffectContext::play_from_security_card`.
+- **source_material_count formula**; `OnLeaveField` timing wired to fire from deletion +
+  return paths; `binding_count_eq` predicate; `ResolvedBinding::SourceRefs` +
+  `per_selected` over source refs.
+
+### Gaps that were STALE (tracker said open / `#[ignore]` said pending, but the substrate already existed and is now USED)
+
+The following gaps were carried as open in the trackers, but the engine/DSL substrate had
+already landed in an earlier phase. The `complete-dna-omnimon-archetype` change authored
+the DNA Omnimon card clauses against the existing substrate and re-enabled the
+behavioral tests, which now pass:
+
+`G-COUNT-AGGREGATE`, `G-COUNT-LTE-EVAL`, `G-DECLARATIVE-KEYWORD`,
+`G-DSL-EVENT-TARGET-IS-OTHER`, `G-DSL-EVENT-TARGET-IS-SELF`, `G-OPT-TRIGGERED`,
+`G-PLAY-COST-GTE`, `G-PLAY-COST-LTE`, `G-SECURITY-ZONE-AURA-SOURCE`,
+`G-DSL-SOURCE-NAME-CONTAINS`, `G-DSL-SELECT-OWN-SOURCES-FILTER`,
+`G-DSL-DISTINCT-TAMER-COLORS-FORMULA`, `G-PLACE-SELF-AS-OPTION-PERMANENT`,
+`G-ADD-OPTION-SELF-TO-HAND`, `G-EVENT-CARD-TAMER-PLAY`, `G-COLOR-MATCH-AGAINST-BOARD`,
+`G-DSL-SELF-NAME-CONTAINS`, `G-EVENT-TARGET-NOT-SOURCE`.
+
+### Gaps STILL OPEN (verified open against code; filed, not closed by this change)
+
+These two gaps remain genuinely open and are tracked in
+[qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md) and
+[docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md). They account for the 2 PARTIAL
+cards in the final ledger:
+
+- **G-DYNAMIC-NAME-ALIAS-FROM-STACK** — BT17-102 Greymon `[All Turns]` material-name-alias
+  clause. The DSL identity layer has only static `name_aliases`; there is NO engine
+  consumer for a dynamic alias derived from the live digivolution-source stack. A faithful
+  fix is a cross-cutting engine feature (a Permanent-level effective-name-set query
+  consulted by every name predicate). BT17-102 is otherwise IMPLEMENTED; this one clause
+  is omitted and test `bt17_102_all_turns_aliases_low_level_material_names` is left
+  `#[ignore]`'d.
+- **G-DSL-DELAY-ON-ATTACK-EVENT** — BT23-096 Comet Hammer `<Delay>`-on-attack clause.
+  3-part engine blocker: `lower_delay.rs` does not map attack timings to
+  `DelayTrigger::OnEvent`; `combat.rs` dispatches `OnAllyAttack` via
+  `TriggerSource::PlayerBattleArea` which `effect_queue.rs` never fans out to event-gated
+  delays; `attacker_trait_has` resolves the attacker only via `attack_target_change()`
+  (unset for a plain attack). `G-DSL-ON-ALLY-ATTACK-TIMING` and `G-ATK-TRAIT-FILTER` are
+  noted as already-present substrate. BT23-096 is otherwise IMPLEMENTED; the clause is
+  omitted and the test is left `#[ignore]`'d.
 
 ## Phase 2 Track C closure — 2026-05-17
 

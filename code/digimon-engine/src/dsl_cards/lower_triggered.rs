@@ -4,8 +4,8 @@
 use std::sync::Arc;
 
 use digimon_dsl::compiled::{
-    CompiledActivationCostKind, CompiledCardKind, CompiledPredicate, CompiledScope, CompiledStep,
-    CompiledTriggeredClause,
+    CompiledActivationCostKind, CompiledCardKind, CompiledPlayerRef, CompiledPredicate,
+    CompiledScope, CompiledStep, CompiledTriggeredClause,
 };
 
 use crate::card_source::CardHandle;
@@ -52,7 +52,40 @@ pub fn lower_with_raw_and_option_use_requirement_for_kind(
     option_use_requirement: Option<Arc<CompiledPredicate>>,
     card_kind: Option<CompiledCardKind>,
 ) -> Vec<Effect> {
+    lower_for_kind_with_clause_index(card, clause, raw, option_use_requirement, card_kind, 0)
+}
+
+/// Lower a triggered clause, supplying its index among the card's clauses.
+/// `clause_index` seeds the `shared_opt_group` for a once-per-turn clause
+/// that lowers to MULTIPLE effects (one per `when:` timing) so all of those
+/// effects share a single OPT lockout per turn — DCGO's `SharedHashString`.
+/// See `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
+pub fn lower_for_kind_with_clause_index(
+    card: CardHandle,
+    clause: &CompiledTriggeredClause,
+    raw: Arc<EngineRawRustRegistry>,
+    option_use_requirement: Option<Arc<CompiledPredicate>>,
+    card_kind: Option<CompiledCardKind>,
+    clause_index: usize,
+) -> Vec<Effect> {
     let mut out = Vec::new();
+    // Count the timings that map to a real engine timing. When a clause is
+    // once-per-turn AND spans more than one real timing, every lowered effect
+    // must share a single OPT counter rather than each timing keeping its own.
+    let real_timing_count = clause
+        .when
+        .iter()
+        .filter(|t| compiled_timing_to_engine(**t).is_some())
+        .count();
+    let needs_shared_opt = real_timing_count > 1
+        && (clause.once_per_turn || matches!(clause.max_per_turn, Some(n) if n > 0));
+    // Disjoint keyspace: real effect slots are vec indices (0..N). A shared
+    // group key sets the high bit so it can never collide with a slot index.
+    let shared_opt_group: Option<u8> = if needs_shared_opt {
+        Some(0x80u8 | (clause_index as u8 & 0x7f))
+    } else {
+        None
+    };
     for t in &clause.when {
         let Some(mut engine_timing) = compiled_timing_to_engine(*t) else {
             continue;
@@ -77,6 +110,18 @@ pub fn lower_with_raw_and_option_use_requirement_for_kind(
                 }
                 _ => (None, clause.process.clone()),
             };
+        // G-OUTER-OPTIONAL-NOT-INSTALLED: decide whether a "you may" clause
+        // needs an explicit outer accept/decline prompt — computed before
+        // `body_steps` is moved into the `Arc` below.
+        let needs_outer_optional = clause.optional && !body_first_step_is_declinable(&body_steps);
+        // Guard predicate: when the body's first step is a selection, the
+        // outer prompt only installs if it has >=1 candidate. `None` ⇒ no
+        // guard (always prompt).
+        let outer_optional_first_step = if needs_outer_optional {
+            body_steps.first().cloned()
+        } else {
+            None
+        };
         let process_steps = Arc::new(body_steps);
         let active_when = clause.active_when.clone().map(Arc::new);
         let condition = clause.condition.clone().map(Arc::new);
@@ -110,8 +155,31 @@ pub fn lower_with_raw_and_option_use_requirement_for_kind(
                 builder = builder.once_per_turn();
             }
         }
+        // Multi-timing OPT cluster: all timings lowered from this clause
+        // share one once-per-turn counter (G-OPT-MULTI-TIMING-SHARED-LOCKOUT).
+        if let Some(group) = shared_opt_group {
+            builder = builder.shared_opt_group(group);
+        }
         if optional {
             builder = builder.optional();
+            // G-OUTER-OPTIONAL-NOT-INSTALLED: a "you may" clause whose body's
+            // first step is NOT itself a declinable (PASS-able) selection
+            // needs an explicit outer accept/decline prompt — otherwise the
+            // body would force a mandatory action the printed "you may"
+            // forbids. When the first step IS an optional selection, the
+            // inner PASS already provides the decline path (no double prompt).
+            if needs_outer_optional {
+                builder = builder.needs_outer_optional_prompt();
+                // Suppress the prompt when the body's first selection step
+                // has zero candidates — DCGO does not prompt for an optional
+                // ability with no legal target.
+                if let Some(guard) = outer_optional_first_step
+                    .as_ref()
+                    .and_then(first_step_candidate_guard)
+                {
+                    builder = builder.outer_optional_guard(guard);
+                }
+            }
         }
         if steps_provide_resource_flow(&clause.process) {
             builder = builder.resource_flow();
@@ -184,6 +252,143 @@ fn predicate_subject_for_source(
 
 fn steps_provide_resource_flow(steps: &[CompiledStep]) -> bool {
     steps.iter().any(step_provides_resource_flow)
+}
+
+/// True when the body's first step already exposes a declinable (PASS-able)
+/// choice to the player, so a `optional: true` clause does NOT also need an
+/// outer accept/decline prompt. A step-level `optional:` selection, an
+/// allow-zero multi-select, an explicit `optional`/`min_picks: 0` budget /
+/// attack step, or a `CompiledStep::Optional(...)` wrapper is itself the
+/// inner decline path. Only a clause whose first step is unconditionally
+/// mandatory needs the outer prompt. `G-OUTER-OPTIONAL-NOT-INSTALLED`.
+fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
+    let Some(first) = body.first() else {
+        // Empty body — nothing to run; an outer prompt would be pointless.
+        return true;
+    };
+    match first {
+        // Explicit step-level optional wrapper — the player may skip it.
+        CompiledStep::Optional(_) => true,
+        // Single-pick selection steps carry their own `optional` flag; when
+        // set, the player can PASS the prompt — itself the decline path.
+        CompiledStep::SelectHand { optional, .. }
+        | CompiledStep::SelectTrash { optional, .. }
+        | CompiledStep::SelectReveal { optional, .. }
+        | CompiledStep::SelectSecurity { optional, .. }
+        | CompiledStep::SelectOwnPermanent { optional, .. }
+        | CompiledStep::SelectOpponentPermanent { optional, .. }
+        | CompiledStep::SelectAnyPermanent { optional, .. }
+        | CompiledStep::SelectMaterial { optional, .. }
+        | CompiledStep::SelectUnionZone { optional, .. }
+        | CompiledStep::SelectDnaPair { optional, .. }
+        | CompiledStep::LinkToOwnDigimon { optional, .. }
+        | CompiledStep::MayAttackNow { optional, .. }
+        | CompiledStep::RedirectAttackTarget { optional, .. }
+        | CompiledStep::RefireEffect { optional, .. } => *optional,
+        // Multi-pick selections are declinable when their minimum is zero
+        // (the player may pick nothing — PASS at `picked >= min`).
+        CompiledStep::SelectCountCappedMulti {
+            min, optional_zero, ..
+        } => *min == 0 || *optional_zero,
+        CompiledStep::SelectOwnSources { min, .. } => *min == 0,
+        CompiledStep::SelectOpponentDpBudget { min_picks, .. }
+        | CompiledStep::SelectOpponentPlayCostBudget { min_picks, .. } => *min_picks == 0,
+        // Any other leading step is mandatory work — the printed "you may"
+        // can only be honored via an outer accept/decline prompt.
+        _ => false,
+    }
+}
+
+/// Resolve a `CompiledPlayerRef` against a read context to concrete player
+/// ids whose zone the predicate scans.
+fn players_for_compiled_ref(
+    of: CompiledPlayerRef,
+    rctx: &crate::effect_context::EffectReadContext<'_>,
+) -> Vec<crate::enums::PlayerId> {
+    match of {
+        CompiledPlayerRef::You => vec![rctx.player],
+        CompiledPlayerRef::Opponent => vec![rctx.opponent_id()],
+        CompiledPlayerRef::Active => vec![rctx.game.turn_player()],
+        CompiledPlayerRef::Any => {
+            (0..rctx.game.players.len() as crate::enums::PlayerId).collect()
+        }
+    }
+}
+
+/// Build a guard closure for the outer optional prompt: it returns `true`
+/// iff the body's first selection step would have at least one candidate.
+/// Returns `None` for step kinds whose actionability cannot be cheaply
+/// pre-evaluated (the outer prompt then always installs). Only the common
+/// single-pick selection steps are covered — they are the ones that drive
+/// the `G-OUTER-OPTIONAL-NOT-INSTALLED` failure mode (a useless prompt for
+/// a body that would silently no-op).
+fn first_step_candidate_guard(
+    step: &CompiledStep,
+) -> Option<Box<dyn Fn(&crate::effect_context::EffectReadContext<'_>) -> bool + Send + Sync>> {
+    match step {
+        CompiledStep::SelectHand { of, filter, .. } => {
+            let of = *of;
+            let filter = Arc::new(filter.clone());
+            Some(Box::new(move |rctx| {
+                players_for_compiled_ref(of, rctx).into_iter().any(|p| {
+                    rctx.game.player(p).hand.iter().any(|card| {
+                        eval_predicate(&filter, rctx, PredicateSubject::Card(card.handle()))
+                    })
+                })
+            }))
+        }
+        CompiledStep::SelectTrash { of, filter, .. } => {
+            let of = *of;
+            let filter = Arc::new(filter.clone());
+            Some(Box::new(move |rctx| {
+                players_for_compiled_ref(of, rctx).into_iter().any(|p| {
+                    rctx.game.player(p).trash.iter().any(|card| {
+                        eval_predicate(&filter, rctx, PredicateSubject::Card(card.handle()))
+                    })
+                })
+            }))
+        }
+        CompiledStep::SelectOwnPermanent { filter, .. } => {
+            let filter = Arc::new(filter.clone());
+            Some(Box::new(move |rctx| {
+                permanent_zone_has_match(rctx, rctx.player, &filter)
+            }))
+        }
+        CompiledStep::SelectOpponentPermanent { filter, .. } => {
+            let filter = Arc::new(filter.clone());
+            Some(Box::new(move |rctx| {
+                let opp = rctx.opponent_id();
+                permanent_zone_has_match(rctx, opp, &filter)
+            }))
+        }
+        CompiledStep::SelectAnyPermanent { filter, .. } => {
+            let filter = Arc::new(filter.clone());
+            Some(Box::new(move |rctx| {
+                (0..rctx.game.players.len() as crate::enums::PlayerId)
+                    .any(|p| permanent_zone_has_match(rctx, p, &filter))
+            }))
+        }
+        // Other first-step kinds (suspend, select_effect_choice, budget
+        // selects, etc.) are not pre-evaluated — the outer prompt installs
+        // unconditionally for them.
+        _ => None,
+    }
+}
+
+/// True when `player`'s battle area holds a permanent satisfying `filter`.
+fn permanent_zone_has_match(
+    rctx: &crate::effect_context::EffectReadContext<'_>,
+    player: crate::enums::PlayerId,
+    filter: &CompiledPredicate,
+) -> bool {
+    let count = rctx.game.player(player).battle_area.len();
+    (0..count).any(|i| {
+        let handle = crate::permanent::PermanentHandle {
+            player,
+            index: i as u8,
+        };
+        eval_predicate(filter, rctx, PredicateSubject::Permanent(handle))
+    })
 }
 
 fn step_provides_resource_flow(step: &CompiledStep) -> bool {

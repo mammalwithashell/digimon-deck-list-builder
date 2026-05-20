@@ -238,6 +238,7 @@ fn fixture_cost_reduction(amount: i32, condition: Option<CompiledPredicate>) -> 
                 reduction_timing: Some("before_pay_cost".into()),
                 when_playing_this: true,
                 when_any_ally_played: None,
+                when_any_ally_digivolves_into: None,
                 condition,
                 optional: false,
                 once_per_turn: false,

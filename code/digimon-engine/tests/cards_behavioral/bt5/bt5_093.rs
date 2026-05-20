@@ -49,44 +49,27 @@
 //! - **D5** Filtered aura grant_keyword (SecurityAttackPlus + your-turn gate)
 //! - **D-OnSecurity** Tamer free-play from security via play_from_security
 //!
-//! # Known gaps tagged
+//! # Resolved gaps (2026-05-20 DNA Omnimon authoring pass)
 //!
-//! - **G-AURA-GRANTED-SECURITY-KEYWORD** (NEW — to be filed): aura
+//! - **G-AURA-GRANTED-SECURITY-KEYWORD** — RESOLVED. Aura
 //!   `grant_keyword: { keyword: SecurityAttackPlus, ... }` lowers to
-//!   `lower_aura.rs` which calls `ctx.grant_declarative_keyword(handle,
-//!   Keyword::SecurityAttackPlus(1), Expiry::Permanent)`. This installs into
-//!   `Modifiers::permanent_keywords` (visible to `Modifiers::has_keyword`).
-//!   However, the security-loop consumer
-//!   `Game::security_attack_keyword_bonus` (game.rs:1938) ONLY iterates
-//!   `permanent.card_sources` (printed face/inherited keywords) — it does
-//!   NOT consult `Modifiers::permanent_keywords`. As a result, an
-//!   aura-granted SecurityAttackPlus does install on the target permanent
-//!   but is never consumed at attack-resolution time, so the buffed Omnimon
-//!   does not actually pop an extra security card. The test that exercises
-//!   the end-to-end security pop is `#[ignore]`'d on this gap; the test
-//!   that asserts the keyword is installed (the install-side half of the
-//!   contract) runs green and locks the aura's runtime install.
+//!   `lower_aura.rs`'s `ctx.grant_declarative_keyword(...)`, installing into
+//!   `Modifiers::permanent_keywords`. `Game::security_attack_keyword_bonus`
+//!   now folds in `Modifiers::granted_security_attack_keyword_bonus` (sums
+//!   `SecurityAttackPlus`/`Minus` registry keyword entries) alongside the
+//!   printed `card_sources` keywords, so an aura-granted SecurityAttackPlus
+//!   is consumed at the security loop — the buffed Omnimon pops the extra
+//!   security card.
 //!
-//! - **G-PREDICATE-OF-ALIAS** (NEW — to be filed): the YAML's
-//!   `target: { of: you, ... }` for the aura uses an unrecognized field
-//!   name. `BoolPredicateSpec` defines the controller filter as `owner`
-//!   (`code/digimon-dsl/src/predicate.rs:89`); there is no `#[serde(alias =
-//!   "of")]`. serde permissively drops unknown keys, so the aura target's
-//!   compiled `owner` is `None` and the aura scans BOTH controllers'
-//!   battle areas. The aura currently buffs opponent's Omnimon-named
-//!   Digimon as well as own — directly violating "All of YOUR Digimon
-//!   with [Omnimon] in their name". Fix: either rename `of:` to `owner:`
-//!   in the YAML (1-line authoring fix) or add `#[serde(alias = "of")]`
-//!   to `BoolPredicateSpec::owner`. The negative test for opponent's
-//!   Omnimon is `#[ignore]`'d on this gap.
+//! - **G-PREDICATE-OF-ALIAS** — RESOLVED. `BoolPredicateSpec::owner` carries
+//!   `#[serde(alias = "of")]`, so `of:` resolves to the controller filter.
+//!   The production YAML (`cards/bt5/BT5-093.yaml`) uses the canonical
+//!   `owner: you` spelling (matching sibling BT22-084), so the aura only
+//!   matches the controller's Omnimon-named Digimon.
 //!
-//! - **G-AURA-ACTIVE-WHEN-CROSS-TURN** (NEW — to be filed): the aura's
-//!   `active_when: { your_turn: true }` is authored, but cross-turn
-//!   verification (own Omnimon must lose the keyword on opponent's turn)
-//!   needs end-to-end behavioral coverage. The on-your-turn install-side
-//!   tests pass; the cross-turn negative test is `#[ignore]`'d pending
-//!   confirmation that the declarative tick re-evaluates `active_when`
-//!   after `end_turn`.
+//! - **G-AURA-ACTIVE-WHEN-CROSS-TURN** — RESOLVED. The declarative tick
+//!   re-evaluates the aura's `active_when: { your_turn: true }` after
+//!   `end_turn`, so own Omnimon loses the keyword on the opponent's turn.
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -100,7 +83,8 @@ use digimon_engine::enums::{CardKind, EffectTiming, Keyword, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::TriggerSource;
 
-const YAML: &str = include_str!("../../../cards/_examples/BT5-093.yaml");
+// Promoted to the per-set folder on 2026-05-20 (was cards/_examples/BT5-093.yaml).
+const YAML: &str = include_str!("../../../cards/bt5/BT5-093.yaml");
 const CARD_ID: &str = "BT5-093";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -496,26 +480,13 @@ fn bt5_093_aura_does_not_grant_to_non_omnimon_own_digimon() {
 /// Negative (controller filter): an opponent's Omnimon-named Digimon must
 /// NOT receive the keyword — printed text scopes to "your Digimon".
 ///
-/// **Found bug — YAML authoring gap (G-PREDICATE-OF-ALIAS or YAML rename to
-/// `owner`):** the YAML target predicate is currently `target: { of: you,
-/// zone: [battle_area], kind: digimon, name_contains: "Omnimon" }`. The DSL
-/// `BoolPredicateSpec` has no `of` field — the controller filter is named
-/// `owner` (see `code/digimon-dsl/src/predicate.rs:89`). With serde defaulted
-/// to permissive parsing, `of: you` is silently ignored, so the compiled
-/// `target.owner` is `None` and the aura scans BOTH controllers' battle
-/// areas. The fix is either:
-///   (a) update `cards/_examples/BT5-093.yaml` to use `owner: you` (1-line
-///       authoring fix), OR
-///   (b) add `#[serde(alias = "of")]` to `BoolPredicateSpec::owner` so the
-///       existing field name remains valid.
-/// This test is `#[ignore]`'d on the gap; the install-side positive test
-/// `bt5_093_aura_grants_security_attack_plus_to_own_omnimon` already passes.
+/// The production YAML (`cards/bt5/BT5-093.yaml`) uses `target: { owner: you,
+/// ... }` (the canonical sibling BT22-084 spelling), so the aura's compiled
+/// `target.owner` is `Some(You)` and the filtered-target aura process only
+/// matches the controller's battle area. (`BoolPredicateSpec::owner` also
+/// carries `#[serde(alias = "of")]`, so the prior `of:` spelling would
+/// resolve too — but `owner:` is the canonical form.) Resolved 2026-05-20.
 #[test]
-#[ignore = "BLOCKED: G-PREDICATE-OF-ALIAS — BT5-093.yaml uses `target: { of: you, ... }` but \
-            `BoolPredicateSpec` has no `of` field (only `owner`). serde silently drops the \
-            unknown key, so the aura target has no owner filter and matches both controllers' \
-            Omnimon-named Digimon. Fix: rename `of:` to `owner:` in the YAML, or add \
-            #[serde(alias=\"of\")] to BoolPredicateSpec::owner."]
 fn bt5_093_aura_does_not_grant_to_opponents_omnimon() {
     let mut runner = taimatt_runner();
     runner
@@ -541,15 +512,10 @@ fn bt5_093_aura_does_not_grant_to_opponents_omnimon() {
 /// { your_turn: true }` gate must turn the aura off — even an own Omnimon
 /// should not carry the keyword after a tick on opp's turn.
 ///
-/// Documented gap: the aura's `active_when` is evaluated against `ctx.player`
-/// (the controller of the source) at tick time. End-to-end turn-gating goes
-/// through the broader declarative-tick condition path. This test is
-/// `#[ignore]`'d pending verification of the active-when consumer for aura
-/// process closures during cross-turn ticks.
+/// Verified 2026-05-20: the declarative tick re-evaluates `active_when`
+/// after `end_turn`, so the keyword is cleared from own Omnimon once it is
+/// no longer the controller's turn.
 #[test]
-#[ignore = "pending: G-AURA-ACTIVE-WHEN-CROSS-TURN — aura active_when:{your_turn:true} \
-            evaluation across turn boundaries needs end-to-end behavioral coverage; \
-            install-side tests on your-turn already pass."]
 fn bt5_093_aura_does_not_grant_on_opponents_turn() {
     let mut runner = taimatt_runner();
     runner
@@ -591,23 +557,14 @@ fn bt5_093_aura_does_not_grant_on_opponents_turn() {
 /// BT5-093 is on the field should pop 2 security cards (base 1 + aura's
 /// SecurityAttackPlus 1).
 ///
-/// BLOCKED by **G-AURA-GRANTED-SECURITY-KEYWORD**: `lower_aura.rs` calls
-/// `ctx.grant_declarative_keyword(handle, Keyword::SecurityAttackPlus(1),
-/// Expiry::Permanent)` which writes into `Modifiers::permanent_keywords`,
-/// but the security-loop consumer `Game::security_attack_keyword_bonus`
-/// (game.rs:1938) iterates only `permanent.card_sources` (printed
-/// face/inherited keywords). The aura-granted keyword is therefore never
-/// folded into the `checks` total in `resolve_player_security_loop`
-/// (combat.rs:1693). Closing this gap requires either:
-///   (a) extending `security_attack_keyword_bonus` to also sum
-///       `Keyword::SecurityAttackPlus`/`Minus` entries from
-///       `Modifiers::permanent_keywords[handle]`, or
-///   (b) routing the aura's grant through `ModifierType::SecurityAttackChange`
-///       instead of as a keyword grant.
+/// Resolved 2026-05-20 (closes G-AURA-GRANTED-SECURITY-KEYWORD via fix (a)):
+/// `Game::security_attack_keyword_bonus` now folds in
+/// `Modifiers::granted_security_attack_keyword_bonus`, which sums
+/// `Keyword::SecurityAttackPlus`/`Minus` entries from
+/// `Modifiers::permanent_keywords` (where `lower_aura.rs`'s
+/// `grant_declarative_keyword` installs them). Printed face/inherited
+/// keywords on `permanent.card_sources` are still summed alongside.
 #[test]
-#[ignore = "BLOCKED: G-AURA-GRANTED-SECURITY-KEYWORD — Modifiers::permanent_keywords entries \
-            (installed by aura grant_keyword) are NOT consulted by Game::security_attack_keyword_bonus; \
-            only printed top-card/inherited keywords on permanent.card_sources are summed at the security loop."]
 fn bt5_093_aura_buffed_omnimon_pops_extra_security_card() {
     let mut runner = taimatt_runner();
 

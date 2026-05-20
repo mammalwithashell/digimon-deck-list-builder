@@ -20,7 +20,7 @@
 //! `_resolve_effect_stack` max=50 bound.
 
 use crate::action::space::{
-    BREEDING_TARGET, HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS,
+    BREEDING_TARGET, HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS, REPLACEMENT_ACCEPT,
 };
 use crate::card_source::CardHandle;
 use crate::effect::ReFireableEffect;
@@ -755,6 +755,32 @@ impl Game {
                     .effect_queue
                     .remove(idx)
                     .expect("bundle index in-bounds by construction");
+                // Composition note: `needs_pre_cost_prompt` (cost-bearing
+                // optional trigger) and `needs_outer_optional_prompt` below
+                // are mutually exclusive in practice. The pre-cost branch
+                // above `return`s and its TriggerOrder callback runs the
+                // effect directly via `run_queued_effect`, bypassing this
+                // outer-prompt check — so a cost-bearing optional effect
+                // gets exactly one decline gate (the pre-cost PASS), and a
+                // cost-free optional effect gets exactly one (the outer
+                // prompt). No double-prompt.
+                //
+                // G-OUTER-OPTIONAL-NOT-INSTALLED: a lone OPTIONAL triggered
+                // effect ("you may …") whose body's first step is a mandatory
+                // selection must surface an explicit outer accept/decline
+                // prompt BEFORE its body runs — otherwise the body forces an
+                // action the printed "you may" says the player can refuse.
+                // The DSL lowering sets `needs_outer_optional_prompt` only for
+                // that case (when the first body step already exposes a
+                // declinable PASS, the inner PASS is the decline path and the
+                // flag stays false). The outer prompt is skipped entirely
+                // when the effect's preconditions already fail.
+                if qe.is_optional
+                    && self.queued_effect_wants_outer_optional_prompt(&qe)
+                {
+                    self.install_outer_optional_trigger_selection(qe);
+                    return;
+                }
                 self.run_queued_effect(qe);
                 continue;
             }
@@ -1910,10 +1936,11 @@ impl Game {
 
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
+                let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
                 let Some(activation_count) = self.source_permanent_activation_count(
                     perm_handle,
                     qe.source_card,
-                    qe.effect_slot,
+                    opt_key,
                 ) else {
                     return;
                 };
@@ -1998,6 +2025,7 @@ impl Game {
         let mut activation_cost_paid = false;
         if effect.activation_cost_fn.is_some() {
             let max_per_turn = effect.max_per_turn;
+            let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
             // Re-lookup is necessary because invoking the closure needs
             // `&mut self`, which conflicts with the borrow into `effects`.
             let cost_outcome = {
@@ -2025,7 +2053,7 @@ impl Game {
                         self.record_source_permanent_activation(
                             perm_handle,
                             qe.source_card,
-                            qe.effect_slot,
+                            opt_key,
                         );
                     }
                 }
@@ -2055,12 +2083,13 @@ impl Game {
         let Some(effect) = effects.get(qe.effect_slot as usize) else {
             return;
         };
+        let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let Some(activation_count) = self.source_permanent_activation_count(
                     perm_handle,
                     qe.source_card,
-                    qe.effect_slot,
+                    opt_key,
                 ) else {
                     // Source removed by the cost — OPT bookkeeping not
                     // applicable, body still runs.
@@ -2082,7 +2111,7 @@ impl Game {
                 self.record_source_permanent_activation(
                     perm_handle,
                     qe.source_card,
-                    qe.effect_slot,
+                    opt_key,
                 );
             }
         }
@@ -2111,12 +2140,13 @@ impl Game {
             return;
         }
 
+        let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let Some(activation_count) = self.source_permanent_activation_count(
                     perm_handle,
                     qe.source_card,
-                    qe.effect_slot,
+                    opt_key,
                 ) else {
                     return;
                 };
@@ -2126,7 +2156,7 @@ impl Game {
                 self.record_source_permanent_activation(
                     perm_handle,
                     qe.source_card,
-                    qe.effect_slot,
+                    opt_key,
                 );
             }
         }
@@ -2297,6 +2327,14 @@ impl Game {
             })
             .unwrap_or(false);
         top_matches || linked_matches || inherited_source_matches || training_matches
+    }
+
+    /// Resolve the once-per-turn counter key for an effect. A multi-timing
+    /// OPT cluster sets `Effect::shared_opt_group` so all of its timings draw
+    /// on one counter; otherwise the per-slot `effect_slot` is the key.
+    /// `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
+    fn opt_slot_key(effect: &crate::effect::Effect, effect_slot: u8) -> u8 {
+        effect.shared_opt_group.unwrap_or(effect_slot)
     }
 
     fn source_permanent_activation_count(
@@ -2607,6 +2645,107 @@ impl Game {
     /// 30-59 action ID range. If the caller passes more, the overflow
     /// entries are auto-fired in collection order after the prompt
     /// resolves — documented-worst-case behavior, not expected in practice.
+    /// True when a lone OPTIONAL queued effect should install an explicit
+    /// outer accept/decline prompt (`G-OUTER-OPTIONAL-NOT-INSTALLED`). Two
+    /// conditions must both hold: the DSL lowering flagged this effect with
+    /// `needs_outer_optional_prompt` (its body's first step is mandatory),
+    /// AND the effect would actually do something if run — i.e. its source is
+    /// live, its OPT counter is not exhausted, and its `condition` passes.
+    /// An optional effect whose preconditions already fail must not prompt.
+    fn queued_effect_wants_outer_optional_prompt(&self, qe: &QueuedEffect) -> bool {
+        // Granted inline bodies have no Effect metadata and never carry the
+        // outer-prompt flag — never prompt for them.
+        if qe.granted_effect_id.is_some() {
+            return false;
+        }
+        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+            return false;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return false;
+        };
+        if !effect.needs_outer_optional_prompt {
+            return false;
+        }
+        if !self.queued_effect_source_is_live(qe, effect) {
+            return false;
+        }
+        if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
+            if let Some(perm_handle) = qe.source_permanent {
+                let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+                match self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key) {
+                    Some(count) if count >= effect.max_per_turn => return false,
+                    None => return false,
+                    _ => {}
+                }
+            }
+        }
+        // SecuritySkill effects skip the condition gate (Python parity, see
+        // `run_queued_effect_inner`). For every other timing, an unsatisfied
+        // condition means the body would no-op — do not prompt.
+        let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
+        let attribution_source_kind = qe.attribution_source_kind.unwrap_or(qe.source_kind);
+        let rctx = EffectReadContext::new_with_source_kind(
+            self,
+            attribution_source_card,
+            qe.source_permanent,
+            attribution_source_kind,
+            qe.controller,
+        );
+        if qe.timing != EffectTiming::SecuritySkill {
+            if let Some(cond) = &effect.condition {
+                if !cond(&rctx) {
+                    return false;
+                }
+            }
+        }
+        // Body-actionability guard: when the body's first step is a
+        // selection, only prompt if it has at least one candidate — DCGO
+        // does not prompt for an optional ability with no legal target.
+        if let Some(guard) = &effect.outer_optional_guard {
+            if !guard(&rctx) {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Install an outer accept/decline `PendingSelection` for a single
+    /// OPTIONAL triggered effect. ACCEPT runs the queued effect's body;
+    /// PASS/decline skips it cleanly. `G-OUTER-OPTIONAL-NOT-INSTALLED`.
+    fn install_outer_optional_trigger_selection(&mut self, qe: QueuedEffect) {
+        let chooser = qe.controller;
+        let source_card = qe.source_card;
+        let source_permanent = qe.source_permanent;
+        let source_kind = qe.source_kind;
+        let prompt = format!("You may activate {}'s triggered effect", qe.card_id);
+
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::EffectChoice;
+
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Replacement,
+            selecting_player: chooser,
+            previous_phase,
+            valid_action_ids: vec![REPLACEMENT_ACCEPT],
+            is_optional: true,
+            prompt,
+            effect_choices: None,
+            source_card,
+            source_permanent,
+            source_kind,
+            // ACCEPT: the parked QueuedEffect is moved into this `FnOnce`
+            // and its body runs. The generic resolver drains the queue after.
+            callback: Box::new(move |game: &mut Game, _action_id: u16| {
+                game.run_queued_effect(qe);
+            }),
+            // DECLINE: do nothing — the QueuedEffect (already removed from
+            // `effect_queue`) is simply dropped; its body never runs. The
+            // generic resolver resumes draining the rest of the queue.
+            on_decline: Some(Box::new(|_game: &mut Game| {})),
+        });
+    }
+
     fn install_trigger_order_selection(
         &mut self,
         chooser: PlayerId,

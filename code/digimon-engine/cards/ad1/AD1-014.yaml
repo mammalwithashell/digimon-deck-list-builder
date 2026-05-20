@@ -58,56 +58,34 @@ effects:
   #
   # Implementation note (faithful slice):
   #
-  #   1. Delete-1-L5- target picker: fully expressible. Uses
-  #      `select_opponent_permanent` with `level_lte: 5` filter (G-PRED-LEVEL
-  #      is evaluated). Optionality matches DCGO `canNoSelect: false` — the
-  #      step prompts mandatorily when an eligible target exists.
+  #   1. Delete-1-L5- target picker: `select_opponent_permanent` with
+  #      `level_lte: 5` filter (G-PRED-LEVEL is evaluated). Optionality
+  #      matches DCGO `canNoSelect: false` — the step prompts mandatorily
+  #      when an eligible target exists.
   #
-  #   2. Lock branch: BLOCKED — G-DSL-DISTINCT-TAMER-COLORS-FORMULA.
-  #      "For every 2 of your Tamers' colors" requires a formula primitive
-  #      that counts the distinct colors across own Tamers in battle area
-  #      (DCGO: `Combinations.GetDifferenetColorCardCount(tamerCards) / 2`).
-  #      `digimon_dsl::formula::PerSelector` lacks both:
-  #        (a) a `distinct_colors_count` PerSelector (or equivalent
-  #            AggregateSelector) over a zone+filter,
-  #        (b) a generic `repeat_n: { count, body }` step driver to install
-  #            N selection prompts in sequence (each picking a distinct
-  #            opponent permanent, filtered by `not_in_binding`).
-  #      Once the formula primitive ships, the lock body would lower as:
+  #   2. Lock branch: "for every 2 of your Tamers' colors" — DCGO
+  #      `Combinations.GetDifferenetColorCardCount(tamerCards) / 2`. The
+  #      lock count = floor(distinct colors across own battle-area Tamers
+  #      / 2). `select_count_capped_multi` over the opponent's battle area
+  #      installs N distinct picks, where N is a formula-valued `max`:
+  #        floor_div(distinct_colors_count(your Tamers), 2).
+  #      Each picked opponent Digimon/Tamer receives `CannotSuspend`
+  #      expiring at end_of_opponents_turn ("until their turn ends") via
+  #      `per_selected` + `add_modifier`. When the formula evaluates to 0
+  #      (0–1 tamer colors) the multi-select completes synchronously with
+  #      no prompt and no modifier — DCGO's `Math.Max(0, count)`.
   #
-  #        - per_n:
-  #            count:
-  #              floor_div:
-  #                - distinct_colors_count:
-  #                    of: you
-  #                    zone: [battle_area]
-  #                    filter: { kind: tamer }
-  #                - 2
-  #            body:
-  #              - select_opponent_permanent:
-  #                  bind_as: lock_n
-  #                  filter:
-  #                    all_of:
-  #                      - any_of:
-  #                          - kind: digimon
-  #                          - kind: tamer
-  #                      - not_in_binding: prior_locks
-  #                  prompt: "Choose 1 opponent Digimon or Tamer to lock"
-  #              - add_modifier:
-  #                  target: lock_n
-  #                  modifier: CannotSuspend
-  #                  value: 1
-  #                  expiry: end_of_opponents_turn
-  #
-  # GAP G-OPT-MULTI-TIMING-SHARED-LOCKOUT: each timing in `when: [...]` lowers
-  # to a separate `Effect` (lower_triggered.rs `for t in &clause.when`), each
-  # carrying its own OPT counter keyed by (card, slot). DCGO's
-  # `SharedHashString: "AD1_014_OP_WD_WA"` shares lockout across all three.
-  # Single-timing OPT lockout still works (regression in
-  # ad1_014_on_play_opt_blocks_second_same_timing_activation_in_same_turn).
+  # G-OPT-MULTI-TIMING-SHARED-LOCKOUT — CLOSED 2026-05-19:
+  # Each timing in `when: [...]` still lowers to a separate `Effect`, but a
+  # once-per-turn clause spanning >1 timing now stamps every lowered effect
+  # with a shared `Effect::shared_opt_group` so the three timings draw on a
+  # SINGLE per-turn counter — DCGO's `SharedHashString: "AD1_014_OP_WD_WA"`.
+  # `effect_queue::opt_slot_key` keys OPT bookkeeping on the shared group
+  # when present, else on the per-slot index. Verified by
+  # ad1_014_on_play_then_when_attacking_share_one_opt_lockout_per_turn.
   - when: [on_play, when_digivolving, when_attacking]
     once_per_turn: true
-    summary: "[OP][WD][WA][OPT] Delete 1 opp L5- Digimon (lock branch BLOCKED: G-DSL-DISTINCT-TAMER-COLORS-FORMULA)"
+    summary: "[OP][WD][WA][OPT] Delete 1 opp L5- Digimon, then lock floor(tamer-colors/2) opp Digimon/Tamers"
     process:
       - select_opponent_permanent:
           bind_as: del_target
@@ -117,7 +95,38 @@ effects:
               - level_lte: 5
           prompt: "Delete 1 of your opponent's level 5 or lower Digimon"
       - delete_permanent: { target: del_target }
-      # Lock branch BLOCKED — see clause comment.
+      # Lock branch — floor(distinct tamer colors / 2) opp Digimon/Tamers
+      # can't suspend until their turn ends.
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula:
+              floor_div:
+                - base: 0
+                  per:
+                    distinct_colors_count:
+                      of: you
+                      zone: battle_area
+                      filter: { kind: tamer }
+                  delta: 1
+                - 2
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: locked_perms
+          prompt: "Choose 1 opponent Digimon or Tamer per 2 of your Tamers' colors — can't suspend until their turn ends"
+          optional_zero: false
+      - per_selected:
+          selection: locked_perms
+          bind_as: locked
+          body:
+            - add_modifier:
+                target: { binding: locked }
+                modifier: CannotSuspend
+                value: 1
+                expiry: end_of_opponents_turn
 
   # ─── Clause (d): [All Turns][OPT] on_suspend → may unsuspend self ─────────
   #
@@ -167,24 +176,44 @@ effects:
   # AD1-014 source card (which is hidden under a digivolution stack when this
   # inherited effect is active).
   #
-  # GAP G-DSL-SELF-NAME-CONTAINS [new — dsl]:
-  #   No DSL BoolPredicate evaluates "the carrier permanent's top card name
-  #   contains X". The closest existing predicates are:
-  #     - `name_contains` (filters CANDIDATE cards in selections, not self)
-  #     - `source_name_contains` (refers to the source-card name, not the
-  #       carrier's top card; also semantics are about the SOURCE permanent
-  #       in inherited contexts which is the AD1-014 permanent only when
-  #       AD1-014 is itself the top card)
-  #     - `self_digivolution_contains_name` (scans THIS card's own digivolution
-  #       stack for a name — the inverse of what we need; we want to check the
-  #       TOP card name from below the stack)
-  #   Engine API exists: `Permanent::top_card()` + `card_name`. The DSL needs
-  #   a `self_name_contains: <string>` BoolPredicate leaf that evaluates
-  #   `rctx.source_permanent()?.top_card().card_name.contains(name)`.
+  # `source_name_contains` evaluates the carrier permanent's TOP-card name in
+  # an inherited context (`predicate.rs::subject_or_source_permanent` ->
+  # `perm.top_card().card_name`). The `any_of` gate over the two names
+  # ("Garurumon" OR "Omnimon") exactly mirrors DCGO's two-way name check.
+  # Same idiom as BT12-028's inherited [End of Attack] clause.
   #
-  # Until G-DSL-SELF-NAME-CONTAINS closes, the inherited clause is OMITTED
-  # from the production YAML. Including it without the gate would leak the
-  # lock to non-Garurumon/Omnimon top cards, which violates the printed text
-  # and fails the no-approximations policy. Negative test
-  # `ad1_014_inherited_when_attacking_does_not_fire_when_top_card_lacks_garurumon_or_omnimon_name`
-  # passes today (no clause = no install). The positive test is `#[ignore]`.
+  # The lock body is a single mandatory pick (printed "1 of your opponent's
+  # Digimon or Tamers") via `select_opponent_permanent` over the
+  # Digimon-or-Tamer filter + `add_modifier: CannotSuspend` expiring at
+  # end_of_opponents_turn ("until their turn ends").
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][OPT] If carrier name has Garurumon/Omnimon, lock 1 opp Digimon/Tamer"
+    condition:
+      all_of:
+        - any_of:
+            - source_name_contains: "Garurumon"
+            - source_name_contains: "Omnimon"
+        - any_of:
+            - any_permanent:
+                of: opponent
+                zone: [battle_area]
+                kind: digimon
+            - any_permanent:
+                of: opponent
+                zone: [battle_area]
+                kind: tamer
+    process:
+      - select_opponent_permanent:
+          bind_as: inh_lock
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose 1 opponent Digimon or Tamer — can't suspend until their turn ends"
+      - add_modifier:
+          target: inh_lock
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn

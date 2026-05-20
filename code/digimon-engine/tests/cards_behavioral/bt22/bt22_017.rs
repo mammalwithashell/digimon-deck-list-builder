@@ -38,8 +38,8 @@
 //! BT12-059 (Agumon — reveal 4, two buckets: Greymon/Omnimon Digimon +
 //! Tai Kamiya Tamer). BT22-017 differs by:
 //!   (a) reveal count 3 instead of 4;
-//!   (b) bucket 1 is `[Omnimon] in TEXT` (DSL-GAP — see below) instead of
-//!       a name scan;
+//!   (b) bucket 1 is `[Omnimon] in TEXT` (`effect_text_contains`) instead
+//!       of a name scan;
 //!   (c) bucket 2 is `[CS] trait` instead of a name+kind filter;
 //!   (d) inherited clause is the BT22-008-style DNA digivolve registration
 //!       instead of BT12-059's +1000 DP aura.
@@ -48,26 +48,19 @@
 //! registration shape. Tests for the inherited registration mirror
 //! BT22-008's `bt22_008_has_inherited_dna_digivolve_alt_path_registration`.
 //!
-//! # DSL-GAP — `text_contains` predicate (effect-text scan)
-//!                                          [G-DSL-PREDICATE-TEXT-CONTAINS]
+//! # G-DSL-PREDICATE-TEXT-CONTAINS — `effect_text_contains` (RESOLVED)
 //!
 //! Bucket 1's printed filter is "1 card with [Omnimon] in its TEXT" — i.e.
 //! a substring scan against the candidate card's printed `effect_text`
-//! (and inherited / security text). The DSL `PredicateSpec` lacks any
-//! `text_contains` / `effect_text_contains` / `has_text` leaf; the
-//! existing `name_contains` only scans `card_name`.
-//!
-//! Approximation chosen here: bucket 1 uses `name_contains: "Omnimon"`. All
-//! printed Omnimon cards (BT12-085, BT22-015, etc.) are matched correctly
-//! because their card_name itself carries "Omnimon". But cards that mention
-//! "[Omnimon]" only in their effect text WITHOUT carrying Omnimon in their
-//! name (e.g. tutors / supports printed "search for [Omnimon]") are
-//! WRONGLY EXCLUDED by this approximation.
-//!
-//! Tests that exercise the diverging case (a non-Omnimon-named card with
-//! "[Omnimon]" in its effect_text — e.g. a Tamer named "Yamato Ishida" with
-//! body text referencing Omnimon) are `#[ignore]`'d under
-//! G-DSL-PREDICATE-TEXT-CONTAINS until the gap closes.
+//! (and inherited / security text). RESOLVED 2026-05-19: the DSL gained an
+//! `effect_text_contains` predicate leaf — a case-insensitive substring
+//! scan against the candidate card's concatenated printed text
+//! (`effect_text` + `inherited_text` + `security_text`). Bucket 1 now uses
+//! `effect_text_contains: "Omnimon"` directly, matching DCGO
+//! `source.HasText("Omnimon")` faithfully. Cards that mention "[Omnimon]"
+//! only in their effect text — without carrying Omnimon in their name — are
+//! now correctly admitted (see
+//! `bt22_017_on_play_bucket1_admits_card_with_omnimon_only_in_text`).
 //!
 //! # Patterns this test covers (RUST_DSL_TEST_API.md §4 / §5)
 //!   - §5 Structural: standard digivolve alt-path; on-play triggered clause;
@@ -75,12 +68,12 @@
 //!   - §5 Condition gating: empty deck reveal (engine truncates), zero
 //!     bucket-1 candidates, zero bucket-2 candidates, both buckets satisfied.
 //!   - §5 Behavioral integrated: resolving the install moves the chosen
-//!     Omnimon-named card and CS-trait card from reveal to hand; remainder
+//!     [Omnimon]-text card and CS-trait card from reveal to hand; remainder
 //!     to deck bottom.
 //!   - §5 Faithfulness gate: outer trigger is MANDATORY (no "you may" in
 //!     printed text; DCGO `isOptional: false`).
-//!   - DSL-GAP: divergence test for `[Omnimon] in text` ≠ `name_contains
-//!     "Omnimon"` is `#[ignore]`'d under G-DSL-PREDICATE-TEXT-CONTAINS.
+//!   - §5 Faithfulness: bucket 1 admits a card mentioning [Omnimon] only in
+//!     effect text (`effect_text_contains` predicate).
 //!
 //! # `cards.rs` and `mod.rs` policy
 //! This test file is registered in `tests/cards_behavioral/bt22/mod.rs`
@@ -130,6 +123,19 @@ fn make_named_tamer(id: &str, name: &str, traits: &[&str]) -> CardData {
     let mut card = make_test_card(id, name);
     card.card_kind = CardKind::Tamer;
     card.traits = traits.iter().map(|t| t.to_string()).collect();
+    card
+}
+
+/// Build an Omnimon-style Digimon fixture for the bucket-1 ("[Omnimon] in
+/// its text") candidate. Bucket 1 uses the `effect_text_contains: "Omnimon"`
+/// predicate, so a legitimate bucket-1 target must carry "Omnimon" in its
+/// printed effect text — real Omnimon cards print their own name in body
+/// text (`[Omnimon] gains …` / DNA-digivolve clauses). The fixture name
+/// also contains "Omnimon" so it doubles as a realistic Omnimon card.
+fn make_omnimon_card(id: &str, traits: &[&str]) -> CardData {
+    let mut card = make_named_digimon(id, "Omnimon", traits);
+    card.effect_text =
+        "[When Digivolving] [Omnimon] gains <Security Attack +1> for the turn.".to_string();
     card
 }
 
@@ -320,7 +326,7 @@ fn bt22_017_on_play_adds_one_omnimon_named_and_one_cs_trait_bottoms_rest() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-017")
         .expect("BT22-017 YAML loads")
-        .add_card(make_named_digimon("OMNIMON", "Omnimon", &["Holy Warrior"]))
+        .add_card(make_omnimon_card("OMNIMON", &["Holy Warrior"]))
         .add_card(make_named_digimon("CS-CARD", "Greymon", &["Reptile", "CS"]))
         .add_card(make_test_card("FILLER", "Filler"))
         .deck(0, &["OMNIMON", "CS-CARD", "FILLER"])
@@ -330,8 +336,8 @@ fn bt22_017_on_play_adds_one_omnimon_named_and_one_cs_trait_bottoms_rest() {
 
     runner.play(0, 0).expect("play Gabumon BT22-017");
 
-    // Bucket 1: [Omnimon] in name (DSL-GAP-approximated).
-    pick_revealed_by_id(&mut runner, "OMNIMON", "pick Omnimon (name approx)");
+    // Bucket 1: [Omnimon] in effect text.
+    pick_revealed_by_id(&mut runner, "OMNIMON", "pick Omnimon (effect-text)");
 
     // Bucket 2: [CS] trait.
     pick_revealed_by_id(&mut runner, "CS-CARD", "pick CS-trait card");
@@ -372,7 +378,7 @@ fn bt22_017_on_play_only_omnimon_found_skips_cs_bucket() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-017")
         .expect("BT22-017 YAML loads")
-        .add_card(make_named_digimon("OMNIMON", "Omnimon", &["Holy Warrior"]))
+        .add_card(make_omnimon_card("OMNIMON", &["Holy Warrior"]))
         .add_card(make_test_card("FILLER1", "Filler1"))
         .add_card(make_test_card("FILLER2", "Filler2"))
         .deck(0, &["OMNIMON", "FILLER1", "FILLER2"])
@@ -533,24 +539,23 @@ fn bt22_017_no_duplicate_cards_prevents_double_consumption() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 4 — DSL-GAP divergence (G-DSL-PREDICATE-TEXT-CONTAINS)
+// Section 4 — Faithfulness: bucket 1 scans printed effect text
+//                                              (G-DSL-PREDICATE-TEXT-CONTAINS)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Faithfulness divergence test: bucket 1's printed filter is "[Omnimon] in
-/// its TEXT", but the YAML approximates this with `name_contains: "Omnimon"`
-/// because the DSL has no `text_contains` predicate. A card that mentions
-/// `[Omnimon]` only in its effect_text WITHOUT carrying "Omnimon" in its
-/// card_name must still be selectable for bucket 1 per the printed text —
-/// but the approximation REJECTS it.
+/// Faithfulness test: bucket 1's printed filter is "[Omnimon] in its TEXT".
+/// The YAML uses the `effect_text_contains: "Omnimon"` predicate
+/// (G-DSL-PREDICATE-TEXT-CONTAINS, RESOLVED 2026-05-19), which scans the
+/// candidate card's printed effect / inherited / security text. A card that
+/// mentions `[Omnimon]` only in its effect_text WITHOUT carrying "Omnimon"
+/// in its card_name must still be selectable for bucket 1 per the printed
+/// text.
 ///
 /// This test seeds a Tamer named "Yamato Ishida" with `effect_text` =
-/// "Add 1 [Omnimon] to your hand." (a printed text containing the marker
-/// "[Omnimon]" but a name without "Omnimon"). The test asserts that the
-/// bucket 1 prompt offers this Tamer as a target — which it WILL NOT under
-/// the approximation. `#[ignore]`'d under G-DSL-PREDICATE-TEXT-CONTAINS
-/// until the DSL gains a `text_contains` leaf.
+/// "Add 1 [Omnimon] from your trash to your hand." (a printed text
+/// containing the marker "[Omnimon]" but a name without "Omnimon"). The
+/// bucket 1 prompt MUST offer this Tamer as a target.
 #[test]
-#[ignore = "BLOCKED: G-DSL-PREDICATE-TEXT-CONTAINS — DSL lacks `text_contains` predicate; bucket 1 approximated as `name_contains: \"Omnimon\"` and wrongly excludes cards that mention [Omnimon] only in effect text"]
 fn bt22_017_on_play_bucket1_admits_card_with_omnimon_only_in_text() {
     let mut yamato = make_named_tamer("YAMATO", "Yamato Ishida", &[]);
     yamato.effect_text = "Add 1 [Omnimon] from your trash to your hand.".to_string();
@@ -568,9 +573,9 @@ fn bt22_017_on_play_bucket1_admits_card_with_omnimon_only_in_text() {
 
     runner.play(0, 0).expect("play Gabumon BT22-017");
 
-    // Under the printed semantic, YAMATO must be a legal target for bucket 1
-    // because its effect_text contains "[Omnimon]". Under the
-    // `name_contains: "Omnimon"` approximation, YAMATO is NOT offered.
+    // Per the printed semantic, YAMATO must be a legal target for bucket 1
+    // because its effect_text contains "[Omnimon]" — the
+    // `effect_text_contains: "Omnimon"` predicate scans printed text.
     let view = runner
         .pending_selection_view()
         .expect("bucket 1 selection installed");
@@ -579,9 +584,7 @@ fn bt22_017_on_play_bucket1_admits_card_with_omnimon_only_in_text() {
     assert!(
         view.valid_action_ids.contains(&yamato_action),
         "Faithfulness: bucket 1 must admit YAMATO (effect_text contains [Omnimon]); \
-         valid_action_ids={:?}. \
-         When G-DSL-PREDICATE-TEXT-CONTAINS resolves and the YAML swaps to \
-         `text_contains: \"Omnimon\"`, this test should pass.",
+         valid_action_ids={:?}",
         view.valid_action_ids
     );
 }
@@ -653,7 +656,7 @@ fn bt22_017_bucket_pick_is_mandatory_when_candidate_exists() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-017")
         .expect("BT22-017 YAML loads")
-        .add_card(make_named_digimon("OMNIMON", "Omnimon", &["Holy Warrior"]))
+        .add_card(make_omnimon_card("OMNIMON", &["Holy Warrior"]))
         .add_card(make_named_digimon("CS-CARD", "Greymon", &["Reptile", "CS"]))
         .add_card(make_test_card("FILLER", "Filler"))
         .deck(0, &["OMNIMON", "CS-CARD", "FILLER"])

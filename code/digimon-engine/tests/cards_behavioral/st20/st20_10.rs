@@ -33,32 +33,27 @@
 //! |-----------------------------------------------------|--------------------------------------|
 //! | Standard digivolve (Lv2 Black / cost 0)             | Structural — alt_paths kind: digivolve |
 //! | Alt-source xros_req (Lv2 ADVENTURE/Hero / cost 0)   | Structural — alt_paths kind: digivolve |
+//! | Warp into WarGreymon (`direction: into`, cost 4)    | Behavioral — alt-path warp digivolve |
 //! | Inherited <Reboot>                                  | H7 inherited grant_keyword Reboot (stack-walk) |
 //!
-//! # Known gaps blocking the warp-digivolve clause
+//! # Resolved DSL gaps (warp-digivolve clause now authored)
 //!
-//! Three independent DSL gaps prevent the [Your Turn] warp-into-WarGreymon
-//! clause from being expressed today; the YAML's clause-2 comment block
-//! contains the full discussion. Tests covering the warp behaviour are
-//! `#[ignore]`-tagged below.
+//! The three DSL gaps that previously blocked the [Your Turn]
+//! warp-into-WarGreymon clause are all RESOLVED:
 //!
-//! - **G-ALT-PATH-DIRECTION-INTO** (NEW) — `AltPathSpec` describes sources
-//!   that can digivolve INTO the carrier card. There is no inverse form for
-//!   "this card grants ITSELF the ability to digivolve into card X in hand."
-//! - ~~**G-ALT-PATH-CONDITION**~~ RESOLVED 2026-05-15 — `AltPathSpec`
-//!   now carries a `condition:` field (consumed by the Digivolve route
-//!   in `dna_digivolve.rs`). The "while opp has 10000+ DP Digimon OR
-//!   your Tamers have 3+ colours" gate can now be attached, but the
-//!   inverse-direction blocker below still prevents authoring the
-//!   warp-into clause as a whole.
-//! - **G-DSL-DISTINCT-TAMER-COLORS** (NEW; sibling of
-//!   G-DSL-DISTINCT-TAMER-COLORS-FORMULA filed for BT21-102) — there is no
-//!   BoolPredicate leaf for "you have N or more distinct Tamer colours on
-//!   field"; `distinct_colors_count` is only available inside `FormulaSpec::per`.
-//!   The Tamer-colour disjunct of the gate cannot be expressed in any
-//!   predicate. (The 10000+ DP disjunct is also impacted by the existing
-//!   G-PRED-DP-LTE engine gap — `dp_gte` is parsed but not evaluated;
-//!   precedent: EX10-010.)
+//! - **G-ALT-PATH-DIRECTION-INTO** (RESOLVED) — `AltPathSpec` carries a
+//!   `direction:` field. `direction: into` flips the semantic so the
+//!   alt-path lives on the SOURCE card and `from:` filters the destination
+//!   hand card. ST20-10's third alt_path uses it.
+//! - **G-ALT-PATH-CONDITION** (RESOLVED 2026-05-15) — `AltPathSpec` carries
+//!   a `condition:` field, consumed by the Digivolve route in
+//!   `dna_digivolve.rs`. The "[Your Turn] + (opp 10000+ DP OR 3+ Tamer
+//!   colours)" gate attaches here.
+//! - **G-DSL-DISTINCT-TAMER-COLORS** (RESOLVED 2026-05-19) — the
+//!   `distinct_tamer_colors_gte` predicate leaf counts distinct colors
+//!   across the observer's battle-area Tamers. The Tamer-colour disjunct
+//!   uses it. The 10000+ DP disjunct uses `dp_gte` inside an
+//!   `any_permanent` existential.
 
 #![allow(dead_code, unused_imports, unused_variables)]
 
@@ -121,25 +116,59 @@ fn st20_10_identity_matches_printed_card() {
 // Section 2 — Alt-path structure (standard + xros_req)
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// The YAML must declare exactly TWO alt_paths today:
+/// The YAML declares THREE alt_paths:
 ///   1. Standard digivolve from Lv2 Black, cost 0 (printed evo_costs).
 ///   2. Alt-source from Lv2 with ADVENTURE or Hero trait, cost 0 (xros_req box).
-///
-/// A third, "warp into WarGreymon" alt_path is BLOCKED on stacked DSL gaps
-/// (see file header). When G-ALT-PATH-DIRECTION-INTO +
-/// G-DSL-DISTINCT-TAMER-COLORS both close, a third alt_path will be added
-/// and this assertion bumped to 3. (G-ALT-PATH-CONDITION was RESOLVED
-/// 2026-05-15 — no longer a blocker.)
+///   3. Warp digivolve INTO WarGreymon in hand, cost 4, ignoring requirements
+///      (`direction: into`). All three blocking DSL gaps are RESOLVED —
+///      G-ALT-PATH-DIRECTION-INTO, G-ALT-PATH-CONDITION, and
+///      G-DSL-DISTINCT-TAMER-COLORS.
 #[test]
-fn st20_10_has_two_alt_paths_today() {
+fn st20_10_has_three_alt_paths() {
     let card = compiled("ST20-10");
     assert_eq!(
         card.alt_paths.len(),
-        2,
-        "expected exactly 2 alt_paths (standard Lv2 Black + xros_req Lv2 ADVENTURE/Hero) today; \
-         got {}. Note: warp-into-WarGreymon clause is blocked on \
-         G-ALT-PATH-DIRECTION-INTO / G-DSL-DISTINCT-TAMER-COLORS (G-ALT-PATH-CONDITION resolved 2026-05-15).",
+        3,
+        "expected exactly 3 alt_paths (standard Lv2 Black + xros_req Lv2 \
+         ADVENTURE/Hero + warp-into-WarGreymon); got {}",
         card.alt_paths.len()
+    );
+}
+
+/// The third alt_path is the warp-into-WarGreymon clause: `direction: into`,
+/// cost 4, `ignore_requirements: true`, with a `from:` filter on the
+/// WarGreymon hand card and a `condition:` carrying the disjunctive gate.
+#[test]
+fn st20_10_third_alt_path_is_warp_into_wargreymon() {
+    let card = compiled("ST20-10");
+    let path = &card.alt_paths[2];
+    assert_eq!(path.kind, CompiledAltPathKind::Digivolve);
+    assert_eq!(
+        path.direction,
+        digimon_dsl::compiled::CompiledAltPathDirection::Into,
+        "warp path must use direction: into (alt-path lives on the source card)"
+    );
+    assert_eq!(
+        path.cost,
+        Some(CompiledCost::Literal(4)),
+        "warp digivolve cost is 4"
+    );
+    assert!(
+        path.ignore_requirements,
+        "warp digivolve ignores digivolution requirements"
+    );
+    let from = path
+        .from
+        .as_ref()
+        .expect("warp path must carry a `from:` hand-card filter");
+    assert_eq!(
+        from.name_is.as_deref(),
+        Some("WarGreymon"),
+        "warp path `from:` must filter the WarGreymon hand card"
+    );
+    assert!(
+        path.condition.is_some(),
+        "warp path must carry a `condition:` (the [Your Turn] + disjunctive gate)"
     );
 }
 
@@ -317,79 +346,234 @@ fn st20_10_top_card_inherited_reboot_does_not_apply_to_itself_today() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Section 4 — Warp-into-WarGreymon clause (BLOCKED on stacked DSL gaps)
+// Section 4 — Warp-into-WarGreymon clause (G-ALT-PATH-DIRECTION-INTO +
+//             G-ALT-PATH-CONDITION + G-DSL-DISTINCT-TAMER-COLORS all RESOLVED)
 // ═══════════════════════════════════════════════════════════════════════════
-//
-// All tests in this section are `#[ignore]`-tagged with the gap markers that
-// must close before the warp clause can be authored on ST20-10's YAML.
-// Scaffolding is left as comments; replace with real assertions once the
-// gaps land.
+
+/// Build a synthetic Lv.6 "WarGreymon"-named Digimon with EMPTY evo_costs so
+/// the standard rules-based digivolve route cannot apply — a successful
+/// digivolve onto a Lv.3 ST20-10 then proves the `direction: into` warp
+/// alt-path took over. Mirrors the `group7_alt_path_registration.rs` idiom.
+fn make_wargreymon(id: &str) -> CardData {
+    let mut c = make_test_card(id, "WarGreymon");
+    c.level = Some(6);
+    c.dp = Some(12000);
+    c.play_cost = 7;
+    c.evo_costs = Vec::new();
+    c
+}
+
+/// Build an opponent Digimon with an explicit DP value.
+fn make_opp_digimon(id: &str, dp: i32) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.level = Some(4);
+    c.dp = Some(dp);
+    c
+}
+
+/// Build a Tamer with a single explicit color.
+fn make_colored_tamer(id: &str, color: digimon_engine::enums::CardColor) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = digimon_engine::enums::CardKind::Tamer;
+    c.level = None;
+    c.dp = None;
+    c.colors = vec![color];
+    c
+}
 
 /// Positive: when ST20-10 is on field on its controller's turn, an opponent
 /// has a Digimon with DP ≥ 10000, and a WarGreymon is in hand, the player
 /// can digivolve ST20-10 into that WarGreymon for cost 4, ignoring
 /// digivolution requirements.
 #[test]
-#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO + G-PRED-DP-LTE — \
-            warp-into-WarGreymon path cannot be authored on ST20-10's YAML today"]
 fn st20_10_warp_into_wargreymon_via_opp_dp_disjunct() {
-    // Scaffolding (to be filled once gaps close):
-    //
-    //   let mut runner = DebugRunner::builder()
-    //       .dsl_card("ST20-10")
-    //       .dsl_card("ST20-11")          // WarGreymon target
-    //       .add_card(make_opp_digimon("BIG-DP", 10000))
-    //       .memory(20)
-    //       .hand(0, &["ST20-11"])
-    //       .start();
-    //   let agumon = runner.place_on_field(0, "ST20-10", Some(0));
-    //   let _opp_big = runner.place_on_field(1, "BIG-DP", Some(0));
-    //   let memory_before = runner.memory();
-    //
-    //   // Action: activated_digivolve from ST20-10 INTO hand[ST20-11], cost 4.
-    //   runner.activated_digivolve(agumon, /* hand_idx = */ 0)
-    //       .expect("warp digivolve succeeds (opp ≥10000 DP gate satisfied)");
-    //
-    //   // Top card of ST20-10's slot is now WarGreymon; cost was 4.
-    //   let top = runner.game.players[0].battle_area[0].top_card();
-    //   assert_eq!(top.card_id, "ST20-11", "top card is WarGreymon");
-    //   assert_eq!(memory_before - runner.memory(), 4, "warp cost was 4");
-    todo!("G-ALT-PATH-DIRECTION-INTO + G-PRED-DP-LTE must land first");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST20-10")
+        .expect("ST20-10 in pack")
+        .add_card(make_wargreymon("WARGREYMON"))
+        .add_card(make_opp_digimon("BIG-DP", 10000))
+        .hand(0, &["WARGREYMON"])
+        .memory(20)
+        .start();
+
+    let agumon = runner.place_on_field(0, "ST20-10", Some(0));
+    runner.place_on_field(1, "BIG-DP", Some(0));
+    let memory_before = runner.game.memory;
+
+    // Warp digivolve ST20-10 → WarGreymon (hand index 0). The opp ≥10000-DP
+    // disjunct of the condition is satisfied.
+    assert!(
+        runner.game.digivolve_from_hand(
+            0,
+            0,
+            agumon.index as usize,
+            digimon_engine::enums::PlaySource::ByHand,
+        ),
+        "warp digivolve must succeed when opponent has a Digimon with DP ≥ 10000"
+    );
+    let top = runner.game.players[0].battle_area[agumon.index as usize].top_card();
+    assert_eq!(
+        top.card_id(&runner.game.card_data),
+        "WARGREYMON",
+        "ST20-10's slot top card is now WarGreymon"
+    );
+    assert_eq!(
+        memory_before - runner.game.memory,
+        4,
+        "warp digivolve cost is 4"
+    );
 }
 
-/// Positive: same as above, but using the Tamer-colour disjunct (3+ distinct
-/// Tamer colours on own field, opponent has no big Digimon).
+/// Positive: same as above, but using the Tamer-colour disjunct — 3 Tamers of
+/// distinct colours on own field, opponent has no qualifying Digimon.
 #[test]
-#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO + G-DSL-DISTINCT-TAMER-COLORS"]
 fn st20_10_warp_into_wargreymon_via_tamer_colours_disjunct() {
-    // Scaffolding: place ST20-10 + 3 Tamers of distinct colours; assert warp
-    // succeeds. Requires the 3-tamer-colour BoolPredicate (G-DSL-DISTINCT-TAMER-COLORS).
-    todo!("G-ALT-PATH-DIRECTION-INTO + G-DSL-DISTINCT-TAMER-COLORS must land first");
+    use digimon_engine::enums::CardColor;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST20-10")
+        .expect("ST20-10 in pack")
+        .add_card(make_wargreymon("WARGREYMON"))
+        .add_card(make_colored_tamer("TAMER-RED", CardColor::Red))
+        .add_card(make_colored_tamer("TAMER-BLUE", CardColor::Blue))
+        .add_card(make_colored_tamer("TAMER-GREEN", CardColor::Green))
+        .hand(0, &["WARGREYMON"])
+        .memory(20)
+        .start();
+
+    let agumon = runner.place_on_field(0, "ST20-10", Some(0));
+    // 3 Tamers of distinct colors → distinct_tamer_colors_gte: 3 satisfied.
+    runner.place_on_field(0, "TAMER-RED", None);
+    runner.place_on_field(0, "TAMER-BLUE", None);
+    runner.place_on_field(0, "TAMER-GREEN", None);
+    let memory_before = runner.game.memory;
+
+    assert!(
+        runner.game.digivolve_from_hand(
+            0,
+            0,
+            agumon.index as usize,
+            digimon_engine::enums::PlaySource::ByHand,
+        ),
+        "warp digivolve must succeed when your Tamers have 3+ distinct colors"
+    );
+    let top = runner.game.players[0].battle_area[agumon.index as usize].top_card();
+    assert_eq!(
+        top.card_id(&runner.game.card_data),
+        "WARGREYMON",
+        "ST20-10's slot top card is now WarGreymon"
+    );
+    assert_eq!(memory_before - runner.game.memory, 4, "warp cost is 4");
 }
 
-/// Negative: when neither disjunct is satisfied (no opp ≥10000 Digimon AND
-/// fewer than 3 Tamer colours), the warp path must NOT be available.
+/// Negative: when neither disjunct is satisfied (opponent's Digimon is below
+/// 10000 DP AND fewer than 3 distinct Tamer colours), the warp path must NOT
+/// be available — the digivolve attempt fails.
 #[test]
-#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO"]
 fn st20_10_warp_into_wargreymon_blocked_when_neither_disjunct_satisfied() {
-    // Scaffolding: ST20-10 + WarGreymon in hand + no qualifying opponent or
-    // Tamers. Assert the activated_digivolve action is NOT in the action mask.
-    todo!("G-ALT-PATH-DIRECTION-INTO must land first");
+    use digimon_engine::enums::CardColor;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST20-10")
+        .expect("ST20-10 in pack")
+        .add_card(make_wargreymon("WARGREYMON"))
+        .add_card(make_opp_digimon("SMALL-DP", 5000))
+        .add_card(make_colored_tamer("TAMER-RED", CardColor::Red))
+        .add_card(make_colored_tamer("TAMER-BLUE", CardColor::Blue))
+        .hand(0, &["WARGREYMON"])
+        .memory(20)
+        .start();
+
+    let agumon = runner.place_on_field(0, "ST20-10", Some(0));
+    runner.place_on_field(1, "SMALL-DP", Some(0)); // < 10000 DP
+    // Only 2 distinct Tamer colors — below the 3-colour threshold.
+    runner.place_on_field(0, "TAMER-RED", None);
+    runner.place_on_field(0, "TAMER-BLUE", None);
+
+    assert!(
+        !runner.game.digivolve_from_hand(
+            0,
+            0,
+            agumon.index as usize,
+            digimon_engine::enums::PlaySource::ByHand,
+        ),
+        "warp digivolve must FAIL when neither disjunct is satisfied \
+         (opp Digimon < 10000 DP AND < 3 distinct Tamer colors)"
+    );
+    let top = runner.game.players[0].battle_area[agumon.index as usize].top_card();
+    assert_eq!(
+        top.card_id(&runner.game.card_data),
+        "ST20-10",
+        "ST20-10 must still be the top card — no warp digivolve occurred"
+    );
 }
 
-/// Negative: warp clause is gated on `[Your Turn]`. On the opponent's turn
-/// the warp must NOT be available even if both disjuncts are satisfied.
+/// Negative: the warp clause is gated on `[Your Turn]`. On the opponent's
+/// turn the warp must NOT be available even if the opp-DP disjunct holds.
 #[test]
-#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO"]
 fn st20_10_warp_into_wargreymon_blocked_on_opponents_turn() {
-    todo!("G-ALT-PATH-DIRECTION-INTO must land first");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST20-10")
+        .expect("ST20-10 in pack")
+        .add_card(make_wargreymon("WARGREYMON"))
+        .add_card(make_opp_digimon("BIG-DP", 10000))
+        .hand(0, &["WARGREYMON"])
+        .memory(20)
+        .start();
+
+    let agumon = runner.place_on_field(0, "ST20-10", Some(0));
+    runner.place_on_field(1, "BIG-DP", Some(0));
+
+    // Flip to the opponent's turn — `your_turn: true` in the condition fails.
+    runner.game.turn_player_idx = 1;
+
+    assert!(
+        !runner.game.digivolve_from_hand(
+            0,
+            0,
+            agumon.index as usize,
+            digimon_engine::enums::PlaySource::ByHand,
+        ),
+        "warp digivolve must FAIL on the opponent's turn ([Your Turn] gate)"
+    );
 }
 
-/// Negative: warp clause requires self to be on field (DCGO
-/// `IsExistOnBattleArea`). When ST20-10 is in hand (not on field), the warp
-/// alt-path must not be exposed via has-card-in-hand alone.
+/// Sanity: the warp path only resolves while ST20-10 is the digivolve base
+/// permanent. A digivolve attempt against a NON-ST20-10 base must not pick up
+/// the warp route — the `direction: into` path is keyed on the base's card id.
 #[test]
-#[ignore = "pending: G-ALT-PATH-DIRECTION-INTO"]
-fn st20_10_warp_into_wargreymon_requires_self_on_field() {
-    todo!("G-ALT-PATH-DIRECTION-INTO must land first");
+fn st20_10_warp_into_wargreymon_only_applies_to_st20_10_base() {
+    let plain_lv5 = {
+        let mut c = make_test_card("PLAIN-LV5", "PlainLv5");
+        c.level = Some(5);
+        c.dp = Some(9000);
+        c.evo_costs = Vec::new();
+        c
+    };
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST20-10")
+        .expect("ST20-10 in pack")
+        .add_card(make_wargreymon("WARGREYMON"))
+        .add_card(plain_lv5)
+        .add_card(make_opp_digimon("BIG-DP", 10000))
+        .hand(0, &["WARGREYMON"])
+        .memory(20)
+        .start();
+
+    // Place a plain Lv.5 Digimon (NOT ST20-10) as the digivolve base.
+    let plain = runner.place_on_field(0, "PLAIN-LV5", Some(0));
+    runner.place_on_field(1, "BIG-DP", Some(0));
+
+    assert!(
+        !runner.game.digivolve_from_hand(
+            0,
+            0,
+            plain.index as usize,
+            digimon_engine::enums::PlaySource::ByHand,
+        ),
+        "the warp alt-path is registered on ST20-10 — a non-ST20-10 base \
+         must not pick it up (WarGreymon has empty evo_costs so the rules \
+         route also fails)"
+    );
 }

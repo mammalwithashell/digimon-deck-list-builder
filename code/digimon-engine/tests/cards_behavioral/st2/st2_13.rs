@@ -44,8 +44,9 @@
 //!
 //! # YAML faithfulness verdict — PASS
 //!
-//! `code/digimon-engine/cards/_examples/ST2-13.yaml` declares exactly two
-//! triggered clauses with the printed semantics:
+//! `code/digimon-engine/cards/st2/ST2-13.yaml` (promoted from `_examples/`
+//! on 2026-05-20) declares exactly two triggered clauses with the printed
+//! semantics:
 //!
 //! ```yaml
 //! card: ST2-13
@@ -91,7 +92,8 @@ use digimon_engine::enums::{CardColor, CardKind, PlayerId};
 use crate::dsl_card_data::compiled;
 
 const CARD_ID: &str = "ST2-13";
-const YAML: &str = include_str!("../../../cards/_examples/ST2-13.yaml");
+// Promoted to the per-set folder on 2026-05-20 (was cards/_examples/ST2-13.yaml).
+const YAML: &str = include_str!("../../../cards/st2/ST2-13.yaml");
 
 // ─── Card-data factories ─────────────────────────────────────────────────────
 
@@ -130,7 +132,7 @@ fn hammer_spark() -> DebugRunner {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// ST2-13 must be present in the embedded DSL pack and parse cleanly from
-/// the curated `_examples/ST2-13.yaml` source.
+/// the `cards/st2/ST2-13.yaml` source.
 #[test]
 fn st2_13_compiles_in_embedded_pack() {
     let runner = hammer_spark();

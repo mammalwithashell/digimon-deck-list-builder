@@ -1,0 +1,343 @@
+{
+ "pool_size": 64,
+ "frequency": {
+  "BT17-081": 62,
+  "BT22-015": 62,
+  "BT22-013": 65,
+  "EX9-021": 63,
+  "BT23-008": 15,
+  "BT22-017": 65,
+  "BT17-007": 9,
+  "EX9-066": 31,
+  "BT22-084": 63,
+  "BT17-095": 66,
+  "BT14-001": 32,
+  "BT12-059": 10,
+  "BT22-008": 65,
+  "BT17-078": 65,
+  "BT16-082": 33,
+  "BT17-019": 23,
+  "ST20-15": 11,
+  "BT17-015": 65,
+  "BT17-027": 65,
+  "BT22-026": 64,
+  "ST20-10": 39,
+  "P-206": 33,
+  "BT5-092": 27,
+  "EX4-073": 9,
+  "BT8-097": 20,
+  "BT22-089": 34,
+  "BT17-102": 16,
+  "EX4-039": 41,
+  "LM-034": 9,
+  "ST2-13": 4,
+  "EX4-038": 22,
+  "BT22-005": 33,
+  "BT17-093": 2,
+  "BT13-012": 1,
+  "EX10-010": 1,
+  "EX4-061": 9,
+  "BT15-101": 6,
+  "BT1-090": 2,
+  "BT22-099": 4,
+  "BT21-102": 4,
+  "BT5-093": 2,
+  "EX1-021": 1,
+  "ST20-11": 1,
+  "P-182": 3,
+  "BT23-018": 4,
+  "BT22-094": 3,
+  "P-123": 1,
+  "AD1-019": 1,
+  "EX4-060": 1,
+  "EX9-019": 1,
+  "EX1-068": 1,
+  "EX9-012": 1,
+  "EX5-015": 1,
+  "AD1-001": 1,
+  "BT15-020": 1,
+  "AD1-014": 1,
+  "AD1-009": 1,
+  "AD1-010": 1,
+  "EX4-003": 1,
+  "AD1-012": 1,
+  "ST21-13": 1,
+  "BT20-102": 1,
+  "AD1-025": 1,
+  "BT23-096": 1
+ },
+ "yaml_status": {
+  "AD1-001": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "AD1-009": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "AD1-010": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "AD1-012": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "AD1-014": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "AD1-019": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "AD1-025": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT1-090": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT12-059": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT13-012": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT14-001": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT15-020": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT15-101": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT16-082": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT17-007": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT17-015": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT17-019": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT17-027": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT17-078": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT17-081": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT17-093": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT17-095": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT17-102": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT20-102": {
+   "has_yaml": true,
+   "raw_rust": 2
+  },
+  "BT21-102": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT22-005": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT22-008": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT22-013": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT22-015": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT22-017": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT22-026": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT22-084": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT22-089": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT22-094": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT22-099": {
+   "has_yaml": true,
+   "raw_rust": 1
+  },
+  "BT23-008": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT23-018": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT23-096": {
+   "has_yaml": true,
+   "raw_rust": 1
+  },
+  "BT5-092": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT5-093": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "BT8-097": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "EX1-021": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "EX1-068": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "EX10-010": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "EX4-003": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "EX4-038": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "EX4-039": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "EX4-060": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "EX4-061": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "EX4-073": {
+   "has_yaml": true,
+   "raw_rust": 1
+  },
+  "EX5-015": {
+   "has_yaml": true,
+   "raw_rust": 3
+  },
+  "EX9-012": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "EX9-019": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "EX9-021": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "EX9-066": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "LM-034": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "P-123": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "P-182": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "P-206": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "ST2-13": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "ST20-10": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "ST20-11": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "ST20-15": {
+   "has_yaml": true,
+   "raw_rust": 0
+  },
+  "ST21-13": {
+   "has_yaml": true,
+   "raw_rust": 0
+  }
+ },
+ "ignored_tests": [
+  {
+   "card": "BT17-102",
+   "file": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_102.rs",
+   "fn": "bt17_102_all_turns_aliases_low_level_material_names",
+   "reason": "BLOCKED: G-DYNAMIC-NAME-ALIAS-FROM-STACK \u2014 code-verified 2026-05-20. The DSL \\ identity layer (digimon-dsl/src/identity.rs: IdentitySpec.name_aliases) is \\ STATIC (zone-conditional) AND has NO engine-side consumer at all \u2014 a grep of \\ code/digimon-engine/src for name_alias / effective_name / treat_as / \\ aliased_names returns zero hits, so even the static alias surface is currently \\ inert. Engine name resolution (CardSource::card_name / card_names / \\ contains_card_name in card_source.rs) reads only the printed CardData.card_name; \\ there is no name-set query on a Permanent that consults dynamic aliases. DCGO \\ uses ChangeCardNamesClass with a per-evaluation closure scanning \\ DigivolutionCards filtered by Level <= 3. A faithful fix is a cross-cutting \\ engine feature, NOT a focused card fix: it needs (1) a Permanent-level \\ effective-name-set query, (2) every name-predicate evaluator (predicate.rs \\ name_contains/name_is, event_target_name_contains, contains_card_name, and \\ selection-filter name paths) reading the dynamic set, (3) a new declarative \\ clause kind to derive the alias set from the live material stack, (4) \\ recompute on every stack mutation. Affects this card and every card that \\ name-checks it. Tracked in qa/dsl-vocab-gaps.md.",
+   "tag": "G-DYNAMIC-NAME-ALIAS-FROM-STACK"
+  },
+  {
+   "card": "BT23-096",
+   "file": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_096.rs",
+   "fn": "bt23_096_your_turn_cs_attack_delay_dedigi4_",
+   "reason": "BLOCKED: G-DSL-DELAY-ON-ATTACK-EVENT \u2014 code-verified 2026-05-20. The previously \\ cited halves are STALE: digimon_dsl::clause::Timing DOES have OnAllyAttack / \\ OnAttack / OnOpponentAttack (clause.rs:86-91), they map through \\ timing_map.rs:16-17 and lower_triggered.rs (Effect::on_ally_attack), so \\ OnAllyAttack works for TRIGGERED clauses; and an `attacker_trait_has` predicate \\ EXISTS (predicate.rs:927). The genuine, still-open blocker is the <Delay> path: \\ (1) lower_delay.rs:55-65 maps only EndOfYourTurn/StartOfYourTurn/\\ EndOfYourNextTurn/OnSuspend/OnUnsuspend to a specific DelayTrigger \u2014 every \\ other timing (incl. OnAllyAttack) silently degrades to EndOfYourNextTurn; \\ (2) even if lower_delay mapped it, effect_queue.rs:459-464 only calls \\ enqueue_event_gated_delayed_options for TriggerSource::EventObserved / \\ AttackTargetChanged, but combat.rs:2953 dispatches OnAllyAttack via \\ TriggerSource::PlayerBattleArea \u2014 so attack events never reach the \\ event-gated-delay drainer; (3) `attacker_trait_has` resolves the attacker \\ only via rctx.attack_target_change() (predicate.rs:928), which is unset for a \\ plain attack \u2014 an event-gated delay condition has no way to read the \\ attacker's traits. A faithful fix is a 3-system change (delay lowering + \\ combat dispatch fan-out to event-gated delays + a delay-context attacker \\ predicate), not a focused card fix. The [Your Turn] CS-attack <Delay> clause \\ is omitted from BT23-096.yaml until that substrate lands.",
+   "tag": "G-DSL-DELAY-ON-ATTACK-EVENT"
+  }
+ ]
+}

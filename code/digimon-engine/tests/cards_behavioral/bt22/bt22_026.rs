@@ -510,15 +510,11 @@ fn bt22_026_inherited_when_attacking_omnimon_top_unsuspends_self() {
 }
 
 /// Negative condition: stack has only MetalGarurumon (BT22-026) at top —
-/// name gate must block the unsuspend. **BLOCKED**: G-DSL-SOURCE-NAME-CONTAINS
-/// — the predicate is parsed but never evaluated; the clause fires anyway.
-/// Same gap as BT17-015 / BT22-013 analogous negative tests.
+/// name gate must block the unsuspend. `source_name_contains` is evaluated
+/// by the engine predicate path (`predicate.rs:284`), so the inherited
+/// [When Attacking] gate correctly blocks when the top card is not
+/// Omnimon-named.
 #[test]
-#[ignore = "BLOCKED: G-DSL-SOURCE-NAME-CONTAINS — source_name_contains predicate is parsed and \
-            compiled but never evaluated in code/digimon-engine/src/dsl_cards/predicate.rs; \
-            the inherited [When Attacking] gate degenerates to true and incorrectly unsuspends \
-            the attacker even when top card is not Omnimon-named. Same gap blocks BT17-015 / \
-            BT22-013 analogous negative tests."]
 fn bt22_026_inherited_when_attacking_metalgarurumon_top_does_not_unsuspend() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)

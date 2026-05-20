@@ -41,13 +41,13 @@
 //!     security without paying cost (resolved precedent: BT21-015 / BT5-093 /
 //!     BT9-092 G-PLACE-SELF-AS-OPTION-PERMANENT).
 //!
-//! # YAML location (NOTE — `_examples/`, not `bt22/`)
-//! `code/digimon-engine/cards/_examples/BT22-084.yaml`. The card lives in the
-//! curated examples pack rather than the per-set folder; the embedded DSL
-//! pack still surfaces it via `compiled("BT22-084")`. This test follows
-//! `bt17_007.rs` precedent and uses `card_data_from_compiled` + `compiled`
-//! rather than `include_str!` of the `_examples/` path. Per orchestrator
-//! brief, the `_examples` YAML is a fixture and must not be modified.
+//! # YAML location
+//! `code/digimon-engine/cards/bt22/BT22-084.yaml` — promoted to the per-set
+//! production folder on 2026-05-20 (DNA Omnimon missing-card authoring
+//! pass). The prior `cards/_examples/BT22-084.yaml` draft was removed in the
+//! same change. The embedded DSL pack surfaces the production card via
+//! `compiled("BT22-084")`. This test follows `bt17_007.rs` precedent and
+//! uses `card_data_from_compiled` + `compiled` rather than `include_str!`.
 //!
 //! # Audit summary (2026-05-03) — VERDICT: AUDIT-WITH-CAVEATS
 //!
@@ -67,15 +67,14 @@
 //!    into two factory entries that share `SharedActivateCoroutine`,
 //!    which is functionally equivalent).
 //!
-//!    **Caveat — G-COUNT-LTE-EVAL (KNOWN OPEN, engine-gaps.md):** the
+//!    **G-COUNT-LTE-EVAL — RESOLVED:** the
 //!    `count_lte: { filter: { of: you, zone: [battle_area], kind: digimon },
-//!    n: 1 }` gate is parsed and lowered into `CompiledPredicate.count_lte`
-//!    but `eval_predicate_with_bindings` has no match arm for non-security
-//!    `count_lte` (only `security_count_lte` is wired). Predicate evaluates
-//!    to TRUE regardless of actual Digimon count. Positive case (0 Digimon)
-//!    works incidentally. Negative case (2+ Digimon should suppress)
-//!    over-fires. Test for the negative case is `#[ignore = "pending:
-//!    G-COUNT-LTE-EVAL"]` — same precedent as `bt21_017_condition_blocked_with_two_tamers`.
+//!    n: 1 }` gate is parsed, lowered into `CompiledPredicate.count_lte`,
+//!    AND evaluated — `predicate.rs` has a `pred.count_lte` arm that
+//!    compares `count_matching` against the cap. Both the positive case
+//!    (0 Digimon → fires) and the negative case (2+ Digimon → suppressed)
+//!    behave faithfully; `bt22_084_clause2_blocked_when_two_or_more_digimon_present`
+//!    is an active (non-ignored) test.
 //!
 //! 3. **[All Turns] +1000 DP filtered aura on own Digimon with Greymon /
 //!    Garurumon / Omnimon in name** — YAML uses `kind: aura`,
@@ -95,8 +94,9 @@
 //!    line 236). Structural-only assertion in this audit; full security-
 //!    replay path covered in `bt21_015.rs`.
 //!
-//! Remaining caveats / non-faithfulness items: NONE for clauses 1, 3, 4.
-//! Clause 2 negative-gate is BLOCKED on G-COUNT-LTE-EVAL only.
+//! Remaining caveats / non-faithfulness items: NONE. All four clauses are
+//! faithfully implemented; clause 2's negative gate (G-COUNT-LTE-EVAL) is
+//! resolved and covered by an active test.
 //!
 //! # Patterns this test covers (RUST_DSL_TEST_API.md §4 / §5)
 //!   - §5 Structural: 4 effect entries — 3 triggered (start_of_your_turn,
@@ -104,7 +104,7 @@
 //!     aura. Optionality flags. Clause scopes.
 //!   - §5 Condition gating: clause 1 fires at memory<=2 / not at memory>=3;
 //!     clause 2 positive (0 Digimon, candidate in hand → prompt installs);
-//!     clause 2 negative-1 (2+ Digimon — ignored, G-COUNT-LTE-EVAL);
+//!     clause 2 negative-1 (2+ Digimon → count_lte: 1 fails, no prompt);
 //!     clause 2 negative-2 (no Agumon/Gabumon in hand → no prompt).
 //!   - §5 Behavioral integrated: clause 1 sets memory to 3; clause 2 picks
 //!     Agumon and plays it for free (no memory deduction); clause 2 PASS
@@ -448,11 +448,20 @@ fn bt22_084_clause2_on_play_offers_and_plays_agumon_free() {
     let memory_before_nokia = runner.memory();
     runner.play(0, 0).expect("Nokia plays from hand (cost 5)");
 
-    // After Nokia hits the field, On Play fires; clause 2 should install a
-    // selection prompt to play 1 Agumon/Gabumon free.
+    // After Nokia hits the field, On Play fires. The clause is optional
+    // ("you may") and its body's first step is a mandatory select_hand, so
+    // an outer accept/decline prompt installs first (G-OUTER-OPTIONAL-NOT-
+    // INSTALLED). Accept it to enter the inner select_hand picker.
     assert!(
         runner.game.pending_selection.is_some(),
-        "Nokia's On Play should install a select_hand prompt for Agumon/Gabumon"
+        "Nokia's On Play installs an outer accept/decline prompt (optional clause)"
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "accepting the outer prompt installs the inner select_hand prompt"
     );
 
     let memory_after_nokia = runner.memory();
@@ -504,9 +513,17 @@ fn bt22_084_clause2_on_play_offers_gabumon() {
         .start();
 
     runner.play(0, 0).expect("Nokia plays from hand");
+    // Optional clause → outer accept/decline prompt first.
     assert!(
         runner.game.pending_selection.is_some(),
-        "Nokia On Play must install prompt when Gabumon is the eligible candidate"
+        "Nokia On Play installs an outer accept/decline prompt (optional clause)"
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "inner select_hand prompt installs after accepting"
     );
 
     let action = runner
@@ -524,9 +541,11 @@ fn bt22_084_clause2_on_play_offers_gabumon() {
     assert_eq!(runner.battle_area_size(0), 2);
 }
 
-/// Optional: clause 2 is optional — player may PASS and Agumon stays in hand.
+/// Optional: clause 2 is optional — player may decline and Agumon stays in
+/// hand. G-OUTER-OPTIONAL-NOT-INSTALLED (closed 2026-05-20): the clause-level
+/// `optional: true` installs an outer accept/decline prompt before the inner
+/// (mandatory) select_hand; declining skips the body cleanly.
 #[test]
-#[ignore = "pending: G-OUTER-OPTIONAL-NOT-INSTALLED — clause-level `optional: true` does not install an outer accept/decline before inner select_hand prompt; same family as AD1-009 ad1_009_eot_dna_clause_is_optional"]
 fn bt22_084_clause2_pass_leaves_hand_intact() {
     let mut runner = DebugRunner::builder()
         .add_card(nokia_card_data())
@@ -539,18 +558,21 @@ fn bt22_084_clause2_pass_leaves_hand_intact() {
         .start();
 
     runner.play(0, 0).expect("Nokia plays");
-    assert!(runner.game.pending_selection.is_some());
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "an outer accept/decline prompt must install for the optional clause"
+    );
     assert!(
         runner.pending_is_optional(),
-        "Clause 2 must be optional (printed 'you may')"
+        "the outer prompt must be optional (printed 'you may')"
     );
 
     runner
-        .execute_action(0, digimon_engine::action::space::PASS)
-        .expect("pass the optional select_hand prompt");
+        .decline_optional_trigger()
+        .expect("decline the outer optional-trigger prompt");
     let _ = runner.game.drain_effect_queue();
 
-    // Battle area: only Nokia.
+    // Battle area: only Nokia — declining skipped the free-play body.
     assert_eq!(runner.battle_area_size(0), 1);
     // Hand: Agumon still there.
     assert_eq!(runner.hand_size(0), 1);
@@ -584,14 +606,12 @@ fn bt22_084_clause2_no_prompt_when_no_matching_card_in_hand() {
     assert_eq!(runner.hand_size(0), 1);
 }
 
-/// Negative-2 (BLOCKED on G-COUNT-LTE-EVAL): 2+ Digimon already on field
-/// should suppress clause 2's prompt entirely (count_lte: 1 fails). The
-/// engine currently does not evaluate non-security `count_lte`, so the
-/// gate silently passes and the clause over-fires.
-///
-/// Same precedent as `bt21_017_condition_blocked_with_two_tamers`.
+/// Negative-2: 2+ Digimon already on field suppresses clause 2's prompt
+/// entirely (count_lte: 1 fails). G-COUNT-LTE-EVAL is RESOLVED — the
+/// non-security `count_lte` aggregate predicate is evaluated in
+/// `predicate.rs` (the `pred.count_lte` arm compares `count_matching`
+/// against the cap), so the gate now correctly fails with 2+ Digimon.
 #[test]
-#[ignore = "pending: G-COUNT-LTE-EVAL — non-security count_lte aggregate predicate not evaluated in eval_predicate_with_bindings; clause 2 over-fires when 2+ Digimon already on field"]
 fn bt22_084_clause2_blocked_when_two_or_more_digimon_present() {
     let mut runner = DebugRunner::builder()
         .add_card(nokia_card_data())

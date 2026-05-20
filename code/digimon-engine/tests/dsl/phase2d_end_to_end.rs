@@ -71,6 +71,7 @@ fn multi_pick_then_per_selected_then_for_each_round_trip() {
         CompiledStep::SelectCountCappedMulti {
             of: CompiledPlayerRef::Opponent,
             zone: CompiledZone::Trash,
+            min: 0,
             max: digimon_dsl::compiled::CompiledCountBound::Literal(2),
             filter: CompiledPredicate::default(),
             bind_as: Some("picks".to_string()),

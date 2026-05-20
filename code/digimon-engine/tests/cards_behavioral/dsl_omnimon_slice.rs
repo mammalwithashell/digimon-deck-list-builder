@@ -89,9 +89,11 @@ fn nokia_on_play_free_plays_agumon_from_hand() {
     runner.play(0, 0).expect("Nokia plays from hand");
     assert!(
         runner.game.pending_selection.is_some(),
-        "Nokia's On Play should ask which Agumon/Gabumon to play"
+        "Nokia's On Play installs an outer accept/decline prompt (optional clause)"
     );
-
+    // Accept the outer optional-trigger prompt (G-OUTER-OPTIONAL-NOT-INSTALLED),
+    // then resolve the inner select_hand pick.
+    resolve_first_pending(&mut runner);
     resolve_first_pending(&mut runner);
 
     assert_eq!(runner.battle_area_size(0), 2);

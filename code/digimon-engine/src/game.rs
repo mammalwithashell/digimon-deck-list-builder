@@ -1910,6 +1910,119 @@ impl Game {
         Some(merged_handle)
     }
 
+    /// DNA digivolve where ONE material lives on the field (`target`) and the
+    /// OTHER material is a card in `hand_owner`'s hand (`partner_index`). The
+    /// merged permanent is topped with `result_index` (also a hand card —
+    /// typically the Omnimon-name level-7 result).
+    ///
+    /// This is the BT17-095-shaped DNA: the printed text "That Digimon and a
+    /// card in the hand may DNA digivolve into a Digimon card with [Omnimon]
+    /// in its name in the hand" — only one DNA material is a field permanent;
+    /// the second is materialised from hand inline. Mirrors DCGO's
+    /// `BT17_095.SuccessProcess` which builds a temporary `Permanent` from the
+    /// hand-card partner and runs `PlayCardClass.PlayCard` with `SetJogress`.
+    ///
+    /// ## Stacking order
+    ///
+    /// `target.card_sources ++ [hand_partner] ++ [result]`. `target` is the
+    /// `requirement1` material; the hand partner is `requirement2`. The merged
+    /// permanent stays at `target`'s index (no on-field permanent is removed).
+    ///
+    /// ## Triggers
+    ///
+    /// Identical to `dna_digivolve_inner`: `WhenDigivolving` → `OnDnaDigivolve`
+    /// → `OnDigivolve` (global), each followed by a queue drain, all carrying
+    /// the `dna_origin` marker.
+    ///
+    /// ## Returns
+    ///
+    /// `Some(merged_handle)` on success; `None` if `target` is out of range,
+    /// either hand index is out of range, the two hand indices coincide, or
+    /// `cost > 0` and `pay_memory` fails.
+    pub(crate) fn dna_digivolve_hand_partner_inner(
+        &mut self,
+        target: PermanentHandle,
+        hand_owner: PlayerId,
+        partner_index: usize,
+        result_index: usize,
+        cost: u16,
+        effect_initiated: bool,
+    ) -> Option<PermanentHandle> {
+        use crate::enums::EffectTiming;
+        use crate::selection::TriggerSource;
+
+        if (target.index as usize) >= self.player(target.player).battle_area.len() {
+            return None;
+        }
+        if partner_index == result_index {
+            return None;
+        }
+        let hand_len = self.player(hand_owner).hand.len();
+        if partner_index >= hand_len || result_index >= hand_len {
+            return None;
+        }
+
+        if cost > 0 && !self.pay_memory(cost) {
+            return None;
+        }
+
+        // Remove the two hand cards. Remove the higher index first so the
+        // lower index is not shifted before its removal.
+        let (first, second) = if partner_index > result_index {
+            (partner_index, result_index)
+        } else {
+            (result_index, partner_index)
+        };
+        let removed_first = self.player_mut(hand_owner).hand.remove(first);
+        let removed_second = self.player_mut(hand_owner).hand.remove(second);
+        let (partner_source, result_source) = if partner_index > result_index {
+            (removed_first, removed_second)
+        } else {
+            (removed_second, removed_first)
+        };
+
+        let turn = self.turn_count;
+        {
+            let perm = &mut self.player_mut(target.player).battle_area[target.index as usize];
+            perm.card_sources.push(partner_source);
+            perm.card_sources.push(result_source);
+            perm.turn_digivolved = turn;
+        }
+
+        let merged_handle = target;
+
+        self.enqueue_triggered(
+            EffectTiming::WhenDigivolving,
+            TriggerSource::Permanent(merged_handle),
+        );
+        self.drain_effect_queue_with_dna_origin(true);
+
+        self.enqueue_triggered(
+            EffectTiming::OnDnaDigivolve,
+            TriggerSource::Permanent(merged_handle),
+        );
+        self.drain_effect_queue_with_dna_origin(true);
+
+        let event_card = self
+            .player(merged_handle.player)
+            .battle_area
+            .get(merged_handle.index as usize)
+            .map(|perm| perm.top_card().handle())?;
+        self.enqueue_triggered(
+            EffectTiming::OnDigivolve,
+            TriggerSource::Digivolved {
+                player: merged_handle.player,
+                permanent: merged_handle,
+                card: event_card,
+                effect_initiated,
+                dna_origin: true,
+            },
+        );
+        self.drain_effect_queue();
+
+        Some(merged_handle)
+    }
+
     /// Returns `true` when `card` may digivolve onto `perm` per standard
     /// evo-cost rules: `card` has an `EvoCost` entry whose `level` matches
     /// `perm.top_card()`'s level and whose color is present on
@@ -2321,6 +2434,10 @@ impl Game {
                 }
             }
         }
+        // Fold in registry-side granted keywords (e.g. an aura's
+        // `grant_keyword: SecurityAttackPlus`). Printed keywords above come
+        // from `card_sources`; aura grants live in `Modifiers::permanent_keywords`.
+        total += self.modifiers.granted_security_attack_keyword_bonus(target);
         total
     }
 

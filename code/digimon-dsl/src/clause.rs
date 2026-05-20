@@ -353,6 +353,16 @@ pub struct CostReductionBody {
     pub when_playing_this: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub when_any_ally_played: Option<PredicateSpec>,
+    /// Digivolution-target-keyed cost-reduction trigger. When set, the
+    /// reduction fires only for a DIGIVOLVE cost (not a play) whose target
+    /// card — the card being digivolved INTO — matches this predicate. The
+    /// predicate is evaluated against the digivolve target as a `Card`
+    /// subject, so the full card-shape vocabulary (`name_contains`,
+    /// `trait_has`, `any_of`, ...) applies. Models card text of the form
+    /// "When one of your Digimon would digivolve into a [Name] card, ...".
+    /// Used by BT5-092 (Nokia Shiramine). `G-COST-REDUCTION-DIGIVOLVE-INTO`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub when_any_ally_digivolves_into: Option<PredicateSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub condition: Option<PredicateSpec>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]

@@ -161,6 +161,10 @@ pub enum SelectionKind {
     SourceMulti { min: u8, max: u8, picked: u8 },
     /// Pick opponent permanents whose total DP is capped by a remaining budget.
     DpBudget { remaining_dp: i32, picked: u8 },
+    /// Pick opponent permanents whose total printed play cost is capped by a
+    /// remaining budget. Play-cost analog of `DpBudget`.
+    /// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+    PlayCostBudget { remaining_play_cost: i32, picked: u8 },
     /// Pick the selecting player's breeding-area permanent.
     BreedingPermanent,
 }

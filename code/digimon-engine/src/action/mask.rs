@@ -376,8 +376,11 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                         if is_under != effect.inherited {
                             continue;
                         }
+                        // G-OPT-MULTI-TIMING-SHARED-LOCKOUT: a multi-timing
+                        // OPT cluster shares one counter via `shared_opt_group`.
+                        let opt_key = effect.shared_opt_group.unwrap_or(slot as u8);
                         if effect.max_per_turn > 0
-                            && perm.activation_count(source.handle(), slot as u8)
+                            && perm.activation_count(source.handle(), opt_key)
                                 >= effect.max_per_turn
                         {
                             continue;

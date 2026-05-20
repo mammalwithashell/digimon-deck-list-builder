@@ -684,14 +684,71 @@ fn bt17_081_clause2_blocked_by_non_omnimon_named_digimon() {
     );
 }
 
-/// Clause 2 IGNORED — OPT lockout for triggered effects (G-OPT-TRIGGERED).
-/// Even though `once_per_turn: true` is authored, the engine does not yet
-/// enforce same-turn lockout via the queue drain. Re-firing the trigger from
-/// a test re-installs the prompt today.
+/// Clause 2 OPT lockout — printed [Once Per Turn]. The end-of-your-turn
+/// "1 of your Omnimon may attack a player" clause may fire at most once per
+/// turn. Firing the `EndOfYourTurn` trigger a second time in the same turn
+/// must NOT install a second prompt; after a full turn cycle the OPT counter
+/// resets and the clause fires again.
+///
+/// OPT enforcement for permanent-sourced triggered effects is wired in
+/// `run_queued_effect_inner` (`effect_queue.rs` ~1980-2016); the per-permanent
+/// `effect_activations` counter resets via `Permanent::new_turn()`.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — OPT lockout not enforced on triggered effects"]
 fn bt17_081_clause2_opt_lockout_blocks_second_activation_same_turn() {
-    unimplemented!("blocked on G-OPT-TRIGGERED");
+    let mut runner = taimatt_runner();
+    runner
+        .game
+        .card_data
+        .push(make_named_digimon("OWN-OMN", "Omnimon", 6, 13000));
+    let owen = runner.place_on_field(0, "BT17-081", Some(0));
+    runner.place_on_field(0, "OWN-OMN", Some(0));
+
+    // ── First fire: the trigger installs a prompt; resolving it consumes OPT.
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(owen));
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "first EndOfYourTurn fire must install the optional Omnimon-attack prompt"
+    );
+    // Drain the prompt chain (accept the activation, then decline the attack
+    // target via PASS once it is offered) — the body running consumes the OPT.
+    let mut steps = 0;
+    while runner.game.pending_selection.is_some() && steps < 10 {
+        let (player, action) = {
+            let pending = runner.game.pending_selection.as_ref().unwrap();
+            (pending.selecting_player, pending.valid_action_ids[0])
+        };
+        runner.game.resolve_selection(player, action).ok();
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+
+    // ── Second fire, SAME turn: OPT lockout — no prompt installs.
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(owen));
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "OPT lockout must block the second EndOfYourTurn activation in the same turn"
+    );
+
+    // ── OPT reset: `Permanent::new_turn()` clears `effect_activations`. This
+    // is exactly what `begin_turn()` → `Player::new_turn()` calls for the
+    // turn player's permanents at the start of each turn. (Sibling idiom:
+    // `st9_05_when_attacking_opt_resets_after_turn_end`.)
+    runner.game.players[0].battle_area[owen.index as usize].new_turn();
+
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(owen));
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "after the per-turn OPT reset the clause must fire again"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -405,17 +405,66 @@ fn ex10_010_when_digivolving_deletes_selected_opponent_permanent() {
     );
 }
 
-// ─── SECTION 4 — G-PLAY-COST-LTE gap test ────────────────────────────────────
+// ─── SECTION 4 — play_cost_lte filter on the [On Play] delete target ─────────
 
-/// G-PLAY-COST-LTE: a high-cost opponent permanent (cost > 7) should NOT appear
-/// as a valid delete target per card text, but will until the gap is closed.
-/// This test documents the expected behavior when the gap is resolved.
+/// `play_cost_lte: 7` filters the [On Play] delete prompt: an opponent
+/// permanent with play cost 8 (above 7) must NOT be a selectable target,
+/// while a cost-≤7 one must be. `play_cost_lte` is parsed and evaluated at
+/// selection time (predicate.rs:727; G-PLAY-COST-LTE closed 2026-05-01).
 #[test]
-#[ignore = "pending: G-PLAY-COST-LTE — play_cost_lte predicate not evaluated at selection time"]
 fn ex10_010_on_play_excludes_opponent_permanent_with_cost_above_7() {
-    // Post gap-close test scaffolding:
-    // Place a cost-14 Digimon and a cost-3 Digimon on opponent's field.
-    // After playing EX10-010, only the cost-3 card should appear in valid_action_ids.
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX10-010")
+        .expect("EX10-010 in embedded DSL pack")
+        .add_card(make_opp_digimon_costed("OPP-COST7", 5000, 7))
+        .add_card(make_opp_digimon_costed("OPP-COST8", 11000, 8))
+        .add_card(make_filler("FILLER"))
+        .hand(0, &["EX10-010"])
+        .deck(0, &["FILLER"])
+        .deck(1, &["FILLER"])
+        .security(0, &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER"])
+        .security(1, &["FILLER", "FILLER", "FILLER", "FILLER", "FILLER"])
+        .memory(7)
+        .start();
+
+    let _cost7 = runner.place_on_field(1, "OPP-COST7", None);
+    let _cost8 = runner.place_on_field(1, "OPP-COST8", None);
+
+    let _perm = runner.play(0, 0);
+
+    {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("delete prompt must install when an eligible (cost-≤7) target exists");
+        // Exactly one eligible target — only the cost-7 Digimon. The cost-8
+        // Digimon is filtered out by `play_cost_lte: 7`.
+        assert_eq!(
+            pending.valid_action_ids.len(),
+            1,
+            "only the cost-≤7 opponent Digimon should be a valid delete target; \
+             the cost-8 Digimon must be excluded"
+        );
+    }
+
+    // Resolve the prompt: the single eligible target (cost-7) must be the
+    // one deleted — the cost-8 Digimon must survive.
+    resolve_first_pending(&mut runner);
+
+    let survivors: Vec<String> = runner.game.players[1]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(
+        survivors.contains(&"OPP-COST8".to_string()),
+        "cost-8 opponent Digimon must NOT be deletable (above play_cost_lte: 7); survivors: {survivors:?}"
+    );
+    assert!(
+        !survivors.contains(&"OPP-COST7".to_string()),
+        "cost-7 opponent Digimon must have been the deleted target; survivors: {survivors:?}"
+    );
 }
 
 // ─── SECTION 5 — Keyword grants (declarative, runtime) ───────────────────────
@@ -520,40 +569,13 @@ fn ex10_010_no_dp_buff_when_opp_has_no_digimon() {
 
 // ─── SECTION 7 — Immunity from opponent Digimon effects (aura modifier) ─────
 
-/// [All Turns] Immunity: EX10-010 should carry CannotBeAffected modifier when
-/// the condition is met (opp has ≥13000 DP Digimon).
-///
-/// Gap: lower_aura.rs does not pass the `modifier` field from the compiled Aura
-/// clause into `lower_aura::lower()`. The `CannotBeAffected` modifier is compiled
-/// into `CompiledDeclarativeClause::Aura.modifier` but is never installed in the
-/// modifier registry.
-/// Additionally, even if installed, `CannotBeAffected` is not enforced by the
-/// engine's effect execution path.
-///
-/// When both gaps close: the `modifier` field must be threaded into lower_aura and
-/// applied via `ctx.add_modifier(h, CannotBeAffected, 0, Expiry::Permanent)`.
-#[test]
-#[ignore = "pending: lower_aura.rs modifier field not wired — CannotBeAffected never installed; CannotBeAffected not enforced by engine"]
-fn ex10_010_has_cannot_be_affected_modifier_when_opp_has_13000_dp_digimon() {
-    // Post-gap-close scaffolding:
-    // let mut runner = runner_with_ex10_010();
-    // let bwg = runner.place_on_field(0, "EX10-010", None);
-    // let _big_opp = runner.place_on_field(1, <≥13000 DP card>, None);
-    // assert!(runner.game.modifiers.has(bwg, ModifierType::CannotBeAffected),
-    //   "EX10-010 must carry CannotBeAffected when opp has ≥13000 DP Digimon");
-}
-
-/// Negative case: when opp has no ≥13000 DP Digimon, CannotBeAffected must NOT apply.
-#[test]
-#[ignore = "pending: lower_aura.rs modifier field not wired — CannotBeAffected never installed; CannotBeAffected not enforced by engine"]
-fn ex10_010_no_cannot_be_affected_modifier_when_opp_lacks_13000_dp_digimon() {
-    // Post-gap-close scaffolding:
-    // let mut runner = runner_with_ex10_010();
-    // let bwg = runner.place_on_field(0, "EX10-010", None);
-    // // No ≥13000 DP opp Digimon
-    // assert!(!runner.game.modifiers.has(bwg, ModifierType::CannotBeAffected),
-    //   "EX10-010 must NOT carry CannotBeAffected when opp lacks ≥13000 DP Digimon");
-}
+// [All Turns] Immunity (CannotBeAffected) installation is covered by the
+// SECTION 8 regression tests `ex10_010_cannot_be_affected_installed_when_opp_has_13000_dp_digimon`
+// and `ex10_010_cannot_be_affected_not_installed_when_opp_lacks_13000_dp_digimon`,
+// which exercise the same behavior end-to-end (the lower_aura `modifier`
+// threading + engine enforcement gaps closed 2026-05-02/03). The two
+// comment-only `#[ignore]`'d scaffolds that previously sat here were exact
+// behavioral duplicates of those tests and were removed.
 
 // SECTION 8 - Closed-gap regression tests (audit 2026-05-03)
 //

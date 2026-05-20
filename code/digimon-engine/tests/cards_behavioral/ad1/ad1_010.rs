@@ -74,6 +74,17 @@ fn make_named_digimon(id: &str, name: &str) -> CardData {
     make_digimon(id, name, 4, 5000)
 }
 
+/// A named Tamer with no level/dp. The All-Turns observer's play half
+/// (`on_enter_field_anyone`) accepts Tamer plays — the card text scopes to
+/// "your Digimon or Tamers".
+fn make_named_tamer(id: &str, name: &str) -> CardData {
+    let mut c = make_test_card(id, name);
+    c.card_kind = digimon_engine::enums::CardKind::Tamer;
+    c.level = None;
+    c.dp = None;
+    c
+}
+
 /// A Lv.3 ADVENTURE-trait Digimon, suitable as an alt-digivolve base for
 /// AD1-010 (which alt-digivolves from Lv.3 with [Omnimon] in name OR
 /// [ADVENTURE] trait, cost 2).
@@ -442,12 +453,66 @@ fn ad1_010_all_turns_observer_fires_on_greymon_play() {
 }
 
 /// Positive gate (tamer play): when a tamer named "Matt Ishida" is played,
-/// the observer should fire. IGNORED pending engine confirmation that
-/// `event_card` is populated for tamer plays via TriggerSource::EnteredField.
+/// the All-Turns observer fires its optional digivolve prompt. The play path
+/// is kind-agnostic — `TriggerSource::EnteredField` populates `event_card`
+/// for Tamer plays the same as for Digimon plays, and the clause's
+/// `event_card_name_contains: "Matt Ishida"` predicate reads it.
 #[test]
-#[ignore = "pending: G-EVENT-CARD-TAMER-PLAY — event_card population for tamer plays via TriggerSource::EnteredField is unconfirmed in engine-gaps.md"]
 fn ad1_010_all_turns_observer_fires_on_matt_ishida_tamer_play() {
-    unimplemented!("blocked on G-EVENT-CARD-TAMER-PLAY")
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-010")
+        .expect("AD1-010 in embedded pack")
+        .add_card(make_named_tamer("MATT", "Matt Ishida"))
+        .add_card(make_named_digimon("GARU", "Garurumon"))
+        .add_card(make_filler("FILL"))
+        .hand(0, &["MATT", "GARU"])
+        .deck(0, &["FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "AD1-010", Some(0));
+    runner.game.drain_effect_queue();
+    drain_pending(&mut runner);
+
+    let matt_idx = find_hand_index(&runner, 0, "MATT").expect("MATT in hand");
+    let _ = runner.play(0, matt_idx);
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "observer must install a pending selection when a [Matt Ishida] Tamer is played"
+    );
+}
+
+/// Negative gate (tamer play): an unrelated Tamer play must NOT fire the
+/// observer — the name filter requires [Greymon] or [Matt Ishida].
+#[test]
+fn ad1_010_all_turns_observer_does_not_fire_on_unrelated_tamer_play() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-010")
+        .expect("AD1-010 in embedded pack")
+        .add_card(make_named_tamer("UNREL-TAMER", "Some Other Tamer"))
+        .add_card(make_named_digimon("GARU", "Garurumon"))
+        .add_card(make_filler("FILL"))
+        .hand(0, &["UNREL-TAMER", "GARU"])
+        .deck(0, &["FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "AD1-010", Some(0));
+    runner.game.drain_effect_queue();
+    drain_pending(&mut runner);
+
+    let idx = find_hand_index(&runner, 0, "UNREL-TAMER").expect("UNREL-TAMER in hand");
+    let _ = runner.play(0, idx);
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "observer must NOT fire when an unrelated-name Tamer is played"
+    );
 }
 
 // ─── SECTION 4 — All-Turns observer: digivolve trigger path ──────────────────

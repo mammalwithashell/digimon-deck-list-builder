@@ -180,12 +180,16 @@ effects:
               from_hand: dna_card
               cost: 0
               ignore_requirements: false
-      # Step 4: "Then, 1 of your Digimon may attack." Wrap in `- optional:`
-      # so the player gets a clean accept/decline at the start.
+      # Step 4: "Then, 1 of your Digimon may attack." The printed "may"
+      # makes the attacker selection itself optional — the player can
+      # decline to pick any Digimon to attack. Declining the optional
+      # `select_own_permanent` leaves `atk` unbound and the `may_attack_now`
+      # tail simply does not run.
       - optional:
           - select_own_permanent:
               bind_as: atk
               filter: { kind: digimon }
+              optional: true
               prompt: "Select 1 of your Digimon that may attack"
           - may_attack_now:
               attacker: atk

@@ -599,13 +599,65 @@ fn ex9_012_observer_does_not_fire_on_unrelated_own_play() {
     );
 }
 
-/// Positive gate (Tai Kamiya tamer play). IGNORED pending engine confirmation
-/// that `event_card` is populated for tamer plays via TriggerSource::EnteredField
-/// (per AD1-010 docstring §G-EVENT-CARD-TAMER-PLAY).
+/// Positive gate (Tai Kamiya tamer play): when an own Tamer named
+/// "Tai Kamiya" is played on the controller's turn AND a Greymon-named hand
+/// card is available, the observer fires its optional digivolve prompt. The
+/// play path is kind-agnostic — `TriggerSource::EnteredField` populates
+/// `event_card` for Tamer plays, and the clause's
+/// `event_card_name_contains: "Tai Kamiya"` predicate reads it. The play
+/// half deliberately omits `event_target_kind: digimon` so Tamer plays
+/// satisfy the gate (printed: "your Digimon or Tamers ... are played").
 #[test]
-#[ignore = "pending: G-EVENT-CARD-TAMER-PLAY — event_card population for tamer plays via TriggerSource::EnteredField is unconfirmed in engine-gaps.md"]
 fn ex9_012_observer_fires_on_own_tai_kamiya_tamer_play() {
-    unimplemented!("blocked on G-EVENT-CARD-TAMER-PLAY")
+    let mut runner = metalgrey_runner();
+    runner.game.card_data.push(make_grey_lv5("GREY-LV5"));
+    runner
+        .game
+        .card_data
+        .push(make_named_tamer("TAI", "Tai Kamiya"));
+    push_to_hand(&mut runner, 0, "GREY-LV5");
+    push_to_hand(&mut runner, 0, "TAI");
+    let _ex9 = runner.place_on_field(0, "EX9-012", Some(0));
+    runner.game.drain_effect_queue();
+    drain_pending(&mut runner);
+
+    let hand_idx = find_hand_index(&runner, 0, "TAI").expect("TAI in hand");
+    runner.play(0, hand_idx).expect("Tai Kamiya tamer plays");
+    runner.game.drain_effect_queue();
+
+    let pending = runner
+        .pending_selection()
+        .expect("observer must install a prompt when own [Tai Kamiya] Tamer plays on your turn");
+    assert!(
+        pending.is_optional,
+        "observer prompt is optional (\"may digivolve\")"
+    );
+}
+
+/// Negative gate (unrelated tamer play): an own Tamer whose name matches
+/// neither [Garurumon] nor [Tai Kamiya] must NOT fire the observer.
+#[test]
+fn ex9_012_observer_does_not_fire_on_unrelated_own_tamer_play() {
+    let mut runner = metalgrey_runner();
+    runner.game.card_data.push(make_grey_lv5("GREY-LV5"));
+    runner
+        .game
+        .card_data
+        .push(make_named_tamer("UNREL-TAMER", "Some Other Tamer"));
+    push_to_hand(&mut runner, 0, "GREY-LV5");
+    push_to_hand(&mut runner, 0, "UNREL-TAMER");
+    let _ex9 = runner.place_on_field(0, "EX9-012", Some(0));
+    runner.game.drain_effect_queue();
+    drain_pending(&mut runner);
+
+    let hand_idx = find_hand_index(&runner, 0, "UNREL-TAMER").expect("UNREL-TAMER in hand");
+    runner.play(0, hand_idx).expect("unrelated tamer plays");
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "unrelated-name own Tamer play must not fire the observer"
+    );
 }
 
 // ─── SECTION 4 — Behavioral: [Your Turn] observer (digivolve half) ──────────
