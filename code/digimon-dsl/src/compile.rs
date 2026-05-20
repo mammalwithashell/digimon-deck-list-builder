@@ -1763,6 +1763,9 @@ fn compile_step(
         S::TrashTopSecurity(a) => CompiledStep::TrashTopSecurity {
             of: compile_player_ref(a.of),
         },
+        S::TrashBottomSecurity(a) => CompiledStep::TrashBottomSecurity {
+            of: compile_player_ref(a.of),
+        },
         S::TrashTopSecurityAndCancelReplacement(a) => {
             CompiledStep::TrashTopSecurityAndCancelReplacement {
                 of: compile_player_ref(a.of),

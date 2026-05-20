@@ -37,6 +37,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
             ctx.trash_top_security(p);
             true
         }
+        CompiledStep::TrashBottomSecurity { of } => {
+            let p = resolve_player(ctx, *of);
+            ctx.trash_bottom_security(p);
+            true
+        }
         _ => false,
     }
 }

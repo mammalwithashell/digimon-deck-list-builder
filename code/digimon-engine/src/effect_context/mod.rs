@@ -1941,6 +1941,60 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Trash the bottom card of `player`'s security stack (index 0).
+    ///
+    /// Mirrors `trash_top_security` but removes `security[0]` instead of
+    /// the last element. Replacement effects and observers fire identically
+    /// to the top-trash path.
+    pub fn trash_bottom_security(&mut self, player: PlayerId) -> bool {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // Snapshot the bottom-of-security card handle before any state change.
+        let bottom_handle = match self.game.player(player).security.first() {
+            Some(c) => c.handle(),
+            None => return false,
+        };
+        let cause = self.game.infer_effect_cause(player);
+        let subject = ReplacementSubject::Card(bottom_handle, Zone::Security);
+        let outcome = self.game.try_replace(
+            EffectTiming::WhenWouldBeTrashed,
+            subject,
+            cause,
+            Some(Zone::Trash),
+        );
+        if self.game.pending_selection.is_some() {
+            return false;
+        }
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return false;
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(false, "Redirected not supported for WhenWouldBeTrashed v1");
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(false, "Substituted not supported for WhenWouldBeTrashed v1");
+            }
+        }
+
+        let p = self.game.player_mut(player);
+        if p.security.is_empty() {
+            return false;
+        }
+        let card = p.security.remove(0);
+        p.face_up_security.remove(&card.card_index);
+        self.fire_security_removed_observers(
+            player,
+            card,
+            crate::selection::SecurityRemovalDestination::Trash,
+        );
+        self.game.mark_until_condition_dirty();
+        self.game.reevaluate_until_condition_modifiers_if_dirty();
+        true
+    }
+
     fn fire_security_removed_observers(
         &mut self,
         defender: PlayerId,

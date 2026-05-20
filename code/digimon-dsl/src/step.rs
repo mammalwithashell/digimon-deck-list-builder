@@ -149,6 +149,7 @@ pub enum StepSpec {
 
     // Security
     TrashTopSecurity(PlayerArg),
+    TrashBottomSecurity(PlayerArg),
     TrashTopSecurityAndCancelReplacement(PlayerArg),
     BounceSelf(EmptyArgs),
     PlaceSelfAtSecurity(SelfSecurityPlacementArgs),
@@ -304,6 +305,7 @@ impl Serialize for StepSpec {
             StepSpec::EffectInitiatedDnaDigivolve(v) => kv!(s, "effect_initiated_dna_digivolve", v),
             // Security
             StepSpec::TrashTopSecurity(v) => kv!(s, "trash_top_security", v),
+            StepSpec::TrashBottomSecurity(v) => kv!(s, "trash_bottom_security", v),
             StepSpec::TrashTopSecurityAndCancelReplacement(v) => {
                 kv!(s, "trash_top_security_and_cancel_replacement", v)
             }
@@ -492,6 +494,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Security
             "trash_top_security" => StepSpec::TrashTopSecurity(map.next_value()?),
+            "trash_bottom_security" => StepSpec::TrashBottomSecurity(map.next_value()?),
             "trash_top_security_and_cancel_replacement" => {
                 StepSpec::TrashTopSecurityAndCancelReplacement(map.next_value()?)
             }
@@ -638,6 +641,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "effect_initiated_digivolve",
                         "effect_initiated_dna_digivolve",
                         "trash_top_security",
+                        "trash_bottom_security",
                         "trash_top_security_and_cancel_replacement",
                         "bounce_self",
                         "place_self_at_security",

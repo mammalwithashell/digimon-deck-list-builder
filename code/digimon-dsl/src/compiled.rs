@@ -906,6 +906,9 @@ pub enum CompiledStep {
     TrashTopSecurity {
         of: CompiledPlayerRef,
     },
+    TrashBottomSecurity {
+        of: CompiledPlayerRef,
+    },
     TrashTopSecurityAndCancelReplacement {
         of: CompiledPlayerRef,
     },
