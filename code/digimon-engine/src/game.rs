@@ -94,6 +94,9 @@ pub(crate) struct PendingWouldPlayResume {
     pub(crate) effective_cost: u16,
     pub(crate) origin: PendingWouldPlayOrigin,
     pub(crate) effect_initiated: bool,
+    /// When `true`, the just-played permanent's [On Play] clauses are NOT
+    /// enqueued for this play event. See [`PlayOptions::suppress_on_play`].
+    pub(crate) suppress_on_play: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -109,6 +112,46 @@ pub(crate) enum PendingWouldPlayOrigin {
         permanent: PermanentHandle,
         source_index: usize,
     },
+}
+
+/// Options carried through the play-from-zone pipeline that are independent
+/// of memory cost. Bundled into one `Copy` struct so the cost-reduction
+/// continuation chain (which captures these in callbacks) stays readable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct PlayOptions {
+    /// Where the played card came from — used to roll the play back to its
+    /// origin zone if a `WhenPermanentWouldPlay` replacement cancels it.
+    pub(crate) origin: PendingWouldPlayOrigin,
+    /// When `true`, the just-played permanent's [On Play] effect clauses
+    /// are NOT enqueued for this play event. This suppresses **only** the
+    /// played permanent's own [On Play] clauses — sibling permanents'
+    /// [On Play] effects (enqueued at their own play time) and observer
+    /// timings (`OnEnterFieldAnyone`, `OnAllyPlayed`) still fire normally.
+    ///
+    /// Card-text precedent: BT5-106 Demonic Disaster [Security] — "Any
+    /// [On Play] effects on Digimon played with this effect don't
+    /// activate." Royal Knights payoff cards (BT13-110/BT13-112) play
+    /// Royal Knight Digimon from digivolution sources with the same
+    /// suppression.
+    pub(crate) suppress_on_play: bool,
+}
+
+impl PlayOptions {
+    /// Default options: roll back to hand, do not suppress [On Play].
+    pub(crate) fn hand() -> Self {
+        Self {
+            origin: PendingWouldPlayOrigin::Hand,
+            suppress_on_play: false,
+        }
+    }
+
+    /// Options for a play from `origin` with default (non-suppressed) [On Play].
+    pub(crate) fn from_origin(origin: PendingWouldPlayOrigin) -> Self {
+        Self {
+            origin,
+            suppress_on_play: false,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

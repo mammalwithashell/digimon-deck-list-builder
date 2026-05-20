@@ -255,7 +255,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [`ctx.move_from_breeding()` optional level-filtered prompt wrapper](#ctxmove_from_breeding-effectcontext-helper) | 🟡 | 1 | `effect_context.rs` |
 | [Costed self-digivolve stable source binding](#costed-self-digivolve-stable-source-binding) | 🔴 | 1 | `effect_context.rs`, `binding_ref.rs` |
 | [Narrow opponent-effect protection for DP reduction and De-Digivolve](#narrow-opponent-effect-protection-for-dp-reduction-and-de-digivolve) | 🔴 | 1 | `modifiers.rs`, `effect.rs` |
-| [Effect play with played-Digimon On Play suppression](#effect-play-with-played-digimon-on-play-suppression) | 🔴 | 3+ | `effect_context.rs`, `game.rs` |
+| ~~Effect play with played-Digimon On Play suppression~~ | ✅ | — | RESOLVED 2026-05-19 (Phase 2 Track J Task S1.1) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine--dsl-gap-effect-play-with-played-digimon-on-play-suppression--resolved-2026-05-19-phase-2-track-j-task-s11-puppets-g030) |
 | ~~End-of-attack mandatory self-delete chain (EX4-074)~~ | ✅ | — | RESOLVED 2026-05-17 (Track I first-test confirmed existing primitives suffice) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine-gap-end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch--resolved-2026-05-17-track-i) |
 
 **Group 5 contract note (2026-05-02):** Group 5 did not change ACTION_SPACE_SIZE or TENSOR_SIZE. New Link/Delay choices reuse existing pending-selection masks.
@@ -889,14 +889,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-trash-resident-observer-with-effect-digivolve-from-trash--resolved-2026-05-15-2026-05-06) by the 2026-05-15 hygiene sweep.
 
 ### Effect play with played-Digimon On Play suppression
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** Puppets Batch 9 (2026-05-04)
-- **Card(s):** `BT5-106` Demonic Disaster. Royal Knights has adjacent source-play consumers (`BT13-110`, `BT13-112`) that also care about On Play suppression.
-- **Effect text:** "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
-- **What's missing:** Effect-play helpers need provenance that suppresses only the played permanent's On Play enqueue for this play event. Ordinary play-from-trash support is insufficient because it fires On Play normally; broad global On Play suppression would affect unrelated permanents/effects.
-- **Suggested API shape:** Add a `PlayOptions { suppress_on_play: bool, ... }` or equivalent parameter to effect-play helpers, carry it through the play event context, and make On Play enqueue skip the just-played permanent's On Play clauses when set. DSL consumers should expose this as `suppress_on_play: true`.
-- **Workaround:** None faithful. Omit the security slice until the played-Digimon On Play suppression flag is available.
-- **First test:** Security-check `BT5-106`, select a level 3 purple Digimon from trash with a visible On Play memory-gain effect, and assert the Digimon enters play while its On Play effect does not fire.
+> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine--dsl-gap-effect-play-with-played-digimon-on-play-suppression--resolved-2026-05-19-phase-2-track-j-task-s11-puppets-g030) by Phase 2 Track J Task S1.1 (2026-05-19). `game::PlayOptions { suppress_on_play }` threads through the play pipeline; `commit_play_from_hand_card_no_replace` skips `fire_on_play` for the just-played permanent only. DSL `suppress_on_play: true` flag on the `play_from_*` steps. BT5-106's [Security] slice is now authored in `code/digimon-engine/cards/bt5/BT5-106.yaml`.
 
 ### End-of-attack mandatory self-delete chain with recovery and conditional hatch
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch--resolved-2026-05-17-track-i) by the 2026-05-17 Track I first-test confirmation. Existing primitives (`delete_permanent { target: source }`, `select_opponent_permanent { optional: true }`, `recover`, `if { any_field_permanent + can_hatch } then hatch`) compose into a faithful chain — see `code/digimon-engine/cards/ex4/EX4-074.yaml` Clause 2 and `code/digimon-engine/tests/cards_behavioral/ex4/ex4_074.rs::ex4_074_end_of_attack_self_deletes_opponent_delete_recovers_and_hatches_with_tamer`.

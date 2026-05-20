@@ -861,6 +861,9 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         hand_index: CompiledBindingRef,
         cost_delta: Option<CompiledCostDelta>,
+        /// When `true`, the played permanent's own [On Play] effects are not
+        /// activated for this play event (BT5-106 [Security] precedent).
+        suppress_on_play: bool,
     },
     PlayFromHandFree {
         of: CompiledPlayerRef,
@@ -869,15 +872,21 @@ pub enum CompiledStep {
         /// `None` preserves prior behavior (no binding insert).
         /// G-PLAY-FROM-HAND-FREE-BIND-AS (Phase 2 Track H closure).
         bind_as: Option<String>,
+        /// See `PlayFromHand::suppress_on_play`.
+        suppress_on_play: bool,
     },
     PlayFromTrash {
         of: CompiledPlayerRef,
         trash_index: CompiledBindingRef,
         cost_delta: Option<CompiledCostDelta>,
+        /// See `PlayFromHand::suppress_on_play`.
+        suppress_on_play: bool,
     },
     PlayFromTrashFree {
         of: CompiledPlayerRef,
         trash_index: CompiledBindingRef,
+        /// See `PlayFromHand::suppress_on_play`.
+        suppress_on_play: bool,
     },
     PlayFromSecurity,
     PlayFromMaterials {
@@ -885,6 +894,8 @@ pub enum CompiledStep {
         source_index: CompiledBindingRef,
         cost_delta: Option<CompiledCostDelta>,
         bind_as: Option<String>,
+        /// See `PlayFromHand::suppress_on_play`.
+        suppress_on_play: bool,
     },
     PlaySelectedSourcesFree {
         source_refs: String,

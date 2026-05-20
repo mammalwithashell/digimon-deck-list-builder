@@ -1868,6 +1868,20 @@ The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE
 - **Resolution:** Phase 2 landed `effect_initiated_digivolve` (mod.rs:3384), `_ignore_requirements` (mod.rs:3402), `_with_provenance` (mod.rs:3418), `_from_source` (mod.rs:3437), `_from_source_ignore_requirements` (mod.rs:3455), `effect_initiated_dna_digivolve` (mod.rs:3509), `_dna_digivolve_with_provenance` (mod.rs:3572). DNA-origin context bit in Track A. Blast DNA via `execute_blast_dna_digivolve` in combat.rs:1630. BeforePayCost cost reduction in modifier scan is wired (Track C deferred-payload wave, 2026-05-09).
 - **Audit closure note (2026-05-15):** Per the 2026-05-14 rebaseline audit, headline primitive ✅ RESOLVED; BT17-095-style "DNA digivolve with field+hand material pair" is spun off as its own narrow card-shape gap in `docs/RUST_ENGINE_GAPS.md` if it remains blocking after the existing helpers are tried.
 
+## Engine + DSL Gap: Effect play with played-Digimon On Play suppression — RESOLVED 2026-05-19 (Phase 2 Track J Task S1.1) [PUPPETS-G030]
+
+- **Severity:** 🔴 BLOCKING (closed)
+- **Discovered in:** Puppets Batch 9 (2026-05-04) — BT5-106 Demonic Disaster.
+- **Card(s):** `BT5-106` Demonic Disaster [Security]. Royal Knights source-play payoffs (`BT13-110`, `BT13-112`) are adjacent consumers.
+- **Effect text:** "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
+- **What was missing:** Effect-play helpers had no way to suppress *only* the just-played permanent's [On Play] enqueue for a play event. Ordinary play-from-trash fires [On Play] normally; a broad/global suppression would wrongly silence unrelated permanents.
+- **Resolution:**
+  - **Engine:** Added `game::PlayOptions { origin, suppress_on_play }` (a `Copy` struct bundling the rollback origin with the new flag), threaded through `play_from_hand_with_cost_result_with_options` → `continue_play_from_hand_cost_reduction_chain` → `finish_play_from_hand_after_reductions` → `commit_play_from_hand_card_no_replace` (carried across the `WhenPermanentWouldPlay` replacement boundary via `PendingWouldPlayResume.suppress_on_play`). When set, `commit_play_from_hand_card_no_replace` skips the `fire_on_play` call. Because `fire_on_play` enqueues only the just-played permanent (`TriggerSource::Permanent`), skipping it suppresses ONLY that play — sibling permanents enqueue their [On Play] at their own play time, and the `OnEnterFieldAnyone` / `OnAllyPlayed` observer timings still fire. New `Game::play_from_trash_with_cost_options`.
+  - **Card-scripting API:** New public `effect_context::PlayOptions { suppress_on_play }` + `play_from_hand_with_cost_options` / `play_from_trash_with_cost_options` / `play_from_materials_options` helpers.
+  - **DSL:** `suppress_on_play: true` flag on `play_from_hand` / `play_from_hand_free` / `play_from_trash` / `play_from_trash_free` / `play_from_materials` step specs (defaults to `false`, omitted from serialization); lowered through `compile.rs` and `dsl_cards/step/play_digivolve.rs`.
+  - **Card:** BT5-106's [Security] slice was authored in `code/digimon-engine/cards/bt5/BT5-106.yaml` (previously omitted pending this gap).
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt5_106` (9 pass, incl. `bt5_106_security_suppresses_on_play_effects_of_played_digimon` and the sibling-On-Play regression `bt5_106_security_suppression_does_not_silence_a_sibling_on_play`); `cargo test ... --features dsl-yaml-loader --test dsl -- suppress_on_play` (3 pass — YAML→compiled flag lowering + default-false + end-to-end suppression); full engine suite green.
+
 ## DSL Gap: `AltPathSpec.condition` field for alt-digivolve activation gates — RESOLVED 2026-05-15 (Phase 1)
 
 - **Status:** Closed for the schema + Digivolve consumer route. First reported 2026-04-27 (BT24-016 batch-implement-cards-rust-dsl) as `G-ALT-PATH-CONDITION`.

@@ -1357,17 +1357,20 @@ is satisfiable today.
 ## BT5-106 — effect-play On Play suppression provenance  [PUPPETS-G030]
 
 - Effect text: "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
-- Missing DSL verb / step kind / predicate: a play-from-trash/free-play consumer that carries `suppress_on_play: true` provenance for the played Digimon only.
-- Companion engine state: ordinary effect play from trash can enter the Digimon and normally fire On Play; this card needs the same player-visible trash selection but must skip the played permanent's On Play enqueue for that play event.
-- Suggested DSL syntax:
+- Status 2026-05-19: `PUPPETS-G030` **CLOSED** by Phase 2 Track J Task S1.1. Full resolution detail moved to [`qa/resolved-gaps.md`](resolved-gaps.md#engine--dsl-gap-effect-play-with-played-digimon-on-play-suppression--resolved-2026-05-19-phase-2-track-j-task-s11-puppets-g030). Engine: `game::PlayOptions { suppress_on_play }` threaded through the play pipeline; `commit_play_from_hand_card_no_replace` skips the per-permanent `fire_on_play` enqueue when set (sibling permanents and `OnEnterFieldAnyone` observers are unaffected). DSL: `suppress_on_play: true` flag on `play_from_hand` / `play_from_hand_free` / `play_from_trash` / `play_from_trash_free` / `play_from_materials`. BT5-106's [Security] slice is now authored in `code/digimon-engine/cards/bt5/BT5-106.yaml`.
+- Companion engine state: ordinary effect play from trash enters the Digimon and normally fires On Play; this card needs the same player-visible trash selection but skips the played permanent's On Play enqueue for that play event.
+- DSL syntax (shipped):
   ```yaml
-  - play_from_trash_free:
-      target: chosen
+  - play_from_trash:
+      of: you
+      hand_index: revived
+      cost_delta: free
       suppress_on_play: true
   ```
-- Gap kind: hybrid. Engine play provenance needs an On Play suppression flag, and DSL needs vocabulary to request it.
-- Workaround: None faithful. Omitting the play hides a legal security choice; ordinary play-from-trash would illegally fire the played Digimon's On Play effects.
+- Gap kind: hybrid. Engine play provenance needed an On Play suppression flag, and DSL needed vocabulary to request it — both shipped.
+- Workaround: no longer needed.
 - First reported: 2026-05-04 (Puppets resolver Batch 9, BT5-106)
+- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt5_106` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- suppress_on_play`.
 
 ## BT3-002 — `carrier_has_keyword` predicate for inherited clause conditions  [G-DSL-CARRIER-HAS-KEYWORD]
 

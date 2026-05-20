@@ -1708,21 +1708,25 @@ fn compile_step(
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
             cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
+            suppress_on_play: a.suppress_on_play,
         },
         S::PlayFromHandFree(a) => CompiledStep::PlayFromHandFree {
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
             bind_as: a.bind_as.clone(),
+            suppress_on_play: a.suppress_on_play,
         },
         // PlayFromTrash reuses PlayFromHandArgs but the compiled form uses `trash_index`
         S::PlayFromTrash(a) => CompiledStep::PlayFromTrash {
             of: compile_player_ref(a.of),
             trash_index: compile_binding_ref(&a.hand_index),
             cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
+            suppress_on_play: a.suppress_on_play,
         },
         S::PlayFromTrashFree(a) => CompiledStep::PlayFromTrashFree {
             of: compile_player_ref(a.of),
             trash_index: compile_binding_ref(&a.hand_index),
+            suppress_on_play: a.suppress_on_play,
         },
         S::PlayFromSecurity(_) => CompiledStep::PlayFromSecurity,
         S::PlayFromMaterials(a) => CompiledStep::PlayFromMaterials {
@@ -1730,6 +1734,7 @@ fn compile_step(
             source_index: compile_binding_ref(&a.source_index),
             cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
             bind_as: a.bind_as.clone(),
+            suppress_on_play: a.suppress_on_play,
         },
         S::PlaySelectedSourcesFree(a) => CompiledStep::PlaySelectedSourcesFree {
             source_refs: a.source_refs.clone(),

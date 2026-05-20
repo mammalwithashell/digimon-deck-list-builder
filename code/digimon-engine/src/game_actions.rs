@@ -14,7 +14,7 @@ use crate::enums::{
 use crate::game::Game;
 use crate::game::{
     PendingWouldDigivolveResume, PendingWouldLinkResume, PendingWouldPlayOrigin,
-    PendingWouldPlayResume,
+    PendingWouldPlayResume, PlayOptions,
 };
 use crate::permanent::PermanentHandle;
 use crate::selection::{
@@ -356,16 +356,19 @@ impl Game {
         source: PlaySource,
         cost_target_from_hand: bool,
     ) -> PlayFromHandCostResult {
-        self.play_from_hand_with_cost_result_from_origin(
+        self.play_from_hand_with_cost_result_with_options(
             player_id,
             hand_index,
             cost_delta,
             source,
             cost_target_from_hand,
-            PendingWouldPlayOrigin::Hand,
+            PlayOptions::hand(),
         )
     }
 
+    /// Backward-compatible shim: play with a custom origin but default
+    /// (non-suppressed) [On Play] behavior. Retained for the existing
+    /// effect-play helpers that only customize the rollback origin.
     pub(crate) fn play_from_hand_with_cost_result_from_origin(
         &mut self,
         player_id: PlayerId,
@@ -374,6 +377,28 @@ impl Game {
         source: PlaySource,
         cost_target_from_hand: bool,
         origin: PendingWouldPlayOrigin,
+    ) -> PlayFromHandCostResult {
+        self.play_from_hand_with_cost_result_with_options(
+            player_id,
+            hand_index,
+            cost_delta,
+            source,
+            cost_target_from_hand,
+            PlayOptions::from_origin(origin),
+        )
+    }
+
+    /// Play from hand with the full set of play options (rollback origin +
+    /// [On Play] suppression). All other `play_from_*` entry points funnel
+    /// through here.
+    pub(crate) fn play_from_hand_with_cost_result_with_options(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        cost_target_from_hand: bool,
+        options: PlayOptions,
     ) -> PlayFromHandCostResult {
         let field_slots = self.rules.field_slots;
         // Borrow-check-friendly pre-checks: gather everything we need from
@@ -423,7 +448,7 @@ impl Game {
             },
             cost_delta,
             source,
-            origin,
+            options,
             0,
             Vec::new(),
         )
@@ -436,7 +461,7 @@ impl Game {
         target: CostTargetContext,
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
-        origin: PendingWouldPlayOrigin,
+        options: PlayOptions,
         mut accumulated_reduction: i32,
         mut processed: Vec<CostReductionKey>,
     ) -> PlayFromHandCostResult {
@@ -454,7 +479,7 @@ impl Game {
                     target.card,
                     cost_delta,
                     source,
-                    origin,
+                    options,
                     accumulated_reduction,
                 );
             };
@@ -484,7 +509,7 @@ impl Game {
                         target,
                         cost_delta,
                         source,
-                        origin,
+                        options,
                         accumulated_reduction,
                         processed,
                     );
@@ -519,7 +544,7 @@ impl Game {
                     }
                     processed.push(accept_key);
                     let _ = game.continue_play_from_hand_cost_reduction_chain(
-                        player_id, hand_index, target, cost_delta, source, origin, reduction,
+                        player_id, hand_index, target, cost_delta, source, options, reduction,
                         processed,
                     );
                 }),
@@ -536,7 +561,7 @@ impl Game {
         target_card: crate::card_source::CardHandle,
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
-        origin: PendingWouldPlayOrigin,
+        options: PlayOptions,
         total_reduction: i32,
     ) -> PlayFromHandCostResult {
         let field_slots = self.rules.field_slots;
@@ -570,8 +595,9 @@ impl Game {
             player: player_id,
             card: target_card,
             effective_cost,
-            origin,
+            origin: options.origin,
             effect_initiated: source == PlaySource::ByEffect,
+            suppress_on_play: options.suppress_on_play,
         });
         let cause = match source {
             PlaySource::ByEffect => crate::replacement::ReplacementCause::OwnEffect,
@@ -609,6 +635,7 @@ impl Game {
             target_card,
             effective_cost,
             source == PlaySource::ByEffect,
+            options.suppress_on_play,
         )
         .map(PlayFromHandCostResult::Played)
         .unwrap_or(PlayFromHandCostResult::Failed)
@@ -628,6 +655,7 @@ impl Game {
                     resume.card,
                     resume.effective_cost,
                     resume.effect_initiated,
+                    resume.suppress_on_play,
                 );
             }
             crate::replacement::ReplacementOutcome::Cancelled
@@ -695,6 +723,7 @@ impl Game {
         target_card: crate::card_source::CardHandle,
         effective_cost: u16,
         effect_initiated: bool,
+        suppress_on_play: bool,
     ) -> Option<usize> {
         if self.player(player_id).battle_area.len() >= self.rules.field_slots as usize {
             return None;
@@ -733,7 +762,20 @@ impl Game {
             field_index: field_index as u8,
         });
 
-        self.fire_on_play(player_id, field_index);
+        // [On Play] enqueue. When `suppress_on_play` is set (e.g. BT5-106
+        // [Security] — "Any [On Play] effects on Digimon played with this
+        // effect don't activate"), the just-played permanent's own
+        // [On Play] clauses are skipped. `fire_on_play` enqueues only this
+        // one permanent's [On Play] effects (`TriggerSource::Permanent`),
+        // so skipping the call here suppresses ONLY this play — sibling
+        // permanents enqueue their [On Play] at their own play time and are
+        // unaffected. The `OnEnterFieldAnyone` / `OnAllyPlayed` observer
+        // timings below are NOT suppressed: the printed text scopes the
+        // suppression to "[On Play] effects on Digimon played with this
+        // effect", which are exactly the played card's own [On Play].
+        if !suppress_on_play {
+            self.fire_on_play(player_id, field_index);
+        }
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnEnterFieldAnyone,
             crate::selection::TriggerSource::EnteredField {
@@ -782,6 +824,9 @@ impl Game {
     /// success, `None` if trash_index is invalid, battle area full, or memory
     /// insufficient.
     ///
+    /// [On Play] effects fire normally — use
+    /// [`Self::play_from_trash_with_cost_options`] to suppress them.
+    ///
     /// Does NOT call `check_turn_end`. Callers that want to end the turn when
     /// memory goes negative after OnPlay effects resolve should invoke
     /// `check_turn_end` explicitly.
@@ -791,6 +836,27 @@ impl Game {
         trash_index: usize,
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
+    ) -> Option<usize> {
+        self.play_from_trash_with_cost_options(
+            player_id,
+            trash_index,
+            cost_delta,
+            source,
+            false,
+        )
+    }
+
+    /// Like [`Self::play_from_trash_with_cost`], but with explicit
+    /// [On Play] suppression. When `suppress_on_play` is `true`, the played
+    /// permanent's own [On Play] clauses are not enqueued for this play
+    /// event (BT5-106 [Security] / Royal Knights source-play precedent).
+    pub fn play_from_trash_with_cost_options(
+        &mut self,
+        player_id: PlayerId,
+        trash_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        suppress_on_play: bool,
     ) -> Option<usize> {
         if self
             .modifiers
@@ -838,13 +904,16 @@ impl Game {
         self.player_mut(player_id).hand.push(card);
         let hand_index = self.player(player_id).hand.len() - 1;
 
-        match self.play_from_hand_with_cost_result_from_origin(
+        match self.play_from_hand_with_cost_result_with_options(
             player_id,
             hand_index,
             cost_delta,
             source,
             false,
-            PendingWouldPlayOrigin::Trash { index: trash_index },
+            PlayOptions {
+                origin: PendingWouldPlayOrigin::Trash { index: trash_index },
+                suppress_on_play,
+            },
         ) {
             PlayFromHandCostResult::Played(field_index) => Some(field_index),
             PlayFromHandCostResult::Pending => None,

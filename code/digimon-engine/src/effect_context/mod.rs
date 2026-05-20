@@ -58,6 +58,24 @@ pub enum AttackTargetRestriction {
     DigimonOnly,
 }
 
+/// Card-scripting options for the effect-play helpers
+/// (`play_from_trash_with_cost_options`, `play_from_materials_options`,
+/// `play_from_hand_with_cost_options`).
+///
+/// The play's origin zone is implied by which helper is called; this struct
+/// only carries play-time behavior toggles.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct PlayOptions {
+    /// When `true`, the just-played permanent's own [On Play] effect clauses
+    /// are NOT enqueued for this play event. Suppression is scoped to this
+    /// single play — sibling permanents' [On Play] effects and the
+    /// `OnEnterFieldAnyone` / `OnAllyPlayed` observer timings still fire.
+    ///
+    /// Card-text precedent: BT5-106 Demonic Disaster [Security] — "Any
+    /// [On Play] effects on Digimon played with this effect don't activate."
+    pub suppress_on_play: bool,
+}
+
 impl PartitionRequirement {
     pub fn new<F>(label: &'static str, matches: F) -> Self
     where
@@ -2547,12 +2565,39 @@ impl<'a> EffectContext<'a> {
         hand_index: usize,
         cost_delta: crate::enums::CostDelta,
     ) -> Option<PermanentHandle> {
-        let field_index = self.game.play_from_hand_with_cost(
+        self.play_from_hand_with_cost_options(
+            player,
+            hand_index,
+            cost_delta,
+            crate::effect_context::PlayOptions::default(),
+        )
+    }
+
+    /// Like [`Self::play_from_hand_with_cost`], but with explicit
+    /// [`PlayOptions`]. When `options.suppress_on_play` is `true`, the
+    /// played permanent's own [On Play] clauses are NOT enqueued for this
+    /// play event.
+    pub fn play_from_hand_with_cost_options(
+        &mut self,
+        player: PlayerId,
+        hand_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        options: crate::effect_context::PlayOptions,
+    ) -> Option<PermanentHandle> {
+        let field_index = match self.game.play_from_hand_with_cost_result_with_options(
             player,
             hand_index,
             cost_delta,
             PlaySource::ByEffect,
-        )?;
+            true,
+            crate::game::PlayOptions {
+                origin: PendingWouldPlayOrigin::Hand,
+                suppress_on_play: options.suppress_on_play,
+            },
+        ) {
+            PlayFromHandCostResult::Played(field_index) => field_index,
+            PlayFromHandCostResult::Pending | PlayFromHandCostResult::Failed => return None,
+        };
         Some(PermanentHandle {
             player,
             index: field_index as u8,
@@ -2743,6 +2788,27 @@ impl<'a> EffectContext<'a> {
         source_index: usize,
         cost_delta: crate::enums::CostDelta,
     ) -> Option<PermanentHandle> {
+        self.play_from_materials_options(
+            target,
+            source_index,
+            cost_delta,
+            crate::effect_context::PlayOptions::default(),
+        )
+    }
+
+    /// Like [`Self::play_from_materials`], but with explicit [`PlayOptions`].
+    /// When `options.suppress_on_play` is `true`, the played permanent's own
+    /// [On Play] clauses are NOT enqueued for this play event — used by
+    /// effects that play a Digimon out of a digivolution stack with its
+    /// [On Play] effects suppressed (Royal Knights BT13-110 / BT13-112
+    /// source-play payoffs).
+    pub fn play_from_materials_options(
+        &mut self,
+        target: PermanentHandle,
+        source_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        options: crate::effect_context::PlayOptions,
+    ) -> Option<PermanentHandle> {
         // Validate target permanent + source_index up-front using immutable
         // borrows.
         let player = target.player;
@@ -2766,15 +2832,18 @@ impl<'a> EffectContext<'a> {
         self.game.player_mut(player).hand.push(source);
         let hand_index = self.game.player(player).hand.len() - 1;
 
-        match self.game.play_from_hand_with_cost_result_from_origin(
+        match self.game.play_from_hand_with_cost_result_with_options(
             player,
             hand_index,
             cost_delta,
             PlaySource::ByEffect,
             false,
-            PendingWouldPlayOrigin::Source {
-                permanent: target,
-                source_index,
+            crate::game::PlayOptions {
+                origin: PendingWouldPlayOrigin::Source {
+                    permanent: target,
+                    source_index,
+                },
+                suppress_on_play: options.suppress_on_play,
             },
         ) {
             PlayFromHandCostResult::Played(field_index) => Some(PermanentHandle {
@@ -2811,11 +2880,33 @@ impl<'a> EffectContext<'a> {
         trash_index: usize,
         cost_delta: crate::enums::CostDelta,
     ) -> Option<PermanentHandle> {
-        let field_index = self.game.play_from_trash_with_cost(
+        self.play_from_trash_with_cost_options(
+            player,
+            trash_index,
+            cost_delta,
+            crate::effect_context::PlayOptions::default(),
+        )
+    }
+
+    /// Like [`Self::play_from_trash_with_cost`], but with explicit
+    /// [`PlayOptions`]. When `options.suppress_on_play` is `true`, the
+    /// played permanent's own [On Play] clauses are NOT enqueued for this
+    /// play event — used by effects whose text says "Any [On Play] effects
+    /// on Digimon played with this effect don't activate" (BT5-106
+    /// [Security]; Royal Knights source-play payoffs).
+    pub fn play_from_trash_with_cost_options(
+        &mut self,
+        player: PlayerId,
+        trash_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        options: crate::effect_context::PlayOptions,
+    ) -> Option<PermanentHandle> {
+        let field_index = self.game.play_from_trash_with_cost_options(
             player,
             trash_index,
             cost_delta,
             PlaySource::ByEffect,
+            options.suppress_on_play,
         )?;
         Some(PermanentHandle {
             player,

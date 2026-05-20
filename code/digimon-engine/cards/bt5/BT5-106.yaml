@@ -30,11 +30,30 @@ effects:
           prompt: "Unsuspend 1 of your purple Digimon"
       - unsuspend: { target: target }
 
-  # Omitted unsupported slice:
   # [Security] You may play 1 level 3 purple Digimon card from your trash
   # without paying its memory cost. Any [On Play] effects on Digimon played
   # with this effect don't activate.
   #
-  # Current YAML can select/play from trash, but this card also needs
-  # PUPPETS-G030 effect provenance that suppresses On Play effects only for the
-  # played Digimon.
+  # The printed "You may" is surfaced through the optional trash selection.
+  # `play_from_trash: { cost_delta: free }` plays the chosen Digimon without
+  # paying its memory cost. `suppress_on_play: true` carries PUPPETS-G030
+  # provenance so ONLY the just-played Digimon's [On Play] effects are
+  # skipped — sibling permanents are unaffected.
+  - when: on_security
+    summary: "[Security] Play 1 lvl-3 purple Digimon from trash free, On Play suppressed"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+              - color_is: purple
+          prompt: "Play 1 level 3 purple Digimon from your trash"
+      - play_from_trash:
+          of: you
+          hand_index: revived
+          cost_delta: free
+          suppress_on_play: true

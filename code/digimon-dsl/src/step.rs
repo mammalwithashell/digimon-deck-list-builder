@@ -1233,6 +1233,12 @@ pub struct PlayFromHandArgs {
     pub hand_index: BindingRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_delta: Option<CostDelta>,
+    /// When `true`, the played permanent's own [On Play] effects are NOT
+    /// activated for this play event. For card text like "Any [On Play]
+    /// effects on Digimon played with this effect don't activate"
+    /// (BT5-106 [Security]). Defaults to `false`.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub suppress_on_play: bool,
 }
 
 /// Free-play-from-hand args. Adds `bind_as` so the just-played permanent
@@ -1250,6 +1256,9 @@ pub struct PlayFromHandFreeArgs {
     /// same body. None (the default) preserves prior behavior.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
+    /// See [`PlayFromHandArgs::suppress_on_play`]. Defaults to `false`.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub suppress_on_play: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1276,6 +1285,11 @@ pub struct PlayFromMaterialsArgs {
     pub cost_delta: Option<CostDelta>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
+    /// See [`PlayFromHandArgs::suppress_on_play`]. Defaults to `false`.
+    /// Royal Knights BT13-110 / BT13-112 play a Digimon from a digivolution
+    /// source stack with its [On Play] effects suppressed.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub suppress_on_play: bool,
 }
 
 /// Empty args struct for `play_from_security:` — the step carries no

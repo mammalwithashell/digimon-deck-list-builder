@@ -228,11 +228,12 @@ Regression files were added under:
 ### Stack-Source Multi-Selection and Play From King Drasil
 
 - **Gap:** The archetype needs robust selection and extraction from a breeding permanent's digivolution cards, including "one each with different names", On Play suppression, and Rush grants.
+- **Partial closure 2026-05-19 (Phase 2 Track J Task S1.1):** The **On Play suppression** sub-primitive is now resolved — `play_from_materials` (and the other `play_from_*` steps) accept `suppress_on_play: true`, which skips only the just-played permanent's [On Play] enqueue. See [`qa/resolved-gaps.md`](../../resolved-gaps.md#engine--dsl-gap-effect-play-with-played-digimon-on-play-suppression--resolved-2026-05-19-phase-2-track-j-task-s11-puppets-g030) (PUPPETS-G030, proven by BT5-106). Remaining open work for this gap: the source multi-select with per-name uniqueness, and the Rush grant on played Digimon.
 - **Type:** `engine-gap` / `dsl-gap`
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` and `qa/dsl-vocab-gaps.md` under source/material selection and play-from-material helpers
 - **Blocks:** `BT13-112`, `BT13-110`, `BT13-019`, `EX11-053`, `BT20-083`, `BT23-072`.
 - **Why it matters:** Auto-playing the first matching source or ignoring name uniqueness hides a major Royal Knights decision. The selected cards must leave the source stack and become fresh permanents with correct On Play suppression when printed.
-- **Evidence:** `BT20-083` example YAML uses `select_material` and `play_from_materials`; the broader tracker still calls out material extraction/play helpers and breeding follow-ups as recurring blockers.
+- **Evidence:** `BT20-083` example YAML uses `select_material` and `play_from_materials`; the broader tracker still calls out material extraction/play helpers and breeding follow-ups as recurring blockers. The `suppress_on_play` flag closure is proven by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt5_106`.
 - **First test:** Give King Drasil multiple Royal Knight sources with duplicate and distinct names, resolve `BT13-112`, and assert the player can choose at most one per name, selected cards enter battle, On Play effects are suppressed, King Drasil is trashed, and all played Digimon gain Rush.
 - **Implementation hint:** Prefer a generic count-capped source selection with uniqueness predicates over card-specific raw Rust. It should work for battle-area and breeding carriers.
 

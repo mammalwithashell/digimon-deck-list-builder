@@ -31,6 +31,12 @@ use crate::effect_context::EffectContext;
 use crate::enums::CardSourceRef;
 use crate::enums::CostDelta;
 
+/// Build the engine-side [`PlayOptions`] for a play step. The play's origin
+/// zone is fixed by the helper called; only `suppress_on_play` is variable.
+fn play_options(suppress_on_play: bool) -> crate::effect_context::PlayOptions {
+    crate::effect_context::PlayOptions { suppress_on_play }
+}
+
 /// Translate the IR's `CompiledCostDelta` to the engine's `CostDelta`.
 ///
 ///   `None`              → `CostDelta::Reduce(0)` (default to printed cost)
@@ -108,12 +114,18 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             of: _,
             hand_index,
             cost_delta,
+            suppress_on_play,
         } => {
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
                 let delta = lower_cost_delta(cost_delta.as_ref());
-                if let Some(played) = ctx.play_from_hand_with_cost(owner, i as usize, delta) {
+                if let Some(played) = ctx.play_from_hand_with_cost_options(
+                    owner,
+                    i as usize,
+                    delta,
+                    play_options(*suppress_on_play),
+                ) {
                     bindings.record_played(played);
                 }
             }
@@ -123,11 +135,24 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             of: _,
             hand_index,
             bind_as,
+            suppress_on_play,
         } => {
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
-                if let Some(played) = ctx.play_from_hand_free(owner, i as usize) {
+                // `play_from_hand_free` is `play_from_hand_with_cost(Free)`;
+                // the options variant adds the On Play suppression flag.
+                let played = if *suppress_on_play {
+                    ctx.play_from_hand_with_cost_options(
+                        owner,
+                        i as usize,
+                        crate::enums::CostDelta::Free,
+                        play_options(true),
+                    )
+                } else {
+                    ctx.play_from_hand_free(owner, i as usize)
+                };
+                if let Some(played) = played {
                     bindings.record_played(played);
                     // G-PLAY-FROM-HAND-FREE-BIND-AS: expose the played
                     // permanent's handle to subsequent steps in the same body.
@@ -144,33 +169,56 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             of: _,
             trash_index,
             cost_delta,
+            suppress_on_play,
         } => {
             if let Some(ResolvedBinding::TrashIndex(owner, i)) =
                 resolve_binding_ref(trash_index, ctx, bindings)
             {
                 let delta = lower_cost_delta(cost_delta.as_ref());
-                if let Some(played) = ctx.play_from_trash_with_cost(owner, i as usize, delta) {
+                if let Some(played) = ctx.play_from_trash_with_cost_options(
+                    owner,
+                    i as usize,
+                    delta,
+                    play_options(*suppress_on_play),
+                ) {
                     bindings.record_played(played);
                 }
             }
             true
         }
-        CompiledStep::PlayFromTrashFree { of: _, trash_index } => {
-            // `play_from_trash_free_unsuspended` takes a `CardHandle`; the
-            // IR addresses by trash index so we must look up the handle.
+        CompiledStep::PlayFromTrashFree {
+            of: _,
+            trash_index,
+            suppress_on_play,
+        } => {
             if let Some(ResolvedBinding::TrashIndex(owner, i)) =
                 resolve_binding_ref(trash_index, ctx, bindings)
             {
-                let handle: Option<CardHandle> = ctx
-                    .game
-                    .player(owner)
-                    .trash
-                    .get(i as usize)
-                    .map(|cs| cs.handle());
-                if let Some(h) = handle {
-                    if let Some(played) = ctx.play_from_trash_free_unsuspended(h) {
-                        bindings.record_played(played);
-                    }
+                let played = if *suppress_on_play {
+                    // Suppression path: route through the cost-aware play so
+                    // the On Play suppression flag can flow (the
+                    // `play_from_trash_free_unsuspended` handle path has no
+                    // options parameter).
+                    ctx.play_from_trash_with_cost_options(
+                        owner,
+                        i as usize,
+                        crate::enums::CostDelta::Free,
+                        play_options(true),
+                    )
+                } else {
+                    // Default path: `play_from_trash_free_unsuspended` takes a
+                    // `CardHandle`; the IR addresses by trash index so we look
+                    // up the handle. Preserves prior behavior exactly.
+                    let handle: Option<CardHandle> = ctx
+                        .game
+                        .player(owner)
+                        .trash
+                        .get(i as usize)
+                        .map(|cs| cs.handle());
+                    handle.and_then(|h| ctx.play_from_trash_free_unsuspended(h))
+                };
+                if let Some(played) = played {
+                    bindings.record_played(played);
                 }
             }
             true
@@ -201,6 +249,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             source_index,
             cost_delta,
             bind_as,
+            suppress_on_play,
         } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
@@ -225,7 +274,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 return true;
             }
             let delta = lower_cost_delta(cost_delta.as_ref());
-            if let Some(played) = ctx.play_from_materials(target_handle, src_idx, delta) {
+            if let Some(played) = ctx.play_from_materials_options(
+                target_handle,
+                src_idx,
+                delta,
+                play_options(*suppress_on_play),
+            ) {
                 bindings.record_played(played);
                 if let Some(name) = bind_as {
                     bindings.insert_permanent(name, played);
