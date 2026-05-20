@@ -43,8 +43,14 @@ effects:
           keyword: Reboot
           expiry: end_of_opponents_turn
 
-  # Inherited text omitted:
-  # "[All Turns] While this Digimon has [Pulsemon] in its text, it gets +1000 DP."
-  #
-  # Current predicates cover names and source stack names, but not rules-text
-  # containment on the inherited carrier.
+  # Inherited: "[All Turns] While this Digimon has [Pulsemon] in its text,
+  # it gets +1000 DP."
+  # active_when guards on rules_text_contains — checked against the carrier
+  # permanent's printed rules text via source_permanent on the read context.
+  # dp_modifier_fn: 1000 (Literal formula) is picked up live by
+  # live_declarative_formula_sum so effective_dp reflects the bonus without
+  # requiring a declarative tick.
+  - scope: inherited
+    kind: aura
+    active_when: { all_turns: true, rules_text_contains: "[Pulsemon]" }
+    dp_modifier_fn: 1000

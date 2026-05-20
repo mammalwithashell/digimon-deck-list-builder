@@ -252,7 +252,6 @@ fn bt16_055_high_security_selects_one_digimon_for_dp_reduction_and_de_digivolve_
 }
 
 #[test]
-#[ignore = "BLOCKED: PUPPETS-G025 — DSL predicates can check card names/source names, but cannot gate inherited auras on whether the carrier Digimon's rules text contains [Pulsemon]"]
 fn bt16_055_inherited_gives_1000_dp_only_when_carrier_text_contains_pulsemon() {
     let mut runner = namakemon_runner()
         .add_card(make_digimon_with_effect_text(

@@ -225,6 +225,27 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    // PUPPETS-G025: case-insensitive substring match against the carrier
+    // permanent's printed rules text (effect_text + inherited_text +
+    // security_text of the top card). Used by BT16-055 to gate its
+    // inherited +1000 DP aura on "while this Digimon has [Pulsemon] in
+    // its text." In an inherited while_condition context the subject is
+    // the carrier permanent.
+    if let Some(ref needle) = pred.rules_text_contains {
+        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(perm.top_card().handle()) else {
+            return false;
+        };
+        let needle_lc = needle.to_lowercase();
+        let found = data.effect_text.to_lowercase().contains(&needle_lc)
+            || data.inherited_text.to_lowercase().contains(&needle_lc)
+            || data.security_text.to_lowercase().contains(&needle_lc);
+        if !found {
+            return false;
+        }
+    }
     if let Some(want) = pred.in_breeding {
         let is_in_breeding = match subject {
             PredicateSubject::Permanent(h) => {

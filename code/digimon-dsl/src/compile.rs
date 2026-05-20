@@ -568,6 +568,7 @@ fn compile_predicate(
         source_is_unsuspended: p.source_is_unsuspended,
         source_name_contains: p.source_name_contains.clone(),
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
+        rules_text_contains: p.rules_text_contains.clone(),
         self_digivolution_contains_name: p.self_digivolution_contains_name.clone(),
         memory_lte: p
             .memory_lte
