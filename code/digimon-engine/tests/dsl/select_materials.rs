@@ -104,6 +104,53 @@ fn source_card_ids(runner: &DebugRunner) -> Vec<String> {
         .collect()
 }
 
+/// Build a **breeding-area** carrier (King Drasil) on P0 whose digivolution
+/// stack (bottom→top) is the given source ids followed by the carrier top
+/// card. Returns the runner; the carrier is the P0 breeding permanent.
+///
+/// This is the canonical Royal Knights scenario the S1.3 action-space
+/// extension unblocks: BT13-112 / BT13-110 / EX11-053 / BT13-019 / BT23-072
+/// all play Royal-Knight sources out of "the digivolution cards of your
+/// Digimon in the breeding area".
+fn breeding_carrier_with_sources(source_ids: &[&str]) -> DebugRunner {
+    use digimon_engine::enums::PlayerId;
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("KING-DRASIL", "King Drasil_7D6"))
+        .add_card(royal_knight("RK-ALPHA", "Alphamon"))
+        .add_card(royal_knight("RK-OMEGA", "Omnimon"))
+        .add_card(royal_knight("RK-GANK", "Gankoomon"))
+        .memory(0)
+        .start();
+    runner.register_effect("RK-ALPHA", Arc::new(OnPlayGainMemory));
+    runner.register_effect("RK-OMEGA", Arc::new(OnPlayGainMemory));
+    runner.register_effect("RK-GANK", Arc::new(OnPlayGainMemory));
+
+    // Build the stack in the battle area, then relocate it to breeding.
+    let mut stack: Vec<&str> = source_ids.to_vec();
+    stack.push("KING-DRASIL");
+    let handle = runner.place_stack(0, &stack);
+    let perm = runner.game.players[0]
+        .battle_area
+        .remove(handle.index as usize);
+    runner.game.players[0 as usize].breeding_area = Some(perm);
+    let _: PlayerId = 0; // doc: P0 owns the breeding carrier
+    runner
+}
+
+/// Resolve the breeding-area carrier's digivolution source card_ids
+/// (top/active card excluded).
+fn breeding_source_card_ids(runner: &DebugRunner) -> Vec<String> {
+    let perm = runner.game.players[0]
+        .breeding_area
+        .as_ref()
+        .expect("breeding carrier present");
+    let n = perm.card_sources.len().saturating_sub(1);
+    perm.card_sources[..n]
+        .iter()
+        .map(|cs| runner.game.card_data[cs.data_index].card_id.clone())
+        .collect()
+}
+
 #[test]
 fn select_materials_name_uniqueness_caps_mask_to_one_per_name() {
     // Carrier stack: Alphamon, Omnimon, Omnimon (dup), Gankoomon.
@@ -494,5 +541,260 @@ fn select_materials_empty_carrier_runs_tail_synchronously() {
         runner.game.memory,
         memory_before + 3,
         "empty carrier → select_materials no-ops, the tail still runs"
+    );
+}
+
+// ─── Breeding-carrier source selection (Task S1.3) ───────────────────────────
+//
+// The Royal Knights cards BT13-112 / BT13-110 / EX11-053 / BT13-019 /
+// BT23-072 all play sources out of "the digivolution cards of your Digimon
+// in the breeding area" — a King Drasil breeding-area carrier. Before S1.3
+// the breeding `BREEDING_TARGET` sentinel had no source-select action
+// encoding, so `select_materials` against it no-op'd. These tests prove the
+// no-op is gone: a breeding carrier now surfaces a real `pending_selection`
+// with breeding-source action IDs.
+
+use digimon_engine::action::space::{BREEDING_SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START};
+use digimon_engine::selection::{BreedingPermanentSelectionRef, SelectionKind};
+
+/// KEY behavioral test — `select_materials` against a King Drasil breeding
+/// carrier installs a real `pending_selection`, NOT a no-op. The picked
+/// source ends up in the bound `CardList`.
+#[test]
+fn select_materials_breeding_carrier_installs_real_pending_selection() {
+    // Breeding stack bottom→top: Alphamon, Omnimon, KING-DRASIL.
+    let mut runner = breeding_carrier_with_sources(&["RK-ALPHA", "RK-OMEGA"]);
+    assert_eq!(
+        breeding_source_card_ids(&runner),
+        vec!["RK-ALPHA", "RK-OMEGA"],
+        "two Royal Knight sources sit under the breeding carrier",
+    );
+
+    // Bind the carrier as a BreedingPermanentRef — the production lowering
+    // path: resolve_named turns it into the BREEDING_TARGET sentinel handle.
+    let carrier_top = runner.game.players[0]
+        .breeding_area
+        .as_ref()
+        .unwrap()
+        .top_card()
+        .handle();
+    let src_card = carrier_top;
+    let mut bindings = Bindings::new();
+    bindings.insert_breeding_permanent_ref(
+        "king_drasil",
+        BreedingPermanentSelectionRef {
+            player: 0,
+            card: carrier_top,
+        },
+    );
+
+    // A `PerSelected` tail over the bound `picked` CardList runs +1 memory
+    // per resolved pick. The bound CardList is internal to the selection
+    // callback chain; iterating it with `PerSelected` makes its contents
+    // observable through the memory delta — proving each resolved
+    // breeding-source pick really lands in the bound CardList.
+    let steps = vec![
+        CompiledStep::SelectMaterials {
+            of_permanent: CompiledBindingRef::Named("king_drasil".to_string()),
+            max: CompiledCountBound::Literal(2),
+            filter: CompiledPredicate {
+                trait_has: Some("Royal Knight".to_string()),
+                ..CompiledPredicate::default()
+            },
+            uniqueness: Some(CompiledDistinctBy::Name),
+            bind_as: Some("picked".to_string()),
+            prompt: "Pick Royal Knight sources from the breeding carrier".to_string(),
+            prompt_key: None,
+            optional_zero: false,
+        },
+        CompiledStep::PerSelected {
+            selection: "picked".to_string(),
+            bind_as: "one".to_string(),
+            body: vec![CompiledStep::GainMemory(1)],
+        },
+    ];
+    let memory_before = runner.game.memory;
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings);
+    }
+
+    // The no-op is GONE: a real pending selection is installed.
+    let pending = runner.game.pending_selection.as_ref().expect(
+        "select_materials against a breeding carrier must install a real pending selection \
+         (pre-S1.3 this no-op'd)",
+    );
+    assert!(
+        matches!(pending.kind, SelectionKind::CountCappedMultiSelect { .. }),
+        "kind must be CountCappedMultiSelect, got {:?}",
+        pending.kind
+    );
+    assert_eq!(
+        pending.selecting_player, 0,
+        "the controller (P0) selects from their own breeding carrier"
+    );
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        2,
+        "both breeding sources are selectable"
+    );
+    for &aid in &pending.valid_action_ids {
+        assert!(
+            (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&aid),
+            "action id {aid} must be a real breeding-source ID, not a battle-area ID"
+        );
+    }
+
+    // Resolve the Omnimon pick via its real breeding-source action ID.
+    let omega_idx = runner.game.players[0]
+        .breeding_area
+        .as_ref()
+        .unwrap()
+        .card_sources
+        .iter()
+        .position(|cs| runner.game.card_data[cs.data_index].card_id == "RK-OMEGA")
+        .expect("Omnimon source present");
+    let omega_action = BREEDING_SOURCE_SELECT_START + omega_idx as u16;
+    assert!(pending.valid_action_ids.contains(&omega_action));
+
+    let sp = pending.selecting_player;
+    runner
+        .game
+        .resolve_selection(sp, omega_action)
+        .expect("resolve breeding-source pick");
+
+    // Pick the remaining (distinct-name) source to commit the batch.
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("pending re-arms after first breeding-source pick");
+    let last = pending.valid_action_ids[0];
+    runner
+        .game
+        .resolve_selection(sp, last)
+        .expect("resolve second breeding-source pick");
+    assert!(runner.game.pending_selection.is_none(), "batch committed");
+
+    // The `PerSelected` tail ran once per item in the bound `picked`
+    // CardList: +1 memory per resolved breeding-source pick. Two picks → +2.
+    assert_eq!(
+        runner.game.memory,
+        memory_before + 2,
+        "the bound `picked` CardList holds both resolved breeding-source picks"
+    );
+}
+
+/// `distinct_by` (name uniqueness) over a breeding carrier — exercises the
+/// recursive count-capped re-install path against the breeding area. After
+/// picking one Omnimon, the duplicate Omnimon source must be masked out,
+/// which only works if the recursive callback re-derives the breeding stack
+/// (not battle_area) for its distinct_by lookups.
+#[test]
+fn select_materials_breeding_carrier_distinct_by_exercises_recursive_path() {
+    // Breeding stack: Alphamon, Omnimon, Omnimon (dup), Gankoomon, KING-DRASIL.
+    let mut runner =
+        breeding_carrier_with_sources(&["RK-ALPHA", "RK-OMEGA", "RK-OMEGA", "RK-GANK"]);
+    assert_eq!(
+        breeding_source_card_ids(&runner),
+        vec!["RK-ALPHA", "RK-OMEGA", "RK-OMEGA", "RK-GANK"],
+    );
+
+    let carrier_top = runner.game.players[0]
+        .breeding_area
+        .as_ref()
+        .unwrap()
+        .top_card()
+        .handle();
+    let mut bindings = Bindings::new();
+    bindings.insert_breeding_permanent_ref(
+        "king_drasil",
+        BreedingPermanentSelectionRef {
+            player: 0,
+            card: carrier_top,
+        },
+    );
+
+    let steps = vec![
+        CompiledStep::SelectMaterials {
+            of_permanent: CompiledBindingRef::Named("king_drasil".to_string()),
+            max: CompiledCountBound::Literal(4),
+            filter: CompiledPredicate {
+                trait_has: Some("Royal Knight".to_string()),
+                ..CompiledPredicate::default()
+            },
+            uniqueness: Some(CompiledDistinctBy::Name),
+            bind_as: Some("picked".to_string()),
+            prompt: "Pick 1 of each different name".to_string(),
+            prompt_key: None,
+            optional_zero: false,
+        },
+        CompiledStep::PerSelected {
+            selection: "picked".to_string(),
+            bind_as: "one".to_string(),
+            body: vec![CompiledStep::GainMemory(1)],
+        },
+    ];
+    let memory_before = runner.game.memory;
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, carrier_top, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings);
+    }
+
+    // Step 1: all four breeding sources selectable.
+    let pending = runner.game.pending_selection.as_ref().unwrap();
+    assert_eq!(pending.valid_action_ids.len(), 4, "step 1: four sources");
+    let sp = pending.selecting_player;
+
+    // Pick the first Omnimon (stack index 1).
+    let omega_action = BREEDING_SOURCE_SELECT_START + 1;
+    assert!(pending.valid_action_ids.contains(&omega_action));
+    runner
+        .game
+        .resolve_selection(sp, omega_action)
+        .expect("first pick");
+
+    // Step 2: the recursive re-install ran. The duplicate Omnimon is masked
+    // out by uniqueness=name — proving the recursive distinct_by lookup
+    // re-derived the BREEDING stack, not battle_area (which would panic or
+    // read the wrong cards). Alphamon + Gankoomon remain.
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("pending re-arms after the first breeding-source pick");
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        2,
+        "recursive distinct_by over the breeding stack masks the duplicate \
+         Omnimon; Alphamon + Gankoomon stay selectable"
+    );
+    for &aid in &pending.valid_action_ids {
+        assert!(
+            (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&aid),
+            "re-armed action id {aid} stays in the breeding-source range"
+        );
+    }
+
+    // Finish the two remaining distinct-name picks.
+    let next = pending.valid_action_ids[0];
+    runner.game.resolve_selection(sp, next).expect("second pick");
+    let pending = runner.game.pending_selection.as_ref().unwrap();
+    assert_eq!(pending.valid_action_ids.len(), 1, "one distinct name left");
+    let last = pending.valid_action_ids[0];
+    runner.game.resolve_selection(sp, last).expect("third pick");
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "multi-pick auto-commits once no distinct names remain"
+    );
+    // The `PerSelected` tail ran once per bound pick: three distinct-name
+    // breeding sources picked (the duplicate Omnimon was masked).
+    assert_eq!(
+        runner.game.memory,
+        memory_before + 3,
+        "three distinct-name breeding sources picked (the dup was masked)"
     );
 }
