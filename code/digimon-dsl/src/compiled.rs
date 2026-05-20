@@ -1029,6 +1029,13 @@ pub enum CompiledStep {
         source_controller: CompiledEffectController,
         expiry: String,
     },
+    /// PUPPETS-G024 — install the narrow opponent-effect protection
+    /// bundle (opponent-scoped ImmuneFromDPMinus + opponent-scoped
+    /// CannotBeDeDigivolved) on `target`.
+    GrantNarrowOpponentEffectProtection {
+        target: CompiledBindingRef,
+        expiry: String,
+    },
     /// Track H §3 — install a granted triggered effect on each
     /// permanent matching `target`. DCGO `AddSkillClass.cs` analog.
     GrantTriggeredEffect {

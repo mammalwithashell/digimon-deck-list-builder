@@ -1936,6 +1936,12 @@ fn compile_step(
             source_controller: compile_effect_controller(a.source_controller),
             expiry: a.expiry.clone(),
         },
+        S::GrantNarrowOpponentEffectProtection(a) => {
+            CompiledStep::GrantNarrowOpponentEffectProtection {
+                target: compile_binding_ref(&a.target),
+                expiry: a.expiry.clone(),
+            }
+        }
 
         S::SelectOwnPermanent(a) => CompiledStep::SelectOwnPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),

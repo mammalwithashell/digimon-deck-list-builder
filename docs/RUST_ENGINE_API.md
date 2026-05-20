@@ -464,8 +464,22 @@ ctx.grant_keyword_with_until_condition(target, keyword, predicate)
 ctx.add_declarative_player_modifier(target_player, modifier, value, expiry)
 ctx.add_effect_immunity_modifier(target, source_kind, controller_filter, expiry) -> bool
 ctx.grant_zone_return_immunity_to_opponent_effects(target, expiry)
+ctx.grant_narrow_opponent_effect_protection(target, expiry)
 ctx.ignore_option_color_requirement(target_player, expiry)
 ```
+
+`grant_narrow_opponent_effect_protection` (`effect_context/mod.rs`) installs
+the narrow "can't have its DP reduced **by your opponent's effects** and
+isn't affected by ＜De-Digivolve＞ effects" protection bundle (PUPPETS-G024,
+BT16-055 Namakemon). Both protections are genuinely opponent-effect-scoped:
+`ImmuneFromDPMinus` is installed with an `EffectImmunityFilter { controller:
+OpponentOnly }` (consulted by `Game::effective_dp`, which suppresses only
+negative `ChangeDp` deltas whose `source_player` is an opponent), and
+`CannotBeDeDigivolved` is installed via the `ModifierEntry::passive_replacement`
+route so its `default_passive_cause_filter` (`ReplacementCause::OpponentEffect`)
+takes effect. The controller's own DP-reduction and own De-Digivolve still
+apply. Prefer this over a raw `add_modifier(ImmuneFromDPMinus / ...)` pair,
+which installs the broad unscoped variant.
 
 See §5 for `ModifierType` and `Expiry` values. The `add_declarative_*` /
 `grant_declarative_*` variants tag the modifier as **declarative
@@ -1216,7 +1230,7 @@ storage entry, lifecycle, and DSL string published.
 | `CannotAddMemory` | permanent | `Game::adjust_memory_by_effect` |
 | `CannotAddSecurity` | permanent | `Game::add_security_by_effect` |
 | `ChangeEndTurnMinMemory` | permanent / player | `Game::rotate_turn_player` clamps the ending player's memory before sign flip |
-| `ImmuneFromDPMinus` | permanent | `Permanent::dp_modifier_apply` for negative DP modifiers |
+| `ImmuneFromDPMinus` | permanent | `Game::effective_dp` — suppresses negative `ChangeDp` deltas; `effect_immunity_filter.controller` scopes which deltas (`OpponentOnly` = opponent-source only, `Any`/unset = all). See `grant_narrow_opponent_effect_protection` |
 | `ImmuneFromStackTrashing` | permanent | source-trash mutation (the inherited stack-peel path) |
 | `CannotBeAffected` | permanent | already wired via `effect_immunity_filter`; honors source-kind + controller filter |
 | `DisableEffect` | permanent | `effect_queue::permanent_activation_blocked_for_timing` reads `entry.disable_effect_timing` and skips dispatch for that timing only |

@@ -325,6 +325,14 @@ Use `add_dp_modifier`, `add_modifier`, `add_player_modifier`, and `grant_effect_
     expiry: end_of_opponents_turn
 ```
 
+Use `grant_narrow_opponent_effect_protection` for the narrow "can't have its DP reduced **by your opponent's effects** and isn't affected by ＜De-Digivolve＞ effects" protection bundle (BT16-055 Namakemon). It installs two genuinely opponent-effect-scoped modifiers: an `ImmuneFromDPMinus` with an opponent-only filter (only negative `ChangeDp` deltas from an opponent effect are suppressed — the controller's own DP-reduction still applies) and a `CannotBeDeDigivolved` via the passive-replacement route (`OpponentEffect` cause filter — own-side De-Digivolve still applies). Do NOT hand-roll this with `add_modifier`: a plain `add_modifier: { modifier: ImmuneFromDPMinus }` / `{ modifier: CannotBeDeDigivolved }` installs the *broad* unscoped variant and over-protects against the controller's own effects.
+
+```yaml
+- grant_narrow_opponent_effect_protection:
+    target: ally
+    expiry: end_of_opponents_turn
+```
+
 Use `grant_triggered_effect` (Track H, PR #467) to install a granted triggered ability on each matching target permanent — DCGO `AddSkillClass.cs` analog. The granted body fires on the carrier's matching `timing:` and carries an `expiry:`. Source attribution remains the grantor for "by [card]" checks; carrier semantics apply for "this Digimon" reads. EX1-068 Ice Wall! is the canonical fixture.
 
 Use `kind: aura` or `kind: flood_gate` only when the effect is continuous. Aura supports `dp_modifier` / `dp_modifier_fn`, the new `security_attack` / `security_attack_fn` (Track H §1), `grant_keyword`, named `modifier:` grants, and `while_condition:` for install-once UntilCondition gates. Mask-affecting keywords and restrictions must be enforced by the engine mask and decoder, not just represented in YAML.

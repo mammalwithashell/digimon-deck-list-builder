@@ -4035,6 +4035,52 @@ impl<'a> EffectContext<'a> {
         self.game.mark_until_condition_dirty();
     }
 
+    /// PUPPETS-G024 — grant the narrow "can't have its DP reduced by your
+    /// opponent's effects and isn't affected by ＜De-Digivolve＞ effects [by
+    /// your opponent's effects]" protection bundle (BT16-055 Namakemon's
+    /// high-security clause).
+    ///
+    /// Both protections are genuinely opponent-effect-scoped:
+    ///   - `ImmuneFromDPMinus` is installed with an
+    ///     `EffectImmunityFilter { controller: OpponentOnly }` so
+    ///     `Game::effective_dp` suppresses only negative `ChangeDp`
+    ///     deltas whose source is an opponent effect — the controller's
+    ///     own DP-reduction still applies.
+    ///   - `CannotBeDeDigivolved` is installed via the
+    ///     `passive_replacement()` route so its
+    ///     `default_passive_cause_filter` (`ReplacementCause::OpponentEffect`)
+    ///     takes effect — own-side De-Digivolve still applies.
+    ///
+    /// Unrelated opponent effects (non-DP-reduction, non-De-Digivolve) are
+    /// not affected — this is a category-scoped protection, not blanket
+    /// `CannotBeAffected` immunity.
+    pub fn grant_narrow_opponent_effect_protection(
+        &mut self,
+        target: PermanentHandle,
+        expiry: Expiry,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::simple(ModifierType::ImmuneFromDPMinus, 0, expiry, self.player)
+                .with_effect_immunity_filter(EffectImmunityFilter {
+                    source_kind: None,
+                    controller: EffectControllerFilter::OpponentOnly,
+                }),
+        );
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::passive_replacement(
+                ModifierType::CannotBeDeDigivolved,
+                expiry,
+                self.player,
+            ),
+        );
+        self.game.mark_until_condition_dirty();
+    }
+
     pub fn ignore_option_color_requirement(&mut self, target_player: PlayerId, expiry: Expiry) {
         self.game.modifiers.add_player_modifier(
             target_player,

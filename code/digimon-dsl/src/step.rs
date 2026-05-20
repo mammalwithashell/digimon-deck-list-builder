@@ -176,6 +176,12 @@ pub enum StepSpec {
     AddPlayerModifier(AddPlayerModifierArgs),
     GrantKeyword(GrantKeywordArgs),
     GrantEffectImmunity(GrantEffectImmunityArgs),
+    /// PUPPETS-G024 — install the narrow opponent-effect protection
+    /// bundle (ImmuneFromDPMinus opponent-scoped + CannotBeDeDigivolved
+    /// opponent-scoped). For text like BT16-055's "can't have its DP
+    /// reduced by your opponent's effects and isn't affected by
+    /// ＜De-Digivolve＞ effects".
+    GrantNarrowOpponentEffectProtection(GrantNarrowOpponentEffectProtectionArgs),
     /// Track H §3 — install a granted triggered effect on each
     /// permanent matching `target`. The granted body fires on the
     /// carrier's matching `timing` (DCGO `AddSkillClass.cs` analog).
@@ -355,6 +361,9 @@ impl Serialize for StepSpec {
             StepSpec::GrantKeyword(v) => kv!(s, "grant_keyword", v),
             StepSpec::GrantTriggeredEffect(v) => kv!(s, "grant_triggered_effect", v),
             StepSpec::GrantEffectImmunity(v) => kv!(s, "grant_effect_immunity", v),
+            StepSpec::GrantNarrowOpponentEffectProtection(v) => {
+                kv!(s, "grant_narrow_opponent_effect_protection", v)
+            }
             // Selection
             StepSpec::SelectOwnPermanent(v) => kv!(s, "select_own_permanent", v),
             StepSpec::SelectOpponentPermanent(v) => kv!(s, "select_opponent_permanent", v),
@@ -545,6 +554,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "grant_keyword" => StepSpec::GrantKeyword(map.next_value()?),
             "grant_triggered_effect" => StepSpec::GrantTriggeredEffect(map.next_value()?),
             "grant_effect_immunity" => StepSpec::GrantEffectImmunity(map.next_value()?),
+            "grant_narrow_opponent_effect_protection" => {
+                StepSpec::GrantNarrowOpponentEffectProtection(map.next_value()?)
+            }
 
             // Selection
             "select_own_permanent" => StepSpec::SelectOwnPermanent(map.next_value()?),
@@ -676,6 +688,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_modifier",
                         "grant_keyword",
                         "grant_effect_immunity",
+                        "grant_narrow_opponent_effect_protection",
                         "select_own_permanent",
                         "select_opponent_permanent",
                         "select_any_permanent",
@@ -1480,6 +1493,18 @@ pub struct GrantEffectImmunityArgs {
     pub source_kind: EffectSourceKindSpec,
     #[serde(default)]
     pub source_controller: EffectControllerSpec,
+    pub expiry: String,
+}
+
+/// PUPPETS-G024 — arguments for `grant_narrow_opponent_effect_protection`.
+/// Installs the opponent-scoped DP-reduction + De-Digivolve protection
+/// bundle on `target`. No source-kind/controller knobs: this verb is
+/// keyed to the BT16-055-style "by your opponent's effects" narrow
+/// protection and is always opponent-scoped by construction.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GrantNarrowOpponentEffectProtectionArgs {
+    pub target: BindingRef,
     pub expiry: String,
 }
 

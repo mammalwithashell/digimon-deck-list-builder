@@ -31,7 +31,8 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::action::space::encode_attack;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming, Keyword};
+use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::{CardKind, EffectTiming, Expiry, Keyword};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
@@ -436,6 +437,142 @@ fn bt16_055_high_security_protection_absent_below_three_security() {
             .modifiers
             .has(ally, digimon_engine::enums::ModifierType::CannotBeDeDigivolved),
         "CannotBeDeDigivolved must NOT be granted at 2 security"
+    );
+}
+
+/// PUPPETS-G024 — opponent-effect-scoping boundary. Drives the BT16-055
+/// high-security branch, then exercises the protected Digimon with BOTH an
+/// opponent-controlled and a controller-owned DP-reduction. The opponent's
+/// reduction must be suppressed; the controller's own reduction must STILL
+/// apply (printed text: "can't have its DP reduced **by your opponent's
+/// effects**" — own-side reduction is unaffected).
+#[test]
+fn bt16_055_high_security_dp_protection_is_opponent_effect_scoped() {
+    let mut runner = namakemon_runner()
+        .add_card(make_digimon("ALLY", 3, 5000))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .hand(0, &["BT16-055"])
+        .security(0, &["FILLER", "FILLER", "FILLER", "FILLER"])
+        .memory(10)
+        .start();
+    let ally = runner.place_on_field(0, "ALLY", Some(0));
+
+    runner.play(0, 0).expect("play Namakemon");
+    drain_trigger_order_if_any(&mut runner);
+    runner
+        .execute_action(0, encode_permanent(ally))
+        .expect("choose ally for protection");
+    runner.auto_resolve().expect("finish Namakemon effect");
+
+    assert_eq!(
+        runner.effective_dp(ally),
+        Some(5000),
+        "baseline DP before any reduction"
+    );
+
+    // OPPONENT (player 1) effect tries to reduce ally's DP by 3000.
+    {
+        let opp_card = runner.game.players[1].battle_area.first();
+        // Player 1 has no field card; build the EffectContext with the
+        // protected ally's own top card as a stand-in source_card — the
+        // `player` field (1) is what tags `source_player` on the modifier.
+        let _ = opp_card;
+        let source_card = runner.game.players[0].battle_area[ally.index as usize]
+            .top_card()
+            .handle();
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 1);
+        ctx.add_dp_modifier(ally, -3000, Expiry::EndOfTurn);
+    }
+    assert_eq!(
+        runner.effective_dp(ally),
+        Some(5000),
+        "OPPONENT DP-reduction must be blocked by ImmuneFromDPMinus"
+    );
+
+    // CONTROLLER (player 0) own effect reduces ally's DP by 2000 — this must
+    // STILL APPLY. The printed protection is narrow to opponent's effects.
+    {
+        let source_card = runner.game.players[0].battle_area[ally.index as usize]
+            .top_card()
+            .handle();
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        ctx.add_dp_modifier(ally, -2000, Expiry::EndOfTurn);
+    }
+    assert_eq!(
+        runner.effective_dp(ally),
+        Some(3000),
+        "controller's OWN DP-reduction must STILL apply to the protected Digimon"
+    );
+}
+
+/// PUPPETS-G024 — De-Digivolve opponent-effect-scoping boundary. An opponent
+/// De-Digivolve on the protected Digimon must be blocked; the controller's
+/// OWN De-Digivolve must STILL apply.
+#[test]
+fn bt16_055_high_security_de_digivolve_protection_is_opponent_effect_scoped() {
+    let mut runner = namakemon_runner()
+        .add_card(make_digimon("BASE3", 3, 3000))
+        .add_card(make_digimon("BASE4", 4, 4000))
+        .add_card(make_digimon("TOP5", 5, 5000))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .hand(0, &["BT16-055"])
+        .security(0, &["FILLER", "FILLER", "FILLER", "FILLER"])
+        .memory(10)
+        .start();
+    // A 3-card stack (Lv.3 → Lv.4 → Lv.5) so De-Digivolve has cards to pop.
+    let ally = runner.place_stack(0, &["BASE3", "BASE4", "TOP5"]);
+
+    runner.play(0, 0).expect("play Namakemon");
+    drain_trigger_order_if_any(&mut runner);
+    runner
+        .execute_action(0, encode_permanent(ally))
+        .expect("choose ally for protection");
+    runner.auto_resolve().expect("finish Namakemon effect");
+
+    let depth_before = runner.game.players[0].battle_area[ally.index as usize]
+        .card_sources
+        .len();
+    assert_eq!(depth_before, 3, "ally starts as a 3-card stack");
+
+    // OPPONENT (player 1) effect tries to De-Digivolve 1 — must be blocked.
+    runner.game.set_effect_source_player_for_test(Some(1));
+    {
+        let source_card = runner.game.players[0].battle_area[ally.index as usize]
+            .top_card()
+            .handle();
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 1);
+        let popped = ctx.de_digivolve(ally, Some(3), Some(1));
+        assert_eq!(popped, 0, "opponent De-Digivolve must be blocked → 0 pops");
+    }
+    runner.game.set_effect_source_player_for_test(None);
+    assert_eq!(
+        runner.game.players[0].battle_area[ally.index as usize]
+            .card_sources
+            .len(),
+        3,
+        "opponent De-Digivolve blocked — stack depth unchanged"
+    );
+
+    // CONTROLLER (player 0) own De-Digivolve 1 — must STILL apply.
+    runner.game.set_effect_source_player_for_test(Some(0));
+    {
+        let source_card = runner.game.players[0].battle_area[ally.index as usize]
+            .top_card()
+            .handle();
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        let popped = ctx.de_digivolve(ally, Some(3), Some(1));
+        assert_eq!(
+            popped, 1,
+            "controller's OWN De-Digivolve must STILL apply → 1 pop"
+        );
+    }
+    runner.game.set_effect_source_player_for_test(None);
+    assert_eq!(
+        runner.game.players[0].battle_area[ally.index as usize]
+            .card_sources
+            .len(),
+        2,
+        "controller's own De-Digivolve popped one card from the stack"
     );
 }
 
