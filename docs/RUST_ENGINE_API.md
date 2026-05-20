@@ -484,6 +484,7 @@ for the full re-evaluation contract.
 ```rust
 ctx.schedule_delayed(when: EffectTiming, body: Effect)
 ctx.schedule_delayed_with_runtime(when, body, captured_bindings)
+ctx.schedule_delete_at_end_of_turn(permanent: PermanentHandle)
 ctx.place_self_as_delay_option_permanent()
 ```
 
@@ -494,6 +495,24 @@ on `Game.scheduled_effects` keyed to a future timing
 so result-bound predicates inside the body resolve against the original
 selections after the schedule drains. Use this for "at the end of your next
 turn, …" and Delay Option bodies.
+
+`schedule_delete_at_end_of_turn` (PUPPETS-G003) schedules a deletion of
+*exactly* `permanent` at the end of the current turn — for card text "At turn
+end, delete the Digimon this effect played" (EX11-022 Karakurumon, EX11-061
+Mirai Kinosaki). Pass the `PermanentHandle` returned by a free-play call
+(`play_from_hand_free`, `play_union_bound_free`, …) immediately, while the
+handle is still valid: the method captures the permanent's stable
+`ProvenanceToken` (its top card's identity) and pushes a
+`ScheduledProvenanceDeletion` onto `Game.scheduled_provenance_deletions`. The
+queue is drained by `scheduled_effects::fire_scheduled_provenance_deletions`
+from `fire_end_of_your_turn` (after the `EndOfYourTurn` observers). At drain
+time the token is resolved against the live battle areas: a still-present
+permanent is deleted as the controller's own effect (cause `OwnEffect`); if
+the played permanent already left, the entry is a silent no-op. Because the
+deletion is keyed to a provenance identity, not a battle-area index, it
+targets the right permanent even after other permanents enter or leave and
+shift indices. A handle that no longer points at a live permanent is ignored
+(nothing is scheduled).
 
 ### OnDeletion cause accessors
 

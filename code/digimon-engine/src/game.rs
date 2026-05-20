@@ -517,6 +517,17 @@ pub struct Game {
     pub scheduled_effects: Vec<crate::scheduled_effects::ScheduledEffect>,
     /// Continuation for a scheduled-effect drain paused by a DSL selection.
     pub scheduled_drain_tail: Option<crate::scheduled_effects::ScheduledDrainTail>,
+
+    /// PUPPETS-G003 — provenance-keyed deletions scheduled for this turn's
+    /// end. An effect that plays a Digimon and must delete *that specific
+    /// permanent* at turn end ("At turn end, delete the Digimon this effect
+    /// played") pushes one entry here, keyed by a stable `ProvenanceToken`
+    /// (the played card's identity) rather than a battle-area index that can
+    /// shift. Drained by `scheduled_effects::fire_scheduled_provenance_deletions`
+    /// from `fire_end_of_your_turn`; the queue is cleared each turn so a
+    /// played permanent that already left is a silent no-op.
+    pub scheduled_provenance_deletions:
+        Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
     /// Continuation for a delayed-option lifecycle paused by a DelayEffect or
     /// delete/replacement selection. Re-entered from `resolve_selection`.
     pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
@@ -719,6 +730,7 @@ impl Game {
             dsl_outer_tail: None,
             scheduled_effects: Vec::new(),
             scheduled_drain_tail: None,
+            scheduled_provenance_deletions: Vec::new(),
             pending_delayed_option_lifecycle: None,
             pending_delayed_option_lifecycle_stack: Vec::new(),
             until_condition_dirty: false,

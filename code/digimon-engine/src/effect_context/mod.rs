@@ -893,6 +893,40 @@ impl<'a> EffectContext<'a> {
         self.game.scheduled_effects.push(entry);
     }
 
+    /// PUPPETS-G003 — schedule a deletion of `permanent` at the end of the
+    /// current turn, keyed to the permanent's *stable identity* rather than
+    /// its (shifting) battle-area index.
+    ///
+    /// Used by effects whose text says "At turn end, delete the Digimon this
+    /// effect played" (EX11-022 Karakurumon, EX11-061 Mirai Kinosaki). Pass
+    /// the `PermanentHandle` returned by a free-play step (`play_from_hand_free`
+    /// / `play_union_bound_free` / etc.); this captures the top card's
+    /// `ProvenanceToken` *now*, while the handle is still valid.
+    ///
+    /// At turn end `fire_scheduled_provenance_deletions` resolves the token:
+    /// if the played permanent is still on the battle area it is deleted (as
+    /// the controller's own effect); if it already left, the entry is a
+    /// silent no-op. A handle that does not currently point at a live
+    /// permanent is ignored (nothing to schedule).
+    pub fn schedule_delete_at_end_of_turn(&mut self, permanent: PermanentHandle) {
+        let Some(top) = self
+            .game
+            .player(permanent.player)
+            .battle_area
+            .get(permanent.index as usize)
+            .map(|perm| perm.top_card().handle())
+        else {
+            return;
+        };
+        let token = self.game.provenance_token_for_card(top);
+        self.game
+            .scheduled_provenance_deletions
+            .push(crate::scheduled_effects::ScheduledProvenanceDeletion {
+                token,
+                controller: self.player,
+            });
+    }
+
     pub fn place_self_as_delay_option_permanent(&mut self) {
         let source_card = if let Some(source_perm) = self.source_permanent {
             if !matches!(

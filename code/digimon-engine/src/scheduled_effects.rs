@@ -25,6 +25,7 @@ use crate::effect_context::EffectContext;
 use crate::enums::{EffectSourceKind, EffectTiming, PlayerId};
 use crate::game::Game;
 use crate::permanent::PermanentHandle;
+use crate::trigger_context::{EventSubject, ProvenanceToken};
 
 /// A one-shot delayed effect waiting on a future timing boundary.
 #[derive(Debug, Clone)]
@@ -152,4 +153,66 @@ fn drain_scheduled_for_timing(game: &mut Game, t: EffectTiming, queued: Vec<Sche
     let mut new_queue = still_pending;
     new_queue.append(&mut game.scheduled_effects);
     game.scheduled_effects = new_queue;
+}
+
+// ─── PUPPETS-G003 — provenance-keyed turn-end self-deletion ──────────────────
+
+/// A deletion scheduled for the current turn's end, keyed to a stable
+/// [`ProvenanceToken`] rather than a battle-area index.
+///
+/// Used by cards whose text says "At turn end, delete the Digimon this effect
+/// played" (EX11-022 Karakurumon, EX11-061 Mirai Kinosaki). The token is the
+/// identity of the played card; it is resolved at drain time, so the deletion
+/// hits the correct permanent even after other permanents enter or leave the
+/// battle area (shifting indices). If the played permanent has already left
+/// the battle area, the entry is a silent no-op.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScheduledProvenanceDeletion {
+    /// Stable identity of the played card to delete.
+    pub token: ProvenanceToken,
+    /// The player whose effect played the card (the deletion is that
+    /// player's own effect — cause [`crate::replacement::ReplacementCause::OwnEffect`]).
+    pub controller: PlayerId,
+}
+
+/// Drain every [`ScheduledProvenanceDeletion`] queued this turn, deleting each
+/// still-present permanent and discarding the queue.
+///
+/// Called from `fire_end_of_your_turn` after the printed `EndOfYourTurn`
+/// observers and the `EndOfYourTurn` scheduled-effect drain — the played
+/// Digimon's own end-of-turn effects (if any) have already had their window.
+///
+/// Each token is resolved against the live battle areas:
+///   - resolves to a battle-area `Permanent` → delete it (cause `OwnEffect`,
+///     so the deleted Digimon's "leave other than by your effects"
+///     replacements do not fire);
+///   - resolves to anything else, or fails to resolve → silent no-op (the
+///     played permanent already left earlier in the turn).
+///
+/// The deletion routes through `delete_permanent_with_cause`, which honours
+/// `WhenWouldBeDeleted` replacement windows (e.g. `<Scapegoat>`). If a
+/// replacement parks a selection, the remaining entries are preserved on the
+/// queue and the caller's normal selection-resolution path re-drives them.
+pub fn fire_scheduled_provenance_deletions(game: &mut Game) {
+    use crate::replacement::ReplacementCause;
+
+    let queued = std::mem::take(&mut game.scheduled_provenance_deletions);
+    let mut iter = queued.into_iter();
+    while let Some(entry) = iter.next() {
+        // Resolve the stable identity to a current battle-area permanent.
+        // Anything else (card moved to trash/hand/etc., or unresolvable) is a
+        // no-op — the played Digimon already left.
+        let Some(EventSubject::Permanent(handle)) =
+            game.resolve_provenance_token(entry.token)
+        else {
+            continue;
+        };
+        game.delete_permanent_with_cause(handle, ReplacementCause::OwnEffect);
+        if game.pending_selection.is_some() {
+            // A replacement parked a selection. Preserve the not-yet-processed
+            // entries so the selection-resolution path can re-drive them.
+            game.scheduled_provenance_deletions = iter.collect();
+            return;
+        }
+    }
 }

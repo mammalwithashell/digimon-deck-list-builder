@@ -46,17 +46,17 @@ effects:
   # PUPPETS-G021 (DP filter) — RESOLVED: select_union_zone now evaluates the
   # compiled predicate (dp_lte + trait_has) against hidden-zone CardData.
   #
-  # PUPPETS-G014 / Task 7 — BLOCKED: the `select_union_zone` binding is a
-  # CardHandle only; the play step needs origin-preserving play_from_origin_free
-  # to dispatch play_from_hand_free vs play_from_trash_free based on where the
-  # selected card lives. Omitted here — authored in Task 8/11.
+  # PUPPETS-G014 / Task 7 — RESOLVED: `play_union_bound_free` plays the picked
+  # card free from its true origin zone (hand vs trash), recovered from the
+  # `select_union_zone` binding, and `bind_as` exposes the played permanent.
   #
-  # PUPPETS-G003 / Task 7 — BLOCKED: identity-stable cleanup ("at turn end,
-  # delete the Digimon this effect played") requires a stable permanent tag
-  # that survives field-index shifts. Omitted here.
+  # PUPPETS-G003 / Task 11 — RESOLVED: `schedule_delete_played_at_turn_end`
+  # schedules the bound permanent for deletion at the end of the turn, keyed
+  # to its stable provenance identity (survives field-index shifts; a no-op
+  # if it already left).
   - when: [on_play, when_digivolving]
     optional: true
-    summary: "[On Play / When Digivolving] You may play 1 Puppet Digimon (DP ≤ 4000) from hand or trash free"
+    summary: "[On Play / When Digivolving] You may play 1 Puppet Digimon (DP ≤ 4000) from hand or trash free; delete it at turn end"
     process:
       - select_union_zone:
           of: you
@@ -69,10 +69,14 @@ effects:
               - trait_has: Puppet
               - dp_lte: 4000
           prompt: "You may play 1 Puppet Digimon (DP 4000 or less) from your hand or trash without paying the cost"
-      # PUPPETS-G014 (Task 7): play_from_origin_free step omitted until the
-      # origin-preserving play verb is implemented.
-      # PUPPETS-G003 (Task 7): turn-end cleanup step omitted until
-      # identity-stable permanent tagging is implemented.
+      # Play the picked card free from its true origin zone; bind the result.
+      - play_union_bound_free:
+          binding: puppet_pick
+          bind_as: puppet_played
+      # At turn end, delete the Digimon this effect played. No-op if the
+      # union pick was declined (the binding is absent).
+      - schedule_delete_played_at_turn_end:
+          binding: puppet_played
 
   # Inherited [All Turns] [Once Per Turn]
   # When this Digimon would leave the battle area other than by your effects,

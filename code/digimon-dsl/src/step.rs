@@ -208,6 +208,8 @@ pub enum StepSpec {
     ForEach(ForEachStep),
     PerSelected(PerSelectedStep),
     ScheduleDelayed(ScheduleDelayedStep),
+    /// PUPPETS-G003 — schedule the bound permanent for deletion at turn end.
+    ScheduleDeletePlayedAtTurnEnd(ScheduleDeletePlayedAtTurnEndArgs),
     PlaceSelfAsDelayOption(EmptyArgs),
     LinkToOwnDigimon(LinkToOwnDigimonArgs),
     Optional(OptionalStep),
@@ -380,6 +382,9 @@ impl Serialize for StepSpec {
             StepSpec::ForEach(v) => kv!(s, "for_each", v),
             StepSpec::PerSelected(v) => kv!(s, "per_selected", v),
             StepSpec::ScheduleDelayed(v) => kv!(s, "schedule_delayed", v),
+            StepSpec::ScheduleDeletePlayedAtTurnEnd(v) => {
+                kv!(s, "schedule_delete_played_at_turn_end", v)
+            }
             StepSpec::PlaceSelfAsDelayOption(v) => kv!(s, "place_self_as_delay_option", v),
             StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
@@ -569,6 +574,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "for_each" => StepSpec::ForEach(map.next_value()?),
             "per_selected" => StepSpec::PerSelected(map.next_value()?),
             "schedule_delayed" => StepSpec::ScheduleDelayed(map.next_value()?),
+            "schedule_delete_played_at_turn_end" => {
+                StepSpec::ScheduleDeletePlayedAtTurnEnd(map.next_value()?)
+            }
             "place_self_as_delay_option" => StepSpec::PlaceSelfAsDelayOption(map.next_value()?),
             "link_to_own_digimon" => StepSpec::LinkToOwnDigimon(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
@@ -1764,6 +1772,22 @@ pub struct PerSelectedStep {
 pub struct ScheduleDelayedStep {
     pub when: super::clause::Timing,
     pub body: Vec<StepSpec>,
+}
+
+/// `schedule_delete_played_at_turn_end:` args — PUPPETS-G003. Schedules the
+/// permanent named by `binding` to be deleted at the end of the current turn,
+/// keyed to its stable identity (it is deleted even if battle-area indices
+/// shift; a no-op if it already left). `binding` must name a `bind_as` from a
+/// preceding free-play step (`play_union_bound_free` / `play_from_hand_free`).
+///
+/// Consumed by "At turn end, delete the Digimon this effect played" riders
+/// (EX11-022 Karakurumon, EX11-061 Mirai Kinosaki).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ScheduleDeletePlayedAtTurnEndArgs {
+    /// Name of the permanent binding to delete at turn end. Must name a
+    /// `bind_as` declared by an earlier free-play step in the same body.
+    pub binding: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

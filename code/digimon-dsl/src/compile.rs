@@ -2207,6 +2207,9 @@ fn compile_step(
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors))
                 .collect(),
         },
+        S::ScheduleDeletePlayedAtTurnEnd(a) => CompiledStep::ScheduleDeletePlayedAtTurnEnd {
+            binding: a.binding.clone(),
+        },
         S::PlaceSelfAsDelayOption(_) => CompiledStep::PlaceSelfAsDelayOption,
         S::LinkToOwnDigimon(a) => {
             if !a.free {

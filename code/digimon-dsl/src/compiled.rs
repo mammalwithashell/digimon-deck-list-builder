@@ -1205,6 +1205,12 @@ pub enum CompiledStep {
         when: CompiledTiming,
         body: Vec<CompiledStep>,
     },
+    /// PUPPETS-G003 — schedule the permanent named by `binding` for deletion
+    /// at the end of the current turn, keyed to its stable provenance
+    /// identity. `binding` names a `bind_as` from a preceding free-play step.
+    ScheduleDeletePlayedAtTurnEnd {
+        binding: String,
+    },
     PlaceSelfAsDelayOption,
     LinkToOwnDigimon {
         optional: bool,

@@ -710,6 +710,13 @@ impl Game {
         // separately at their respective observer-fire sites.
         crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfYourTurn);
         crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfYourNextTurn);
+
+        // PUPPETS-G003: drain provenance-keyed turn-end self-deletions ("At
+        // turn end, delete the Digimon this effect played"). Runs after the
+        // printed `EndOfYourTurn` observers and scheduled-effect drains —
+        // the played Digimon's own end-of-turn window has already closed —
+        // and before turn rotation flips memory.
+        crate::scheduled_effects::fire_scheduled_provenance_deletions(self);
     }
 
     /// Phase 8 Task 3: fire and trash every Delayed Option (across all
