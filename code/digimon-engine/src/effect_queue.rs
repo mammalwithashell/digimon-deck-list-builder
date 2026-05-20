@@ -1304,22 +1304,6 @@ impl Game {
             return;
         }
 
-        // Defensive guard — not reachable through current dispatch paths but
-        // prevents future double-enqueue if a caller fires a timing directly on
-        // a Training permanent with an effect authored .inherited(). Today no
-        // such card pattern exists; see Phase 8 Task 5 design for rationale.
-        let skip_inherited = self
-            .players
-            .get(handle.player as usize)
-            .and_then(|p| p.battle_area.get(handle.index as usize))
-            .map(|p| {
-                matches!(
-                    p.option_state,
-                    crate::permanent::OptionState::Training { .. }
-                )
-            })
-            .unwrap_or(false);
-
         if let Some(effects) = self.effects_for_card(&card_id, source_card) {
             for (slot, effect) in effects.iter().enumerate() {
                 if !timing_flag_matches(effect, timing) {
@@ -1328,7 +1312,16 @@ impl Game {
                 if effect.linked {
                     continue;
                 }
-                if skip_inherited && effect.inherited {
+                // An inherited effect (the lower portion of a digi card) is
+                // active ONLY while that card is a digivolution source beneath
+                // another card — the top Digimon activates it (RULES 15-3-1).
+                // The card scanned here is the carrier's *top* card, never a
+                // source, so its own inherited clauses stay dormant. Below-top
+                // sources dispatch their inherited effects through the dedicated
+                // `inherited_sources` scan further down. Mirrors
+                // `enqueue_from_breeding_permanent`, which likewise skips
+                // inherited effects unconditionally on its top-card scan.
+                if effect.inherited {
                     continue;
                 }
                 self.effect_queue.push_back(QueuedEffect {
