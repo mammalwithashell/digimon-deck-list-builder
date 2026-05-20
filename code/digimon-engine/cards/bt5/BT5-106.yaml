@@ -5,7 +5,7 @@ color: [purple]
 cost: 1
 
 effects:
-  # Supported slice:
+  # ─── [Main] slice ────────────────────────────────────────────────────────────
   # [Main] You may delete 1 of your Digimon to unsuspend 1 of your purple Digimon.
   #
   # The printed "You may" is surfaced through the optional sacrifice selection.
@@ -30,11 +30,36 @@ effects:
           prompt: "Unsuspend 1 of your purple Digimon"
       - unsuspend: { target: target }
 
-  # Omitted unsupported slice:
-  # [Security] You may play 1 level 3 purple Digimon card from your trash
-  # without paying its memory cost. Any [On Play] effects on Digimon played
-  # with this effect don't activate.
+  # ─── [Security] slice ────────────────────────────────────────────────────────
+  # Security Effect [Security] You may play 1 level 3 purple Digimon card from
+  # your trash without paying its memory cost. Any [On Play] effects on Digimon
+  # played with this effect don't activate.
   #
-  # Current YAML can select/play from trash, but this card also needs
-  # PUPPETS-G030 effect provenance that suppresses On Play effects only for the
-  # played Digimon.
+  # `scope: inherited` — the Security effect rides on the option's inherited
+  # surface (fired at the SecuritySkill timing on a security reveal).
+  # `optional: true` — the printed "You may play" makes the trash play optional;
+  # surfaced via the optional `select_trash` selection.
+  #
+  # PUPPETS-G030: `play_from_trash_free` carries `suppress_on_play: true` so the
+  # played Digimon's own [On Play] effects do NOT activate. The suppression is
+  # scoped strictly to the just-played permanent and this single play event —
+  # other permanents' On Play, and every other timing, are unaffected.
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security] You may play 1 level 3 purple Digimon from trash free; its [On Play] effects don't activate"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+              - color_is: purple
+          prompt: "Play 1 level 3 purple Digimon from your trash without paying its cost"
+      - play_from_trash_free:
+          of: you
+          hand_index: revived
+          suppress_on_play: true

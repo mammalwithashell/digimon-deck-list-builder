@@ -542,6 +542,7 @@ pub fn try_install(
         CompiledStep::SelectUnionZone {
             of,
             zones,
+            filter,
             bind_as,
             prompt,
             optional,
@@ -566,6 +567,7 @@ pub fn try_install(
                 ctx,
                 *of,
                 zoneset,
+                filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -1904,6 +1906,7 @@ fn install_select_union_zone(
     ctx: &mut EffectContext<'_>,
     of: CompiledPlayerRef,
     zoneset: crate::selection::UnionZoneSet,
+    filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
@@ -1914,20 +1917,78 @@ fn install_select_union_zone(
     let target_player = resolve_player(ctx, of);
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
+    // Clone state for the decline path before the success callback consumes
+    // them. G-OPTIONAL-SELECTION-CONTINUE-TAIL — declining an optional
+    // union-zone selection must still run the outer tail so subsequent
+    // mandatory steps (e.g. `play_union_bound_free`'s neighboring steps, or
+    // a mandatory `gain_memory`) execute. Mirrors `install_select_trash`.
+    let tail_for_decline = Arc::clone(&tail);
+    let bindings_for_decline = bindings.clone();
+    let runtime_for_decline = runtime.clone();
+    let trigger_for_decline = trigger_context.clone();
     ctx.select_union_zone(
         target_player,
         zoneset,
         &prompt,
         optional,
-        |_game, _card| true, // Phase 2e: accept-all filter.
-        move |cb_ctx, handle| {
+        // PUPPETS-G021: evaluate the compiled predicate against the card's
+        // CardData (via PredicateSubject::Card) so that DP constraints such
+        // as `dp_lte: 4000` work for hidden-zone (hand/trash) candidates.
+        move |game, card| {
+            let handle = card.handle();
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Card(handle),
+                Some(&filter_bindings),
+            )
+        },
+        move |cb_ctx, handle, origin| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                b.insert_card(name, handle);
+                // PUPPETS-G014: record the origin zone alongside the handle
+                // so a `play_union_bound_free` tail step can replay the card
+                // from its true zone (hand vs trash).
+                b.insert_union_card(name, handle, origin, target_player);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Attach decline-tail callback for optional selections — carry-over from
+    // Task 6 code review. Mirrors `install_select_trash`.
+    if optional {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let mut decline_ctx = EffectContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                );
+                let mut b = bindings_for_decline.clone();
+                run_tail_preserving_trigger_context(
+                    &mut decline_ctx,
+                    trigger_for_decline.clone(),
+                    &tail_for_decline,
+                    &mut b,
+                    &runtime_for_decline,
+                );
+            }));
+        }
+    }
 }
 
 // ───────────────────────────────────────────────────────────────────────────

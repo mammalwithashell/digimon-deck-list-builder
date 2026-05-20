@@ -568,6 +568,7 @@ fn compile_predicate(
         source_is_unsuspended: p.source_is_unsuspended,
         source_name_contains: p.source_name_contains.clone(),
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
+        rules_text_contains: p.rules_text_contains.clone(),
         self_digivolution_contains_name: p.self_digivolution_contains_name.clone(),
         memory_lte: p
             .memory_lte
@@ -617,6 +618,11 @@ fn compile_predicate(
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
+        event_card_color_only: p
+            .event_card_color_only
+            .as_ref()
+            .map(|colors| colors.iter().copied().map(compile_color).collect()),
+        event_card_color_count: p.event_card_color_count,
         event_cause: p.event_cause.map(compile_event_cause),
         host_permanent_trait_has: p.host_permanent_trait_has.clone(),
         trashed_source_trait_has: p.trashed_source_trait_has.clone(),
@@ -1671,6 +1677,7 @@ fn compile_step(
         S::PlayToken(a) => CompiledStep::PlayToken {
             controller: compile_player_ref(a.controller),
             token_name: a.token_name.clone(),
+            bind_as: a.bind_as.clone(),
         },
         S::PlaceAsBottomSource(a) => CompiledStep::PlaceAsBottomSource {
             source: compile_binding_ref(&a.source),
@@ -1704,25 +1711,54 @@ fn compile_step(
         // PlayFromHand, PlayFromTrash, PlayFromTrashFree all use PlayFromHandArgs
         // (with hand_index field), but the compiled variants use different field
         // names for trash steps.
-        S::PlayFromHand(a) => CompiledStep::PlayFromHand {
-            of: compile_player_ref(a.of),
-            hand_index: compile_binding_ref(&a.hand_index),
-            cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
-        },
+        //
+        // PUPPETS-G030: `suppress_on_play` is honored ONLY by
+        // `play_from_trash_free`. Reject it on the other play steps so an
+        // author cannot silently expect a no-op flag to take effect.
+        S::PlayFromHand(a) => {
+            if a.suppress_on_play {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.play_from_hand.suppress_on_play"),
+                    message: "suppress_on_play is only supported on play_from_trash_free"
+                        .to_string(),
+                });
+            }
+            CompiledStep::PlayFromHand {
+                of: compile_player_ref(a.of),
+                hand_index: compile_binding_ref(&a.hand_index),
+                cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
+            }
+        }
         S::PlayFromHandFree(a) => CompiledStep::PlayFromHandFree {
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
             bind_as: a.bind_as.clone(),
         },
         // PlayFromTrash reuses PlayFromHandArgs but the compiled form uses `trash_index`
-        S::PlayFromTrash(a) => CompiledStep::PlayFromTrash {
-            of: compile_player_ref(a.of),
-            trash_index: compile_binding_ref(&a.hand_index),
-            cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
-        },
+        S::PlayFromTrash(a) => {
+            if a.suppress_on_play {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.play_from_trash.suppress_on_play"),
+                    message: "suppress_on_play is only supported on play_from_trash_free"
+                        .to_string(),
+                });
+            }
+            CompiledStep::PlayFromTrash {
+                of: compile_player_ref(a.of),
+                trash_index: compile_binding_ref(&a.hand_index),
+                cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
+            }
+        }
         S::PlayFromTrashFree(a) => CompiledStep::PlayFromTrashFree {
             of: compile_player_ref(a.of),
             trash_index: compile_binding_ref(&a.hand_index),
+            suppress_on_play: a.suppress_on_play,
+        },
+        S::PlayUnionBoundFree(a) => CompiledStep::PlayUnionBoundFree {
+            binding: a.binding.clone(),
+            bind_as: a.bind_as.clone(),
         },
         S::PlayFromSecurity(_) => CompiledStep::PlayFromSecurity,
         S::PlayFromMaterials(a) => CompiledStep::PlayFromMaterials {
@@ -1760,6 +1796,9 @@ fn compile_step(
         },
 
         S::TrashTopSecurity(a) => CompiledStep::TrashTopSecurity {
+            of: compile_player_ref(a.of),
+        },
+        S::TrashBottomSecurity(a) => CompiledStep::TrashBottomSecurity {
             of: compile_player_ref(a.of),
         },
         S::TrashTopSecurityAndCancelReplacement(a) => {
@@ -1922,6 +1961,12 @@ fn compile_step(
             source_controller: compile_effect_controller(a.source_controller),
             expiry: a.expiry.clone(),
         },
+        S::GrantNarrowOpponentEffectProtection(a) => {
+            CompiledStep::GrantNarrowOpponentEffectProtection {
+                target: compile_binding_ref(&a.target),
+                expiry: a.expiry.clone(),
+            }
+        }
 
         S::SelectOwnPermanent(a) => CompiledStep::SelectOwnPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -2192,6 +2237,10 @@ fn compile_step(
                 .enumerate()
                 .map(|(i, s)| compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors))
                 .collect(),
+        },
+        S::ScheduleDeletePlayedAtTurnEnd(a) => CompiledStep::ScheduleDeletePlayedAtTurnEnd {
+            binding: a.binding.clone(),
+            at_opponents_turn: matches!(a.at, crate::step::DeleteTurnBoundary::OpponentsTurn),
         },
         S::PlaceSelfAsDelayOption(_) => CompiledStep::PlaceSelfAsDelayOption,
         S::LinkToOwnDigimon(a) => {

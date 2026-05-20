@@ -75,7 +75,7 @@ fn install_sets_phase_and_kind() {
             "pick one",
             false,
             |_, _| true,
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -117,7 +117,7 @@ fn valid_action_ids_covers_both_zones() {
             "pick",
             false,
             |_, _| true,
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -172,7 +172,7 @@ fn filter_restricts_valid_action_ids() {
             "trash only",
             false,
             |game, card| game.card_data[card.data_index].card_id.starts_with('T'),
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -209,7 +209,7 @@ fn empty_filter_is_noop() {
             "none eligible",
             true,
             |_, _| false,
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -243,7 +243,7 @@ fn hand_only_zone_excludes_trash() {
             "hand only",
             false,
             |_, _| true,
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -270,7 +270,7 @@ fn trash_only_zone_excludes_hand() {
             "trash only",
             false,
             |_, _| true,
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -308,7 +308,7 @@ fn callback_receives_correct_handle_for_trash_pick() {
             "pick",
             false,
             |_, _| true,
-            move |_, handle| {
+            move |_, handle, _origin| {
                 *slot.lock().unwrap() = Some(handle);
             },
         );
@@ -355,7 +355,7 @@ fn callback_receives_correct_handle_for_hand_pick() {
             "pick",
             false,
             |_, _| true,
-            move |_, handle| {
+            move |_, handle, _origin| {
                 *slot.lock().unwrap() = Some(handle);
             },
         );
@@ -390,7 +390,7 @@ fn mandatory_rejects_pass() {
             "must pick",
             false,
             |_, _| true,
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -418,7 +418,7 @@ fn optional_accepts_pass() {
             "optional",
             true,
             |_, _| true,
-            |_, _| {
+            |_, _, _| {
                 panic!("callback must NOT fire on decline");
             },
         );

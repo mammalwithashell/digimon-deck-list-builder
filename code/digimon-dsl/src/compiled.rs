@@ -233,6 +233,10 @@ pub struct CompiledPredicate {
     pub source_is_unsuspended: Option<bool>,
     pub source_name_contains: Option<String>,
     pub source_permanent_trait_has: Option<String>,
+    /// Case-insensitive substring match against the carrier permanent's
+    /// printed rules text (effect_text + inherited_text + security_text of
+    /// the top card). Fails when the subject is not a permanent. PUPPETS-G025.
+    pub rules_text_contains: Option<String>,
     pub memory_lte: Option<CompiledDpConstraint>,
     pub memory_gte: Option<CompiledDpConstraint>,
     pub security_count_lte: Option<CompiledDpConstraint>,
@@ -254,6 +258,10 @@ pub struct CompiledPredicate {
     pub attacker_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
     pub event_card_name_contains: Option<String>,
+    /// Every color of the triggering event card must be within this set.
+    pub event_card_color_only: Option<Vec<CompiledColor>>,
+    /// The triggering event card must have exactly this many distinct colors.
+    pub event_card_color_count: Option<u8>,
     pub event_permanent_is_source: Option<bool>,
     pub event_is_effect_initiated: Option<bool>,
     pub event_cause: Option<CompiledEventCause>,
@@ -834,6 +842,7 @@ pub enum CompiledStep {
     PlayToken {
         controller: CompiledPlayerRef,
         token_name: String,
+        bind_as: Option<String>,
     },
     PlaceAsBottomSource {
         source: CompiledBindingRef,
@@ -878,6 +887,17 @@ pub enum CompiledStep {
     PlayFromTrashFree {
         of: CompiledPlayerRef,
         trash_index: CompiledBindingRef,
+        /// PUPPETS-G030 — when `true`, the played Digimon's own `[On Play]`
+        /// effects are skipped for this play event only (BT5-106 [Security]).
+        suppress_on_play: bool,
+    },
+    /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
+    /// true origin zone (hand vs trash). `binding` names a `select_union_zone`
+    /// `bind_as`; the origin zone is carried in the binding value.
+    PlayUnionBoundFree {
+        binding: String,
+        /// Bind the just-played permanent handle for use in later steps.
+        bind_as: Option<String>,
     },
     PlayFromSecurity,
     PlayFromMaterials {
@@ -903,6 +923,9 @@ pub enum CompiledStep {
         ignore_requirements: bool,
     },
     TrashTopSecurity {
+        of: CompiledPlayerRef,
+    },
+    TrashBottomSecurity {
         of: CompiledPlayerRef,
     },
     TrashTopSecurityAndCancelReplacement {
@@ -1007,6 +1030,13 @@ pub enum CompiledStep {
         target: CompiledBindingRef,
         source_kind: CompiledEffectSourceKind,
         source_controller: CompiledEffectController,
+        expiry: String,
+    },
+    /// PUPPETS-G024 — install the narrow opponent-effect protection
+    /// bundle (opponent-scoped ImmuneFromDPMinus + opponent-scoped
+    /// CannotBeDeDigivolved) on `target`.
+    GrantNarrowOpponentEffectProtection {
+        target: CompiledBindingRef,
         expiry: String,
     },
     /// Track H §3 — install a granted triggered effect on each
@@ -1184,6 +1214,16 @@ pub enum CompiledStep {
     ScheduleDelayed {
         when: CompiledTiming,
         body: Vec<CompiledStep>,
+    },
+    /// PUPPETS-G003 — schedule the permanent named by `binding` for deletion
+    /// at the end of the designated turn boundary, keyed to its stable
+    /// provenance identity. `binding` names a `bind_as` from a preceding
+    /// free-play step. `at_opponents_turn` selects the opponent-turn-end drain
+    /// (P-165); `false` (default) selects the your-turn-end drain (EX11-022,
+    /// EX11-061).
+    ScheduleDeletePlayedAtTurnEnd {
+        binding: String,
+        at_opponents_turn: bool,
     },
     PlaceSelfAsDelayOption,
     LinkToOwnDigimon {

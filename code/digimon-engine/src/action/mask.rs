@@ -342,6 +342,22 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     player: player_id,
                     index: i as u8,
                 };
+
+                // PUPPETS-G009 — standard `<Delay>` `[Main]`-phase activation.
+                // A parked `DelayTrigger::MainPhaseActivated` Option whose
+                // placing turn has passed exposes a player-visible
+                // FIELD_EFFECT activation (slot `+2`) — "By trashing this
+                // card after the placing turn, activate the effect below"
+                // (RULES_CONTEXT 16-16). The choice is optional, so PASS
+                // remains legal alongside it (emitted below).
+                if game.delayed_option_main_activation_available(perm_handle) {
+                    let bit = FIELD_EFFECT_START
+                        + i as u16 * EFFECTS_PER_PERMANENT
+                        + FIELD_EFFECT_SLOT_FOR_MAIN;
+                    mask[bit as usize] = 1.0;
+                    continue;
+                }
+
                 let stack_size = perm.card_sources.len();
                 let mut emitted = false;
                 for (source_index, source) in perm.card_sources.iter().enumerate() {

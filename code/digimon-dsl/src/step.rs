@@ -141,6 +141,9 @@ pub enum StepSpec {
     PlayFromHandFree(PlayFromHandFreeArgs),
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
+    /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
+    /// true origin zone (hand vs trash), recovered from the binding.
+    PlayUnionBoundFree(PlayUnionBoundFreeArgs),
     PlayFromSecurity(PlayFromSecurityArgs),
     PlayFromMaterials(PlayFromMaterialsArgs),
     PlaySelectedSourcesFree(TrashSelectedSourcesArgs),
@@ -149,6 +152,7 @@ pub enum StepSpec {
 
     // Security
     TrashTopSecurity(PlayerArg),
+    TrashBottomSecurity(PlayerArg),
     TrashTopSecurityAndCancelReplacement(PlayerArg),
     BounceSelf(EmptyArgs),
     PlaceSelfAtSecurity(SelfSecurityPlacementArgs),
@@ -172,6 +176,12 @@ pub enum StepSpec {
     AddPlayerModifier(AddPlayerModifierArgs),
     GrantKeyword(GrantKeywordArgs),
     GrantEffectImmunity(GrantEffectImmunityArgs),
+    /// PUPPETS-G024 — install the narrow opponent-effect protection
+    /// bundle (ImmuneFromDPMinus opponent-scoped + CannotBeDeDigivolved
+    /// opponent-scoped). For text like BT16-055's "can't have its DP
+    /// reduced by your opponent's effects and isn't affected by
+    /// ＜De-Digivolve＞ effects".
+    GrantNarrowOpponentEffectProtection(GrantNarrowOpponentEffectProtectionArgs),
     /// Track H §3 — install a granted triggered effect on each
     /// permanent matching `target`. The granted body fires on the
     /// carrier's matching `timing` (DCGO `AddSkillClass.cs` analog).
@@ -204,6 +214,8 @@ pub enum StepSpec {
     ForEach(ForEachStep),
     PerSelected(PerSelectedStep),
     ScheduleDelayed(ScheduleDelayedStep),
+    /// PUPPETS-G003 — schedule the bound permanent for deletion at turn end.
+    ScheduleDeletePlayedAtTurnEnd(ScheduleDeletePlayedAtTurnEndArgs),
     PlaceSelfAsDelayOption(EmptyArgs),
     LinkToOwnDigimon(LinkToOwnDigimonArgs),
     Optional(OptionalStep),
@@ -297,6 +309,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
             StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
+            StepSpec::PlayUnionBoundFree(v) => kv!(s, "play_union_bound_free", v),
             StepSpec::PlayFromSecurity(v) => kv!(s, "play_from_security", v),
             StepSpec::PlayFromMaterials(v) => kv!(s, "play_from_materials", v),
             StepSpec::PlaySelectedSourcesFree(v) => kv!(s, "play_selected_sources_free", v),
@@ -304,6 +317,7 @@ impl Serialize for StepSpec {
             StepSpec::EffectInitiatedDnaDigivolve(v) => kv!(s, "effect_initiated_dna_digivolve", v),
             // Security
             StepSpec::TrashTopSecurity(v) => kv!(s, "trash_top_security", v),
+            StepSpec::TrashBottomSecurity(v) => kv!(s, "trash_bottom_security", v),
             StepSpec::TrashTopSecurityAndCancelReplacement(v) => {
                 kv!(s, "trash_top_security_and_cancel_replacement", v)
             }
@@ -347,6 +361,9 @@ impl Serialize for StepSpec {
             StepSpec::GrantKeyword(v) => kv!(s, "grant_keyword", v),
             StepSpec::GrantTriggeredEffect(v) => kv!(s, "grant_triggered_effect", v),
             StepSpec::GrantEffectImmunity(v) => kv!(s, "grant_effect_immunity", v),
+            StepSpec::GrantNarrowOpponentEffectProtection(v) => {
+                kv!(s, "grant_narrow_opponent_effect_protection", v)
+            }
             // Selection
             StepSpec::SelectOwnPermanent(v) => kv!(s, "select_own_permanent", v),
             StepSpec::SelectOpponentPermanent(v) => kv!(s, "select_opponent_permanent", v),
@@ -374,6 +391,9 @@ impl Serialize for StepSpec {
             StepSpec::ForEach(v) => kv!(s, "for_each", v),
             StepSpec::PerSelected(v) => kv!(s, "per_selected", v),
             StepSpec::ScheduleDelayed(v) => kv!(s, "schedule_delayed", v),
+            StepSpec::ScheduleDeletePlayedAtTurnEnd(v) => {
+                kv!(s, "schedule_delete_played_at_turn_end", v)
+            }
             StepSpec::PlaceSelfAsDelayOption(v) => kv!(s, "place_self_as_delay_option", v),
             StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
@@ -482,6 +502,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
             "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
+            "play_union_bound_free" => StepSpec::PlayUnionBoundFree(map.next_value()?),
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
             "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
             "play_selected_sources_free" => StepSpec::PlaySelectedSourcesFree(map.next_value()?),
@@ -492,6 +513,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Security
             "trash_top_security" => StepSpec::TrashTopSecurity(map.next_value()?),
+            "trash_bottom_security" => StepSpec::TrashBottomSecurity(map.next_value()?),
             "trash_top_security_and_cancel_replacement" => {
                 StepSpec::TrashTopSecurityAndCancelReplacement(map.next_value()?)
             }
@@ -532,6 +554,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "grant_keyword" => StepSpec::GrantKeyword(map.next_value()?),
             "grant_triggered_effect" => StepSpec::GrantTriggeredEffect(map.next_value()?),
             "grant_effect_immunity" => StepSpec::GrantEffectImmunity(map.next_value()?),
+            "grant_narrow_opponent_effect_protection" => {
+                StepSpec::GrantNarrowOpponentEffectProtection(map.next_value()?)
+            }
 
             // Selection
             "select_own_permanent" => StepSpec::SelectOwnPermanent(map.next_value()?),
@@ -561,6 +586,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "for_each" => StepSpec::ForEach(map.next_value()?),
             "per_selected" => StepSpec::PerSelected(map.next_value()?),
             "schedule_delayed" => StepSpec::ScheduleDelayed(map.next_value()?),
+            "schedule_delete_played_at_turn_end" => {
+                StepSpec::ScheduleDeletePlayedAtTurnEnd(map.next_value()?)
+            }
             "place_self_as_delay_option" => StepSpec::PlaceSelfAsDelayOption(map.next_value()?),
             "link_to_own_digimon" => StepSpec::LinkToOwnDigimon(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
@@ -632,12 +660,14 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_from_hand_free",
                         "play_from_trash",
                         "play_from_trash_free",
+                        "play_union_bound_free",
                         "play_from_security",
                         "play_from_materials",
                         "play_selected_sources_free",
                         "effect_initiated_digivolve",
                         "effect_initiated_dna_digivolve",
                         "trash_top_security",
+                        "trash_bottom_security",
                         "trash_top_security_and_cancel_replacement",
                         "bounce_self",
                         "place_self_at_security",
@@ -658,6 +688,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_modifier",
                         "grant_keyword",
                         "grant_effect_immunity",
+                        "grant_narrow_opponent_effect_protection",
                         "select_own_permanent",
                         "select_opponent_permanent",
                         "select_any_permanent",
@@ -1211,6 +1242,10 @@ fn default_player_ref_you() -> PlayerRef {
 pub struct PlayTokenArgs {
     pub controller: PlayerRef,
     pub token_name: String,
+    /// Bind the resulting permanent handle for use in later steps in the
+    /// same body. None (the default) preserves prior behavior.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1233,6 +1268,15 @@ pub struct PlayFromHandArgs {
     pub hand_index: BindingRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_delta: Option<CostDelta>,
+    /// PUPPETS-G030 — when `true`, the played Digimon's own `[On Play]`
+    /// effects do NOT activate for this play event. Only honored by
+    /// `play_from_trash_free` (BT5-106's [Security] clause: "Any [On Play]
+    /// effects on Digimon played with this effect don't activate."). The
+    /// suppression is scoped to the just-played permanent and this single
+    /// play; other permanents' On Play and every other timing are
+    /// unaffected. `false` (the default) preserves prior behavior.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub suppress_on_play: bool,
 }
 
 /// Free-play-from-hand args. Adds `bind_as` so the just-played permanent
@@ -1265,6 +1309,27 @@ pub enum CostDelta {
 pub enum CostDeltaKeyword {
     Free,
     Printed,
+}
+
+/// `play_union_bound_free:` args — play a card previously picked by a
+/// `select_union_zone` step, **without paying its cost**, from its true
+/// origin zone (hand vs trash). `binding` names the `select_union_zone`
+/// binding (a `bind_as` from that step). The origin zone is recorded in the
+/// binding itself, so this step needs no zone parameter.
+///
+/// PUPPETS-G014 substrate. Consumed by EX11-022 / ST19-08 / BT22-098-shape
+/// "play 1 of the chosen cards … without paying the cost" effects.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayUnionBoundFreeArgs {
+    /// Name of the `select_union_zone` binding to consume. Must name a
+    /// `bind_as` declared by an earlier `select_union_zone` step — the
+    /// binding carries the origin zone the step replays the card from.
+    pub binding: String,
+    /// Bind the just-played permanent handle for use in later steps in the
+    /// same body (e.g. a Task 11 cleanup step). `None` preserves no binding.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1437,6 +1502,18 @@ pub struct GrantEffectImmunityArgs {
     pub source_kind: EffectSourceKindSpec,
     #[serde(default)]
     pub source_controller: EffectControllerSpec,
+    pub expiry: String,
+}
+
+/// PUPPETS-G024 — arguments for `grant_narrow_opponent_effect_protection`.
+/// Installs the opponent-scoped DP-reduction + De-Digivolve protection
+/// bundle on `target`. No source-kind/controller knobs: this verb is
+/// keyed to the BT16-055-style "by your opponent's effects" narrow
+/// protection and is always opponent-scoped by construction.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct GrantNarrowOpponentEffectProtectionArgs {
+    pub target: BindingRef,
     pub expiry: String,
 }
 
@@ -1729,6 +1806,45 @@ pub struct PerSelectedStep {
 pub struct ScheduleDelayedStep {
     pub when: super::clause::Timing,
     pub body: Vec<StepSpec>,
+}
+
+/// Which turn boundary should trigger the provenance deletion. Defaults to
+/// `your_turn` (end of the scheduling player's turn), which is the behaviour
+/// from Task 11 (EX11-022, EX11-061). P-165 ShoeShoemon needs
+/// `opponents_turn` ("at the end of your opponent's turn, delete that token").
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum DeleteTurnBoundary {
+    #[default]
+    YourTurn,
+    OpponentsTurn,
+}
+
+/// `schedule_delete_played_at_turn_end:` args — PUPPETS-G003. Schedules the
+/// permanent named by `binding` to be deleted at the end of the current turn,
+/// keyed to its stable identity (it is deleted even if battle-area indices
+/// shift; a no-op if it already left). `binding` must name a `bind_as` from a
+/// preceding free-play step (`play_union_bound_free` / `play_from_hand_free`
+/// / `play_token`).
+///
+/// Consumed by "At turn end, delete the Digimon this effect played" riders
+/// (EX11-022 Karakurumon, EX11-061 Mirai Kinosaki) and by "at the end of your
+/// opponent's turn, delete that token" riders (P-165 ShoeShoemon).
+/// Use `at: opponents_turn` for the latter; omit `at` (or write `at: your_turn`)
+/// for the former — the default preserves Task 11 behaviour.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ScheduleDeletePlayedAtTurnEndArgs {
+    /// Name of the permanent binding to delete at turn end. Must name a
+    /// `bind_as` declared by an earlier free-play step in the same body.
+    pub binding: String,
+    /// Which turn boundary triggers the deletion. Defaults to `your_turn`.
+    #[serde(default, skip_serializing_if = "is_default_turn_boundary")]
+    pub at: DeleteTurnBoundary,
+}
+
+fn is_default_turn_boundary(v: &DeleteTurnBoundary) -> bool {
+    matches!(v, DeleteTurnBoundary::YourTurn)
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

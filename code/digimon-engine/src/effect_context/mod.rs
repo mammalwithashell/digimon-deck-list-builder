@@ -893,6 +893,58 @@ impl<'a> EffectContext<'a> {
         self.game.scheduled_effects.push(entry);
     }
 
+    /// PUPPETS-G003 — schedule a deletion of `permanent` at the end of the
+    /// current turn, keyed to the permanent's *stable identity* rather than
+    /// its (shifting) battle-area index.
+    ///
+    /// Used by effects whose text says "At turn end, delete the Digimon this
+    /// effect played" (EX11-022 Karakurumon, EX11-061 Mirai Kinosaki). Pass
+    /// the `PermanentHandle` returned by a free-play step (`play_from_hand_free`
+    /// / `play_union_bound_free` / etc.); this captures the top card's
+    /// `ProvenanceToken` *now*, while the handle is still valid.
+    ///
+    /// At turn end `fire_scheduled_provenance_deletions` resolves the token:
+    /// if the played permanent is still on the battle area it is deleted (as
+    /// the controller's own effect); if it already left, the entry is a
+    /// silent no-op. A handle that does not currently point at a live
+    /// permanent is ignored (nothing to schedule).
+    pub fn schedule_delete_at_end_of_turn(&mut self, permanent: PermanentHandle) {
+        self.schedule_provenance_deletion(permanent, false);
+    }
+
+    /// PUPPETS-G016 — schedule a deletion of `permanent` at the end of the
+    /// **opponent's** turn, keyed to the permanent's *stable identity*.
+    ///
+    /// Used by P-165 ShoeShoemon ("At the end of your opponent's turn, delete
+    /// that token"). Analogous to `schedule_delete_at_end_of_turn` but the
+    /// deletion fires from `rotate_turn_player` rather than
+    /// `fire_end_of_your_turn`.
+    pub fn schedule_delete_at_end_of_opponents_turn(&mut self, permanent: PermanentHandle) {
+        self.schedule_provenance_deletion(permanent, true);
+    }
+
+    fn schedule_provenance_deletion(&mut self, permanent: PermanentHandle, opponents_turn: bool) {
+        let Some(top) = self
+            .game
+            .player(permanent.player)
+            .battle_area
+            .get(permanent.index as usize)
+            .map(|perm| perm.top_card().handle())
+        else {
+            return;
+        };
+        let token = self.game.provenance_token_for_card(top);
+        let entry = crate::scheduled_effects::ScheduledProvenanceDeletion {
+            token,
+            controller: self.player,
+        };
+        if opponents_turn {
+            self.game.scheduled_provenance_deletions_opp.push(entry);
+        } else {
+            self.game.scheduled_provenance_deletions.push(entry);
+        }
+    }
+
     pub fn place_self_as_delay_option_permanent(&mut self) {
         let source_card = if let Some(source_perm) = self.source_permanent {
             if !matches!(
@@ -1941,6 +1993,60 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Trash the bottom card of `player`'s security stack (index 0).
+    ///
+    /// Mirrors `trash_top_security` but removes `security[0]` instead of
+    /// the last element. Replacement effects and observers fire identically
+    /// to the top-trash path.
+    pub fn trash_bottom_security(&mut self, player: PlayerId) -> bool {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // Snapshot the bottom-of-security card handle before any state change.
+        let bottom_handle = match self.game.player(player).security.first() {
+            Some(c) => c.handle(),
+            None => return false,
+        };
+        let cause = self.game.infer_effect_cause(player);
+        let subject = ReplacementSubject::Card(bottom_handle, Zone::Security);
+        let outcome = self.game.try_replace(
+            EffectTiming::WhenWouldBeTrashed,
+            subject,
+            cause,
+            Some(Zone::Trash),
+        );
+        if self.game.pending_selection.is_some() {
+            return false;
+        }
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return false;
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(false, "Redirected not supported for WhenWouldBeTrashed v1");
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(false, "Substituted not supported for WhenWouldBeTrashed v1");
+            }
+        }
+
+        let p = self.game.player_mut(player);
+        if p.security.is_empty() {
+            return false;
+        }
+        let card = p.security.remove(0);
+        p.face_up_security.remove(&card.card_index);
+        self.fire_security_removed_observers(
+            player,
+            card,
+            crate::selection::SecurityRemovalDestination::Trash,
+        );
+        self.game.mark_until_condition_dirty();
+        self.game.reevaluate_until_condition_modifiers_if_dirty();
+        true
+    }
+
     fn fire_security_removed_observers(
         &mut self,
         defender: PlayerId,
@@ -2861,6 +2967,28 @@ impl<'a> EffectContext<'a> {
         &mut self,
         card: CardHandle,
     ) -> Option<PermanentHandle> {
+        self.play_from_trash_free_unsuspended_inner(card, false)
+    }
+
+    /// As [`Self::play_from_trash_free_unsuspended`], but suppresses the
+    /// played Digimon's own `[On Play]` effects for this play event only
+    /// (PUPPETS-G030). Used by BT5-106's [Security] clause — "Any [On Play]
+    /// effects on Digimon played with this effect don't activate." The
+    /// suppression is scoped strictly to the just-played permanent and this
+    /// single play; other permanents' On Play and every other timing
+    /// (`OnEnterFieldAnyone` / `OnAllyPlayed`) fire normally.
+    pub fn play_from_trash_free_unsuspended_suppress_on_play(
+        &mut self,
+        card: CardHandle,
+    ) -> Option<PermanentHandle> {
+        self.play_from_trash_free_unsuspended_inner(card, true)
+    }
+
+    fn play_from_trash_free_unsuspended_inner(
+        &mut self,
+        card: CardHandle,
+        suppress_on_play: bool,
+    ) -> Option<PermanentHandle> {
         let controller = self.player;
         let trash_index = self
             .game
@@ -2881,11 +3009,12 @@ impl<'a> EffectContext<'a> {
                 return None;
             }
         };
-        let field_index = self.game.play_from_trash_with_cost(
+        let field_index = self.game.play_from_trash_with_cost_suppress(
             controller,
             trash_index,
             crate::enums::CostDelta::Free,
             PlaySource::ByEffect,
+            suppress_on_play,
         )?;
         Some(PermanentHandle {
             player: controller,
@@ -3926,6 +4055,52 @@ impl<'a> EffectContext<'a> {
                 ModifierEntry::passive_replacement(modifier, expiry, self.player),
             );
         }
+        self.game.mark_until_condition_dirty();
+    }
+
+    /// PUPPETS-G024 — grant the narrow "can't have its DP reduced by your
+    /// opponent's effects and isn't affected by ＜De-Digivolve＞ effects [by
+    /// your opponent's effects]" protection bundle (BT16-055 Namakemon's
+    /// high-security clause).
+    ///
+    /// Both protections are genuinely opponent-effect-scoped:
+    ///   - `ImmuneFromDPMinus` is installed with an
+    ///     `EffectImmunityFilter { controller: OpponentOnly }` so
+    ///     `Game::effective_dp` suppresses only negative `ChangeDp`
+    ///     deltas whose source is an opponent effect — the controller's
+    ///     own DP-reduction still applies.
+    ///   - `CannotBeDeDigivolved` is installed via the
+    ///     `passive_replacement()` route so its
+    ///     `default_passive_cause_filter` (`ReplacementCause::OpponentEffect`)
+    ///     takes effect — own-side De-Digivolve still applies.
+    ///
+    /// Unrelated opponent effects (non-DP-reduction, non-De-Digivolve) are
+    /// not affected — this is a category-scoped protection, not blanket
+    /// `CannotBeAffected` immunity.
+    pub fn grant_narrow_opponent_effect_protection(
+        &mut self,
+        target: PermanentHandle,
+        expiry: Expiry,
+    ) {
+        if !self.can_affect_permanent(target) {
+            return;
+        }
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::simple(ModifierType::ImmuneFromDPMinus, 0, expiry, self.player)
+                .with_effect_immunity_filter(EffectImmunityFilter {
+                    source_kind: None,
+                    controller: EffectControllerFilter::OpponentOnly,
+                }),
+        );
+        self.game.modifiers.add(
+            target,
+            ModifierEntry::passive_replacement(
+                ModifierType::CannotBeDeDigivolved,
+                expiry,
+                self.player,
+            ),
+        );
         self.game.mark_until_condition_dirty();
     }
 

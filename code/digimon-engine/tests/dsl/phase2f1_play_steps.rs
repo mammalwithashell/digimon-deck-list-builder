@@ -343,6 +343,7 @@ fn play_from_trash_free_step_consumes_trash_and_keeps_memory() {
     let step = CompiledStep::PlayFromTrashFree {
         of: CompiledPlayerRef::You,
         trash_index: CompiledBindingRef::Named("idx".into()),
+        suppress_on_play: false,
     };
 
     {
@@ -513,6 +514,7 @@ fn play_token_step_creates_token_permanent_in_battle_area() {
     let step = CompiledStep::PlayToken {
         controller: CompiledPlayerRef::You,
         token_name: "petrification".to_string(),
+        bind_as: None,
     };
 
     {

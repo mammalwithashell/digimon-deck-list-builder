@@ -12,7 +12,7 @@
 
 use crate::card_source::CardSource;
 use crate::enums::{DelayTrigger, EffectTiming, PlayerId};
-use crate::game::Game;
+use crate::game::{Game, DelayedOptionLifecycleResume, DelayedOptionLifecycleResumeKind};
 use crate::permanent::{OptionState, Permanent, PermanentHandle};
 use crate::selection::TriggerSource;
 
@@ -355,6 +355,122 @@ impl Game {
             },
         );
         self.drain_effect_queue();
+        true
+    }
+
+    // ── Standard `<Delay>` `[Main]`-phase activation (PUPPETS-G009) ──────
+    //
+    // A standard `<Delay>` Option (`DelayTrigger::MainPhaseActivated`) is NOT
+    // auto-fired by the start/end-of-turn scan. Its controller takes a
+    // player-visible `[Main]`-phase `FIELD_EFFECT` action — "By trashing this
+    // card after the placing turn, activate the effect below" (RULES_CONTEXT
+    // 16-16). The activation is optional (16-16-2) and unavailable on the
+    // placing turn (16-16-3).
+
+    /// True when the permanent at `option` is a standard `<Delay>` Option
+    /// whose placing turn has passed — i.e. its `<Delay>` body may be
+    /// activated by its controller's `[Main]`-phase action this turn.
+    ///
+    /// Panic-safe on out-of-range player / field indices (returns `false`)
+    /// so the decode path can call it before its own bounds checks.
+    pub fn delayed_option_main_activation_available(&self, option: PermanentHandle) -> bool {
+        let Some(perm) = self
+            .players
+            .get(option.player as usize)
+            .and_then(|player| player.battle_area.get(option.index as usize))
+        else {
+            return false;
+        };
+        match perm.option_state {
+            OptionState::Delayed {
+                trigger: DelayTrigger::MainPhaseActivated,
+                placed_on_turn,
+                ..
+            } => self.turn_count > placed_on_turn,
+            _ => false,
+        }
+    }
+
+    /// Activate a standard `<Delay>` Option's body via its controller's
+    /// `[Main]`-phase action. Fires the stored `DelayEffect` body, then
+    /// trashes the Option as the activation cost.
+    ///
+    /// Returns `true` if the activation was dispatched. Mirrors the
+    /// per-permanent block of [`Game::resolve_delayed_options_matching`]: the
+    /// `DelayEffect` body runs first, then the Option is trashed via
+    /// `delete_permanent_with_cause` (cause = `Cost`) so Phase 7 replacement
+    /// windows still get a chance to intercept. If the body installs a
+    /// pending selection, the trash is deferred behind a
+    /// `MainPhaseActivation` lifecycle resume; if the *trash itself* parks a
+    /// replacement-window selection, the lifecycle is likewise re-parked so
+    /// the resume path re-drives the deletion's continuation — keeping this
+    /// path identical to the sibling turn-scan's post-delete handling.
+    pub fn activate_delayed_option_main(&mut self, option: PermanentHandle) -> bool {
+        if !self.delayed_option_main_activation_available(option) {
+            return false;
+        }
+
+        // Stable key `(owner, bottom_card_index)` survives the index shifts a
+        // `DelayEffect` body might cause. An Option has no digivolution stack,
+        // so the bottom card is the Option itself.
+        let key = {
+            let perm = &self.player(option.player).battle_area[option.index as usize];
+            (option.player, perm.card_sources[0].card_index)
+        };
+
+        self.enqueue_triggered(EffectTiming::DelayEffect, TriggerSource::Permanent(option));
+        self.drain_effect_queue();
+
+        // The body installed a selection (e.g. the digivolve pick on P-105 /
+        // LM-054). Defer the trash until the selection resolves.
+        if self.pending_selection.is_some() {
+            self.park_delayed_option_lifecycle(DelayedOptionLifecycleResume {
+                turn: u16::MAX,
+                kind: DelayedOptionLifecycleResumeKind::MainPhaseActivation,
+                pending_delete_key: Some(key),
+                skip_key: None,
+            });
+            return true;
+        }
+
+        // Re-find by stable key — the body may have shifted indices — then
+        // trash the Option as the activation cost.
+        if let Some(handle) =
+            self.find_delayed_permanent_by_key(key, u16::MAX, &[DelayTrigger::MainPhaseActivated])
+        {
+            self.delete_permanent_with_cause(handle, crate::replacement::ReplacementCause::Cost);
+        }
+
+        // The cost trash can itself park a `pending_selection` at a
+        // `WhenWouldLeaveBattleArea` / `WhenWouldBeDeleted` replacement window
+        // and early-return (`delete_permanent_with_cause`'s own doc: "caller
+        // re-drives"). Mirror the sibling turn-scan path
+        // (`resolve_delayed_options_matching`, `game_phases.rs`): re-park the
+        // lifecycle with `pending_delete_key: None, skip_key: Some(key)` so
+        // `resume_pending_delayed_option_lifecycle` re-drives the deletion's
+        // continuation rather than silently completing.
+        //
+        // For the `MainPhaseActivation` resume kind the re-driven continuation
+        // is currently a no-op cleanup — exactly ONE Option is activated by
+        // this action, so there are no sibling Delays to scan on resume, and
+        // the deferred-delete (`pending_delete_key`) is `None` because the
+        // delete was already attempted above. The re-park therefore costs
+        // nothing observable today, but it keeps the two post-delete fire
+        // sites (turn-scan and `[Main]`-phase activation) handling the
+        // parked-selection case IDENTICALLY, so a future change to the
+        // post-delete continuation (e.g. a faithful follow-up effect) cannot
+        // silently drop it from only the `[Main]`-phase path. None of the 5
+        // PUPPETS-G009 migrated Delay Options carry a trash-time replacement
+        // window, so this branch is latent — but the divergence from the
+        // engine's own established defensive pattern is closed regardless.
+        if self.pending_selection.is_some() {
+            self.park_delayed_option_lifecycle(DelayedOptionLifecycleResume {
+                turn: u16::MAX,
+                kind: DelayedOptionLifecycleResumeKind::MainPhaseActivation,
+                pending_delete_key: None,
+                skip_key: Some(key),
+            });
+        }
         true
     }
 }

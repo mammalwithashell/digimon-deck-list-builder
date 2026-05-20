@@ -77,6 +77,12 @@ pub(crate) enum DelayedOptionLifecycleResumeKind {
     StartTurn,
     EndTurn { ending_player: PlayerId },
     Event { timing: crate::enums::EffectTiming },
+    /// Standard `<Delay>` activated by a player `[Main]`-phase action
+    /// (PUPPETS-G009). The Option's `DelayEffect` body installed a pending
+    /// selection; once it resolves, the Option is trashed as the activation
+    /// cost. No turn-keyed scan resumes — this kind only carries the deferred
+    /// trash of the activated Option.
+    MainPhaseActivation,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -94,6 +100,13 @@ pub(crate) struct PendingWouldPlayResume {
     pub(crate) effective_cost: u16,
     pub(crate) origin: PendingWouldPlayOrigin,
     pub(crate) effect_initiated: bool,
+    /// PUPPETS-G030 — when `true`, the just-played permanent's own `[On Play]`
+    /// effects are NOT enqueued for this play event. Used by BT5-106's
+    /// [Security] clause ("Any [On Play] effects on Digimon played with this
+    /// effect don't activate."). Scoped strictly to the played permanent and
+    /// this single play event: other permanents' On Play, and every other
+    /// timing (OnEnterFieldAnyone / OnAllyPlayed), are unaffected.
+    pub(crate) suppress_on_play: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -517,6 +530,25 @@ pub struct Game {
     pub scheduled_effects: Vec<crate::scheduled_effects::ScheduledEffect>,
     /// Continuation for a scheduled-effect drain paused by a DSL selection.
     pub scheduled_drain_tail: Option<crate::scheduled_effects::ScheduledDrainTail>,
+
+    /// PUPPETS-G003 — provenance-keyed deletions scheduled for this turn's
+    /// end. An effect that plays a Digimon and must delete *that specific
+    /// permanent* at turn end ("At turn end, delete the Digimon this effect
+    /// played") pushes one entry here, keyed by a stable `ProvenanceToken`
+    /// (the played card's identity) rather than a battle-area index that can
+    /// shift. Drained by `scheduled_effects::fire_scheduled_provenance_deletions`
+    /// from `fire_end_of_your_turn`; the queue is cleared each turn so a
+    /// played permanent that already left is a silent no-op.
+    pub scheduled_provenance_deletions:
+        Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
+    /// PUPPETS-G016 — provenance-keyed deletions scheduled for the end of the
+    /// **opponent's** turn. Mirror of `scheduled_provenance_deletions` but
+    /// drained from `rotate_turn_player` (after `EndOfOpponentsTurn` observers
+    /// and scheduled-effect drains) rather than from `fire_end_of_your_turn`.
+    /// Used by P-165 ShoeShoemon ("At the end of your opponent's turn, delete
+    /// that token").
+    pub scheduled_provenance_deletions_opp:
+        Vec<crate::scheduled_effects::ScheduledProvenanceDeletion>,
     /// Continuation for a delayed-option lifecycle paused by a DelayEffect or
     /// delete/replacement selection. Re-entered from `resolve_selection`.
     pub(crate) pending_delayed_option_lifecycle: Option<DelayedOptionLifecycleResume>,
@@ -719,6 +751,8 @@ impl Game {
             dsl_outer_tail: None,
             scheduled_effects: Vec::new(),
             scheduled_drain_tail: None,
+            scheduled_provenance_deletions: Vec::new(),
+            scheduled_provenance_deletions_opp: Vec::new(),
             pending_delayed_option_lifecycle: None,
             pending_delayed_option_lifecycle_stack: Vec::new(),
             until_condition_dirty: false,
@@ -1277,6 +1311,28 @@ impl Game {
             return ReplacementCause::OpponentEffect;
         }
         ReplacementCause::OwnEffect
+    }
+
+    /// The observer-facing `EventCause` for the deletion currently being
+    /// finalized, applying override-first precedence:
+    ///   1. `current_deletion_event_cause_override` (a keyword route like
+    ///      Overclock refining the payload), else
+    ///   2. `current_deletion_cause` converted to `EventCause`.
+    ///
+    /// `None` outside an OnDeletion / OnAnyDeletion drain. Every deletion-cause
+    /// consumer that wants an `EventCause` (the `OnAnyDeletion`
+    /// `DeletedObjectSnapshot` in `combat.rs`, the OnDeletion `TriggerContext`
+    /// in `effect_queue.rs`) must route through this so they cannot drift.
+    /// (`effect_context::observed_deletion_cause` keeps its own copy because it
+    /// returns a `ReplacementCause`, not an `EventCause`.)
+    #[doc(hidden)]
+    pub(crate) fn observed_deletion_event_cause(
+        &self,
+    ) -> Option<crate::trigger_context::EventCause> {
+        self.current_deletion_event_cause_override.or_else(|| {
+            self.current_deletion_cause
+                .map(crate::trigger_context::EventCause::from)
+        })
     }
 
     /// Generalized cause inference for non-deletion Would-replacement fire-sites

@@ -126,6 +126,15 @@ pub struct PredicateSpec {
     pub source_permanent_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_digivolution_contains_name: Option<String>,
+    /// True when the carrier Digimon's printed rules text (effect_text +
+    /// inherited_text + security_text of the top card) contains the given
+    /// substring (case-insensitive). Evaluated against the subject permanent
+    /// in an inherited-aura `while_condition` context.
+    ///
+    /// Card driver: BT16-055 Namakemon — "[All Turns] While this Digimon has
+    /// [Pulsemon] in its text, it gets +1000 DP." PUPPETS-G025.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rules_text_contains: Option<String>,
 
     // Leaf — global / observer
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -176,6 +185,18 @@ pub struct PredicateSpec {
     pub event_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_name_contains: Option<String>,
+    /// True when every color of the triggering event card is within the given
+    /// set. Used to gate observers on "the just-played card is black/yellow
+    /// only" without listing individual card names. Mirrors `color_only` but
+    /// operates on the event payload rather than the predicate subject.
+    /// PUPPETS-G023.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_color_only: Option<Vec<ColorSpec>>,
+    /// True when the triggering event card has exactly N distinct colors.
+    /// Pair with `event_card_color_only` to express "exactly 2-color
+    /// black/yellow". PUPPETS-G023.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_color_count: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_cause: Option<EventCauseSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -122,7 +122,6 @@ fn bt15_003_top_branch_trashes_top_security_and_gains_memory() {
 }
 
 #[test]
-#[ignore = "pending: DSL/engine gap for trashing a selected or bottom security card"]
 fn bt15_003_bottom_branch_trashes_bottom_security_and_gains_memory() {
     let mut runner = start_attack_with_nyaromon(nyaromon_runner(&["SEC-BOTTOM", "SEC-TOP"]), true);
     let memory_before = runner.memory();

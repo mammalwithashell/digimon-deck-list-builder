@@ -17,6 +17,23 @@
 > `.claude/plans/pre-scaling-cleanup-batch.md` §2 for the closure-
 > index narrative.
 
+> **Tracker hygiene sweep — Puppets substrate sweep (2026-05-20):** 15 reusable
+> substrate gaps closed on branch `claude/stoic-moser-0ef79e`. Closed:
+> PUPPETS-G003 (provenance-bound turn-end self-delete), PUPPETS-G009 (Standard
+> Delay [Main]-phase activation), PUPPETS-G010 (`trash_bottom_security` DSL verb),
+> PUPPETS-G012 (deletion-cause predicate on OnDeletion), PUPPETS-G014
+> (origin-preserving union-zone play), PUPPETS-G015 (count-threshold conditional
+> modifier), PUPPETS-G016 (`play_token` bind_as + opponent-turn-end cleanup),
+> PUPPETS-G018 (stable source_permanent across mid-body delete), PUPPETS-G020
+> (hand-[Main] trash-cost preflight + self-digivolve), PUPPETS-G021 (hidden-zone
+> DP eval in union-zone filters), PUPPETS-G023 (event-card color predicates),
+> PUPPETS-G024 (narrow opponent-effect protection), PUPPETS-G025
+> (rules_text_contains predicate), PUPPETS-G028 (return-self-to-deck-bottom
+> activation cost + branch), PUPPETS-G030 (suppress_on_play flag). See
+> [docs/RUST_ENGINE_GAPS.md](../../../docs/RUST_ENGINE_GAPS.md) and
+> [qa/dsl-vocab-gaps.md](../../dsl-vocab-gaps.md) for engine-side and DSL-vocab
+> closure details.
+
 
 Date: 2026-05-03
 Archetype: Puppets / Nyabootmon
@@ -121,11 +138,11 @@ Resolver-backed corrected batches on 2026-05-03:
 | `EX11-023` | implemented | yellow Lv5 and Puppet Lv5 digivolve paths; Alliance; Scapegoat; mandatory lowest-level opponent Digimon delete on When Digivolving and End of Opponent's Turn; All Turns OPT other-Digimon-deleted optional level 4 or lower Puppet trash play | none identified in covered text |
 | `EX11-060` | implemented | start-of-turn memory setter; Token/Puppet deletion observer with visible suspend-this-Tamer Draw 1 branch; Overclock-only level 4 Puppet hand-play; Security play this Tamer without paying cost | none identified in covered text |
 | `EX11-061` | partial | Start of Your Main Phase memory gain; Security play this Tamer without paying cost | Puppet digivolve observer/effect-play branch needs `PUPPETS-G005`; exact turn-end cleanup needs `PUPPETS-G003` |
-| `P-229` | partial | Main and Security reveal-top-3 dual-bucket search for 1 Puppet Digimon and 1 LIBERATOR | option battle-area placement and Mirai-played event-gated Delay/reduced-cost digivolve need `PUPPETS-G004` and `PUPPETS-G009` |
-| `BT22-098` | partial | supported hand-origin Main/Security Shoemon/Arisa free-play; Arisa-suspend event-gated Delay with Puppet base and Puppet+LIBERATOR hand digivolve cost -3 | exact hand-or-trash origin-preserving play needs `PUPPETS-G014`; full security/Main option placement remains under `PUPPETS-G009` |
+| `P-229` | partial | Main and Security reveal-top-3 dual-bucket search for 1 Puppet Digimon and 1 LIBERATOR | Mirai-played event-gated Delay/reduced-cost digivolve needs `PUPPETS-G004`; Option-pipeline integrated battle-area placement needs `PUPPETS-G033` |
+| `BT22-098` | partial | supported hand-origin Main/Security Shoemon/Arisa free-play; Arisa-suspend event-gated Delay with Puppet base and Puppet+LIBERATOR hand digivolve cost -3 | exact hand-or-trash origin-preserving play needs `PUPPETS-G014`; full Option-pipeline integrated resolution (pending optional play + post-resolution battle-area placement) remains under `PUPPETS-G033` |
 | `LM-029` | partial | Main yellow Digimon effect-digivolve cost -3; mandatory Security add-this-option-to-hand tail | optional Security yellow DP<=2000 trash play and Scramble Delay trash-to-deck-top body need hidden-zone DP filtering, trash-to-deck-top movement, and mandatory-tail continuation under `PUPPETS-G017` |
-| `P-105` | partial | Main reveal-top-2 yellow-card search; battle-area delayed Option placement; inherited Security placement; scheduled Delay yellow hand digivolve cost -2 | standard Delay main-phase activation remains under `PUPPETS-G009` |
-| `LM-054` | partial | color-bypass use requirement; Main reveal-top-2 yellow/black search; inherited Security reveal/search plus battle-area placement; scheduled Delay yellow/black hand digivolve cost -2 | standard Delay main-phase activation remains under `PUPPETS-G009` |
+| `P-105` | implemented | Main reveal-top-2 yellow-card search; battle-area delayed Option placement; inherited Security placement; Delay yellow hand digivolve cost -2 with visible player-activated Main action after placing turn (`PUPPETS-G009` closed) | none identified in covered text |
+| `LM-054` | implemented | color-bypass use requirement; Main reveal-top-2 yellow/black search; inherited Security reveal/search plus battle-area placement; Delay yellow/black hand digivolve cost -2 with visible player-activated Main action after placing turn (`PUPPETS-G009` closed) | none identified in covered text |
 | `BT13-101` | partial | optional On Play PawnChessmon-named hand free-play; Security play self | All Turns 2-color black/yellow play observer needs event-card exact color/count predicates and visible source-bound suspend-cost preflight under `PUPPETS-G023` |
 | `BT16-055` | partial | black Lv3 and Pulsemon digivolve paths; <=3 security Blocker/Reboot grant branch | >=3 security narrow protection and inherited text-contains-Pulsemon aura need `PUPPETS-G024` and `PUPPETS-G025` |
 | `BT20-084` | partial | Sistermon Ciel cost-1 digivolve; On Play/When Digivolving CannotSuspend target; trash-resident optional free digivolve from trash; End of All Turns top stacked card to security via Track E | remaining partial status is card-local coverage, not `PUPPETS-G027` |
@@ -149,36 +166,38 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 |---|---|---|---|---|
 | `PUPPETS-G001` | dsl-gap / test-gap | open | Most Puppet core cards | none; archetype-local authoring backlog |
 | `PUPPETS-G002` | engine-gap / dsl-gap | closed for Puppet self-refire | refire primitive exists; `BT22-040` and `BT22-042` prove deleted-object gated self-refire fixtures, including visible optional refire and once-per-turn handling | `qa/archetype-qa/engine-gaps.md` |
-| `PUPPETS-G003` | engine-gap | open | `EX11-022`, `EX11-061`, related effect-play cleanup cards | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G003` | engine-gap | **closed** (Puppets substrate sweep 2026-05-20) | `EX11-022`, `EX11-061`, related effect-play cleanup cards | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G004` | hybrid | partially resolved | `BT22-098`, `P-229` | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G005` | engine-gap / test-gap | partially resolved | `EX9-067`, `EX11-061` | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G006` | test-gap | partially resolved | security end-of-battle play effects | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G007` | test-gap | closed | no current Puppet aura/Rush cards in the resolved pool | none |
 | `PUPPETS-G008` | dsl-gap | **closed** (Track I 2026-05-17) | `ST19-03` (IMPLEMENTED), `EX7-024` (substrate ready, test bodies pending), other inherited opponent-security DP auras | `qa/dsl-vocab-gaps.md`, `qa/resolved-gaps.md` |
-| `PUPPETS-G009` | engine-gap | open | `P-037`, `P-105`, `LM-035`, `LM-037`, `LM-054`, `BT22-098`, standard Memory Boost/Training/Scramble Delay options | `docs/RUST_ENGINE_GAPS.md` |
-| `PUPPETS-G010` | dsl-gap | open | `BT15-003`, top/bottom security-cost effects | `qa/archetype-qa/engine-gaps.md` |
+| `PUPPETS-G009` | engine-gap | **closed** (Puppets substrate sweep 2026-05-20) | `P-037`, `P-105`, `LM-035`, `LM-037`, `LM-054`, `BT22-098`, standard Memory Boost/Training/Scramble Delay options | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G010` | dsl-gap | **closed** (Puppets substrate sweep 2026-05-20) | `BT15-003`, top/bottom security-cost effects | `qa/archetype-qa/engine-gaps.md` |
 | `PUPPETS-G011` | engine-gap | closed | `BT22-002`, `EX9-033`, `EX11-023`, `EX11-060`, Token/Puppet/other-Digimon deletion observers | `docs/RUST_ENGINE_GAPS.md` |
-| `PUPPETS-G012` | dsl-gap | open | `EX11-020`, On Deletion cause-gated effects | `qa/dsl-vocab-gaps.md` |
+| `PUPPETS-G012` | dsl-gap | **closed** (Puppets substrate sweep 2026-05-20) | `EX11-020`, On Deletion cause-gated effects | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G013` | hybrid | open | `EX7-024`, source-scoped digivolve-into-trait cost reduction | `qa/dsl-vocab-gaps.md` |
-| `PUPPETS-G014` | hybrid | open | `ST19-08`, `BT22-098`, hand-or-trash filtered free-play security effects | `docs/RUST_ENGINE_GAPS.md` |
-| `PUPPETS-G015` | engine-gap / dsl-gap | open | `ST19-11`, count-threshold modifier branches | `qa/archetype-qa/engine-gaps.md` |
-| `PUPPETS-G016` | engine-gap | open | `P-165`, "that token" cleanup riders | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G014` | hybrid | **closed** (Puppets substrate sweep 2026-05-20) | `ST19-08`, `BT22-098`, hand-or-trash filtered free-play security effects | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G015` | engine-gap / dsl-gap | **closed** (Puppets substrate sweep 2026-05-20) | `ST19-11`, count-threshold modifier branches | `qa/archetype-qa/engine-gaps.md` |
+| `PUPPETS-G016` | engine-gap | **closed** (Puppets substrate sweep 2026-05-20) | `P-165`, "that token" cleanup riders | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G017` | hybrid | partially resolved | `BT22-042` closed by outer-tail rewrap for nested selections; `LM-029`, `P-156`, and other optional sub-effect + mandatory "Then" tails still need card-shaped adoption | `qa/dsl-vocab-gaps.md` |
-| `PUPPETS-G018` | hybrid | open | `EX9-032`, costed self-digivolve after deleting Token/Puppet cost body | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G018` | hybrid | **closed** (Puppets substrate sweep 2026-05-20) | `EX9-032`, costed self-digivolve after deleting Token/Puppet cost body | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G019` | engine-gap / dsl-gap | partially resolved | `EX9-032`, `EX7-027`, `ST19-11`, inherited Token/Puppet leave-prevention replacements | `docs/RUST_ENGINE_GAPS.md` |
-| `PUPPETS-G020` | hybrid | open | `BT22-036`, hand-main Arisa-gated ShoeShoemon trash-to-Shoemon source placement and hand-card digivolve | `qa/dsl-vocab-gaps.md` |
-| `PUPPETS-G021` | dsl-gap | open | `EX11-022`, hand-or-trash Puppet DP<=4000 free-play selection | `qa/dsl-vocab-gaps.md` |
+| `PUPPETS-G020` | hybrid | **closed** (Puppets substrate sweep 2026-05-20) | `BT22-036`, hand-main Arisa-gated ShoeShoemon trash-to-Shoemon source placement and hand-card digivolve | `qa/dsl-vocab-gaps.md` |
+| `PUPPETS-G021` | dsl-gap | **closed** (Puppets substrate sweep 2026-05-20) | `EX11-022`, hand-or-trash Puppet DP<=4000 free-play selection | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G022` | hybrid | closed | `EX11-060`, suspend-this-Tamer deletion observer with Overclock cause branch | `qa/dsl-vocab-gaps.md` |
-| `PUPPETS-G023` | hybrid | open | `BT13-101`, `P-136`, event-card/event-target predicates plus source-bound suspend-this-Tamer triggered cost | `qa/dsl-vocab-gaps.md`, `docs/RUST_ENGINE_GAPS.md` |
-| `PUPPETS-G024` | engine-gap / dsl-gap | open | `BT16-055`, narrow protection from opponent DP reduction and De-Digivolve | `docs/RUST_ENGINE_GAPS.md` |
-| `PUPPETS-G025` | dsl-gap | open | `BT16-055`, inherited carrier rules-text-contains-Pulsemon DP aura | `qa/dsl-vocab-gaps.md` |
+| `PUPPETS-G023` | hybrid | **closed** (Puppets substrate sweep 2026-05-20) | `BT13-101`, `P-136`, event-card/event-target predicates plus source-bound suspend-this-Tamer triggered cost | `qa/dsl-vocab-gaps.md`, `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G024` | engine-gap / dsl-gap | **closed** (Puppets substrate sweep 2026-05-20) | `BT16-055`, narrow protection from opponent DP reduction and De-Digivolve | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G025` | dsl-gap | **closed** (Puppets substrate sweep 2026-05-20) | `BT16-055`, inherited carrier rules-text-contains-Pulsemon DP aura | `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G026` | hybrid | closed | `BT20-084`, trash-resident observer and effect digivolve from trash into a field Sistermon Ciel | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G027` | engine-gap / dsl-gap | closed | `BT20-084`, move top stacked card to top security at End of All Turns | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
-| `PUPPETS-G028` | hybrid | open | `BT22-088`, optional triggered return-this-Tamer-to-deck cost before chained free-play branches | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
+| `PUPPETS-G028` | hybrid | **closed** (Puppets substrate sweep 2026-05-20) | `BT22-088`, optional triggered return-this-Tamer-to-deck cost before chained free-play branches | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G029` | dsl-gap | closed | `BT23-077`, self-scoped OnSuspend observer predicate | `qa/dsl-vocab-gaps.md` |
-| `PUPPETS-G030` | engine-gap / dsl-gap | open | `BT5-106`, Security play from trash while suppressing played Digimon On Play effects | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
+| `PUPPETS-G030` | engine-gap / dsl-gap | **closed** (Puppets substrate sweep 2026-05-20) | `BT5-106`, Security play from trash while suppressing played Digimon On Play effects | `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md` |
 | `PUPPETS-G031` | engine-gap / dsl-gap | open | `EX4-074`, End of Attack self-delete/opponent-delete/Recovery/conditional-hatch chain | `docs/RUST_ENGINE_GAPS.md` |
 | `PUPPETS-G032` | engine-gap | closed | `EX6-011`, Counter Blast DNA Digivolve activation from hand | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G033` | engine-gap | open | `BT22-098`, `P-229`, Option-pipeline integrated resolution with pending-optional-play + post-resolution battle-area placement | `docs/RUST_ENGINE_GAPS.md` |
+| `PUPPETS-G034` | engine-gap | open | edge case: un-resumed provenance-deletion parked tail in `fire_scheduled_provenance_deletions` / `fire_scheduled_provenance_deletions_opp` when replacement parks selection mid-drain | `docs/RUST_ENGINE_GAPS.md` |
 
 ## Detailed Gaps
 
@@ -206,7 +225,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G003: Effect-Played Permanent Provenance and Scheduled Turn-End Cleanup
 
 - **Type:** `engine-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). `schedule_delete_played_at_turn_end` provenance-bound turn-end self-delete landed. See `docs/RUST_ENGINE_GAPS.md` for engine-side details.
 - **Blocks:** `EX11-022` Karakurumon, `EX11-061` Mirai Kinosaki, and any Puppet effect that says to delete "the Digimon this effect played" at turn end.
 - **Effect text examples:** "At turn end, delete the Digimon this effect played."
 - **Why it matters:** The engine must remember exactly which permanent was played by a specific effect, then delete that permanent later if it is still present. Index-based battle-area references are not enough because other deletes/plays can shift slots.
@@ -269,18 +288,17 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G009: Standard Delay Activation as a Visible Main-Phase Action
 
 - **Type:** `engine-gap`
-- **Status:** open
-- **Blocks:** full no-approximations readiness for `P-037`, `P-105`, `LM-035`, `LM-037`, `LM-054`, and other standard Memory Boost/Training/Scramble-style Options. `BT22-098` also uses the same visible delayed-option placement/activation surface for its full Main/Security mirror.
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). `DelayTrigger::MainPhaseActivated` landed (commits `44ce72a4` + `9afdfdb7`). The earlier Track I attribution (commit `26e27ccc`, 2026-05-17) was optimistic — `DelayTrigger::MainPhaseActivated` and the action-mask activation path did not exist before this sweep. See `qa/resolved-gaps.md` § "Engine Gap: Standard Delay main-phase activation action (PUPPETS-G009)" and `docs/RUST_ENGINE_GAPS.md` for engine-side details.
+- **Blocks:** full no-approximations readiness for `P-037`, `P-105`, `LM-035`, `LM-037`, `LM-054`, and other standard Memory Boost/Training/Scramble-style Options. Standard `<Delay>` main-phase activation is now proven for `P-105` and `LM-054` (all tests passing). `BT22-098`'s distinct residual (Option-pipeline integrated resolution with pending optional play + post-resolution battle-area placement) is filed separately as `PUPPETS-G033`.
 - **Effect text examples:** `[Main] <Delay> (By trashing this card after the placing turn, activate the effect below.) Gain 2 memory.`
-- **Why it matters:** The current Rust Delay primitive parks Options on the battle area and fires `DelayEffect` through a scheduled turn/start/event scan. That supports placement and a deterministic delayed body, but standard `<Delay>` is a player-visible `[Main]` activation after the placing turn: the player chooses whether and when to trash the Option. Auto-firing the body hides that choice from the action mask.
-- **Evidence:** Batch 1 added `P-037`, `LM-035`, and `LM-037` against the current `kind: delay` lifecycle and marked them `PARTIAL` in `qa/qa-reports/validated_cards_dsl.json`. Batch 7 added `P-105` and `LM-054` with the same scheduled Delay workaround and explicit ignored tests for later Main-phase activation. The batches also tightened mandatory reveal picks so PASS is not legal when eligible cards exist.
-- **First test:** Place a standard Memory Boost as `OptionState::Delayed`, advance past the placing turn, enter its controller's Main phase, and assert the action mask exposes a field-effect activation for the delayed Option while PASS remains legal. Choosing the activation must trash the Option as a cost, then run the Delay body; declining must leave the Option on field.
-- **Implementation hint:** Reuse the existing field-effect action range for battle-area Options. Standard `kind: delay` likely needs an activation-mode distinct from event-gated/start/end scheduled Delay triggers so `classify_option_subtype` can still park the Option while the body is gated by a post-placement Main action.
+- **Evidence:** `p_105_delay_is_player_visible_main_activation_after_placing_turn`, `p_105_declining_delay_leaves_option_on_field`, `lm_054_delay_is_main_phase_action_after_placing_turn`, `lm_054_declining_delay_leaves_option_in_battle_area` — all pass without `#[ignore]`. Tests verify placing-turn mask gating, next-own-main-phase activation bit, PASS legality, Option-trash-as-cost on activation, and body resolution.
+- **First test:** closed by `p_105_delay_is_player_visible_main_activation_after_placing_turn`.
+- **Residual:** `PUPPETS-G033` — BT22-098 Option-pipeline integrated resolution (a different, narrower gap).
 
 ### PUPPETS-G010: Trash Selected or Bottom Security From a Visible Choice
 
 - **Type:** `dsl-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). `trash_bottom_security` DSL verb landed, unblocking `BT15-003`.
 - **Blocks:** `BT15-003` and any inherited/triggered cost that lets the player choose top or bottom security to trash.
 - **Effect text:** "By trashing the top or bottom card of your security stack, gain 1 memory."
 - **Why it matters:** The visible top-vs-bottom choice can be represented as an effect-choice prompt, and `trash_top_security` covers the top branch. The bottom branch currently needs either a native `trash_bottom_security`/`trash_selected_security` DSL step or a selected-security binding consumer; using raw Rust from `_examples/BT15-003.yaml` is not acceptable for production batch implementation.
@@ -301,7 +319,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G012: On Deletion Predicate for Deletion Cause
 
 - **Type:** `dsl-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). `event_cause` predicate threaded into OnDeletion `TriggerContext`, unblocking `EX11-020`.
 - **Blocks:** `EX11-020` and any On Deletion text gated on "deleted other than in battle" or similar cause restrictions.
 - **Effect text:** "[On Deletion] If deleted other than in battle, you may play 1 [Shoemon] trait from your hand without paying the cost."
 - **Why it matters:** The engine exposes `EffectContext::deletion_cause()` during OnDeletion observer resolution, but the YAML predicate vocabulary has no leaf for it. `replacement_cause` is replacement-context only and does not inspect deletion observer cause, so using it would over-fire on battle deletion.
@@ -323,7 +341,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G014: Filtered Hand-or-Trash Security Free-Play
 
 - **Type:** hybrid `engine-gap` / `dsl-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). Origin-preserving union-zone play (`select_union_zone` + `play_union_bound_free`) landed, unblocking `ST19-08` and `BT22-098`. Note: the `play_from_revealed_free`/`play_from_security_at` family is separate and remains open.
 - **Blocks:** `ST19-08`, `BT22-098`, and other security effects that play a filtered card from hand or trash.
 - **Effect text:** "[Security] You may play 1 [LIBERATOR] card with play cost 4 or less from your hand or trash without paying the cost."
 - **Why it matters:** A faithful implementation must expose one visible choice over both zones, enforce the trait and play-cost filter, preserve which zone the chosen card came from, and move/play the chosen card from that origin. Binding only a `CardHandle` without origin loses enough information to misroute the selected card.
@@ -334,7 +352,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G015: Count-Threshold Branches for Modifier Amounts
 
 - **Type:** `engine-gap` / `dsl-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). Count-threshold conditional modifier (`if` + `count_gte`) landed, unblocking `ST19-11`.
 - **Blocks:** `ST19-11` and any effect whose amount increases when a board-count threshold is met.
 - **Effect text:** "1 of your opponent's Digimon gets -3000 DP for the turn. If there are 3 or more Digimon, increase the DP reduction by -3000."
 - **Why it matters:** The first -3000 is target-specific and implemented. The second -3000 must be conditional on a total Digimon count across battle areas. Current aggregate predicates have known evaluation gaps in triggered conditions, so encoding the branch would over-fire if the count predicate evaluates true by default.
@@ -345,7 +363,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G016: Token Handle Provenance for "That Token" Cleanup
 
 - **Type:** `engine-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). `play_token` `bind_as` + scheduled token cleanup at end of opponent's turn landed, unblocking `P-165`. See `docs/RUST_ENGINE_GAPS.md` for engine-side details.
 - **Blocks:** `P-165` and any card that creates a token and later refers to "that token."
 - **Effect text:** "At the end of your opponent's turn, delete that token."
 - **Why it matters:** `play_token` can create the Familiar Token, but the YAML process cannot bind the resulting permanent handle or schedule an end-of-opponent-turn cleanup keyed to that exact token. A broad cleanup of any Familiar Token would delete the wrong permanent if multiple effects create tokens.
@@ -367,7 +385,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G018: Costed Self-Digivolve Stable Source Binding
 
 - **Type:** hybrid `engine-gap` / `dsl-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). Stable `source_permanent` re-locate by `CardHandle` across mid-body delete landed, unblocking `EX9-032`. See `docs/RUST_ENGINE_GAPS.md` for engine-side details.
 - **Blocks:** `EX9-032` and other effects that pay a field cost, then digivolve the resolving source card.
 - **Effect text:** `EX9-032` Karakurumon: "[On Play] [When Digivolving] By deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon may digivolve into a [Puppet] trait Digimon card in your hand without paying the cost."
 - **Why it matters:** The legal cost body can be below the resolving permanent in the battle area. Deleting that body shifts battle-area indices before a later `target: self` digivolve step runs, so an index-bound source can digivolve the wrong permanent or lose the original source. The cost preflight also needs to distinguish "legal cost body exists" from "the source itself is the only Puppet".
@@ -390,7 +408,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G020: Hand-Main Trash-to-Source Hand-Card Digivolve Chain
 
 - **Type:** hybrid `engine-gap` / `dsl-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). Hand-`[Main]` trash-cost preflight + bottom-source placement + self-digivolve landed, unblocking `BT22-036`.
 - **Blocks:** `BT22-036` Chaperomon.
 - **Effect text:** `BT22-036` hand text: "[Hand] [Main] If you have [Arisa Kinosaki], by placing 1 [ShoeShoemon] from your trash as any of your [Shoemon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements."
 - **Why it matters:** This is an activated hand effect with an Arisa board condition, an exact trash-card cost, a player-visible choice among your Shoemon stacks, bottom-source placement, and digivolving that chosen Shoemon into the resolving hand card. No part can be hidden or auto-picked because the trash cost and Shoemon target are player-visible choices.
@@ -401,7 +419,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G021: Hidden-Zone DP Predicate for Hand/Trash Free-Play
 
 - **Type:** `dsl-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). Hidden-zone DP eval in union-zone filters landed, unblocking `EX11-022`'s free-play selection.
 - **Blocks:** `EX11-022` Karakurumon and any hand-or-trash selection filtered by printed DP.
 - **Effect text:** `EX11-022`: "[On Play] [When Digivolving] You may play 1 [Puppet] trait Digimon card with 4000 DP or less from your hand or trash without paying the cost. At turn end, delete the Digimon this effect played."
 - **Why it matters:** The selection must include eligible hand and trash cards while excluding Puppet cards above 4000 DP. Broad trait-only selection would expose illegal choices; hand-only or trash-only selection would hide legal choices.
@@ -422,7 +440,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G023: Event Predicates Plus Source-Bound Suspend Cost
 
 - **Type:** hybrid `engine-gap` / `dsl-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). Event-card color predicates (`event_card_color_only`, `event_card_color_count`) landed, unblocking `BT13-101` and `P-136`. See `qa/dsl-vocab-gaps.md` for DSL-vocab closure details.
 - **Blocks:** `BT13-101` Miki Kurosaki & Megumi Shirakawa, `P-136` Arisa Kinosaki.
 - **Effect text:** `BT13-101`: "[All Turns] When you play a 2-color black/yellow Digimon, by suspending this Tamer, <Draw 1> and gain 1 memory." `P-136`: "[Your Turn] [Once Per Turn] When one of your Digimon digivolves into a Digimon with the [Puppet] trait, by suspending this Tamer, gain 1 memory."
 - **Why it matters:** The observer must inspect the triggering card/permanent rather than the observing Tamer, and it must expose the "by suspending this Tamer" activation cost as a legal preflight. An already-suspended source must not install a prompt, and accepting the trigger must pay the cost before the draw/memory body.
@@ -433,7 +451,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G024: Narrow Protection From Opponent DP Reduction and De-Digivolve
 
 - **Type:** `engine-gap` / `dsl-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). Security-gated narrow opponent-effect protection (`grant_narrow_opponent_effect_protection`) landed, unblocking `BT16-055`. See `docs/RUST_ENGINE_GAPS.md` for engine-side details.
 - **Blocks:** `BT16-055` Namakemon.
 - **Effect text:** "While you have 3 or more security cards, this Digimon isn't affected by your opponent's DP reduction effects and can't be de-digivolved by their effects."
 - **Why it matters:** This is not broad immunity. It protects only against two effect categories, only from the opponent, and only while the controller has 3 or more security. Modeling it as `CannotBeAffected` would over-block legal effects; omitting the source/opponent/category gates would produce illegal protection.
@@ -444,7 +462,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G025: Rules-Text Contains Predicate for Inherited Carrier Aura
 
 - **Type:** `dsl-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). `rules_text_contains` predicate landed, unblocking `BT16-055`'s inherited Pulsemon-text aura. See `qa/dsl-vocab-gaps.md` for DSL-vocab closure details.
 - **Blocks:** `BT16-055` Namakemon inherited effect.
 - **Effect text:** "[Your Turn] While this Digimon has [Pulsemon] in its text, it gets +1000 DP."
 - **Why it matters:** The predicate is over the carrier stack's printed rules text, not card name, traits, or colors. A name-based approximation would miss non-Pulsemon cards with Pulsemon in text and could include cards that only have Pulsemon in their name.
@@ -473,7 +491,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G028: Optional Triggered Return-Self Cost Before Chained Free-Play Branches
 
 - **Type:** hybrid `engine-gap` / `dsl-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). Return-self-to-deck-bottom activation cost + branch (pre-cost decline prompt) landed, unblocking `BT22-088`. See `qa/dsl-vocab-gaps.md` for DSL-vocab closure details.
 - **Blocks:** `BT22-088` Arisa Kinosaki.
 - **Effect text:** "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] with a different card number in your hand without paying the cost, or play 1 [Shoemon] from your hand or trash without paying the cost."
 - **Why it matters:** The source Tamer is the activation cost, and after paying it the player chooses between distinct free-play branches with their own legal target sets. Auto-returning the Tamer or auto-picking a branch would hide player-visible decisions.
@@ -495,7 +513,7 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 ### PUPPETS-G030: Effect Play With Played-Digimon On Play Suppression
 
 - **Type:** `engine-gap` / `dsl-gap`
-- **Status:** open
+- **Status:** **closed** — Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). `suppress_on_play` flag on effect-play helpers landed, unblocking `BT5-106`. See `docs/RUST_ENGINE_GAPS.md` and `qa/dsl-vocab-gaps.md` for closure details.
 - **Blocks:** `BT5-106` Demonic Disaster and source/security play effects that say the played Digimon's `[On Play]` effects do not activate.
 - **Effect text:** "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
 - **Why it matters:** Ordinary play-from-trash support is not enough: the selected Digimon enters play, but its own On Play clauses must be suppressed only for this effect-played permanent. Broadly disabling all On Play effects or omitting the play source provenance would misfire elsewhere.
@@ -523,6 +541,26 @@ The earlier ST19 follow-up batch used the broader Puppet/ST19 card group. In the
 - **Why it matters:** This is a defender-side Counter-window activation that selects a specific field Digimon plus a specific hand material, then DNA digivolves into the hand card without paying cost. It must be exposed through the Counter action mask and pending-selection flow, not approximated as normal main-phase DNA.
 - **Evidence:** Closed by the CounterTiming Blast DNA slice. `EX6-011.yaml` declares `alt_paths.kind: blast_dna_digivolve` with named Durandamon + BryweLudramon materials. Runtime test `ex6_011_counter_blast_dna_uses_durandamon_and_bryweludramon` asserts the Counter action exposes the field material, the hand-material pending selection follows, the resulting stack is `Durandamon/BryweLudramon/EX6-011`, and the DNA-origin delete choice is surfaced.
 - **Verification:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex6_011_counter_blast_dna_uses_durandamon_and_bryweludramon ex6_011_has_standard_red_lv6_and_dna_red_black_lv6_routes ex6_011_dna_origin_tail_dedigivolves_all_then_surfaces_delete_choice`.
+
+### PUPPETS-G033: BT22-098 Option-Pipeline Integrated Resolution — Pending-Optional-Play + Post-Resolution Battle-Area Placement
+
+- **Type:** `engine-gap`
+- **Status:** open
+- **Blocks:** `BT22-098` Unique Emblem: Fable Waltz (full `[Main]`/`[Security]` Option pipeline path), `P-229` Unique Emblem: Narrative Ronde (Option pipeline battle-area placement).
+- **Effect text (BT22-098):** "[Main] You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand or trash without paying the cost. Then, place this card in the battle area."
+- **What is still open:** When a standard Option card whose `[Main]` clause installs a pending selection (e.g. a union-zone play choice) is played through the normal Option pipeline (`play_option_from_hand`), the pipeline returns `OptionPlayResult::Pending` before the Option can be placed or disposed. The integrated path — run the optional play to completion, then place the Option as a `Delayed` battle-area permanent — is not yet proven. The three `#[ignore]`d tests in `code/digimon-engine/tests/cards_behavioral/bt22/bt22_098.rs` document this precisely: `bt22_098_option_pipeline_places_as_delayed_option` (todo!), `bt22_098_full_main_decline_still_places_as_delayed_option` (todo!), and `bt22_098_security_activates_main_effects` (todo!). Until the pipeline resolves the pending optional-play selection and then performs the post-resolution battle-area placement as a Delayed Option, the Option card's full flow cannot be verified end-to-end.
+- **Why it matters:** Standard Delay activation is proven (PUPPETS-G009 closed). The gap here is specifically the engine returning `Pending` from the Option pipeline when the `[Main]` clause installs an in-effect selection, before the Option has been placed. The pipeline must be able to: (a) park and resolve the optional selection, (b) complete any "Then" placement tail, and (c) install the card as `OptionState::Delayed { trigger: DelayTrigger::MainPhaseActivated, .. }`.
+- **First test:** `bt22_098_option_pipeline_places_as_delayed_option` (un-ignore and implement): play BT22-098 through `play_option_from_hand`, verify the card is in `OptionState::Delayed` in the battle area after the optional Shoemon/Arisa selection resolves; verify declining the optional play also places the card as a Delayed Option.
+- **Implementation hint:** The Option pipeline's pending-selection continuation must recognize the "pending optional play body + mandatory placement tail" pattern and resume placement after the selection resolves. Alternatively, the placement tail may need to be explicitly authored as a post-body step in the YAML so the pipeline dispatches it after the body's `Pending` resolves.
+
+### PUPPETS-G034: Un-Resumed Provenance-Deletion Parked Tail (Edge Case)
+
+- **Type:** `engine-gap`
+- **Status:** open
+- **Blocks:** no currently-authored Puppet card triggers this path; it is an unexercised edge case in the provenance-deletion drain.
+- **What is the issue:** `fire_scheduled_provenance_deletions` (`code/digimon-engine/src/scheduled_effects.rs`) and `fire_scheduled_provenance_deletions_opp` preserve their unprocessed tail when a `WhenWouldBeDeleted` replacement (e.g. `<Scapegoat>`) parks a pending selection mid-drain. The unprocessed entries are written back to `game.scheduled_provenance_deletions` (or `_opp`), but there is no dedicated continuation path (`resume_provenance_deletions`) analogous to `resume_scheduled_drain`. The entries will only be re-drained if the same turn-end path re-enters `fire_scheduled_provenance_deletions` — which only happens at the next turn-end, not when the parked selection resolves. This means if two provenance-deletion entries exist in the same turn and the first one's replacement parks a selection, the second entry is silently deferred until the next turn-end.
+- **Why it matters:** This is a narrow, currently-unexercised edge case. It would only manifest if multiple effect-played permanents with end-of-turn deletion riders are on the board in the same turn AND a replacement intercepts one of them and parks a selection. Under normal Puppet gameplay a single cleanup entry per turn is the common case and this is a silent no-op. However, for correctness the drain should be re-entered after the replacement selection resolves, analogous to `resume_scheduled_drain` called from `effect_queue.rs:2801`.
+- **Recommended fix:** Add a `resume_provenance_deletions` function in `scheduled_effects.rs` that re-drains `game.scheduled_provenance_deletions` (and/or `_opp`), and call it from the selection-resolution path alongside `resume_scheduled_drain`.
 
 ## Cross-Archetype Spec Tags
 

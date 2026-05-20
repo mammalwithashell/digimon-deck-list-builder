@@ -298,7 +298,8 @@ ctx.play_from_hand_with_cost(player, hand_index, CostDelta) -> Option<PermanentH
 ctx.play_from_hand_free(player, hand_index) -> Option<PermanentHandle>
 ctx.play_from_hand_free_with_provenance(player, hand_index) -> Option<(PermanentHandle, ProvenanceToken)>
 ctx.play_from_trash_with_cost(player, trash_index, CostDelta) -> Option<PermanentHandle>
-ctx.play_from_trash_free_unsuspended(player, trash_index) -> Option<PermanentHandle>
+ctx.play_from_trash_free_unsuspended(card) -> Option<PermanentHandle>
+ctx.play_from_trash_free_unsuspended_suppress_on_play(card) -> Option<PermanentHandle>
 ctx.play_from_security(player) -> Option<PermanentHandle>
 ctx.play_from_materials(carrier, source_index, CostDelta, bind_target: Option<...>) -> Option<PermanentHandle>
 ctx.play_to_breeding_from_hand(player, hand_index) -> bool
@@ -315,6 +316,7 @@ ctx.effect_initiated_dna_digivolve_with_provenance(...) -> Option<ProvenanceToke
 
 ctx.recover_from_deck(player, count: u8) -> u8       // mod.rs:4197 — "recover N security"
 ctx.trash_top_security(player) -> bool                // mod.rs:1863
+ctx.trash_bottom_security(player) -> bool
 ctx.add_top_security_to_hand(player) -> bool          // mod.rs:2225
 ctx.add_pending_security_to_hand() -> bool            // mod.rs:2324
 ```
@@ -326,6 +328,17 @@ discriminate effect-initiated plays from natural plays. The
 the new `CardSource` rather than the battle-area slot — use these when later
 cleanup or suppression must identify the same created object after zone
 movement.
+
+`play_from_trash_free_unsuspended_suppress_on_play` (PUPPETS-G030) is the
+On-Play-suppressing variant: the played Digimon's own `[On Play]` effects do
+**not** activate for that play event. The suppression is scoped strictly to
+the just-played permanent and that single play — `OnEnterFieldAnyone` /
+`OnAllyPlayed` broadcasts and every other permanent's triggers fire normally.
+It threads a `suppress_on_play` bool through `play_from_trash_with_cost_suppress`
+→ the cost-reduction chain → `PendingWouldPlayResume` → the final
+`commit_play_from_hand_card_no_replace`, which gates exactly the `fire_on_play`
+call for that permanent. Surfaced to the DSL as `suppress_on_play: true` on the
+`play_from_trash_free` step (BT5-106 Demonic Disaster's [Security] clause).
 
 ### Granted triggered effects (Track H)
 
@@ -463,8 +476,22 @@ ctx.grant_keyword_with_until_condition(target, keyword, predicate)
 ctx.add_declarative_player_modifier(target_player, modifier, value, expiry)
 ctx.add_effect_immunity_modifier(target, source_kind, controller_filter, expiry) -> bool
 ctx.grant_zone_return_immunity_to_opponent_effects(target, expiry)
+ctx.grant_narrow_opponent_effect_protection(target, expiry)
 ctx.ignore_option_color_requirement(target_player, expiry)
 ```
+
+`grant_narrow_opponent_effect_protection` (`effect_context/mod.rs`) installs
+the narrow "can't have its DP reduced **by your opponent's effects** and
+isn't affected by ＜De-Digivolve＞ effects" protection bundle (PUPPETS-G024,
+BT16-055 Namakemon). Both protections are genuinely opponent-effect-scoped:
+`ImmuneFromDPMinus` is installed with an `EffectImmunityFilter { controller:
+OpponentOnly }` (consulted by `Game::effective_dp`, which suppresses only
+negative `ChangeDp` deltas whose `source_player` is an opponent), and
+`CannotBeDeDigivolved` is installed via the `ModifierEntry::passive_replacement`
+route so its `default_passive_cause_filter` (`ReplacementCause::OpponentEffect`)
+takes effect. The controller's own DP-reduction and own De-Digivolve still
+apply. Prefer this over a raw `add_modifier(ImmuneFromDPMinus / ...)` pair,
+which installs the broad unscoped variant.
 
 See §5 for `ModifierType` and `Expiry` values. The `add_declarative_*` /
 `grant_declarative_*` variants tag the modifier as **declarative
@@ -483,6 +510,8 @@ for the full re-evaluation contract.
 ```rust
 ctx.schedule_delayed(when: EffectTiming, body: Effect)
 ctx.schedule_delayed_with_runtime(when, body, captured_bindings)
+ctx.schedule_delete_at_end_of_turn(permanent: PermanentHandle)
+ctx.schedule_delete_at_end_of_opponents_turn(permanent: PermanentHandle)
 ctx.place_self_as_delay_option_permanent()
 ```
 
@@ -493,6 +522,38 @@ on `Game.scheduled_effects` keyed to a future timing
 so result-bound predicates inside the body resolve against the original
 selections after the schedule drains. Use this for "at the end of your next
 turn, …" and Delay Option bodies.
+
+`schedule_delete_at_end_of_turn` (PUPPETS-G003) schedules a deletion of
+*exactly* `permanent` at the end of the **current** turn — for card text "At turn
+end, delete the Digimon this effect played" (EX11-022 Karakurumon, EX11-061
+Mirai Kinosaki). Pass the `PermanentHandle` returned by a free-play call
+(`play_from_hand_free`, `play_union_bound_free`, `play_token` bind_as, …)
+immediately, while the handle is still valid: the method captures the
+permanent's stable `ProvenanceToken` (its top card's identity) and pushes a
+`ScheduledProvenanceDeletion` onto `Game.scheduled_provenance_deletions`. The
+queue is drained by `scheduled_effects::fire_scheduled_provenance_deletions`
+from `fire_end_of_your_turn` (after the `EndOfYourTurn` observers). At drain
+time the token is resolved against the live battle areas: a still-present
+permanent is deleted as the controller's own effect (cause `OwnEffect`); if
+the played permanent already left, the entry is a silent no-op. Because the
+deletion is keyed to a provenance identity, not a battle-area index, it
+targets the right permanent even after other permanents enter or leave and
+shift indices. A handle that no longer points at a live permanent is ignored
+(nothing is scheduled).
+
+`schedule_delete_at_end_of_opponents_turn` (PUPPETS-G016) is the opponent-turn
+variant — for card text "At the end of your opponent's turn, delete that token"
+(P-165 ShoeShoemon). Pushes to `Game.scheduled_provenance_deletions_opp`; drained
+in `rotate_turn_player(ending_player)` only for entries whose `controller !=
+ending_player` (i.e., when the ending player is the controller's opponent). The
+provenance-identity guarantees are identical to the your-turn variant.
+
+In DSL YAML, use the `at:` field on `schedule_delete_played_at_turn_end`:
+```yaml
+- schedule_delete_played_at_turn_end:
+    binding: <name>
+    at: opponents_turn   # omit or write `at: your_turn` for the default
+```
 
 ### OnDeletion cause accessors
 
@@ -1181,7 +1242,7 @@ storage entry, lifecycle, and DSL string published.
 | `CannotAddMemory` | permanent | `Game::adjust_memory_by_effect` |
 | `CannotAddSecurity` | permanent | `Game::add_security_by_effect` |
 | `ChangeEndTurnMinMemory` | permanent / player | `Game::rotate_turn_player` clamps the ending player's memory before sign flip |
-| `ImmuneFromDPMinus` | permanent | `Permanent::dp_modifier_apply` for negative DP modifiers |
+| `ImmuneFromDPMinus` | permanent | `Game::effective_dp` — suppresses negative `ChangeDp` deltas; `effect_immunity_filter.controller` scopes which deltas (`OpponentOnly` = opponent-source only, `Any`/unset = all). See `grant_narrow_opponent_effect_protection` |
 | `ImmuneFromStackTrashing` | permanent | source-trash mutation (the inherited stack-peel path) |
 | `CannotBeAffected` | permanent | already wired via `effect_immunity_filter`; honors source-kind + controller filter |
 | `DisableEffect` | permanent | `effect_queue::permanent_activation_blocked_for_timing` reads `entry.disable_effect_timing` and skips dispatch for that timing only |
@@ -2080,7 +2141,7 @@ Options are *ephemeral*: they do not normally live on the field. The exceptions 
 | Subtype | Disposition | Timing(s) fired |
 |---------|-------------|-----------------|
 | **Standard** | Body drains, then self-trashes via `WhenWouldBeTrashed` (cause `Cost`). | `OnUseOption` (global) → `OptionMain` (this card) → cleanup. |
-| **Delay** | Body drains, card parks on field as `OptionState::Delayed`. At the scheduled turn end, a `DelayEffect` fires and the card trashes via `WhenWouldLeaveBattleArea` + `WhenWouldBeDeleted`. | `OnUseOption` → `OptionMain` (install delay) → later: `DelayEffect` → leave/deleted replacement windows → trash. |
+| **Delay** | Body drains, card parks on field as `OptionState::Delayed`. **Standard `<Delay>`** (`DelayTrigger::MainPhaseActivated`) is activated by a player-visible `[Main]`-phase `FIELD_EFFECT` action — `Game::activate_delayed_option_main` runs the `DelayEffect` body, then trashes the Option as the cost (PUPPETS-G009, RULES_CONTEXT 16-16). Engine-scheduled triggers (`EndOfThisTurn` / `EndOfYourNextTurn` / `StartOfYourNextTurn` / `OnEvent`) instead auto-fire at the matching turn-scan / event. The card trashes via `WhenWouldLeaveBattleArea` + `WhenWouldBeDeleted` in all cases. | `OnUseOption` → `OptionMain` (install delay) → later: `DelayEffect` (player `[Main]` action or scheduled scan) → leave/deleted replacement windows → trash. |
 | **Plug-In (Link)** | Body drains, player selects a legal host, card attaches sideways into `host.linked_cards`. `OnLink` fires globally after attach. Effects on the attached card flagged `.linked()` fire off the host's timings. | `OnUseOption` → `OptionMain` (runs `.link(cost, filter)` mask + prompt + attach) → `OnLink` (global). |
 | **Training** | Body drains, card parks on field as `OptionState::Training`. At the owner's next breeding-hatch, an `OnTrainingTrash` observer fires on the specific Training permanent being trashed, then `delete_permanent_with_cause(Cost)` routes it to the trash. | `OnUseOption` → `OptionMain` → later: `OnTrainingTrash` → deletion. |
 
@@ -2212,7 +2273,7 @@ digivolution card, performs the normal draw and rule check, then fires
 | `OnUseOption` | Global observer | Any Option card is played (both players' listeners hear it). |
 | `OnOptionTrashed` | Global observer | A persistent field Option is trashed through `Game::trash_field_option`; `EffectContext::option_last_field_state()` exposes the last lifecycle state. |
 | `OptionMain` | This Option | The played Option's own body — pre-existing variant, now dispatched. |
-| `DelayEffect` | This Option | Scheduled turn-end landing for a `Delayed` Option. |
+| `DelayEffect` | This Option | A `Delayed` Option's body. Standard `<Delay>` (`DelayTrigger::MainPhaseActivated`) fires via the controller's `[Main]`-phase activation action (`Game::activate_delayed_option_main`); scheduled triggers fire at the matching turn-scan / event. |
 | `OnLink` | Global observer | After a Plug-In attaches to its host. |
 | `OnLinkedCardTrashed` | Global observer | A linked card leaves its host via trash (host death, return-to-hand, return-to-deck). Mirrors DCGO `OnLinkCardDiscarded`. |
 | `OnUnlink` | Global observer | **Reserved** for clean unlink paths. Rust-engine-specific; DCGO folds unlinks into `OnLinkCardDiscarded` + zone checks. Not yet fired. |
@@ -2227,7 +2288,16 @@ Effect::new(card, EffectTiming::None)
     .process(|ctx| { ctx.gain_memory(2); })
     .build();
 
-// Delay Option body — trigger is EndOfThisTurn | EndOfYourNextTurn.
+// Standard <Delay> Option body — player-visible [Main]-phase activation.
+// `DelayTrigger::MainPhaseActivated` parks the Option; the controller takes a
+// FIELD_EFFECT action on a later main phase to trash it and run the body.
+Effect::new(card, EffectTiming::None)
+    .delay(DelayTrigger::MainPhaseActivated)
+    .process(|ctx| { ctx.gain_memory(2); })
+    .build();
+
+// Engine-scheduled Delay body — auto-fires at the turn-scan landing.
+// Trigger is EndOfThisTurn | EndOfYourNextTurn | StartOfYourNextTurn | OnEvent.
 Effect::new(card, EffectTiming::None)
     .delay(DelayTrigger::EndOfYourNextTurn)
     .process(|ctx| { ctx.draw(2); })

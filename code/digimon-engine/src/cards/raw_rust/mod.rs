@@ -87,7 +87,7 @@ fn bt24_012_would_leave_replacement(_handle: crate::card_source::CardHandle) -> 
 /// [G-ADD-TOP-SECURITY-TO-HAND]:
 ///
 /// **DSL gap**: No `add_top_security_to_hand` verb exists in `digimon-dsl/src/step.rs`.
-///   The only security-removal verb is `trash_top_security` (moves to trash).
+///   The security-removal verbs are `trash_top_security` (moves top card to trash) and `trash_bottom_security` (moves bottom card to trash).
 ///   `add_top_security_to_hand` would lower to a new `EffectContext` method that
 ///   moves the card to the owner's hand instead of trash.
 ///
