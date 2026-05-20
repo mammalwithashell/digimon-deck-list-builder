@@ -3,6 +3,24 @@
 Operational guide for the Digimon TCG RL training pipeline.
 For architecture details, see `../AGENTS.md`.
 
+> ## ⚠️ Action-space break — 2026-05-20 (Task S1.3)
+>
+> The engine action space grew from **2168** to **2192** actions (Task S1.3
+> appended a breeding-carrier source-selection sub-range). This widens the
+> policy/value action head, so **every model trained against the pre-S1.3
+> 2168-action engine is incompatible and must be retrained from scratch**
+> against a post-S1.3 engine — checkpoints cannot be resumed across the
+> bump, and old ONNX exports cannot be served (see
+> [MODEL_CATALOG.md](MODEL_CATALOG.md)).
+>
+> The project owner has explicitly accepted this break. After rebuilding
+> the PyO3 bindings (`cd code/digimon-engine-py && maturin develop`), all
+> `pilot_training` / `architect_training` runs start fresh. The default
+> `standard_lite_v2` observation tensor is size-unchanged; only the action
+> dimension (and its mask array) grew 2168 → 2192. The `standard_full_v2`
+> profile additionally grew its `action_id_features` block — see
+> [TENSOR_SPEC.md](TENSOR_SPEC.md).
+
 ---
 
 ## 1. Quick Reference Commands
@@ -207,7 +225,7 @@ variants = generate_variants(
 ### Standard Training Chain
 
 ```
-DigimonEnv                        (1375-obs, 2168-action, reward shaping)
+DigimonEnv                        (1375-obs, 2192-action, reward shaping)
   → OpponentWrapper              (single-agent MDP, auto-plays P2)
   → DeckPoolWrapper              (agent deck variation, optional)
   → GauntletWrapper              (opponent deck sampling from MetaGauntlet, optional)

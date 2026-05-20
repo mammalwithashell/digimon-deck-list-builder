@@ -58,17 +58,26 @@ Top-level sections:
 
 `standard_full_v2` is an opt-in experimental profile. `standard_lite_v2`
 remains the default pilot observation profile. Full v2 extends
-`standard_lite_v2` with `action_id_features[2168][16]`.
+`standard_lite_v2` with `action_id_features[2192][16]`.
+
+> **Task S1.3:** `ACTION_SPACE_SIZE` grew `2168 → 2192` (appended
+> breeding-carrier source-selection sub-range). `action_id_features` has
+> one row per action ID, so it gained 24 rows (`24 * 16 = 384` floats):
+> `tensor_size` `43008 → 43392`, `reserved` shifted `42752 → 43136`, and
+> `feature_schema_version` bumped to `standard_full_v2.2`. The
+> `ACTION_SPACE_SIZE`-independent `standard_compact_v1` and `standard_lite_v2`
+> profiles are unchanged in size (their action mask, delivered separately,
+> grows `2168 → 2192` automatically).
 
 | Field | Value |
 |---|---:|
 | `id` | `standard_full_v2` |
 | `version` | 2 |
 | `tensor_version` | 2 |
-| `feature_schema_version` | `standard_full_v2.1` |
-| `tensor_size` | 43008 |
+| `feature_schema_version` | `standard_full_v2.2` |
+| `tensor_size` | 43392 |
 | `card_id_slot_count` | 542 |
-| `scalar_slot_count` | 42466 |
+| `scalar_slot_count` | 42850 |
 
 Top-level sections:
 
@@ -81,8 +90,8 @@ Top-level sections:
 | `known_zone_cards` | 3968 | `[120][8]` | 960 |
 | `decision_context` | 4928 | `[64]` | 64 |
 | `pending_choice_features` | 4992 | `[32][96]` | 3072 |
-| `action_id_features` | 8064 | `[2168][16]` | 34688 |
-| `reserved` | 42752 | `[256]` | 256 |
+| `action_id_features` | 8064 | `[2192][16]` | 35072 |
+| `reserved` | 43136 | `[256]` | 256 |
 
 `action_id_features[action_id]` fields:
 

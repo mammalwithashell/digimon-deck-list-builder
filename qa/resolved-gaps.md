@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-05-17
+Last updated: 2026-05-20
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -1881,6 +1881,21 @@ The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE
   - **DSL:** `suppress_on_play: true` flag on `play_from_hand` / `play_from_hand_free` / `play_from_trash` / `play_from_trash_free` / `play_from_materials` step specs (defaults to `false`, omitted from serialization); lowered through `compile.rs` and `dsl_cards/step/play_digivolve.rs`.
   - **Card:** BT5-106's [Security] slice was authored in `code/digimon-engine/cards/bt5/BT5-106.yaml` (previously omitted pending this gap).
 - **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt5_106` (9 pass, incl. `bt5_106_security_suppresses_on_play_effects_of_played_digimon` and the sibling-On-Play regression `bt5_106_security_suppression_does_not_silence_a_sibling_on_play`); `cargo test ... --features dsl-yaml-loader --test dsl -- suppress_on_play` (3 pass — YAML→compiled flag lowering + default-false + end-to-end suppression); full engine suite green.
+
+## Engine + DSL Gap: Source selection from a breeding-area carrier — RESOLVED 2026-05-20 (Phase 2 Track J Task S1.3) [G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES residual]
+
+- **Severity:** 🔴 BLOCKING (closed)
+- **Discovered in:** Royal Knights DSL assessment (2026-05-03); narrowed by Track J S1.2 (2026-05-19) to the breeding-carrier residual.
+- **Card(s):** `BT13-112` Omnimon, `BT13-110` Royal Knights of the Purge, `EX11-053` Omekamon, `BT13-019` Gankoomon, `BT23-072` King Drasil_7D6 — all play Royal-Knight sources out of "the digivolution cards of your Digimon in the breeding area" (a King Drasil breeding-area carrier the controller owns).
+- **What was missing:** `select_material` / `select_count_capped_multi(CountCappedZone::Material)` encoded each source pick as `SOURCE_SELECT_START + perm.index * SOURCES_PER_FIELD + source_index`. A breeding-area carrier resolves to a sentinel `PermanentHandle { player, index: BREEDING_TARGET (=14) }`; candidate collection read `battle_area.get(14)` → `None` → zero candidates → the selection step no-op'd, and the would-be action ID `2168` fell outside the action space. King Drasil source picks were therefore unrepresentable.
+- **Resolution (Task S1.3):**
+  - **Action space:** appended a 24-slot `BREEDING_SOURCE_SELECT` sub-range (`BREEDING_SOURCE_SELECT_START..END` = `2168..2192`, `2` carriers × `SOURCES_PER_FIELD`), keyed by the carrier's owning player. `ACTION_SPACE_SIZE` raised `2168 → 2192` — a deliberate action-space version bump. New `encode_breeding_source_select` / `decode_breeding_source_select` helpers in `action/space.rs`.
+  - **Engine:** new `material_carrier_permanent` / `material_zone_slice` / `material_zone_geometry` helpers in `effect_context/selections.rs` — the single battle-vs-breeding branch point on the `BREEDING_TARGET` sentinel. `select_count_capped_multi` (candidate collection, per-pick filter loop, and all three `card_sources` re-derivations inside the recursive resolution callback) and `select_material` route through them; `range_start` is threaded through the recursive count-capped trampoline. `select_material`'s callback recovers the source index via `range_start` instead of `decode_source_select`.
+  - **DSL:** `has_material_candidates` and the `install_select_material` filter/bind closures resolve their carrier via `material_carrier_permanent`, so a breeding King Drasil carrier yields its real sources and `completes_synchronously` accounting is correct.
+  - **Explain:** `explain_selection` gained a `BREEDING_SOURCE_SELECT` branch (`kind = SourceSelect`, `target_zone = Breeding`, `target_index = carrier owner`).
+  - **Tensor:** `standard_full_v2`'s `action_id_features` grew 24 rows (`tensor_size` `43008 → 43392`, `feature_schema_version` `standard_full_v2.2`, LAYOUT_HASH recomputed). `standard_compact_v1` / `standard_lite_v2` are size-unchanged; their action mask grows `2168 → 2192` automatically.
+- **Model-compat note:** the `ACTION_SPACE_SIZE` bump changes the policy/value head width — existing trained RL models must be retrained. Flagged in `docs/MODEL_CATALOG.md` and `docs/TRAINING_RUNBOOK.md`.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection -- breeding_carrier`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- select_materials::select_materials_breeding_carrier` (incl. the `distinct_by`-on-breeding recursive-path test); `cargo test --manifest-path code/digimon-engine/Cargo.toml --test mask_and_tensor` (mask length 2192, breeding-source mask survival, `standard_full_v2` layout); full engine suite green. **Remaining work is card-authoring only** (the Rush grant + production YAML for the five cards).
 
 ## DSL Gap: `AltPathSpec.condition` field for alt-digivolve activation gates — RESOLVED 2026-05-15 (Phase 1)
 
