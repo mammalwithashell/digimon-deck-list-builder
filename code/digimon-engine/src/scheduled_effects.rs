@@ -192,7 +192,8 @@ pub struct ScheduledProvenanceDeletion {
 /// The deletion routes through `delete_permanent_with_cause`, which honours
 /// `WhenWouldBeDeleted` replacement windows (e.g. `<Scapegoat>`). If a
 /// replacement parks a selection, the remaining entries are preserved on the
-/// queue and the caller's normal selection-resolution path re-drives them.
+/// queue; re-draining them is guaranteed only via an end-turn continuation
+/// resume (i.e. `resume_scheduled_drain` called from the end-turn path).
 pub fn fire_scheduled_provenance_deletions(game: &mut Game) {
     use crate::replacement::ReplacementCause;
 

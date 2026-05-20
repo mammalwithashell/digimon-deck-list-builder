@@ -1164,6 +1164,11 @@ fn validate_step_binding_scope(
             // steps in the same body (e.g. `schedule_delete_played_at_turn_end`).
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::PlayToken(args) => {
+            // The played token's `bind_as` becomes available to later
+            // steps in the same body (e.g. `schedule_delete_played_at_turn_end`).
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::PlayUnionBoundFree(args) => {
             // The `binding` must name an in-scope `select_union_zone` bind_as.
             report_if_undeclared_binding(
