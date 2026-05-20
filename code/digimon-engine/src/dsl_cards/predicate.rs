@@ -305,6 +305,27 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    // PUPPETS-G025: case-insensitive substring match against the carrier
+    // permanent's printed rules text (effect_text + inherited_text +
+    // security_text of the top card). Used by BT16-055 to gate its
+    // inherited +1000 DP aura on "while this Digimon has [Pulsemon] in
+    // its text." In an inherited while_condition context the subject is
+    // the carrier permanent.
+    if let Some(ref needle) = pred.rules_text_contains {
+        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(perm.top_card().handle()) else {
+            return false;
+        };
+        let needle_lc = needle.to_lowercase();
+        let found = data.effect_text.to_lowercase().contains(&needle_lc)
+            || data.inherited_text.to_lowercase().contains(&needle_lc)
+            || data.security_text.to_lowercase().contains(&needle_lc);
+        if !found {
+            return false;
+        }
+    }
     if let Some(want) = pred.in_breeding {
         let is_in_breeding = match subject {
             PredicateSubject::Permanent(h) => {
@@ -1126,6 +1147,44 @@ fn eval_event_fields(
     }
     if let Some(ref needle) = pred.event_card_name_contains {
         if !rctx.event_card_name_contains(needle) {
+            return false;
+        }
+    }
+    if let Some(ref allowed) = pred.event_card_color_only {
+        // Every color of the triggering event card must appear in `allowed`.
+        let Some(card) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.event_card)
+        else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if data
+            .colors
+            .iter()
+            .any(|c| !allowed.iter().any(|a| color_matches(*a, *c)))
+        {
+            return false;
+        }
+    }
+    if let Some(want_count) = pred.event_card_color_count {
+        // The triggering event card must have exactly `want_count` distinct colors.
+        let Some(card) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.event_card)
+        else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if distinct_color_count(&data.colors) as u8 != want_count {
             return false;
         }
     }

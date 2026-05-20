@@ -17,14 +17,37 @@ alt_paths:
     cost: 2
 
 effects:
-  # Printed high-security branch omitted:
-  # "If you have 3 or more security cards ... 1 of your Digimon can't have its
-  # DP reduced by your opponent's effects and isn't affected by <De-Digivolve>
-  # effects."
+  # Printed high-security branch:
+  # "If you have 3 or more security cards, until the end of your opponent's turn,
+  # 1 of your Digimon can't have its DP reduced by your opponent's effects and
+  # isn't affected by <De-Digivolve> effects [by your opponent's effects]."
   #
-  # Current DSL can express broad CannotBeAffected-style immunity and simple
-  # passive modifiers, but not the narrow reusable bundle that blocks only
-  # opponent DP reduction plus De-Digivolve without over-blocking other effects.
+  # PUPPETS-G024 — narrow opponent-effect protection. `grant_narrow_opponent_
+  # effect_protection` installs BOTH protections genuinely opponent-effect-
+  # scoped (review fix; the earlier `add_modifier` pair over-protected by
+  # blocking the controller's OWN DP-reduction and De-Digivolve too):
+  #   - ImmuneFromDPMinus is installed with an opponent-only effect_immunity_
+  #     filter; effective_dp (combat.rs) suppresses only negative ChangeDp
+  #     deltas whose source is an opponent effect. The controller's own
+  #     DP-reduction still applies. Covers "DP reduced by your opponent's
+  #     effects."
+  #   - CannotBeDeDigivolved is installed via the passive_replacement route so
+  #     its default_passive_cause_filter (ReplacementCause::OpponentEffect,
+  #     modifiers.rs:484) takes effect. Own-side De-Digivolve still applies.
+  #     Covers "isn't affected by <De-Digivolve> effects."
+  #   Both expire at end_of_opponents_turn. Selection is mandatory (printed text
+  #   says "1 of your Digimon" with no optional marker).
+  - when: [on_play, when_digivolving]
+    condition: { security_count_gte: 3 }
+    summary: "At 3 or more security, 1 of your Digimon can't have DP reduced or be De-Digivolved by opponent effects until opponent's turn ends"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to protect from DP reduction and De-Digivolve"
+      - grant_narrow_opponent_effect_protection:
+          target: target
+          expiry: end_of_opponents_turn
 
   - when: [on_play, when_digivolving]
     condition: { security_count_lte: 3 }
@@ -43,8 +66,14 @@ effects:
           keyword: Reboot
           expiry: end_of_opponents_turn
 
-  # Inherited text omitted:
-  # "[All Turns] While this Digimon has [Pulsemon] in its text, it gets +1000 DP."
-  #
-  # Current predicates cover names and source stack names, but not rules-text
-  # containment on the inherited carrier.
+  # Inherited: "[All Turns] While this Digimon has [Pulsemon] in its text,
+  # it gets +1000 DP."
+  # active_when guards on rules_text_contains — checked against the carrier
+  # permanent's printed rules text via source_permanent on the read context.
+  # dp_modifier_fn: 1000 (Literal formula) is picked up live by
+  # live_declarative_formula_sum so effective_dp reflects the bonus without
+  # requiring a declarative tick.
+  - scope: inherited
+    kind: aura
+    active_when: { all_turns: true, rules_text_contains: "[Pulsemon]" }
+    dp_modifier_fn: 1000

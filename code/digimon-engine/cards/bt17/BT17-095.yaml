@@ -67,33 +67,23 @@
 #
 # | Card-text element                                                   | Status |
 # |---------------------------------------------------------------------|--------|
-# | [Main] play [Agumon]/[Gabumon] from hand or trash, free             | PARTIAL — see G-DSL-UNION-PLAY-FREE
+# | [Main] play [Agumon]/[Gabumon] from hand or trash, free             | IMPLEMENTED — select_union_zone + play_union_bound_free
 # | [Main] "Then, place this card in the battle area"                   | IMPLEMENTED via place_self_as_delay_option
 # | [All Turns] cross-permanent leave-watcher gate (subject filter)     | IMPLEMENTED via kind: replacement + replacement_subject_is_mine
 # | [All Turns] "outside of a battle" gate                              | IMPLEMENTED via none_of: [replacement_cause: battle]
 # | [All Turns] <Delay> trashes this card after the placing turn         | PARTIAL — Delay-as-replacement-cost surfaced via replacement process; "after the placing turn" timing-window IS covered by source_is_delayed_option guard inside lower_replacement.rs
-# | [All Turns] DNA-digivolve into Omnimon, where second material is in hand | BLOCKED — see G-DSL-DNA-FROM-HAND-PARTNER
-# | [Security] play [Tai Kamiya]/[Matt Ishida] from hand or trash, free | PARTIAL — see G-DSL-UNION-PLAY-FREE
+# | [All Turns] DNA-digivolve into Omnimon, where second material is in hand | IMPLEMENTED — effect_initiated_dna_digivolve_hand_partner
+# | [Security] play [Tai Kamiya]/[Matt Ishida] from hand or trash, free | IMPLEMENTED — select_union_zone + play_union_bound_free
 # | [Security] "Then, add this card to the hand"                        | IMPLEMENTED via add_this_option_to_hand
 #
-# ─── DSL-GAP — `select_union_zone` binding type vs. play_from_*_free  [G-DSL-UNION-PLAY-FREE] ──
+# ─── G-DSL-UNION-PLAY-FREE — CLOSED (2026-05-20) ──────────────────────────────
 #
-# `select_union_zone` (the natural primitive for "from your hand or trash")
-# binds the picked card as a `Card`-typed binding (CardHandle). The downstream
-# `play_from_hand_free` / `play_from_trash_free` steps both REQUIRE a
-# `HandIndex` / `TrashIndex` binding (see `play_digivolve.rs:120-160`); a
-# Card binding is silently dropped. Until the engine widens the resolver
-# (`resolve_binding_ref` → tolerate `Card` and look up the index by handle),
-# the From-hand-or-trash optional play cannot be expressed in a single
-# `select_union_zone` step.
-#
-# Workaround used here: P-189 / P-206 pattern — `select_effect_choice` with
-# "From hand" / "From trash" labels, then a branching `if` per choice. This
-# reaches the same RL action surface (the player still chooses a zone, then a
-# card), but the engine doesn't auto-collapse the branch when only one zone
-# has eligible cards. DCGO collapses via `SetBool`; we always present both
-# branches and the player must walk through them. Tracked in
-# qa/dsl-vocab-gaps.md.
+# `select_union_zone` binds the picked card as a `UnionCard` value that records
+# the origin zone (hand vs trash). The `play_union_bound_free` step consumes
+# that binding and replays the card from its true zone without paying the cost.
+# A single `select_union_zone` + `play_union_bound_free` pair expresses the
+# printed "play 1 … from your hand or trash without paying the cost" — no
+# per-zone `select_effect_choice` branching needed.
 #
 # ─── G-DSL-DNA-FROM-HAND-PARTNER — CLOSED (2026-05-20) ────────────────────────
 #
@@ -160,12 +150,11 @@ effects:
     optional: true
     summary: "[Main] You may play [Agumon]/[Gabumon] from hand or trash free; then place self in battle area"
     process:
-      # G-DSL-UNION-PLAY-FREE CLOSED: `select_union_zone` now binds a
-      # ZONE-TAGGED index (HandIndex / TrashIndex) rather than a zone-agnostic
-      # Card. A single union pick covers both hand and trash; the engine
+      # G-DSL-UNION-PLAY-FREE CLOSED: `select_union_zone` binds the picked
+      # card as a `UnionCard` value that records its origin zone (hand vs
+      # trash). A single union pick covers both hand and trash; the engine
       # auto-collapses to the populated zone when only one is eligible
-      # (matching DCGO's `SetBool(...)` shortcut). The two free-play steps
-      # below each resolve only their own binding shape, so exactly one fires.
+      # (matching DCGO's `SetBool(...)` shortcut).
       - select_union_zone:
           of: you
           zones: [hand, trash]
@@ -178,15 +167,10 @@ effects:
                   - name_contains: "Agumon"
                   - name_contains: "Gabumon"
           prompt: "Play 1 [Agumon] or [Gabumon] from hand or trash (free)"
-      # `play_from_hand_free` fires only when `picked` is a HandIndex;
-      # `play_from_trash_free` only when `picked` is a TrashIndex — so the
-      # zone the player picked determines which one runs.
-      - play_from_hand_free:
-          of: you
-          hand_index: picked
-      - play_from_trash_free:
-          of: you
-          hand_index: picked
+      # `play_union_bound_free` replays the bound card from its true origin
+      # zone (hand or trash) without paying the cost.
+      - play_union_bound_free:
+          binding: picked
       # Final step: place this Option in controller's battle area as a Delay
       # permanent (so Clause B's cross-permanent leave observer can fire).
       - place_self_as_delay_option: {}
@@ -300,8 +284,8 @@ effects:
     summary: "[Security][Inherited] You may play 1 [Tai Kamiya]/[Matt Ishida] from hand or trash free; then add self to hand"
     process:
       # G-DSL-UNION-PLAY-FREE CLOSED — single `select_union_zone` over hand +
-      # trash, binding a zone-tagged index. Exactly one of the two free-play
-      # steps below fires depending on which zone was picked.
+      # trash, binding a `UnionCard` value that records the origin zone.
+      # `play_union_bound_free` then replays the card from its true zone.
       - select_union_zone:
           of: you
           zones: [hand, trash]
@@ -312,12 +296,8 @@ effects:
               - name_contains: "Tai Kamiya"
               - name_contains: "Matt Ishida"
           prompt: "Play 1 [Tai Kamiya] or [Matt Ishida] from hand or trash (free)"
-      - play_from_hand_free:
-          of: you
-          hand_index: picked
-      - play_from_trash_free:
-          of: you
-          hand_index: picked
+      - play_union_bound_free:
+          binding: picked
       # Final step: route this Option from security-resolution staging to the
       # controller's hand instead of the trash.
       - add_this_option_to_hand: {}

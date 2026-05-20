@@ -30,6 +30,7 @@ use crate::dsl_cards::step::resolve_player;
 use crate::effect_context::EffectContext;
 use crate::enums::CardSourceRef;
 use crate::enums::CostDelta;
+use crate::selection::UnionZoneOrigin;
 
 /// Translate the IR's `CompiledCostDelta` to the engine's `CostDelta`.
 ///
@@ -177,7 +178,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::PlayFromTrashFree { of: _, trash_index } => {
+        CompiledStep::PlayFromTrashFree {
+            of: _,
+            trash_index,
+            suppress_on_play,
+        } => {
             // `play_from_trash_free_unsuspended` takes a `CardHandle`; the
             // IR addresses by trash index so we must look up the handle.
             if let Some(ResolvedBinding::TrashIndex(owner, i)) =
@@ -190,9 +195,90 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     .get(i as usize)
                     .map(|cs| cs.handle());
                 if let Some(h) = handle {
-                    if let Some(played) = ctx.play_from_trash_free_unsuspended(h) {
+                    // PUPPETS-G030 — when `suppress_on_play` is set, the
+                    // played Digimon's own `[On Play]` effects do not fire
+                    // for this play event (BT5-106 [Security]).
+                    let played = if *suppress_on_play {
+                        ctx.play_from_trash_free_unsuspended_suppress_on_play(h)
+                    } else {
+                        ctx.play_from_trash_free_unsuspended(h)
+                    };
+                    if let Some(played) = played {
                         bindings.record_played(played);
                     }
+                }
+            }
+            true
+        }
+
+        // ── Origin-preserving union-zone play (PUPPETS-G014) ──────────────
+        CompiledStep::PlayUnionBoundFree { binding, bind_as } => {
+            // Resolve the union-zone binding: the picked card, the zone it
+            // came from (hand vs trash), and the owner of that zone. The
+            // binding is read directly (not via `resolve_binding_ref`) so the
+            // origin tag is preserved — `ResolvedBinding` has no zone-tagged
+            // card variant. Missing / wrong-kind binding: silent no-op, per
+            // the module strictness convention.
+            if let Some((card, origin, owner)) = bindings.get_union_card(binding) {
+                let played = match origin {
+                    UnionZoneOrigin::Hand => {
+                        // Locate the card in the owner's hand by handle —
+                        // the index may have shifted since selection.
+                        ctx.game
+                            .player(owner)
+                            .hand
+                            .iter()
+                            .position(|c| c.handle() == card)
+                            .and_then(|idx| ctx.play_from_hand_free(owner, idx))
+                    }
+                    UnionZoneOrigin::Trash => {
+                        // Locate the card in the owner's trash by handle and
+                        // play it for free (CostDelta::Free → no cost paid).
+                        ctx.game
+                            .player(owner)
+                            .trash
+                            .iter()
+                            .position(|c| c.handle() == card)
+                            .and_then(|idx| {
+                                ctx.play_from_trash_with_cost(owner, idx, CostDelta::Free)
+                            })
+                    }
+                };
+                if let Some(played) = played {
+                    bindings.record_played(played);
+                    // Expose the played permanent's handle for later steps
+                    // (e.g. a Task 11 cleanup), mirroring PlayFromHandFree.
+                    if let Some(name) = bind_as {
+                        bindings.insert_permanent(name, played);
+                    }
+                }
+            }
+            true
+        }
+
+        // ── Provenance-bound turn-end self-delete (PUPPETS-G003 / G016) ──
+        CompiledStep::ScheduleDeletePlayedAtTurnEnd {
+            binding,
+            at_opponents_turn,
+        } => {
+            // Resolve the permanent binding produced by a preceding free-play
+            // step (`play_union_bound_free` / `play_from_hand_free` /
+            // `play_token` bind_as). Captures the permanent's stable
+            // `ProvenanceToken` now, so the turn-end deletion hits the right
+            // permanent even after battle-area indices shift. Missing /
+            // wrong-kind binding: silent no-op (e.g. the optional play was
+            // declined).
+            if let Some(ResolvedBinding::Permanent(handle)) =
+                resolve_binding_ref(
+                    &digimon_dsl::compiled::CompiledBindingRef::Named(binding.clone()),
+                    ctx,
+                    bindings,
+                )
+            {
+                if *at_opponents_turn {
+                    ctx.schedule_delete_at_end_of_opponents_turn(handle);
+                } else {
+                    ctx.schedule_delete_at_end_of_turn(handle);
                 }
             }
             true
@@ -417,10 +503,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
         CompiledStep::PlayToken {
             controller,
             token_name,
+            bind_as,
         } => {
             let p = resolve_player(ctx, *controller);
             if let Some(played) = ctx.play_token(p, token_name) {
                 bindings.record_played(played);
+                // G016 binding half: expose the created token's handle to
+                // subsequent steps in the same body (mirrors PlayFromHandFree).
+                if let Some(name) = bind_as {
+                    bindings.insert_permanent(name, played);
+                }
             }
             true
         }

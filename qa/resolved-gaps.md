@@ -1996,3 +1996,52 @@ The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE
   ```
 - **Evidence:** `cargo test --manifest-path code/digimon-dsl/Cargo.toml` (parse round-trip); `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage` (variant-coverage lint).
 - **Card-side authoring follow-up:** BT24-016's YAML still leaves the Owen gate unenforced; populating `condition:` on the activated_digivolve path is card-local work, not substrate. Other alt-path routes (`DigiXros`, `BurstDigivolve`, `Assembly`, `AppFusion`, etc.) do not yet read the field — extend per-route as cards need them.
+
+## Engine Gap: Standard Delay main-phase activation action (PUPPETS-G009) — RESOLVED 2026-05-20 (Puppets substrate sweep)
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets (2026-05-03 batch implementation)
+- **Card(s):** `P-037` Yellow Memory Boost!, `P-105` Physical Training, `LM-035` Physical Training, `LM-037` Yellow Scramble, `LM-054` Treadmill Training; also standard Memory Boost/Training/Scramble cards whose `<Delay>` text is activated by the controller during a later main phase.
+- **Effect text:** "`<Delay>` (By trashing this card after the placing turn, activate the effect below.)"
+- **What was missing:** The Group 5 Delay lifecycle supported persistent delayed Options, placement-turn gating, start/end/event drains, and replacement-aware self-trash costs. Standard main-phase Delay cards were modeled in DSL/YAML as scheduled automatic effects (e.g. `end_of_your_next_turn`), which hid the player's later `[Main]` decision to activate or decline after the placing turn. The `DelayTrigger::MainPhaseActivated` variant and the main-phase action mask activation path did not exist before this sweep. An earlier tracker entry (Track I, commit `26e27ccc`, 2026-05-17) was optimistic/incorrect — that commit did not deliver this substrate.
+- **Resolution:** `DelayTrigger::MainPhaseActivated` variant added. Standard `kind: delay` Options placed in the battle area with this trigger expose a field-effect activation slot through the normal main-phase action mask once the placing turn has passed (placement-turn gating per rule 16-16-3). Taking the activation trashes the Option as cost and runs the Delay body; PASS leaves the Option parked for a future legal activation. No `ACTION_SPACE_SIZE` change. DSL standard `<Delay>` lowers to `OptionState::Delayed { trigger: DelayTrigger::MainPhaseActivated, .. }`.
+- **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, commits `44ce72a4` + `9afdfdb7`, 2026-05-20.
+- **Evidence:** `p_105_delay_is_player_visible_main_activation_after_placing_turn`, `p_105_declining_delay_leaves_option_on_field`, `lm_054_delay_is_main_phase_action_after_placing_turn`, `lm_054_declining_delay_leaves_option_in_battle_area` — all pass without `#[ignore]`. Tests verify: (a) placing-turn mask bit is 0, (b) next own main phase bit flips to 1 with PASS legal, (c) taking the action trashes the Option and resolves the body, (d) PASS leaves the Option parked.
+- **Residual:** `BT22-098` has a distinct residual filed as `PUPPETS-G033` — the Option-card pipeline's integrated resolution (pending optional play + post-resolution battle-area placement as a Delayed Option) is not yet proven. That is a different, narrower shape from the standard `<Delay>` main-phase activation that this entry closes.
+- **Related:** `PUPPETS-G009` in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`; `PUPPETS-G033` (BT22-098 Option pipeline residual).
+
+## Engine Gap: Effect-spawned permanent with end-of-turn deletion rider — RESOLVED 2026-05-20 (Puppets substrate sweep)
+
+- **Severity:** 🔴 BLOCKING (closed for provenance-bound cleanup substrate)
+- **Discovered in:** Dark Masters (2026-04-18); Puppets (2026-05-04)
+- **Card(s):** EX10-012 MetalSeadramon, EX10-020 Puppetmon, EX10-035 Machinedramon, EX10-057 Piedmon, EX10-061 Apocalymon, EX10-072 Spiral Mountain, P-216 WaruMonzaemon; Puppets adds EX11-022, EX11-061 (PUPPETS-G003) and P-165 (PUPPETS-G016).
+- **Effect text:** "At turn end, delete the Digimon this effect played." / "At the end of your opponent's turn, delete that token."
+- **Resolution:** `schedule_delete_played_at_turn_end` provenance-bound turn-end self-delete landed (`PUPPETS-G003`): effect-play helpers return a `PermanentHandle`; `ctx.schedule_delete_at_end_of_turn(handle)` enqueues a handle-keyed deletion that is a no-op if the permanent is already gone. `play_token` `bind_as` (`PUPPETS-G016`) lets the token-creation step bind the returned `PermanentHandle` so a separate `schedule_delete_at_end_of_opponent_turn(handle)` step can target exactly that token rather than any same-kind token.
+- **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, 2026-05-20.
+
+## Engine Gap: Costed self-digivolve stable source binding — RESOLVED 2026-05-20 (Puppets substrate sweep)
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets Batch 5 (2026-05-04)
+- **Card(s):** `EX9-032` Karakurumon (PUPPETS-G018)
+- **Effect text:** "[On Play] [When Digivolving] By deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon may digivolve into a [Puppet] trait Digimon card in your hand without paying the cost."
+- **Resolution:** `source_permanent` is now re-located by `CardHandle` after any mid-body battle-area index shift. `binding_ref.rs::Source` resolution searches the live battle area for the carrier card-handle rather than trusting the snapshot index. Preflight for legal Token/Puppet cost bodies excludes the source permanent by handle.
+- **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, 2026-05-20.
+
+## Engine Gap: Narrow opponent-effect protection for DP reduction and De-Digivolve — RESOLVED 2026-05-20 (Puppets substrate sweep)
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets Batch 8 (2026-05-04)
+- **Card(s):** `BT16-055` Namakemon (PUPPETS-G024)
+- **Effect text:** "While you have 3 or more security cards, this Digimon isn't affected by your opponent's DP reduction effects and can't be de-digivolved by their effects."
+- **Resolution:** `grant_narrow_opponent_effect_protection` landed: category-scoped protection modifiers (`ImmuneToOpponentDpReduction`, `ImmuneToOpponentDeDigivolve`) with opponent-source and live security-count predicates are consulted at DP-reduction and De-Digivolve effect sites. DSL surface: `narrow_opponent_effect_protection: { categories: [dp_reduction, de_digivolve], while: { own_security_gte: 3 } }`.
+- **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, 2026-05-20.
+
+## Engine Gap: Effect play with played-Digimon On Play suppression — RESOLVED 2026-05-20 (Puppets substrate sweep)
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets Batch 9 (2026-05-04)
+- **Card(s):** `BT5-106` Demonic Disaster (PUPPETS-G030); adjacent: `BT13-110`, `BT13-112` (Royal Knights)
+- **Effect text:** "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
+- **Resolution:** `suppress_on_play: true` flag added to effect-play helpers and threaded through the play event context. On Play enqueue skips the just-played permanent's On Play clauses when the flag is set. DSL step: `play_from_trash_free: { filter: ..., suppress_on_play: true }`.
+- **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, 2026-05-20.

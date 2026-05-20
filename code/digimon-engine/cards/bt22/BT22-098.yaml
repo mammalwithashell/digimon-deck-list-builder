@@ -16,58 +16,56 @@ traits: [LIBERATOR]
 # by 3.
 #
 # Supported faithfully here:
-# - Hand-origin slice of the [Main] play effect. The target choice is visible,
-#   optional, filtered to [Shoemon] or [Arisa Kinosaki], and plays the selected
-#   hand card without paying its cost.
+# - [Main] union-zone (hand ∪ trash) play: the target choice is visible, optional,
+#   filtered to [Shoemon] or [Arisa Kinosaki], and plays the selected card from its
+#   true origin zone without paying its cost. (PUPPETS-G014 substrate landed in Task 7.)
 # - Battle-area Delay placement via the standard delayed-option pipeline.
 # - Event-gated Delay activation after the placing turn when your Arisa Kinosaki
 #   suspends, with visible Puppet base and Puppet+LIBERATOR hand-evolution
 #   selections before effect_initiated_digivolve with cost reduced by 3.
+# - [Security] mirrors the [Main] union-zone play.
 #
 # Omitted rather than approximated:
-# - The exact hand-or-trash [Main] choice is blocked by
-#   G-UNION-ZONE-PLAY-FROM-ORIGIN / PUPPETS-G014. Current select_union_zone DSL
-#   lowering uses an accept-all filter and does not preserve enough origin data
-#   for a single faithful play-from-original-zone consumer step.
-# - The [Security] clause mirrors only the currently supported hand-origin slice
-#   of [Main]. Exact hand-or-trash security play and security battle-area
-#   placement remain blocked by PUPPETS-G014/PUPPETS-G009.
+# - "Then, place this card in the battle area" after the [Main] free play is blocked
+#   by PUPPETS-G009: integrated Option Main resolution with pending optional play
+#   plus post-resolution battle-area placement.
+# - Security battle-area placement mirrors the same PUPPETS-G009 gap.
 
 effects:
   - when: main_from_hand
     optional: false
-    summary: "[Main] You may play 1 Shoemon or Arisa Kinosaki from hand free; place this in battle area"
+    summary: "[Main] You may play 1 Shoemon or Arisa Kinosaki from hand or trash free"
     process:
-      - select_hand:
+      - select_union_zone:
           of: you
-          bind_as: pick
-          optional: true
+          zones: [hand, trash]
           filter:
             any_of:
               - name_is: Shoemon
               - name_is: Arisa Kinosaki
-          prompt: "You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand without paying the cost"
-      - play_from_hand_free:
-          of: you
-          hand_index: pick
+          bind_as: pick
+          optional: true
+          prompt: "You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: pick
 
   - scope: inherited
     when: on_security
     optional: false
-    summary: "[Security] Activate supported [Main] hand-origin play slice"
+    summary: "[Security] Activate [Main] union-zone play (Shoemon or Arisa Kinosaki from hand or trash)"
     process:
-      - select_hand:
+      - select_union_zone:
           of: you
-          bind_as: sec_pick
-          optional: true
+          zones: [hand, trash]
           filter:
             any_of:
               - name_is: Shoemon
               - name_is: Arisa Kinosaki
-          prompt: "You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand without paying the cost"
-      - play_from_hand_free:
-          of: you
-          hand_index: sec_pick
+          bind_as: sec_pick
+          optional: true
+          prompt: "You may play 1 [Shoemon] or [Arisa Kinosaki] from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: sec_pick
 
   - kind: delay
     trigger: on_suspend

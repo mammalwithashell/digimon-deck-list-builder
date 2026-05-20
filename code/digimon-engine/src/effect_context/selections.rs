@@ -937,6 +937,12 @@ impl<'a> EffectContext<'a> {
     /// `usize` index), this helper's filter receives `&CardSource` so cross-zone
     /// predicates can inspect the card directly without branching on whether the
     /// index is a hand or trash index.
+    /// Prompt for a card from the union of `zones` (hand ∪ trash). The
+    /// `callback` receives the picked card's `CardHandle` **and** the
+    /// [`UnionZoneOrigin`](crate::selection::UnionZoneOrigin) of the zone it
+    /// came from, so a downstream consumer can act on the card's true origin
+    /// (e.g. play it back from hand vs trash). The origin is recovered from
+    /// the encoded `action_id` range (`PLAY_HAND` vs `TRASH_EFFECT`).
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: PlayerId,
@@ -947,7 +953,13 @@ impl<'a> EffectContext<'a> {
         callback: C,
     ) where
         F: Fn(&Game, &CardSource) -> bool,
-        C: FnOnce(&mut EffectContext<'_>, crate::selection::UnionZonePick) + Send + Sync + 'static,
+        C: FnOnce(
+                &mut EffectContext<'_>,
+                crate::card_source::CardHandle,
+                crate::selection::UnionZoneOrigin,
+            ) + Send
+            + Sync
+            + 'static,
     {
         use crate::action::space::{
             HAND_MAIN_LIMIT, PLAY_HAND_END, PLAY_HAND_START, TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
@@ -994,7 +1006,12 @@ impl<'a> EffectContext<'a> {
         let source_permanent = self.source_permanent;
         let source_kind = self.source_kind;
         let user_callback: Box<
-            dyn FnOnce(&mut EffectContext<'_>, crate::selection::UnionZonePick) + Send + Sync,
+            dyn FnOnce(
+                    &mut EffectContext<'_>,
+                    crate::card_source::CardHandle,
+                    crate::selection::UnionZoneOrigin,
+                ) + Send
+                + Sync,
         > = Box::new(callback);
 
         let previous_phase = self.game.current_phase;
@@ -1016,18 +1033,21 @@ impl<'a> EffectContext<'a> {
                     "select_union_zone: action_id {} falls in gap between PLAY_HAND ({}..{}) and TRASH_EFFECT ({}..); valid_action_ids was populated incorrectly",
                     action_id, PLAY_HAND_START, PLAY_HAND_END, TRASH_EFFECT_START
                 );
-                // Disambiguate by range — produce a ZONE-TAGGED pick so the
-                // downstream free-play step can bind HandIndex / TrashIndex.
-                let pick = if action_id >= TRASH_EFFECT_START {
-                    crate::selection::UnionZonePick::Trash {
-                        player: of_player,
-                        index: action_id - TRASH_EFFECT_START,
-                    }
+                // Disambiguate by range — the action_id range also records
+                // the picked card's origin zone.
+                let (handle, origin) = if action_id >= TRASH_EFFECT_START {
+                    let idx = (action_id - TRASH_EFFECT_START) as usize;
+                    (
+                        game.player(of_player).trash[idx].handle(),
+                        crate::selection::UnionZoneOrigin::Trash,
+                    )
                 } else {
-                    crate::selection::UnionZonePick::Hand {
-                        player: of_player,
-                        index: action_id.saturating_sub(PLAY_HAND_START),
-                    }
+                    // PLAY_HAND_START range (0-29)
+                    let idx = action_id.saturating_sub(PLAY_HAND_START) as usize;
+                    (
+                        game.player(of_player).hand[idx].handle(),
+                        crate::selection::UnionZoneOrigin::Hand,
+                    )
                 };
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
@@ -1037,7 +1057,7 @@ impl<'a> EffectContext<'a> {
                     controller,
                     override_pin,
                 );
-                user_callback(&mut ctx, pick);
+                user_callback(&mut ctx, handle, origin);
             }),
             on_decline: None,
         });
@@ -1699,7 +1719,13 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
         callback: C,
     ) where
         F: Fn(&crate::game::Game, &crate::card_source::CardSource) -> bool,
-        C: FnOnce(&mut EffectContext<'_>, crate::selection::UnionZonePick) + Send + Sync + 'static,
+        C: FnOnce(
+                &mut EffectContext<'_>,
+                crate::card_source::CardHandle,
+                crate::selection::UnionZoneOrigin,
+            ) + Send
+            + Sync
+            + 'static,
     {
         let prev = self.ctx.override_selecting_player.take();
         self.ctx.override_selecting_player = Some(self.selecting_player);

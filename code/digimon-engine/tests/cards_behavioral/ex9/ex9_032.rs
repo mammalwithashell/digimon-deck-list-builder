@@ -103,7 +103,6 @@ fn ex9_032_active_costed_digivolve_clause_is_compiled() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-COSTED-SELF-DIGIVOLVE-STABLE-SOURCE — confirmed 2026-05-17: when the chosen cost body has a lower battle-area index than Karakurumon, `Player::delete_permanent` shifts indices down, but ctx.source_permanent still holds the original index; the subsequent `effect_initiated_digivolve { target: source }` resolves to the wrong slot (or none) and the digivolve never lands. Repro: place PUPPET-COST/PLAIN-COST/TOKEN-COST then play Karakurumon (idx 3), delete PUPPET-COST (idx 0) — Karakurumon's live index drops to 2, but `source_permanent` is still {index: 3}."]
 fn ex9_032_on_play_deletes_token_or_other_puppet_then_free_digivolves_into_puppet() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX9-032")
@@ -114,7 +113,8 @@ fn ex9_032_on_play_deletes_token_or_other_puppet_then_free_digivolves_into_puppe
         .add_card(make_puppet_digimon("PUPPET-EVO", 6))
         .add_card(make_plain_digimon("NONPUPPET-EVO", 6))
         .hand(0, &["EX9-032", "NONPUPPET-EVO", "PUPPET-EVO"])
-        .memory(20)
+        // The memory seesaw caps at 10; Karakurumon's 7-cost play leaves 3.
+        .memory(10)
         .start();
 
     let puppet_cost = runner.place_on_field(0, "PUPPET-COST", Some(0));
@@ -181,8 +181,9 @@ fn ex9_032_on_play_deletes_token_or_other_puppet_then_free_digivolves_into_puppe
     );
     assert_eq!(
         runner.memory(),
-        13,
-        "only the play cost was paid; the effect digivolve was free"
+        3,
+        "only the 7-cost Karakurumon play was paid (10 - 7); the effect \
+         digivolve was free"
     );
 }
 
@@ -257,7 +258,6 @@ fn ex9_032_when_digivolving_uses_same_cost_and_free_puppet_hand_digivolve_flow()
 }
 
 #[test]
-#[ignore = "BLOCKED: G-COSTED-SELF-DIGIVOLVE-PREFLIGHT — cost-body preflight over battle area is not faithful for this clause yet"]
 fn ex9_032_does_not_prompt_without_legal_cost_body() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX9-032")

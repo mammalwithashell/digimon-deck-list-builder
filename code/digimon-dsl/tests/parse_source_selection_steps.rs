@@ -1,7 +1,9 @@
 //! Phase 2g source-selection DSL verbs parse and lower into compiled steps.
 
 use digimon_dsl::compile::compile;
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledClause, CompiledStep};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledClause, CompiledPredicate, CompiledStep,
+};
 use digimon_dsl::spec::CardSpec;
 
 fn compile_first_step(yaml: &str) -> CompiledStep {
@@ -237,11 +239,13 @@ effects:
         CompiledStep::SelectOwnBreedingPermanent {
             bind_as,
             prompt,
+            filter,
             then,
-            filter: _,
+            ..
         } => {
             assert_eq!(bind_as.as_deref(), Some("breeding_target"));
             assert_eq!(prompt, "Choose breeding");
+            assert_eq!(filter, CompiledPredicate::default());
             assert_eq!(then, vec![CompiledStep::GainMemory(1)]);
         }
         other => panic!("expected SelectOwnBreedingPermanent, got {other:?}"),

@@ -60,7 +60,7 @@ fn bt5_106_is_purple_option_cost_1() {
 }
 
 #[test]
-fn bt5_106_has_main_clause_only_for_supported_slice() {
+fn bt5_106_has_main_and_security_clauses() {
     let runner = option_runner();
     let compiled = runner
         .compiled_card("BT5-106")
@@ -77,12 +77,29 @@ fn bt5_106_has_main_clause_only_for_supported_slice() {
 
     assert_eq!(
         triggered.len(),
-        1,
-        "only the supported Main slice should ship until Security On Play suppression is supported"
+        2,
+        "BT5-106 ships both the [Main] slice and the [Security] slice (PUPPETS-G030)"
     );
-    let main = triggered[0];
+
+    let main = triggered
+        .iter()
+        .find(|t| t.when.contains(&CompiledTiming::MainFromHand))
+        .expect("[Main] clause present");
     assert_eq!(main.scope, CompiledScope::FaceUp);
-    assert!(main.when.contains(&CompiledTiming::MainFromHand));
+
+    let security = triggered
+        .iter()
+        .find(|t| t.when.contains(&CompiledTiming::OnSecurity))
+        .expect("[Security] clause present");
+    assert_eq!(
+        security.scope,
+        CompiledScope::Inherited,
+        "the Security clause rides on the option's inherited surface"
+    );
+    assert!(
+        security.optional,
+        "the printed 'You may play' makes the Security clause optional"
+    );
 }
 
 #[test]
@@ -209,16 +226,218 @@ fn bt5_106_main_requires_suspended_purple_unsuspend_target() {
     );
 }
 
-#[test]
-#[ignore = "pending: PUPPETS-G030 — security play-from-trash with On Play suppression provenance"]
-fn bt5_106_security_prompts_for_level_3_purple_digimon_in_trash() {
-    todo!("Security effect must select a level 3 purple Digimon from trash and play it for free");
+// ─── PUPPETS-G030 — [Security] free play from trash with On Play suppression ──
+
+/// An inline DSL purple level-3 Digimon whose `[On Play]` effect draws 1 card
+/// for its controller. The draw is the observable signal: when BT5-106's
+/// Security clause plays this card with `suppress_on_play: true`, the OnPlay
+/// `draw` must NOT fire. Played by any other path, the `draw` fires normally.
+const ONPLAY_PURPLE_L3_YAML: &str = r#"
+card: ONPLAY-PURPLE-L3
+name: OnPlay Purple Imp
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 2000
+effects:
+  - when: on_play
+    summary: "[On Play] Draw 1"
+    process:
+      - draw: { of: you, count: 1 }
+"#;
+
+/// A purple level-4 Digimon (wrong level) — must NOT be a legal Security
+/// trash-play candidate (the clause filters on level 3).
+fn purple_l4(id: &str) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.colors = vec![CardColor::Purple];
+    card.level = Some(4);
+    card
 }
 
+/// A yellow level-3 Digimon (wrong color) — must NOT be a legal Security
+/// trash-play candidate (the clause filters on purple).
+fn yellow_l3(id: &str) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.colors = vec![CardColor::Yellow];
+    card.level = Some(3);
+    card
+}
+
+/// Build a runner where P0 attacks P1, whose single Security card is BT5-106.
+/// P1's trash is seeded with the supplied card ids. P1's deck is stocked so a
+/// draw is observable. Returns the runner with an attacker already on P0's
+/// field (turn 0 → no summoning sickness).
+fn security_runner(trash_ids: &[&str]) -> (DebugRunner, digimon_engine::permanent::PermanentHandle) {
+    let mut attacker = make_test_card("ATTACKER", "Attacker");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.level = Some(4);
+    attacker.dp = Some(9000);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT5-106")
+        .expect("BT5-106 YAML parses and compiles")
+        .from_dsl_yaml(ONPLAY_PURPLE_L3_YAML)
+        .expect("ONPLAY-PURPLE-L3 inline DSL compiles")
+        .add_card(attacker)
+        .add_card(purple_l4("PURPLE-L4"))
+        .add_card(yellow_l3("YELLOW-L3"))
+        .security(1, &["BT5-106"])
+        .deck(1, &["ATTACKER", "ATTACKER", "ATTACKER"])
+        .memory(10)
+        .start();
+
+    // Seed P1's trash with the requested cards.
+    for id in trash_ids {
+        let card = {
+            let data_idx = runner
+                .game
+                .card_data
+                .iter()
+                .position(|c| &c.card_id == id)
+                .unwrap_or_else(|| panic!("security_runner: unknown card_id {id}"));
+            let next_idx = runner.game.next_card_index();
+            digimon_engine::card_source::CardSource::new(data_idx, 1, next_idx)
+        };
+        runner.game.players[1].trash.push(card);
+    }
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    (runner, attacker)
+}
+
+/// G030: BT5-106's [Security] clause prompts the defender to optionally play a
+/// **level 3 purple** Digimon from trash. Wrong-level and wrong-color cards in
+/// trash must not be offered as candidates.
 #[test]
-#[ignore = "pending: PUPPETS-G030 — security play-from-trash with On Play suppression provenance"]
+fn bt5_106_security_prompts_for_level_3_purple_digimon_in_trash() {
+    let (mut runner, attacker) =
+        security_runner(&["ONPLAY-PURPLE-L3", "PURPLE-L4", "YELLOW-L3"]);
+
+    runner.attack_player(attacker, 1, false);
+
+    let sel = runner
+        .pending_selection_view()
+        .expect("BT5-106 Security clause must install a trash-selection prompt");
+    assert_eq!(
+        sel.kind,
+        SelectionKind::Trash,
+        "Security clause selects from the defender's own trash"
+    );
+    assert_eq!(
+        sel.selecting_player, 1,
+        "the defender controls the Security selection"
+    );
+    assert!(
+        sel.is_optional,
+        "the printed 'You may play' makes the trash play optional"
+    );
+    assert_eq!(
+        sel.valid_action_ids.len(),
+        1,
+        "only the level-3 purple Digimon is a legal candidate \
+         (the level-4 purple and level-3 yellow cards are filtered out)"
+    );
+}
+
+/// G030: BT5-106's [Security] clause plays the chosen level-3 purple Digimon
+/// from trash for free, and the `suppress_on_play: true` flag stops THAT
+/// Digimon's own `[On Play]` effect from activating. The On Play here is a
+/// `draw: 1` — under suppression the defender draws nothing from it.
+#[test]
 fn bt5_106_security_suppresses_on_play_effects_of_played_digimon() {
-    todo!("played Digimon's On Play effects must not activate");
+    let (mut runner, attacker) = security_runner(&["ONPLAY-PURPLE-L3"]);
+
+    let hand_before = runner.hand_size(1);
+    let deck_before = runner.deck_size(1);
+
+    runner.attack_player(attacker, 1, false);
+    runner.auto_resolve().expect("resolve Security trash play");
+
+    // The level-3 purple Digimon was played from trash into P1's battle area.
+    assert!(
+        runner.game.players[1]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data)
+                == "ONPLAY-PURPLE-L3"),
+        "the level-3 purple Digimon must enter the defender's battle area"
+    );
+    // The played Digimon left the trash (BT5-106 itself lands in the trash as
+    // the spent security card, so only it remains there).
+    assert!(
+        !runner.game.players[1]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "ONPLAY-PURPLE-L3"),
+        "the played Digimon must have left the trash"
+    );
+
+    // suppress_on_play: true — the played Digimon's [On Play] draw must NOT
+    // fire. Hand and deck are unchanged by the OnPlay (the play itself moves
+    // no cards into hand or deck).
+    assert_eq!(
+        runner.hand_size(1),
+        hand_before,
+        "suppressed [On Play] draw must not add a card to the defender's hand"
+    );
+    assert_eq!(
+        runner.deck_size(1),
+        deck_before,
+        "suppressed [On Play] draw must not consume a card from the defender's deck"
+    );
+}
+
+/// G030 scoping proof: the suppression is scoped to the BT5-106 Security play
+/// event only. The SAME OnPlay Digimon, played through an ordinary
+/// effect-play-from-trash path (no `suppress_on_play`), DOES fire its
+/// `[On Play]` draw. This guards against a global On Play disable.
+#[test]
+fn bt5_106_on_play_suppression_does_not_leak_to_normal_plays() {
+    // No BT5-106 involved — just the OnPlay Digimon, played the ordinary way.
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(ONPLAY_PURPLE_L3_YAML)
+        .expect("ONPLAY-PURPLE-L3 inline DSL compiles")
+        .deck(0, &["ONPLAY-PURPLE-L3", "ONPLAY-PURPLE-L3"])
+        .memory(10)
+        .start();
+
+    // Seed one copy into P0's trash.
+    let card = {
+        let data_idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "ONPLAY-PURPLE-L3")
+            .expect("ONPLAY-PURPLE-L3 in card_data");
+        let next_idx = runner.game.next_card_index();
+        digimon_engine::card_source::CardSource::new(data_idx, 0, next_idx)
+    };
+    runner.game.players[0].trash.push(card);
+
+    let hand_before = runner.hand_size(0);
+    let deck_before = runner.deck_size(0);
+
+    // Ordinary effect-driven play from trash — no suppression.
+    runner
+        .game
+        .play_from_trash(0, 0)
+        .expect("OnPlay Digimon plays from trash");
+    runner.auto_resolve().expect("resolve [On Play] draw");
+
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before + 1,
+        "an unsuppressed [On Play] draw must add a card to the hand"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 1,
+        "an unsuppressed [On Play] draw must consume a card from the deck"
+    );
 }
 
 // ─── Failure-mode audit (PR #456 cluster 3f — effect-driven play / sacrifice) ──

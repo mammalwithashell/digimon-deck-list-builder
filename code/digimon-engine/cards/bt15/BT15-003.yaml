@@ -1,0 +1,33 @@
+card: BT15-003
+name: Nyaromon
+kind: digi_egg
+level: 2
+color: [yellow]
+cost: 0
+traits: [Lesser]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    condition: { security_count_gte: 1 }
+    summary: "Trash top or bottom security to gain 1 memory"
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Trash top security"
+            - "Trash bottom security"
+          prompt: "Choose security card"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - trash_top_security: { of: you }
+            - gain_memory: 1
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - trash_bottom_security: { of: you }
+            - gain_memory: 1

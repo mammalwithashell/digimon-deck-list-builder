@@ -213,23 +213,55 @@ impl Game {
     /// `ModifierType::ImmuneFromDPMinus` entry, negative `ChangeDp`
     /// modifiers are filtered out before summing — the protection
     /// narrows to DP-minus only, leaving positive `ChangeDp` and the
-    /// dynamic aura bonus untouched. `effect_immunity_filter` on the
-    /// `ImmuneFromDPMinus` entry is reserved for a future refinement
-    /// (opponent-only / source-kind filtering of the protected delta);
-    /// the unfiltered path is what the published variant currently
-    /// promises.
+    /// dynamic aura bonus untouched.
+    ///
+    /// PUPPETS-G024 (2026-05-20): each `ImmuneFromDPMinus` entry's
+    /// `effect_immunity_filter.controller` now scopes which negative
+    /// `ChangeDp` deltas it suppresses:
+    ///   - `OpponentOnly` — suppress only deltas whose `source_player`
+    ///     is the protected permanent's opponent (printed text "can't
+    ///     have its DP reduced **by your opponent's effects**"). The
+    ///     controller's own DP-reduction still applies.
+    ///   - `Any` / no filter — suppress every negative delta (the broad
+    ///     variant; back-compat for entries installed without a filter).
+    /// A negative `ChangeDp` delta is suppressed if ANY `ImmuneFromDPMinus`
+    /// entry's scope covers it.
     pub fn effective_dp(&self, handle: PermanentHandle) -> Option<i32> {
+        use crate::modifiers::EffectControllerFilter;
         let perm = self
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)?;
         let base = perm.base_dp_for_rules(&self.card_data, &self.modifiers, handle)?;
-        let immune_to_dp_minus = self.modifiers.has(handle, ModifierType::ImmuneFromDPMinus);
+        let immunity_scopes: Vec<EffectControllerFilter> = self
+            .modifiers
+            .get(handle, ModifierType::ImmuneFromDPMinus)
+            .iter()
+            .map(|entry| {
+                entry
+                    .effect_immunity_filter
+                    .map(|f| f.controller)
+                    .unwrap_or(EffectControllerFilter::Any)
+            })
+            .collect();
         let change_dp_sum: i32 = self
             .modifiers
             .get(handle, ModifierType::ChangeDp)
             .iter()
-            .filter(|entry| !(immune_to_dp_minus && entry.value < 0))
+            .filter(|entry| {
+                if entry.value >= 0 {
+                    return true;
+                }
+                // Negative delta — suppress if any ImmuneFromDPMinus
+                // entry's scope covers this delta's source.
+                let from_opponent = entry.source_player != handle.player;
+                let suppressed = immunity_scopes.iter().any(|scope| match scope {
+                    EffectControllerFilter::Any => true,
+                    EffectControllerFilter::OpponentOnly => from_opponent,
+                    EffectControllerFilter::OwnOnly => !from_opponent,
+                });
+                !suppressed
+            })
             .map(|entry| entry.value)
             .sum();
         let bonus = change_dp_sum + self.dynamic_dp_aura_bonus(handle);
@@ -3341,11 +3373,7 @@ impl Game {
                 level: data.level,
                 dp: live_deleted_top_card.and_then(|_| self.effective_dp(handle)),
                 cause: self
-                    .current_deletion_event_cause_override
-                    .or_else(|| {
-                        self.current_deletion_cause
-                            .map(crate::trigger_context::EventCause::from)
-                    })
+                    .observed_deletion_event_cause()
                     .unwrap_or(crate::trigger_context::EventCause::Rule),
             })
         });

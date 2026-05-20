@@ -297,6 +297,14 @@ impl Game {
             EffectTiming::EndOfOpponentsNextTurn,
         );
 
+        // PUPPETS-G016: drain provenance-keyed deletions scheduled for
+        // the end of the opponent's turn ("At the end of your opponent's
+        // turn, delete that token" — P-165 ShoeShoemon). Runs after the
+        // printed EndOfOpponentsTurn observers and scheduled-effect drains.
+        // Only drains entries whose controller != ending_player (i.e. effects
+        // scheduled by the ending player's opponents that fire at this boundary).
+        crate::scheduled_effects::fire_scheduled_provenance_deletions_opp(self, ending_player);
+
         if let Some(floor) = self.modifiers.end_turn_min_memory_floor(ending_player) {
             let floor = floor.clamp(i16::MIN as i32, i16::MAX as i32) as i16;
             if self.memory < floor {
@@ -710,6 +718,13 @@ impl Game {
         // separately at their respective observer-fire sites.
         crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfYourTurn);
         crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::EndOfYourNextTurn);
+
+        // PUPPETS-G003: drain provenance-keyed turn-end self-deletions ("At
+        // turn end, delete the Digimon this effect played"). Runs after the
+        // printed `EndOfYourTurn` observers and scheduled-effect drains —
+        // the played Digimon's own end-of-turn window has already closed —
+        // and before turn rotation flips memory.
+        crate::scheduled_effects::fire_scheduled_provenance_deletions(self);
     }
 
     /// Phase 8 Task 3: fire and trash every Delayed Option (across all
@@ -913,7 +928,8 @@ impl Game {
                 }
 
                 match resume.kind {
-                    DelayedOptionLifecycleResumeKind::Event { .. } => continue,
+                    DelayedOptionLifecycleResumeKind::Event { .. }
+                    | DelayedOptionLifecycleResumeKind::MainPhaseActivation => continue,
                     _ => {
                         let triggers = Self::delay_lifecycle_triggers(resume.kind);
                         if self
@@ -953,7 +969,8 @@ impl Game {
                     self.continue_end_turn_after_delays(ending_player);
                     return;
                 }
-                DelayedOptionLifecycleResumeKind::Event { .. } => continue,
+                DelayedOptionLifecycleResumeKind::Event { .. }
+                | DelayedOptionLifecycleResumeKind::MainPhaseActivation => continue,
             }
         }
     }
@@ -965,6 +982,9 @@ impl Game {
                 &[DelayTrigger::EndOfThisTurn, DelayTrigger::EndOfYourNextTurn]
             }
             DelayedOptionLifecycleResumeKind::Event { .. } => &[],
+            DelayedOptionLifecycleResumeKind::MainPhaseActivation => {
+                &[DelayTrigger::MainPhaseActivated]
+            }
         }
     }
 
@@ -1004,8 +1024,9 @@ impl Game {
     /// given `(owner, bottom_card_index)` key and `trash_on_turn`. Returns
     /// the current `PermanentHandle` (indices may have shifted since the
     /// key was captured). Phase 8 Task 3 helper for
-    /// `resolve_delayed_options`.
-    fn find_delayed_permanent_by_key(
+    /// `resolve_delayed_options`; also used by the standard `<Delay>`
+    /// `[Main]`-phase activation path in `option_lifecycle.rs`.
+    pub(crate) fn find_delayed_permanent_by_key(
         &self,
         key: (PlayerId, u16),
         turn: u16,

@@ -127,6 +127,17 @@ This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine h
 > entry bodies are preserved for reference but the heading line carries
 > the closure stamp.
 
+> **Tracker hygiene sweep — 2026-05-20 (Puppets substrate sweep):** 15
+> reusable substrate gaps closed on branch `claude/stoic-moser-0ef79e`.
+> DSL-vocab entries closed in this file: `PUPPETS-G023` (BT13-101/P-136
+> event-card color predicates), `PUPPETS-G024` (BT16-055 narrow
+> opponent-effect protection), `PUPPETS-G025` (BT16-055 rules_text_contains
+> predicate), `PUPPETS-G028` (BT22-088 return-self-to-deck-bottom cost +
+> branch), `PUPPETS-G030` (BT5-106 suppress_on_play flag). All four entry
+> headings below carry inline RESOLVED stamps; legacy bodies preserved for
+> reference. See `docs/RUST_ENGINE_GAPS.md` and `qa/resolved-gaps.md` for
+> engine-side closures.
+
 > **Tracker hygiene sweep — 2026-05-17 (Phase 2 Track F):** Five DNA
 > Omnimon DSL/substrate gaps closed; full closure summaries in
 > [resolved-gaps.md](resolved-gaps.md) under "Phase 2 Track F closure":
@@ -1247,10 +1258,11 @@ is satisfiable today.
 
 ## Puppets Resolver Residual DSL/Hybrid Gaps (2026-05-04)
 
-## BT13-101 / P-136 — event predicates with suspend-this-Tamer cost  [PUPPETS-G023]
+## BT13-101 / P-136 — event predicates with suspend-this-Tamer cost  [PUPPETS-G023] — RESOLVED 2026-05-20 (Puppets substrate sweep)
 
 - Effect text: `BT13-101`: "[All Turns] When you play a 2-color black/yellow Digimon, by suspending this Tamer, <Draw 1> and gain 1 memory." `P-136`: "[Your Turn] [Once Per Turn] When one of your Digimon digivolves into a Digimon with the [Puppet] trait, by suspending this Tamer, gain 1 memory."
-- Status 2026-05-17: the **activation-cost half** of this gap closed under Phase 2 Track B. DSL `activation_cost: { suspend_self: true }` lifts onto `EffectBuilder::activation_cost(ctx.suspend_self_as_cost)`; cost failure (already-suspended source) consumes the OPT slot and skips the body silently (no decline-vs-fail elision). The **event-card colour predicates half** remains open: `BT13-101` still needs `event_card_color_only` / `event_card_color_count` to gate the All Turns observer faithfully. The three BT13-101 All Turns behavioural tests (`bt13_101_all_turns_*`) remain `#[ignore]` until those predicates land. See `qa/resolved-gaps.md` § Engine Gap: Generic `.activation_cost(...)` builder hook for triggered abilities for the substrate closure.
+- Status 2026-05-20: **FULLY CLOSED** by the Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`). Event-card color predicates (`event_card_color_only`, `event_card_color_count`) landed, completing the second half of this gap. `BT13-101`'s All Turns observer and `P-136`'s digivolve observer are now expressible in YAML. The `bt13_101_all_turns_*` tests are un-ignored. See `qa/resolved-gaps.md` for the engine-side substrate closure.
+- Status 2026-05-17: the **activation-cost half** of this gap closed under Phase 2 Track B. DSL `activation_cost: { suspend_self: true }` lifts onto `EffectBuilder::activation_cost(ctx.suspend_self_as_cost)`; cost failure (already-suspended source) consumes the OPT slot and skips the body silently (no decline-vs-fail elision). The **event-card colour predicates half** was still open at that point. See `qa/resolved-gaps.md` § Engine Gap: Generic `.activation_cost(...)` builder hook for triggered abilities for the substrate closure.
 - Missing DSL verb / step kind / predicate: event-card predicates for exact color sets and color count, event-target owner/trait predicates for digivolve observers where needed, plus declarative source-bound triggered activation costs.
 - Companion engine state: the generic triggered activation-cost hook is now resolved (`qa/resolved-gaps.md`); DSL `activation_cost: { suspend_self: true }` is wired and preflight comes for free via `EffectContext::suspend_self_as_cost` returning `false` on already-suspended sources.
 - Suggested DSL syntax:
@@ -1272,9 +1284,10 @@ is satisfiable today.
 
 ---
 
-## BT16-055 — narrow protection and inherited rules-text predicate  [PUPPETS-G024/PUPPETS-G025]
+## BT16-055 — narrow protection and inherited rules-text predicate  [PUPPETS-G024/PUPPETS-G025] — RESOLVED 2026-05-20 (Puppets substrate sweep)
 
 - Effect text: "While you have 3 or more security cards, this Digimon isn't affected by your opponent's DP reduction effects and can't be de-digivolved by their effects." / "[Your Turn] While this Digimon has [Pulsemon] in its text, it gets +1000 DP."
+- Status 2026-05-20: **FULLY CLOSED** by the Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`). `grant_narrow_opponent_effect_protection` (PUPPETS-G024) and `rules_text_contains` predicate (PUPPETS-G025) both landed. `BT16-055` is now fully expressible in YAML. See `qa/resolved-gaps.md` for engine-side details.
 - Missing DSL verb / step kind / predicate: category-scoped protection modifiers for opponent DP reduction and opponent De-Digivolve; inherited predicate over the carrier stack's printed rules text.
 - Companion engine state: broad `CannotBeAffected` is too strong for the protection branch, and current inherited predicates do not inspect rules text on the carrier.
 - Suggested DSL syntax:
@@ -1338,10 +1351,11 @@ is satisfiable today.
 
 ---
 
-## BT22-088 — return-this-Tamer cost before branch free-play  [PUPPETS-G028]
+## BT22-088 — return-this-Tamer cost before branch free-play  [PUPPETS-G028] — RESOLVED 2026-05-20 (Puppets substrate sweep)
 
 - Effect text: "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] with a different card number in your hand without paying the cost, or play 1 [Shoemon] from your hand or trash without paying the cost."
-- Status 2026-05-17: the **return-self-cost half** of this gap closed under Phase 2 Track B. DSL `activation_cost: { return_self_to_deck_bottom: true }` lifts onto `EffectBuilder::activation_cost(ctx.return_self_to_deck_bottom_as_cost)`; the engine queue's source-liveness check after the cost is now bypassed so the chained free-play branch can fire even though the source Tamer has left the field. The **branch selector half** remains open: BT22-088 still needs the `choose_one` body shape with origin-preserving hand/trash play consumers (exact-name Arisa from hand, exact-name Shoemon from hand-or-trash). The three BT22-088 Start-of-Main behavioural tests remain `#[ignore]` until that branch selector lands.
+- Status 2026-05-20: **FULLY CLOSED** by the Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`). The `choose_one` branch selector with origin-preserving hand/trash play consumers (PUPPETS-G028) landed. `BT22-088`'s Start-of-Main tests are un-ignored. See `qa/resolved-gaps.md` for engine-side details.
+- Status 2026-05-17: the **return-self-cost half** of this gap closed under Phase 2 Track B. DSL `activation_cost: { return_self_to_deck_bottom: true }` lifts onto `EffectBuilder::activation_cost(ctx.return_self_to_deck_bottom_as_cost)`; the engine queue's source-liveness check after the cost is now bypassed so the chained free-play branch can fire even though the source Tamer has left the field. The **branch selector half** was still open at that point.
 - Missing DSL verb / step kind / predicate: optional triggered activation cost that moves the source permanent to the bottom of deck, then an in-effect branch selector with origin-preserving hand/trash play consumers.
 - Companion engine state: the generic triggered activation-cost hook is now resolved (`qa/resolved-gaps.md`); the source-zone move helper lives on `EffectContext::return_self_to_deck_bottom_as_cost`. The chained branch selector with hand/trash consumers is still card-author DSL surface.
 - Suggested DSL syntax:
@@ -1386,9 +1400,10 @@ is satisfiable today.
 
 ---
 
-## BT5-106 — effect-play On Play suppression provenance  [PUPPETS-G030]
+## BT5-106 — effect-play On Play suppression provenance  [PUPPETS-G030] — RESOLVED 2026-05-20 (Puppets substrate sweep)
 
 - Effect text: "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
+- Status 2026-05-20: **FULLY CLOSED** by the Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`). `suppress_on_play` flag on effect-play helpers (PUPPETS-G030) landed. `BT5-106`'s Security slice is now expressible in YAML. See `qa/resolved-gaps.md` for engine-side details.
 - Missing DSL verb / step kind / predicate: a play-from-trash/free-play consumer that carries `suppress_on_play: true` provenance for the played Digimon only.
 - Companion engine state: ordinary effect play from trash can enter the Digimon and normally fire On Play; this card needs the same player-visible trash selection but must skip the played permanent's On Play enqueue for that play event.
 - Suggested DSL syntax:

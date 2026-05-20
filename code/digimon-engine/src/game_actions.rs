@@ -380,6 +380,31 @@ impl Game {
         cost_target_from_hand: bool,
         origin: PendingWouldPlayOrigin,
     ) -> PlayFromHandCostResult {
+        self.play_from_hand_with_cost_result_from_origin_suppress(
+            player_id,
+            hand_index,
+            cost_delta,
+            source,
+            cost_target_from_hand,
+            origin,
+            false,
+        )
+    }
+
+    /// As [`Self::play_from_hand_with_cost_result_from_origin`], but threads a
+    /// `suppress_on_play` flag (PUPPETS-G030). When `true`, the just-played
+    /// permanent's own `[On Play]` effects are skipped for this play event;
+    /// every other timing and every other permanent are unaffected.
+    pub(crate) fn play_from_hand_with_cost_result_from_origin_suppress(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        cost_target_from_hand: bool,
+        origin: PendingWouldPlayOrigin,
+        suppress_on_play: bool,
+    ) -> PlayFromHandCostResult {
         let field_slots = self.rules.field_slots;
         // Borrow-check-friendly pre-checks: gather everything we need from
         // immutable borrows before taking a mutable borrow.
@@ -430,11 +455,13 @@ impl Game {
             cost_delta,
             source,
             origin,
+            suppress_on_play,
             0,
             Vec::new(),
         )
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn continue_play_from_hand_cost_reduction_chain(
         &mut self,
         player_id: PlayerId,
@@ -443,6 +470,7 @@ impl Game {
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
         origin: PendingWouldPlayOrigin,
+        suppress_on_play: bool,
         mut accumulated_reduction: i32,
         mut processed: Vec<CostReductionKey>,
     ) -> PlayFromHandCostResult {
@@ -461,6 +489,7 @@ impl Game {
                     cost_delta,
                     source,
                     origin,
+                    suppress_on_play,
                     accumulated_reduction,
                 );
             };
@@ -491,6 +520,7 @@ impl Game {
                         cost_delta,
                         source,
                         origin,
+                        suppress_on_play,
                         accumulated_reduction,
                         processed,
                     );
@@ -525,8 +555,8 @@ impl Game {
                     }
                     processed.push(accept_key);
                     let _ = game.continue_play_from_hand_cost_reduction_chain(
-                        player_id, hand_index, target, cost_delta, source, origin, reduction,
-                        processed,
+                        player_id, hand_index, target, cost_delta, source, origin,
+                        suppress_on_play, reduction, processed,
                     );
                 }),
                 on_decline,
@@ -535,6 +565,7 @@ impl Game {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn finish_play_from_hand_after_reductions(
         &mut self,
         player_id: PlayerId,
@@ -543,6 +574,7 @@ impl Game {
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
         origin: PendingWouldPlayOrigin,
+        suppress_on_play: bool,
         total_reduction: i32,
     ) -> PlayFromHandCostResult {
         let field_slots = self.rules.field_slots;
@@ -579,6 +611,7 @@ impl Game {
             effective_cost,
             origin,
             effect_initiated: source == PlaySource::ByEffect,
+            suppress_on_play,
         });
         let cause = match source {
             PlaySource::ByEffect => crate::replacement::ReplacementCause::OwnEffect,
@@ -616,6 +649,7 @@ impl Game {
             target_card,
             effective_cost,
             source == PlaySource::ByEffect,
+            suppress_on_play,
         )
         .map(PlayFromHandCostResult::Played)
         .unwrap_or(PlayFromHandCostResult::Failed)
@@ -635,6 +669,7 @@ impl Game {
                     resume.card,
                     resume.effective_cost,
                     resume.effect_initiated,
+                    resume.suppress_on_play,
                 );
             }
             crate::replacement::ReplacementOutcome::Cancelled
@@ -702,6 +737,7 @@ impl Game {
         target_card: crate::card_source::CardHandle,
         effective_cost: u16,
         effect_initiated: bool,
+        suppress_on_play: bool,
     ) -> Option<usize> {
         if self.player(player_id).battle_area.len() >= self.rules.field_slots as usize {
             return None;
@@ -740,7 +776,15 @@ impl Game {
             field_index: field_index as u8,
         });
 
-        self.fire_on_play(player_id, field_index);
+        // PUPPETS-G030 — `suppress_on_play` skips ONLY the just-played
+        // permanent's own `[On Play]` enqueue, and only for this play event.
+        // `OnEnterFieldAnyone` / `OnAllyPlayed` broadcasts below, and every
+        // other permanent's triggers, are untouched. Used by BT5-106's
+        // [Security] clause ("Any [On Play] effects on Digimon played with
+        // this effect don't activate.").
+        if !suppress_on_play {
+            self.fire_on_play(player_id, field_index);
+        }
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnEnterFieldAnyone,
             crate::selection::TriggerSource::EnteredField {
@@ -799,6 +843,27 @@ impl Game {
         cost_delta: crate::enums::CostDelta,
         source: PlaySource,
     ) -> Option<usize> {
+        self.play_from_trash_with_cost_suppress(
+            player_id,
+            trash_index,
+            cost_delta,
+            source,
+            false,
+        )
+    }
+
+    /// As [`Self::play_from_trash_with_cost`], but threads a `suppress_on_play`
+    /// flag (PUPPETS-G030). When `true`, the just-played permanent's own
+    /// `[On Play]` effects are skipped for this play event only. Used by
+    /// BT5-106's [Security] clause.
+    pub fn play_from_trash_with_cost_suppress(
+        &mut self,
+        player_id: PlayerId,
+        trash_index: usize,
+        cost_delta: crate::enums::CostDelta,
+        source: PlaySource,
+        suppress_on_play: bool,
+    ) -> Option<usize> {
         if self
             .modifiers
             .player_has(player_id, ModifierType::CannotPlayFromTrash)
@@ -845,13 +910,14 @@ impl Game {
         self.player_mut(player_id).hand.push(card);
         let hand_index = self.player(player_id).hand.len() - 1;
 
-        match self.play_from_hand_with_cost_result_from_origin(
+        match self.play_from_hand_with_cost_result_from_origin_suppress(
             player_id,
             hand_index,
             cost_delta,
             source,
             false,
             PendingWouldPlayOrigin::Trash { index: trash_index },
+            suppress_on_play,
         ) {
             PlayFromHandCostResult::Played(field_index) => Some(field_index),
             PlayFromHandCostResult::Pending => None,
@@ -1962,7 +2028,10 @@ impl Game {
             DelayTrigger::EndOfYourNextTurn | DelayTrigger::StartOfYourNextTurn => {
                 self.next_owner_turn_count(owner)
             }
-            DelayTrigger::OnEvent(_) => u16::MAX,
+            // Standard `<Delay>` is activated by a player `[Main]`-phase
+            // action, not a turn-keyed auto-trash scan. `OnEvent` likewise
+            // has no scheduled turn — both park indefinitely.
+            DelayTrigger::MainPhaseActivated | DelayTrigger::OnEvent(_) => u16::MAX,
         }
     }
 
@@ -2209,6 +2278,20 @@ impl Game {
         // `MainOnField` on the same card cannot leak through.
         if field_index == crate::action::space::BREEDING_TARGET as usize {
             return self.activate_breeding_main_training(player_id);
+        }
+
+        // PUPPETS-G009 — standard `<Delay>` `[Main]`-phase activation. A
+        // parked `DelayTrigger::MainPhaseActivated` Option whose placing turn
+        // has passed is activated by trashing it as the cost and running its
+        // stored `<Delay>` body. Dispatched before the ordinary `MainOnField`
+        // scan because the Delay body lives at `EffectTiming::DelayEffect`,
+        // not `MainOnField`.
+        let delay_handle = PermanentHandle {
+            player: player_id,
+            index: field_index as u8,
+        };
+        if self.delayed_option_main_activation_available(delay_handle) {
+            return self.activate_delayed_option_main(delay_handle);
         }
 
         // Snapshot per-source identity without holding the battle_area borrow

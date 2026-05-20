@@ -1159,6 +1159,27 @@ fn validate_step_binding_scope(
         StepSpec::PlayFromMaterials(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::PlayFromHandFree(args) => {
+            // The played permanent's `bind_as` becomes available to later
+            // steps in the same body (e.g. `schedule_delete_played_at_turn_end`).
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::PlayToken(args) => {
+            // The played token's `bind_as` becomes available to later
+            // steps in the same body (e.g. `schedule_delete_played_at_turn_end`).
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::PlayUnionBoundFree(args) => {
+            // The `binding` must name an in-scope `select_union_zone` bind_as.
+            report_if_undeclared_binding(
+                &args.binding,
+                &format!("{prefix}.binding"),
+                card_id,
+                scope,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::BindPermanentProperty(args) => {
             scope.insert(args.bind_as.clone());
         }
@@ -1243,6 +1264,17 @@ fn validate_step_binding_scope(
                 &format!("{prefix}.body"),
                 card_id,
                 &mut child,
+                errors,
+            );
+        }
+        StepSpec::ScheduleDeletePlayedAtTurnEnd(args) => {
+            // The `binding` must name an in-scope permanent binding produced
+            // by an earlier free-play step (PUPPETS-G003).
+            report_if_undeclared_binding(
+                &args.binding,
+                &format!("{prefix}.binding"),
+                card_id,
+                scope,
                 errors,
             );
         }

@@ -370,10 +370,19 @@ pub enum EffectTiming {
     None,
 }
 
-/// When a Delay Option's body fires relative to the play. Most printed
-/// cards use `EndOfYourNextTurn`; `EndOfThisTurn` is rare but present.
+/// When a Delay Option's body fires relative to the play.
+///
+/// `MainPhaseActivated` is the standard printed `<Delay>` (RULES_CONTEXT
+/// 16-16): a player-visible `[Main]`-phase action — "By trashing this card
+/// after the placing turn, activate the effect below." The body NEVER
+/// auto-fires; the controller takes a `FIELD_EFFECT` action on a later main
+/// phase, trashing the Option as the cost. The remaining variants are
+/// genuine engine-scheduled auto-fire timings used by event-gated and
+/// start/end-of-turn Delay bodies.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum DelayTrigger {
+    /// Standard `<Delay>` — player-visible `[Main]`-phase activation action.
+    MainPhaseActivated,
     EndOfYourNextTurn,
     EndOfThisTurn,
     StartOfYourNextTurn,

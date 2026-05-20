@@ -60,16 +60,21 @@ impl std::ops::BitOrAssign for UnionZoneSet {
     }
 }
 
-/// The zone-tagged result of a `select_union_zone` pick — identifies BOTH
-/// the zone the card was picked from AND its index in that zone, so a
-/// downstream free-play step can bind a `HandIndex` / `TrashIndex` rather
-/// than a zone-agnostic `Card`. G-DSL-UNION-PLAY-FREE.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum UnionZonePick {
-    /// The card was picked from the player's hand at `index`.
-    Hand { player: crate::enums::PlayerId, index: u16 },
-    /// The card was picked from the player's trash at `index`.
-    Trash { player: crate::enums::PlayerId, index: u16 },
+/// The concrete zone a `select_union_zone` pick came from. A union-zone
+/// selection spans hand ∪ trash; the resulting `CardHandle` alone does not
+/// record *which* zone the card was in. `UnionZoneOrigin` is carried in the
+/// selection callback so a downstream consumer (e.g. `play_union_bound_free`)
+/// can play the card back from its true origin zone.
+///
+/// Only `Hand` / `Trash` are modeled — the only two zones the union-zone
+/// selection currently spans (`UnionZoneSet::HAND | UnionZoneSet::TRASH`).
+/// Extend in lockstep with `UnionZoneSet` if future tasks widen the bitfield.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum UnionZoneOrigin {
+    /// The card was picked from the player's hand.
+    Hand,
+    /// The card was picked from the player's trash.
+    Trash,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
