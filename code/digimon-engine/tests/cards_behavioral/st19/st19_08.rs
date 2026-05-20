@@ -74,7 +74,6 @@ fn st19_08_grants_overclock_with_puppet_cost_filter() {
 }
 
 #[test]
-#[ignore = "pending: G-UNION-ZONE-PLAY-FROM-ORIGIN - select_union_zone binds CardHandle only and does not enforce filters"]
 fn st19_08_security_may_play_liberator_cost_4_or_less_from_hand_or_trash() {
     let runner = DebugRunner::builder()
         .dsl_card("ST19-08")
