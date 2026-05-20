@@ -186,6 +186,7 @@ pub enum StepSpec {
     SelectHand(SelectZoneArgs),
     SelectTrash(SelectZoneArgs),
     SelectMaterial(SelectMaterialArgs),
+    SelectMaterials(SelectMaterialsArgs),
     SelectOwnSources(SelectOwnSourcesArgs),
     DigiBurst(DigiBurstArgs),
     SelectOpponentDpBudget(SelectOpponentDpBudgetArgs),
@@ -355,6 +356,7 @@ impl Serialize for StepSpec {
             StepSpec::SelectHand(v) => kv!(s, "select_hand", v),
             StepSpec::SelectTrash(v) => kv!(s, "select_trash", v),
             StepSpec::SelectMaterial(v) => kv!(s, "select_material", v),
+            StepSpec::SelectMaterials(v) => kv!(s, "select_materials", v),
             StepSpec::SelectOwnSources(v) => kv!(s, "select_own_sources", v),
             StepSpec::DigiBurst(v) => kv!(s, "digi_burst", v),
             StepSpec::SelectOpponentDpBudget(v) => kv!(s, "select_opponent_dp_budget", v),
@@ -541,6 +543,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "select_hand" => StepSpec::SelectHand(map.next_value()?),
             "select_trash" => StepSpec::SelectTrash(map.next_value()?),
             "select_material" => StepSpec::SelectMaterial(map.next_value()?),
+            "select_materials" => StepSpec::SelectMaterials(map.next_value()?),
             "select_own_sources" => StepSpec::SelectOwnSources(map.next_value()?),
             "digi_burst" => StepSpec::DigiBurst(map.next_value()?),
             "select_opponent_dp_budget" => StepSpec::SelectOpponentDpBudget(map.next_value()?),
@@ -665,6 +668,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "select_hand",
                         "select_trash",
                         "select_material",
+                        "select_materials",
                         "select_own_sources",
                         "digi_burst",
                         "select_opponent_dp_budget",
@@ -1541,6 +1545,50 @@ pub struct SelectMaterialArgs {
     pub prompt: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
+}
+
+/// Count-capped / different-name multi-pick over a carrier permanent's
+/// digivolution-source stack — the batch sibling of `select_material`.
+///
+/// YAML shape:
+///
+/// ```yaml
+/// - select_materials:
+///     target: <carrier-binding>   # battle-area permanent (or BREEDING_TARGET)
+///     max: 4
+///     uniqueness: name            # "1 of each different name"
+///     filter: { trait_has: "Royal Knight" }
+///     bind_as: picked
+/// ```
+///
+/// Picks are surfaced one-at-a-time through `pending_selection` (the
+/// count-capped multi-select state machine); `uniqueness` shapes the
+/// legal action mask after each pick — it never auto-picks. The bound
+/// `CardList` can be consumed as a batch by `play_from_materials`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectMaterialsArgs {
+    /// Carrier permanent whose digivolution sources are the candidate pool.
+    pub target: BindingRef,
+    /// Upper bound on the number of sources the player may pick.
+    pub max: CountBound,
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
+    /// Per-pick uniqueness constraint. `name` means "at most one pick per
+    /// distinct card name" — the printed-text "1 of each different name".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uniqueness: Option<crate::alt_path::DistinctBy>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    /// When `true`, the player may commit zero picks. Default `false`:
+    /// PASS only becomes legal after at least one pick.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional_zero: bool,
     /// Optional localization-key override for `prompt`. If absent, derived
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]

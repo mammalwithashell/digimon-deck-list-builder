@@ -1085,6 +1085,20 @@ pub enum CompiledStep {
         prompt_key: Option<String>,
         optional: bool,
     },
+    /// Count-capped / name-unique multi-pick over a carrier permanent's
+    /// digivolution-source stack — the batch sibling of `SelectMaterial`.
+    /// Lowers to `EffectContext::select_count_capped_multi` with
+    /// `CountCappedZone::Material`; `uniqueness` maps to `DistinctByMode`.
+    SelectMaterials {
+        of_permanent: CompiledBindingRef,
+        max: CompiledCountBound,
+        filter: CompiledPredicate,
+        uniqueness: Option<CompiledDistinctBy>,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional_zero: bool,
+    },
     SelectOwnSources {
         target: Option<CompiledBindingRef>,
         filter: CompiledPredicate,

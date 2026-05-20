@@ -113,6 +113,7 @@ mod roundtrip;
 mod schema_export;
 mod security_boundary;
 mod security_stack_steps;
+mod select_materials;
 mod selection_dp_extrema;
 mod track_e_reveal_ordering;
 mod source_stack_aggregates;

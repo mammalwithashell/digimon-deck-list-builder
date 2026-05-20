@@ -821,6 +821,24 @@ fn validate_step(
                 errors,
             );
         }
+        StepSpec::SelectMaterials(args) => {
+            if let crate::step::CountBound::Formula { formula } = &args.max {
+                validate_formula(
+                    formula,
+                    &format!("{prefix}.max.formula"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
+            validate_predicate(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
         StepSpec::SelectUnionZone(args) => {
             validate_predicate(
                 &args.filter,
@@ -1018,6 +1036,16 @@ fn validate_step_binding_scope(
             }
         }
         StepSpec::SelectMaterial(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectMaterials(args) => {
             validate_predicate_binding_scope(
                 &args.filter,
                 &format!("{prefix}.filter"),

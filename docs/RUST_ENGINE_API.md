@@ -4032,6 +4032,48 @@ Effect::on_play(card)
       # follow-up that only happens if the source was actually played
 ```
 
+### `select_materials` (count-capped / name-unique batch source pick)
+
+**DSL wrapper.** `select_materials` is the *batch sibling* of `select_material`:
+it picks **up to N** digivolution sources of a carrier permanent in ONE
+count-capped multi-pick (excluding the carrier's top card), optionally
+constrained by a per-pick `uniqueness` predicate. `uniqueness: name` enforces
+"1 of each different name" — after each pick, any remaining source sharing a
+picked card's name is removed from the next step's legal action mask. Every
+pick surfaces through `pending_selection`; the uniqueness constraint *shapes
+the mask*, it never auto-picks (CLAUDE.md §17).
+
+It lowers to `EffectContext::select_count_capped_multi` with
+`CountCappedZone::Material` + `DistinctByMode`, REUSING the existing
+count-capped action mask — no `ACTION_SPACE_SIZE` change. The picked sources
+are bound as a `CardList`.
+
+`play_from_materials.source_index` accepts that `CardList` binding and consumes
+the **whole batch**: each picked source is removed from the stack and played as
+a fresh permanent (each handle is re-resolved to its current stack index right
+before its play, since each play shifts later indices down). `suppress_on_play:
+true` composes — it suppresses every played source's [On Play] enqueue.
+
+```yaml
+- select_materials:
+    target: carrier              # battle-area carrier permanent
+    max: 4
+    uniqueness: name             # "1 of each different name"
+    filter: { trait_has: "Royal Knight" }
+    bind_as: picked
+- play_from_materials:
+    target: carrier
+    source_index: picked         # batch — all picked sources played
+    cost_delta: free
+    suppress_on_play: true
+```
+
+A `BREEDING_TARGET`-sentinel carrier binding is accepted but resolves to zero
+candidates today — the source-select action range covers only the 14
+battle-area field slots, so a breeding-resident carrier's sources have no
+action encoding. Engine lowering coverage:
+`code/digimon-engine/tests/dsl/select_materials.rs`.
+
 ### `place_permanent_on_security`
 
 **DSL wrapper.** Normal effect bodies can initiate a move from the battle area to security:
