@@ -887,6 +887,9 @@ pub enum CompiledStep {
     PlayFromTrashFree {
         of: CompiledPlayerRef,
         trash_index: CompiledBindingRef,
+        /// PUPPETS-G030 — when `true`, the played Digimon's own `[On Play]`
+        /// effects are skipped for this play event only (BT5-106 [Security]).
+        suppress_on_play: bool,
     },
     /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
     /// true origin zone (hand vs trash). `binding` names a `select_union_zone`

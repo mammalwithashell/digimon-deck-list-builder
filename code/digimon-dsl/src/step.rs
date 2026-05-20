@@ -1268,6 +1268,15 @@ pub struct PlayFromHandArgs {
     pub hand_index: BindingRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_delta: Option<CostDelta>,
+    /// PUPPETS-G030 — when `true`, the played Digimon's own `[On Play]`
+    /// effects do NOT activate for this play event. Only honored by
+    /// `play_from_trash_free` (BT5-106's [Security] clause: "Any [On Play]
+    /// effects on Digimon played with this effect don't activate."). The
+    /// suppression is scoped to the just-played permanent and this single
+    /// play; other permanents' On Play and every other timing are
+    /// unaffected. `false` (the default) preserves prior behavior.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub suppress_on_play: bool,
 }
 
 /// Free-play-from-hand args. Adds `bind_as` so the just-played permanent

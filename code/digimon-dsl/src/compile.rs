@@ -1711,25 +1711,50 @@ fn compile_step(
         // PlayFromHand, PlayFromTrash, PlayFromTrashFree all use PlayFromHandArgs
         // (with hand_index field), but the compiled variants use different field
         // names for trash steps.
-        S::PlayFromHand(a) => CompiledStep::PlayFromHand {
-            of: compile_player_ref(a.of),
-            hand_index: compile_binding_ref(&a.hand_index),
-            cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
-        },
+        //
+        // PUPPETS-G030: `suppress_on_play` is honored ONLY by
+        // `play_from_trash_free`. Reject it on the other play steps so an
+        // author cannot silently expect a no-op flag to take effect.
+        S::PlayFromHand(a) => {
+            if a.suppress_on_play {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.play_from_hand.suppress_on_play"),
+                    message: "suppress_on_play is only supported on play_from_trash_free"
+                        .to_string(),
+                });
+            }
+            CompiledStep::PlayFromHand {
+                of: compile_player_ref(a.of),
+                hand_index: compile_binding_ref(&a.hand_index),
+                cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
+            }
+        }
         S::PlayFromHandFree(a) => CompiledStep::PlayFromHandFree {
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),
             bind_as: a.bind_as.clone(),
         },
         // PlayFromTrash reuses PlayFromHandArgs but the compiled form uses `trash_index`
-        S::PlayFromTrash(a) => CompiledStep::PlayFromTrash {
-            of: compile_player_ref(a.of),
-            trash_index: compile_binding_ref(&a.hand_index),
-            cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
-        },
+        S::PlayFromTrash(a) => {
+            if a.suppress_on_play {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.play_from_trash.suppress_on_play"),
+                    message: "suppress_on_play is only supported on play_from_trash_free"
+                        .to_string(),
+                });
+            }
+            CompiledStep::PlayFromTrash {
+                of: compile_player_ref(a.of),
+                trash_index: compile_binding_ref(&a.hand_index),
+                cost_delta: a.cost_delta.as_ref().map(compile_cost_delta),
+            }
+        }
         S::PlayFromTrashFree(a) => CompiledStep::PlayFromTrashFree {
             of: compile_player_ref(a.of),
             trash_index: compile_binding_ref(&a.hand_index),
+            suppress_on_play: a.suppress_on_play,
         },
         S::PlayUnionBoundFree(a) => CompiledStep::PlayUnionBoundFree {
             binding: a.binding.clone(),

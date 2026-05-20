@@ -298,7 +298,8 @@ ctx.play_from_hand_with_cost(player, hand_index, CostDelta) -> Option<PermanentH
 ctx.play_from_hand_free(player, hand_index) -> Option<PermanentHandle>
 ctx.play_from_hand_free_with_provenance(player, hand_index) -> Option<(PermanentHandle, ProvenanceToken)>
 ctx.play_from_trash_with_cost(player, trash_index, CostDelta) -> Option<PermanentHandle>
-ctx.play_from_trash_free_unsuspended(player, trash_index) -> Option<PermanentHandle>
+ctx.play_from_trash_free_unsuspended(card) -> Option<PermanentHandle>
+ctx.play_from_trash_free_unsuspended_suppress_on_play(card) -> Option<PermanentHandle>
 ctx.play_from_security(player) -> Option<PermanentHandle>
 ctx.play_from_materials(carrier, source_index, CostDelta, bind_target: Option<...>) -> Option<PermanentHandle>
 ctx.play_to_breeding_from_hand(player, hand_index) -> bool
@@ -327,6 +328,17 @@ discriminate effect-initiated plays from natural plays. The
 the new `CardSource` rather than the battle-area slot — use these when later
 cleanup or suppression must identify the same created object after zone
 movement.
+
+`play_from_trash_free_unsuspended_suppress_on_play` (PUPPETS-G030) is the
+On-Play-suppressing variant: the played Digimon's own `[On Play]` effects do
+**not** activate for that play event. The suppression is scoped strictly to
+the just-played permanent and that single play — `OnEnterFieldAnyone` /
+`OnAllyPlayed` broadcasts and every other permanent's triggers fire normally.
+It threads a `suppress_on_play` bool through `play_from_trash_with_cost_suppress`
+→ the cost-reduction chain → `PendingWouldPlayResume` → the final
+`commit_play_from_hand_card_no_replace`, which gates exactly the `fire_on_play`
+call for that permanent. Surfaced to the DSL as `suppress_on_play: true` on the
+`play_from_trash_free` step (BT5-106 Demonic Disaster's [Security] clause).
 
 ### Granted triggered effects (Track H)
 

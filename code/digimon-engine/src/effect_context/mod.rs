@@ -2967,6 +2967,28 @@ impl<'a> EffectContext<'a> {
         &mut self,
         card: CardHandle,
     ) -> Option<PermanentHandle> {
+        self.play_from_trash_free_unsuspended_inner(card, false)
+    }
+
+    /// As [`Self::play_from_trash_free_unsuspended`], but suppresses the
+    /// played Digimon's own `[On Play]` effects for this play event only
+    /// (PUPPETS-G030). Used by BT5-106's [Security] clause — "Any [On Play]
+    /// effects on Digimon played with this effect don't activate." The
+    /// suppression is scoped strictly to the just-played permanent and this
+    /// single play; other permanents' On Play and every other timing
+    /// (`OnEnterFieldAnyone` / `OnAllyPlayed`) fire normally.
+    pub fn play_from_trash_free_unsuspended_suppress_on_play(
+        &mut self,
+        card: CardHandle,
+    ) -> Option<PermanentHandle> {
+        self.play_from_trash_free_unsuspended_inner(card, true)
+    }
+
+    fn play_from_trash_free_unsuspended_inner(
+        &mut self,
+        card: CardHandle,
+        suppress_on_play: bool,
+    ) -> Option<PermanentHandle> {
         let controller = self.player;
         let trash_index = self
             .game
@@ -2987,11 +3009,12 @@ impl<'a> EffectContext<'a> {
                 return None;
             }
         };
-        let field_index = self.game.play_from_trash_with_cost(
+        let field_index = self.game.play_from_trash_with_cost_suppress(
             controller,
             trash_index,
             crate::enums::CostDelta::Free,
             PlaySource::ByEffect,
+            suppress_on_play,
         )?;
         Some(PermanentHandle {
             player: controller,

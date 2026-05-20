@@ -100,6 +100,13 @@ pub(crate) struct PendingWouldPlayResume {
     pub(crate) effective_cost: u16,
     pub(crate) origin: PendingWouldPlayOrigin,
     pub(crate) effect_initiated: bool,
+    /// PUPPETS-G030 — when `true`, the just-played permanent's own `[On Play]`
+    /// effects are NOT enqueued for this play event. Used by BT5-106's
+    /// [Security] clause ("Any [On Play] effects on Digimon played with this
+    /// effect don't activate."). Scoped strictly to the played permanent and
+    /// this single play event: other permanents' On Play, and every other
+    /// timing (OnEnterFieldAnyone / OnAllyPlayed), are unaffected.
+    pub(crate) suppress_on_play: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

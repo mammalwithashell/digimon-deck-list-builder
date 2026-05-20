@@ -343,6 +343,7 @@ fn play_from_trash_free_step_consumes_trash_and_keeps_memory() {
     let step = CompiledStep::PlayFromTrashFree {
         of: CompiledPlayerRef::You,
         trash_index: CompiledBindingRef::Named("idx".into()),
+        suppress_on_play: false,
     };
 
     {

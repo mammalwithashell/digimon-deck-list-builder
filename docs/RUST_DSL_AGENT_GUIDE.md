@@ -266,6 +266,8 @@ Use these instead of mutating engine internals:
 - Stack / source: `place_as_bottom_source`, `trash_top_source`, `trash_all_sources`, `select_own_sources`, `trash_selected_sources`, `play_selected_sources_free`, `trash_top_n_digivolution_cards_of_each`.
 - Security: `trash_top_security`, `trash_bottom_security`, `add_top_security_to_hand`, `may_add_top_security_to_hand`, `recover`, `place_on_security`, `add_this_option_to_hand`, `search_own_security_stack`, `mark_security_face_up`, `shuffle_security`, `security_place_stacked_card`, `security_place_top_stacked_card`, `bounce_self`, `place_self_at_security`, `place_self_option_at_security`. The `..._and_cancel_replacement` and `..._and_handle_replacement` variants exist for replacement-flow card text (`trash_top_security_and_cancel_replacement`, `place_permanent_on_security_and_handle_replacement`, etc.) — use them only inside a `kind: replacement` clause's `process:`.
 
+`play_from_trash_free` accepts an optional `suppress_on_play: true` flag (default `false`). When set, the played Digimon's own `[On Play]` effects do **not** activate for that play event — for card text like "Any [On Play] effects on Digimon played with this effect don't activate." (BT5-106 Demonic Disaster). The suppression is scoped strictly to the just-played permanent and that single play: other permanents' On Play, and every other timing (`OnEnterFieldAnyone` / `OnAllyPlayed`), still fire normally. The flag is honored only by `play_from_trash_free`; setting it on `play_from_hand` / `play_from_trash` is a compile error.
+
 Example search pattern:
 
 ```yaml

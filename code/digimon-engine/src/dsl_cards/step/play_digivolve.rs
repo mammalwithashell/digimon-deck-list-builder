@@ -156,7 +156,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::PlayFromTrashFree { of: _, trash_index } => {
+        CompiledStep::PlayFromTrashFree {
+            of: _,
+            trash_index,
+            suppress_on_play,
+        } => {
             // `play_from_trash_free_unsuspended` takes a `CardHandle`; the
             // IR addresses by trash index so we must look up the handle.
             if let Some(ResolvedBinding::TrashIndex(owner, i)) =
@@ -169,7 +173,15 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     .get(i as usize)
                     .map(|cs| cs.handle());
                 if let Some(h) = handle {
-                    if let Some(played) = ctx.play_from_trash_free_unsuspended(h) {
+                    // PUPPETS-G030 — when `suppress_on_play` is set, the
+                    // played Digimon's own `[On Play]` effects do not fire
+                    // for this play event (BT5-106 [Security]).
+                    let played = if *suppress_on_play {
+                        ctx.play_from_trash_free_unsuspended_suppress_on_play(h)
+                    } else {
+                        ctx.play_from_trash_free_unsuspended(h)
+                    };
+                    if let Some(played) = played {
                         bindings.record_played(played);
                     }
                 }
