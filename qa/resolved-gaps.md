@@ -1888,3 +1888,39 @@ The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE
   ```
 - **Evidence:** `cargo test --manifest-path code/digimon-dsl/Cargo.toml` (parse round-trip); `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage` (variant-coverage lint).
 - **Card-side authoring follow-up:** BT24-016's YAML still leaves the Owen gate unenforced; populating `condition:` on the activated_digivolve path is card-local work, not substrate. Other alt-path routes (`DigiXros`, `BurstDigivolve`, `Assembly`, `AppFusion`, etc.) do not yet read the field — extend per-route as cards need them.
+
+## Engine Gap: Effect-spawned permanent with end-of-turn deletion rider — RESOLVED 2026-05-20 (Puppets substrate sweep)
+
+- **Severity:** 🔴 BLOCKING (closed for provenance-bound cleanup substrate)
+- **Discovered in:** Dark Masters (2026-04-18); Puppets (2026-05-04)
+- **Card(s):** EX10-012 MetalSeadramon, EX10-020 Puppetmon, EX10-035 Machinedramon, EX10-057 Piedmon, EX10-061 Apocalymon, EX10-072 Spiral Mountain, P-216 WaruMonzaemon; Puppets adds EX11-022, EX11-061 (PUPPETS-G003) and P-165 (PUPPETS-G016).
+- **Effect text:** "At turn end, delete the Digimon this effect played." / "At the end of your opponent's turn, delete that token."
+- **Resolution:** `schedule_delete_played_at_turn_end` provenance-bound turn-end self-delete landed (`PUPPETS-G003`): effect-play helpers return a `PermanentHandle`; `ctx.schedule_delete_at_end_of_turn(handle)` enqueues a handle-keyed deletion that is a no-op if the permanent is already gone. `play_token` `bind_as` (`PUPPETS-G016`) lets the token-creation step bind the returned `PermanentHandle` so a separate `schedule_delete_at_end_of_opponent_turn(handle)` step can target exactly that token rather than any same-kind token.
+- **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, 2026-05-20.
+
+## Engine Gap: Costed self-digivolve stable source binding — RESOLVED 2026-05-20 (Puppets substrate sweep)
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets Batch 5 (2026-05-04)
+- **Card(s):** `EX9-032` Karakurumon (PUPPETS-G018)
+- **Effect text:** "[On Play] [When Digivolving] By deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon may digivolve into a [Puppet] trait Digimon card in your hand without paying the cost."
+- **Resolution:** `source_permanent` is now re-located by `CardHandle` after any mid-body battle-area index shift. `binding_ref.rs::Source` resolution searches the live battle area for the carrier card-handle rather than trusting the snapshot index. Preflight for legal Token/Puppet cost bodies excludes the source permanent by handle.
+- **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, 2026-05-20.
+
+## Engine Gap: Narrow opponent-effect protection for DP reduction and De-Digivolve — RESOLVED 2026-05-20 (Puppets substrate sweep)
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets Batch 8 (2026-05-04)
+- **Card(s):** `BT16-055` Namakemon (PUPPETS-G024)
+- **Effect text:** "While you have 3 or more security cards, this Digimon isn't affected by your opponent's DP reduction effects and can't be de-digivolved by their effects."
+- **Resolution:** `grant_narrow_opponent_effect_protection` landed: category-scoped protection modifiers (`ImmuneToOpponentDpReduction`, `ImmuneToOpponentDeDigivolve`) with opponent-source and live security-count predicates are consulted at DP-reduction and De-Digivolve effect sites. DSL surface: `narrow_opponent_effect_protection: { categories: [dp_reduction, de_digivolve], while: { own_security_gte: 3 } }`.
+- **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, 2026-05-20.
+
+## Engine Gap: Effect play with played-Digimon On Play suppression — RESOLVED 2026-05-20 (Puppets substrate sweep)
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets Batch 9 (2026-05-04)
+- **Card(s):** `BT5-106` Demonic Disaster (PUPPETS-G030); adjacent: `BT13-110`, `BT13-112` (Royal Knights)
+- **Effect text:** "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
+- **Resolution:** `suppress_on_play: true` flag added to effect-play helpers and threaded through the play event context. On Play enqueue skips the just-played permanent's On Play clauses when the flag is set. DSL step: `play_from_trash_free: { filter: ..., suppress_on_play: true }`.
+- **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, 2026-05-20.
