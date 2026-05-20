@@ -27,10 +27,11 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
     CompiledDeclarativeClause, CompiledReplacementCause, CompiledScope, CompiledStep,
 };
+use digimon_engine::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::CardKind;
 use digimon_engine::replacement::ReplacementCause;
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::selection::{SelectionKind, UnionZoneSet};
 
 fn digimon(id: &str, level: u8, dp: i32, traits: &[&str]) -> digimon_engine::card_data::CardData {
     let mut card = make_test_card(id, id);
@@ -276,23 +277,118 @@ fn ex11_022_inherited_leave_prevention_uses_token_or_other_puppet_and_is_once_pe
     );
 }
 
+/// PUPPETS-G021 (Task 6): union-zone DP filter for hidden-zone candidates.
+///
+/// The selection must offer ONLY Puppet Digimon cards with DP ≤ 4000 from
+/// both hand and trash. Non-Puppet cards and Puppet cards above 4000 DP must
+/// be absent from `valid_action_ids`. The play consumer and turn-end cleanup
+/// are deferred to later tasks (PUPPETS-G014 / PUPPETS-G003, Tasks 7/8).
 #[test]
-#[ignore = "pending: G-HAND-TRASH-CARD-DP-FILTER + PUPPETS-G003 - hidden-zone card DP predicates and identity-stable effect-play cleanup are required"]
-fn ex11_022_on_play_may_play_only_puppet_dp_4000_or_less_from_hand_or_trash_then_cleanup() {
+fn ex11_022_on_play_union_selection_filter_excludes_non_puppet_and_high_dp() {
+    // Cards in hand (after EX11-022 is played from index 0):
+    //   index 0: PUPPET-HAND   — Puppet, DP 3000  → should be OFFERED   (action PLAY_HAND_START+0)
+    //   index 1: PUPPET-HIGH   — Puppet, DP 5000  → should be EXCLUDED  (DP > 4000)
+    //   index 2: NON-PUPPET    — Beast,  DP 2000  → should be EXCLUDED  (not Puppet)
+    // Cards in trash:
+    //   index 0: PUPPET-TRASH  — Puppet, DP 4000  → should be OFFERED   (action TRASH_EFFECT_START+0)
+    //   index 1: PUPPET-HIGH-T — Puppet, DP 6000  → should be EXCLUDED  (DP > 4000)
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-022")
+        .expect("EX11-022 YAML loads")
+        .add_card(digimon("PUPPET-HAND", 4, 3000, &["Puppet"]))
+        .add_card(digimon("PUPPET-HIGH", 4, 5000, &["Puppet"]))
+        .add_card(digimon("NON-PUPPET", 4, 2000, &["Beast"]))
+        .add_card(digimon("PUPPET-TRASH", 4, 4000, &["Puppet"]))
+        .add_card(digimon("PUPPET-HIGH-T", 5, 6000, &["Puppet"]))
+        .hand(0, &["EX11-022", "PUPPET-HAND", "PUPPET-HIGH", "NON-PUPPET"])
+        .memory(10)
+        .start();
+
+    // Push cards to player 0's trash.
+    let puppet_trash_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "PUPPET-TRASH")
+        .expect("PUPPET-TRASH in registry");
+    let puppet_high_t_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "PUPPET-HIGH-T")
+        .expect("PUPPET-HIGH-T in registry");
+    use digimon_engine::card_source::CardSource;
+    let ci0 = runner.game.next_card_index();
+    runner.game.players[0]
+        .trash
+        .push(CardSource::new(puppet_trash_idx, 0, ci0));
+    let ci1 = runner.game.next_card_index();
+    runner.game.players[0]
+        .trash
+        .push(CardSource::new(puppet_high_t_idx, 0, ci1));
+
+    // Play EX11-022 from hand index 0. This triggers the On Play effect.
+    runner.play(0, 0).expect("EX11-022 plays from hand");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("union zone selection must be installed by On Play");
+
+    assert_eq!(
+        view.kind,
+        SelectionKind::UnionZone {
+            zones: UnionZoneSet::HAND | UnionZoneSet::TRASH
+        },
+        "pending selection must be a union-zone prompt"
+    );
+    assert!(view.is_optional, "the selection must be optional ('you may')");
+
+    // Exactly 2 eligible candidates: PUPPET-HAND (hand[0]) + PUPPET-TRASH (trash[0]).
+    assert_eq!(
+        view.valid_action_ids.len(),
+        2,
+        "only PUPPET-HAND and PUPPET-TRASH should be eligible; got {:?}",
+        view.valid_action_ids
+    );
+
+    // Hand index 0 maps to PLAY_HAND_START + 0.
+    assert!(
+        view.valid_action_ids.contains(&(PLAY_HAND_START + 0)),
+        "PUPPET-HAND (hand index 0, DP 3000, Puppet) must be offered"
+    );
+    // Trash index 0 maps to TRASH_EFFECT_START + 0.
+    assert!(
+        view.valid_action_ids.contains(&(TRASH_EFFECT_START + 0)),
+        "PUPPET-TRASH (trash index 0, DP 4000, Puppet) must be offered"
+    );
+
+    // Verify the excluded cards are absent.
+    assert!(
+        !view.valid_action_ids.contains(&(PLAY_HAND_START + 1)),
+        "PUPPET-HIGH (DP 5000) must be excluded"
+    );
+    assert!(
+        !view.valid_action_ids.contains(&(PLAY_HAND_START + 2)),
+        "NON-PUPPET (Beast trait) must be excluded"
+    );
+    assert!(
+        !view.valid_action_ids.contains(&(TRASH_EFFECT_START + 1)),
+        "PUPPET-HIGH-T (DP 6000) must be excluded"
+    );
+}
+
+#[test]
+#[ignore = "pending: PUPPETS-G014 (Task 7) + PUPPETS-G003 (Task 7) - play consumer and turn-end cleanup are required"]
+fn ex11_022_on_play_selected_puppet_is_played_free_and_deleted_at_turn_end() {
     let _runner = load_runner();
     // Required behavior:
-    // - optional prompt is visible;
-    // - legal picks are Puppet trait Digimon cards with printed DP <= 4000
-    //   from hand and trash;
-    // - non-Puppet cards and Puppet cards above 4000 DP are absent from the
-    //   mask;
     // - the selected card is played from its original zone without cost;
     // - at turn end, the exact played permanent is deleted even if field
     //   indices shift before cleanup.
 }
 
 #[test]
-#[ignore = "pending: G-HAND-TRASH-CARD-DP-FILTER + PUPPETS-G003 - same blocked body as On Play must fire on When Digivolving"]
+#[ignore = "pending: PUPPETS-G014 + PUPPETS-G003 - same blocked body as On Play must fire on When Digivolving"]
 fn ex11_022_when_digivolving_uses_same_optional_play_and_cleanup_body() {
     let _runner = load_runner();
 }

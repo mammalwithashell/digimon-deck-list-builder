@@ -39,10 +39,40 @@ effects:
       - substitute_replacement:
           subject: scapegoat_cost
 
-  # [On Play] [When Digivolving] omitted:
-  # Needs a hidden-zone card DP predicate for hand/trash selections, plus
-  # PUPPETS-G003 identity-stable tracking for "the Digimon this effect played"
-  # at turn-end cleanup.
+  # [On Play] [When Digivolving] You may play 1 [Puppet] trait Digimon card
+  # with 4000 DP or less from your hand or trash without paying the cost.
+  # At turn end, delete the Digimon this effect played.
+  #
+  # PUPPETS-G021 (DP filter) — RESOLVED: select_union_zone now evaluates the
+  # compiled predicate (dp_lte + trait_has) against hidden-zone CardData.
+  #
+  # PUPPETS-G014 / Task 7 — BLOCKED: the `select_union_zone` binding is a
+  # CardHandle only; the play step needs origin-preserving play_from_origin_free
+  # to dispatch play_from_hand_free vs play_from_trash_free based on where the
+  # selected card lives. Omitted here — authored in Task 8/11.
+  #
+  # PUPPETS-G003 / Task 7 — BLOCKED: identity-stable cleanup ("at turn end,
+  # delete the Digimon this effect played") requires a stable permanent tag
+  # that survives field-index shifts. Omitted here.
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play / When Digivolving] You may play 1 Puppet Digimon (DP ≤ 4000) from hand or trash free"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: puppet_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Puppet
+              - dp_lte: 4000
+          prompt: "You may play 1 Puppet Digimon (DP 4000 or less) from your hand or trash without paying the cost"
+      # PUPPETS-G014 (Task 7): play_from_origin_free step omitted until the
+      # origin-preserving play verb is implemented.
+      # PUPPETS-G003 (Task 7): turn-end cleanup step omitted until
+      # identity-stable permanent tagging is implemented.
 
   # Inherited [All Turns] [Once Per Turn]
   # When this Digimon would leave the battle area other than by your effects,

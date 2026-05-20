@@ -542,6 +542,7 @@ pub fn try_install(
         CompiledStep::SelectUnionZone {
             of,
             zones,
+            filter,
             bind_as,
             prompt,
             optional,
@@ -566,6 +567,7 @@ pub fn try_install(
                 ctx,
                 *of,
                 zoneset,
+                filter.clone(),
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
@@ -1904,6 +1906,7 @@ fn install_select_union_zone(
     ctx: &mut EffectContext<'_>,
     of: CompiledPlayerRef,
     zoneset: crate::selection::UnionZoneSet,
+    filter: CompiledPredicate,
     bind_as: Option<String>,
     prompt: String,
     optional: bool,
@@ -1914,12 +1917,35 @@ fn install_select_union_zone(
     let target_player = resolve_player(ctx, of);
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
     ctx.select_union_zone(
         target_player,
         zoneset,
         &prompt,
         optional,
-        |_game, _card| true, // Phase 2e: accept-all filter.
+        // PUPPETS-G021: evaluate the compiled predicate against the card's
+        // CardData (via PredicateSubject::Card) so that DP constraints such
+        // as `dp_lte: 4000` work for hidden-zone (hand/trash) candidates.
+        move |game, card| {
+            let handle = card.handle();
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Card(handle),
+                Some(&filter_bindings),
+            )
+        },
         move |cb_ctx, handle| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
