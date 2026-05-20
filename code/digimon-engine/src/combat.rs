@@ -3341,11 +3341,7 @@ impl Game {
                 level: data.level,
                 dp: live_deleted_top_card.and_then(|_| self.effective_dp(handle)),
                 cause: self
-                    .current_deletion_event_cause_override
-                    .or_else(|| {
-                        self.current_deletion_cause
-                            .map(crate::trigger_context::EventCause::from)
-                    })
+                    .observed_deletion_event_cause()
                     .unwrap_or(crate::trigger_context::EventCause::Rule),
             })
         });

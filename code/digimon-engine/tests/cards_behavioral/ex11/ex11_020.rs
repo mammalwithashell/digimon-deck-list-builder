@@ -189,6 +189,94 @@ fn ex11_020_inherited_decline_does_not_delete_or_end_attack() {
     );
 }
 
+/// Regression for PUPPETS-G012 review Issue 2 — the deferred-replacement
+/// decline path must preserve the deletion cause.
+///
+/// `delete_permanent_with_cause` sets `current_deletion_cause` only around its
+/// *synchronous* `commit_permanent_deletion`. When an optional
+/// `WhenWouldBeDeleted` replacement (here `<Barrier>`) parks a selection, the
+/// fire-site early-returns and restores `current_deletion_cause` to `None`.
+/// Declining the replacement later runs `commit_permanent_deletion_no_replace`
+/// from the selection callback — which must re-establish the original cause so
+/// the OnDeletion `event_cause` predicate still sees `battle_deletion`.
+///
+/// This card mirrors EX11-020's On Deletion clause (`not battle_deletion`) and
+/// additionally grants itself `<Barrier>`. Deleted in battle, Barrier offers an
+/// optional replacement; declining it deletes the card in battle. The
+/// `not battle_deletion` clause must therefore NOT fire.
+const BARRIER_ON_DELETION_YAML: &str = r#"
+card: TST-BARRIER-ONDEL
+name: Barrier Hanimon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Puppet]
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+  - when: on_deletion
+    optional: true
+    condition:
+      not:
+        event_cause: battle_deletion
+    summary: "[On Deletion] If deleted other than in battle, you may play 1 [Shoemon] trait Digimon from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: shoemon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Shoemon
+          prompt: "Play 1 [Shoemon] trait Digimon from your hand without paying its cost"
+      - play_from_hand_free: { of: you, hand_index: shoemon }
+"#;
+
+#[test]
+fn deferred_barrier_decline_in_battle_does_not_fire_not_battle_on_deletion() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BARRIER_ON_DELETION_YAML)
+        .expect("inline Barrier-OnDeletion YAML compiles")
+        .add_card(make_shoemon_trait("SHOEMON-TRAIT", "Shoemon Friend"))
+        .add_card(make_test_card("SEC", "Security Card"))
+        .hand(0, &["SHOEMON-TRAIT"])
+        // Barrier's gate requires the owner to hold at least one security card.
+        .security(0, &["SEC"])
+        .memory(0)
+        .start();
+    let carrier = runner.place_on_field(0, "TST-BARRIER-ONDEL", Some(0));
+
+    // Battle deletion: try_replace offers the optional <Barrier> replacement,
+    // which parks a selection. The fire-site early-returns.
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::Battle);
+    assert!(
+        runner.pending_is_optional(),
+        "Barrier must offer an optional replacement on a battle deletion"
+    );
+
+    // Decline Barrier — the deferred-decline path now actually deletes the
+    // card in battle via commit_permanent_deletion_no_replace.
+    runner.execute_action(0, PASS).expect("decline Barrier");
+
+    // The On Deletion clause is gated on `not battle_deletion`. Because the
+    // card was in fact deleted in battle, it must not fire — no hand prompt,
+    // no free play.
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "battle deletion through a declined Barrier must not offer the free-play prompt"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "Shoemon-trait card stays in hand — the not-battle clause did not fire"
+    );
+}
+
 fn make_shoemon_trait(id: &str, name: &str) -> digimon_engine::card_data::CardData {
     let mut card = make_test_card(id, name);
     card.traits = vec!["Shoemon".to_string()];

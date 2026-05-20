@@ -194,7 +194,7 @@ impl Game {
     pub fn enqueue_triggered(&mut self, timing: EffectTiming, source: TriggerSource) {
         match source {
             TriggerSource::Permanent(handle) => {
-                let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                 self.enqueue_from_permanent(timing, handle, Some(trigger_context));
             }
             TriggerSource::PlayerBattleArea(player) => {
@@ -206,7 +206,7 @@ impl Game {
                         player,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
@@ -215,11 +215,11 @@ impl Game {
                     player,
                     index: BREEDING_TARGET as u8,
                 };
-                let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                 self.enqueue_from_breeding_permanent(timing, handle, Some(trigger_context));
             }
             TriggerSource::SecurityRevealed { defender, card } => {
-                let trigger_context = self.trigger_context_for_source(&source, None);
+                let trigger_context = self.trigger_context_for_source(&source, None, timing);
                 self.enqueue_from_security_card(
                     timing,
                     defender,
@@ -238,7 +238,7 @@ impl Game {
                 }
             }
             TriggerSource::SecurityStackCard { player, card } => {
-                let trigger_context = self.trigger_context_for_source(&source, None);
+                let trigger_context = self.trigger_context_for_source(&source, None, timing);
                 self.enqueue_from_security_stack_card(timing, player, card, Some(trigger_context));
             }
             TriggerSource::OnSecurityCheck { defender, .. } => {
@@ -254,7 +254,7 @@ impl Game {
                         player: defender,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
@@ -265,7 +265,7 @@ impl Game {
                         player,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
@@ -279,7 +279,7 @@ impl Game {
                             index: i as u8,
                         };
                         let trigger_context =
-                            self.trigger_context_for_source(&source, Some(handle));
+                            self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
                 }
@@ -301,12 +301,12 @@ impl Game {
                             index: i as u8,
                         };
                         let trigger_context =
-                            self.trigger_context_for_source(&source, Some(handle));
+                            self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
                 }
                 if timing == EffectTiming::OnAllyPlayed {
-                    let trigger_context = self.trigger_context_for_source(&source, None);
+                    let trigger_context = self.trigger_context_for_source(&source, None, timing);
                     self.enqueue_from_player_trash(timing, player, Some(trigger_context));
                 }
             }
@@ -320,7 +320,7 @@ impl Game {
                             index: i as u8,
                         };
                         let trigger_context =
-                            self.trigger_context_for_source(&source, Some(handle));
+                            self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
                     let breeding_handle = PermanentHandle {
@@ -328,7 +328,7 @@ impl Game {
                         index: BREEDING_TARGET as u8,
                     };
                     let trigger_context =
-                        self.trigger_context_for_source(&source, Some(breeding_handle));
+                        self.trigger_context_for_source(&source, Some(breeding_handle), timing);
                     self.enqueue_from_breeding_permanent(
                         timing,
                         breeding_handle,
@@ -346,7 +346,7 @@ impl Game {
                             index: i as u8,
                         };
                         let trigger_context =
-                            self.trigger_context_for_source(&source, Some(handle));
+                            self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
                     let breeding_handle = PermanentHandle {
@@ -354,7 +354,7 @@ impl Game {
                         index: BREEDING_TARGET as u8,
                     };
                     let trigger_context =
-                        self.trigger_context_for_source(&source, Some(breeding_handle));
+                        self.trigger_context_for_source(&source, Some(breeding_handle), timing);
                     self.enqueue_from_breeding_permanent(
                         timing,
                         breeding_handle,
@@ -372,13 +372,13 @@ impl Game {
                             index: i as u8,
                         };
                         let trigger_context =
-                            self.trigger_context_for_source(&source, Some(handle));
+                            self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
                 }
             }
             TriggerSource::SourceTrashedFromStack { player, card, .. } => {
-                let trigger_context = self.trigger_context_for_source(&source, None);
+                let trigger_context = self.trigger_context_for_source(&source, None, timing);
                 self.enqueue_from_trashed_source(timing, player, card, Some(trigger_context));
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
@@ -389,7 +389,7 @@ impl Game {
                             index: i as u8,
                         };
                         let trigger_context =
-                            self.trigger_context_for_source(&source, Some(handle));
+                            self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
                 }
@@ -403,7 +403,7 @@ impl Game {
                         player: observer_player,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
                 let breeding_handle = PermanentHandle {
@@ -411,7 +411,7 @@ impl Game {
                     index: BREEDING_TARGET as u8,
                 };
                 let trigger_context =
-                    self.trigger_context_for_source(&source, Some(breeding_handle));
+                    self.trigger_context_for_source(&source, Some(breeding_handle), timing);
                 self.enqueue_from_breeding_permanent(
                     timing,
                     breeding_handle,
@@ -427,7 +427,7 @@ impl Game {
                         player: affected_player,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
                 let breeding_handle = PermanentHandle {
@@ -435,7 +435,7 @@ impl Game {
                     index: BREEDING_TARGET as u8,
                 };
                 let trigger_context =
-                    self.trigger_context_for_source(&source, Some(breeding_handle));
+                    self.trigger_context_for_source(&source, Some(breeding_handle), timing);
                 self.enqueue_from_breeding_permanent(
                     timing,
                     breeding_handle,
@@ -447,7 +447,7 @@ impl Game {
                 card,
                 ..
             } => {
-                let trigger_context = self.trigger_context_for_source(&source, None);
+                let trigger_context = self.trigger_context_for_source(&source, None, timing);
                 self.enqueue_from_security_card(
                     timing,
                     affected_player,
@@ -460,7 +460,7 @@ impl Game {
             source,
             TriggerSource::EventObserved { .. } | TriggerSource::AttackTargetChanged { .. }
         ) {
-            let trigger_context = self.trigger_context_for_source(&source, None);
+            let trigger_context = self.trigger_context_for_source(&source, None, timing);
             self.enqueue_event_gated_delayed_options(timing, trigger_context);
         }
     }
@@ -695,16 +695,24 @@ impl Game {
         &self,
         source: &TriggerSource,
         source_permanent: Option<PermanentHandle>,
+        timing: EffectTiming,
     ) -> TriggerContext {
         let mut context = match *source {
             TriggerSource::Permanent(handle) => TriggerContext {
                 target_permanent: Some(handle),
                 target_card: self.top_card_handle(handle),
                 source_player: Some(handle.player),
-                // Thread the active deletion cause (set by delete_permanent_with_cause
-                // before enqueueing OnDeletion) so event_cause predicates in
-                // on_deletion YAML clauses can inspect it (e.g. "not battle").
-                cause: self.current_deletion_cause.map(crate::trigger_context::EventCause::from),
+                // `cause` is only meaningful for the OnDeletion timing: it
+                // forwards the active deletion cause (set by
+                // delete_permanent_with_cause before enqueueing OnDeletion,
+                // override-first via observed_deletion_event_cause) so
+                // event_cause predicates in on_deletion YAML clauses can
+                // inspect it (e.g. "not battle"). `TriggerSource::Permanent`
+                // is shared by non-deletion timings (OnPlay, OnDigivolve,
+                // CounterEffect, …) — leave `cause` at `None` for those.
+                cause: (timing == EffectTiming::OnDeletion)
+                    .then(|| self.observed_deletion_event_cause())
+                    .flatten(),
                 ..TriggerContext::default()
             },
             TriggerSource::PlayerBattleArea(player) => TriggerContext {

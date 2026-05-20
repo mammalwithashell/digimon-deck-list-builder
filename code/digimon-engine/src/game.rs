@@ -1279,6 +1279,28 @@ impl Game {
         ReplacementCause::OwnEffect
     }
 
+    /// The observer-facing `EventCause` for the deletion currently being
+    /// finalized, applying override-first precedence:
+    ///   1. `current_deletion_event_cause_override` (a keyword route like
+    ///      Overclock refining the payload), else
+    ///   2. `current_deletion_cause` converted to `EventCause`.
+    ///
+    /// `None` outside an OnDeletion / OnAnyDeletion drain. Every deletion-cause
+    /// consumer that wants an `EventCause` (the `OnAnyDeletion`
+    /// `DeletedObjectSnapshot` in `combat.rs`, the OnDeletion `TriggerContext`
+    /// in `effect_queue.rs`) must route through this so they cannot drift.
+    /// (`effect_context::observed_deletion_cause` keeps its own copy because it
+    /// returns a `ReplacementCause`, not an `EventCause`.)
+    #[doc(hidden)]
+    pub(crate) fn observed_deletion_event_cause(
+        &self,
+    ) -> Option<crate::trigger_context::EventCause> {
+        self.current_deletion_event_cause_override.or_else(|| {
+            self.current_deletion_cause
+                .map(crate::trigger_context::EventCause::from)
+        })
+    }
+
     /// Generalized cause inference for non-deletion Would-replacement fire-sites
     /// (return-to-hand/deck, trash-by-effect, draw, place-in-security,
     /// de-digivolve, etc.).

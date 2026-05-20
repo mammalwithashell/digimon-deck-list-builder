@@ -46,6 +46,7 @@ fn install_parked(game: &mut digimon_engine::game::Game, target: PermanentHandle
     game.install_parked_replacement_for_test(ParkedReplacement {
         subject: ReplacementSubject::Permanent(target),
         cause: ReplacementCause::OpponentEffect,
+        event_cause_override: None,
         original_destination: Some(Zone::Trash),
         source_card: CardHandle(0),
         source_permanent: None,
