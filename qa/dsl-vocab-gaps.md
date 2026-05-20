@@ -640,7 +640,16 @@ test was already passing through the `count_lte` aggregate over
 
 ---
 
-## BT21-024 — Outer-tail continuation lost when `select_hand` has no candidates  [G-SELECT-EMPTY-OUTER-TAIL]
+## ~~BT21-024 — Outer-tail continuation lost when `select_hand` has no candidates  [G-SELECT-EMPTY-OUTER-TAIL]~~ — RESOLVED 2026-05-20 (DNA Omnimon completion)
+
+- **Status:** Closed. The `select_hand` empty-candidate path now drains the outer tail —
+  when `install_select_hand` finds no valid candidates it runs the parked outer-tail steps
+  (e.g. `trash_top_security`) instead of silently discarding them. Landed in the
+  `complete-dna-omnimon-archetype` change; the empty-hand behavioral test is re-enabled and
+  passing. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon completion closure —
+  2026-05-20". Original entry retained below for provenance.
+
+[ORIGINAL ENTRY BELOW]
 
 - Effect text: "[On Play][When Digivolving] ... Then, trash their top security card." — the `trash_top_security` step after `as_selecting_player` must fire even when the opponent has no hand cards.
 - Engine gap: `install_select_hand` in `code/digimon-engine/src/effect_context/selections.rs` (lines 177–179) returns early without installing a `PendingSelection` when `valid_action_ids.is_empty()` (opponent has no hand cards). When this early-return fires, no selection callback is ever installed, so `drain_dsl_outer_tail` (which is called from the selection callback in `selections.rs:47`) is never executed. Steps that `park_outer_tail` placed after the `as_selecting_player` block — specifically `trash_top_security` — are silently discarded.
@@ -939,7 +948,18 @@ test was already passing through the `count_lte` aggregate over
 - Workaround used in EX9-066: drop the count_gte pre-gate entirely; always present the binary [Return / Draw] choice and rely on the inner `select_trash` being `optional: true`. Acceptable because the action mask still surfaces both branches faithfully. BT24-008 has the same pending workaround documented in its YAML header.
 - First reported: 2026-05-03 (EX9-066 Tai Kamiya & Matt Ishida, batch-implement-cards-rust-dsl)
 
-## BT22-017 — `text_contains` (effect-text scan) predicate  [G-DSL-PREDICATE-TEXT-CONTAINS]
+## ~~BT22-017 — `text_contains` (effect-text scan) predicate  [G-DSL-PREDICATE-TEXT-CONTAINS]~~ — RESOLVED 2026-05-20 (DNA Omnimon completion)
+
+- **Status:** Closed. The `effect_text_contains` predicate leaf landed in the
+  `complete-dna-omnimon-archetype` change; it scans a candidate's printed
+  effect/inherited/security text by case-insensitive substring, lowering through
+  `CompiledPredicate`. BT22-017's bucket-1 filter now uses `effect_text_contains: "Omnimon"`
+  and the `bt22_017_on_play_bucket1_admits_card_with_omnimon_only_in_text` test is
+  re-enabled and passing. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon completion
+  closure — 2026-05-20". Original entry retained below for provenance.
+
+[ORIGINAL ENTRY BELOW]
+
 - Effect text: BT22-017 [On Play] "Reveal the top 3 cards of your deck. Add 1 card with [Omnimon] in its TEXT and 1 card with the [CS] trait among them to the hand."
 - Missing DSL verb / step kind / predicate: `text_contains: Option<String>` leaf on `predicate::PredicateSpec`. The DSL exposes `name_contains` / `name_is` / `name_in` for card-name scans, but has no leaf that scans a candidate's printed `effect_text` / `inherited_text` / `security_text`. DCGO uses `source.HasText("Omnimon")` (BT22_017.cs line 63) which scans the card's effect text for the literal substring.
 - Engine data IS present: `code/digimon-engine/src/card_data.rs` carries `effect_text`, `inherited_text`, and `security_text` fields on `CardData` (lines 87, 99, 124). Only the DSL predicate verb is missing.
@@ -1087,7 +1107,19 @@ EX1-021 production YAML authored.
 - Gap kind: dsl + engine, closed for the EX4-060 replacement-body form.
 - First reported: 2026-05-03 (EX4-060 Omnimon Alter-S, batch-implement-cards-rust-dsl)
 
-## EX4-039 / EX4-038 — Event-target-not-source predicate for OnDigivolve  [G-EVENT-TARGET-NOT-SOURCE]
+## ~~EX4-039 / EX4-038 — Event-target-not-source predicate for OnDigivolve  [G-EVENT-TARGET-NOT-SOURCE]~~ — RESOLVED 2026-05-20 (DNA Omnimon completion)
+
+- **Status:** Closed. This gap was STALE — the engine already carried both data points
+  (`event_permanent` on `TriggerContext` for `Digivolved`, `source_permanent` on
+  `EffectReadContext`) and the DSL predicate evaluator branch was present. The
+  `complete-dna-omnimon-archetype` change authored the DNA Omnimon card clauses against
+  the existing substrate and re-enabled the
+  `ex4_039_inherited_does_not_fire_when_carrier_itself_digivolves` behavioral test, which
+  now passes. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon completion closure —
+  2026-05-20" (STALE gaps list). Original entry retained below for provenance.
+
+[ORIGINAL ENTRY BELOW]
+
 - Effect text (both): "[Your Turn] [Once Per Turn] When one of your **other** Digimon digivolves, gain 1 memory."
 - Status: OPEN as of 2026-05-03. EX4-039 surfaces it; EX4-038 has the same printed-text family.
 - Missing DSL verb / step kind / predicate: a `CompiledPredicate` leaf such as `event_target_not_source: true` (or equivalently `event_permanent_not_source: true`) that returns false when the OnDigivolve trigger's `event_permanent` equals the inherited clause's `source_permanent` (the carrier permanent EX4-039 sits under). DCGO encodes this as `permanent != card.PermanentOfThisCard()` inside `CanTriggerWhenPermanentDigivolving`'s `PermanentCondition`.
@@ -1498,7 +1530,15 @@ on the auto-resolved post-state. 5 tests now active.
 
 ---
 
-## BT12-028 / BT16-027 — `self_digivolution_contains_name` predicate  [G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME]
+## ~~BT12-028 / BT16-027 — `self_digivolution_contains_name` predicate  [G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME]~~ — RESOLVED 2026-05-20 (DNA Omnimon completion)
+
+- **Status:** Closed. The sources-only `self_digivolution_sources_contain_name` predicate
+  leaf landed in the `complete-dna-omnimon-archetype` change, evaluating whether the source
+  permanent's own `card_sources` stack contains a card matching the given name via
+  `Permanent::contains_card_name`. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon
+  completion closure — 2026-05-20". Original entry retained below for provenance.
+
+[ORIGINAL ENTRY BELOW]
 
 - Effect text: "if [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards" (BT16-027). Sister of `G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT` (EX1-014).
 - Card first discovered in: BT16-027 Imperialdramon: Fighter Mode. Cross-listed in BT12-028 (`source_name_contains` family).
@@ -1769,6 +1809,30 @@ on the auto-resolved post-state. 5 tests now active.
 - Gap kind: engine and DSL, closed for current script-facing retarget effects.
 - Workaround: None needed for current script-facing retarget effects.
 - First reported: 2026-05-05 (Royal Knights Batch 3: BT19-072).
+
+## BT17-102 — dynamic name alias from digivolution-source stack  [G-DYNAMIC-NAME-ALIAS-FROM-STACK] — OPEN
+
+- Effect text: BT17-102 Greymon "[All Turns] This Digimon has all the names of level 3 and lower cards in its digivolution cards."
+- Status: OPEN. Verified open against code by the `complete-dna-omnimon-archetype` change. BT17-102 is otherwise IMPLEMENTED; this single `[All Turns]` clause is omitted and the test `bt17_102_all_turns_aliases_low_level_material_names` is left `#[ignore]`'d.
+- Missing capability: the DSL identity layer carries only static `name_aliases`. There is NO engine consumer for a *dynamic* alias derived from the live digivolution-source stack — a name predicate run by any other card against this permanent sees only the printed top-card name. A faithful fix is a cross-cutting engine feature: a `Permanent`-level effective-name-set query (union of printed name + dynamic overlay names) consulted by every name predicate, aura filter, and inherited-effect name check.
+- Companion engine gap: this is the DSL/identity-layer face of the engine-level "Digivolution-stack name overlay" gap in [docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md) (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`).
+- Gap kind: hybrid (engine needs the effective-name-set overlay + universal consult-site rewrite; DSL needs a declarative `name_overlay_from_sources`-style verb).
+- Workaround: none faithful — the clause is OMITTED per no-approximations.
+- First reported: 2026-05-20 (`complete-dna-omnimon-archetype` closure — BT17-102 Greymon).
+
+## BT23-096 — `<Delay>`-on-attack-event clause  [G-DSL-DELAY-ON-ATTACK-EVENT] — OPEN
+
+- Effect text: BT23-096 Comet Hammer — `<Delay>` body gated on an ally-attack event.
+- Status: OPEN. Verified open against code by the `complete-dna-omnimon-archetype` change. BT23-096 is otherwise IMPLEMENTED; the `<Delay>`-on-attack clause is omitted and its test is left `#[ignore]`'d.
+- Missing capability: a 3-part engine blocker prevents an attack event from triggering a `<Delay>` body —
+  1. `lower_delay.rs` does not map attack timings to `DelayTrigger::OnEvent`;
+  2. `combat.rs` dispatches `OnAllyAttack` via `TriggerSource::PlayerBattleArea`, which `effect_queue.rs` never fans out to event-gated delays;
+  3. `attacker_trait_has` resolves the attacker only via `attack_target_change()`, which is unset for a plain attack.
+- Already-present substrate (NOT the blocker): `G-DSL-ON-ALLY-ATTACK-TIMING` and `G-ATK-TRAIT-FILTER` — the on-ally-attack timing token and the attacker-trait predicate both exist; the gap is delay/attack-event dispatch wiring.
+- Companion engine gap: tracked engine-side in [docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md) (`G-DSL-DELAY-ON-ATTACK-EVENT`).
+- Gap kind: hybrid (engine needs delay/attack-event dispatch + plain-attack attacker resolution; DSL needs the attack-timing → `DelayTrigger::OnEvent` lowering).
+- Workaround: none faithful — the clause is OMITTED per no-approximations.
+- First reported: 2026-05-20 (`complete-dna-omnimon-archetype` closure — BT23-096 Comet Hammer).
 
 ## Zephagamon — prompted attack target retarget to another Digimon or player  [ZEPH-G005]
 

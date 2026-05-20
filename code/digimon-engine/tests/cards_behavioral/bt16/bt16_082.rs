@@ -454,18 +454,87 @@ fn bt16_082_does_not_prompt_hatch_when_player_cannot_hatch() {
     );
 }
 
-/// OPT lockout: second move-from-breeding in the same turn does NOT re-trigger.
+/// OPT lockout: a second move-from-breeding in the same turn does NOT
+/// re-trigger Ukkomon's [Once Per Turn] clause.
+///
+/// First move: Ukkomon fires — install + fully resolve the reveal/select
+/// (digitama empty so no hatch prompt follows), consuming the OPT slot.
+/// Second move same turn: place a fresh mover, move it; Ukkomon's clause is
+/// OPT-locked and must NOT install another reveal prompt.
 #[test]
-#[ignore = "pending: triggered OPT lockout coverage for OnMove effects"]
 fn bt16_082_opt_blocks_second_trigger_same_turn() {
-    unimplemented!("pending BT16-082 card-specific move-trigger body");
+    // Six deck cards: three feed the first reveal, three remain so a second
+    // reveal *could* draw if the OPT lockout were absent.
+    let mut runner = bt16_behavior_runner(
+        &["PICK-DIGI", "PICK-TAMER", "FILL", "PICK-DIGI", "PICK-TAMER", "FILL"],
+        &[],
+    );
+    runner.place_on_field(0, "BT16-082", Some(0));
+
+    // First move from breeding — Ukkomon's clause fires.
+    runner.place_in_breeding(0, "MOVER");
+    assert!(runner.move_from_breeding(0), "first move_from_breeding");
+    assert!(
+        runner.pending_selection().is_some(),
+        "first move must install Ukkomon's reveal prompt"
+    );
+    // Resolve the reveal (pick first revealed card, order the remainder).
+    // Digitama is empty so no hatch prompt follows — the clause fully
+    // resolves and the OPT slot is now consumed.
+    pick_reveal_and_order_remainder(&mut runner, SEL_REVEAL_START);
+    assert!(
+        runner.pending_selection().is_none(),
+        "first trigger must fully resolve (no hatch prompt — empty digitama)"
+    );
+
+    // Second move from breeding, SAME turn — OPT lockout must suppress.
+    runner.place_in_breeding(0, "MOVER");
+    assert!(runner.move_from_breeding(0), "second move_from_breeding");
+    assert!(
+        runner.pending_selection().is_none(),
+        "OPT lockout: second move in the same turn must NOT re-trigger Ukkomon"
+    );
 }
 
-/// OPT resets after end_turn: the trigger fires again on the player's next turn.
+/// OPT resets after the turn rotates back: Ukkomon's clause fires again on
+/// the controller's next turn.
 #[test]
-#[ignore = "pending: triggered OPT reset coverage for OnMove effects"]
 fn bt16_082_opt_resets_after_end_turn() {
-    unimplemented!("pending BT16-082 card-specific move-trigger body");
+    let mut runner = bt16_behavior_runner(
+        &["PICK-DIGI", "PICK-TAMER", "FILL", "PICK-DIGI", "PICK-TAMER", "FILL"],
+        &[],
+    );
+    runner.place_on_field(0, "BT16-082", Some(0));
+
+    // First move on P0's turn — fires and consumes the OPT slot.
+    runner.place_in_breeding(0, "MOVER");
+    assert!(runner.move_from_breeding(0), "first move_from_breeding");
+    assert!(
+        runner.pending_selection().is_some(),
+        "first move must install Ukkomon's reveal prompt"
+    );
+    pick_reveal_and_order_remainder(&mut runner, SEL_REVEAL_START);
+
+    // Rotate the turn away and back to P0 so the OPT counter resets.
+    runner.end_turn();
+    if runner.game.pending_selection.is_some() {
+        // Defensive: drain any end-of-turn prompt.
+        let p = runner.game.pending_selection.as_ref().unwrap().selecting_player;
+        let a = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        runner.game.resolve_selection(p, a).ok();
+        runner.game.drain_effect_queue();
+    }
+    assert_eq!(runner.turn_player(), 1, "precondition: P1's turn after first end_turn");
+    runner.end_turn();
+    assert_eq!(runner.turn_player(), 0, "precondition: back to P0's turn");
+
+    // New turn: move from breeding again — OPT has reset, clause re-fires.
+    runner.place_in_breeding(0, "MOVER");
+    assert!(runner.move_from_breeding(0), "next-turn move_from_breeding");
+    assert!(
+        runner.pending_selection().is_some(),
+        "OPT reset: Ukkomon's clause must fire again on the controller's next turn"
+    );
 }
 
 /// The trigger does NOT fire on the opponent's turn ([Your Turn] gate).

@@ -386,6 +386,19 @@ pub fn try_run(
             // per-card moves until the helper returns provenance.
             true
         }
+        CompiledStep::ReturnTrashListToDeckBottom { of, cards } => {
+            // G-ZONE-TRASH-TO-DECK — move exactly the bound card list out of
+            // trash to the bottom of the deck, leaving the rest of the trash
+            // untouched.
+            let player = resolve_player(ctx, *of);
+            let handles = match resolve_binding_ref(cards, ctx, bindings) {
+                Some(ResolvedBinding::CardList(v)) => v,
+                Some(ResolvedBinding::Card(h)) => vec![h],
+                _ => Vec::new(),
+            };
+            let _ = ctx.return_trash_cards_to_deck_bottom(player, &handles);
+            true
+        }
         CompiledStep::TrashTopNDigivolutionCardsOfEach { of, n } => {
             let player = resolve_player(ctx, *of);
             let n = formula_to_u8(n, ctx, bindings);

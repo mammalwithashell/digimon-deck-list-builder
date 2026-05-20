@@ -26,7 +26,8 @@
 //! - F7 cannot_suspend modifier with end_of_opponents_turn expiry
 //! - Multi-timing OPT cluster ([On Play]/[When Digivolving]/[When Attacking])
 //! - All-Turns OPT on_suspend → unsuspend self
-//! - Inherited [When Attacking] OPT lock with self-name gate
+//! - Inherited [When Attacking] OPT lock with carrier top-card name gate
+//!   (`source_name_contains`)
 
 #[path = "../../support/dsl_card_data.rs"]
 mod dsl_card_data;
@@ -172,7 +173,6 @@ fn ad1_014_has_op_wd_wa_cluster_and_all_turns_on_suspend_clause() {
 }
 
 #[test]
-#[ignore = "pending: G-DSL-SELF-NAME-CONTAINS — inherited [When Attacking] OPT lock with self-name gate omitted from YAML; structural assertion held until the predicate ships"]
 fn ad1_014_inherited_when_attacking_is_present_and_once_per_turn_and_gated() {
     let card = compiled();
     let inh = card
@@ -374,8 +374,19 @@ fn ad1_014_on_play_opt_blocks_second_same_timing_activation_in_same_turn() {
     );
 }
 
+/// G-OPT-MULTI-TIMING-SHARED-LOCKOUT (closed 2026-05-19): the
+/// `[On Play][When Digivolving][When Attacking][Once Per Turn]` cluster
+/// lowers to one Effect per timing, but all three carry the same
+/// `shared_opt_group` so they draw on a single per-turn counter — DCGO's
+/// `SharedHashString: "AD1_014_OP_WD_WA"`.
+///
+/// The cluster's signature effect is a DELETE of an opponent Digimon. The
+/// inherited [When Attacking] clause (a lock, not a delete) is a separate
+/// effect outside the shared OPT group, so it may also fire at
+/// WhenAttacking — this test isolates the cluster by counting deletions:
+/// if the cluster's WhenAttacking shell re-fired despite the shared
+/// lockout, a SECOND opponent Digimon would be deleted.
 #[test]
-#[ignore = "pending: G-OPT-MULTI-TIMING-SHARED-LOCKOUT — multi-timing OPT cluster compiles to one Effect per timing, each with its own OPT counter; cross-timing shared lockout (DCGO SharedHashString) not yet wired"]
 fn ad1_014_on_play_then_when_attacking_share_one_opt_lockout_per_turn() {
     let mut runner = metal_garurumon_runner()
         .add_card(make_digimon("OPP-A", 5, 7000))
@@ -386,68 +397,128 @@ fn ad1_014_on_play_then_when_attacking_share_one_opt_lockout_per_turn() {
     runner.place_on_field(1, "OPP-A", Some(0));
     runner.place_on_field(1, "OPP-B", Some(0));
 
-    // Fire OnPlay first.
+    // Fire OnPlay first and resolve every pending selection it raises
+    // (the cluster's delete pick deletes one opponent Digimon).
     runner
         .game
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(perm));
     runner.game.drain_effect_queue();
-    let (sp, aid) = {
-        let v = runner.pending_selection_view().unwrap();
-        (v.selecting_player, v.valid_action_ids[0])
-    };
-    runner.execute_action(sp, aid).unwrap();
+    while let Some(view) = runner.pending_selection_view() {
+        let accept = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != digimon_engine::action::space::PASS)
+            .unwrap_or(view.valid_action_ids[0]);
+        runner
+            .execute_action(view.selecting_player, accept)
+            .expect("resolve On Play selection");
+    }
     let _ = runner.auto_resolve();
 
-    // Now WhenAttacking same turn must NOT fire (DCGO shares hash AD1_014_OP_WD_WA).
+    let opp_digimon_after_on_play = runner.game.players[1]
+        .battle_area
+        .iter()
+        .filter(|p| p.top_card().card_kind(&runner.game.card_data) == CardKind::Digimon)
+        .count();
+    assert_eq!(
+        opp_digimon_after_on_play, 1,
+        "On Play cluster must delete exactly 1 opponent Digimon"
+    );
+
+    // Now fire WhenAttacking the same turn. The shared OPT lockout must
+    // block the cluster's WhenAttacking shell — no second deletion.
     runner
         .game
         .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(perm));
     runner.game.drain_effect_queue();
-    assert!(
-        runner.pending_selection().is_none(),
-        "cross-timing OPT must lock When Attacking after On Play same turn"
+    while let Some(view) = runner.pending_selection_view() {
+        let accept = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != digimon_engine::action::space::PASS)
+            .unwrap_or(view.valid_action_ids[0]);
+        runner
+            .execute_action(view.selecting_player, accept)
+            .expect("resolve When Attacking selection");
+    }
+    let _ = runner.auto_resolve();
+
+    let opp_digimon_after_when_attacking = runner.game.players[1]
+        .battle_area
+        .iter()
+        .filter(|p| p.top_card().card_kind(&runner.game.card_data) == CardKind::Digimon)
+        .count();
+    assert_eq!(
+        opp_digimon_after_when_attacking, 1,
+        "cross-timing OPT must lock the cluster's When Attacking delete after On Play same turn (no second deletion)"
     );
 }
 
 // ─── Section 5: Lock — for every 2 of your Tamers' colors ────────────────────
 
 #[test]
-#[ignore = "pending: G-DSL-DISTINCT-TAMER-COLORS-FORMULA — DSL has no formula primitive that counts distinct colors of your Tamers in battle area; lock-count branch unimplementable in pure YAML and not yet bridged via raw_rust in this skill scope"]
 fn ad1_014_on_play_with_zero_tamers_locks_zero_opp_permanents() {
+    use digimon_engine::action::space::PASS;
+
     let mut runner = metal_garurumon_runner()
         .add_card(make_digimon("OPP-LV5", 5, 7000))
         .add_card(make_digimon("OPP-LOCK", 4, 5000))
         .memory(20)
         .start();
     let perm = runner.place_on_field(0, "AD1-014", Some(0));
-    let target = runner.place_on_field(1, "OPP-LV5", Some(0));
-    let lock = runner.place_on_field(1, "OPP-LOCK", Some(0));
+    runner.place_on_field(1, "OPP-LV5", Some(0));
+    runner.place_on_field(1, "OPP-LOCK", Some(0));
 
     runner
         .game
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(perm));
     runner.game.drain_effect_queue();
 
-    // Resolve the delete selection.
-    let (sp, aid) = {
-        let v = runner.pending_selection_view().unwrap();
-        (v.selecting_player, v.valid_action_ids[0])
-    };
-    runner.execute_action(sp, aid).unwrap();
+    // Resolve every pending selection (the delete pick). With zero Tamers
+    // the lock-count formula evaluates to 0, so no lock selection installs.
+    while let Some(view) = runner.pending_selection_view() {
+        let accept = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != PASS)
+            .unwrap_or(view.valid_action_ids[0]);
+        runner
+            .execute_action(view.selecting_player, accept)
+            .expect("resolve pending selection");
+    }
     let _ = runner.auto_resolve();
 
-    let _ = target; // delete asserted by mainline test above
-    assert!(
-        !runner.modifiers().has(lock, ModifierType::CannotSuspend),
-        "with zero Tamers, no permanent should be locked"
-    );
+    // With zero Tamers (0 colors / 2 = 0 locks), no opponent permanent
+    // should hold CannotSuspend.
+    let modifiers = runner.modifiers();
+    let locked = runner.game.players[1]
+        .battle_area
+        .iter()
+        .enumerate()
+        .filter(|(idx, _)| {
+            modifiers.has(
+                PermanentHandle {
+                    player: 1,
+                    index: *idx as u8,
+                },
+                ModifierType::CannotSuspend,
+            )
+        })
+        .count();
+    assert_eq!(locked, 0, "with zero Tamers, no permanent should be locked");
 }
 
 #[test]
-#[ignore = "pending: G-DSL-DISTINCT-TAMER-COLORS-FORMULA — see above; needs a distinct-tamer-colors-floor-div-2 formula plus repeat_n / for_each-N driver to install N selections"]
 fn ad1_014_on_play_with_three_tamer_colors_locks_one_opp_permanent_for_one_turn() {
+    use digimon_engine::action::space::PASS;
     use digimon_engine::enums::CardColor;
 
+    // Two opponent Digimon both at level 5 or lower (delete-eligible). After
+    // the delete removes one, exactly 1 of the opponent's remaining
+    // permanents must receive CannotSuspend (3 tamer colors / 2 = 1 lock).
     let mut runner = metal_garurumon_runner()
         .add_card(make_digimon("OPP-LV5", 5, 7000))
         .add_card(make_digimon("OPP-LOCK", 4, 5000))
@@ -461,31 +532,49 @@ fn ad1_014_on_play_with_three_tamer_colors_locks_one_opp_permanent_for_one_turn(
     runner.place_on_field(0, "TAMER-B", Some(0));
     runner.place_on_field(0, "TAMER-Y", Some(0));
     runner.place_on_field(1, "OPP-LV5", Some(0));
-    let lock = runner.place_on_field(1, "OPP-LOCK", Some(0));
+    runner.place_on_field(1, "OPP-LOCK", Some(0));
 
     runner
         .game
         .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(perm));
     runner.game.drain_effect_queue();
 
-    // Delete pick.
-    let (sp, aid) = {
-        let v = runner.pending_selection_view().unwrap();
-        (v.selecting_player, v.valid_action_ids[0])
-    };
-    runner.execute_action(sp, aid).unwrap();
-
-    // Lock pick (3 colors / 2 = 1 lock).
-    let (sp2, lock_aid) = {
-        let v = runner.pending_selection_view().expect("lock selection");
-        (v.selecting_player, v.valid_action_ids[0])
-    };
-    runner.execute_action(sp2, lock_aid).unwrap();
+    // Resolve every pending selection (delete pick, then the lock pick),
+    // always taking the first non-PASS action so a real target is chosen.
+    while let Some(view) = runner.pending_selection_view() {
+        let accept = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&id| id != PASS)
+            .unwrap_or(view.valid_action_ids[0]);
+        runner
+            .execute_action(view.selecting_player, accept)
+            .expect("resolve pending selection");
+    }
     let _ = runner.auto_resolve();
 
-    assert!(
-        runner.modifiers().has(lock, ModifierType::CannotSuspend),
-        "1 opp permanent must receive CannotSuspend until end of opp turn"
+    // Exactly 1 of the opponent's surviving permanents must hold
+    // CannotSuspend (3 colors / 2 = 1 lock). Re-resolve handles after the
+    // delete shifted battle-area indices.
+    let modifiers = runner.modifiers();
+    let locked = runner.game.players[1]
+        .battle_area
+        .iter()
+        .enumerate()
+        .filter(|(idx, _)| {
+            modifiers.has(
+                PermanentHandle {
+                    player: 1,
+                    index: *idx as u8,
+                },
+                ModifierType::CannotSuspend,
+            )
+        })
+        .count();
+    assert_eq!(
+        locked, 1,
+        "exactly 1 opp permanent must receive CannotSuspend (3 tamer colors / 2 = 1 lock)"
     );
 }
 
@@ -575,7 +664,6 @@ fn ad1_014_inherited_when_attacking_does_not_fire_when_top_card_lacks_garurumon_
 }
 
 #[test]
-#[ignore = "pending: G-DSL-SELF-NAME-CONTAINS — DSL lacks a `self_name_contains` predicate that evaluates against the carrier permanent's top-card name; the inherited name gate cannot be expressed in pure YAML today"]
 fn ad1_014_inherited_when_attacking_fires_when_top_card_contains_garurumon_in_name() {
     let mut runner = metal_garurumon_runner()
         .add_card(make_digimon_with_name(

@@ -1335,6 +1335,15 @@ fn validate_predicate_binding_scope(
             );
         }
     }
+    if let Some(bc) = &pred.binding_count_eq {
+        report_if_undeclared_binding(
+            &bc.binding,
+            &format!("{prefix}.binding_count_eq.binding"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
 
     for (i, sub) in pred.all_of.iter().enumerate() {
         validate_predicate_binding_scope(
@@ -1488,6 +1497,8 @@ fn validate_formula_binding_scope(
             }
         }
         FormulaSpec::Literal(_)
+        | FormulaSpec::SourceDp { .. }
+        | FormulaSpec::SourceMaterialCount { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
         | FormulaSpec::Compound(CompoundFormula::AggregateScoped(_))
         | FormulaSpec::Compound(CompoundFormula::RawRust(_)) => {}
@@ -1631,6 +1642,8 @@ fn validate_formula(
             }
         }
         FormulaSpec::Literal(_)
+        | FormulaSpec::SourceDp { .. }
+        | FormulaSpec::SourceMaterialCount { .. }
         | FormulaSpec::BindingDp { .. }
         | FormulaSpec::BindingPlayCost { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
@@ -1675,6 +1688,8 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
         FormulaSpec::BasePerDelta { per, .. } => per_uses_dp_aggregate(per),
         FormulaSpec::SourceStackDpSum { .. } => false,
         FormulaSpec::Literal(_)
+        | FormulaSpec::SourceDp { .. }
+        | FormulaSpec::SourceMaterialCount { .. }
         | FormulaSpec::BindingDp { .. }
         | FormulaSpec::BindingPlayCost { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))

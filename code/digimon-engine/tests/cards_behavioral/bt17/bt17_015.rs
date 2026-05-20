@@ -587,13 +587,12 @@ fn bt17_015_inherited_when_attacking_omnimon_top_trashes_security() {
 }
 
 /// Negative condition: stack has only WarGreymon (BT17-015) at top — name gate
-/// must block the trash. **BLOCKED**: under DSL-GAP G-DSL-SOURCE-NAME-CONTAINS,
-/// the predicate is parsed but never evaluated; the clause fires anyway.
+/// must block the trash. `source_name_contains` is evaluated by the engine
+/// predicate path (`predicate.rs:284`, via `subject_or_source_permanent`
+/// which falls back to `rctx.source_permanent()` for `PredicateSubject::None`),
+/// so the inherited gate correctly blocks when the top card is not
+/// Omnimon-named.
 #[test]
-#[ignore = "BLOCKED: G-DSL-SOURCE-NAME-CONTAINS — source_name_contains predicate is parsed and \
-            compiled but never evaluated in code/digimon-engine/src/dsl_cards/predicate.rs; \
-            the inherited [When Attacking] gate degenerates to true and incorrectly trashes \
-            opp security even when top card is not Omnimon-named."]
 fn bt17_015_inherited_when_attacking_wargreymon_top_does_not_trash_security() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-015")

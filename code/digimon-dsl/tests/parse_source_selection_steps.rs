@@ -238,6 +238,7 @@ effects:
             bind_as,
             prompt,
             then,
+            filter: _,
         } => {
             assert_eq!(bind_as.as_deref(), Some("breeding_target"));
             assert_eq!(prompt, "Choose breeding");

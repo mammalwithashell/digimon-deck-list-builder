@@ -14,7 +14,7 @@ use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{CardColor, CardKind, GamePhase};
-use digimon_engine::selection::{SelectionError, SelectionKind, UnionZoneSet};
+use digimon_engine::selection::{SelectionError, SelectionKind, UnionZonePick, UnionZoneSet};
 
 fn make_card(id: &str) -> CardData {
     CardData {
@@ -294,10 +294,8 @@ fn callback_receives_correct_handle_for_trash_pick() {
     push_to_trash(&mut r, tp, "T1");
     push_to_trash(&mut r, tp, "T2");
 
-    // Record the card_index of the second trash card (index 1 = T2).
-    let expected_handle = r.game.player(tp).trash[1].handle();
-
-    let observed: Arc<Mutex<Option<CardHandle>>> = Arc::new(Mutex::new(None));
+    // G-DSL-UNION-PLAY-FREE — the callback now receives a zone-tagged pick.
+    let observed: Arc<Mutex<Option<UnionZonePick>>> = Arc::new(Mutex::new(None));
     let slot = Arc::clone(&observed);
 
     {
@@ -308,8 +306,8 @@ fn callback_receives_correct_handle_for_trash_pick() {
             "pick",
             false,
             |_, _| true,
-            move |_, handle| {
-                *slot.lock().unwrap() = Some(handle);
+            move |_, pick| {
+                *slot.lock().unwrap() = Some(pick);
             },
         );
     }
@@ -320,8 +318,11 @@ fn callback_receives_correct_handle_for_trash_pick() {
 
     assert_eq!(
         *observed.lock().unwrap(),
-        Some(expected_handle),
-        "callback must receive the handle of the second trash card"
+        Some(UnionZonePick::Trash {
+            player: tp,
+            index: 1
+        }),
+        "callback must receive the zone-tagged Trash pick for the second trash card"
     );
     assert_ne!(
         r.game.current_phase,
@@ -342,9 +343,7 @@ fn callback_receives_correct_handle_for_hand_pick() {
     let tp = r.game.turn_player();
     push_to_trash(&mut r, tp, "T1");
 
-    let expected_handle = r.game.player(tp).hand[0].handle();
-
-    let observed: Arc<Mutex<Option<CardHandle>>> = Arc::new(Mutex::new(None));
+    let observed: Arc<Mutex<Option<UnionZonePick>>> = Arc::new(Mutex::new(None));
     let slot = Arc::clone(&observed);
 
     {
@@ -355,8 +354,8 @@ fn callback_receives_correct_handle_for_hand_pick() {
             "pick",
             false,
             |_, _| true,
-            move |_, handle| {
-                *slot.lock().unwrap() = Some(handle);
+            move |_, pick| {
+                *slot.lock().unwrap() = Some(pick);
             },
         );
     }
@@ -366,8 +365,11 @@ fn callback_receives_correct_handle_for_hand_pick() {
 
     assert_eq!(
         *observed.lock().unwrap(),
-        Some(expected_handle),
-        "callback must receive the handle of the first hand card"
+        Some(UnionZonePick::Hand {
+            player: tp,
+            index: 0
+        }),
+        "callback must receive the zone-tagged Hand pick for the first hand card"
     );
     assert!(r.game.pending_selection.is_none());
 }

@@ -79,6 +79,7 @@ mod phase2f4_end_to_end;
 mod phase2f4_schedule_delayed;
 mod phase2g_breeding_selection;
 mod phase2g_dp_budget;
+mod play_cost_budget;
 mod phase2g_on_dna_digivolve;
 mod phase2g_select_sources;
 mod phase3_dna_digivolve_triggers;

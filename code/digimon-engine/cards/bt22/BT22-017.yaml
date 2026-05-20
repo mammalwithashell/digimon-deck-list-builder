@@ -88,8 +88,7 @@
 # framework — DNA digivolve is always an opt-in player action surfaced
 # through the action mask.
 #
-# ─── DSL-GAP — `text_contains` (effect-text scan) predicate ────────────────
-#                                              [G-DSL-PREDICATE-TEXT-CONTAINS]
+# ─── G-DSL-PREDICATE-TEXT-CONTAINS — `effect_text_contains` (RESOLVED) ─────
 #
 # Bucket 1 of the [On Play] reveal selects "1 card with [Omnimon] in its
 # TEXT" — i.e. a substring match against the candidate card's printed
@@ -97,39 +96,16 @@
 # `card_name`. DCGO uses `source.HasText("Omnimon")` (BT22_017.cs line 63),
 # which scans the card's effect text for the literal "Omnimon" substring.
 #
-# The DSL `PredicateSpec` (`code/digimon-dsl/src/predicate.rs`) exposes
-# `name_contains: Option<String>` and `name_is: Option<String>` for name
-# scans, but has NO `text_contains` (or `effect_text_contains` /
-# `has_text` / `card_text_contains`) leaf for scanning a candidate's
-# effect / inherited / security text. The engine `CardData` struct DOES
-# carry `effect_text`, `inherited_text`, and `security_text` fields
-# (`code/digimon-engine/src/card_data.rs:87,99,124`), so the engine has the
-# data — the DSL just lacks the predicate verb to expose it to filters.
-#
-# Approximation chosen here (per the brief): use `name_contains: "Omnimon"`
-# in place of the printed "in its text" filter. This narrows the legal set:
-# all printed Omnimon cards (e.g. BT12-085 Omnimon, BT22-015 Omnimon, etc.)
-# are matched correctly because their card_name itself contains "Omnimon".
-# But cards that REFERENCE Omnimon in their effect_text WITHOUT carrying
-# Omnimon in their name (e.g. tutors / supports that print "[Omnimon]"
-# in body text) are wrongly excluded. The scope of the divergence is narrow
-# in practice (most "Omnimon-payoff" tutors are themselves named Omnimon
-# variants), but it is a faithful divergence and tests for the diverging
-# branch are #[ignore]'d under G-DSL-PREDICATE-TEXT-CONTAINS until the gap
-# closes.
-#
-# Closing the gap requires:
-#   (1) Adding `text_contains: Option<String>` to `predicate::PredicateSpec`,
-#       compiling through `CompiledPredicate`, and lowering in
-#       `dsl_cards/predicate.rs` evaluator to scan
-#       `card_data.effect_text + inherited_text + security_text` for the
-#       case-insensitive substring; OR
-#   (2) Promoting `name_contains` to also scan effect text — NOT
-#       recommended, since it changes existing semantics for callers like
-#       BT12-059 that intentionally restrict to name only.
-#
-# When G-DSL-PREDICATE-TEXT-CONTAINS resolves, swap the bucket-1 filter to
-# `text_contains: "Omnimon"` and un-#[ignore] the divergence test.
+# RESOLVED 2026-05-19: the DSL gained an `effect_text_contains` predicate
+# leaf — a case-insensitive substring scan against the candidate card's
+# concatenated printed text (`effect_text` + `inherited_text` +
+# `security_text`). The engine `CardData` struct already carries those
+# three fields (`code/digimon-engine/src/card_data.rs:87,99,124`); the new
+# predicate exposes them to filters. Bucket 1 now uses
+# `effect_text_contains: "Omnimon"` directly, matching the printed
+# "[Omnimon] in its text" semantic faithfully — cards that reference
+# Omnimon only in body text (without "Omnimon" in their name) are now
+# correctly admitted.
 
 card: BT22-017
 name: Gabumon
@@ -157,9 +133,9 @@ effects:
   # DCGO confirms `isOptional: false` on outer ActivateClass.
   #
   # Bucket 1: "[Omnimon] in its TEXT" — DCGO `source.HasText("Omnimon")`.
-  #   DSL-GAP G-DSL-PREDICATE-TEXT-CONTAINS: no `text_contains` predicate.
-  #   Approximated as `name_contains: "Omnimon"` — see header for the
-  #   narrowness diff and divergence test #[ignore] note.
+  #   Implemented with `effect_text_contains: "Omnimon"` (G-DSL-PREDICATE-
+  #   TEXT-CONTAINS RESOLVED 2026-05-19) — a substring scan of the
+  #   candidate's printed effect / inherited / security text.
   #
   # Bucket 2: "[CS] trait" — `trait_has: CS`. The CS trait disjunction is a
   #   single trait, so a flat `trait_has: CS` leaf suffices.
@@ -182,15 +158,18 @@ effects:
               min: 1
               max: 1
               filter:
-                # G-DSL-PREDICATE-TEXT-CONTAINS approximation: printed
-                # "[Omnimon] in its text" is implemented as a name scan
-                # because the DSL lacks `text_contains`. See header.
-                # Empty-bucket case is handled by the engine (it skips
-                # buckets with zero candidates rather than locking on
-                # `min: 1`), matching DCGO `SimplifiedRevealDeckTopCardsAndSelect`
-                # behavior — see BT12-059's
+                # G-DSL-PREDICATE-TEXT-CONTAINS (RESOLVED): printed
+                # "[Omnimon] in its text" is a substring scan of the
+                # candidate card's printed effect / inherited / security
+                # text. DCGO `source.HasText("Omnimon")`. The
+                # `effect_text_contains` predicate scans all three text
+                # fields case-insensitively. Empty-bucket case is handled
+                # by the engine (it skips buckets with zero candidates
+                # rather than locking on `min: 1`), matching DCGO
+                # `SimplifiedRevealDeckTopCardsAndSelect` behavior — see
+                # BT12-059's
                 # `bt12_059_on_play_only_greymon_found_skips_tamer_bucket`.
-                name_contains: "Omnimon"
+                effect_text_contains: "Omnimon"
             - bind_as: cs_pick
               min: 1
               max: 1

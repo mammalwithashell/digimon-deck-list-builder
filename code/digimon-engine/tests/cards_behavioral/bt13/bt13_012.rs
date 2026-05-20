@@ -17,14 +17,15 @@
 //! DCGO/Assets/Scripts/CardEffect/BT13/Red/BT13_012.cs
 //!
 //! # Patterns this test file covers
-//! - C5-adjacent: When-Digivolving security search + conditional Recovery + shuffle
-//!   (clause 1, BLOCKED — see `bt13_012_clause1_when_digivolving_is_blocked` for
-//!   the gap rationale).
+//! - C5-adjacent: When-Digivolving security search + conditional Recovery +
+//!   shuffle (clause 1). G-PLAY-SELECTED-SECURITY-CARD resolved 2026-05-20:
+//!   `select_security` honours its `filter`, and the `play_security_card`
+//!   step verb plays a bound security card free.
 //! - B3-adjacent: Inherited triggered observer of own-Tamer suspend events
-//!   (clause 2, partially shipped — color filter and OPT enforcement noted).
-//! - F-OPT: [Once Per Turn] on a triggered observer (gap G-OPT-TRIGGERED).
-//! - F-Predicate: dp_lte filter on opponent permanent select (gap G-PRED-DP-LTE).
-//! - Predicate gap: event_target_color_any_of (gap G-EVENT-TARGET-COLOR).
+//!   (clause 2). G-EVENT-TARGET-COLOR resolved 2026-05-20 — the red/yellow
+//!   color filter is enforced via `event_target_color_any_of`.
+//! - F-OPT: [Once Per Turn] on a triggered observer.
+//! - F-Predicate: dp_lte filter on opponent permanent select.
 
 #![allow(dead_code, unused_imports)]
 
@@ -142,11 +143,9 @@ fn bt13_012_alt_path_agumon_dinosaur_lv3_cost2() {
     );
 }
 
-/// The shipping spec has exactly one Triggered clause — the inherited
-/// on_suspend observer (clause 2). Clause 1 (When Digivolving) is BLOCKED on a
-/// hybrid DSL gap and is intentionally omitted; see
-/// `bt13_012_clause1_when_digivolving_is_blocked` below for the explicit
-/// rationale and the gap ID.
+/// The shipping spec has exactly two Triggered clauses — the [When
+/// Digivolving] security-search clause (clause 1) and the inherited
+/// on_suspend observer (clause 2).
 #[test]
 fn bt13_012_has_exactly_one_triggered_clause() {
     let card = geogreymon();
@@ -160,8 +159,8 @@ fn bt13_012_has_exactly_one_triggered_clause() {
         .collect();
     assert_eq!(
         triggered.len(),
-        1,
-        "Only the inherited on_suspend clause ships; When Digivolving clause is BLOCKED. Got: {:?}",
+        2,
+        "Two triggered clauses ship: [When Digivolving] + inherited on_suspend. Got: {:?}",
         triggered
             .iter()
             .map(|t| (t.scope, t.when.clone()))
@@ -193,10 +192,9 @@ fn bt13_012_inherited_on_suspend_clause_shape() {
     assert!(triggered.once_per_turn, "[Once Per Turn] flag must be set");
 }
 
-/// Negative structural test: there must NOT be a `WhenDigivolving` clause in
-/// the shipping spec. If a future commit accidentally re-adds clause 1
-/// (perhaps via a partial implementation that violates the no-approximations
-/// policy), this test fails loudly so the gap is closed properly first.
+/// Clause 1 ([When Digivolving] security search) must be present in the
+/// shipping spec. G-PLAY-SELECTED-SECURITY-CARD is resolved — the clause is
+/// authored with `select_security` + the `play_security_card` step verb.
 #[test]
 fn bt13_012_when_digivolving_clause_intentionally_omitted() {
     let card = geogreymon();
@@ -205,87 +203,171 @@ fn bt13_012_when_digivolving_clause_intentionally_omitted() {
         _ => false,
     });
     assert!(
-        !when_digivolving,
-        "Clause 1 (When Digivolving security search) is BLOCKED on \
-         G-PLAY-SELECTED-SECURITY-CARD and must remain omitted until that gap closes. \
-         If you intend to ship the clause, also update this test."
+        when_digivolving,
+        "Clause 1 ([When Digivolving] security search) must be authored — \
+         G-PLAY-SELECTED-SECURITY-CARD is resolved via the `play_security_card` step verb."
     );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION 2 — Clause 1 [When Digivolving]: BLOCKED gap documentation
+// SECTION 2 — Clause 1 [When Digivolving]: security search + play + Recovery
+//
+// G-PLAY-SELECTED-SECURITY-CARD resolved 2026-05-20: `select_security` now
+// honours its `filter` field (was previously ignored by
+// `install_select_security`), and the new `play_security_card: { of, card }`
+// step verb plays a bound security card free (engine
+// `EffectContext::play_from_security_card`). The conditional Recovery is
+// gated with `binding_present: sec_tamer`.
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Clause 1 placeholder: [When Digivolving] search security stack, may play 1
-/// red/yellow Tamer free, conditional Recovery+1, then shuffle security.
-///
-/// BLOCKED on hybrid DSL gap [G-PLAY-SELECTED-SECURITY-CARD]:
-///
-///   - `select_security: { of: you, ... }` exists and binds the chosen card
-///     via `Bindings::insert_card(name, CardHandle)`.
-///   - `play_from_security: {}` exists but pops the *top* of security; it
-///     does not accept a binding to a specific security card.
-///   - `add_to_hand_from_security: { of: you, card: <Card binding> }` works,
-///     but `play_from_hand_free` requires a `hand_index: BindingRef`
-///     (`HandIndex` flavour) — there is no DSL primitive that converts the
-///     post-move card position into a hand-index binding.
-///   - Step (b) "If you did, Recovery +1" also needs a
-///     `binding_was_set` / `last_play_succeeded` predicate to gate Recovery on
-///     whether the Tamer was actually played.
-///
-/// Two equally-acceptable closures (see YAML header):
-///   (i) Add a new `play_security_card: { of: you, card: <binding> }` step
-///       verb that lowers to: pop matching security card, push to hand, call
-///       `play_from_hand_with_cost_result(.., Free, ByEffect, false)`.
-///   (ii) Extend `PlayFromHandFree` to accept Card-handle bindings,
-///        resolving the current hand index at run-time.
-///
-/// Tracked under [G-PLAY-SELECTED-SECURITY-CARD] in `qa/dsl-vocab-gaps.md`.
-/// Same blocker affects BT11-042 Angewomon (currently uses raw_rust escape).
+/// Clause 1 — Pick branch: digivolving BT13-012 installs the optional
+/// security-search prompt; picking a red Tamer plays it free onto the field,
+/// fires Recovery +1, and shuffles security.
 #[test]
-#[ignore = "pending: G-PLAY-SELECTED-SECURITY-CARD (qa/dsl-vocab-gaps.md) — \
-            select_security binds CardHandle, but no DSL verb plays a bound \
-            security card without paying cost; add_to_hand_from_security + \
-            play_from_hand_free chain blocked by missing Card→HandIndex bridge"]
 fn bt13_012_clause1_when_digivolving_is_blocked() {
-    // Scaffolding for when the gap closes:
-    //
-    // 1. Place a Lv3 base on P0's field (Agumon-named, Dinosaur trait, to
-    //    exercise the alt-path digivolve at cost 2).
-    // 2. Seed P0's security with a mix of cards: at least one red Tamer, at
-    //    least one yellow Tamer, plus filler.
-    // 3. Digivolve BT13-012 onto the Lv3 base (effect-initiated digivolve via
-    //    the alt-path; cost 2).
-    // 4. WhenDigivolving prompt installs (optional) with the legal-action
-    //    list filtered to the red and yellow Tamers in security.
-    //    Three branches to assert:
-    //
-    //    Branch A — Decline:
-    //      execute_action(player, PASS) → no Tamer played, NO Recovery
-    //      fires, security shuffles, security count unchanged.
-    //
-    //    Branch B — Pick a Tamer:
-    //      execute_action(player, valid_action_ids[0]) →
-    //        - Selected Tamer enters battle_area (free play).
-    //        - Recovery +1 fires (deck top → security top); security_count
-    //          delta = 0 (one card played from security, one card recovered
-    //          back into security).
-    //        - Security stack is shuffled (verify via face_up_security state
-    //          or order-randomisation hook).
-    //
-    //    Branch C — No legal targets in security:
-    //      Seed security with NO red/yellow Tamers → optional prompt should
-    //      either auto-decline or never install; Recovery does NOT fire;
-    //      security IS still shuffled (the "Then, shuffle" clause is
-    //      unconditional per printed text).
-    //
-    // 5. Assert event-log fires for security-search interactions if any
-    //    OnSearchSecurity / OnAddToHandFromSecurity events are emitted by
-    //    the eventual implementation.
-    todo!(
-        "pending G-PLAY-SELECTED-SECURITY-CARD: no DSL verb to play a selected \
-         security card free; clause 1 must remain omitted until the gap closes"
-    )
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT13-012")
+        .expect("BT13-012 in embedded pack")
+        .add_card(make_tamer("SEC-RED-TAMER", vec![CardColor::Red]))
+        .add_card(make_tamer("SEC-YEL-TAMER", vec![CardColor::Yellow]))
+        .add_card(make_digimon("SEC-FILLER", 3000, CardColor::Blue))
+        .add_card(make_digimon("DECK-FILLER", 3000, CardColor::Blue))
+        .security(0, &["SEC-RED-TAMER", "SEC-YEL-TAMER", "SEC-FILLER"])
+        .deck(0, &["DECK-FILLER"])
+        .memory(10)
+        .start();
+
+    // BT13-012 as the carrier (top card) on P0's field — its own [When
+    // Digivolving] clause fires from the top-card effect slot.
+    let carrier = runner.place_on_field(0, "BT13-012", Some(0));
+
+    let battle_before = runner.battle_area_size(0);
+    let sec_before = runner.security_count(0);
+    let deck_before = runner.deck_size(0);
+
+    // Fire [When Digivolving] for the carrier.
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(carrier),
+    );
+    runner.game.drain_effect_queue();
+
+    // The optional security-search prompt installs — only the two Tamers
+    // (red + yellow) are legal picks; the Blue filler Digimon is filtered out.
+    let (player, action_id) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("select_security prompt must install on [When Digivolving]");
+        assert!(
+            pending.is_optional,
+            "the security-search play is 'you may', so optional"
+        );
+        // The `filter` admits exactly the 2 red/yellow Tamers — the Blue
+        // filler Digimon in security is excluded. (PASS is surfaced via the
+        // `is_optional` flag, not as a `valid_action_ids` entry.)
+        assert_eq!(
+            pending.valid_action_ids.len(),
+            2,
+            "filter must admit exactly the 2 red/yellow Tamers; got {:?}",
+            pending.valid_action_ids
+        );
+        (
+            pending.selecting_player,
+            *pending
+                .valid_action_ids
+                .first()
+                .expect("a Tamer pick"),
+        )
+    };
+    runner
+        .execute_action(player, action_id)
+        .expect("security-card pick resolves");
+    let _ = runner.auto_resolve();
+
+    // A Tamer was played free onto P0's battle area.
+    assert_eq!(
+        runner.battle_area_size(0),
+        battle_before + 1,
+        "the chosen red/yellow Tamer must be played free onto the field"
+    );
+    let played_tamer = runner.game.players[0].battle_area.iter().any(|p| {
+        let id = p.top_card().card_id(&runner.game.card_data);
+        id == "SEC-RED-TAMER" || id == "SEC-YEL-TAMER"
+    });
+    assert!(played_tamer, "a red/yellow Tamer must now be on P0's field");
+
+    // Recovery +1: one deck card moved to security. Net security delta:
+    // -1 (Tamer played out) +1 (Recovery) = 0.
+    assert_eq!(
+        runner.security_count(0),
+        sec_before,
+        "security count net-unchanged: -1 Tamer played, +1 Recovery"
+    );
+    assert_eq!(
+        deck_before - runner.deck_size(0),
+        1,
+        "Recovery +1 must move exactly 1 card from deck to security"
+    );
+}
+
+/// Clause 1 — Decline branch: declining the optional security-search prompt
+/// plays no Tamer and fires no Recovery, but the security stack is still
+/// shuffled (the "Then, shuffle" clause is unconditional per printed text).
+#[test]
+fn bt13_012_clause1_decline_skips_play_and_recovery() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT13-012")
+        .expect("BT13-012 in embedded pack")
+        .add_card(make_tamer("SEC-RED-TAMER", vec![CardColor::Red]))
+        .add_card(make_digimon("SEC-FILLER", 3000, CardColor::Blue))
+        .add_card(make_digimon("DECK-FILLER", 3000, CardColor::Blue))
+        .security(0, &["SEC-RED-TAMER", "SEC-FILLER"])
+        .deck(0, &["DECK-FILLER"])
+        .memory(10)
+        .start();
+
+    let carrier = runner.place_on_field(0, "BT13-012", Some(0));
+
+    let battle_before = runner.battle_area_size(0);
+    let sec_before = runner.security_count(0);
+    let deck_before = runner.deck_size(0);
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(carrier),
+    );
+    runner.game.drain_effect_queue();
+
+    let player = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("select_security prompt installs")
+        .selecting_player;
+    runner
+        .execute_action(player, PASS)
+        .expect("decline resolves");
+    let _ = runner.auto_resolve();
+
+    // Declining: no Tamer played, no Recovery — battle area, security count,
+    // and deck size all unchanged.
+    assert_eq!(
+        runner.battle_area_size(0),
+        battle_before,
+        "declining must not play a Tamer"
+    );
+    assert_eq!(
+        runner.security_count(0),
+        sec_before,
+        "declining must not change security count (no play, no Recovery)"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before,
+        "Recovery must NOT fire when the play was declined (binding_present gate)"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -525,18 +607,12 @@ fn bt13_012_does_not_install_prompt_when_opponent_has_no_digimon() {
 /// becomes suspended" — a green or purple own Tamer suspending should NOT
 /// trigger the clause.
 ///
-/// BLOCKED on [G-EVENT-TARGET-COLOR]: the DSL has no
-/// `event_target_color_any_of` predicate leaf. Available leaves only include
-/// `event_target_kind`, `event_target_trait_has`, `event_target_owner`. The
-/// shipping YAML therefore over-fires on own Tamers of any color.
-///
-/// When the gap closes, augment the YAML clause's `condition` block with:
-///   `event_target_color_any_of: [red, yellow]`
-/// and re-enable this test.
+/// G-EVENT-TARGET-COLOR resolved 2026-05-20: the `event_target_color_any_of`
+/// predicate leaf compares the event-target permanent's printed color set
+/// against the requested list. BT13-012's clause condition gates on
+/// `event_target_color_any_of: [red, yellow]`, so a green own Tamer
+/// suspending does not install the delete prompt.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-COLOR (qa/dsl-vocab-gaps.md) — \
-            no event_target_color_any_of predicate; clause over-fires on \
-            non-red/yellow own Tamers"]
 fn bt13_012_does_not_fire_for_own_green_or_purple_tamer() {
     let mut runner = fresh_runner(vec![
         make_tamer("GREEN-TAMER", vec![CardColor::Green]),

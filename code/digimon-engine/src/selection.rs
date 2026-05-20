@@ -60,6 +60,18 @@ impl std::ops::BitOrAssign for UnionZoneSet {
     }
 }
 
+/// The zone-tagged result of a `select_union_zone` pick — identifies BOTH
+/// the zone the card was picked from AND its index in that zone, so a
+/// downstream free-play step can bind a `HandIndex` / `TrashIndex` rather
+/// than a zone-agnostic `Card`. G-DSL-UNION-PLAY-FREE.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnionZonePick {
+    /// The card was picked from the player's hand at `index`.
+    Hand { player: crate::enums::PlayerId, index: u16 },
+    /// The card was picked from the player's trash at `index`.
+    Trash { player: crate::enums::PlayerId, index: u16 },
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SourceSelectionRef {
     pub permanent: PermanentHandle,
@@ -144,6 +156,10 @@ pub enum SelectionKind {
     SourceMulti { min: u8, max: u8, picked: u8 },
     /// Pick opponent permanents whose total DP is capped by a remaining budget.
     DpBudget { remaining_dp: i32, picked: u8 },
+    /// Pick opponent permanents whose total printed play cost is capped by a
+    /// remaining budget. Play-cost analog of `DpBudget`.
+    /// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+    PlayCostBudget { remaining_play_cost: i32, picked: u8 },
     /// Pick the selecting player's breeding-area permanent.
     BreedingPermanent,
 }

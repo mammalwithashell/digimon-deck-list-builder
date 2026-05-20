@@ -136,12 +136,14 @@ effects:
   #   - event_target_kind: digimon   — digivolving permanent is a Digimon
   #                                    (DCGO `IsPermanentExistsOnOwnerBattleAreaDigimon`)
   #
-  # The "other" qualifier from "one of your OTHER Digimon" is NOT expressible
-  # today — see G-DSL-EVENT-TARGET-IS-OTHER in the header comment. With the
-  # owner+kind gate the clause is faithful for every digivolve EXCEPT the
-  # digivolve of Tsunomon's own host carrier, where DCGO suppresses and the
-  # DSL would over-fire. The negative-case test for that scenario is
-  # `#[ignore]`'d pending the DSL gap closing.
+  # The "other" qualifier from "one of your OTHER Digimon" maps to
+  # `event_permanent_is_source: false` — the predicate evaluator
+  # (`code/digimon-engine/src/dsl_cards/predicate.rs`, the
+  # `event_permanent_is_source` arm) compares the digivolving permanent
+  # (`current_trigger_context.event_permanent`) against the inherited
+  # clause's source carrier (`rctx.source_permanent`). `false` rejects the
+  # fire when the digivolving permanent IS Tsunomon's own host carrier,
+  # faithfully implementing DCGO `permanent != card.PermanentOfThisCard()`.
   - scope: inherited
     when: on_digivolve
     once_per_turn: true
@@ -151,5 +153,6 @@ effects:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
+        - event_permanent_is_source: false
     process:
       - draw: { of: you, count: 1 }

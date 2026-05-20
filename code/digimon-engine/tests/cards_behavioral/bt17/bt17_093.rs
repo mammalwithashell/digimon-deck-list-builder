@@ -550,21 +550,26 @@ fn bt17_093_clause2_inner_tamer_pick_declined_still_pays_cost_and_draws() {
 
     runner.end_turn();
 
-    // Decline every optional install we encounter via PASS; honor required
-    // ones by accepting the first non-PASS option. The clause-2 outer body
-    // runs unconditionally (single-trigger `optional` lowering — see header),
-    // so the cost step (return-to-deck-bottom) and draw fire before the
-    // optional inner Tai/Kari select_hand prompt installs.
+    // G-OUTER-OPTIONAL-NOT-INSTALLED: clause 2 is optional and its body's
+    // first step (`return_to_deck`) is mandatory, so an outer accept/decline
+    // prompt (`SelectionKind::Replacement`) installs first. ACCEPT it so the
+    // cost (return-to-deck-bottom) and draw run; then PASS the inner
+    // optional Tai/Kari select_hand prompt (`SelectionKind::Hand`).
+    use digimon_engine::selection::SelectionKind;
     let pass = digimon_engine::action::space::PASS;
     while let Some(view) = runner.pending_selection_view() {
-        let action = if view.is_optional {
-            pass
-        } else {
-            view.valid_action_ids
+        let action = match view.kind {
+            // Accept the outer optional-trigger prompt — run the body.
+            SelectionKind::Replacement => view.valid_action_ids[0],
+            // Decline every inner optional pick.
+            _ if view.is_optional => pass,
+            // Honor mandatory installs.
+            _ => view
+                .valid_action_ids
                 .iter()
                 .copied()
                 .find(|&id| id != pass)
-                .unwrap_or(view.valid_action_ids[0])
+                .unwrap_or(view.valid_action_ids[0]),
         };
         runner
             .execute_action(0, action)
@@ -572,14 +577,15 @@ fn bt17_093_clause2_inner_tamer_pick_declined_still_pays_cost_and_draws() {
     }
     let _ = runner.auto_resolve();
 
-    // BT17-093 must be off-field (cost-as-return-to-deck-bottom paid).
+    // BT17-093 must be off-field (cost-as-return-to-deck-bottom paid after
+    // accepting the outer prompt).
     let tamer_on_field = runner.game.players[0]
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID);
     assert!(
         !tamer_on_field,
-        "BT17-093 must leave the field after Clause 2 outer body runs (single-trigger optional cannot decline)"
+        "BT17-093 must leave the field after the accepted Clause 2 body runs"
     );
 
     // Tai-Kamiya tamer must NOT be on field (inner select_hand was declined).

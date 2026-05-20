@@ -200,6 +200,10 @@ pub struct CompiledPredicate {
     pub attribute_is: Option<String>,
     pub name_is: Option<String>,
     pub name_contains: Option<String>,
+    /// Case-insensitive substring scan against the candidate card's
+    /// concatenated printed text (`effect_text` + `inherited_text` +
+    /// `security_text`). G-DSL-PREDICATE-TEXT-CONTAINS.
+    pub effect_text_contains: Option<String>,
     pub name_in: Option<Vec<String>>,
     pub card_number_is: Option<String>,
     pub play_cost_lte: Option<CompiledDpConstraint>,
@@ -223,6 +227,9 @@ pub struct CompiledPredicate {
     /// gates target selection on this predicate.
     pub has_on_deletion_effect: Option<bool>,
     pub self_color_count_gte: Option<u8>,
+    /// True when the observer's battle-area Tamers collectively have at
+    /// least N distinct colors. G-DSL-DISTINCT-TAMER-COLORS.
+    pub distinct_tamer_colors_gte: Option<u8>,
     pub zone: Vec<CompiledZone>,
     pub owner: Option<CompiledPlayerRef>,
     pub other: Option<bool>,
@@ -239,6 +246,12 @@ pub struct CompiledPredicate {
     pub security_count_gte: Option<CompiledDpConstraint>,
     pub opponent_security_count_lte: Option<CompiledDpConstraint>,
     pub opponent_security_count_gte: Option<CompiledDpConstraint>,
+    /// True when the named player has no face-up security card matching the
+    /// identity filter. G-PRED-NO-FACE-UP-SECURITY-NAMED.
+    pub no_face_up_security_named: Option<CompiledFaceUpSecurityNamed>,
+    /// True when the named list-typed binding holds exactly `1` (count)
+    /// entries. `(binding_name, n)`. G-DSL-BINDING-COUNT-EQ.
+    pub binding_count_eq: Option<(String, u8)>,
     pub your_turn: Option<bool>,
     pub opponents_turn: Option<bool>,
     pub all_turns: Option<bool>,
@@ -248,6 +261,9 @@ pub struct CompiledPredicate {
     pub dna_origin: Option<bool>,
     pub event_target_kind: Option<CompiledCardKind>,
     pub event_target_trait_has: Option<String>,
+    /// Case-insensitive substring scan against the event-target
+    /// permanent's card name. G-EVENT-TARGET-NAME-CONTAINS.
+    pub event_target_name_contains: Option<String>,
     pub event_target_is_player: Option<bool>,
     pub event_target_was_self: Option<bool>,
     pub attack_target_change_reason: Option<String>,
@@ -285,7 +301,14 @@ pub struct CompiledPredicate {
     pub has_alt_path: Option<String>,
     pub level_matches_aggregate: Option<(CompiledAggregateSelector, CompiledPlayerRef)>,
     pub self_digivolution_contains_name: Option<String>,
+    /// Like `self_digivolution_contains_name` but scans ONLY the
+    /// digivolution source cards beneath the carrier — the carrier's
+    /// own top card is excluded. G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY.
+    pub self_digivolution_sources_contain_name: Option<String>,
     pub event_target_owner: Option<CompiledPlayerRef>,
+    /// Event-target permanent color-set intersection test.
+    /// G-EVENT-TARGET-COLOR.
+    pub event_target_color_any_of: Option<Vec<CompiledColor>>,
     pub host_permanent_trait_has: Option<String>,
     pub trashed_source_trait_has: Option<String>,
     pub trashed_source_card_id_is: Option<String>,
@@ -362,6 +385,15 @@ pub struct CompiledExistential {
     pub predicate: CompiledPredicate,
 }
 
+/// Compiled form of `no_face_up_security_named`. Exactly one of
+/// `card_number_is` / `name_is` is populated. G-PRED-NO-FACE-UP-SECURITY-NAMED.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CompiledFaceUpSecurityNamed {
+    pub of: CompiledPlayerRef,
+    pub card_number_is: Option<String>,
+    pub name_is: Option<String>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum CompiledPlayerRef {
     You,
@@ -392,6 +424,17 @@ pub enum CompiledFormula {
     },
     BindingDp(String),
     BindingPlayCost(String),
+    /// Effective DP of the effect's `source_permanent` (the carrier of
+    /// the running effect). Unlike `BindingDp`, which reads a named
+    /// `bind_as` binding, this reads `ctx.source_permanent` directly.
+    /// Used by P-182's [When Digivolving] "delete 1 opp Digimon with as
+    /// much or less DP as this Digimon". G-FORMULA-SOURCE-DP.
+    SourceDp,
+    /// Digivolution-card count (materials beneath the top card) of the
+    /// effect's `source_permanent`. Sibling of `SourceDp`. Used by AD1-025's
+    /// [On Play][When Digivolving] bounce-by-digivolution-card-count.
+    /// G-FORMULA-SOURCE-MATERIAL-COUNT.
+    SourceMaterialCount,
     SourceStackDpSum {
         target: String,
         filter: Option<Box<CompiledPredicate>>,
@@ -441,6 +484,9 @@ pub enum CompiledAggregateSelector {
     HighestDp,
     LowestLevel,
     HighestLevel,
+    /// Lowest printed play cost among the candidate set.
+    /// G-PLAY-COST-AGGREGATE.
+    LowestPlayCost,
 }
 
 /// Value carried by `add_dp_modifier` / `add_modifier` steps. Phase 2f2 Task 1
@@ -512,6 +558,10 @@ pub enum CompiledDeclarativeClause {
         reduction_timing: Option<String>,
         when_playing_this: bool,
         when_any_ally_played: Option<CompiledPredicate>,
+        /// Digivolution-target-keyed trigger — fires only for a DIGIVOLVE
+        /// cost whose target card matches this predicate.
+        /// `G-COST-REDUCTION-DIGIVOLVE-INTO`.
+        when_any_ally_digivolves_into: Option<CompiledPredicate>,
         condition: Option<CompiledPredicate>,
         optional: bool,
         once_per_turn: bool,
@@ -692,6 +742,9 @@ pub enum CompiledEffectController {
 pub enum CompiledFieldSelector {
     LowestDp,
     HighestDp,
+    /// Lowest printed play cost among the candidate permanents.
+    /// G-PLAY-COST-AGGREGATE.
+    LowestPlayCost,
 }
 
 // ── Steps ───────────────────────────────────────────────────────────
@@ -732,6 +785,12 @@ pub enum CompiledStep {
         card: CompiledBindingRef,
     },
     AddToHandFromSecurity {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+    },
+    /// Play a bound card from the security stack without paying its cost.
+    /// G-PLAY-SELECTED-SECURITY-CARD.
+    PlaySecurityCard {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
     },
@@ -902,6 +961,16 @@ pub enum CompiledStep {
         cost: CompiledCostDelta,
         ignore_requirements: bool,
     },
+    /// DNA digivolve where `target` is a battle-area permanent and
+    /// `hand_partner` is the second DNA material drawn from hand; the merged
+    /// permanent is topped with `from_hand` (the result card). BT17-095 B.
+    EffectInitiatedDnaDigivolveHandPartner {
+        target: CompiledBindingRef,
+        hand_partner: CompiledBindingRef,
+        from_hand: CompiledBindingRef,
+        cost: CompiledCostDelta,
+        ignore_requirements: bool,
+    },
     TrashTopSecurity {
         of: CompiledPlayerRef,
     },
@@ -956,6 +1025,12 @@ pub enum CompiledStep {
     },
     ReturnAllTrashToDeckBottom {
         of: CompiledPlayerRef,
+    },
+    /// Move a bound card list out of trash to the bottom of the deck.
+    /// G-ZONE-TRASH-TO-DECK.
+    ReturnTrashListToDeckBottom {
+        of: CompiledPlayerRef,
+        cards: CompiledBindingRef,
     },
     TrashTopNDigivolutionCardsOfEach {
         of: CompiledPlayerRef,
@@ -1090,6 +1165,16 @@ pub enum CompiledStep {
         prompt: String,
         then: Vec<CompiledStep>,
     },
+    /// Play-cost-budget analog of `SelectOpponentDpBudget`.
+    /// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+    SelectOpponentPlayCostBudget {
+        play_cost_budget: i32,
+        min_picks: u8,
+        filter: CompiledPredicate,
+        bind_as: Option<String>,
+        prompt: String,
+        then: Vec<CompiledStep>,
+    },
     SelectOwnBreedingPermanent {
         bind_as: Option<String>,
         prompt: String,
@@ -1149,6 +1234,8 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         zone: CompiledZone,
         max: CompiledCountBound,
+        /// Minimum required picks. G-SELECT-MULTI-MIN.
+        min: u8,
         filter: CompiledPredicate,
         bind_as: Option<String>,
         prompt: String,
@@ -1309,6 +1396,9 @@ pub enum CompiledCostDelta {
     Printed,
     Literal(i32),
     Reduce(i32),
+    /// Formula-valued cost reduction — the evaluated integer is subtracted
+    /// from the printed play cost at resolution time. G-FORMULA-COST-DELTA.
+    ReduceFn(CompiledFormula),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

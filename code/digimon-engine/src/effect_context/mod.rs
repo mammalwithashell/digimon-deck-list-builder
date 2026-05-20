@@ -120,6 +120,12 @@ pub struct EffectReadContext<'a> {
     /// `None` outside play/digivolve cost calculation.
     pub cost_target_card: Option<CardHandle>,
     pub cost_target_from_hand: bool,
+    /// True when the cost currently being computed is a DIGIVOLVE cost (as
+    /// opposed to a play cost or option-use cost). Consumed by the
+    /// `when_any_ally_digivolves_into` cost-reduction trigger so it fires
+    /// only for digivolutions. `false` outside cost-calc dispatch and for
+    /// non-digivolve costs. `G-COST-REDUCTION-DIGIVOLVE-INTO`.
+    pub cost_is_digivolve: bool,
     /// Permanent(s) being digivolved or otherwise mutated by the play/
     /// digivolve action whose cost is currently being computed. Single
     /// entry for a normal digivolve (the digivolve-target permanent),
@@ -159,6 +165,7 @@ impl<'a> EffectReadContext<'a> {
             replacement_subject_controller: None,
             cost_target_card: None,
             cost_target_from_hand: false,
+            cost_is_digivolve: false,
             cost_target_permanents: Vec::new(),
         }
     }
@@ -183,8 +190,16 @@ impl<'a> EffectReadContext<'a> {
             replacement_subject_controller: None,
             cost_target_card: Some(cost_target_card),
             cost_target_from_hand,
+            cost_is_digivolve: false,
             cost_target_permanents: Vec::new(),
         }
+    }
+
+    /// Mark the cost currently being computed as a digivolve cost. Chains
+    /// after `new_with_cost_target`. `G-COST-REDUCTION-DIGIVOLVE-INTO`.
+    pub fn with_cost_is_digivolve(mut self, is_digivolve: bool) -> Self {
+        self.cost_is_digivolve = is_digivolve;
+        self
     }
 
     /// Attach the digivolve target permanents (one for normal digivolve,
@@ -637,6 +652,9 @@ pub struct EffectContext<'a> {
     /// BeforePayCost hook. `None` outside cost-reducer resolution.
     pub cost_target_card: Option<CardHandle>,
     pub cost_target_from_hand: bool,
+    /// True when the cost currently being resolved is a digivolve cost.
+    /// `G-COST-REDUCTION-DIGIVOLVE-INTO`.
+    pub cost_is_digivolve: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -678,6 +696,7 @@ impl<'a> EffectContext<'a> {
             override_selecting_player: None,
             cost_target_card: None,
             cost_target_from_hand: false,
+            cost_is_digivolve: false,
         }
     }
 
@@ -1767,6 +1786,7 @@ impl<'a> EffectContext<'a> {
             replacement_subject_controller: None,
             cost_target_card: self.cost_target_card,
             cost_target_from_hand: self.cost_target_from_hand,
+            cost_is_digivolve: self.cost_is_digivolve,
             cost_target_permanents: Vec::new(),
         }
     }
@@ -2637,6 +2657,31 @@ impl<'a> EffectContext<'a> {
             .iter()
             .position(|card| card.handle() == self.source_card)
             .or_else(|| self.game.player(player).security.len().checked_sub(1))?;
+        self.play_from_security_index(player, security_index)
+    }
+
+    /// Play a SPECIFIC card from `player`'s security stack — identified by
+    /// its `CardHandle` — without paying its cost. Used by DSL clauses that
+    /// `select_security` a card and then play exactly that bound card
+    /// (e.g. BT13-012 "search your security stack, and you may play 1 red
+    /// or yellow Tamer card among it without paying its cost").
+    ///
+    /// Unlike `play_from_security` (which plays the trigger-context card or
+    /// the security top), this resolves the security index of the bound
+    /// handle and routes through the same `play_from_security_index`
+    /// hand-transit path. Returns `None` if the handle is not in `player`'s
+    /// security zone or the play is gated / fails.
+    pub fn play_from_security_card(
+        &mut self,
+        player: PlayerId,
+        card: CardHandle,
+    ) -> Option<PermanentHandle> {
+        let security_index = self
+            .game
+            .player(player)
+            .security
+            .iter()
+            .position(|c| c.handle() == card)?;
         self.play_from_security_index(player, security_index)
     }
 
@@ -3691,6 +3736,105 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Effect-initiated DNA digivolve where ONE material is a battle-area
+    /// permanent (`target`) and the OTHER material is a card in hand
+    /// (`hand_partner`). The merged permanent is topped with `result_from_hand`
+    /// (also a hand card — the Omnimon-name result).
+    ///
+    /// This is the BT17-095 Clause B shape: "That Digimon and a card in the
+    /// hand may DNA digivolve into a Digimon card with [Omnimon] in its name
+    /// in the hand." `effect_initiated_dna_digivolve` cannot express it — that
+    /// verb requires BOTH DNA materials to be on-field permanents. See
+    /// G-DSL-DNA-FROM-HAND-PARTNER.
+    ///
+    /// ## Stacking order
+    ///
+    /// `target.card_sources ++ [hand_partner] ++ [result_from_hand]`.
+    ///
+    /// ## Triggers
+    ///
+    /// `WhenDigivolving` → `OnDnaDigivolve` → `OnDigivolve` (global), each
+    /// followed by a queue drain, all carrying the `dna_origin` marker — the
+    /// same firing sequence as `effect_initiated_dna_digivolve`.
+    ///
+    /// ## Defensive validation
+    ///
+    /// Returns `None` if:
+    /// - `target`'s index is out of range on its player's battle area,
+    /// - `hand_partner` and `result_from_hand` are not both in the SAME
+    ///   player's hand (they must share a hand owner),
+    /// - `hand_partner == result_from_hand`,
+    /// - the hand owner has `CannotDigivolveDigimonByEffect`,
+    /// - `cost > 0` and `!ignore_requirements` and the controller cannot pay
+    ///   the memory cost.
+    ///
+    /// `ignore_requirements` bypasses the memory affordability floor exactly
+    /// as in `effect_initiated_dna_digivolve` (the cost is still subtracted).
+    pub fn effect_initiated_dna_digivolve_with_hand_partner(
+        &mut self,
+        target: PermanentHandle,
+        hand_partner: CardHandle,
+        result_from_hand: CardHandle,
+        cost: i32,
+        ignore_requirements: bool,
+    ) -> Option<PermanentHandle> {
+        if hand_partner == result_from_hand {
+            return None;
+        }
+        if (target.index as usize) >= self.game.player(target.player).battle_area.len() {
+            return None;
+        }
+
+        // Both hand cards must live in the SAME player's hand; locate it.
+        let mut hand_owner: Option<PlayerId> = None;
+        let mut partner_index: Option<usize> = None;
+        let mut result_index: Option<usize> = None;
+        for pid in 0..self.game.players.len() {
+            let hand = &self.game.players[pid].hand;
+            let p = hand.iter().position(|c| c.handle() == hand_partner);
+            let r = hand.iter().position(|c| c.handle() == result_from_hand);
+            if let (Some(p), Some(r)) = (p, r) {
+                hand_owner = Some(pid as PlayerId);
+                partner_index = Some(p);
+                result_index = Some(r);
+                break;
+            }
+        }
+        let (hand_owner, partner_index, result_index) =
+            (hand_owner?, partner_index?, result_index?);
+
+        if self
+            .game
+            .modifiers
+            .player_has(hand_owner, ModifierType::CannotDigivolveDigimonByEffect)
+        {
+            return None;
+        }
+
+        let effective_cost: u16 = cost.max(0) as u16;
+
+        if ignore_requirements && effective_cost > 0 {
+            self.game.pay_memory_unchecked(effective_cost);
+            self.game.dna_digivolve_hand_partner_inner(
+                target,
+                hand_owner,
+                partner_index,
+                result_index,
+                0,
+                true,
+            )
+        } else {
+            self.game.dna_digivolve_hand_partner_inner(
+                target,
+                hand_owner,
+                partner_index,
+                result_index,
+                effective_cost,
+                true,
+            )
+        }
+    }
+
     pub fn effect_initiated_dna_digivolve_with_provenance(
         &mut self,
         target_a: PermanentHandle,
@@ -4291,6 +4435,37 @@ impl<'a> EffectContext<'a> {
             self.game.player_mut(owner).deck.insert(0, card);
         }
         handles
+    }
+
+    /// Move a SELECTED LIST of cards out of `player`'s trash to the bottom of
+    /// the deck, in the given order (the first handle ends up deepest). Unlike
+    /// `return_all_trash_to_deck_bottom`, this targets exactly the cards in
+    /// `cards` (e.g. a `select_count_capped_multi` pick set) and leaves the
+    /// rest of the trash untouched. Returns the handles actually moved (a
+    /// handle not found in the trash is silently skipped).
+    /// G-ZONE-TRASH-TO-DECK.
+    pub fn return_trash_cards_to_deck_bottom(
+        &mut self,
+        player: PlayerId,
+        cards: &[CardHandle],
+    ) -> Vec<CardHandle> {
+        let mut moved = Vec::with_capacity(cards.len());
+        for &handle in cards {
+            let Some(pos) = self
+                .game
+                .player(player)
+                .trash
+                .iter()
+                .position(|c| c.handle() == handle)
+            else {
+                continue;
+            };
+            let card = self.game.player_mut(player).trash.remove(pos);
+            let owner = card.owner;
+            self.game.player_mut(owner).deck.insert(0, card);
+            moved.push(handle);
+        }
+        moved
     }
 
     /// (Track A) Move a battle-area permanent to a player's security stack

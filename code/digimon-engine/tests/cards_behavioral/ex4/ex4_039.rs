@@ -561,15 +561,13 @@ fn ex4_039_inherited_fires_when_top_and_other_friendly_digivolves() {
 // SECTION 4 — IGNORED tests (gap-blocked)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// IGNORED — printed text says "your other Digimon", which excludes the
-/// carrier (the permanent EX4-039 sits under) from triggering the clause
-/// when IT digivolves further. No DSL predicate today excludes the
-/// OnDigivolve event_permanent when it equals the inherited source's
-/// carrier (G-EVENT-TARGET-NOT-SOURCE in qa/dsl-vocab-gaps.md). Currently
-/// the clause over-fires in this case (gains memory). Will pass once
-/// the predicate exists and is added to the YAML condition.
+/// Printed text says "your other Digimon", which excludes the carrier
+/// (the permanent EX4-039 sits under) from triggering the clause when IT
+/// digivolves further. The YAML condition uses `event_permanent_is_source:
+/// false` — the digivolving (event) permanent must NOT be this inherited
+/// clause's source-permanent (the carrier). When the carrier itself
+/// digivolves, the condition fails and no memory is gained.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-NOT-SOURCE — no \"event target is not source-permanent\" predicate"]
 fn ex4_039_inherited_does_not_fire_when_carrier_itself_digivolves() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -617,11 +615,107 @@ fn ex4_039_inherited_does_not_fire_when_carrier_itself_digivolves() {
     );
 }
 
-/// IGNORED — `once_per_turn: true` is authored on the inherited clause but
-/// engine queue-drain does not yet enforce same-turn lockout. Re-firing the
-/// trigger from a test re-runs the body today.
+/// Inherited clause OPT lockout — printed [Once Per Turn]. The inherited
+/// "[Your Turn][Once Per Turn] When one of your other Digimon digivolves,
+/// gain 1 memory" clause may fire at most once per turn. Firing a second
+/// other-friendly digivolve in the same turn must NOT grant a second
+/// memory; the per-turn OPT reset (`Permanent::new_turn`) re-arms it.
+///
+/// OPT enforcement for permanent-sourced triggered effects is wired in
+/// `run_queued_effect_inner` (`effect_queue.rs` ~1980-2016); the per-permanent
+/// `effect_activations` counter is keyed to the carrier hosting EX4-039.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — OPT lockout not enforced on triggered effects"]
 fn ex4_039_inherited_opt_lockout_blocks_second_fire_same_turn() {
-    unimplemented!("blocked on G-OPT-TRIGGERED");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX4-039 YAML parses")
+        .add_card(make_named_digimon("CARRIER", "Carrier", 4, 4000))
+        .add_card(make_named_digimon("OTHER-LV3", "OtherLv3", 3, 3000))
+        .add_card(make_named_digimon("OTHER-LV4", "OtherLv4", 4, 5000))
+        .add_card(make_named_digimon("OTHER-LV5", "OtherLv5", 5, 7000))
+        .add_card(make_filler("FILL"))
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(0)
+        .start();
+
+    // EX4-039 sits as a source under CARRIER on player 0's field.
+    let carrier_handle = runner.place_stack(0, &["EX4-039", "CARRIER"]);
+    // A separate Digimon (OTHER-LV3) that will digivolve twice this turn.
+    let other_handle = runner.place_on_field(0, "OTHER-LV3", Some(0));
+
+    /// Push a new top onto `other_handle` and fire its OnDigivolve event.
+    fn digivolve_other(runner: &mut DebugRunner, other: PermanentHandle, into_id: &str) {
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == into_id)
+            .unwrap();
+        let next_idx = runner.game.next_card_index();
+        let new_top = CardSource::new(idx, 0, next_idx);
+        let perm = &mut runner.game.players[0].battle_area[other.index as usize];
+        perm.digivolve(new_top, runner.game.turn_count);
+        let event_card = perm.top_card().handle();
+        runner.game.enqueue_triggered(
+            EffectTiming::OnDigivolve,
+            TriggerSource::Digivolved {
+                player: 0,
+                permanent: other,
+                card: event_card,
+                effect_initiated: false,
+                dna_origin: false,
+            },
+        );
+        runner.game.drain_effect_queue();
+        drain_accepting_all(runner);
+    }
+
+    let memory_before = runner.memory();
+
+    // ── First fire: OTHER-LV3 → OTHER-LV4. The inherited clause grants +1.
+    digivolve_other(&mut runner, other_handle, "OTHER-LV4");
+    assert_eq!(
+        runner.memory(),
+        memory_before + 1,
+        "first other-friendly digivolve must grant +1 memory"
+    );
+
+    // ── Second fire, SAME turn: OTHER-LV4 → OTHER-LV5. OPT lockout — no gain.
+    digivolve_other(&mut runner, other_handle, "OTHER-LV5");
+    assert_eq!(
+        runner.memory(),
+        memory_before + 1,
+        "OPT lockout must block the second memory gain in the same turn"
+    );
+
+    // ── OPT reset: `Permanent::new_turn()` clears `effect_activations` on the
+    // carrier hosting EX4-039 — the same per-turn reset `begin_turn()` does.
+    runner.game.players[0].battle_area[carrier_handle.index as usize].new_turn();
+
+    // Place a fresh separate Digimon and digivolve it — the inherited clause
+    // must fire again after the OPT reset.
+    let third_handle = {
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "OTHER-LV3")
+            .unwrap();
+        let next_idx = runner.game.next_card_index();
+        let card = CardSource::new(idx, 0, next_idx);
+        runner.game.players[0].battle_area.push(
+            digimon_engine::permanent::Permanent::new(card, runner.game.turn_count),
+        );
+        PermanentHandle {
+            player: 0,
+            index: (runner.game.players[0].battle_area.len() - 1) as u8,
+        }
+    };
+    digivolve_other(&mut runner, third_handle, "OTHER-LV4");
+    assert_eq!(
+        runner.memory(),
+        memory_before + 2,
+        "after the per-turn OPT reset the inherited clause must grant memory again"
+    );
 }

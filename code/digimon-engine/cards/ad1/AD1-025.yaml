@@ -28,16 +28,80 @@ effects:
       - { name_contains: "MetalGarurumon" }
     exclude_cause: [own_effect, battle]
 
+  # ─── [On Play][When Digivolving] body ────────────────────────────────────────
+  #
+  # Printed text: "Return all of your opponent's Digimon with as many or fewer
+  # digivolution cards as this Digimon to the bottom of the deck. Then, delete
+  # 1 of your opponent's Digimon."
+  #
+  # DCGO (AD1_025.cs OnEnterFieldAnyone shared body, isOptional=false): a
+  # batch return of every opponent Digimon whose digivolution-card count is
+  # `<=` this permanent's, followed by a mandatory single-target delete.
+  #
+  # G-SOURCE-COUNT-BOUND-BOUNCE-THEN-DELETE CLOSED — re-authored in pure DSL.
+  # The "as many or fewer digivolution cards as this Digimon" comparison uses
+  # the `source_material_count` formula (G-FORMULA-SOURCE-MATERIAL-COUNT — the
+  # digivolution-card-count sibling of P-182's `source_dp`). `for_each` walks
+  # every matching opponent Digimon and returns it to the deck bottom
+  # (snapshot-by-stable-id iteration tolerates the per-iteration removal).
+  # The follow-up `select_opponent_permanent` is mandatory (DCGO
+  # `canNoSelect: false`) and silently no-ops when the opponent has no
+  # remaining Digimon.
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] Return opponent Digimon with <= this source count, then delete 1"
+    summary: "[On Play][When Digivolving] Return opponent Digimon with <= this Digimon's digivolution cards to deck bottom; then delete 1 opp Digimon"
     process:
-      # BLOCKED: G-SOURCE-COUNT-BOUND-BOUNCE-THEN-DELETE — this requires an
-      # aggregate comparison against this Digimon's source count followed by a
-      # second mandatory delete prompt. The historical example uses a raw Rust
-      # hook that remains unregistered; keep the clause visible for audit tests.
-      - raw_rust: { fn: ad1_025_on_play_process }
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            materials_count_lte:
+              formula:
+                source_material_count: {}
+          bind_as: bounce_target
+          body:
+            - return_to_deck:
+                target: bounce_target
+                position: bottom
+      - select_opponent_permanent:
+          bind_as: delete_target
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: delete_target }
 
-  # Omitted:
-  # [All Turns][Once Per Turn] When any opponent Digimon leaves the battle
-  # area, trash 1 of their battle-area Options and their top security. Current
-  # DSL lacks the observer payload and once-per-turn coverage for that shape.
+  # ─── [All Turns][Once Per Turn] observer ─────────────────────────────────────
+  #
+  # Printed text: "[All Turns] [Once Per Turn] When any of your opponent's
+  # Digimon leave the battle area, trash 1 of their Option cards in the battle
+  # area and trash their top security card."
+  #
+  # DCGO (AD1_025.cs OnLeaveFieldAnyone, max-per-turn=1, isOptional=false):
+  # gated by `CanTriggerOnPermanentLeave(IsOpponentsDigimon)`. Body — an
+  # optional-when-empty / mandatory-when-present pick of 1 opponent
+  # battle-area Option to trash, then an unconditional trash of the
+  # opponent's top security card.
+  #
+  # `active_when: { all_turns: true }` makes the observer fire on the
+  # opponent's turn too (printed [All Turns]). `condition` closes the
+  # "your opponent's Digimon" filter on the leaving permanent. The Option
+  # pick uses `select_opponent_permanent` with `kind: option` (mandatory
+  # when a candidate exists, silently no-ops when none — matches DCGO
+  # `canNoSelect: false` + the empty-set no-op). `delete_permanent` is the
+  # engine's move-a-battle-area-permanent-to-trash verb — for an Option
+  # permanent (no [On Deletion] effect) it is mechanically "trash". The
+  # unconditional `trash_top_security` is the second step.
+  - when: on_leave_field
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][OPT] When an opponent Digimon leaves, trash 1 of their battle-area Options and their top security"
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: opt_target
+          filter: { kind: option }
+          prompt: "Trash 1 of your opponent's Option cards in the battle area"
+      - delete_permanent: { target: opt_target }
+      - trash_top_security: { of: opponent }

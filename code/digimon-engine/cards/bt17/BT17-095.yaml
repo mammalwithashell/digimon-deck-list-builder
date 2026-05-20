@@ -95,37 +95,30 @@
 # branches and the player must walk through them. Tracked in
 # qa/dsl-vocab-gaps.md.
 #
-# ─── DSL-GAP — DNA digivolve where second material lives in hand  [G-DSL-DNA-FROM-HAND-PARTNER] ──
+# ─── G-DSL-DNA-FROM-HAND-PARTNER — CLOSED (2026-05-20) ────────────────────────
 #
-# `effect_initiated_dna_digivolve` (the only DNA-from-effect verb) requires
-# BOTH `target_a` and `target_b` to be permanents that already exist on the
-# battle area; it merges the two permanents and tops them with `from_hand`
-# (the result card). See `effect_context/effect_initiated_dna_digivolve.rs`
-# for the engine contract.
+# `effect_initiated_dna_digivolve` (the original DNA-from-effect verb) requires
+# BOTH `target_a` and `target_b` to be permanents on the battle area. BT17-095's
+# printed text is unique: the SECOND DNA material is "a card in the hand" — not
+# a permanent on the field.
 #
-# BT17-095's printed text is unique: the SECOND DNA material is "a card in
-# the hand" — not a permanent on the field. DCGO models this by speculatively
-# materialising the hand card as a temporary `Permanent`, calling the standard
-# `PlayCardClass.PlayCard` with `SetJogress(...)` to perform the DNA, then
-# either committing the permanent (if the DNA succeeded) or returning the
-# card to hand (if the recipe was invalid).
+# The engine now exposes `effect_initiated_dna_digivolve_with_hand_partner`
+# (DSL verb `effect_initiated_dna_digivolve_hand_partner`): one DNA material is
+# a battle-area permanent (`target`), the other is a hand card (`hand_partner`),
+# and `from_hand` is the resulting Omnimon-name card pulled from hand. The
+# merged permanent's stack is `target.card_sources ++ [hand_partner] ++
+# [from_hand]`. Standard WhenDigivolving → OnDnaDigivolve → OnDigivolve
+# observers fire with `dna_origin` preserved — see
+# `Game::dna_digivolve_hand_partner_inner`.
 #
-# Closing this gap requires either:
-#   A. A new DSL verb `effect_initiated_dna_digivolve_with_hand_partner` that
-#      accepts (`target_perm`, `hand_partner_card`, `result_from_hand`, cost)
-#      and materialises the hand partner inline; OR
-#   B. Engine-side: extend `effect_initiated_dna_digivolve` to accept a
-#      `CardHandle` (not just `PermanentHandle`) for `target_b`, with the
-#      hand-card path inlined behind a runtime branch.
-#
-# Until the gap closes the entire DNA-digivolve sub-clause is OMITTED from
-# Clause B's `process:`. The visible behavior is still faithful to two-thirds
-# of the printed text: the cross-permanent observer fires, the Delay cost
-# (trashing this Option) is paid, and the would-leave subject is allowed to
-# proceed. The omitted leg is the "may DNA-digivolve into Omnimon in hand"
-# bonus reward; declining the bonus is itself a printed-legal outcome ("may")
-# so the partial-implementation behavior is identical to the player declining.
-# Tests for the DNA branch are #[ignore]'d pending closure of the gap.
+# Clause B drives this through the recognised `DelayHandDnaDigivolveFlow`
+# replacement-process shape (see `dsl_cards/lower_replacement.rs`): pay the
+# Delay cost → present the Omnimon result-card selection → then the L6 hand
+# partner selection → run the DNA merge. On a successful merge the leaving
+# subject is consumed into the merged permanent, so the replacement is
+# Cancelled (the subject does NOT proceed to the trash). If the player declines
+# either selection, or no eligible card exists, the leaving subject simply
+# proceeds — faithful to the printed "may".
 #
 # ─── Behavioral note — Clause B replacement does NOT cancel the leave ─────────
 #
@@ -167,47 +160,33 @@ effects:
     optional: true
     summary: "[Main] You may play [Agumon]/[Gabumon] from hand or trash free; then place self in battle area"
     process:
-      # G-DSL-UNION-PLAY-FREE workaround: surface the zone choice explicitly.
-      # DCGO would auto-collapse to the populated zone if only one of the two
-      # is non-empty; this DSL form always presents both branches.
-      - select_effect_choice:
-          labels: ["From hand", "From trash"]
-          bind_as: zone_choice
-          prompt: "From which area do you play [Agumon] or [Gabumon]?"
-      - if:
-          condition: { equals: [zone_choice, 0] }
-          then:
-            - select_hand:
-                of: you
-                bind_as: picked_hand
-                optional: true
-                filter:
-                  all_of:
-                    - kind: digimon
-                    - any_of:
-                        - name_contains: "Agumon"
-                        - name_contains: "Gabumon"
-                prompt: "Play 1 [Agumon] or [Gabumon] from hand (free)"
-            - play_from_hand_free:
-                of: you
-                hand_index: picked_hand
-      - if:
-          condition: { equals: [zone_choice, 1] }
-          then:
-            - select_trash:
-                of: you
-                bind_as: picked_trash
-                optional: true
-                filter:
-                  all_of:
-                    - kind: digimon
-                    - any_of:
-                        - name_contains: "Agumon"
-                        - name_contains: "Gabumon"
-                prompt: "Play 1 [Agumon] or [Gabumon] from trash (free)"
-            - play_from_trash_free:
-                of: you
-                hand_index: picked_trash
+      # G-DSL-UNION-PLAY-FREE CLOSED: `select_union_zone` now binds a
+      # ZONE-TAGGED index (HandIndex / TrashIndex) rather than a zone-agnostic
+      # Card. A single union pick covers both hand and trash; the engine
+      # auto-collapses to the populated zone when only one is eligible
+      # (matching DCGO's `SetBool(...)` shortcut). The two free-play steps
+      # below each resolve only their own binding shape, so exactly one fires.
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: picked
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: "Agumon"
+                  - name_contains: "Gabumon"
+          prompt: "Play 1 [Agumon] or [Gabumon] from hand or trash (free)"
+      # `play_from_hand_free` fires only when `picked` is a HandIndex;
+      # `play_from_trash_free` only when `picked` is a TrashIndex — so the
+      # zone the player picked determines which one runs.
+      - play_from_hand_free:
+          of: you
+          hand_index: picked
+      - play_from_trash_free:
+          of: you
+          hand_index: picked
       # Final step: place this Option in controller's battle area as a Delay
       # permanent (so Clause B's cross-permanent leave observer can fire).
       - place_self_as_delay_option: {}
@@ -240,20 +219,23 @@ effects:
   #     `lower_replacement.rs` (`source_is_delayed_option`) ensures the
   #     observer only fires while THIS card is on the battle area as a Delay.
   #
-  # Process:
+  # Process (recognised `DelayHandDnaDigivolveFlow` shape):
   #   1. `delete_permanent: { target: source }` — pays the Delay cost by
-  #      trashing this Option from the battle area.
-  #   2. (BLOCKED — G-DSL-DNA-FROM-HAND-PARTNER) The DNA-digivolve sub-clause
-  #      is omitted entirely. The printed body reads "may DNA digivolve … in
-  #      the hand" — the second material lives in the HAND, not on the field.
-  #      `effect_initiated_dna_digivolve` only accepts permanent handles for
-  #      both DNA materials. Including a half-implementation (e.g. select an
-  #      Omnimon hand card and mark it played) would over-fire on illegal DNA
-  #      recipes, violating no-approximations. Omitted — see header docs.
-  #
-  # We deliberately do NOT cancel the replacement: DCGO does not prevent the
-  # leave (the body is a benefit, not a prevention). Default replacement
-  # outcome is Proceed.
+  #      trashing this Option from the battle area. DCGO:
+  #      `DeletePermanentAndProcessAccordingToResult` on
+  #      `card.PermanentOfThisCard()`.
+  #   2. `select_hand` — the Omnimon-name result card (level 7, Omnimon in
+  #      name). DCGO `IsOmnimonCardCondition`. `optional: true` — the printed
+  #      "may" lets the player decline.
+  #   3. `select_hand` — the second DNA material, a level-6 Digimon card in
+  #      hand. DCGO `IsLevel6HandCardCondition`. `optional: true`.
+  #   4. `effect_initiated_dna_digivolve_hand_partner` — merges the leaving
+  #      subject (`replacement_subject`) with the hand partner, topped by the
+  #      Omnimon result.
+  #   5. `cancel_replacement` — on a successful merge the leaving subject is
+  #      consumed into the merged permanent, so it must NOT proceed to the
+  #      trash. (If the merge does not happen — declined or ineligible — the
+  #      flow installs no cancel and the subject proceeds normally.)
   - kind: replacement
     trigger: when_would_leave_battle_area
     optional: true
@@ -267,16 +249,35 @@ effects:
             - name_contains: "Garurumon"
         - none_of:
             - replacement_cause: battle
-    summary: "[All Turns] When own L6 Greymon/Garurumon would leave outside battle: <Delay> trash self (DNA-digivolve into Omnimon BLOCKED — G-DSL-DNA-FROM-HAND-PARTNER)"
+    summary: "[All Turns] When own L6 Greymon/Garurumon would leave outside battle: <Delay> trash self, DNA digivolve into Omnimon in hand"
     process:
-      # Step 1: pay the Delay cost — trash this Option from the battle area.
-      # DCGO: `DeletePermanentAndProcessAccordingToResult` on
-      # `card.PermanentOfThisCard()`.
       - delete_permanent: { target: source }
-      # Step 2: BLOCKED — DNA-digivolve into Omnimon-name hand card with the
-      # leaving Digimon + a second hand card as DNA materials.
-      # See G-DSL-DNA-FROM-HAND-PARTNER in header docs. Omitted entirely until
-      # the engine grows a DNA-from-hand-partner verb.
+      - select_hand:
+          of: you
+          bind_as: omnimon_result
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 7
+              - name_contains: "Omnimon"
+          prompt: "Select an [Omnimon] card in hand to DNA digivolve into"
+      - select_hand:
+          of: you
+          bind_as: dna_partner
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 6
+          prompt: "Select a level 6 Digimon card in hand as the DNA partner"
+      - effect_initiated_dna_digivolve_hand_partner:
+          target: replacement_subject
+          hand_partner: dna_partner
+          from_hand: omnimon_result
+          cost: 0
+          ignore_requirements: true
+      - cancel_replacement: {}
 
   # ─── Clause C — [Security] (inherited) ───────────────────────────────────────
   #
@@ -298,40 +299,25 @@ effects:
     optional: true
     summary: "[Security][Inherited] You may play 1 [Tai Kamiya]/[Matt Ishida] from hand or trash free; then add self to hand"
     process:
-      - select_effect_choice:
-          labels: ["From hand", "From trash"]
-          bind_as: zone_choice
-          prompt: "From which area do you play a card?"
-      - if:
-          condition: { equals: [zone_choice, 0] }
-          then:
-            - select_hand:
-                of: you
-                bind_as: picked_hand
-                optional: true
-                filter:
-                  any_of:
-                    - name_contains: "Tai Kamiya"
-                    - name_contains: "Matt Ishida"
-                prompt: "Play 1 [Tai Kamiya] or [Matt Ishida] from hand (free)"
-            - play_from_hand_free:
-                of: you
-                hand_index: picked_hand
-      - if:
-          condition: { equals: [zone_choice, 1] }
-          then:
-            - select_trash:
-                of: you
-                bind_as: picked_trash
-                optional: true
-                filter:
-                  any_of:
-                    - name_contains: "Tai Kamiya"
-                    - name_contains: "Matt Ishida"
-                prompt: "Play 1 [Tai Kamiya] or [Matt Ishida] from trash (free)"
-            - play_from_trash_free:
-                of: you
-                hand_index: picked_trash
+      # G-DSL-UNION-PLAY-FREE CLOSED — single `select_union_zone` over hand +
+      # trash, binding a zone-tagged index. Exactly one of the two free-play
+      # steps below fires depending on which zone was picked.
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: picked
+          filter:
+            any_of:
+              - name_contains: "Tai Kamiya"
+              - name_contains: "Matt Ishida"
+          prompt: "Play 1 [Tai Kamiya] or [Matt Ishida] from hand or trash (free)"
+      - play_from_hand_free:
+          of: you
+          hand_index: picked
+      - play_from_trash_free:
+          of: you
+          hand_index: picked
       # Final step: route this Option from security-resolution staging to the
       # controller's hand instead of the trash.
       - add_this_option_to_hand: {}

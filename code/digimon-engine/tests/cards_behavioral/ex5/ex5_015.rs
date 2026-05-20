@@ -257,13 +257,11 @@ fn ex5_015_has_on_play_and_when_digivolving_triggered_clause_mandatory() {
     );
 }
 
-/// Inherited Substitute clause is intentionally OMITTED from the YAML pending
-/// G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH closure. This test pins the
-/// omission so a future author who restores the clause without closing the
-/// gaps will trip the failing assertion in
-/// `ex5_015_substitute_clause_will_be_authored_when_gap_closes`.
+/// Inherited Substitute clause (Clause C) is now AUTHORED —
+/// G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH is closed. It compiles as an
+/// inherited-scope `Replacement` declarative clause.
 #[test]
-fn ex5_015_inherited_substitute_clause_currently_omitted() {
+fn ex5_015_inherited_substitute_clause_is_authored() {
     let card = dsl_card_data::compiled(CARD_ID);
     let inherited_replacement = card.effects.iter().find(|c| {
         matches!(
@@ -274,19 +272,15 @@ fn ex5_015_inherited_substitute_clause_currently_omitted() {
         )
     });
     assert!(
-        inherited_replacement.is_none(),
-        "Until G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH closes, Clause C \
-         (inherited Substitute on battle deletion) must remain OMITTED — \
-         authoring a partial body would violate no-approximations. \
-         When the gap closes, restore the clause body documented in the \
-         EX5-015 YAML header."
+        inherited_replacement.is_some(),
+        "Clause C (inherited Substitute on battle deletion) must be authored \
+         now that G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH is closed"
     );
 }
 
-/// Total clause count: exactly 1 triggered clause. (Inherited Substitute
-/// OMITTED — see G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH.)
+/// Total clause count: 1 triggered clause + 1 declarative Replacement clause.
 #[test]
-fn ex5_015_total_clause_count_matches_partial_implementation() {
+fn ex5_015_total_clause_count_matches_full_implementation() {
     let card = dsl_card_data::compiled(CARD_ID);
     let triggered = card
         .effects
@@ -300,8 +294,8 @@ fn ex5_015_total_clause_count_matches_partial_implementation() {
         .count();
     assert_eq!(triggered, 1, "Exactly one triggered clause expected");
     assert_eq!(
-        declarative, 0,
-        "No declarative clauses expected (Substitute OMITTED — see header)"
+        declarative, 1,
+        "One declarative Replacement clause expected (Clause C authored)"
     );
 }
 
@@ -496,58 +490,160 @@ fn ex5_015_on_play_trash_branch_trashes_chosen_hand_card() {
 // Section 3 — BLOCKED behavioral coverage (Clause C, OMITTED until gap closes)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Restoration test for Clause C (inherited Substitute) — when
-/// G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH closes and the YAML restores the
-/// suggested clause body, this test validates the printed semantics:
-/// EX5-015 stacked under a Garurumon-named host, the host is targeted in
-/// battle and would be deleted; the player optionally returns 2 non-Digi-Egg
-/// cards from trash to deck bottom; the host survives.
-///
-/// `#[ignore]`'d under G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH. Remove the
-/// `#[ignore]` attribute when:
-///   (a) `select_count_capped_multi` gains `min: 2` enforcement,
-///   (b) a `return_trash_list_to_deck_bottom` step verb is added, AND
-///   (c) cost-then-cancel guard is implemented in lower_replacement.rs.
+use digimon_engine::replacement::ReplacementCause;
+use digimon_engine::selection::SelectionKind;
+
+/// Seed `count` non-Digi-Egg cards into P0's trash.
+fn seed_non_egg_trash(runner: &mut DebugRunner, count: usize) {
+    for i in 0..count {
+        let id = format!("TRASH-{i}");
+        let data = make_named_digimon(&id, &format!("TrashCard{i}"), &["Beast"]);
+        let data_index = runner.game.card_data.len();
+        runner.game.card_data.push(data);
+        let card_index = runner.game.next_card_index();
+        let source = CardSource::new(data_index, 0, card_index);
+        runner.game.players[0].trash.push(source);
+    }
+}
+
+/// Inherited Substitute (Clause C) — EX5-015 stacked under a Garurumon-named
+/// host, the host would be deleted in battle. The player accepts the optional
+/// replacement, returns 2 non-Digi-Egg trash cards to the deck bottom, and
+/// the host survives.
 #[test]
-#[ignore = "BLOCKED: G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH — multi-pick \
-            trash-to-deck cost + atomic cost-then-cancel guard not yet \
-            available; clause C OMITTED from YAML to avoid violating \
-            no-approximations. Restore clause + remove ignore when stacked \
-            gaps close."]
 fn ex5_015_inherited_substitute_prevents_battle_deletion_on_garurumon_host() {
-    // Test stub — real assertion lives behind the gap closure. Once the
-    // inherited Substitute clause is restored:
-    //   1. Set up a Garurumon-named host with EX5-015 as digivolution source.
-    //   2. Seed P0's trash with >=2 non-Digi-Egg cards.
-    //   3. Trigger a battle that would delete the Garurumon host.
-    //   4. Drive the optional substitute prompt; pick 2 trash cards.
-    //   5. Assert: the 2 cards moved to deck bottom; Garurumon host still on
-    //      battle area (deletion cancelled).
-    panic!("clause C OMITTED — see G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH");
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX5-015 YAML loads")
+        .add_card(make_named_digimon("HOST", "WereGarurumon", &["Beast Man"]))
+        .start();
+    // EX5-015 sits as the digivolution source beneath the Garurumon host.
+    let host = runner.place_stack(0, &[CARD_ID, "HOST"]);
+    seed_non_egg_trash(&mut runner, 3);
+    let deck_before = runner.game.players[0].deck.len();
+
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::Battle);
+
+    // Optional Substitute accept prompt.
+    let view = runner
+        .pending_selection_view()
+        .expect("Substitute accept prompt installs");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    assert!(view.is_optional, "inherited Substitute is optional");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("accept Substitute");
+
+    // Pick exactly 2 non-Digi-Egg trash cards (min: 2 forbids stopping early).
+    for n in 0..2 {
+        let view = runner
+            .pending_selection_view()
+            .unwrap_or_else(|| panic!("trash pick {n} prompt installs"));
+        runner
+            .execute_action(0, view.valid_action_ids[0])
+            .unwrap_or_else(|_| panic!("pick trash card {n}"));
+    }
+    let _ = runner.auto_resolve();
+
+    // The Garurumon host must survive (deletion cancelled).
+    assert_eq!(
+        runner.battle_area_size(0),
+        1,
+        "Garurumon host must survive the battle deletion"
+    );
+    // 2 trash cards moved to the bottom of the deck.
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        deck_before + 2,
+        "exactly 2 trash cards returned to the deck"
+    );
 }
 
 /// Inherited Substitute must NOT fire when the host is NOT named Garurumon
-/// or Omnimon — even if EX5-015 is stacked under them. Pinned for restoration.
+/// or Omnimon — even if EX5-015 is stacked under it.
 #[test]
-#[ignore = "BLOCKED: G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH — clause C OMITTED"]
 fn ex5_015_inherited_substitute_does_not_fire_on_non_garurumon_omnimon_host() {
-    panic!("clause C OMITTED — see G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH");
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX5-015 YAML loads")
+        .add_card(make_named_digimon("HOST", "Greymon", &["Dinosaur"]))
+        .start();
+    let host = runner.place_stack(0, &[CARD_ID, "HOST"]);
+    seed_non_egg_trash(&mut runner, 3);
+
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::Battle);
+
+    // No Substitute prompt — the host name does not match Garurumon/Omnimon.
+    assert!(
+        runner.pending_selection().is_none(),
+        "Substitute must not fire when the host is not a Garurumon/Omnimon"
+    );
+    assert_eq!(
+        runner.battle_area_size(0),
+        0,
+        "non-Garurumon host is deleted normally (no substitute)"
+    );
 }
 
-/// Inherited Substitute must NOT fire on non-battle deletion (e.g.
-/// effect-driven deletion). Pinned for restoration.
+/// Inherited Substitute must NOT fire on non-battle deletion (effect-driven).
 #[test]
-#[ignore = "BLOCKED: G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH — clause C OMITTED"]
 fn ex5_015_inherited_substitute_does_not_fire_outside_battle() {
-    panic!("clause C OMITTED — see G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH");
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX5-015 YAML loads")
+        .add_card(make_named_digimon("HOST", "WereGarurumon", &["Beast Man"]))
+        .start();
+    let host = runner.place_stack(0, &[CARD_ID, "HOST"]);
+    seed_non_egg_trash(&mut runner, 3);
+
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+
+    // No Substitute prompt — `replacement_cause: battle` gates to battle only.
+    assert!(
+        runner.pending_selection().is_none(),
+        "Substitute must not fire on effect-driven (non-battle) deletion"
+    );
+    assert_eq!(
+        runner.battle_area_size(0),
+        0,
+        "effect-deleted Garurumon host is not protected by the battle-only Substitute"
+    );
 }
 
 /// Inherited Substitute must NOT fire if trash has < 2 non-Digi-Egg cards
-/// (cost cannot be paid). Pinned for restoration.
+/// (the required 2-card cost is unpayable).
 #[test]
-#[ignore = "BLOCKED: G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH — clause C OMITTED"]
 fn ex5_015_inherited_substitute_blocked_when_trash_has_fewer_than_two_non_egg() {
-    panic!("clause C OMITTED — see G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH");
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX5-015 YAML loads")
+        .add_card(make_named_digimon("HOST", "WereGarurumon", &["Beast Man"]))
+        .start();
+    let host = runner.place_stack(0, &[CARD_ID, "HOST"]);
+    // Only 1 non-Digi-Egg card in trash — the 2-card cost cannot be paid.
+    seed_non_egg_trash(&mut runner, 1);
+
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::Battle);
+
+    // No Substitute prompt — the required cost is unpayable, so the
+    // replacement clause never activates (cost-then-cancel guard).
+    assert!(
+        runner.pending_selection().is_none(),
+        "Substitute must not offer when fewer than 2 non-Digi-Egg cards are in trash"
+    );
+    assert_eq!(
+        runner.battle_area_size(0),
+        0,
+        "host is deleted normally when the substitute cost is unpayable"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

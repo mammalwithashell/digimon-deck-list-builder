@@ -413,8 +413,16 @@ fn bt21_013_when_attacking_installs_hand_selection_with_hybrid_in_hand() {
 
     runner.attack_digimon(attacker, defender, false);
 
-    // The WhenAttacking clause is optional, so if the prompt installs it's
-    // of kind Hand (select_hand step).
+    // The WhenAttacking clause is optional ("This Digimon may digivolve ...")
+    // and its body's first step is a mandatory select_hand, so an outer
+    // accept/decline prompt installs first (G-OUTER-OPTIONAL-NOT-INSTALLED).
+    if runner.pending_kind() == Some(SelectionKind::Replacement) {
+        runner
+            .accept_optional_trigger()
+            .expect("accept the outer optional-trigger prompt");
+    }
+
+    // After accepting, the inner select_hand prompt installs (kind Hand).
     let pending = runner.pending_selection();
     if let Some(p) = pending {
         assert!(

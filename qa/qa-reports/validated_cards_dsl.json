@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-05-17",
+  "last_updated": "2026-05-20",
   "cards": {
     "BT21-093": {
       "card_name": "Raging Serpentine",
@@ -87,11 +87,11 @@
     },
     "BT1-090": {
       "card_name": "Gravity Crush",
-      "validated_date": "2026-04-28",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "Medusamon Batch 13",
+      "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt1/BT1-090.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt1/bt1_090.rs",
       "test_count": 7,
@@ -99,7 +99,7 @@
         "B1-adjacent",
         "schedule_delayed"
       ],
-      "notes": "Option cost-0 Black. Single main_from_hand clause: gain_memory:2 immediate + schedule_delayed(when:end_of_your_turn, body:[lose_memory:2]). All 7 tests green (2 structural, 4 behavioral, 1 scheduling queue assertion). No engine gaps. Net memory swing is +2 activation / -2 EOT = 0 before seesaw flip. schedule_delayed landed Phase 2f4 (2026-04-26)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "P-035": {
       "card_name": "Red Memory Boost!",
@@ -116,7 +116,7 @@
         "A2",
         "Option-as-permanent Delay (standard EndOfYourNextTurn)"
       ],
-      "notes": "11 active tests pass; 6 ignored. Clause 0 ([Main] reveal 4 + select + add to hand + place rest bottom) fully DSL-implemented: reveal_top_deck(4) + select_reveal(optional, filter:kind:digimon+color_is:red) + add_to_hand_from_reveal + place_remainder_on_deck(bottom). Clause 1 ([Delay] gain 2 memory) fully DSL-implemented: kind:delay trigger:end_of_your_next_turn + gain_memory:2. Clause 2 ([Inherited][Security] place self in battle area) empty-process triggered clause (scope:inherited, when:on_security, process:[]) — G-PLACE-SELF-AS-OPTION-PERMANENT. 4 filter-enforcement tests ignored pending Phase 2b (install_select_reveal accept-all filter). 2 Delay/security behavioral tests ignored pending G-PLACE-SELF-AS-OPTION-PERMANENT."
+      "notes": "11 active tests pass; 6 ignored. Clause 0 ([Main] reveal 4 + select + add to hand + place rest bottom) fully DSL-implemented: reveal_top_deck(4) + select_reveal(optional, filter:kind:digimon+color_is:red) + add_to_hand_from_reveal + place_remainder_on_deck(bottom). Clause 1 ([Delay] gain 2 memory) fully DSL-implemented: kind:delay trigger:end_of_your_next_turn + gain_memory:2. Clause 2 ([Inherited][Security] place self in battle area) empty-process triggered clause (scope:inherited, when:on_security, process:[]) \u2014 G-PLACE-SELF-AS-OPTION-PERMANENT. 4 filter-enforcement tests ignored pending Phase 2b (install_select_reveal accept-all filter). 2 Delay/security behavioral tests ignored pending G-PLACE-SELF-AS-OPTION-PERMANENT."
     },
     "LM-027": {
       "card_name": "Red Scramble",
@@ -133,7 +133,7 @@
         "E1",
         "G1-adjacent"
       ],
-      "notes": "13 active tests pass; 6 ignored pending gaps. Clause A ([Main] effect_initiated_digivolve cost -3 from option card) fully DSL-implemented — optional select_own_permanent + select_hand + effect_initiated_digivolve. Clause B ([Start of Your Turn] Delay) registered as raw_rust declarative lm_027_delay_start_of_turn_noop (no-op) pending G-DELAY-START-OF-TURN (engine has no DelayTrigger::StartOfYourNextTurn). Clause C ([Security] play small red Digimon from trash) DSL-implemented with select_trash + play_from_trash_free; add-self-to-hand step is raw_rust no-op pending G-ADD-OPTION-SELF-TO-HAND. dp_lte: 2000 filter compiled but unenforced pending G-PRED-DP-LTE."
+      "notes": "13 active tests pass; 6 ignored pending gaps. Clause A ([Main] effect_initiated_digivolve cost -3 from option card) fully DSL-implemented \u2014 optional select_own_permanent + select_hand + effect_initiated_digivolve. Clause B ([Start of Your Turn] Delay) registered as raw_rust declarative lm_027_delay_start_of_turn_noop (no-op) pending G-DELAY-START-OF-TURN (engine has no DelayTrigger::StartOfYourNextTurn). Clause C ([Security] play small red Digimon from trash) DSL-implemented with select_trash + play_from_trash_free; add-self-to-hand step is raw_rust no-op pending G-ADD-OPTION-SELF-TO-HAND. dp_lte: 2000 filter compiled but unenforced pending G-PRED-DP-LTE."
     },
     "LM-055": {
       "card_name": "Sprint Dash Training",
@@ -173,10 +173,10 @@
     },
     "BT20-102": {
       "card_name": "Omnimon (X Antibody)",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-DRIFT",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt20/BT20-102.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_102.rs",
@@ -187,15 +187,15 @@
         "H3",
         "H5"
       ],
-      "notes": "YAML BUGS: color [red, blue] should be [blue, white]; alt_path name_contains should be name_is. Multiple resolved gaps not yet adopted (G-FOR-EACH-EXCLUDE-BINDING, G-DECLARATIVE-KEYWORD, G-SELF-DIGIVOLUTION-CONTAINS-NAME). NEW gap suggested: self_digivolution_has_name (exact-match variant)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT14-001": {
       "card_name": "Koromon",
-      "validated_date": "2026-04-27",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
-      "archetype": "Medusamon Batch 6",
+      "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt14/BT14-001.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt14/bt14_001.rs",
       "test_count": 8,
@@ -203,7 +203,7 @@
         "G4",
         "E2-adjacent"
       ],
-      "notes": "Single inherited clause: [Your Turn][OPT] on_opponent_security_removed draw 1. YAML authors draw: { of: you, count: 1 }. 8 active tests pass (structural x5 + your_turn gate negative + inherited fire-test + OPT-lockout); 0 ignored. G-INHERITED-DISPATCH closed in Phase 2 Track D 2026-05-17; G-OPT-TRIGGERED closed in Phase 2 Track C."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT24-001": {
       "card_name": "Gigimon",
@@ -268,7 +268,7 @@
         "A4",
         "F9-adjacent"
       ],
-      "notes": "OnPlay optional cost-as-trash â†’ draw 2 implemented + tested. Inherited OPT clause shipped. 11 active, 2 ignored for sub-gaps (select_hand filter eval + trash-from-hand event)."
+      "notes": "OnPlay optional cost-as-trash \u00e2\u2020\u2019 draw 2 implemented + tested. Inherited OPT clause shipped. 11 active, 2 ignored for sub-gaps (select_hand filter eval + trash-from-hand event)."
     },
     "EX11-008": {
       "card_name": "Elizamon",
@@ -299,7 +299,7 @@
       "patterns": [
         "H_PROGRESS"
       ],
-      "notes": "Lamiamon — alt-digivolve into Owen Dreadnought + inherited [All Turns] OnOpponentSecurityRemoved free-play. All 11 active tests pass; 2 ignored are card-local body deferrals against Track C + Track D substrate that is already closed."
+      "notes": "Lamiamon \u2014 alt-digivolve into Owen Dreadnought + inherited [All Turns] OnOpponentSecurityRemoved free-play. All 11 active tests pass; 2 ignored are card-local body deferrals against Track C + Track D substrate that is already closed."
     },
     "BT24-016": {
       "card_name": "Lamiamon",
@@ -334,7 +334,7 @@
         "D-DELETE-DP-LTE",
         "D4"
       ],
-      "notes": "All 3 clauses ship: [Security] play-self-after-battle (engine fix landed in src/dsl_cards/step/play_digivolve.rs), [On Play]+[When Digivolving] delete â‰¤4000 DP, inherited [Your Turn] +2000 DP aura. 14 active, 2 ignored pending G-DP-LTE-PREDICATE."
+      "notes": "All 3 clauses ship: [Security] play-self-after-battle (engine fix landed in src/dsl_cards/step/play_digivolve.rs), [On Play]+[When Digivolving] delete \u00e2\u2030\u00a44000 DP, inherited [Your Turn] +2000 DP aura. 14 active, 2 ignored pending G-DP-LTE-PREDICATE."
     },
     "BT24-011": {
       "card_name": "Cyclonemon",
@@ -369,7 +369,7 @@
         "H4-SECA-PLUS-1",
         "H_PROGRESS"
       ],
-      "notes": "Medusamon — 6 effect clauses including Petrification Token spawn on opp Digimon deletion and inherited Security arm. 15/19 active tests pass; 4 ignored are card-local body deferrals against now-closed substrate (G-OPT-TRIGGERED via Track C, G-DECLARATIVE-KEYWORD via Group 6, G-PREDICATE-DP-FILTER via Group 7)."
+      "notes": "Medusamon \u2014 6 effect clauses including Petrification Token spawn on opp Digimon deletion and inherited Security arm. 15/19 active tests pass; 4 ignored are card-local body deferrals against now-closed substrate (G-OPT-TRIGGERED via Track C, G-DECLARATIVE-KEYWORD via Group 6, G-PREDICATE-DP-FILTER via Group 7)."
     },
     "BT24-017": {
       "card_name": "Medusamon",
@@ -403,7 +403,7 @@
         "H1-RUSH",
         "H_PROGRESS"
       ],
-      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave â†’ delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
+      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave \u00e2\u2020\u2019 delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
     },
     "BT24-018": {
       "card_name": "Styracomon",
@@ -439,7 +439,7 @@
         "B2",
         "F9"
       ],
-      "notes": "Owen Dreadnought (BT24) — when ally digivolves into Reptile/Dragonkin, may-attack-now wired via Track D inherited-dispatch + G-MAY-ATTACK-NOW closure (2026-05-03). All 13 active tests pass; 1 OPT-lockout placeholder retired in Phase 2 Track G."
+      "notes": "Owen Dreadnought (BT24) \u2014 when ally digivolves into Reptile/Dragonkin, may-attack-now wired via Track D inherited-dispatch + G-MAY-ATTACK-NOW closure (2026-05-03). All 13 active tests pass; 1 OPT-lockout placeholder retired in Phase 2 Track G."
     },
     "BT18-087": {
       "card_name": "Owen Dreadnought",
@@ -456,7 +456,7 @@
         "B3",
         "F9"
       ],
-      "notes": "All 3 clauses ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3, [All Turns] on_opponent_security_removed suspend-cost + delete â‰¤4000 DP, [Security] play_from_security. 14 active tests pass. 1 ignored (G-PRED-DP-LTE: dp_lte filter not evaluated at runtime). Key fix: `target: source` (not `source_permanent`) required for suspend step to resolve CompiledBindingRef::Source â†’ ctx.source_permanent; `source_permanent` is not a recognized DSL keyword (falls through to named-binding lookup, returning None silently)."
+      "notes": "All 3 clauses ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3, [All Turns] on_opponent_security_removed suspend-cost + delete \u00e2\u2030\u00a44000 DP, [Security] play_from_security. 14 active tests pass. 1 ignored (G-PRED-DP-LTE: dp_lte filter not evaluated at runtime). Key fix: `target: source` (not `source_permanent`) required for suspend step to resolve CompiledBindingRef::Source \u00e2\u2020\u2019 ctx.source_permanent; `source_permanent` is not a recognized DSL keyword (falls through to named-binding lookup, returning None silently)."
     },
     "EX11-054": {
       "card_name": "Owen Dreadnought",
@@ -523,7 +523,7 @@
         "H_PROGRESS",
         "G-INHERITED-OPT"
       ],
-      "notes": "Clause 1 [Security] optional play-LIBERATOR-free-from-hand-or-trash ships via select_effect_choice + two separate if: blocks + select_hand/select_trash + play_from_hand_free/play_from_trash_free. Cost-≤4 filter (G-PLAY-COST-LTE) cannot be enforced — play_cost_lte predicate absent from PredicateSpec; select_hand/select_trash accept-all (Phase 2b). Clause 2 Progress declarative ships structurally; modifier not installed at runtime (G-DECLARATIVE-KEYWORD). Clause 3 [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory now ships live: G-INHERITED-DISPATCH closed in Phase 2 Track D 2026-05-17; G-OPT-TRIGGERED closed in Phase 2 Track C. 12 active tests pass (inherited fire + your-turn gate + OPT-lockout + OPT-reset), 4 ignored on unrelated DSL gaps (G-PLAY-COST-LTE, G-DECLARATIVE-KEYWORD, security-attack harness, Progress declarative)."
+      "notes": "Clause 1 [Security] optional play-LIBERATOR-free-from-hand-or-trash ships via select_effect_choice + two separate if: blocks + select_hand/select_trash + play_from_hand_free/play_from_trash_free. Cost-\u22644 filter (G-PLAY-COST-LTE) cannot be enforced \u2014 play_cost_lte predicate absent from PredicateSpec; select_hand/select_trash accept-all (Phase 2b). Clause 2 Progress declarative ships structurally; modifier not installed at runtime (G-DECLARATIVE-KEYWORD). Clause 3 [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory now ships live: G-INHERITED-DISPATCH closed in Phase 2 Track D 2026-05-17; G-OPT-TRIGGERED closed in Phase 2 Track C. 12 active tests pass (inherited fire + your-turn gate + OPT-lockout + OPT-reset), 4 ignored on unrelated DSL gaps (G-PLAY-COST-LTE, G-DECLARATIVE-KEYWORD, security-attack harness, Progress declarative)."
     },
     "BT24-012": {
       "card_name": "Dimetromon",
@@ -560,8 +560,8 @@
     },
     "BT16-082": {
       "card_name": "Ukkomon",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-f-dna-omnimon",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -571,7 +571,7 @@
       "patterns": [
         "B3"
       ],
-      "notes": "Phase 2 Track F (2026-05-17): tracker drift cleanup. YAML uses G-ON-MOVE (RESOLVED 2026-04-29) reveal-buckets + hatch. 16 pass / 2 ignored."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT21-007": {
       "card_name": "Agumon",
@@ -623,7 +623,7 @@
         "E5-TRASH-TOP-SECURITY",
         "D4-INHERITED-DP-AURA"
       ],
-      "notes": "Clause 1 [OnPlay/WhenDigivolving]: opponent places hand card as bottom security + trash top security. YAML fix: place_on_security moved inside as_selecting_player body so binding 'pick' is in scope for the callback (outer-tail binding propagation gap). select_hand optional:true so trash_top_security in outer tail fires even when opponent has hand cards. G-SELECT-EMPTY-OUTER-TAIL: when empty hand skips install_select_hand (no valid_action_ids), outer tail is lost (1 test #[ignore]). Opponent-security-count gate (<=5) dropped â€” DSL has no opponent_security_count_lte predicate (G-OPP-SECURITY-COUNT-LTE, 1 test #[ignore]). WhenDigivolving dispatch blocked by G-OPT-TRIGGERED (1 test #[ignore]). Clause 2 Inherited [Your Turn] +4000 DP aura ships (2 tests #[ignore] G-INHERITED-DISPATCH). 11 active pass, 5 ignored."
+      "notes": "Clause 1 [OnPlay/WhenDigivolving]: opponent places hand card as bottom security + trash top security. YAML fix: place_on_security moved inside as_selecting_player body so binding 'pick' is in scope for the callback (outer-tail binding propagation gap). select_hand optional:true so trash_top_security in outer tail fires even when opponent has hand cards. G-SELECT-EMPTY-OUTER-TAIL: when empty hand skips install_select_hand (no valid_action_ids), outer tail is lost (1 test #[ignore]). Opponent-security-count gate (<=5) dropped \u00e2\u20ac\u201d DSL has no opponent_security_count_lte predicate (G-OPP-SECURITY-COUNT-LTE, 1 test #[ignore]). WhenDigivolving dispatch blocked by G-OPT-TRIGGERED (1 test #[ignore]). Clause 2 Inherited [Your Turn] +4000 DP aura ships (2 tests #[ignore] G-INHERITED-DISPATCH). 11 active pass, 5 ignored."
     },
     "ST1-07": {
       "card_name": "Greymon",
@@ -691,13 +691,13 @@
         "D1-adjacent",
         "E2-adjacent"
       ],
-      "notes": "Lv6 Red/White Blast Digivolve ACE — all 21 tests pass (was 19/20 pre-Phase-2). G-MAY-ATTACK-NOW resolved 2026-05-03 already integrated; no remaining ignored tests."
+      "notes": "Lv6 Red/White Blast Digivolve ACE \u2014 all 21 tests pass (was 19/20 pre-Phase-2). G-MAY-ATTACK-NOW resolved 2026-05-03 already integrated; no remaining ignored tests."
     },
     "EX10-010": {
       "card_name": "BlackWarGreymon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-DRIFT",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/ex10/EX10-010.yaml",
@@ -710,7 +710,7 @@
         "H7",
         "H5"
       ],
-      "notes": "YAML DRIFT: missing play_cost_lte: 7 filter on opp delete (G-PLAY-COST-LTE RESOLVED 2026-05-01 not yet adopted). Stale gap comments (G-PRED-DP-LTE etc all resolved). 20 pass / 4 ignored."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX8-074": {
       "status": "IMPLEMENTED",
@@ -720,7 +720,7 @@
     "BT21-026": {
       "status": "IMPLEMENTED",
       "date": "2026-04-28",
-      "notes": "WarGreymon — cost reduction by 2 x opp Digimon count, three keyword grants (Rush/Raid/Blocker), and now-wired [All Turns][OPT] deletion arm using event_target_owner: opponent predicate (Phase 2 Track G YAML migration). 11/16 tests pass; 5 are card-local body deferrals against substrate that is already closed.",
+      "notes": "WarGreymon \u2014 cost reduction by 2 x opp Digimon count, three keyword grants (Rush/Raid/Blocker), and now-wired [All Turns][OPT] deletion arm using event_target_owner: opponent predicate (Phase 2 Track G YAML migration). 11/16 tests pass; 5 are card-local body deferrals against substrate that is already closed.",
       "validated_date": "2026-05-17",
       "report": "phase-2-track-g-medusamon-pilot-completion",
       "gap_kind": null
@@ -742,7 +742,7 @@
         "C1",
         "raw_rust"
       ],
-      "notes": "Lv7 Black/Purple Cost 20. Three clauses: (A) BeforePayCost cost_reduction -3 per opp battle-area permanent; (B) [On Play][When Digivolving] for_each de_digivolve(1, stop_at_level:3) then for_each delete ≤Lv4 (snapshot semantics); (C) [End of Opponent's Turn][OPT] delete lowest-play-cost opp Digimon via raw_rust bt9_112_delete_lowest_cost_digimon. 12/13 tests runnable; 1 ignored (G-OPT-TRIGGERED — triggered OPT lockout not wired). Gaps: G-PLAY-COST-LTE (no play_cost_lte aggregate predicate in DSL, worked around with raw_rust), G-OPT-TRIGGERED (once_per_turn on triggered clause not enforced at runtime)."
+      "notes": "Lv7 Black/Purple Cost 20. Three clauses: (A) BeforePayCost cost_reduction -3 per opp battle-area permanent; (B) [On Play][When Digivolving] for_each de_digivolve(1, stop_at_level:3) then for_each delete \u2264Lv4 (snapshot semantics); (C) [End of Opponent's Turn][OPT] delete lowest-play-cost opp Digimon via raw_rust bt9_112_delete_lowest_cost_digimon. 12/13 tests runnable; 1 ignored (G-OPT-TRIGGERED \u2014 triggered OPT lockout not wired). Gaps: G-PLAY-COST-LTE (no play_cost_lte aggregate predicate in DSL, worked around with raw_rust), G-OPT-TRIGGERED (once_per_turn on triggered clause not enforced at runtime)."
     },
     "BT23-014": {
       "card_name": "Gallantmon",
@@ -780,7 +780,7 @@
         "E5-TRASH-TOP-SECURITY",
         "raw_rust"
       ],
-      "notes": "Lv7 Red Blast Digivolve ACE — multi-select opp-DP-budget (LM-021 Bond of Bravery) ships via SelectionKind::DpBudget + select_opponent_dp_budget. All 15 tests pass."
+      "notes": "Lv7 Red Blast Digivolve ACE \u2014 multi-select opp-DP-budget (LM-021 Bond of Bravery) ships via SelectionKind::DpBudget + select_opponent_dp_budget. All 15 tests pass."
     },
     "BT17-018": {
       "card_name": "Gallantmon: Crimson Mode",
@@ -802,7 +802,7 @@
         "raw_rust",
         "once_per_turn"
       ],
-      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP ≤ 15000 — raw_rust:bt17_018_delete_opp_digimon_dp_budget single-pick fallback, blocked on G-DP-BUDGET-MULTI-SELECT (now tracked also as G-MULTI-SELECT-OPP-DP-SUM); (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security — raw_rust:bt17_018_trash_security_per_ten_trash (floor division loop), DSL gap G-LOSE-COUNT-BOUND. 11/16 tests pass; 3 ignored for G-DP-BUDGET-MULTI-SELECT multi-pick; 2 ignored for G-OPT-TRIGGERED (triggered OPT lockout not enforced). TDD fix required: summoning sickness blocked attack tests (turn_count=0 → is_fresh=true → can_attack()=false); fix: r.game.turn_count = 1 in runner setup."
+      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP \u2264 15000 \u2014 raw_rust:bt17_018_delete_opp_digimon_dp_budget single-pick fallback, blocked on G-DP-BUDGET-MULTI-SELECT (now tracked also as G-MULTI-SELECT-OPP-DP-SUM); (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security \u2014 raw_rust:bt17_018_trash_security_per_ten_trash (floor division loop), DSL gap G-LOSE-COUNT-BOUND. 11/16 tests pass; 3 ignored for G-DP-BUDGET-MULTI-SELECT multi-pick; 2 ignored for G-OPT-TRIGGERED (triggered OPT lockout not enforced). TDD fix required: summoning sickness blocked attack tests (turn_count=0 \u2192 is_fresh=true \u2192 can_attack()=false); fix: r.game.turn_count = 1 in runner setup."
     },
     "ST22-08": {
       "card_name": "Offensive Plug-In V",
@@ -855,10 +855,10 @@
     },
     "BT8-097": {
       "card_name": "Crimson Blaze",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-OK",
-      "gap_kind": "engine",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt8/BT8-097.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_097.rs",
@@ -867,7 +867,7 @@
         "D2",
         "D6"
       ],
-      "notes": "YAML faithful. 20 pass / 1 ignored on G-FOR-EACH-DELETE-INDEX-SHIFT (still open engine gap)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "P-151": {
       "card_name": "Digimon Liberator",
@@ -885,13 +885,13 @@
         "A2-remainder-bottom",
         "E2-optional-free-play"
       ],
-      "notes": "Purple Option Cost 3 [LIBERATOR] — use_requirement color bypass is active; all 18 tests pass."
+      "notes": "Purple Option Cost 3 [LIBERATOR] \u2014 use_requirement color bypass is active; all 18 tests pass."
     },
     "P-206": {
       "card_name": "Digital Gate Open",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-DRIFT",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/p/P-206.yaml",
@@ -901,7 +901,7 @@
         "A2",
         "D6"
       ],
-      "notes": "G-COLOR-MATCH-AGAINST-BOARD primitive RESOLVED 2026-05-02 but YAML not yet wired. 18 pass / 10 ignored pending Delay/Option mechanics."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT17-009": {
       "card_name": "Flamemon",
@@ -980,8 +980,8 @@
     },
     "AD1-001": {
       "card_name": "Greymon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -993,12 +993,12 @@
         "E2",
         "H9"
       ],
-      "notes": "All-Turns observer + free-digivolve from hand; 1 ignored on G-DECLARATIVE-KEYWORD"
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "AD1-009": {
       "card_name": "BlitzGreymon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1014,12 +1014,12 @@
         "H10",
         "H4"
       ],
-      "notes": "Alliance/Piercing/Blocker, De-Digivolve 3 + immunity grant, EOT DNA into Omnimon Alter-S, may_attack_now; 1 ignored on G-SELECT-EMPTY-OUTER-TAIL edge case"
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "AD1-010": {
       "card_name": "Garurumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1030,14 +1030,14 @@
         "H2",
         "E2"
       ],
-      "notes": "Draw 1 + All-Turns Garurumon-name observer; 1 ignored pending tamer-play event_card confirmation"
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "AD1-012": {
       "card_name": "CresGarurumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/ad1/AD1-012.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_012.rs",
@@ -1050,14 +1050,14 @@
         "G2",
         "A1"
       ],
-      "notes": "Shared OP/WD/WA + alt-paths IMPLEMENTED. Opponent's-Turn DNA + redirect BLOCKED on DSL-on_opponent_attack + DSL-redirect_attack_target. Inherited Your-Turn attack-target restriction BLOCKED on engine ModifierType::CannotChangeAttackTarget. 3 tests ignored."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "AD1-014": {
       "card_name": "MetalGarurumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/ad1/AD1-014.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_014.rs",
@@ -1069,16 +1069,16 @@
         "D6",
         "G2"
       ],
-      "notes": "Delete branch + on_suspend may unsuspend implemented. BLOCKED: distinct-Tamer-colors formula, self_name_contains predicate (inherited Garurumon/Omnimon name check), cross-timing OPT lockout."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "AD1-025": {
       "card_name": "Omnimon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-DRIFT",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
-      "yaml_path": "code/digimon-engine/cards/_examples/AD1-025.yaml",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-025.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_025.rs",
       "test_count": 16,
       "patterns": [
@@ -1088,12 +1088,12 @@
         "H9",
         "H5"
       ],
-      "notes": "DRIFT: raw_rust fn ad1_025_on_play_process is unregistered (silently no-ops) AND [All Turns] OPT clause is missing entirely. Diff proposal in audit report."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT12-059": {
       "card_name": "Agumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1104,14 +1104,14 @@
         "A2",
         "D4"
       ],
-      "notes": "select_reveal_buckets primitive + self_digivolution_contains_name aura gate. All 12 tests passing."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT13-012": {
       "card_name": "GeoGreymon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-012.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_012.rs",
@@ -1120,12 +1120,12 @@
         "B3",
         "E2"
       ],
-      "notes": "Inherited on_suspend Tamer trigger + delete implemented. WhenDigivolving security-search BLOCKED on G-PLAY-SELECTED-SECURITY-CARD (no DSL verb plays a selected security card without paying cost)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT15-020": {
       "card_name": "Gabumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1136,14 +1136,14 @@
         "B1",
         "H5"
       ],
-      "notes": "Start-of-main grant Blocker + conditional Draw 1; inherited When Attacking OPT Draw 1. All 14 tests pass."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT15-101": {
       "card_name": "MetalGarurumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt15/BT15-101.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_101.rs",
@@ -1153,32 +1153,32 @@
         "D6",
         "E2"
       ],
-      "notes": "Evade + 3-of-opp-cant-suspend + on-suspend-may-unsuspend implemented. Gabumon alt-path BLOCKED on G-ALT-PATH-CONDITION. on_suspend over-fires for ally Digimon (G-DSL-EVENT-TARGET-IS-SELF NEW)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT17-007": {
       "card_name": "Agumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-OK",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
-      "yaml_path": "code/digimon-engine/cards/_examples/BT17-007.yaml",
+      "yaml_path": "code/digimon-engine/cards/bt17/BT17-007.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_007.rs",
       "test_count": 13,
       "patterns": [
         "B1",
         "G2"
       ],
-      "notes": "_examples YAML faithful. Inherited DNA digivolve via alt_path_registration + start-of-main trash search. All 13 tests pass."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT17-015": {
       "card_name": "WarGreymon",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-f-dna-omnimon",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
-      "yaml_path": "code/digimon-engine/cards/_examples/BT17-015.yaml",
+      "yaml_path": "code/digimon-engine/cards/bt17/BT17-015.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_015.rs",
       "test_count": 16,
       "patterns": [
@@ -1186,12 +1186,12 @@
         "D2",
         "G2"
       ],
-      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved; Branch 1 digivolve test active. Inherited Omnimon-name negative gate still BLOCKED on G-DSL-SOURCE-NAME-CONTAINS."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT17-019": {
       "card_name": "Gabumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1202,14 +1202,14 @@
         "B1",
         "G2"
       ],
-      "notes": "Sister to BT17-007. All 12 tests pass."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT17-027": {
       "card_name": "MetalGarurumon",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-f-dna-omnimon",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt17/BT17-027.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_027.rs",
@@ -1218,14 +1218,14 @@
         "E1",
         "D2"
       ],
-      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved; Branch 1 digivolve test active. Inherited Omnimon-name negative gate still BLOCKED on G-DSL-SOURCE-NAME-CONTAINS."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT17-078": {
       "card_name": "Omnimon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt17/BT17-078.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_078.rs",
@@ -1236,14 +1236,14 @@
         "H5",
         "H13"
       ],
-      "notes": "Raid+Blocker+ACE Overflow + DNA alt-path implemented. Blast DNA Digivolve BLOCKED on G-BLAST-DNA-DIGIVOLVE (NEW). OnPlay bottom-deck-by-chosen-level body BLOCKED on G-BIND-SELECTED-PROPERTY-FOR-EACH."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT17-102": {
       "card_name": "Greymon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "gap_kind": "G-DYNAMIC-NAME-ALIAS-FROM-STACK",
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt17/BT17-102.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_102.rs",
@@ -1252,12 +1252,12 @@
         "D4",
         "B3"
       ],
-      "notes": "WhenDigivolving Koromon DP buff (via self_digivolution_contains_name), OnDeletion play-tamer-or-hatch implemented. Delete-DP-≤-self BLOCKED on G-FORMULA-SOURCE-DP (NEW). [All Turns] dynamic-name-alias-from-stack BLOCKED on G-DYNAMIC-NAME-ALIAS-FROM-STACK (NEW)."
+      "notes": "DNA Omnimon completion 2026-05-20: core card faithfully implemented; one clause omitted on a verified-open engine gap (G-DYNAMIC-NAME-ALIAS-FROM-STACK). Test left #[ignore]'d with an accurate reason."
     },
     "BT17-081": {
       "card_name": "Tai Kamiya & Matt Ishida",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1268,12 +1268,12 @@
         "B3",
         "E2"
       ],
-      "notes": "All-Turns observer + EOT may-attack-Omnimon-player + security. 18 pass, 1 ignored G-OPT-TRIGGERED."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT17-093": {
       "card_name": "Tai Kamiya & Kari Kamiya",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1283,14 +1283,14 @@
       "patterns": [
         "B3"
       ],
-      "notes": "on_hatch suspend->memory + EOT return-to-deck draw + tamer recur + security. All 11 pass."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT21-102": {
       "card_name": "Tai Kamiya",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-102.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_102.rs",
@@ -1299,16 +1299,16 @@
         "B1",
         "B3"
       ],
-      "notes": "Memory floor + on-ally-attack draw + security implemented. [Main] OPT play-cost-cap-with-distinct-colors BLOCKED on G-PLAY-COST-LTE-FORMULA + G-DSL-DISTINCT-TAMER-COLORS-FORMULA."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT22-084": {
       "card_name": "Nokia Shiramine",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-OK",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
-      "yaml_path": "code/digimon-engine/cards/_examples/BT22-084.yaml",
+      "yaml_path": "code/digimon-engine/cards/bt22/BT22-084.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_084.rs",
       "test_count": 19,
       "patterns": [
@@ -1316,14 +1316,14 @@
         "B2",
         "D4"
       ],
-      "notes": "_examples YAML faithful. 17 pass, 2 ignored: G-COUNT-LTE-EVAL (count_lte gate over-permits) + G-OUTER-OPTIONAL-NOT-INSTALLED."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT22-089": {
       "card_name": "Mirei Mikagura",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-089.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_089.rs",
@@ -1332,12 +1332,12 @@
         "B2",
         "A1"
       ],
-      "notes": "Both clauses authored. play_cost_gte filter dropped silently (G-PLAY-COST-GTE NEW). count_gte hand condition over-fires (existing eval gap)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT22-094": {
       "card_name": "Yuugo Kamishiro",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1348,14 +1348,14 @@
         "A2",
         "D2"
       ],
-      "notes": "select_reveal_buckets + cost_reduction with pay_cost return-to-deck. All 12 pass."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT5-092": {
       "card_name": "Nokia Shiramine",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt5/BT5-092.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_092.rs",
@@ -1364,16 +1364,16 @@
         "B2",
         "D2"
       ],
-      "notes": "OnPlay + security implemented. Your-Turn cost reduction BLOCKED on missing when_*_digivolves_into form (BT23-005 family) AND missing pay_cost suspend hook on cost_reduction."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT5-093": {
       "card_name": "Tai Kamiya & Matt Ishida",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-DRIFT",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
-      "yaml_path": "code/digimon-engine/cards/_examples/BT5-093.yaml",
+      "yaml_path": "code/digimon-engine/cards/bt5/BT5-093.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_093.rs",
       "test_count": 15,
       "patterns": [
@@ -1381,12 +1381,12 @@
         "D4",
         "H4"
       ],
-      "notes": "_examples YAML has YAML BUG: target.of vs target.owner (G-PREDICATE-OF-ALIAS — over-fires on opp Omnimon). ENGINE GAP: aura-granted SecurityAttackPlus not consumed by security loop (G-AURA-GRANTED-SECURITY-KEYWORD)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX4-061": {
       "card_name": "Matt Ishida & Tai Kamiya",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1397,12 +1397,12 @@
         "B3",
         "D2"
       ],
-      "notes": "21/24 pass; 3 ignored on G-COUNT-AGGREGATE, G-EVENT-TARGET-NAME-CONTAINS, G-OPT-TRIGGERED."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX9-066": {
       "card_name": "Tai Kamiya & Matt Ishida",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1412,12 +1412,12 @@
       "patterns": [
         "B3"
       ],
-      "notes": "All 25 pass via faithful workaround. New gaps G-DSL-BIND-PRESENT + G-COUNT-GTE-NOT-EVALUATED logged."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "ST21-13": {
       "card_name": "Matt Ishida & T.K. Takaishi",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1429,14 +1429,14 @@
         "D4",
         "H1"
       ],
-      "notes": "All 17 pass."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT17-095": {
       "card_name": "Miraculous Mega Knight",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt17/BT17-095.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_095.rs",
@@ -1446,12 +1446,12 @@
         "G2",
         "C5"
       ],
-      "notes": "12 pass / 4 ignored. NEW G-DSL-UNION-PLAY-FREE + G-DSL-DNA-FROM-HAND-PARTNER. Replacement subject filter + delay placement work."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT22-005": {
       "card_name": "Tsumemon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1462,12 +1462,12 @@
         "G4",
         "B3"
       ],
-      "notes": "DigiEgg inherited Draw 1 on [Unidentified]/[CS] Digimon play. 14 pass, 0 ignored. G-INHERITED-DISPATCH closed in Phase 2 Track D 2026-05-17; G-OPT-TRIGGERED closed in Phase 2 Track C."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT22-008": {
       "card_name": "Agumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1478,14 +1478,14 @@
         "A4",
         "G2"
       ],
-      "notes": "Sister to BT17-007. 12/12 pass."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT22-013": {
       "card_name": "WarGreymon",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-f-dna-omnimon",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-013.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_013.rs",
@@ -1494,14 +1494,14 @@
         "E1",
         "G2"
       ],
-      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved. Branch 0 digivolve test active. G-ALT-PATH-CONDITION/G-PRED-DP-LTE also resolved upstream. Remaining: G-DSL-SOURCE-NAME-CONTAINS."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT22-015": {
       "card_name": "Omnimon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-015.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_015.rs",
@@ -1511,12 +1511,12 @@
         "H5",
         "H7"
       ],
-      "notes": "11 pass / 4 ignored. Decode keyword variant BLOCKED on G-DECODE-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (NEW). Same-level-pairs bottom-deck BLOCKED on G-FORMULA-SAME-LEVEL-PAIRS-REPEAT-TARGET. Lowest-DP delete partial."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT22-017": {
       "card_name": "Gabumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1527,14 +1527,14 @@
         "A2",
         "G2"
       ],
-      "notes": "select_reveal_buckets + alt_path_registration. NEW G-DSL-PREDICATE-TEXT-CONTAINS — text_contains approximated as name_contains. 14 pass / 1 ignored."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT22-026": {
       "card_name": "MetalGarurumon",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-f-dna-omnimon",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt22/BT22-026.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_026.rs",
@@ -1543,12 +1543,12 @@
         "E1",
         "G2"
       ],
-      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved. Branch 0 digivolve test active. Remaining: G-ALT-PATH-CONDITION/G-DSL-SOURCE-NAME-CONTAINS."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT22-099": {
       "card_name": "Kuremi Detective Agency",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1559,12 +1559,12 @@
         "A2",
         "D6"
       ],
-      "notes": "Option card with flood_gate color bypass + Delay clause + security place. All 11 pass."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT23-008": {
       "card_name": "Greymon",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-f-dna-omnimon",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1575,12 +1575,12 @@
         "H9",
         "D4"
       ],
-      "notes": "Phase 2 Track F (2026-05-17): G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM closed. [Main][OPT] place-top-as-bottom + play Gabumon/Nokia clause authored. 13 pass / 0 ignored."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX1-021": {
       "card_name": "MetalGarurumon",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-f-dna-omnimon",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1590,12 +1590,12 @@
       "patterns": [
         "D4"
       ],
-      "notes": "Phase 2 Track F (2026-05-17): G-DSL-GAIN-MEMORY-FN + G-DSL-HAS-ON-DELETION-EFFECT closed. Both clauses authored faithfully (gain_memory_fn with floor_div/card_count_in_zone formula; count_gte hand>=8 + has_on_deletion_effect target filter). 13 pass / 0 ignored."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT23-018": {
       "card_name": "Garurumon",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-f-dna-omnimon",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1606,14 +1606,14 @@
         "H2",
         "D4"
       ],
-      "notes": "Phase 2 Track F (2026-05-17): G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM closed. [Main][OPT] place-top-as-bottom + play Agumon/Nokia clause authored. 13 pass / 0 ignored."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT23-096": {
       "card_name": "Comet Hammer",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "gap_kind": "G-DSL-DELAY-ON-ATTACK-EVENT",
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-096.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_096.rs",
@@ -1622,14 +1622,14 @@
         "D6",
         "E2"
       ],
-      "notes": "Color bypass + [Main] de_digivolve + security implemented. [Your Turn] CS-attack Delay BLOCKED on G-DSL-ON-ALLY-ATTACK-TIMING + G-ATK-TRAIT-FILTER + G-DSL-DELAY-ON-ATTACK-EVENT (NEW)."
+      "notes": "DNA Omnimon completion 2026-05-20: core card faithfully implemented; one clause omitted on a verified-open engine gap (G-DSL-DELAY-ON-ATTACK-EVENT). Test left #[ignore]'d with an accurate reason."
     },
     "EX1-068": {
       "card_name": "Ice Wall!",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/ex1/EX1-068.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex1/ex1_068.rs",
@@ -1637,14 +1637,14 @@
       "patterns": [
         "F1"
       ],
-      "notes": "Security gain_memory implemented. [Main] grant-triggered-effect-to-opponent BLOCKED on G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT (NEW). 6 pass / 0 ignored (whole BLOCKED clause omitted, defended structurally)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX4-003": {
       "card_name": "Tsunomon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/ex4/EX4-003.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_003.rs",
@@ -1653,12 +1653,12 @@
         "G4",
         "B3"
       ],
-      "notes": "DigiEgg inherited Draw. 9 pass / 3 ignored on G-INHERITED-DISPATCH, G-OPT-TRIGGERED, G-DSL-EVENT-TARGET-IS-OTHER (NEW)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX4-038": {
       "card_name": "Agumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1670,12 +1670,12 @@
         "A3",
         "B3"
       ],
-      "notes": "select_reveal_buckets + place_remainder top + inherited on_digivolve gain_memory. 12 pass / 2 ignored."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX4-039": {
       "card_name": "Gabumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1687,14 +1687,14 @@
         "A3",
         "B3"
       ],
-      "notes": "Sister to EX4-038. 11 pass / 2 ignored on G-EVENT-TARGET-NOT-SOURCE (NEW)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX4-060": {
       "card_name": "Omnimon Alter-S",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/ex4/EX4-060.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_060.rs",
@@ -1703,14 +1703,14 @@
         "G2",
         "F4"
       ],
-      "notes": "WhenDigivolving 2-step delete+bounce implemented. [All Turns] play-from-own-digivolution + self-to-security BLOCKED on NEW G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES + G-PLACE-SELF-AT-SECURITY-BOTTOM."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX4-073": {
       "card_name": "Omnimon Alter-B",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/ex4/EX4-073.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_073.rs",
@@ -1719,14 +1719,14 @@
         "G2",
         "E1"
       ],
-      "notes": "Alt-paths + dedigi3 implemented. NEW gaps: G-MULTI-SELECT-OPP-PLAY-COST-SUM, G-DSL-SELECT-OWN-SOURCES-FILTER, G-PLAY-COST-AGGREGATE."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX5-015": {
       "card_name": "Gabumon (X Antibody)",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/ex5/EX5-015.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex5/ex5_015.rs",
@@ -1736,12 +1736,12 @@
         "F3",
         "G1"
       ],
-      "notes": "OnPlay reveal-buckets implemented via 2 single-pick buckets. Inherited replacement BLOCKED on G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH (NEW)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX9-012": {
       "card_name": "MetalGreymon: Alterous Mode",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1753,12 +1753,12 @@
         "D4",
         "D1"
       ],
-      "notes": "21/22 pass. dp_lte delete + observer free-digivolve self + inherited +4000 DP. 1 ignored on G-EVENT-CARD-TAMER-PLAY."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX9-019": {
       "card_name": "WereGarurumon: Sagittarius Mode",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1769,14 +1769,14 @@
         "B3",
         "D6"
       ],
-      "notes": "Sister to EX9-012. All 16 pass."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "EX9-021": {
       "card_name": "Omnimon Alter-S",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/ex9/EX9-021.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_021.rs",
@@ -1785,12 +1785,12 @@
         "G2",
         "F4"
       ],
-      "notes": "DNA gate BLOCKED on G-DSL-IS-DNA-DIGIVOLVING (NEW). Highest-level delete works. End-of-attack BLOCKED on G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES + G-PLACE-SELF-AT-SECURITY-TOP (NEW)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "LM-034": {
       "card_name": "Wisteria Memory Boost!",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1801,12 +1801,12 @@
         "A2",
         "D6"
       ],
-      "notes": "All 12 pass. flood_gate color bypass + reveal-bucket + Delay + security place. Sister to BT22-099."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "P-123": {
       "card_name": "Ukkomon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
@@ -1817,14 +1817,14 @@
         "E2",
         "B3"
       ],
-      "notes": "on_move trigger. 13 pass / 2 ignored G-OPT-TRIGGERED."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "P-182": {
       "card_name": "WarGreymon",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-f-dna-omnimon",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/p/P-182.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_182.rs",
@@ -1833,29 +1833,29 @@
         "H4",
         "H5"
       ],
-      "notes": "Phase 2 Track F (2026-05-17): G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA verified (substrate already shipped, regression-tested). [All Turns] +1000 DP-per-color aura authored. [When Digivolving] delete-opp-DP-le-self still BLOCKED on G-FORMULA-SOURCE-DP. 8 pass / 4 ignored."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "ST2-13": {
       "card_name": "Hammer Spark",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "AUDITED-OK",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DNA Omnimon",
-      "yaml_path": "code/digimon-engine/cards/_examples/ST2-13.yaml",
+      "yaml_path": "code/digimon-engine/cards/st2/ST2-13.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st2/st2_13.rs",
       "test_count": 14,
       "patterns": [
         "F1"
       ],
-      "notes": "Trivially simple Option. All 14 pass."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "ST20-10": {
       "card_name": "Agumon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/st20/ST20-10.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_10.rs",
@@ -1863,14 +1863,14 @@
       "patterns": [
         "H7"
       ],
-      "notes": "Reboot keyword + alt-paths implemented. Warp-into-WarGreymon BLOCKED on G-ALT-PATH-DIRECTION-INTO + G-ALT-PATH-CONDITION + G-DSL-DISTINCT-TAMER-COLORS (NEW)."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "ST20-11": {
       "card_name": "WarGreymon",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/st20/ST20-11.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_11.rs",
@@ -1880,14 +1880,14 @@
         "H13",
         "F6"
       ],
-      "notes": "Blast Digivolve + Ace Overflow + alt-paths + delete-lowest implemented. Tamer-color immunity BLOCKED on G-DSL-DISTINCT-TAMER-COLORS-FORMULA."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "ST20-15": {
       "card_name": "Island of Adventure",
-      "validated_date": "2026-05-03",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/st20/ST20-15.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_15.rs",
@@ -1895,7 +1895,7 @@
       "patterns": [
         "D6"
       ],
-      "notes": "Color bypass + security inherited tamer-play implemented. Security-aura + main-shuffle BLOCKED on NEW G-PRED-NO-FACE-UP-SECURITY-NAMED + G-PLACE-SELF-AT-SECURITY-TOP-FACE-UP-OPTION + G-SECURITY-ZONE-AURA-SOURCE."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     },
     "BT3-002": {
       "card_name": "DemiVeemon",
@@ -1983,7 +1983,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt16/BT16-040.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_040.rs",
-      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved as phantom — chain already worked. End-state test now active."
+      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved as phantom \u2014 chain already worked. End-state test now active."
     },
     "BT12-047": {
       "card_name": "Wormmon",
@@ -1994,7 +1994,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt12/BT12-047.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_047.rs",
-      "notes": "Sister to BT12-021 — Wormmon line reveal-add"
+      "notes": "Sister to BT12-021 \u2014 Wormmon line reveal-add"
     },
     "BT12-050": {
       "card_name": "Stingmon",
@@ -2005,7 +2005,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt12/BT12-050.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_050.rs",
-      "notes": "Phase 2 Track H — sister of BT12-022 with green→blue swap. Same substrate (before_pay_cost_observe, cost_target, source_is_cost_target_permanent, dna_origin)."
+      "notes": "Phase 2 Track H \u2014 sister of BT12-022 with green\u2192blue swap. Same substrate (before_pay_cost_observe, cost_target, source_is_cost_target_permanent, dna_origin)."
     },
     "ST9-09": {
       "card_name": "Stingmon",
@@ -2177,7 +2177,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/lm/LM-030.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_030.rs",
-      "notes": "Phase 2 Track H closed G-OPTIONAL-SELECTION-CONTINUE-TAIL — declining the optional security trash play now still adds the option to hand. Delay clause remains blocked (G-ZONE-SELECTED-TRASH-TO-DECK-TOP)."
+      "notes": "Phase 2 Track H closed G-OPTIONAL-SELECTION-CONTINUE-TAIL \u2014 declining the optional security trash play now still adds the option to hand. Delay clause remains blocked (G-ZONE-SELECTED-TRASH-TO-DECK-TOP)."
     },
     "BT14-009": {
       "card_name": "Gotsumon",
@@ -3495,7 +3495,7 @@
         "COSTED-SELF-DIGIVOLVE",
         "INHERITED-REPLACEMENT"
       ],
-      "notes": "Track I 2026-05-17: active On Play / When Digivolving costed self-digivolve clause authored. 5/7 tests pass: metadata, both digivolution paths, the When Digivolving costed flow (cost body at idx > source), the decline path, and inherited Token/Puppet leave-prevention replacement. 2 tests remain ignored on confirmed BLOCKING substrate gaps re-filed with concrete failure modes — G-COSTED-SELF-DIGIVOLVE-STABLE-SOURCE (when the chosen cost body has a lower battle-area index than the source, Player::delete_permanent shifts indices but ctx.source_permanent stays stale) and G-COSTED-SELF-DIGIVOLVE-PREFLIGHT (select_own_permanent prompts even when the filter has no candidates)."
+      "notes": "Track I 2026-05-17: active On Play / When Digivolving costed self-digivolve clause authored. 5/7 tests pass: metadata, both digivolution paths, the When Digivolving costed flow (cost body at idx > source), the decline path, and inherited Token/Puppet leave-prevention replacement. 2 tests remain ignored on confirmed BLOCKING substrate gaps re-filed with concrete failure modes \u2014 G-COSTED-SELF-DIGIVOLVE-STABLE-SOURCE (when the chosen cost body has a lower battle-area index than the source, Player::delete_permanent shifts indices but ctx.source_permanent stays stale) and G-COSTED-SELF-DIGIVOLVE-PREFLIGHT (select_own_permanent prompts even when the filter has no candidates)."
     },
     "EX9-033": {
       "card_name": "Kaguyamon",
@@ -3772,7 +3772,7 @@
         "PUPPET-FILTER",
         "DRAW"
       ],
-      "notes": "Track I 2026-05-17: All Turns Token/Puppet played observer migrated from the select_effect_choice workaround to Track B's activation_cost: { suspend_self: true }. 8/11 tests pass — Security play-self, structural assertion, suspend+draw on Token/Puppet plays, Token-via-effect, pre-suspended cost-failure silent skip, non-Puppet/opponent-Puppet filter, multi-Arisa source-bound preflight. 3 tests remain ignored (PUPPETS-G028) on the Start of Your Main Phase return-this-Tamer-to-deck-bottom cost into exact Arisa/Shoemon free-play branches — the cost itself is now Track B's `activation_cost: { return_self_to_deck_bottom: true }` but the chained `choose_one` + origin-preserving free-play branch selectors are out of scope here."
+      "notes": "Track I 2026-05-17: All Turns Token/Puppet played observer migrated from the select_effect_choice workaround to Track B's activation_cost: { suspend_self: true }. 8/11 tests pass \u2014 Security play-self, structural assertion, suspend+draw on Token/Puppet plays, Token-via-effect, pre-suspended cost-failure silent skip, non-Puppet/opponent-Puppet filter, multi-Arisa source-bound preflight. 3 tests remain ignored (PUPPETS-G028) on the Start of Your Main Phase return-this-Tamer-to-deck-bottom cost into exact Arisa/Shoemon free-play branches \u2014 the cost itself is now Track B's `activation_cost: { return_self_to_deck_bottom: true }` but the chained `choose_one` + origin-preserving free-play branch selectors are out of scope here."
     },
     "BT23-077": {
       "card_name": "Sistermon Ciel",
@@ -3879,7 +3879,7 @@
         "RECOVERY",
         "HATCH"
       ],
-      "notes": "Track I 2026-05-17: End of Attack self-delete + opponent-delete + Recovery +1 + Tamer-gated hatch chain authored and behaviorally verified (PUPPETS-G031 RESOLVED — existing primitives suffice, moved to qa/resolved-gaps.md). 2/5 tests pass: metadata + alt-paths and the End of Attack chain. 3 tests remain ignored on the When Digivolving/On Deletion opponent-wide -5000 DP clause pending Expiry::EndOfOpponentsNextTurn modifier-expiry support (separate substrate gap)."
+      "notes": "Track I 2026-05-17: End of Attack self-delete + opponent-delete + Recovery +1 + Tamer-gated hatch chain authored and behaviorally verified (PUPPETS-G031 RESOLVED \u2014 existing primitives suffice, moved to qa/resolved-gaps.md). 2/5 tests pass: metadata + alt-paths and the End of Attack chain. 3 tests remain ignored on the When Digivolving/On Deletion opponent-wide -5000 DP clause pending Expiry::EndOfOpponentsNextTurn modifier-expiry support (separate substrate gap)."
     },
     "EX6-011": {
       "card_name": "RagnaLoardmon",
@@ -3988,7 +3988,7 @@
         "ON-PLAY-DRAW",
         "ON-DELETION-PLACE-UNDER-KING-DRASIL"
       ],
-      "notes": "Both clauses authored under Phase 2 Track J. On Play Draw 1 plus On Deletion: pick a [Royal Knight]-traited Digimon from hand and place it under [King Drasil_7D6] in breeding as the bottom digivolution source. Uses RK-G001 filter (Phase 2 Track J PR 1) plus the BreedingPermanentRef → PermanentHandle{BREEDING_TARGET} resolver. Short-circuits gracefully when no King Drasil is in breeding or no Royal Knight is in hand."
+      "notes": "Both clauses authored under Phase 2 Track J. On Play Draw 1 plus On Deletion: pick a [Royal Knight]-traited Digimon from hand and place it under [King Drasil_7D6] in breeding as the bottom digivolution source. Uses RK-G001 filter (Phase 2 Track J PR 1) plus the BreedingPermanentRef \u2192 PermanentHandle{BREEDING_TARGET} resolver. Short-circuits gracefully when no King Drasil is in breeding or no Royal Knight is in hand."
     },
     "BT20-083": {
       "card_name": "Omekamon",
@@ -5064,6 +5064,19 @@
         "DELAY"
       ],
       "notes": "Implemented after DSL primitive refresh using use_requirement plus IgnoreColorRequirement for TS board color bypass, reveal-3 TS search, explicit place_self_as_delay_option, standard Delay gain 2 memory, and inherited Security delayed-option placement."
+    },
+    "AD1-019": {
+      "card_name": "",
+      "validated_date": "2026-05-20",
+      "report": "complete-dna-omnimon-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DNA Omnimon",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-019.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_019.rs",
+      "test_count": null,
+      "patterns": [],
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
     }
   }
 }

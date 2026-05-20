@@ -29,38 +29,37 @@
 //! - All-Turns OPT observer firing on opponent Digimon leaving the battle area
 //! - DNA digivolve alt-path (Lv.6 Greymon + Lv.6 Garurumon, cost 0)
 //!
-//! # AUDIT VERDICT (drift): see top-level audit report.
+//! # AUDIT VERDICT (drift) — BOTH DRIFTS FIXED.
 //!
-//! Two pieces of drift were identified during this audit. The tests below
-//! document the *intended* behavior; tests that rely on the missing raw_rust
-//! body or the missing [All Turns] clause are `#[ignore]`'d with the gap tag.
+//! Two pieces of drift were identified during this audit; both are now closed.
 //!
-//! ## DRIFT 1 — `raw_rust: { fn: ad1_025_on_play_process }` is unregistered
+//! ## DRIFT 1 FIXED — on-play body re-authored in pure DSL
 //!
-//! The YAML's `[on_play, when_digivolving]` process body is a single
-//! `raw_rust: { fn: ad1_025_on_play_process }` step. That function name is
-//! validated against a `StubRegistry` in `tests/dsl/phase0_exit.rs` and
-//! `tests/dsl/roundtrip.rs`, but it is **NOT** registered in the production
-//! engine raw_rust registry (`code/digimon-engine/src/cards/raw_rust/mod.rs::build_registry`).
-//! At runtime `step::run_step_with_runtime` looks the function up via
-//! `runtime.raw().step_fn(fn_name)` and silently skips when the lookup
-//! returns `None`. The clause therefore parses, validates, and lowers, but
-//! the OnPlay/WhenDigivolving body never executes — opponent Digimon never
-//! get bounced and the follow-up delete never installs.
+//! The YAML's `[on_play, when_digivolving]` body was a single
+//! `raw_rust: { fn: ad1_025_on_play_process }` step whose function was never
+//! registered in the production raw_rust registry — so the body silently
+//! no-op'd. It is now authored entirely in DSL: a `for_each` over opponent
+//! Digimon whose digivolution-card count is `<=` this Digimon's
+//! (`materials_count_lte` against the `source_material_count` formula —
+//! G-FORMULA-SOURCE-MATERIAL-COUNT, the digivolution-card-count sibling of
+//! P-182's `source_dp`) returns each to the deck bottom, then a mandatory
+//! `select_opponent_permanent` deletes 1 remaining opponent Digimon.
 //!
-//! ## DRIFT 2 — Missing [All Turns] [OPT] clause
+//! ## DRIFT 2 FIXED — [All Turns] [OPT] observer clause authored
 //!
-//! The printed text has a SECOND triggered clause that the YAML omits
-//! entirely:
+//! The printed text's SECOND triggered clause is now authored:
 //!   "[All Turns] [Once Per Turn] When any of your opponent's Digimon leave
 //!    the battle area, trash 1 of their Option cards in the battle area and
 //!    trash their top security card."
 //!
 //! DCGO `AD1_025.cs` lines 152–211 implement this on `EffectTiming.OnLeaveFieldAnyone`,
 //! gated by `CardEffectCommons.CanTriggerOnPermanentLeave(hashtable, IsOpponentsDigimon)`,
-//! with `max-per-turn: 1` (DCGO `SetUpActivateClass(..., 1, false, ...)` arg #3),
-//! optional Option-card pick (mandatory if any), then unconditional
-//! `IDestroySecurity(enemy, 1, fromTop: true)`.
+//! with `max-per-turn: 1`, optional Option-card pick (mandatory if any),
+//! then unconditional `IDestroySecurity(enemy, 1, fromTop: true)`. The Rust
+//! engine's `OnLeaveField` timing is now wired: it fires from the deletion
+//! finalize (`combat::finalize_permanent_deletion_with_event_card`) and from
+//! `return_to_hand` / `return_to_deck` — covering every "leaves the battle
+//! area" route per printed text.
 //!
 //! ## Note on DCGO line 124 / 141 max-per-turn arg `-1`
 //!
@@ -368,14 +367,10 @@ fn ad1_025_has_on_play_when_digivolving_mandatory_clause() {
     );
 }
 
-/// DRIFT — printed text has a [All Turns] [Once Per Turn] clause that
-/// triggers when an opponent's Digimon leaves the battle area. The YAML
-/// omits this clause entirely. This test asserts the missing clause's
-/// shape (it will fail until the YAML is fixed). When the YAML is patched,
-/// remove the `#[ignore]` and this test should pass.
+/// DRIFT 2 FIXED — printed text has a [All Turns] [Once Per Turn] clause that
+/// triggers when an opponent's Digimon leaves the battle area. The clause is
+/// now authored on OnLeaveField timing.
 #[test]
-#[ignore = "pending YAML drift fix: missing [All Turns][OPT] clause on OnLeaveField. \
-            See top-of-file DRIFT 2 and the audit verdict."]
 fn ad1_025_has_all_turns_opt_observer_on_opp_digimon_leave() {
     let runner = omnimon_runner();
     let card = runner.compiled_card("AD1-025").expect("AD1-025 compiles");
@@ -424,13 +419,10 @@ fn ad1_025_has_all_turns_opt_observer_on_opp_digimon_leave() {
 /// body should resolve without installing any pending selection (no opponent
 /// Digimon to bounce, no opponent Digimon to delete).
 ///
-/// IGNORED — see DRIFT 1: the raw_rust function `ad1_025_on_play_process`
-/// is not registered in the production raw_rust registry, so the body
-/// silently no-ops in BOTH branches. This test cannot distinguish "correct
-/// no-op because no targets" from "broken because no implementation".
+/// DRIFT 1 FIXED — the on-play body is now pure DSL. With no opponent
+/// Digimon, the `for_each` bounce no-ops and the follow-up
+/// `select_opponent_permanent` finds no candidate → no prompt installed.
 #[test]
-#[ignore = "pending raw_rust fn registration: `ad1_025_on_play_process` is referenced by YAML but missing from \
-            code/digimon-engine/src/cards/raw_rust/mod.rs::build_registry. See top-of-file DRIFT 1."]
 fn ad1_025_on_play_no_opponent_digimon_no_prompt() {
     let mut runner = omnimon_runner();
     push_to_hand(&mut runner, 0, "AD1-025");
@@ -464,9 +456,8 @@ fn ad1_025_on_play_no_opponent_digimon_no_prompt() {
 /// then step 2 finds no remaining target → no prompt. The observable proof
 /// is that the opp's battle area becomes empty AND their deck grows by 1.
 ///
-/// IGNORED — see DRIFT 1: raw_rust body unregistered, so nothing happens.
+/// DRIFT 1 FIXED — pure-DSL on-play body bounces the lower-source opp Digimon.
 #[test]
-#[ignore = "pending raw_rust fn registration: `ad1_025_on_play_process` missing. See DRIFT 1."]
 fn ad1_025_on_play_returns_lower_source_opp_digimon_to_deck_bottom() {
     let mut runner = omnimon_runner();
     push_to_hand(&mut runner, 0, "AD1-025");
@@ -503,9 +494,8 @@ fn ad1_025_on_play_returns_lower_source_opp_digimon_to_deck_bottom() {
 /// the bounce step removes only the lower-source one, then the delete step
 /// installs an OppField prompt for the surviving Digimon.
 ///
-/// IGNORED — see DRIFT 1.
+/// DRIFT 1 FIXED.
 #[test]
-#[ignore = "pending raw_rust fn registration: `ad1_025_on_play_process` missing. See DRIFT 1."]
 fn ad1_025_on_play_then_installs_delete_prompt_for_remaining_opp_digimon() {
     let mut runner = omnimon_runner();
     push_to_hand(&mut runner, 0, "AD1-025");
@@ -549,9 +539,8 @@ fn ad1_025_on_play_then_installs_delete_prompt_for_remaining_opp_digimon() {
 /// `WhenDigivolving` on an Omnimon permanent must trigger the same shared
 /// body as OnPlay (DCGO uses identical `SharedActivateCoroutine`).
 ///
-/// IGNORED — see DRIFT 1.
+/// DRIFT 1 FIXED.
 #[test]
-#[ignore = "pending raw_rust fn registration: `ad1_025_on_play_process` missing. See DRIFT 1."]
 fn ad1_025_when_digivolving_fires_same_body_as_on_play() {
     let mut runner = omnimon_runner();
     let _opp = runner.place_on_field(1, "FILL", Some(0));
@@ -579,10 +568,8 @@ fn ad1_025_when_digivolving_fires_same_body_as_on_play() {
 ///     if any exist; mandatory when present per DCGO line 196 canNoSelect: false),
 ///   - then unconditionally trash the top of the opponent's security stack.
 ///
-/// IGNORED — see DRIFT 2: the entire [All Turns][OPT] clause is missing
-/// from the YAML.
+/// DRIFT 2 FIXED — the [All Turns][OPT] clause is now authored.
 #[test]
-#[ignore = "pending YAML drift fix: missing [All Turns][OPT] clause. See DRIFT 2."]
 fn ad1_025_all_turns_observer_trashes_opp_option_and_top_security() {
     let mut runner = omnimon_runner();
     runner
@@ -621,27 +608,34 @@ fn ad1_025_all_turns_observer_trashes_opp_option_and_top_security() {
 /// engine wake up — verified at the engine boundary, not via GameEvent
 /// since the public `GameEvent` enum has no security-loss variant today).
 ///
-/// IGNORED — depends on DRIFT 2 being fixed first.
+/// DRIFT 2 FIXED.
 #[test]
-#[ignore = "pending YAML drift fix: missing [All Turns][OPT] clause. See DRIFT 2."]
 fn ad1_025_all_turns_observer_routes_security_to_opp_trash() {
     let mut runner = omnimon_runner();
     let _omni = runner.place_on_field(0, "AD1-025", Some(0));
     let opp_dig = runner.place_on_field(1, "FILL", Some(0));
     push_to_hand(&mut runner, 1, "FILL");
-    {
+    // Capture the seeded security card's stable identity so we can assert it
+    // specifically lands in the opponent's trash.
+    let security_card_index = {
         let card = runner.game.player_mut(1).hand.pop().expect("seeded card");
+        let idx = card.card_index;
         runner.game.player_mut(1).security.push(card);
-    }
-    let trash_before = runner.trash_size(1);
+        idx
+    };
 
     runner.game.delete_permanent_with_effects(opp_dig);
     runner.game.drain_effect_queue();
     runner.auto_resolve().expect("auto-resolve");
 
-    assert_eq!(
-        runner.trash_size(1),
-        trash_before + 1,
+    // The trashed top security card must be in the opponent's trash. (The
+    // deleted opp Digimon also routes to that trash; this assertion targets
+    // the security card by its stable `card_index`.)
+    let security_in_trash = runner.game.player(1).trash.iter().any(|c| {
+        c.card_index == security_card_index
+    });
+    assert!(
+        security_in_trash,
         "trashed top security must end up in the opponent's trash"
     );
 }
@@ -659,11 +653,8 @@ fn ad1_025_all_turns_observer_routes_security_to_opp_trash() {
 /// once, a second opp-Digimon-leave on the same turn must NOT install a
 /// new selection or trash a second security card.
 ///
-/// IGNORED — depends on DRIFT 2 (YAML drift). Phase 2 Track C closure:
-/// OPT enforcement and reset are no longer blocking; the residual failure
-/// is the DRIFT 2 fix only.
+/// DRIFT 2 FIXED — OPT enforcement plus the now-authored [All Turns] clause.
 #[test]
-#[ignore = "pending YAML drift fix (DRIFT 2). See top-of-file. OPT half closed in Phase 2 Track C."]
 fn ad1_025_all_turns_observer_opt_blocks_second_trigger_same_turn() {
     let mut runner = omnimon_runner();
     let _omni = runner.place_on_field(0, "AD1-025", Some(0));

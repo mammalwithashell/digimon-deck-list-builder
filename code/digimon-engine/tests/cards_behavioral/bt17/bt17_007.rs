@@ -27,12 +27,12 @@
 //!     "another of your Digimon", which matches the "any of your **other**
 //!     Digimon" wording.
 //!
-//! # YAML location (NOTE — `_examples/`, not `bt17/`)
-//! `code/digimon-engine/cards/_examples/BT17-007.yaml`. The card lives in the
-//! curated examples pack rather than the per-set folder; the embedded DSL
-//! pack still surfaces it via `dsl_card("BT17-007")`. We intentionally DO NOT
-//! `include_str!` the YAML the way other bt17 tests do, because the path is
-//! `_examples` and we want this audit to track the embedded-pack identity.
+//! # YAML location
+//! `code/digimon-engine/cards/bt17/BT17-007.yaml` — promoted to the per-set
+//! folder on 2026-05-20 (was `cards/_examples/BT17-007.yaml`). This test
+//! reads the card through `card_data_from_compiled` + `compiled` (the
+//! embedded DSL pack) rather than `include_str!`, matching the BT22-084
+//! promotion convention.
 //!
 //! # Audit summary (2026-05-03)
 //!

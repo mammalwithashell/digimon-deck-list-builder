@@ -38,13 +38,35 @@ use crate::enums::CostDelta;
 ///   `Some(Free)`        → `CostDelta::Free`
 ///   `Some(Literal(n))`  → `CostDelta::Fixed(n as i16)`
 ///   `Some(Reduce(n))`   → `CostDelta::Reduce(n as i16)`
-fn lower_cost_delta(d: Option<&digimon_dsl::compiled::CompiledCostDelta>) -> CostDelta {
+///   `Some(ReduceFn(f))` → `CostDelta::Reduce(N)` where `N` is the formula
+///                         result computed against `ctx`/`bindings` at
+///                         resolution time (G-FORMULA-COST-DELTA). A negative
+///                         result is clamped to 0 — a "reduction" can only
+///                         lower, never raise, the printed cost.
+fn lower_cost_delta(
+    d: Option<&digimon_dsl::compiled::CompiledCostDelta>,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+) -> CostDelta {
     use digimon_dsl::compiled::CompiledCostDelta;
     match d {
         None | Some(CompiledCostDelta::Printed) => CostDelta::Reduce(0),
         Some(CompiledCostDelta::Free) => CostDelta::Free,
         Some(CompiledCostDelta::Literal(n)) => CostDelta::Fixed(*n as i16),
         Some(CompiledCostDelta::Reduce(n)) => CostDelta::Reduce(*n as i16),
+        Some(CompiledCostDelta::ReduceFn(formula)) => {
+            let target = ctx.source_permanent.unwrap_or(crate::permanent::PermanentHandle {
+                player: ctx.player,
+                index: 0,
+            });
+            let raw = crate::dsl_cards::formula_eval::evaluate_with_bindings(
+                formula,
+                ctx,
+                target,
+                Some(bindings),
+            );
+            CostDelta::Reduce(raw.max(0).min(i16::MAX as i32) as i16)
+        }
     }
 }
 
@@ -112,7 +134,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
-                let delta = lower_cost_delta(cost_delta.as_ref());
+                let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
                 if let Some(played) = ctx.play_from_hand_with_cost(owner, i as usize, delta) {
                     bindings.record_played(played);
                 }
@@ -148,7 +170,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if let Some(ResolvedBinding::TrashIndex(owner, i)) =
                 resolve_binding_ref(trash_index, ctx, bindings)
             {
-                let delta = lower_cost_delta(cost_delta.as_ref());
+                let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
                 if let Some(played) = ctx.play_from_trash_with_cost(owner, i as usize, delta) {
                     bindings.record_played(played);
                 }
@@ -196,6 +218,21 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        // ── Play a specific bound card from the security stack ────────────
+        CompiledStep::PlaySecurityCard { of, card } => {
+            // G-PLAY-SELECTED-SECURITY-CARD: `card` is a CardHandle binding
+            // (typically from a prior `select_security`). Resolve the owner
+            // and play exactly that security card free.
+            let owner = resolve_player(ctx, *of);
+            if let Some(ResolvedBinding::Card(handle)) =
+                resolve_binding_ref(card, ctx, bindings)
+            {
+                if let Some(played) = ctx.play_from_security_card(owner, handle) {
+                    bindings.record_played(played);
+                }
+            }
+            true
+        }
         CompiledStep::PlayFromMaterials {
             target,
             source_index,
@@ -224,7 +261,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if src_idx == usize::MAX {
                 return true;
             }
-            let delta = lower_cost_delta(cost_delta.as_ref());
+            let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
             if let Some(played) = ctx.play_from_materials(target_handle, src_idx, delta) {
                 bindings.record_played(played);
                 if let Some(name) = bind_as {
@@ -248,7 +285,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let Some(source_ref) = resolve_card_source_ref(from_hand, ctx, bindings) else {
                 return true;
             };
-            let delta = lower_cost_delta(Some(cost));
+            let delta = lower_cost_delta(Some(cost), ctx, bindings);
             // The effect runs on the target's controller (the digivolve is
             // applied to `target`; the result card can now come from any
             // supported source zone.
@@ -299,7 +336,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 }
                 _ => return true,
             };
-            let cost = match lower_cost_delta(Some(cost)) {
+            let cost = match lower_cost_delta(Some(cost), ctx, bindings) {
                 CostDelta::Free => 0,
                 CostDelta::Fixed(n) => n,
                 CostDelta::Reduce(n) => {
@@ -316,6 +353,57 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 a,
                 b,
                 from_card,
+                cost as i32,
+                *ignore_requirements,
+            );
+            if let Some(played) = success {
+                bindings.record_digivolved(played);
+            }
+            true
+        }
+        CompiledStep::EffectInitiatedDnaDigivolveHandPartner {
+            target,
+            hand_partner,
+            from_hand,
+            cost,
+            ignore_requirements,
+        } => {
+            let target_handle = match resolve_binding_ref(target, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(h)) => h,
+                _ => return true,
+            };
+            let partner_card = match resolve_binding_ref(hand_partner, ctx, bindings) {
+                Some(ResolvedBinding::Card(h)) => h,
+                Some(ResolvedBinding::HandIndex(owner, i)) => {
+                    match ctx.game.player(owner).hand.get(i as usize) {
+                        Some(cs) => cs.handle(),
+                        None => return true,
+                    }
+                }
+                _ => return true,
+            };
+            let result_card = match resolve_binding_ref(from_hand, ctx, bindings) {
+                Some(ResolvedBinding::Card(h)) => h,
+                Some(ResolvedBinding::HandIndex(owner, i)) => {
+                    match ctx.game.player(owner).hand.get(i as usize) {
+                        Some(cs) => cs.handle(),
+                        None => return true,
+                    }
+                }
+                _ => return true,
+            };
+            let cost = match lower_cost_delta(Some(cost), ctx, bindings) {
+                CostDelta::Free => 0,
+                CostDelta::Fixed(n) => n,
+                CostDelta::Reduce(n) => {
+                    debug_assert!(n >= 0, "negative DNA cost reduction is not meaningful");
+                    0
+                }
+            };
+            let success = ctx.effect_initiated_dna_digivolve_with_hand_partner(
+                target_handle,
+                partner_card,
+                result_card,
                 cost as i32,
                 *ignore_requirements,
             );

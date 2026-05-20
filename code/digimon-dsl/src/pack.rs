@@ -418,6 +418,8 @@ fn collect_formula_raw_rust_fns(formula: &CompiledFormula, names: &mut BTreeSet<
             }
         }
         CompiledFormula::Literal(_)
+        | CompiledFormula::SourceDp
+        | CompiledFormula::SourceMaterialCount
         | CompiledFormula::Aggregate(_)
         | CompiledFormula::AggregateScoped { .. }
         | CompiledFormula::BindingDp(_)
@@ -567,6 +569,7 @@ mod tests {
                     reduction_timing: None,
                     when_playing_this: true,
                     when_any_ally_played: None,
+                    when_any_ally_digivolves_into: None,
                     condition: None,
                     optional: false,
                     once_per_turn: false,

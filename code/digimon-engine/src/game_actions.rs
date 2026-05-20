@@ -105,6 +105,11 @@ struct BeforePayCostSourceInfo {
 struct CostTargetContext {
     card: crate::card_source::CardHandle,
     from_hand: bool,
+    /// True when this cost is a DIGIVOLVE cost (normal or DNA). Surfaced to
+    /// predicates via `EffectReadContext::cost_is_digivolve` so the
+    /// `when_any_ally_digivolves_into` cost-reduction trigger fires only for
+    /// digivolutions. `G-COST-REDUCTION-DIGIVOLVE-INTO`.
+    is_digivolve: bool,
     /// Permanents being digivolved (single entry for normal digivolve,
     /// two for DNA digivolve; both `None` for play-from-hand / option
     /// use). Fixed-size to preserve `Copy`; surfaced to predicates via
@@ -419,6 +424,7 @@ impl Game {
             CostTargetContext {
                 card: target_card,
                 from_hand: cost_target_from_hand,
+                is_digivolve: false,
                 target_permanents: [None, None],
             },
             cost_delta,
@@ -561,6 +567,7 @@ impl Game {
         let cost_target_ctx = CostTargetContext {
             card: target_card,
             from_hand: true,
+            is_digivolve: false,
             target_permanents: [None, None],
         };
         self.scan_before_pay_cost_observers(player_id, Some(cost_target_ctx));
@@ -977,6 +984,7 @@ impl Game {
         let cost_target_ctx = CostTargetContext {
             card: card_handle,
             from_hand: matches!(source, OptionSource::Hand(_)),
+            is_digivolve: false,
             target_permanents: [None, None],
         };
         let total_reduction = self.scan_before_pay_cost_reduction_with_target(
@@ -2595,6 +2603,26 @@ impl Game {
             }
         }
 
+        // Snapshot the leaving permanent's identity BEFORE removal so the
+        // OnLeaveField observer's `event_target_*` predicates resolve.
+        let leave_snapshot = self
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .and_then(|p| {
+                let top_handle = p.top_card().handle();
+                let data = self.card_data_for_handle(top_handle)?;
+                Some(crate::trigger_context::DeletedObjectSnapshot {
+                    former_controller: handle.player,
+                    top_card: top_handle,
+                    card_kind: data.card_kind,
+                    traits: data.traits.clone(),
+                    level: data.level,
+                    dp: self.effective_dp(handle),
+                    cause: crate::trigger_context::EventCause::Return,
+                })
+            });
+
         let perm = self
             .player_mut(handle.player)
             .battle_area
@@ -2657,6 +2685,10 @@ impl Game {
         self.modifiers.expire_player_on_permanent_leave(handle);
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
+        // OnLeaveField: the permanent left the battle area by return-to-hand.
+        if let Some(snapshot) = leave_snapshot {
+            self.fire_on_leave_field(handle, snapshot);
+        }
         Some(top_handle)
     }
 
@@ -2715,6 +2747,44 @@ impl Game {
         let moved = self.return_to_deck(handle, crate::enums::StackPosition::Bottom);
         self.effect_source_player = previous;
         moved
+    }
+
+    /// Fire the global `OnLeaveField` observer for a permanent that has just
+    /// left the battle area by a non-deletion route (return-to-hand,
+    /// return-to-deck). The deletion route fires `OnLeaveField` from
+    /// `finalize_permanent_deletion_with_event_card`. `snapshot` carries the
+    /// leaving permanent's identity so `event_target_*` predicates resolve
+    /// against it, exactly as the deletion path does. Called AFTER the
+    /// permanent is removed from `battle_area`.
+    pub(crate) fn fire_on_leave_field(
+        &mut self,
+        handle: PermanentHandle,
+        snapshot: crate::trigger_context::DeletedObjectSnapshot,
+    ) {
+        let card = snapshot.top_card;
+        let queue_start = self.effect_queue.len();
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnLeaveField,
+            crate::selection::TriggerSource::EventObserved {
+                player: handle.player,
+                permanent: handle,
+                card,
+            },
+        );
+        for queued in self.effect_queue.iter_mut().skip(queue_start) {
+            if queued.timing != crate::enums::EffectTiming::OnLeaveField {
+                continue;
+            }
+            if let Some(trigger) = queued.trigger_context.as_mut() {
+                trigger.deleted_object = Some(snapshot.clone());
+                trigger.cause = Some(snapshot.cause);
+                trigger.affected_player = Some(snapshot.former_controller);
+                trigger.subject = Some(crate::trigger_context::EventSubject::Permanent(handle));
+            }
+        }
+        self.drain_effect_queue();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
     pub(crate) fn fire_digivolution_card_trashed(
@@ -2849,6 +2919,31 @@ impl Game {
             }
         }
 
+        // Snapshot the leaving permanent's identity BEFORE removal so the
+        // OnLeaveField observer's `event_target_*` predicates resolve.
+        let leave_snapshot = self
+            .player(player_id)
+            .battle_area
+            .get(handle.index as usize)
+            .and_then(|p| {
+                let top_handle = p.top_card().handle();
+                let data = self.card_data_for_handle(top_handle)?;
+                Some(crate::trigger_context::DeletedObjectSnapshot {
+                    former_controller: player_id,
+                    top_card: top_handle,
+                    card_kind: data.card_kind,
+                    traits: data.traits.clone(),
+                    level: data.level,
+                    dp: self.effective_dp(handle),
+                    cause: match position {
+                        crate::enums::StackPosition::Bottom => {
+                            crate::trigger_context::EventCause::DeckBottom
+                        }
+                        _ => crate::trigger_context::EventCause::Return,
+                    },
+                })
+            });
+
         let mut perm = self
             .player_mut(player_id)
             .battle_area
@@ -2916,6 +3011,10 @@ impl Game {
         self.clear_permanent_full(handle);
         // Phase 6: expire any player-scoped modifiers sourced from this permanent.
         self.modifiers.expire_player_on_permanent_leave(handle);
+        // OnLeaveField: the permanent left the battle area by return-to-deck.
+        if let Some(snapshot) = leave_snapshot {
+            self.fire_on_leave_field(handle, snapshot);
+        }
         true
     }
 
@@ -3066,6 +3165,7 @@ impl Game {
         let target = CostTargetContext {
             card: card.handle(),
             from_hand: true,
+            is_digivolve: true,
             target_permanents: [Some(handle), None],
         };
         let total_reduction = self.scan_before_pay_cost_reduction_with_target(
@@ -3313,6 +3413,7 @@ impl Game {
         let target = CostTargetContext {
             card: card.handle(),
             from_hand: true,
+            is_digivolve: true,
             target_permanents: [Some(breeding_handle), None],
         };
         let total_reduction = self.scan_before_pay_cost_reduction_with_target(
@@ -3788,7 +3889,14 @@ impl Game {
             self.collect_before_pay_cost_reducers(acting_player, cost_target, &[], cost_kind);
         let mut total = 0;
         for candidate in candidates {
-            if candidate.optional || candidate.has_pay_cost {
+            // Optional reducers still need an explicit play-cost choice flow.
+            // A `pay_cost`-bearing reducer (e.g. BT5-092's "by suspending this
+            // Tamer") IS resolvable here when there is a real cost target —
+            // `apply_cost_reduction_candidate` runs the synchronous pay_cost
+            // and only counts the reduction if it succeeds
+            // (G-COST-REDUCTION-DIGIVOLVE-INTO). Without a real cost target
+            // (the sentinel fallback below) a paid reducer is still skipped.
+            if candidate.optional || (candidate.has_pay_cost && cost_target.is_none()) {
                 self.logger.log(
                     "[Skipped] optional/paid BeforePayCost reducer requires explicit pending play-cost context",
                 );
@@ -3804,6 +3912,7 @@ impl Game {
             let resolved_target = cost_target.unwrap_or(CostTargetContext {
                 card: candidate.key.source_card,
                 from_hand: false,
+                is_digivolve: false,
                 target_permanents: [None, None],
             });
             if let Some(amount) = self.apply_cost_reduction_candidate(
@@ -3919,6 +4028,7 @@ impl Game {
                     target.card,
                     target.from_hand,
                 )
+                .with_cost_is_digivolve(target.is_digivolve)
                 .with_cost_target_permanents(target.target_permanents_vec())
             } else {
                 EffectReadContext::new(self, key.source_card, key.source_permanent, key.controller)
@@ -3940,6 +4050,7 @@ impl Game {
                     target.card,
                     target.from_hand,
                 )
+                .with_cost_is_digivolve(target.is_digivolve)
                 .with_cost_target_permanents(target.target_permanents_vec())
             } else {
                 EffectReadContext::new(self, key.source_card, key.source_permanent, key.controller)
@@ -3968,6 +4079,7 @@ impl Game {
                 cost_target.card,
                 cost_target.from_hand,
             );
+            ctx.cost_is_digivolve = cost_target.is_digivolve;
             if !pay_cost_fn(&mut ctx) {
                 return None;
             }
@@ -4644,6 +4756,7 @@ impl Game {
         let target = CostTargetContext {
             card: evo_card_target,
             from_hand: true,
+            is_digivolve: true,
             target_permanents: [Some(target_a), Some(target_b)],
         };
         // Set the DNA-origin context so cost-calc-time predicates like
@@ -5498,6 +5611,7 @@ impl Game {
         let cost_target_ctx = CostTargetContext {
             card: evo_card_handle,
             from_hand,
+            is_digivolve: true,
             target_permanents: [Some(target), None],
         };
         let total_reduction = self.scan_before_pay_cost_reduction_with_target(

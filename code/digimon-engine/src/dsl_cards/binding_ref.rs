@@ -8,6 +8,7 @@ use crate::dsl_cards::bindings::{BindingValue, Bindings};
 use crate::effect_context::EffectContext;
 use crate::enums::PlayerId;
 use crate::permanent::PermanentHandle;
+use crate::selection::SourceSelectionRef;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ResolvedBinding {
@@ -18,6 +19,7 @@ pub enum ResolvedBinding {
     Literal(i64),
     PermanentList(Vec<PermanentHandle>),
     CardList(Vec<CardHandle>),
+    SourceRefs(Vec<SourceSelectionRef>),
 }
 
 pub fn resolve_binding_ref(
@@ -92,7 +94,7 @@ pub(crate) fn resolve_named(name: &str, bindings: &Bindings) -> Option<ResolvedB
         BindingValue::Literal(v) => Some(ResolvedBinding::Literal(v)),
         BindingValue::PermanentList(v) => Some(ResolvedBinding::PermanentList(v)),
         BindingValue::CardList(v) => Some(ResolvedBinding::CardList(v)),
-        BindingValue::SourceRefs(_) => None,
+        BindingValue::SourceRefs(v) => Some(ResolvedBinding::SourceRefs(v)),
         // Surface a breeding permanent binding as a sentinel `PermanentHandle`
         // (`index = BREEDING_TARGET`). Engine APIs that accept
         // `PermanentHandle` and operate on breeding permanents already

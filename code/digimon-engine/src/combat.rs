@@ -3431,7 +3431,7 @@ impl Game {
                     card,
                 },
             );
-            if let Some(snapshot) = deleted_snapshot {
+            if let Some(ref snapshot) = deleted_snapshot {
                 for queued in self.effect_queue.iter_mut().skip(queue_start) {
                     if queued.timing != crate::enums::EffectTiming::OnAnyDeletion {
                         continue;
@@ -3453,6 +3453,39 @@ impl Game {
                 );
             }
         }
+
+        // OnLeaveField: global observer — fires when a permanent LEAVES the
+        // battle area by any route. Deletion is one such route; the timing is
+        // distinct from OnAnyDeletion so observer clauses can react to the
+        // broader "leaves the battle area" trigger (DCGO OnLeaveFieldAnyone).
+        // Carries the same deleted-object snapshot so `event_target_*`
+        // predicates resolve against the leaving permanent.
+        if let Some(card) = event_deleted_top_card {
+            let queue_start = self.effect_queue.len();
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnLeaveField,
+                crate::selection::TriggerSource::EventObserved {
+                    player: handle.player,
+                    permanent: handle,
+                    card,
+                },
+            );
+            if let Some(ref snapshot) = deleted_snapshot {
+                for queued in self.effect_queue.iter_mut().skip(queue_start) {
+                    if queued.timing != crate::enums::EffectTiming::OnLeaveField {
+                        continue;
+                    }
+                    if let Some(trigger) = queued.trigger_context.as_mut() {
+                        trigger.deleted_object = Some(snapshot.clone());
+                        trigger.cause = Some(snapshot.cause);
+                        trigger.affected_player = Some(snapshot.former_controller);
+                        trigger.subject =
+                            Some(crate::trigger_context::EventSubject::Permanent(handle));
+                    }
+                }
+            }
+        }
+
         self.drain_effect_queue();
         self.reevaluate_until_condition_modifiers_if_dirty();
     }

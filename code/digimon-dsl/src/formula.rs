@@ -24,11 +24,36 @@ pub enum FormulaSpec {
     BindingPlayCost {
         binding_play_cost: String,
     },
+    /// Effective DP of the effect's `source_permanent` (the carrier of
+    /// the running effect). YAML form: `{ source_dp: {} }`. Unlike
+    /// `binding_dp`, which reads a named `bind_as` binding, this reads
+    /// `ctx.source_permanent` directly. Used by P-182's [When
+    /// Digivolving] "delete 1 opp Digimon with as much or less DP as
+    /// this Digimon". G-FORMULA-SOURCE-DP.
+    SourceDp {
+        source_dp: SourceDpSpec,
+    },
+    /// Number of digivolution *cards* (materials beneath the top card) on
+    /// the effect's `source_permanent`. YAML form: `{ source_material_count:
+    /// {} }`. Sibling of `source_dp`. Used by AD1-025's [On Play][When
+    /// Digivolving] "return all opponent Digimon with as many or fewer
+    /// digivolution cards as this Digimon" — the candidate's
+    /// `materials_count_lte` is compared against this. G-FORMULA-SOURCE-MATERIAL-COUNT.
+    SourceMaterialCount {
+        source_material_count: SourceDpSpec,
+    },
     SourceStackDpSum {
         source_stack_dp_sum: SourceStackDpSumSpec,
     },
     Compound(CompoundFormula),
 }
+
+/// Empty payload marker for the `source_dp` / `source_material_count`
+/// formulas. Exists so the untagged `FormulaSpec` variant has a
+/// distinguishing map key at deserialization. YAML: `{ source_dp: {} }`.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SourceDpSpec {}
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
@@ -203,4 +228,8 @@ pub enum AggregateSelector {
     HighestDp,
     LowestLevel,
     HighestLevel,
+    /// Lowest printed play cost among the candidate set. Used by
+    /// EX4-073 clause C ("delete 1 opp Digimon/Tamer with the lowest
+    /// play cost"). G-PLAY-COST-AGGREGATE.
+    LowestPlayCost,
 }

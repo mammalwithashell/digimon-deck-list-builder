@@ -364,15 +364,13 @@ fn bt8_097_main_deletes_opp_digimon_with_dp_lte_6000() {
 /// [Main]: multiple opponent Digimon present — all are swept (no player choice).
 /// Verifies the for_each is an automated sweep, not a targeted selection.
 ///
-/// NOTE G-FOR-EACH-DELETE-INDEX-SHIFT: `for_each` snapshots PermanentHandles (player,index)
-/// before iterating. When a Digimon at index 0 is deleted, permanents at higher indices
-/// shift down by 1. The handle for the second Digimon (originally index 1) becomes
-/// stale (now out-of-bounds or pointing to a different permanent). The second deletion
-/// silently no-ops via the `field_index >= battle_area.len()` guard.
-/// This test correctly documents the expected behavior (all deleted) but is ignored
-/// until the engine fix lands (iterate in reverse, or use permanent IDs instead of indices).
+/// G-FOR-EACH-DELETE-INDEX-SHIFT (closed): `for_each` now snapshots each
+/// matched permanent's STABLE top-card identity (`CardHandle`) and re-resolves
+/// the positional handle at the start of every iteration. When a Digimon at
+/// index 0 is deleted, the second permanent's iteration re-resolves to its new
+/// (shifted-down) index instead of going stale, so all eligible Digimon are
+/// swept. The fix is body-agnostic — correct for delete, return-to-hand, etc.
 #[test]
-#[ignore = "pending: G-FOR-EACH-DELETE-INDEX-SHIFT — for_each snapshot indices shift when first deletion removes perm at idx 0; second handle becomes stale and no-ops"]
 fn bt8_097_main_deletes_multiple_opp_digimon_with_no_player_choice() {
     let mut d1 = make_test_card("OPP-D1", "OppD1");
     d1.card_kind = CardKind::Digimon;

@@ -65,6 +65,7 @@ fn per_selected_drives_body_once_per_pick() {
         CompiledStep::SelectCountCappedMulti {
             of: CompiledPlayerRef::Opponent,
             zone: CompiledZone::Trash,
+            min: 0,
             max: digimon_dsl::compiled::CompiledCountBound::Literal(3),
             filter: CompiledPredicate::default(),
             bind_as: Some("picks".to_string()),

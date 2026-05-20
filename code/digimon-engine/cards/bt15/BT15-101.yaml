@@ -136,32 +136,19 @@ effects:
   #   - CanActivate: CardEffectCommons.CanUnsuspend on the source permanent.
   #   - Activate: IUnsuspendPermanents on [card.PermanentOfThisCard()].
   #
-  # G-DSL-EVENT-TARGET-IS-SELF [new — dsl]:
-  #   No DSL predicate compares the suspended-permanent handle to the source
-  #   permanent. The DSL `equals: [...]` predicate only compares integers
-  #   (literals + integer bindings via `get_literal`); `event_target` /
-  #   `source` permanent handles are not exposed as integer comparison values.
-  #   Until the predicate ships, the closest faithful DSL gate is
-  #   `event_target_owner: you` + `event_target_kind: digimon` (the AD1-014
-  #   pattern), which OVER-FIRES when an ally Digimon suspends instead of
-  #   only when this Digimon suspends. The over-fire wastes the OPT lockout
-  #   and offers a "may unsuspend self" prompt at the wrong moment.
-  #
-  #   Suggested DSL syntax: `event_target_is_source: true` BoolPredicate leaf
-  #   evaluating
-  #   `rctx.game.current_trigger_context?.event_permanent ==
-  #    Some(rctx.source_permanent_handle()?)`.
+  # The `event_permanent_is_source: true` BoolPredicate leaf gates the clause
+  # so it fires ONLY when the suspended permanent IS this card's permanent —
+  # exactly DCGO's `permanent == card.PermanentOfThisCard()` check. An ally
+  # Digimon suspending no longer over-fires the clause or wastes the OPT.
   #
   # `target: source` resolves to the source permanent (this card on field), so
-  # the unsuspend target itself is correct — only the gate is permissive.
+  # the unsuspend target itself is correct.
   - when: on_suspend
     active_when: { all_turns: true }
     once_per_turn: true
     optional: true
-    summary: "[All Turns][OPT] When this Digimon becomes suspended (over-fires on ally suspend pending G-DSL-EVENT-TARGET-IS-SELF), you may unsuspend it"
+    summary: "[All Turns][OPT] When this Digimon becomes suspended, you may unsuspend it"
     condition:
-      all_of:
-        - event_target_owner: you
-        - event_target_kind: digimon
+      event_permanent_is_source: true
     process:
       - unsuspend: { target: source }
