@@ -166,7 +166,7 @@ Implemented / audited in these batches:
 | `BT23-013` Jesmon | `PARTIAL` | Rush and Alliance. | Card-authoring only (Track J PR 3) — the substrate is RESOLVED: Atho/Rene/Por token (PR 1), the Sistermon hand/trash union play with name exclusion (`G-UNION-HAND-TRASH-NAME-EXCLUSION`, S2.2 — `select_union_zone` filter + `name_not_shared_by_field_digimon`), and the other-Digimon-played may-attack observer (`G-ALLY-PLAYED-MAY-ATTACK`, S2.1). |
 | `BT23-035` Dynasmon | `PARTIAL` | Barrier; top-security cost into -6000 DP board debuff. | Security-removed Security A. +1 / recovery tail. |
 | `BT23-047` Examon | `PARTIAL` | Piercing, Security A. +1, and declared green Lv.5 + blue Lv.5 Partition source requirement. | Five-target suspend; next-unsuspend lock; may attack; security-removed tail. |
-| `BT23-057` Gankoomon | `BLOCKED` | Load-only gap stub. | Multi-card trash-to-deck cost reduction; Hinukamuy token; dynamic play-cost delete. |
+| `BT23-057` Gankoomon | `BLOCKED` | Load-only gap stub. Hinukamuy token registered in `token_registry.rs` (Track J S2.3 — White/6000 DP/`<Alliance> <Reboot> <Blocker>`). | Multi-card trash-to-deck cost reduction; dynamic play-cost delete; production card body unauthored (Track J PR 3). |
 | `BT23-072` King Drasil_7D6 | `BLOCKED` | Load-only gap stub. | Hand-main source placement; played-Digimon keyword grant; breeding source play. |
 | `EX8-073` Gallantmon (X Antibody) | `BLOCKED` | Load-only gap stub. | Source-gated DP swings; delete-or-security fallback; memory aura immunity. |
 | `EX10-068` Digimon Emperor | `PARTIAL` | [On Play] delete play cost 5 or lower; [Security] play self. | Opponent distinct-color count; returned-card color binding into same-color hand/trash play. |
