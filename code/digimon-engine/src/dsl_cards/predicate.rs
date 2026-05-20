@@ -1340,8 +1340,18 @@ fn eval_card_fields(
         }
     }
     if let Some(of) = pred.name_not_shared_by_field_digimon {
-        // The candidate card's effective name — an overlay name (e.g. a
-        // name-change effect) takes precedence over the printed name.
+        // The candidate card's effective name. NOTE: this is a deliberate
+        // divergence from the sibling `name_is` / `name_contains` / `name_in`
+        // leaves above. Those treat an overlay name as an *alternative* match
+        // (`printed_match || overlay_match`) — a card can satisfy them via
+        // either its printed name or its overlaid name. This leaf instead uses
+        // the overlay name as a *replacement* for the printed name
+        // (`overlay.name.unwrap_or(data.card_name)`). Replacement is correct
+        // for exclusion semantics: a name-changed card's *effective / current*
+        // name is the overlay name, and that single effective name is what
+        // must be compared against field Digimon to decide exclusion. ORing in
+        // the printed name would wrongly exclude on a name the card no longer
+        // has.
         let candidate_name = overlay
             .and_then(|o| o.name.as_deref())
             .unwrap_or(data.card_name.as_str());
