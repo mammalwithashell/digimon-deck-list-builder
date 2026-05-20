@@ -1558,7 +1558,7 @@ pub struct SelectMaterialArgs {
 ///
 /// ```yaml
 /// - select_materials:
-///     target: <carrier-binding>   # battle-area permanent (or BREEDING_TARGET)
+///     of_permanent: <carrier-binding>   # battle-area permanent (or BREEDING_TARGET)
 ///     max: 4
 ///     uniqueness: name            # "1 of each different name"
 ///     filter: { trait_has: "Royal Knight" }
@@ -1573,7 +1573,7 @@ pub struct SelectMaterialArgs {
 #[serde(deny_unknown_fields)]
 pub struct SelectMaterialsArgs {
     /// Carrier permanent whose digivolution sources are the candidate pool.
-    pub target: BindingRef,
+    pub of_permanent: BindingRef,
     /// Upper bound on the number of sources the player may pick.
     pub max: CountBound,
     #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]

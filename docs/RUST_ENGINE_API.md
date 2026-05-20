@@ -4056,7 +4056,7 @@ true` composes — it suppresses every played source's [On Play] enqueue.
 
 ```yaml
 - select_materials:
-    target: carrier              # battle-area carrier permanent
+    of_permanent: carrier        # battle-area carrier permanent
     max: 4
     uniqueness: name             # "1 of each different name"
     filter: { trait_has: "Royal Knight" }
@@ -4067,6 +4067,16 @@ true` composes — it suppresses every played source's [On Play] enqueue.
     cost_delta: free
     suppress_on_play: true
 ```
+
+`select_materials` exposes its carrier-binding field as `of_permanent`, matching
+the single-pick sibling `select_material` for authoring-surface consistency.
+
+**Batch `play_from_materials` `bind_as` binds only the last-played permanent.**
+When `source_index` is a batch `CardList` (as produced by `select_materials`),
+`play_from_materials`'s `bind_as` records *only the last* permanent it played —
+not all of them. A future card needing "do X to each played source" will
+require a `PermanentList` binding; until then only the last-played source is
+addressable downstream.
 
 A `BREEDING_TARGET`-sentinel carrier binding is accepted but resolves to zero
 candidates today — the source-select action range covers only the 14

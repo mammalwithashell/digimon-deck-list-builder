@@ -1996,7 +1996,7 @@ fn compile_step(
             optional: a.optional,
         },
         S::SelectMaterials(a) => CompiledStep::SelectMaterials {
-            of_permanent: compile_binding_ref(&a.target),
+            of_permanent: compile_binding_ref(&a.of_permanent),
             max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             uniqueness: a.uniqueness.map(compile_distinct_by),

@@ -1042,7 +1042,7 @@ EX1-021 production YAML authored.
 - DSL syntax (landed):
   ```yaml
   - select_materials:
-      target: <carrier-binding>     # battle-area permanent
+      of_permanent: <carrier-binding>  # battle-area permanent (matches select_material)
       max: 4
       uniqueness: name              # "1 of each different name"
       filter: { trait_has: "Royal Knight" }
@@ -1053,6 +1053,7 @@ EX1-021 production YAML authored.
       cost_delta: free
       suppress_on_play: true        # composes with the S1.1 flag
   ```
+- Note: batch `play_from_materials` `bind_as` binds only the *last-played* permanent. A future card needing "do X to each played source" will require a `PermanentList` binding.
 - Residual (breeding-area carriers): `select_materials` ACCEPTS a `BREEDING_TARGET`-sentinel carrier binding, but the source-select action range (`SOURCE_SELECT_START..SOURCE_SELECT_END`, 14 field slots) has no encoding for a breeding-area carrier's sources; a breeding carrier resolves to zero candidates and the step no-ops gracefully. Picking sources from a breeding-resident carrier (King Drasil's printed text) needs either a distinct action encoding or an `ACTION_SPACE_SIZE` increase — deferred. Substrate is proven for battle-area carriers, which is the reusable primitive.
 - Gap kind: dsl + engine. CLOSED for battle-area source plays (single, sequential, and batch / different-name). Breeding-carrier source picks remain open as a narrower action-encoding residual.
 - First reported: 2026-05-03 (EX4-060 Omnimon Alter-S, batch-implement-cards-rust-dsl). Sibling clause documented earlier under BT22-015 Decode.

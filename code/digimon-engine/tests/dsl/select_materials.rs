@@ -377,7 +377,7 @@ effects:
   - when: when_digivolving
     process:
       - select_materials:
-          target: king_drasil
+          of_permanent: king_drasil
           max: 4
           uniqueness: name
           filter:
@@ -411,7 +411,7 @@ effects:
             assert_eq!(
                 of_permanent,
                 &CompiledBindingRef::Named("king_drasil".to_string()),
-                "target carrier binding must lower onto of_permanent"
+                "of_permanent carrier binding must lower onto of_permanent"
             );
             assert_eq!(max, &CompiledCountBound::Literal(4), "max: 4 must lower");
             assert_eq!(
