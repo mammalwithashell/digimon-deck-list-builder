@@ -26,14 +26,31 @@ effects:
   #    [Puppet] trait Digimon, this Digimon may digivolve into a Digimon card
   #    with the [Puppet] trait in the hand without paying the cost."
   #
-  # The cost body deletion can shift battle-area indices before
-  # `effect_initiated_digivolve { target: source }` resolves. Audit (2026-05-15)
-  # flagged the substrate as UNCLEAR — write the body and unignore tests in
-  # ex9_032.rs to confirm whether `ctx.source_permanent` stays stable across
-  # the cost-payment deletion, or to surface the concrete failure mode.
+  # The cost body deletion shifts battle-area indices before
+  # `effect_initiated_digivolve { target: source }` resolves. PUPPETS-G018
+  # made `Source` ref resolution re-locate the live carrier by the source
+  # card's stable `card_index` (see `dsl_cards/binding_ref.rs`), so the
+  # self-digivolve lands on Karakurumon even after the cost deletion shifts
+  # indices.
+  #
+  # `condition` is the cost preflight (G-COSTED-SELF-DIGIVOLVE-PREFLIGHT):
+  # the effect only fires when a legal cost body — a Token or *other* Puppet
+  # Digimon, i.e. not Karakurumon itself — is on the field. Without it the
+  # clause would present an empty (PASS-only) prompt.
   - when: [on_play, when_digivolving]
     optional: true
     summary: "[OnPlay/WhenDigivolving] Delete 1 Token/other Puppet, free-digivolve into a Puppet hand card"
+    condition:
+      count_gte:
+        filter:
+          all_of:
+            - other: true
+            - any_of:
+                - kind: token
+                - all_of:
+                    - kind: digimon
+                    - trait_has: Puppet
+        n: 1
     process:
       - select_own_permanent:
           bind_as: cost_body
