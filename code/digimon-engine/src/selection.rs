@@ -60,6 +60,23 @@ impl std::ops::BitOrAssign for UnionZoneSet {
     }
 }
 
+/// The concrete zone a `select_union_zone` pick came from. A union-zone
+/// selection spans hand ∪ trash; the resulting `CardHandle` alone does not
+/// record *which* zone the card was in. `UnionZoneOrigin` is carried in the
+/// selection callback so a downstream consumer (e.g. `play_union_bound_free`)
+/// can play the card back from its true origin zone.
+///
+/// Only `Hand` / `Trash` are modeled — the only two zones the union-zone
+/// selection currently spans (`UnionZoneSet::HAND | UnionZoneSet::TRASH`).
+/// Extend in lockstep with `UnionZoneSet` if future tasks widen the bitfield.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum UnionZoneOrigin {
+    /// The card was picked from the player's hand.
+    Hand,
+    /// The card was picked from the player's trash.
+    Trash,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SourceSelectionRef {
     pub permanent: PermanentHandle,

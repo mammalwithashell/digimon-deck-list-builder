@@ -104,6 +104,12 @@ pub(crate) fn resolve_named(name: &str, bindings: &Bindings) -> Option<ResolvedB
             player: r.player,
             index: crate::action::space::BREEDING_TARGET as u8,
         })),
+        // A union-zone pick surfaces to generic handle-consuming steps as a
+        // plain `Card` (just the handle). `play_union_bound_free` reads the
+        // binding directly via `Bindings::get_union_card` when it needs the
+        // origin zone — the origin is intentionally not modeled in
+        // `ResolvedBinding`, which has no zone-tagged card variant.
+        BindingValue::UnionCard { card, .. } => Some(ResolvedBinding::Card(card)),
     }
 }
 

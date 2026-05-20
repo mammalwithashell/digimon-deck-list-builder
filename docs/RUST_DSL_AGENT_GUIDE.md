@@ -233,7 +233,7 @@ Selections are the heart of agent-safe card scripting. They install a `PendingSe
 Use:
 
 - Field permanents: `select_own_permanent`, `select_opponent_permanent`, `select_any_permanent`, `select_own_breeding_permanent`.
-- Zones: `select_hand`, `select_trash`, `select_security`, `select_union_zone`.
+- Zones: `select_hand`, `select_trash`, `select_security`, `select_union_zone`. A `select_union_zone` pick (hand ∪ trash) records the **origin zone** of the chosen card in its `bind_as` binding, not just the card handle. Pair it with `play_union_bound_free: { binding: <name>, bind_as: <opt> }` to replay that card for free from its true zone (`play_from_hand_free` for a hand pick, `play_from_trash` Free for a trash pick). If the `select_union_zone` is `optional`, declining still runs all mandatory tail steps.
 - Reveal pools: `select_reveal`, `select_reveal_buckets`, `select_ordered_permutation`, `select_count_capped_multi`.
 - Stacks / sources: `select_own_sources`, `select_material`, `digi_burst` (Burst-style material picks), `select_dna_pair`.
 - Modal / cost shapes: `select_effect_choice` for printed modal choices, `select_opponent_dp_budget` for "delete Digimon up to DP X total".
@@ -262,7 +262,7 @@ Use these instead of mutating engine internals:
 
 - Hand / deck / trash: `draw`, `trash_from_top`, `add_to_hand_from_deck`, `add_to_hand_from_trash`, `add_to_hand_from_security`, `trash_from_hand_by_index`, `shuffle_deck`, `return_all_trash_to_deck_bottom`, `trash_opponent_hand_to_count`.
 - Reveal: `reveal_top_deck`, `add_to_hand_from_reveal`, `return_to_deck_from_reveal`, `trash_from_reveal`, `place_remainder_on_deck`.
-- Field: `play_from_hand`, `play_from_hand_free`, `play_from_trash`, `play_from_trash_free`, `play_from_security`, `play_from_materials`, `return_to_hand`, `return_to_deck`, `delete_permanent`, `delete_bound_permanents`, `suspend`, `unsuspend`, `de_digivolve`, `hatch`, `play_token`, `bind_permanent_property` (capture a permanent's static metadata into a binding for later predicate lookups).
+- Field: `play_from_hand`, `play_from_hand_free`, `play_from_trash`, `play_from_trash_free`, `play_union_bound_free` (play a `select_union_zone`-bound card for free from its true origin zone — see Selection note below), `play_from_security`, `play_from_materials`, `return_to_hand`, `return_to_deck`, `delete_permanent`, `delete_bound_permanents`, `suspend`, `unsuspend`, `de_digivolve`, `hatch`, `play_token`, `bind_permanent_property` (capture a permanent's static metadata into a binding for later predicate lookups).
 - Stack / source: `place_as_bottom_source`, `trash_top_source`, `trash_all_sources`, `select_own_sources`, `trash_selected_sources`, `play_selected_sources_free`, `trash_top_n_digivolution_cards_of_each`.
 - Security: `trash_top_security`, `trash_bottom_security`, `add_top_security_to_hand`, `may_add_top_security_to_hand`, `recover`, `place_on_security`, `add_this_option_to_hand`, `search_own_security_stack`, `mark_security_face_up`, `shuffle_security`, `security_place_stacked_card`, `security_place_top_stacked_card`, `bounce_self`, `place_self_at_security`, `place_self_option_at_security`. The `..._and_cancel_replacement` and `..._and_handle_replacement` variants exist for replacement-flow card text (`trash_top_security_and_cancel_replacement`, `place_permanent_on_security_and_handle_replacement`, etc.) — use them only inside a `kind: replacement` clause's `process:`.
 

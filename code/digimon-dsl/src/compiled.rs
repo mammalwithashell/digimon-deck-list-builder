@@ -888,6 +888,14 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         trash_index: CompiledBindingRef,
     },
+    /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
+    /// true origin zone (hand vs trash). `binding` names a `select_union_zone`
+    /// `bind_as`; the origin zone is carried in the binding value.
+    PlayUnionBoundFree {
+        binding: String,
+        /// Bind the just-played permanent handle for use in later steps.
+        bind_as: Option<String>,
+    },
     PlayFromSecurity,
     PlayFromMaterials {
         target: CompiledBindingRef,

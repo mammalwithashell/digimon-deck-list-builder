@@ -141,6 +141,9 @@ pub enum StepSpec {
     PlayFromHandFree(PlayFromHandFreeArgs),
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
+    /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
+    /// true origin zone (hand vs trash), recovered from the binding.
+    PlayUnionBoundFree(PlayUnionBoundFreeArgs),
     PlayFromSecurity(PlayFromSecurityArgs),
     PlayFromMaterials(PlayFromMaterialsArgs),
     PlaySelectedSourcesFree(TrashSelectedSourcesArgs),
@@ -298,6 +301,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
             StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
+            StepSpec::PlayUnionBoundFree(v) => kv!(s, "play_union_bound_free", v),
             StepSpec::PlayFromSecurity(v) => kv!(s, "play_from_security", v),
             StepSpec::PlayFromMaterials(v) => kv!(s, "play_from_materials", v),
             StepSpec::PlaySelectedSourcesFree(v) => kv!(s, "play_selected_sources_free", v),
@@ -484,6 +488,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
             "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
+            "play_union_bound_free" => StepSpec::PlayUnionBoundFree(map.next_value()?),
             "play_from_security" => StepSpec::PlayFromSecurity(map.next_value()?),
             "play_from_materials" => StepSpec::PlayFromMaterials(map.next_value()?),
             "play_selected_sources_free" => StepSpec::PlaySelectedSourcesFree(map.next_value()?),
@@ -635,6 +640,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_from_hand_free",
                         "play_from_trash",
                         "play_from_trash_free",
+                        "play_union_bound_free",
                         "play_from_security",
                         "play_from_materials",
                         "play_selected_sources_free",
@@ -1273,6 +1279,27 @@ pub enum CostDelta {
 pub enum CostDeltaKeyword {
     Free,
     Printed,
+}
+
+/// `play_union_bound_free:` args — play a card previously picked by a
+/// `select_union_zone` step, **without paying its cost**, from its true
+/// origin zone (hand vs trash). `binding` names the `select_union_zone`
+/// binding (a `bind_as` from that step). The origin zone is recorded in the
+/// binding itself, so this step needs no zone parameter.
+///
+/// PUPPETS-G014 substrate. Consumed by EX11-022 / ST19-08 / BT22-098-shape
+/// "play 1 of the chosen cards … without paying the cost" effects.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayUnionBoundFreeArgs {
+    /// Name of the `select_union_zone` binding to consume. Must name a
+    /// `bind_as` declared by an earlier `select_union_zone` step — the
+    /// binding carries the origin zone the step replays the card from.
+    pub binding: String,
+    /// Bind the just-played permanent handle for use in later steps in the
+    /// same body (e.g. a Task 11 cleanup step). `None` preserves no binding.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

@@ -1731,6 +1731,10 @@ fn compile_step(
             of: compile_player_ref(a.of),
             trash_index: compile_binding_ref(&a.hand_index),
         },
+        S::PlayUnionBoundFree(a) => CompiledStep::PlayUnionBoundFree {
+            binding: a.binding.clone(),
+            bind_as: a.bind_as.clone(),
+        },
         S::PlayFromSecurity(_) => CompiledStep::PlayFromSecurity,
         S::PlayFromMaterials(a) => CompiledStep::PlayFromMaterials {
             target: compile_binding_ref(&a.target),

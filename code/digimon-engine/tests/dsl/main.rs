@@ -116,6 +116,7 @@ mod security_boundary;
 mod security_stack_steps;
 mod selection_dp_extrema;
 mod track_e_reveal_ordering;
+mod union_zone_origin_play;
 mod source_stack_aggregates;
 mod standalone_declaratives_exit;
 mod validator;

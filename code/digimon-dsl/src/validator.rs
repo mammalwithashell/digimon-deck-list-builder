@@ -1159,6 +1159,17 @@ fn validate_step_binding_scope(
         StepSpec::PlayFromMaterials(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::PlayUnionBoundFree(args) => {
+            // The `binding` must name an in-scope `select_union_zone` bind_as.
+            report_if_undeclared_binding(
+                &args.binding,
+                &format!("{prefix}.binding"),
+                card_id,
+                scope,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::BindPermanentProperty(args) => {
             scope.insert(args.bind_as.clone());
         }

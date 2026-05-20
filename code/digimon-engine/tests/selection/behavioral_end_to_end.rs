@@ -267,7 +267,7 @@ fn permutation_then_opponent_union_zone_tech_flow() {
             "Opponent: choose a card from your opponent's hand or trash",
             false,
             |_, _| true,
-            move |resolve_ctx, chosen_handle| {
+            move |resolve_ctx, chosen_handle, _origin| {
                 let player_ref = resolve_ctx.game.player(p0);
                 if let Some(idx) = player_ref
                     .hand

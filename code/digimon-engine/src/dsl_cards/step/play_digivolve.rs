@@ -30,6 +30,7 @@ use crate::dsl_cards::step::resolve_player;
 use crate::effect_context::EffectContext;
 use crate::enums::CardSourceRef;
 use crate::enums::CostDelta;
+use crate::selection::UnionZoneOrigin;
 
 /// Translate the IR's `CompiledCostDelta` to the engine's `CostDelta`.
 ///
@@ -170,6 +171,51 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 if let Some(h) = handle {
                     if let Some(played) = ctx.play_from_trash_free_unsuspended(h) {
                         bindings.record_played(played);
+                    }
+                }
+            }
+            true
+        }
+
+        // ── Origin-preserving union-zone play (PUPPETS-G014) ──────────────
+        CompiledStep::PlayUnionBoundFree { binding, bind_as } => {
+            // Resolve the union-zone binding: the picked card, the zone it
+            // came from (hand vs trash), and the owner of that zone. The
+            // binding is read directly (not via `resolve_binding_ref`) so the
+            // origin tag is preserved — `ResolvedBinding` has no zone-tagged
+            // card variant. Missing / wrong-kind binding: silent no-op, per
+            // the module strictness convention.
+            if let Some((card, origin, owner)) = bindings.get_union_card(binding) {
+                let played = match origin {
+                    UnionZoneOrigin::Hand => {
+                        // Locate the card in the owner's hand by handle —
+                        // the index may have shifted since selection.
+                        ctx.game
+                            .player(owner)
+                            .hand
+                            .iter()
+                            .position(|c| c.handle() == card)
+                            .and_then(|idx| ctx.play_from_hand_free(owner, idx))
+                    }
+                    UnionZoneOrigin::Trash => {
+                        // Locate the card in the owner's trash by handle and
+                        // play it for free (CostDelta::Free → no cost paid).
+                        ctx.game
+                            .player(owner)
+                            .trash
+                            .iter()
+                            .position(|c| c.handle() == card)
+                            .and_then(|idx| {
+                                ctx.play_from_trash_with_cost(owner, idx, CostDelta::Free)
+                            })
+                    }
+                };
+                if let Some(played) = played {
+                    bindings.record_played(played);
+                    // Expose the played permanent's handle for later steps
+                    // (e.g. a Task 11 cleanup), mirroring PlayFromHandFree.
+                    if let Some(name) = bind_as {
+                        bindings.insert_permanent(name, played);
                     }
                 }
             }
