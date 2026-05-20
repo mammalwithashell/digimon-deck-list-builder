@@ -1020,7 +1020,7 @@ fn eval_event_fields(
         let Some(data) = rctx.game.card_data_for_handle(card) else {
             return false;
         };
-        if data.colors.len() as u8 != want_count {
+        if distinct_color_count(&data.colors) as u8 != want_count {
             return false;
         }
     }

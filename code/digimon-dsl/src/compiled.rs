@@ -255,10 +255,8 @@ pub struct CompiledPredicate {
     pub event_card_trait_has: Option<String>,
     pub event_card_name_contains: Option<String>,
     /// Every color of the triggering event card must be within this set.
-    /// PUPPETS-G023.
     pub event_card_color_only: Option<Vec<CompiledColor>>,
     /// The triggering event card must have exactly this many distinct colors.
-    /// PUPPETS-G023.
     pub event_card_color_count: Option<u8>,
     pub event_permanent_is_source: Option<bool>,
     pub event_is_effect_initiated: Option<bool>,
