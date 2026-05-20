@@ -6,9 +6,13 @@ pub const PROFILE_ID: &str = "standard_full_v2";
 pub const GAME_MODE: &str = v2_lite::GAME_MODE;
 pub const VERSION: u32 = v2_lite::VERSION;
 pub const TENSOR_VERSION: u16 = v2_lite::TENSOR_VERSION;
-pub const FEATURE_SCHEMA_VERSION: &str = "standard_full_v2.1";
+// Bumped to .2 in Task S1.3: ACTION_SPACE_SIZE 2168 -> 2192 grows the
+// `action_id_features` section by 24 rows (24 * 16 = 384 floats), shifting
+// `reserved` and changing `tensor_size`. The LAYOUT_HASH below is recomputed
+// for the new layout.
+pub const FEATURE_SCHEMA_VERSION: &str = "standard_full_v2.2";
 pub const LAYOUT_HASH: &str =
-    "sha256:ec4f1f8233faaa0b5d36e1b3864d4dc72a07300ce997ad4d4f4e92bf7eccaf8f";
+    "sha256:4b1d0ef2a9c481c029bf267b3822c41711f8be58e6c3a2cd6fe44d77622e91a4";
 
 pub const GLOBAL_FEATURES_SIZE: usize = v2_lite::GLOBAL_FEATURES_SIZE;
 pub const PLAYER_SUMMARY_SIZE: usize = v2_lite::PLAYER_SUMMARY_SIZE;

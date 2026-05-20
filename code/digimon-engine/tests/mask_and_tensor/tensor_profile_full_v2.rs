@@ -11,10 +11,13 @@ fn standard_full_v2_layout_matches_spec() {
     assert_eq!(profile.game_mode, "standard");
     assert_eq!(profile.version, 2);
     assert_eq!(profile.tensor_version, 2);
-    assert_eq!(profile.feature_schema_version, "standard_full_v2.1");
-    assert_eq!(profile.tensor_size, 43008);
+    // Task S1.3: ACTION_SPACE_SIZE 2168 -> 2192 grows action_id_features by
+    // 24 rows (24 * 16 = 384 floats); tensor_size 43008 -> 43392, the
+    // schema version bumps to .2, and `reserved` shifts down by 384.
+    assert_eq!(profile.feature_schema_version, "standard_full_v2.2");
+    assert_eq!(profile.tensor_size, 43392);
     assert_eq!(profile.card_id_slot_count, 542);
-    assert_eq!(profile.scalar_slot_count, 42466);
+    assert_eq!(profile.scalar_slot_count, 42850);
 
     let expected_sections = [
         ("global_features", 0, &[64][..], 64),
@@ -24,8 +27,8 @@ fn standard_full_v2_layout_matches_spec() {
         ("known_zone_cards", 3968, &[120, 8][..], 960),
         ("decision_context", 4928, &[64][..], 64),
         ("pending_choice_features", 4992, &[32, 96][..], 3072),
-        ("action_id_features", 8064, &[2168, 16][..], 34688),
-        ("reserved", 42752, &[256][..], 256),
+        ("action_id_features", 8064, &[2192, 16][..], 35072),
+        ("reserved", 43136, &[256][..], 256),
     ];
 
     for (id, start, shape, len) in expected_sections {
@@ -45,7 +48,7 @@ fn standard_full_v2_positions_cover_tensor_once() {
     let (cards, scalars) = profile.positions();
 
     assert_eq!(cards.len(), 542);
-    assert_eq!(scalars.len(), 42466);
+    assert_eq!(scalars.len(), 42850);
     assert_eq!(cards.len() + scalars.len(), profile.tensor_size);
 
     let card_set: std::collections::BTreeSet<_> = cards.iter().copied().collect();

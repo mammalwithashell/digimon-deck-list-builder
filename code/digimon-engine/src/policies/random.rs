@@ -53,7 +53,7 @@ mod tests {
         // assert via the same filter the implementation uses. A full
         // DebugRunner-driven integration test lives in
         // `tests/policies_random.rs`.
-        let mask = vec![0.0f32; 2168];
+        let mask = vec![0.0f32; crate::action::space::ACTION_SPACE_SIZE];
         let valid: Vec<u16> = mask
             .iter()
             .enumerate()
@@ -66,7 +66,7 @@ mod tests {
     fn seeded_is_deterministic() {
         let mut a = RandomPolicy::new(Some(7));
         let mut b = RandomPolicy::new(Some(7));
-        let mut mask = vec![0.0f32; 2168];
+        let mut mask = vec![0.0f32; crate::action::space::ACTION_SPACE_SIZE];
         for i in 0..100 {
             mask[i] = 1.0;
         }
