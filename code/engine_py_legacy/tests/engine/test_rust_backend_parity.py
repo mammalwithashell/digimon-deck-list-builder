@@ -69,7 +69,7 @@ def test_env_swap_via_backend_env_var(monkeypatch):
     obs, info = env.reset()
     assert obs.shape[0] > 0
     assert "action_mask" in info
-    assert info["action_mask"].shape == obs.shape[:0] + (2168,)
+    assert info["action_mask"].shape == obs.shape[:0] + (2192,)
     # Confirm we really got the Rust runner.
     assert type(env.runner).__name__ == "RustHeadlessGame"
 
