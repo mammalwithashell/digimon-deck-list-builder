@@ -291,7 +291,9 @@ class TestLoadImplementedCardIds:
 class TestActionAndTensorConstants:
     def test_action_space_size(self):
         from digimon_engine import ACTION_SPACE_SIZE
-        assert ACTION_SPACE_SIZE == 2168
+        # Task S1.3 raised the action space 2168 -> 2192 (appended a
+        # breeding-carrier source-selection sub-range).
+        assert ACTION_SPACE_SIZE == 2192
 
     def test_tensor_size(self):
         from digimon_engine import TENSOR_SIZE

@@ -9,7 +9,7 @@ describe('toTensorSummary', () => {
       profile_id: 'standard_v1',
       profile_version: 1,
       tensor_size: 1375,
-      mask_size: 2168,
+      mask_size: 2192,
       legal_action_count: 12,
       card_id_slot_count: 520,
       scalar_slot_count: 855,
@@ -34,7 +34,7 @@ describe('engine trace types', () => {
       profileId: 'standard_v1',
       profileVersion: 1,
       tensorSize: 1375,
-      maskSize: 2168,
+      maskSize: 2192,
       legalActionCount: 4,
       cardIdSlotCount: 520,
       scalarSlotCount: 855,
@@ -64,7 +64,7 @@ describe('engine trace types', () => {
     };
 
     expect(trace.tensorSummary?.tensorSize).toBe(1375);
-    expect(trace.tensorSummary?.maskSize).toBe(2168);
+    expect(trace.tensorSummary?.maskSize).toBe(2192);
     expect(trace.decoded.label).toBe('Pass / decline');
   });
 });

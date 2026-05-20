@@ -69,12 +69,14 @@ def test_get_standard_full_v2_tensor_profile_from_rust():
 
     profile = get_tensor_profile("standard_full_v2")
 
+    # Task S1.3: action space 2168 -> 2192 grows action_id_features by 24
+    # rows (24 * 16 = 384 floats); tensor_size 43008 -> 43392, schema v2.2.
     assert profile.id == "standard_full_v2"
-    assert profile.tensor_size == 43008
+    assert profile.tensor_size == 43392
     assert profile.tensor_version == 2
-    assert profile.feature_schema_version == "standard_full_v2.1"
+    assert profile.feature_schema_version == "standard_full_v2.2"
     assert profile.card_id_slot_count == 542
-    assert profile.scalar_slot_count == 42466
+    assert profile.scalar_slot_count == 42850
 
     action_section = next(
         (
@@ -86,7 +88,7 @@ def test_get_standard_full_v2_tensor_profile_from_rust():
     )
     assert action_section is not None
     assert action_section.offset == 8064
-    assert action_section.shape == (2168, 16)
+    assert action_section.shape == (2192, 16)
     assert "standard_full_v2" in list_tensor_profiles()
 
     if hasattr(digimon_engine, "list_observation_profiles"):
@@ -215,8 +217,8 @@ def test_digimon_env_accepts_standard_full_v2_under_rust_backend(monkeypatch):
     obs, info = env.reset(seed=7)
 
     assert env.tensor_profile == "standard_full_v2"
-    assert env.observation_space.shape == (43008,)
-    assert obs.shape == (43008,)
+    assert env.observation_space.shape == (43392,)
+    assert obs.shape == (43392,)
     assert info["tensor_profile"] == "standard_full_v2"
 
 
@@ -247,7 +249,7 @@ def test_feature_extractor_accepts_standard_full_v2():
     from digimon_gym.tensor_profiles import get_tensor_profile
 
     profile = get_tensor_profile("standard_full_v2")
-    assert profile.tensor_size == 43008
+    assert profile.tensor_size == 43392
     space = spaces.Box(
         low=-10.0,
         high=20001.0,
@@ -259,7 +261,7 @@ def test_feature_extractor_accepts_standard_full_v2():
         out = extractor(torch.zeros((2, profile.tensor_size), dtype=torch.float32))
 
     assert extractor.card_id_indices.numel() == 542
-    assert extractor.scalar_indices.numel() == 42466
+    assert extractor.scalar_indices.numel() == 42850
     assert tuple(out.shape) == (2, 512)
 
 

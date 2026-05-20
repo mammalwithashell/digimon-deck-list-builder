@@ -326,7 +326,7 @@ def test_training_run_metadata_round_trips_tensor_profile_fields(tmp_path):
         feature_schema_version="standard_lite_v2.1",
         tensor_size=8320,
         tensor_layout_hash="sha256:test",
-        action_space_size=2168,
+        action_space_size=2192,
         card_registry_capacity=4096,
         embedding_dim=16,
     )
@@ -339,7 +339,7 @@ def test_training_run_metadata_round_trips_tensor_profile_fields(tmp_path):
     assert loaded.feature_schema_version == "standard_lite_v2.1"
     assert loaded.tensor_size == 8320
     assert loaded.tensor_layout_hash == "sha256:test"
-    assert loaded.action_space_size == 2168
+    assert loaded.action_space_size == 2192
     assert loaded.card_registry_capacity == 4096
     assert loaded.embedding_dim == 16
 
