@@ -22,11 +22,49 @@ effects:
                   - kind: digimon
                   - trait_has: Puppet
 
-  # The [Hand][Main] effect is omitted rather than approximated. The current
-  # hand-action mask can gate on Arisa/Shoemon permanents, but this card also
-  # needs the hand effect to be hidden when no [ShoeShoemon] exists in trash.
-  # Keep the ignored tests in bt22_036.rs until that preflight is proven.
+  # [Hand][Main] If you have [Arisa Kinosaki], by placing 1 [ShoeShoemon]
+  # from your trash as any of your [Shoemon]'s bottom digivolution card, it
+  # digivolves into this card for a digivolution cost of 3, ignoring
+  # digivolution requirements. (PUPPETS-G020.)
   #
+  # The `condition:` is the hand-[Main] activation-mask preflight: the action
+  # bit only appears when Arisa is in play, a Shoemon permanent is on the
+  # field, and a [ShoeShoemon] card exists in trash (the placement cost must
+  # be payable). `name_is` is exact-match so "ShoeShoemon" never satisfies a
+  # "Shoemon" gate and vice versa.
+  - when: main_from_hand
+    summary: "[Hand][Main] Place a ShoeShoemon from trash under a Shoemon, then digivolve into this card for cost 3 ignoring requirements"
+    condition:
+      all_of:
+        - any_field_permanent:
+            of: you
+            predicate: { name_is: "Arisa Kinosaki" }
+        - any_field_permanent:
+            of: you
+            predicate: { kind: digimon, name_is: "Shoemon" }
+        - count_gte:
+            filter:
+              owner: you
+              zone: [trash]
+              name_is: "ShoeShoemon"
+            n: 1
+    process:
+      - select_trash:
+          of: you
+          bind_as: shoeshoemon
+          filter: { name_is: "ShoeShoemon" }
+          prompt: "Choose 1 ShoeShoemon from your trash"
+      - select_own_permanent:
+          bind_as: shoemon
+          filter: { kind: digimon, name_is: "Shoemon" }
+          prompt: "Choose 1 of your Shoemon to place ShoeShoemon under and digivolve"
+      - place_as_bottom_source: { source: shoeshoemon, target: shoemon }
+      - effect_initiated_digivolve:
+          target: shoemon
+          from_hand: self
+          cost: 3
+          ignore_requirements: true
+
   # Inherited [All Turns][Once Per Turn] leave-prevention. Mirrors DCGO's
   # WhenRemoveField inherited Substitute handler: the carrier is the threatened
   # subject, and this source card is the attribution.
