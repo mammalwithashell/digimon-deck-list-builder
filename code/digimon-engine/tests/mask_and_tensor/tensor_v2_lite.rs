@@ -402,8 +402,9 @@ fn v2_lite_breeding_carrier_encodes_twelfth_source_slot() {
     let breeding_base = v2_lite::OFF_PERMANENT_SLOTS + 14 * v2_lite::PERMANENT_SLOT_SIZE;
     assert_eq!(tensor[breeding_base], 1.0, "breeding slot 14 occupied");
 
-    // Sources 0..count are stored top-of-stack last in card_sources; the
-    // writer indexes them positionally. Every source index must be observable.
+    // Assert every card-source SLOT index 0..count of the permanent's
+    // encoded `card_sources` is observable (non-zero card identity) in the
+    // tensor.
     for source_idx in 0..count {
         let source_base = breeding_base
             + v2_lite::PERM_SOURCE_START_OFFSET

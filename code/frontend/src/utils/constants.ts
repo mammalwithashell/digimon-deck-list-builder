@@ -34,7 +34,6 @@ export const ACTION = {
 // Board layout constants
 export const FIELD_SLOTS = 14;
 export const BREEDING_SLOT = FIELD_SLOTS;  // 14
-export const MAX_SOURCES = 11;
 
 // Attack formula: 100 + attacker * 15 + target
 export const ATTACK_TARGETS_PER_SLOT = 15;
