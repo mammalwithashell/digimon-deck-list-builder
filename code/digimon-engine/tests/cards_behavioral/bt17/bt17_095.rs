@@ -744,47 +744,72 @@ fn bt17_095_replacement_dna_consumes_leaving_subject_into_merged_permanent() {
 // Section 4 — Clause C: [Security] (inherited) Tai Kamiya / Matt Ishida
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Smoke test: firing the Security clause on a placed BT17-095 with no
-/// eligible Tai/Matt cards anywhere completes without panic.
+/// With BT17-095 in the defender's security and the defender holding no
+/// eligible [Tai Kamiya]/[Matt Ishida] card in hand or trash, a real attack on
+/// the defender's security still runs BT17-095's inherited [Security] clause:
+/// the optional union-zone play has no eligible target (nothing played), but
+/// the mandatory `add_this_option_to_hand` tail still routes BT17-095 to the
+/// defender's hand and removes it from the security stack.
+///
+/// Driven through the real combat/security-check path. The previous
+/// `enqueue_triggered(SecuritySkill, Permanent(..))` shortcut became a silent
+/// no-op for inherited-scope [Security] clauses after PR #490's
+/// `enqueue_from_permanent` over-fire fix (the top-card scan now skips
+/// inherited-scoped effects), so the old "no panic" assertion passed vacuously
+/// — the effect never fired at all. This rewrite asserts real post-state.
 #[test]
 fn bt17_095_security_no_panic_with_empty_hand_and_trash() {
+    let mut attacker = make_filler("BT17095-ATK-EMPTY");
+    attacker.dp = Some(6000);
+
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT17_095_YAML)
         .expect("BT17-095 YAML parses")
+        .add_card(attacker.clone())
         .add_card(make_filler("FILL"))
         .memory(10)
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
+        .security(1, &["BT17-095"])
         .start();
 
-    let field_handle = runner.place_on_field(0, "BT17-095", Some(0));
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let attacker_handle = runner.place_on_field(0, "BT17095-ATK-EMPTY", Some(0));
+    assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
+    assert_eq!(runner.trash_size(1), 0, "precondition: defender trash empty");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: BT17-095 in security"
     );
-    runner.game.drain_effect_queue();
 
-    // Drain any selections — the workaround installs a zone choice prompt.
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 30 {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        let _ = runner.game.resolve_selection(player, action);
-        runner.game.drain_effect_queue();
-        steps += 1;
-    }
-    // Primary assertion: no panic.
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
+
+    // No eligible Tai/Matt card in hand or trash → nothing played.
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "no card played from an empty hand and trash"
+    );
+    // The mandatory tail still ran: BT17-095 left security and went to hand.
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "BT17-095 left the security stack"
+    );
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "BT17-095's mandatory add_this_option_to_hand tail must add it to the \
+         defender's hand even with an empty hand and trash"
+    );
+    let hand_id = runner.game.players[1].hand[0]
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(
+        hand_id, "BT17-095",
+        "the card added to the defender's hand must be BT17-095 itself"
+    );
 }
 
 /// Positive: when defender's Security has BT17-095 and they have a Tai Kamiya
@@ -842,44 +867,50 @@ fn bt17_095_security_adds_card_to_hand_after_play() {
 }
 
 /// G-DSL-UNION-PLAY-FREE CLOSED: the Security clause uses the same
-/// `select_union_zone` step. With a Tai Kamiya card ONLY in trash, the union
-/// selection's only valid card action targets the trash slot.
+/// `select_union_zone` step. With a Tai Kamiya card ONLY in the defender's
+/// trash, the union selection's only valid card action targets the trash slot.
+///
+/// Driven through the real combat/security-check path. The previous
+/// `enqueue_triggered(SecuritySkill, Permanent(..))` shortcut became a silent
+/// no-op for inherited-scope [Security] clauses after PR #490's
+/// `enqueue_from_permanent` over-fire fix, so the union-zone selection never
+/// installed and the test panicked.
 #[test]
 fn bt17_095_security_auto_collapses_zone_when_only_trash_eligible() {
     let tamer = make_named_tamer("BT17095-TAI", "Tai Kamiya");
+    let mut attacker = make_filler("BT17095-ATK-COLLAPSE");
+    attacker.dp = Some(6000);
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT17_095_YAML)
         .expect("BT17-095 YAML parses")
         .add_card(tamer.clone())
+        .add_card(attacker.clone())
         .add_card(make_filler("FILL"))
         .memory(10)
         .deck(0, &["FILL"; 5])
-        .deck(1, &["FILL"; 5])
+        .deck(1, &["BT17095-TAI"])
+        .security(1, &["BT17-095"])
         .start();
 
-    let field_handle = runner.place_on_field(0, "BT17-095", Some(0));
+    // Seed a Tai Kamiya card ONLY into the defender's trash.
+    let trash_seed = runner.game.players[1]
+        .deck
+        .pop()
+        .expect("Tamer seed in deck");
+    runner.game.players[1].trash.push(trash_seed);
 
-    // Seed a Tai Kamiya card ONLY into P0's trash.
-    let tai_data_index = runner
-        .game
-        .card_data
-        .iter()
-        .position(|d| d.card_id == "BT17095-TAI")
-        .expect("Tai Kamiya card data registered");
-    let tai_card_index = runner.game.next_card_index();
-    runner.game.players[0].trash.push(CardSource::new(
-        tai_data_index,
-        0,
-        tai_card_index,
-    ));
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let attacker_handle = runner.place_on_field(0, "BT17095-ATK-COLLAPSE", Some(0));
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: BT17-095 in security"
     );
-    runner.game.drain_effect_queue();
 
+    let _ = runner.attack_player(attacker_handle, 1, false);
+
+    // The security check flips BT17-095 and runs its inherited [Security]
+    // clause for the defender; the union-zone pick is its first prompt.
     let sel = runner
         .game
         .pending_selection
