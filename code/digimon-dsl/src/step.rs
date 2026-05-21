@@ -139,6 +139,7 @@ pub enum StepSpec {
     TrashTopSource(TargetArg),
     TrashAllSources(TargetArg),
     TrashSelectedSources(TrashSelectedSourcesArgs),
+    TrashBottomFaceDownSourceUnderTamer(TrashBottomFaceDownSourceUnderTamerArgs),
     BindPermanentProperty(BindPermanentProperty),
     Hatch(PlayerArg),
 
@@ -313,6 +314,9 @@ impl Serialize for StepSpec {
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
             StepSpec::TrashAllSources(v) => kv!(s, "trash_all_sources", v),
             StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
+            StepSpec::TrashBottomFaceDownSourceUnderTamer(v) => {
+                kv!(s, "trash_bottom_face_down_source_under_tamer", v)
+            }
             StepSpec::BindPermanentProperty(v) => kv!(s, "bind_permanent_property", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             // Play / digivolve
@@ -516,6 +520,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
             "trash_all_sources" => StepSpec::TrashAllSources(map.next_value()?),
             "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
+            "trash_bottom_face_down_source_under_tamer" => {
+                StepSpec::TrashBottomFaceDownSourceUnderTamer(map.next_value()?)
+            }
             "bind_permanent_property" => StepSpec::BindPermanentProperty(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
 
@@ -838,6 +845,11 @@ pub struct StructuredBindingRef {
     pub zone: Option<Zone>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub of_permanent: Option<String>,
+    /// Top card of a player's deck — a card-source binding (not a permanent).
+    /// Used by card-source steps such as `place_as_bottom_source` to stash
+    /// the deck top under a Tamer. YAML: `{ deck_top: you }`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deck_top: Option<PlayerRef>,
 }
 
 // ── Argument structs (one per verb family) ──────────────────────────
@@ -845,6 +857,15 @@ pub struct StructuredBindingRef {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayerArg {
+    pub of: PlayerRef,
+}
+
+/// Args for `trash_bottom_face_down_source_under_tamer` — bundles "pick one of
+/// `of`'s Tamers that carries a face-down stash → trash its bottom face-down
+/// source". Used as an activation cost by BEATBREAK / DATA SQUAD cards.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashBottomFaceDownSourceUnderTamerArgs {
     pub of: PlayerRef,
 }
 
@@ -1305,6 +1326,10 @@ pub struct PlayTokenArgs {
 pub struct PlaceAsBottomSourceArgs {
     pub source: BindingRef,
     pub target: BindingRef,
+    /// When `true`, the placed bottom digivolution source is marked
+    /// face-down. Omitted → face-up (the default).
+    #[serde(default)]
+    pub face_down: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

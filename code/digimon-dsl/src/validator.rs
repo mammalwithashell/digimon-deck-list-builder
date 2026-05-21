@@ -1614,6 +1614,7 @@ fn validate_binding_ref(
         permanent,
         source_permanent,
         of_permanent,
+        deck_top,
         ..
     }) = binding_ref
     else {
@@ -1628,10 +1629,15 @@ fn validate_binding_ref(
         });
     }
 
-    let populated = [binding, permanent, of_permanent]
-        .iter()
-        .filter(|field| field.is_some())
-        .count();
+    let populated = [
+        binding.is_some(),
+        permanent.is_some(),
+        of_permanent.is_some(),
+        deck_top.is_some(),
+    ]
+    .iter()
+    .filter(|present| **present)
+    .count();
     if populated == 0 {
         errors.push(ValidationError {
             card_id: card_id.into(),

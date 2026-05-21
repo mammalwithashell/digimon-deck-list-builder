@@ -574,6 +574,7 @@ fn compile_predicate(
         has_keyword: p.has_keyword.clone(),
         has_on_deletion_effect: p.has_on_deletion_effect,
         self_color_count_gte: p.self_color_count_gte,
+        has_face_down_source: p.has_face_down_source,
         distinct_tamer_colors_gte: p.distinct_tamer_colors_gte,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
@@ -591,6 +592,9 @@ fn compile_predicate(
         source_is_unsuspended: p.source_is_unsuspended,
         source_name_contains: p.source_name_contains.clone(),
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
+        is_face_down: p.is_face_down,
+        is_bottom_source: p.is_bottom_source,
+        host_kind_is: p.host_kind_is.map(compile_card_kind),
         rules_text_contains: p.rules_text_contains.clone(),
         self_digivolution_contains_name: p.self_digivolution_contains_name.clone(),
         self_digivolution_sources_contain_name: p
@@ -1497,6 +1501,7 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
             permanent,
             binding,
             of_permanent,
+            deck_top,
             ..
         }) => {
             if let Some(p) = permanent {
@@ -1505,6 +1510,8 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
                 CompiledBindingRef::Binding(b.clone())
             } else if let Some(o) = of_permanent {
                 CompiledBindingRef::OfPermanent(o.clone())
+            } else if let Some(p) = deck_top {
+                CompiledBindingRef::DeckTop(compile_player_ref(*p))
             } else {
                 CompiledBindingRef::Named(String::new())
             }
@@ -1744,6 +1751,7 @@ fn compile_step(
         S::PlaceAsBottomSource(a) => CompiledStep::PlaceAsBottomSource {
             source: compile_binding_ref(&a.source),
             target: compile_binding_ref(&a.target),
+            face_down: a.face_down,
         },
         S::PlaceTopSourceAsBottom(a) => CompiledStep::PlaceTopSourceAsBottom {
             target: compile_binding_ref(&a.target),
@@ -1754,6 +1762,11 @@ fn compile_step(
         S::TrashAllSources(a) => CompiledStep::TrashAllSources {
             target: compile_binding_ref(&a.target),
         },
+        S::TrashBottomFaceDownSourceUnderTamer(a) => {
+            CompiledStep::TrashBottomFaceDownSourceUnderTamer {
+                of: compile_player_ref(a.of),
+            }
+        }
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
         },

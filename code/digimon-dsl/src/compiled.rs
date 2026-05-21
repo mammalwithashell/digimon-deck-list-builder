@@ -234,6 +234,7 @@ pub struct CompiledPredicate {
     /// gates target selection on this predicate.
     pub has_on_deletion_effect: Option<bool>,
     pub self_color_count_gte: Option<u8>,
+    pub has_face_down_source: Option<bool>,
     /// True when the observer's battle-area Tamers collectively have at
     /// least N distinct colors. G-DSL-DISTINCT-TAMER-COLORS.
     pub distinct_tamer_colors_gte: Option<u8>,
@@ -247,6 +248,9 @@ pub struct CompiledPredicate {
     pub source_is_unsuspended: Option<bool>,
     pub source_name_contains: Option<String>,
     pub source_permanent_trait_has: Option<String>,
+    pub is_face_down: Option<bool>,
+    pub is_bottom_source: Option<bool>,
+    pub host_kind_is: Option<CompiledCardKind>,
     /// Case-insensitive substring match against the carrier permanent's
     /// printed rules text (effect_text + inherited_text + security_text of
     /// the top card). Fails when the subject is not a permanent. PUPPETS-G025.
@@ -913,6 +917,7 @@ pub enum CompiledStep {
     PlaceAsBottomSource {
         source: CompiledBindingRef,
         target: CompiledBindingRef,
+        face_down: bool,
     },
     /// Phase 2 Track F (2026-05-17) — deterministic "top stacked card →
     /// bottom" source-stack rotation. Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM
@@ -928,6 +933,13 @@ pub enum CompiledStep {
     },
     TrashAllSources {
         target: CompiledBindingRef,
+    },
+    /// Pick one of `of`'s Tamers that carries a face-down stash, then trash
+    /// that Tamer's bottom face-down digivolution source. Compiled from the
+    /// `trash_bottom_face_down_source_under_tamer` verb; used as an activation
+    /// cost by BEATBREAK / DATA SQUAD cards.
+    TrashBottomFaceDownSourceUnderTamer {
+        of: CompiledPlayerRef,
     },
     Hatch {
         of: CompiledPlayerRef,
@@ -1443,6 +1455,9 @@ pub enum CompiledBindingRef {
     Permanent(String),
     Binding(String),
     OfPermanent(String),
+    /// Top card of a player's deck — resolves to `CardSourceRef::DeckTop`.
+    /// Card-source binding only (never a permanent/card handle).
+    DeckTop(CompiledPlayerRef),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

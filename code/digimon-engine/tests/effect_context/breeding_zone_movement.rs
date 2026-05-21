@@ -130,7 +130,7 @@ fn place_as_bottom_source_with_breeding_target_tucks_under_real_breeding_stack()
 
     {
         let mut ctx = EffectContext::new(&mut r.game, source_card, Some(source), 0);
-        assert!(ctx.place_as_bottom_source(CardSourceRef::Hand(0, 1), breeding_target));
+        assert!(ctx.place_as_bottom_source(CardSourceRef::Hand(0, 1), breeding_target, false));
     }
 
     assert_eq!(r.game.player(0).hand.len(), 1);

@@ -23,6 +23,11 @@ pub enum PredicateSubject {
     BreedingPermanent(PlayerId),
     Card(CardHandle),
     RevealedCard(CardHandle),
+    /// A digivolution-stack source carrying source-stack metadata (face-down
+    /// flag, host permanent, stack position). Source-subject leaves
+    /// (e.g. `is_face_down`) are evaluated against this, after which the
+    /// subject degrades to `Card` so card-identity leaves keep working.
+    Source(crate::selection::SourceSelectionRef),
     None,
 }
 
@@ -50,6 +55,73 @@ pub fn eval_predicate_with_bindings(
     subject: PredicateSubject,
     bindings: Option<&Bindings>,
 ) -> bool {
+    // Source subjects: evaluate source-stack-metadata leaves here, then
+    // degrade the subject to Card so every existing card-identity leaf
+    // (trait_has / kind / name / etc.) continues to work unchanged.
+    // `is_face_down` / `is_bottom_source` are only satisfiable for a Source
+    // subject — on any non-Source subject a present source-subject leaf is an
+    // unconditional non-match.
+    //
+    // The degrade is *node-local*: `subject` below is the degraded value
+    // used by THIS node's leaf checks, but `original_subject` is preserved
+    // un-degraded so the combinator arms (`all_of`/`any_of`/`none_of`/`not`)
+    // recurse with it. Each recursive call then re-runs this same degrade
+    // block for its own node — so a `Source` subject's source-stack leaves
+    // (e.g. `is_face_down` / `is_bottom_source`) stay evaluable at any
+    // combinator nesting depth.
+    let original_subject = subject;
+    let subject = if let PredicateSubject::Source(sref) = subject {
+        if let Some(want) = pred.is_face_down {
+            let actual = rctx
+                .game
+                .player(sref.permanent.player)
+                .battle_area
+                .get(sref.permanent.index as usize)
+                .and_then(|perm| perm.card_sources.get(sref.source_index as usize))
+                .map(|cs| cs.face_down);
+            match actual {
+                Some(face_down) if face_down == want => {}
+                _ => return false,
+            }
+        }
+        if let Some(want) = pred.is_bottom_source {
+            let actual = sref.source_index == 0;
+            if actual != want {
+                return false;
+            }
+        }
+        if let Some(want) = pred.host_kind_is {
+            // The host permanent's top card is the visible Digimon/Tamer the
+            // source sits beneath. If the host permanent cannot be resolved,
+            // the predicate does not match. An in-battle_area permanent always
+            // has a top card, so no empty-stack case is reachable (consistent
+            // with the A3.1 `is_face_down` leaf). The top `CardSource`'s
+            // `data_index` indexes `rctx.game.card_data` directly.
+            let actual_kind = rctx
+                .game
+                .player(sref.permanent.player)
+                .battle_area
+                .get(sref.permanent.index as usize)
+                .map(|perm| rctx.game.card_data[perm.top_card().data_index].card_kind);
+            match actual_kind {
+                // `host_kind_is` reads a field permanent's top card, so it uses
+                // the field-subject matcher (`Dual` coalesces to `Digimon`),
+                // consistent with this file's other field-subject kind checks.
+                Some(kind) if kind_matches_field(want, kind) => {}
+                _ => return false,
+            }
+        }
+        PredicateSubject::Card(sref.card)
+    } else {
+        if pred.is_face_down.is_some()
+            || pred.is_bottom_source.is_some()
+            || pred.host_kind_is.is_some()
+        {
+            return false;
+        }
+        subject
+    };
+
     // Game-state fields — independent of subject.
     if let Some(want) = pred.your_turn {
         let is_my = rctx.game.turn_player() == rctx.player;
@@ -353,9 +425,11 @@ pub fn eval_predicate_with_bindings(
         }
     }
 
-    // Combinators — short-circuit on first failure.
+    // Combinators — short-circuit on first failure. Recurse with the
+    // un-degraded `original_subject` so a `Source` subject keeps its
+    // source-stack metadata; each child re-runs the degrade block above.
     for child in &pred.all_of {
-        if !eval_predicate_with_bindings(child, rctx, subject, bindings) {
+        if !eval_predicate_with_bindings(child, rctx, original_subject, bindings) {
             return false;
         }
     }
@@ -363,18 +437,18 @@ pub fn eval_predicate_with_bindings(
         let any_match = pred
             .any_of
             .iter()
-            .any(|c| eval_predicate_with_bindings(c, rctx, subject, bindings));
+            .any(|c| eval_predicate_with_bindings(c, rctx, original_subject, bindings));
         if !any_match {
             return false;
         }
     }
     for child in &pred.none_of {
-        if eval_predicate_with_bindings(child, rctx, subject, bindings) {
+        if eval_predicate_with_bindings(child, rctx, original_subject, bindings) {
             return false;
         }
     }
     if let Some(inner) = &pred.not {
-        if eval_predicate_with_bindings(inner, rctx, subject, bindings) {
+        if eval_predicate_with_bindings(inner, rctx, original_subject, bindings) {
             return false;
         }
     }
@@ -455,6 +529,20 @@ pub fn eval_predicate_with_bindings(
         }
     }
 
+    // `has_face_down_source` is a permanent-subject-only leaf: it reads a
+    // permanent's `card_sources` stack. Only `Permanent` / `BreedingPermanent`
+    // can satisfy it — on any other subject (`Card`, `RevealedCard`, `None`,
+    // and a `Source` subject already degraded to `Card` above) a present
+    // `has_face_down_source` leaf is an unconditional non-match.
+    if pred.has_face_down_source.is_some()
+        && !matches!(
+            subject,
+            PredicateSubject::Permanent(_) | PredicateSubject::BreedingPermanent(_)
+        )
+    {
+        return false;
+    }
+
     match subject {
         PredicateSubject::Card(card) => eval_card_fields(pred, rctx, card, false, None, bindings),
         PredicateSubject::RevealedCard(card) => {
@@ -463,6 +551,13 @@ pub fn eval_predicate_with_bindings(
         PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h, bindings),
         PredicateSubject::BreedingPermanent(player) => {
             eval_breeding_permanent_fields(pred, rctx, player, bindings)
+        }
+        // A `Source` subject is always degraded to `Card` by the
+        // degrade-to-Card block at the top of this function, so this arm
+        // is unreachable in practice; route it through the card path for
+        // exhaustiveness and forward-compat safety.
+        PredicateSubject::Source(sref) => {
+            eval_card_fields(pred, rctx, sref.card, false, None, bindings)
         }
         PredicateSubject::None => eval_no_subject_fields(pred),
     }
@@ -931,6 +1026,7 @@ fn eval_event_fields(
             }),
             PredicateSubject::Card(_)
             | PredicateSubject::RevealedCard(_)
+            | PredicateSubject::Source(_)
             | PredicateSubject::None => rctx
                 .game
                 .current_trigger_context
@@ -1299,9 +1395,10 @@ fn subject_or_source_permanent<'a>(
         PredicateSubject::BreedingPermanent(player) => {
             rctx.game.player(player).breeding_area.as_ref()
         }
-        PredicateSubject::Card(_) | PredicateSubject::RevealedCard(_) | PredicateSubject::None => {
-            rctx.source_permanent()
-        }
+        PredicateSubject::Card(_)
+        | PredicateSubject::RevealedCard(_)
+        | PredicateSubject::Source(_)
+        | PredicateSubject::None => rctx.source_permanent(),
     }
 }
 
@@ -1981,6 +2078,12 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    if let Some(want) = pred.has_face_down_source {
+        let has_face_down = perm.card_sources.iter().any(|cs| cs.face_down);
+        if has_face_down != want {
+            return false;
+        }
+    }
     if let Some(ref keyword) = pred.has_keyword {
         let Some(kw) = lookup_keyword(keyword, None) else {
             return false;
@@ -2225,6 +2328,12 @@ fn eval_breeding_permanent_fields(
             CompiledPlayerRef::Any => true,
         };
         if !matches {
+            return false;
+        }
+    }
+    if let Some(want) = pred.has_face_down_source {
+        let has_face_down = perm.card_sources.iter().any(|cs| cs.face_down);
+        if has_face_down != want {
             return false;
         }
     }
