@@ -118,5 +118,6 @@ mod security_stack_steps;
 mod selection_dp_extrema;
 mod source_stack_aggregates;
 mod standalone_declaratives_exit;
+mod trash_bottom_face_down_source_under_tamer;
 mod validator;
 mod zone_movement_verbs;

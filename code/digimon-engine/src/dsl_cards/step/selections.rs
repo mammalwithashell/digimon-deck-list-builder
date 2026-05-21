@@ -251,6 +251,38 @@ pub fn try_install(
             );
             selection_result(ctx)
         }
+        CompiledStep::TrashBottomFaceDownSourceUnderTamer { of } => {
+            // Bundled activation cost: "pick one of `of`'s Tamers that carries
+            // a face-down stash → trash its bottom face-down source". Pre-filter
+            // the controller's permanents with the fixed predicate
+            // `{ kind: tamer, has_face_down_source: true }`.
+            let player = resolve_player(ctx, *of);
+            let filter = CompiledPredicate {
+                kind: Some(digimon_dsl::compiled::CompiledCardKind::Tamer),
+                has_face_down_source: Some(true),
+                ..CompiledPredicate::default()
+            };
+            let candidates = collect_matching_permanents(ctx, player, &filter, Some(&bindings));
+            if candidates.is_empty() {
+                // The cost is unpayable: no Tamer has a face-down stash. Abort
+                // the clause — the dispatcher must stop and the tail (the rest
+                // of the process) must NOT run. `TailAlreadyRan` here means
+                // "dispatcher, stop; do not run the remaining steps".
+                return InstallResult::TailAlreadyRan;
+            }
+            install_trash_bottom_face_down_source_under_tamer(
+                ctx,
+                player,
+                filter,
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            );
+            // With ≥1 candidate, `select_own_permanent` always installs a
+            // pending selection (even a single candidate is exposed as a
+            // 1-option selection — no auto-resolve), so this parks.
+            selection_result(ctx)
+        }
         CompiledStep::SelectOpponentPermanent {
             filter,
             bind_as,
@@ -888,6 +920,59 @@ fn install_select_own_permanent(
             if let Some(name) = &bind_as {
                 b.insert_permanent(name, handle);
             }
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+        },
+    );
+}
+
+/// Install the Tamer pick for `trash_bottom_face_down_source_under_tamer`.
+///
+/// Mirrors `install_select_own_permanent` but with a fixed predicate and no
+/// `selector` / `bind_as` / `optional`. The empty-candidates short-circuit is
+/// NOT here — the caller (`try_install`) already handled the no-eligible-Tamer
+/// case by returning `TailAlreadyRan`. The pick is mandatory (`optional:
+/// false`): once the player activates the clause, they must choose which
+/// eligible Tamer pays the cost. Whether to activate/decline at all is the
+/// clause's own `optional`, governed one level up.
+///
+/// The callback trashes the picked Tamer's bottom face-down source via
+/// `EffectContext::trash_bottom_face_down_source`, then runs the captured tail.
+fn install_trash_bottom_face_down_source_under_tamer(
+    ctx: &mut EffectContext<'_>,
+    _player: u8,
+    filter: CompiledPredicate,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
+    ctx.select_own_permanent(
+        "Choose a Tamer to trash a face-down card from under",
+        false,
+        move |game, handle| {
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Permanent(handle),
+                Some(&filter_bindings),
+            )
+        },
+        move |cb_ctx, handle: PermanentHandle| {
+            cb_ctx.trash_bottom_face_down_source(handle);
+            let mut b = bindings.clone();
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );

@@ -773,6 +773,13 @@ pub enum CompiledStep {
     TrashAllSources {
         target: CompiledBindingRef,
     },
+    /// Pick one of `of`'s Tamers that carries a face-down stash, then trash
+    /// that Tamer's bottom face-down digivolution source. Compiled from the
+    /// `trash_bottom_face_down_source_under_tamer` verb; used as an activation
+    /// cost by BEATBREAK / DATA SQUAD cards.
+    TrashBottomFaceDownSourceUnderTamer {
+        of: CompiledPlayerRef,
+    },
     Hatch {
         of: CompiledPlayerRef,
     },

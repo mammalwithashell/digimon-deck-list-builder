@@ -1566,6 +1566,11 @@ fn compile_step(
         S::TrashAllSources(a) => CompiledStep::TrashAllSources {
             target: compile_binding_ref(&a.target),
         },
+        S::TrashBottomFaceDownSourceUnderTamer(a) => {
+            CompiledStep::TrashBottomFaceDownSourceUnderTamer {
+                of: compile_player_ref(a.of),
+            }
+        }
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
         },
