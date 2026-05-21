@@ -119,14 +119,21 @@ fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
 /// top-card Digimon (RULES 15-3-1). A single optional triggered clause whose
 /// body opens with a mandatory `select_effect_choice` surfaces its accept/
 /// decline as an outer `SelectionKind::Replacement` prompt
-/// (G-OUTER-OPTIONAL-NOT-INSTALLED); accept it so the `EffectChoice` body
-/// installs next. No-op if no such prompt is pending.
+/// (G-OUTER-OPTIONAL-NOT-INSTALLED).
+///
+/// This asserts that prompt is the pending selection before accepting it, so
+/// the test fails loudly *here* — rather than later with a confusing
+/// EffectChoice mismatch — if the engine's trigger flow changes.
 fn accept_on_deletion_optional(runner: &mut DebugRunner) {
-    if runner.pending_kind() == Some(SelectionKind::Replacement) {
-        runner
-            .accept_optional_trigger()
-            .expect("accept the outer optional-trigger prompt");
-    }
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "BT17-102's lone optional [On Deletion] clause must install an outer \
+         Replacement accept prompt before its EffectChoice body"
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
 }
 
 // ─── Fixture helpers ────────────────────────────────────────────────────────
