@@ -72,13 +72,8 @@ effects:
     process:
       - select_opponent_permanent:
           bind_as: lowest_dp_cost
-          filter:
-            all_of:
-              - kind: digimon
-              - dp_lte:
-                  aggregate:
-                    selector: lowest_dp
-                    scope: opponent
+          filter: { kind: digimon }
+          selector: lowest_dp
           prompt: "Delete 1 of your opponent's lowest DP Digimon"
       - delete_permanent: { target: lowest_dp_cost }
       - cancel_replacement: {}
