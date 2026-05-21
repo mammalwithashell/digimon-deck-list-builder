@@ -21,8 +21,10 @@ fn real_adapter_loads_cards_json() {
 
 #[test]
 fn real_adapter_cross_checks_st2_13_fixture() {
+    // ST2-13 was promoted from cards/_examples/ to the per-set folder on
+    // 2026-05-20 (DNA Omnimon missing-card authoring pass).
     let yaml = std::fs::read_to_string(
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("cards/_examples/ST2-13.yaml"),
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("cards/st2/ST2-13.yaml"),
     )
     .unwrap();
     let spec: CardSpec = serde_yml::from_str(&yaml).unwrap();

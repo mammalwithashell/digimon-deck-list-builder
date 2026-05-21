@@ -1,6 +1,8 @@
 //! DSL test binary. Submodules (one per task group) contribute the `#[test]`
 //! functions. See `digimon-engine/Cargo.toml` for the `[[test]]` entry.
 
+mod activation_cost;
+mod also_treated_as;
 mod cross_check;
 mod delay;
 mod digixros_aliases;
@@ -70,6 +72,7 @@ mod phase2f1_digivolve_steps;
 mod phase2f1_end_to_end;
 mod phase2f1_placement_steps;
 mod phase2f1_play_steps;
+mod play_token_bind_as;
 mod phase2f2_formula_eval;
 mod phase2f2_modifier_formula;
 mod phase2f3_as_selecting_player;
@@ -78,6 +81,7 @@ mod phase2f4_end_to_end;
 mod phase2f4_schedule_delayed;
 mod phase2g_breeding_selection;
 mod phase2g_dp_budget;
+mod play_cost_budget;
 mod phase2g_on_dna_digivolve;
 mod phase2g_select_sources;
 mod phase3_dna_digivolve_triggers;
@@ -112,10 +116,15 @@ mod replacement_context;
 mod residual_formula_predicate_vocab;
 mod reveal_buckets;
 mod roundtrip;
+mod s2_2_union_hand_trash_name_exclusion;
 mod schema_export;
+mod provenance_turn_end_delete;
 mod security_boundary;
 mod security_stack_steps;
+mod select_materials;
 mod selection_dp_extrema;
+mod track_e_reveal_ordering;
+mod union_zone_origin_play;
 mod source_stack_aggregates;
 mod standalone_declaratives_exit;
 mod tamer_stash_substrate_integration;

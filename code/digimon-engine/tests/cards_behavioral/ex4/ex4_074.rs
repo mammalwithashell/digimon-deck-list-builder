@@ -77,10 +77,10 @@ fn ex4_074_metadata_alt_paths_and_supported_clause_match_printed_text() {
         "When Digivolving / On Deletion DP reduction is intentionally omitted until next-turn modifier expiry exists"
     );
     assert!(
-        !triggered_clauses(compiled)
+        triggered_clauses(compiled)
             .iter()
             .any(|clause| clause.when.contains(&CompiledTiming::EndOfAttack)),
-        "End of Attack is intentionally omitted until the full chain is fidelity-proven"
+        "End of Attack chain must compile (PUPPETS-G031 first-test target)"
     );
 }
 
@@ -177,19 +177,20 @@ fn ex4_074_on_deletion_during_opponents_turn_expires_at_end_of_their_next_turn()
 }
 
 #[test]
-#[ignore = "BLOCKED: PUPPETS-G031 — End of Attack chain needs mandatory self-delete + opponent target delete + Recovery + conditional hatch continuation"]
 fn ex4_074_end_of_attack_self_deletes_opponent_delete_recovers_and_hatches_with_tamer() {
     let mut runner = shine_runner()
         .add_card(make_digimon("OPP", 9000))
         .add_card(make_tamer("TAMER"))
+        .add_card(make_egg("EGG"))
         .add_card(make_test_card("SECURITY", "Security"))
         .hand(0, &["TAMER"])
         .deck(0, &["SECURITY"])
+        .digitama(0, &["EGG"])
         .security(1, &["SECURITY"])
         .start();
     let ruin = runner.place_on_field(0, "EX4-074", Some(0));
     runner.place_on_field(0, "TAMER", Some(0));
-    runner.place_on_field(1, "OPP", Some(0));
+    let opp = runner.place_on_field(1, "OPP", Some(0));
 
     runner.attack_player(ruin, 1, false);
     runner.auto_resolve().expect("resolve End of Attack chain");
@@ -201,6 +202,14 @@ fn ex4_074_end_of_attack_self_deletes_opponent_delete_recovers_and_hatches_with_
             .all(|perm| { perm.top_card().card_id(&runner.game.card_data) != "EX4-074" }),
         "Ruin Mode deletes itself"
     );
+    assert!(
+        runner.game.players[1]
+            .battle_area
+            .iter()
+            .all(|perm| { perm.top_card().card_id(&runner.game.card_data) != "OPP" }),
+        "Chosen opponent Digimon is deleted"
+    );
+    let _ = opp;
     assert_eq!(runner.security_count(0), 1, "Recovery +1 (Deck)");
     assert!(
         runner.game.players[0].breeding_area.is_some(),
@@ -249,5 +258,13 @@ fn make_tamer(id: &str) -> digimon_engine::card_data::CardData {
     let mut card = make_test_card(id, id);
     card.card_kind = CardKind::Tamer;
     card.dp = None;
+    card
+}
+
+fn make_egg(id: &str) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::DigiEgg;
+    card.dp = None;
+    card.level = Some(2);
     card
 }

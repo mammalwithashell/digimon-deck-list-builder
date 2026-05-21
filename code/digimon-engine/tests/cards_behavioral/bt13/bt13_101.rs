@@ -12,15 +12,11 @@
 //!
 //! Implemented YAML slices:
 //! - [On Play] optional PawnChessmon hand play.
+//! - [All Turns] 2-color black/yellow Digimon played observer with
+//!   `activation_cost: { suspend_self: true }` → Draw 1 + gain 1 memory.
+//!   Uses PUPPETS-G023 `event_card_color_only` / `event_card_color_count`
+//!   predicates.
 //! - [Security] play this Tamer.
-//!
-//! Omitted slice:
-//! - [All Turns] played-Digimon observer. The engine/DSL can observe
-//!   `on_enter_field_anyone`, suspend the source Tamer, draw, and gain memory,
-//!   but the DSL has no event-card color predicate for "the card just played is
-//!   exactly 2-color black and yellow." Name-listing PawnChessmon cards would
-//!   be an approximation, so the slice is omitted until a reusable
-//!   `event_card_color_only` / event-card color-count predicate exists.
 
 use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledColor, CompiledTiming};
 use digimon_engine::card_data::CardData;
@@ -53,6 +49,86 @@ fn non_pawn_digimon(id: &str) -> CardData {
     card.play_cost = 5;
     card.colors = vec![CardColor::Black, CardColor::Yellow];
     card
+}
+
+/// A 2-color Black+Yellow Digimon that should trigger BT13-101.
+fn two_color_black_yellow_digimon(id: &str) -> CardData {
+    let mut card = make_test_card(id, "BlackYellowDigimon");
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(5000);
+    card.play_cost = 4;
+    card.colors = vec![CardColor::Black, CardColor::Yellow];
+    card
+}
+
+/// A mono-color Black Digimon — should NOT trigger BT13-101.
+fn mono_black_digimon(id: &str) -> CardData {
+    let mut card = make_test_card(id, "MonoBlackDigimon");
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(5000);
+    card.play_cost = 4;
+    card.colors = vec![CardColor::Black];
+    card
+}
+
+/// A mono-color Yellow Digimon — should NOT trigger BT13-101.
+fn mono_yellow_digimon(id: &str) -> CardData {
+    let mut card = make_test_card(id, "MonoYellowDigimon");
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(5000);
+    card.play_cost = 4;
+    card.colors = vec![CardColor::Yellow];
+    card
+}
+
+/// A 3-color Black+Yellow+Red Digimon — should NOT trigger BT13-101.
+fn three_color_digimon(id: &str) -> CardData {
+    let mut card = make_test_card(id, "ThreeColorDigimon");
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(5000);
+    card.play_cost = 5;
+    card.colors = vec![CardColor::Black, CardColor::Yellow, CardColor::Red];
+    card
+}
+
+/// A draw-filler card for the deck in observer tests.
+fn draw_card(id: &str) -> CardData {
+    let mut card = make_test_card(id, "DrawFiller");
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(3);
+    card.dp = Some(1000);
+    card.play_cost = 0;
+    card
+}
+
+/// Build a runner for BT13-101 [All Turns] observer tests.
+/// BT13-101 is placed on the field via `place_on_field` after start.
+/// `hand_cards` go into P0's hand (index 0 = first card to play).
+/// `deck_cards` go into P0's deck (for Draw 1 to consume).
+fn observer_runner(hand_cards: &[CardData], deck_cards: &[CardData]) -> DebugRunner {
+    let mut builder = DebugRunner::builder()
+        .dsl_card("BT13-101")
+        .expect("BT13-101 YAML loads")
+        .memory(10);
+    for card in hand_cards {
+        builder = builder.add_card(card.clone());
+    }
+    for card in deck_cards {
+        builder = builder.add_card(card.clone());
+    }
+    let hand_ids: Vec<&str> = hand_cards.iter().map(|c| c.card_id.as_str()).collect();
+    let deck_ids: Vec<&str> = deck_cards.iter().map(|c| c.card_id.as_str()).collect();
+    if !hand_ids.is_empty() {
+        builder = builder.hand(0, &hand_ids);
+    }
+    if !deck_ids.is_empty() {
+        builder = builder.deck(0, &deck_ids);
+    }
+    builder.start()
 }
 
 #[test]
@@ -94,8 +170,8 @@ fn bt13_101_has_printed_metadata_and_supported_clauses() {
     assert!(
         triggered
             .iter()
-            .all(|clause| !clause.when.contains(&CompiledTiming::OnEnterFieldAnyone)),
-        "All Turns observer must be omitted until event-card color predicates exist"
+            .any(|clause| clause.when.contains(&CompiledTiming::OnAnyDigimonPlayed)),
+        "All Turns observer must be present after PUPPETS-G023 event-card color predicates landed"
     );
 }
 
@@ -219,10 +295,14 @@ fn bt13_101_on_play_plays_pawnchessmon_for_free() {
         field_before + 1,
         "PawnChessmon free play should add exactly one permanent"
     );
+    // PawnChessmon is a 2-color Black+Yellow Digimon, so the [All Turns] observer
+    // fires: BT13-101 suspends itself and gains +1 memory. play_from_hand_free
+    // correctly does not spend PawnChessmon's play cost; the only memory delta
+    // beyond the Tamer's own cost is the observer's +1 gain.
     assert_eq!(
         runner.memory(),
-        memory_after_tamer_cost,
-        "play_from_hand_free must not spend PawnChessmon's play cost"
+        memory_after_tamer_cost + 1,
+        "play_from_hand_free must not spend PawnChessmon's play cost; observer adds +1 memory"
     );
 }
 
@@ -278,27 +358,105 @@ fn bt13_101_security_plays_itself_without_paying_cost() {
 }
 
 #[test]
-#[ignore = "pending: PUPPETS-G023 — OnEnterFieldAnyone observers need event-card color_only/color-count predicates and source-bound suspend-cost preflight"]
 fn bt13_101_all_turns_suspends_draws_and_gains_memory_for_two_color_black_yellow_digimon() {
-    // Required behavior once the reusable gap closes:
-    // - trigger when controller plays a Digimon card whose colors are exactly
-    //   Black + Yellow;
-    // - optional activation is only available while this Tamer is unsuspended;
-    // - accepting suspends this exact Tamer, draws 1, and gains 1 memory.
+    // PUPPETS-G023: positive path — exactly Black+Yellow 2-color Digimon triggers.
+    let digimon = two_color_black_yellow_digimon("BY-DIGIMON-G023");
+    let draw_filler = draw_card("DRAW-G023");
+    let mut runner = observer_runner(&[digimon], &[draw_filler]);
+    let tamer = runner.place_on_field(0, "BT13-101", Some(0));
+    let memory_before = runner.memory();
+
+    runner.play(0, 0).expect("2-color B/Y Digimon plays from hand");
+    runner.auto_resolve().expect("activation_cost + Draw 1 + gain 1 memory resolve");
+
+    assert!(
+        runner.game.player(0).battle_area[tamer.index as usize].is_suspended,
+        "BT13-101 must be suspended as the activation cost"
+    );
+    assert_eq!(runner.hand_size(0), 1, "Draw 1 must put the deck card into hand");
+    assert_eq!(runner.deck_size(0), 0, "Draw 1 must consume the deck card");
+    assert_eq!(
+        runner.memory(),
+        memory_before - 4 + 1, // -4 for the Digimon's play cost, +1 for gain_memory
+        "playing the Digimon costs 4 memory, observer adds 1"
+    );
 }
 
 #[test]
-#[ignore = "pending: PUPPETS-G023 — exact event-card color_only/color-count predicates required; name or trait filters would approximate"]
 fn bt13_101_all_turns_does_not_trigger_for_single_color_or_three_color_digimon() {
-    // Required negative coverage:
-    // - black-only, yellow-only, and black/yellow/extra-color Digimon must not
-    //   offer the activation.
+    // PUPPETS-G023: negative paths — mono-color and 3-color must not trigger.
+    // Provide draw filler in deck to distinguish: if draw happened, hand size grows.
+    let mut runner = observer_runner(
+        &[
+            mono_black_digimon("MONO-B-G023"),
+            mono_yellow_digimon("MONO-Y-G023"),
+            three_color_digimon("THREE-C-G023"),
+        ],
+        &[
+            draw_card("DRAW1-G023"),
+            draw_card("DRAW2-G023"),
+            draw_card("DRAW3-G023"),
+        ],
+    );
+    runner.place_on_field(0, "BT13-101", Some(0));
+
+    // Play mono-black — should not trigger.
+    runner.play(0, 0).expect("mono-black plays");
+    runner.auto_resolve().expect("settle mono-black play");
+    assert_eq!(
+        runner.hand_size(0),
+        2,
+        "mono-black Digimon must not trigger observer (hand = remaining 2 cards)"
+    );
+
+    // Play mono-yellow — should not trigger.
+    runner.play(0, 0).expect("mono-yellow plays");
+    runner.auto_resolve().expect("settle mono-yellow play");
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "mono-yellow Digimon must not trigger observer"
+    );
+
+    // Play 3-color B/Y/R — should not trigger.
+    runner.play(0, 0).expect("3-color plays");
+    runner.auto_resolve().expect("settle 3-color play");
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "3-color B/Y/R Digimon must not trigger observer"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        3,
+        "none of the non-qualifying Digimon must trigger Draw 1"
+    );
 }
 
 #[test]
-#[ignore = "pending: PUPPETS-G023 — observer must inspect the just-played event card and source Tamer suspend-cost availability"]
 fn bt13_101_all_turns_does_not_trigger_when_tamer_is_already_suspended() {
-    // Required negative coverage:
-    // - even for an exact Black+Yellow two-color Digimon, a suspended
-    //   BT13-101 cannot pay the suspend cost and must not install a prompt.
+    // PUPPETS-G023: negative path — suspended BT13-101 cannot pay the suspend
+    // cost, so the observer body must not execute (no draw, no memory gain).
+    let digimon = two_color_black_yellow_digimon("BY-DIGIMON-SUSP-G023");
+    let draw_filler = draw_card("DRAW-SUSP-G023");
+    let mut runner = observer_runner(&[digimon], &[draw_filler]);
+    let tamer = runner.place_on_field(0, "BT13-101", Some(0));
+    // Pre-suspend the Tamer so it cannot pay the suspend cost.
+    runner.game.player_mut(0).battle_area[tamer.index as usize].is_suspended = true;
+    let memory_before = runner.memory();
+
+    runner.play(0, 0).expect("2-color B/Y Digimon plays");
+    runner.auto_resolve().expect("settle with pre-suspended Tamer");
+
+    assert!(
+        runner.game.player(0).battle_area[tamer.index as usize].is_suspended,
+        "pre-suspended Tamer must remain suspended"
+    );
+    assert_eq!(runner.hand_size(0), 0, "cost failure must not draw");
+    assert_eq!(runner.deck_size(0), 1, "cost failure must not consume deck card");
+    assert_eq!(
+        runner.memory(),
+        memory_before - 4, // only the Digimon's play cost, no gain_memory
+        "cost failure must not grant the +1 memory"
+    );
 }

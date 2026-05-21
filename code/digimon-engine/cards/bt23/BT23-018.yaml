@@ -128,43 +128,36 @@ effects:
     keyword: Jamming
 
   # ─── Clause 2 — [Main][OPT] place-top-as-bottom + play Agumon/Nokia ──────────
-  # BLOCKED — G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM. See header docs.
   #
-  # Stub (commented — uncomment + remove BLOCKED note when the gap closes):
-  #
-  # - when: main_on_field
-  #   once_per_turn: true
-  #   optional: true
-  #   summary: "[Main][OPT] Place top stacked card as bottom; may play [Agumon]/[Nokia Shiramine] from hand at -2"
-  #   condition:
-  #     # DCGO: card.PermanentOfThisCard().StackCards.Count >= 1 (must have
-  #     # at least one stacked card to pay the cost).
-  #     stack_size_gte: 1
-  #   process:
-  #     # Cost: place this permanent's top stacked card as its bottom
-  #     # digivolution card. NEEDS NEW DSL VERB.
-  #     - place_top_source_as_bottom: { target: source }   # ← BLOCKED
-  #     # Effect: optional play of an Agumon Digimon or Nokia Shiramine Tamer
-  #     # from hand with -2 cost reduction. DCGO: SelectHandEffect with
-  #     # CanSelectCardCondition allowing IsDigimon+EqualsCardName("Agumon")
-  #     # OR IsTamer+EqualsCardName("Nokia Shiramine"); canNoSelect: true.
-  #     - select_hand:
-  #         of: you
-  #         bind_as: pick
-  #         optional: true
-  #         filter:
-  #           any_of:
-  #             - all_of:
-  #                 - kind: digimon
-  #                 - name_is: "Agumon"
-  #             - all_of:
-  #                 - kind: tamer
-  #                 - name_is: "Nokia Shiramine"
-  #         prompt: "Play 1 [Agumon] or [Nokia Shiramine] from hand (cost -2)"
-  #     - play_from_hand:
-  #         of: you
-  #         hand_index: pick
-  #         cost_delta: { reduce: 2 }
+  # Phase 2 Track F (2026-05-17) closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM via
+  # the new `place_top_source_as_bottom: { target: <perm> }` verb. Same
+  # shape as BT23-008's Clause 2 except the optional-play filter is
+  # [Agumon]-named (not [Gabumon]).
+  - when: main_on_field
+    once_per_turn: true
+    optional: true
+    summary: "[Main][OPT] Place top stacked card as bottom; may play [Agumon]/[Nokia Shiramine] from hand at -2"
+    condition:
+      materials_count_gte: 1
+    process:
+      - place_top_source_as_bottom: { target: source }
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - all_of:
+                  - kind: digimon
+                  - name_is: "Agumon"
+              - all_of:
+                  - kind: tamer
+                  - name_is: "Nokia Shiramine"
+          prompt: "Play 1 [Agumon] or [Nokia Shiramine] from hand (cost -2)"
+      - play_from_hand:
+          of: you
+          hand_index: pick
+          cost_delta: { reduce: 2 }
 
   # ─── Clause 3 — [Inherited][Opponent's Turn] +2000 DP self-aura ──────────────
   # Mirrors BT23-008 Clause 3, but gated on the OPPONENT's turn instead of

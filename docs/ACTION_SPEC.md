@@ -1,6 +1,6 @@
 # Action Decoder Specification
 
-The engine exposes `2168` discrete action IDs. Legal actions are provided by `get_action_mask(player_id)` and executed by `decode_action(action_id, player_id)`.
+The engine exposes `2192` discrete action IDs. Legal actions are provided by `get_action_mask(player_id)` and executed by `decode_action(action_id, player_id)`.
 
 ## Global Action Ranges
 
@@ -16,7 +16,8 @@ The engine exposes `2168` discrete action IDs. Legal actions are provided by `ge
 | `100-399` | 300 | Attack / block / alliance (phase-dependent) | `100 + slot * 15 + target` |
 | `400-999` | 600 | Digivolve | `400 + hand_idx * 15 + field_idx` |
 | `1000-1999` | 1000 | Effect activation | `1000 + perm_idx * 10 + effect_idx` |
-| `2000-2167` | 168 | Source selection | `2000 + field_idx * 12 + source_idx` |
+| `2000-2167` | 168 | Source selection (battle-area carrier) | `2000 + field_idx * 12 + source_idx` |
+| `2168-2191` | 24 | Source selection (breeding-area carrier) | `2168 + carrier_owner * 12 + source_idx` |
 
 ## Key Constants
 
@@ -30,6 +31,8 @@ The engine exposes `2168` discrete action IDs. Legal actions are provided by `ge
 | `FIELDS_PER_HAND` | 15 | Stride for digivolve formula |
 | `EFFECTS_PER_PERM` | 10 | Stride for effect formula |
 | `SOURCES_PER_FIELD` | 12 | Stride for source selection formula |
+| `BREEDING_SOURCE_CARRIERS` | 2 | Breeding carriers addressable for source selection (one stack per player) |
+| `BREEDING_SOURCE_SELECT_START` | 2168 | First breeding-carrier source-selection action ID |
 
 ## Phase-Aware Meaning
 
@@ -82,16 +85,17 @@ Action IDs are intentionally reused across phases.
 
 - Generic selection phases (`SelectTarget`, `SelectMaterial`, `SelectHand`, `SelectReveal`, `SelectEffectChoice`, `SelectSecurity`) use `pending_selection.valid_indices`.
 - `SelectTrash`: uses `pending_selection.valid_indices` when available, otherwise falls back to `130-179` (`130 + trash_idx`). Optional selections allow decline with `62`.
-- `SelectSource`: uses `pending_selection.valid_indices` when available, otherwise falls back to `2000-2167` (`2000 + field_idx * 12 + source_idx`). Optional selections allow decline with `62`.
+- `SelectSource` / `SelectMaterial`: uses `pending_selection.valid_indices` when available, otherwise falls back to `2000-2167` (`2000 + field_idx * 12 + source_idx`) for a battle-area carrier, or `2168-2191` (`2168 + carrier_owner * 12 + source_idx`) for a breeding-area carrier (King Drasil). Optional selections allow decline with `62`.
 - `SelectBudgeted`: uses field-target action IDs for opponent battle-area permanents and allows decline with `62` once the minimum pick count is satisfied.
 - `SelectBreedingPermanent`: uses phase-scoped breeding selection IDs (`14` for player 0, `15` for player 1) for breeding-area permanent choices.
 - Optional selections allow decline with `62`.
 
 ### Selection Primitive Reuse
 
-Group 2 selection primitives reuse existing action ranges and keep `ACTION_SPACE_SIZE = 2168`.
+Group 2 selection primitives reuse existing action ranges.
 
-- Cross-permanent source selections use `SOURCE_SELECT_START..SOURCE_SELECT_END`.
+- Cross-permanent source selections (battle-area carriers) use `SOURCE_SELECT_START..SOURCE_SELECT_END`.
+- Breeding-area carrier source selections use `BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END` (`2168..2192`), keyed by the carrier's owning player. This sub-range was appended in Task S1.3, raising `ACTION_SPACE_SIZE` from `2168` to `2192` — a deliberate action-space version bump (existing trained RL models must be retrained).
 - Up-to-N source selections expose `PASS` only after the minimum pick count is satisfied.
 - DP-budget permanent selections reuse field-target action IDs during `SelectBudgeted`.
 - Breeding permanent selections use phase-scoped breeding selection IDs only while `SelectBreedingPermanent` is pending.
@@ -139,13 +143,19 @@ Current engine usage includes training, delay, and end-of-turn effect hooks (for
 
 ## Source Selection Formula
 
+Battle-area carrier:
+
 `action_id = 2000 + field_idx * 12 + source_idx`
 
-Used in `SelectSource` when effects need a specific card from a digivolution stack.
+Breeding-area carrier (King Drasil — Task S1.3):
+
+`action_id = 2168 + carrier_owner * 12 + source_idx`
+
+Used in `SelectSource` / `SelectMaterial` when effects need a specific card from a digivolution stack. A breeding-area carrier holds exactly one digivolving stack per player, so it is addressed by the carrier's owning player rather than a field index.
 
 ## Masking Contract
 
-- Mask size is always `2168`
+- Mask size is always `2192`
 - `1.0` means legal, `0.0` illegal
 - Frontend and RL agents must select only masked-legal actions
 - Backend decoder is phase-aware and resolves semantics from current `GamePhase`

@@ -11,22 +11,25 @@ fn standard_lite_v2_layout_matches_spec() {
     assert_eq!(profile.game_mode, "standard");
     assert_eq!(profile.version, 2);
     assert_eq!(profile.tensor_version, 2);
-    assert_eq!(profile.feature_schema_version, "standard_lite_v2.1");
-    assert_eq!(profile.tensor_size, 8320);
-    assert_eq!(profile.card_id_slot_count, 542);
-    assert_eq!(profile.scalar_slot_count, 7778);
+    // Task S1.4: PERM_MAX_SOURCES 11 -> 12 grows each permanent slot by 3
+    // floats (96 -> 99); permanent_slots 2880 -> 2970, tensor_size
+    // 8320 -> 8410, and every section after permanent_slots shifts +90.
+    assert_eq!(profile.feature_schema_version, "standard_lite_v2.2");
+    assert_eq!(profile.tensor_size, 8410);
+    assert_eq!(profile.card_id_slot_count, 572);
+    assert_eq!(profile.scalar_slot_count, 7838);
     assert!(profile.layout_hash.starts_with("sha256:"));
     assert_eq!(profile.layout_hash.len(), "sha256:".len() + 64);
 
     let expected_sections = [
         ("global_features", 0, &[64][..], 64),
         ("player_summary", 64, &[2, 32][..], 64),
-        ("permanent_slots", 128, &[2, 15, 96][..], 2880),
-        ("own_hand", 3008, &[30, 32][..], 960),
-        ("known_zone_cards", 3968, &[120, 8][..], 960),
-        ("decision_context", 4928, &[64][..], 64),
-        ("pending_choice_features", 4992, &[32, 96][..], 3072),
-        ("reserved", 8064, &[256][..], 256),
+        ("permanent_slots", 128, &[2, 15, 99][..], 2970),
+        ("own_hand", 3098, &[30, 32][..], 960),
+        ("known_zone_cards", 4058, &[120, 8][..], 960),
+        ("decision_context", 5018, &[64][..], 64),
+        ("pending_choice_features", 5082, &[32, 96][..], 3072),
+        ("reserved", 8154, &[256][..], 256),
     ];
 
     for (id, start, shape, len) in expected_sections {
@@ -72,28 +75,28 @@ fn standard_lite_v2_card_id_positions_match_spec() {
     let mut expected = Vec::new();
 
     for row in 0..30 {
-        let base = 128 + row * 96;
+        let base = 128 + row * 99;
         expected.push(base + 8);
-        for source_index in 0..11 {
+        for source_index in 0..12 {
             expected.push(base + 63 + source_index * 3);
         }
     }
 
     for row in 0..30 {
-        expected.push(3008 + row * 32 + 1);
+        expected.push(3098 + row * 32 + 1);
     }
 
     for row in 0..120 {
-        expected.push(3968 + row * 8 + 1);
+        expected.push(4058 + row * 8 + 1);
     }
 
     for row in 0..32 {
-        expected.push(4992 + row * 96 + 44);
+        expected.push(5082 + row * 96 + 44);
     }
 
     expected.sort();
     assert_eq!(cards, expected);
-    assert_eq!(cards.len(), 542);
+    assert_eq!(cards.len(), 572);
 }
 
 #[test]
@@ -101,8 +104,8 @@ fn standard_lite_v2_positions_cover_tensor_once() {
     let profile = profile_by_id("standard_lite_v2").unwrap();
     let (cards, scalars) = profile.positions();
 
-    assert_eq!(cards.len(), 542);
-    assert_eq!(scalars.len(), 7778);
+    assert_eq!(cards.len(), 572);
+    assert_eq!(scalars.len(), 7838);
     assert_eq!(cards.len() + scalars.len(), profile.tensor_size);
 
     let card_set: std::collections::BTreeSet<_> = cards.iter().copied().collect();

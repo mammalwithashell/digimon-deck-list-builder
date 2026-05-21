@@ -50,6 +50,7 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::MainFromTrash => EffectTiming::MainFromTrash,
         CompiledTiming::Counter => EffectTiming::CounterEffect,
         CompiledTiming::BeforePayCost => EffectTiming::BeforePayCost,
+        CompiledTiming::BeforePayCostObserve => EffectTiming::BeforePayCostObserve,
         CompiledTiming::OnOptionPlaced => EffectTiming::OnOptionPlaced,
         CompiledTiming::OnPlaceSecurity => EffectTiming::OnPlaceSecurity,
         CompiledTiming::OnAddedToSecurity => EffectTiming::OnPlaceSecurity,

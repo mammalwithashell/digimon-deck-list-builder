@@ -20,39 +20,24 @@
 #                            for by suspending this Tamer (BLOCKED — see below)
 #   Clause 3: [Security]  — play_from_security (this Tamer plays itself for free)
 #
-# ─── Clause 2 status — BLOCKED on DSL vocab gap ─────────────────────────────
+# ─── Clause 2 — CLOSED 2026-05-20 (G-COST-REDUCTION-DIGIVOLVE-INTO) ──────────
 #
-# `CostReductionBody` (digimon-dsl/src/clause.rs) currently exposes:
-#   - `when_playing_this: bool`            — observer on THIS card being played
-#   - `when_any_ally_played: PredicateSpec` — observer on an ally entering field
+# `CostReductionBody` now exposes `when_any_ally_digivolves_into:
+# <PredicateSpec>` — a digivolution-target-keyed trigger that fires only for
+# a DIGIVOLVE cost (not a play) whose target card (the card being digivolved
+# INTO) matches the predicate. The engine threads the digivolve cost-target
+# hand-card AND a `cost_is_digivolve` flag through `EffectReadContext`, so
+# the predicate inspects the target card's name.
 #
-# It has no `when_this_digivolves_into` (or `when_any_ally_digivolves_into`)
-# trigger form keyed on the target hand card's name. BT5-092 needs the latter
-# variant: "when ANY of MY Digimon would digivolve into a hand card whose
-# name contains Greymon / Garurumon / Omnimon." Furthermore the engine path
-# `scan_before_pay_cost_reduction` does not thread the digivolution-target
-# CardSource through to the condition closure, so a predicate could not
-# inspect the target's name even if the trigger variant existed.
+# The "by suspending this Tamer" cost is authored as `pay_cost: [suspend:
+# { target: source }]`. The lowering recognises a single self-targeted
+# suspend as the "suspend-self cost" idiom and routes it through
+# `suspend_self_as_cost`, which FAILS (and so cancels the reduction) when
+# the Tamer is already suspended. `scan_before_pay_cost_reduction` honours a
+# pay-cost-bearing reducer when a real digivolve cost-target is present.
 #
-# This is the same root gap recorded as the BT23-005 entry in
-# qa/dsl-vocab-gaps.md (search anchor: "when_this_digivolves_into").
-# BT5-092 widens the gap to cover BOTH the "THIS permanent" (BT23-005) and
-# the "ANY of your Digimon" (BT5-092) source-card forms; the missing knob is
-# the same on both shapes.
-#
-# Until the DSL adds (a) a `when_*_digivolves_into` trigger variant with
-# `target_name_contains` / `target_trait_has` predicates AND (b) the engine
-# threads the target hand-card into `EffectReadContext`, this clause cannot
-# be expressed faithfully. We omit it from the YAML rather than emit a
-# silently-misfiring approximation. The BT23-005 precedent does the same.
-#
-# Additional missing primitive (orthogonal to the trigger gap): the cost
-# (`by suspending this Tamer`) is a player-paid resource cost on a
-# cost-reduction clause. CostReductionBody has no `pay_cost: [{ suspend_self }]`
-# step list (the `pay_cost` field exists but is unused for declarative
-# reductions, and `suspend_self` is not a recognised step kind in this
-# context). Even if the trigger gap closes, the suspend-self payment will
-# require a second pass.
+# Same root gap as BT23-005 (`when_this_digivolves_into`); BT5-092 covers
+# the "ANY of your Digimon" source form.
 
 card: BT5-092
 name: Nokia Shiramine
@@ -67,10 +52,16 @@ effects:
   # SetUpActivateClass(..., isOptional: true, ...) and SelectHandEffect.SetUp
   # (canNoSelect: true, maxCount: 1). Filter: cardSource.CardNames.Contains
   # ("Agumon") || cardSource.CardNames.Contains("Gabumon"). Played via
-  # CardEffectCommons.PlayPermanentCards(payCost: false). The "you may"
-  # wording maps to clause-level `optional: true` and select_hand
-  # `optional: true` (player can decline either to never enter the picker
-  # or to PASS the picker once installed).
+  # CardEffectCommons.PlayPermanentCards(payCost: false).
+  #
+  # The "you may" wording maps to the CLAUSE-LEVEL `optional: true`.
+  # G-OUTER-OPTIONAL-NOT-INSTALLED (closed 2026-05-19): a lone optional
+  # trigger now installs an explicit outer accept/decline prompt before its
+  # body runs. The inner `select_hand` is therefore MANDATORY (`optional:
+  # false`) — once the player accepts the outer prompt they must pick an
+  # eligible card if one exists. Previously the inner `select_hand` was
+  # ALSO marked `optional: true`, which masked the missing outer-prompt
+  # gap; relying on the clause-level optional is the faithful shape.
   #
   # Cross-reference: same shape as BT22-084 (Nokia Shiramine Lv.5) clause 2
   # and BT5-091 Tai Kamiya — see qa/archetype-qa/dsl/ implementations.
@@ -81,7 +72,7 @@ effects:
       - select_hand:
           of: you
           bind_as: pick
-          optional: true
+          optional: false
           filter:
             any_of:
               - name_contains: "Agumon"
@@ -92,38 +83,37 @@ effects:
   # ─── Clause 2: [Your Turn] cost reduction on digivolve into ─────────────────
   #             Greymon/Garurumon/Omnimon-named hand card.
   #
-  # BLOCKED on DSL vocab gap (see file header). DCGO BT5_092.cs:108-269 —
-  # BeforePayCost ActivateClass that, when CanTriggerWhenPermanentWouldDigivolve
-  # fires for an OWNER battle-area permanent digivolving into a hand card with
-  # HasGreymonName || ContainsCardName("Omnimon") || HasGarurumonName, suspends
-  # this Tamer (CanActivateSuspendCostEffect + new SuspendPermanentsClass(...)
-  # then enqueues a ChangeCostClass with Cost -= 1 for the next paid cost).
-  # Hash: "Digisorption-1_BT5_092" (1-per-trigger throttling shared across
-  # copies). Once-per-trigger; not Once-per-turn.
+  # Printed: "[Your Turn] When one of your Digimon would digivolve into a
+  # Digimon card in your hand with [Greymon], [Garurumon] or [Omnimon] in its
+  # name, by suspending this Tamer, reduce the digivolution cost by 1."
   #
-  # Concrete YAML shape that would lower IF the missing primitives existed:
+  # DCGO BT5_092.cs:108-269 — BeforePayCost ActivateClass that, when
+  # CanTriggerWhenPermanentWouldDigivolve fires for an OWNER battle-area
+  # permanent digivolving into a hand card with HasGreymonName ||
+  # ContainsCardName("Omnimon") || HasGarurumonName, suspends this Tamer
+  # (CanActivateSuspendCostEffect) then applies Cost -= 1.
   #
-  #   - scope: own
-  #     kind: cost_reduction
-  #     reduction_timing: before_pay_cost
-  #     active_when: { your_turn: true }
-  #     when_any_ally_digivolves_into:
-  #       target:
-  #         any_of:
-  #           - name_contains: "Greymon"
-  #           - name_contains: "Garurumon"
-  #           - name_contains: "Omnimon"
-  #     pay_cost:
-  #       - suspend: { target: self }
-  #     amount: 1
-  #     summary: "[Your Turn] Suspend self → -1 digivolve cost when ally digivolves into
-  #              a Greymon/Garurumon/Omnimon-named hand card"
-  #
-  # Until the DSL gains `when_any_ally_digivolves_into` (target-card aware
-  # trigger) AND the suspend-self payment hook on cost_reduction clauses,
-  # this effect is intentionally omitted. The behavioral test file documents
-  # the missing branches with `#[ignore]` markers tagged to the same gap
-  # entry that BT23-005 references in qa/dsl-vocab-gaps.md.
+  # G-COST-REDUCTION-DIGIVOLVE-INTO (closed 2026-05-20):
+  #   - `when_any_ally_digivolves_into` fires only for a DIGIVOLVE cost whose
+  #     target card matches the name predicate.
+  #   - `pay_cost: [suspend: { target: source }]` is the "by suspending this
+  #     Tamer" cost — recognised as the suspend-self idiom; it FAILS (and so
+  #     cancels the reduction) when Nokia is already suspended.
+  #   - `active_when: { your_turn: true }` enforces the printed [Your Turn].
+  #   - Not optional: the reduction applies whenever the cost is payable.
+  - kind: cost_reduction
+    scope: face_up
+    reduction_timing: before_pay_cost
+    active_when: { your_turn: true }
+    when_any_ally_digivolves_into:
+      any_of:
+        - name_contains: "Greymon"
+        - name_contains: "Garurumon"
+        - name_contains: "Omnimon"
+    pay_cost:
+      - suspend: { target: source }
+    amount: 1
+    summary: "[Your Turn] Suspend self → -1 digivolve cost when an ally digivolves into a Greymon/Garurumon/Omnimon-named hand card"
 
   # ─── Clause 3: [Security] Play this card without paying the cost ───────────
   #

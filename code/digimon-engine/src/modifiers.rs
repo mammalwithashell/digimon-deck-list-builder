@@ -863,6 +863,28 @@ impl ModifierRegistry {
             .unwrap_or(false)
     }
 
+    /// Net `<Security A. +N>` / `<Security A. -N>` contributed by *granted*
+    /// keyword entries on `target` (e.g. an aura's
+    /// `grant_keyword: SecurityAttackPlus`). Printed face/inherited keywords
+    /// on the permanent's `card_sources` are summed separately by
+    /// `Game::security_attack_keyword_bonus`; this folds in the registry side
+    /// so aura-granted Security Attack keywords are actually consumed at the
+    /// security loop.
+    pub fn granted_security_attack_keyword_bonus(&self, target: PermanentHandle) -> i32 {
+        self.permanent_keywords
+            .get(&target)
+            .map(|kws| {
+                kws.iter()
+                    .map(|entry| match entry.keyword {
+                        Keyword::SecurityAttackPlus(n) => n as i32,
+                        Keyword::SecurityAttackMinus(n) => -(n as i32),
+                        _ => 0,
+                    })
+                    .sum()
+            })
+            .unwrap_or(0)
+    }
+
     /// Whether dispatch of `timing` should be suppressed for `target`.
     ///
     /// True iff there is at least one `ModifierType::DisableEffect` entry on

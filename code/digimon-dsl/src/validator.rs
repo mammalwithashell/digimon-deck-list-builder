@@ -821,6 +821,24 @@ fn validate_step(
                 errors,
             );
         }
+        StepSpec::SelectMaterials(args) => {
+            if let crate::step::CountBound::Formula { formula } = &args.max {
+                validate_formula(
+                    formula,
+                    &format!("{prefix}.max.formula"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
+            validate_predicate(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
         StepSpec::SelectUnionZone(args) => {
             validate_predicate(
                 &args.filter,
@@ -1027,6 +1045,16 @@ fn validate_step_binding_scope(
             );
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::SelectMaterials(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::SelectOwnSources(args) => {
             validate_predicate_binding_scope(
                 &args.filter,
@@ -1071,6 +1099,13 @@ fn validate_step_binding_scope(
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::SelectOwnBreedingPermanent(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
             let mut child = scope.clone();
             declare_optional_binding(&mut child, &args.bind_as);
             validate_steps_binding_scope(
@@ -1150,6 +1185,27 @@ fn validate_step_binding_scope(
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::PlayFromMaterials(args) => {
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::PlayFromHandFree(args) => {
+            // The played permanent's `bind_as` becomes available to later
+            // steps in the same body (e.g. `schedule_delete_played_at_turn_end`).
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::PlayToken(args) => {
+            // The played token's `bind_as` becomes available to later
+            // steps in the same body (e.g. `schedule_delete_played_at_turn_end`).
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::PlayUnionBoundFree(args) => {
+            // The `binding` must name an in-scope `select_union_zone` bind_as.
+            report_if_undeclared_binding(
+                &args.binding,
+                &format!("{prefix}.binding"),
+                card_id,
+                scope,
+                errors,
+            );
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::BindPermanentProperty(args) => {
@@ -1236,6 +1292,17 @@ fn validate_step_binding_scope(
                 &format!("{prefix}.body"),
                 card_id,
                 &mut child,
+                errors,
+            );
+        }
+        StepSpec::ScheduleDeletePlayedAtTurnEnd(args) => {
+            // The `binding` must name an in-scope permanent binding produced
+            // by an earlier free-play step (PUPPETS-G003).
+            report_if_undeclared_binding(
+                &args.binding,
+                &format!("{prefix}.binding"),
+                card_id,
+                scope,
                 errors,
             );
         }
@@ -1327,6 +1394,15 @@ fn validate_predicate_binding_scope(
                 errors,
             );
         }
+    }
+    if let Some(bc) = &pred.binding_count_eq {
+        report_if_undeclared_binding(
+            &bc.binding,
+            &format!("{prefix}.binding_count_eq.binding"),
+            card_id,
+            scope,
+            errors,
+        );
     }
 
     for (i, sub) in pred.all_of.iter().enumerate() {
@@ -1481,6 +1557,8 @@ fn validate_formula_binding_scope(
             }
         }
         FormulaSpec::Literal(_)
+        | FormulaSpec::SourceDp { .. }
+        | FormulaSpec::SourceMaterialCount { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
         | FormulaSpec::Compound(CompoundFormula::AggregateScoped(_))
         | FormulaSpec::Compound(CompoundFormula::RawRust(_)) => {}
@@ -1630,6 +1708,8 @@ fn validate_formula(
             }
         }
         FormulaSpec::Literal(_)
+        | FormulaSpec::SourceDp { .. }
+        | FormulaSpec::SourceMaterialCount { .. }
         | FormulaSpec::BindingDp { .. }
         | FormulaSpec::BindingPlayCost { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))
@@ -1674,6 +1754,8 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
         FormulaSpec::BasePerDelta { per, .. } => per_uses_dp_aggregate(per),
         FormulaSpec::SourceStackDpSum { .. } => false,
         FormulaSpec::Literal(_)
+        | FormulaSpec::SourceDp { .. }
+        | FormulaSpec::SourceMaterialCount { .. }
         | FormulaSpec::BindingDp { .. }
         | FormulaSpec::BindingPlayCost { .. }
         | FormulaSpec::Compound(CompoundFormula::Aggregate(_))

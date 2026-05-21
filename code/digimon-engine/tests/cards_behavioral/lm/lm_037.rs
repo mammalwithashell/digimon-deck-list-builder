@@ -21,7 +21,9 @@ use digimon_dsl::compiled::{
     CompiledStackPosition, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::mask::build_action_mask;
-use digimon_engine::action::space::PLAY_HAND_START;
+use digimon_engine::action::space::{
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS, PLAY_HAND_START,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -204,7 +206,7 @@ fn lm_037_has_main_delay_and_inherited_security_clauses() {
         CompiledClause::Declarative(CompiledDeclarativeClause::Delay {
             trigger, process, ..
         }) => {
-            assert_eq!(*trigger, CompiledTiming::EndOfYourNextTurn);
+            assert_eq!(*trigger, CompiledTiming::Delayed);
             assert!(
                 process
                     .iter()
@@ -387,14 +389,18 @@ fn lm_037_security_check_places_self_in_battle_area_as_delay_option() {
     assert!(matches!(
         placed.option_state,
         OptionState::Delayed {
-            trigger: DelayTrigger::EndOfYourNextTurn,
+            trigger: DelayTrigger::MainPhaseActivated,
             ..
         }
     ));
 }
 
+/// PUPPETS-G009 — LM-037's standard `<Delay>` is a player-visible
+/// `[Main]`-phase activation. Playing it parks a `MainPhaseActivated`
+/// delayed Option; on a later main phase the controller activates it,
+/// trashing the Option as cost and running the body (gain 2 memory).
 #[test]
-fn lm_037_delay_activation_gains_2_memory_when_played_as_delay_option() {
+fn lm_037_delay_activation_gains_2_memory_via_main_phase_action() {
     let yaml = lm_037_yaml();
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(&yaml)
@@ -402,14 +408,13 @@ fn lm_037_delay_activation_gains_2_memory_when_played_as_delay_option() {
         .add_card(make_tamer("YELLOW-TAMER", CardColor::Yellow))
         .add_card(red_digimon("FILL"))
         .hand(0, &["LM-037"])
-        .deck(0, &["FILL"; 5])
-        .deck(1, &["FILL"; 5])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
         .memory(10)
         .start();
 
     runner.place_on_field(0, "YELLOW-TAMER", Some(0));
     runner.game.enter_main_phase();
-    let start_turn = runner.game.turn_count;
 
     assert_eq!(
         runner.game.play_option_from_hand(0, 0),
@@ -418,41 +423,49 @@ fn lm_037_delay_activation_gains_2_memory_when_played_as_delay_option() {
     runner
         .auto_resolve()
         .expect("resolve LM-037 reveal selection and delay placement");
-    assert!(
-        runner
-            .game
-            .player(0)
-            .battle_area
-            .iter()
-            .any(|permanent| matches!(
+
+    let delay_idx = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|permanent| {
+            matches!(
                 permanent.option_state,
                 OptionState::Delayed {
-                    trigger: DelayTrigger::EndOfYourNextTurn,
+                    trigger: DelayTrigger::MainPhaseActivated,
                     ..
                 }
-            )),
-        "playing LM-037 should park it as a delayed option"
+            )
+        })
+        .expect("playing LM-037 should park it as a MainPhaseActivated delayed option");
+
+    let bit = (FIELD_EFFECT_START
+        + delay_idx as u16 * EFFECTS_PER_PERMANENT
+        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize;
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[bit],
+        0.0,
+        "LM-037 <Delay> must not be activatable on the placing turn"
     );
 
     runner.end_turn();
     runner.game.enter_main_phase();
     runner.end_turn();
-    assert_eq!(runner.game.turn_count, start_turn + 2);
     assert_eq!(runner.game.turn_player(), 0);
-
     runner.game.enter_main_phase();
     runner.game.set_memory(0);
-    runner.end_turn();
 
-    let expected_memory = if runner.game.turn_player() == 0 {
-        2
-    } else {
-        -2
-    };
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(mask[bit], 1.0, "LM-037 <Delay> activation is a legal action");
+    assert_eq!(mask[PASS as usize], 1.0, "declining stays legal");
+
+    runner.game.decode_action(bit as u16, 0);
+
     assert_eq!(
         runner.memory(),
-        expected_memory,
-        "LM-037 Delay body should give its owner 2 memory at end of owner's next turn"
+        2,
+        "LM-037 <Delay> body gains 2 memory when the player activates it"
     );
     assert!(
         !runner
@@ -461,6 +474,6 @@ fn lm_037_delay_activation_gains_2_memory_when_played_as_delay_option() {
             .battle_area
             .iter()
             .any(|permanent| matches!(permanent.option_state, OptionState::Delayed { .. })),
-        "delayed LM-037 should be trashed after the Delay body resolves"
+        "LM-037 is trashed as the <Delay> activation cost"
     );
 }

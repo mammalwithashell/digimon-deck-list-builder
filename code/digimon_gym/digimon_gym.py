@@ -92,6 +92,7 @@ from engine_py_legacy.engine.game import (
     SECURITY_TARGET, BREEDING_SLOT,
 )  # parity-doc: these geometry constants stay on Python until migrated
 from engine_py_legacy.engine.data.enums import PendingAction  # parity-doc: Python-engine fallback path only
+import digimon_engine as _engine
 from digimon_engine import ACTION_SPACE_SIZE, GamePhase, TENSOR_SIZE
 
 # Action Space Constants (re-exported for backward compatibility)
@@ -109,7 +110,16 @@ ACTION_DIGIVOLVE_END = 999
 ACTION_EFFECT_START = 1000
 ACTION_EFFECT_END = 1999
 ACTION_SOURCE_START = 2000
-ACTION_SOURCE_END = ACTION_SPACE_SIZE - 1  # 2167
+# Battle-area source-selection range. `ACTION_SOURCE_END` is pinned to the
+# LAST battle-area source-select ID, NOT `ACTION_SPACE_SIZE - 1`: Task S1.3
+# appended a breeding-carrier source-select sub-range after it, so the old
+# `ACTION_SPACE_SIZE - 1` expression would wrongly drift to 2191.
+# `SOURCE_SELECT_END` / the breeding constants come from the engine when the
+# (post-S1.3) PyO3 binding exports them; literals are the documented fallback.
+SOURCE_SELECT_END = getattr(_engine, "SOURCE_SELECT_END", 2168)
+ACTION_SOURCE_END = SOURCE_SELECT_END - 1  # 2167
+ACTION_BREEDING_SOURCE_START = getattr(_engine, "BREEDING_SOURCE_SELECT_START", 2168)
+ACTION_BREEDING_SOURCE_END = getattr(_engine, "BREEDING_SOURCE_SELECT_END", 2192) - 1  # 2191
 
 logger = logging.getLogger(__name__)
 

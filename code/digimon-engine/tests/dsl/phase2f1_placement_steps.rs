@@ -176,6 +176,73 @@ fn place_as_bottom_source_uses_bound_hand_owner() {
     );
 }
 
+/// Royal Knights (BT13-093, BT23-072, EX11-053) need to place a hand card
+/// as the bottom digivolution source of the breeding-area permanent (e.g.
+/// [King Drasil_7D6]). The breeding permanent binding must resolve as a
+/// sentinel `PermanentHandle` (`index == BREEDING_TARGET`) and the
+/// `place_as_bottom_source` lowering must take that path. Proves the
+/// substrate close of "hand-Main bottom-source placement".
+#[test]
+fn place_as_bottom_source_accepts_breeding_permanent_target_from_hand_source() {
+    use digimon_engine::selection::BreedingPermanentSelectionRef;
+
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("KING-DRASIL", "King Drasil_7D6"))
+        .add_card(make_test_card("RK-CARD", "Some Royal Knight"))
+        .hand(0, &["RK-CARD"])
+        .memory(5)
+        .start();
+
+    let breeding = runner.place_in_breeding(0, "KING-DRASIL");
+    let src_handle = runner.game.players[0].hand[0].handle();
+    let hand_before = runner.game.players[0].hand.len();
+    let stack_before = runner
+        .game
+        .player(0)
+        .breeding_area
+        .as_ref()
+        .unwrap()
+        .stack_size();
+
+    let mut bindings = Bindings::new();
+    bindings.insert_hand_index("src", 0, 0);
+    bindings.insert_breeding_permanent_ref(
+        "kd",
+        BreedingPermanentSelectionRef {
+            player: breeding.player,
+            card: breeding.card,
+        },
+    );
+
+    let step = CompiledStep::PlaceAsBottomSource {
+        source: CompiledBindingRef::Named("src".into()),
+        target: CompiledBindingRef::Named("kd".into()),
+        face_down: false,
+    };
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_handle, None, 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        hand_before - 1,
+        "hand card consumed"
+    );
+    let breeding_after = runner.game.player(0).breeding_area.as_ref().unwrap();
+    assert_eq!(
+        breeding_after.stack_size(),
+        stack_before + 1,
+        "breeding stack grew by 1"
+    );
+    assert_eq!(
+        breeding_after.card_sources[0].handle(),
+        src_handle,
+        "hand card landed at the bottom of the breeding stack"
+    );
+}
+
 #[test]
 fn place_on_security_uses_bound_trash_owner() {
     let mut runner = DebugRunner::builder()
@@ -234,6 +301,100 @@ fn place_on_security_uses_bound_trash_owner() {
             .any(|cs| cs.handle() == p1_trash_handle),
         "P1 trash card is placed into P0 security"
     );
+}
+
+// ─── PlaceTopSourceAsBottom (Phase 2 Track F) ────────────────────────────────
+
+#[test]
+fn place_top_source_as_bottom_rotates_top_stacked_card_to_bottom() {
+    // Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM. Build a 3-source stack
+    // [BASE, MID, TOP] and verify the verb rotates MID (the top stacked
+    // card — the one immediately beneath TOP) to position 0 → [MID, BASE, TOP].
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("T-BASE", "Base"))
+        .add_card(make_test_card("T-MID", "Mid"))
+        .add_card(make_test_card("T-TOP", "Top"))
+        .start();
+
+    let target = runner.place_on_field(0, "T-BASE", None);
+    let base_h = runner.game.players[0].battle_area[0].card_sources[0].handle();
+    for card_id in ["T-MID", "T-TOP"] {
+        let data_idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == card_id)
+            .unwrap();
+        let card_index = runner.game.next_card_index();
+        runner.game.players[0].battle_area[0]
+            .card_sources
+            .push(CardSource::new(data_idx, 0, card_index));
+    }
+    let mid_h = runner.game.players[0].battle_area[0].card_sources[1].handle();
+    let top_h = runner.game.players[0].battle_area[0].card_sources[2].handle();
+    assert_eq!(runner.game.players[0].battle_area[0].stack_size(), 3);
+
+    let src_card = runner.game.players[0].battle_area[0].top_card().handle();
+
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("tgt", target);
+
+    let step = CompiledStep::PlaceTopSourceAsBottom {
+        target: CompiledBindingRef::Named("tgt".into()),
+    };
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, Some(target), 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    let perm = &runner.game.players[0].battle_area[target.index as usize];
+    assert_eq!(perm.stack_size(), 3, "stack size is unchanged");
+    assert_eq!(
+        perm.card_sources[0].handle(),
+        mid_h,
+        "the rotated top stacked card lives at the bottom of the stack"
+    );
+    assert_eq!(
+        perm.card_sources[1].handle(),
+        base_h,
+        "the original base shifts up one slot"
+    );
+    assert_eq!(
+        perm.card_sources[2].handle(),
+        top_h,
+        "the active top card stays on top"
+    );
+}
+
+#[test]
+fn place_top_source_as_bottom_noops_when_no_stacked_cards() {
+    // Single-source permanents have no "top stacked card" beneath the
+    // active top — the engine helper returns false and the stack is
+    // unchanged. Callers gate the activating step with `materials_count_gte: 1`.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("T-SOLO", "Solo"))
+        .start();
+
+    let target = runner.place_on_field(0, "T-SOLO", None);
+    let solo_h = runner.game.players[0].battle_area[0].top_card().handle();
+    assert_eq!(runner.game.players[0].battle_area[0].stack_size(), 1);
+
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("tgt", target);
+
+    let step = CompiledStep::PlaceTopSourceAsBottom {
+        target: CompiledBindingRef::Named("tgt".into()),
+    };
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, solo_h, Some(target), 0);
+        run_step(&step, &mut ctx, &mut bindings);
+    }
+
+    let perm = &runner.game.players[0].battle_area[target.index as usize];
+    assert_eq!(perm.stack_size(), 1);
+    assert_eq!(perm.top_card().handle(), solo_h);
 }
 
 // ─── TrashTopSource ──────────────────────────────────────────────────────────

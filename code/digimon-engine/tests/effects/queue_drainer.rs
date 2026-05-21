@@ -8,10 +8,12 @@
 //! effects that make resolution order observable in memory totals.
 
 use digimon_engine::action::space::{HAND_EFFECT_START, PASS};
-use digimon_engine::card_source::CardSource;
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::EffectTiming;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
+use std::sync::Arc;
 
 fn setup_two_effects_on_turn_player(cards: &[&str]) -> DebugRunner {
     let mut r = DebugRunner::builder()
@@ -333,6 +335,75 @@ fn buried_non_inherited_triggered_effect_does_not_fire_from_source_position() {
         r.memory(),
         0,
         "buried non-inherited top-card effects must not dispatch from source position"
+    );
+}
+
+/// A `CardEffect` carrying a single INHERITED triggered clause: at end of the
+/// controller's turn, gain 4 memory. An inherited effect is the lower portion
+/// of a digi card — per RULES 15-3-1 it is active only while the card is a
+/// digivolution source beneath another card (the top Digimon activates it).
+struct InheritedEndTurnMemoryGain;
+impl CardEffect for InheritedEndTurnMemoryGain {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::end_of_your_turn(card)
+            .inherited()
+            .name("[Inherited] gain 4 memory at end of turn")
+            .process(|ctx| {
+                ctx.gain_memory(4);
+            })
+            .build()]
+    }
+}
+
+/// Regression: a lone top-card Digimon must use its MAIN effects. Its own
+/// inherited clause is dormant while it sits on top of its stack — it is not a
+/// digivolution source beneath anything, so the top-card scan must not enqueue
+/// it (RULES 15-3-1).
+#[test]
+fn lone_top_card_digimon_does_not_fire_its_own_inherited_effect() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("INH-TRIG", "InhTrig"))
+        .memory(0)
+        .start();
+    r.register_effect("INH-TRIG", Arc::new(InheritedEndTurnMemoryGain));
+    r.place_on_field(0, "INH-TRIG", Some(0));
+
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
+    r.game.drain_effect_queue();
+
+    assert_eq!(
+        r.memory(),
+        0,
+        "a lone Digimon's own inherited clause must not fire — it uses its main effects (RULES 15-3-1)"
+    );
+}
+
+/// Counterpart: the same card placed as a digivolution source beneath a top
+/// card IS active — its inherited clause fires through the carrier.
+#[test]
+fn inherited_effect_fires_when_card_is_a_digivolution_source() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("INH-TRIG", "InhTrig"))
+        .add_card(make_test_card("PLAIN-TOP", "PlainTop"))
+        .memory(0)
+        .start();
+    r.register_effect("INH-TRIG", Arc::new(InheritedEndTurnMemoryGain));
+    // Stack: [INH-TRIG (digivolution source), PLAIN-TOP (top card)].
+    r.place_stack(0, &["INH-TRIG", "PLAIN-TOP"]);
+
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
+    r.game.drain_effect_queue();
+
+    assert_eq!(
+        r.memory(),
+        4,
+        "INH-TRIG beneath a top card is a digivolution source — its inherited clause must fire (RULES 15-3-1)"
     );
 }
 

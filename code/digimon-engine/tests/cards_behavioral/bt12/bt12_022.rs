@@ -77,12 +77,10 @@ fn bt12_022_yaml_parses_and_compiles() {
     let _compiled = digimon_dsl::compile::compile(&spec).expect("BT12-022 YAML compiles");
 }
 
-/// BT12-022 has exactly zero triggered clauses (clause 0 is BLOCKED and absent
-/// from the YAML). The effect text triggers at BeforePayCost timing which the
-/// DSL cannot model without G-BEFORE-PAY-COST-DIGIVOLVE-TARGET and
-/// G-BEFORE-PAY-COST-GAIN-MEMORY.
+/// BT12-022 has exactly one triggered clause: clause 0 is now an observer-
+/// style `before_pay_cost_observe` clause (Phase 2 Track H closure).
 #[test]
-fn bt12_022_clause_0_is_absent_blocked() {
+fn bt12_022_clause_0_is_present_observer() {
     let runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT12-022 in embedded DSL pack")
@@ -98,9 +96,9 @@ fn bt12_022_clause_0_is_absent_blocked() {
         .count();
 
     assert_eq!(
-        triggered_count, 0,
-        "BT12-022 clause 0 is BLOCKED — no triggered clauses should be present; \
-         gap: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET + G-BEFORE-PAY-COST-GAIN-MEMORY"
+        triggered_count, 1,
+        "BT12-022 clause 0 is IMPLEMENTED (Phase 2 Track H) — exactly one \
+         before_pay_cost_observe clause should be present"
     );
 }
 
@@ -151,39 +149,239 @@ fn bt12_022_has_one_inherited_jamming_aura() {
 // BLOCKED: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET + G-BEFORE-PAY-COST-GAIN-MEMORY.
 // All behavioral tests for clause 0 are ignored until both gaps close.
 
-/// DNA digivolving into a green Digimon should gain 1 memory — BLOCKED.
+/// DNA digivolving into a green Digimon gains 1 memory — IMPLEMENTED.
 #[test]
-#[ignore = "pending: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET + G-BEFORE-PAY-COST-GAIN-MEMORY from qa/dsl-vocab-gaps.md"]
 fn bt12_022_dna_digivolving_into_green_gains_one_memory() {
-    // When gap closes: set up BT12-022 on field, initiate DNA digivolve into
-    // a green Digimon card from hand, assert memory increases by 1.
-    //
-    // Suggested setup:
-    //   let mut runner = DebugRunner::builder()
-    //       .dsl_card(CARD_ID)
-    //       .add_card(make_green_digimon("GREEN-DNA"))
-    //       .hand(0, &["GREEN-DNA"])
-    //       .memory(0)
-    //       .start();
-    //   let carrier = runner.place_on_field(0, CARD_ID, Some(0));
-    //   let mat_b = runner.place_on_field(0, "MAT-B", None);
-    //   // initiate DNA digivolve on carrier + mat_b into GREEN-DNA
-    //   assert_eq!(runner.memory(), 1, "should gain 1 memory for green DNA target");
+    use digimon_engine::card_data::{DnaCost, DnaRequirement};
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::enums::CardColor;
+
+    // Green Digimon DNA result. Requires Blue Lv.4 + Green Lv.4. Memory cost 0.
+    let mut green_dna = make_test_card("GREEN-DNA", "GreenDNAResult");
+    green_dna.card_kind = CardKind::Digimon;
+    green_dna.level = Some(5);
+    green_dna.dp = Some(6000);
+    green_dna.play_cost = 8;
+    green_dna.colors = vec![CardColor::Green];
+    green_dna.dna_costs = vec![DnaCost {
+        memory_cost: 0,
+        requirement1: DnaRequirement {
+            level: 4,
+            card_colors: vec![CardColor::Blue],
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+        requirement2: DnaRequirement {
+            level: 4,
+            card_colors: vec![CardColor::Green],
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+    }];
+
+    // Green Lv.4 partner material.
+    let mut green_mat = make_test_card("GREEN-MAT", "GreenMaterial");
+    green_mat.card_kind = CardKind::Digimon;
+    green_mat.level = Some(4);
+    green_mat.dp = Some(4000);
+    green_mat.colors = vec![CardColor::Green];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT12-022 in embedded DSL pack")
+        .add_card(green_dna)
+        .add_card(green_mat)
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    // Place BT12-022 (Blue Lv.4) and GREEN-MAT on field, GREEN-DNA in hand.
+    let bt12_022_perm = runner.place_on_field(0, CARD_ID, Some(0));
+    let _green_mat_perm = runner.place_on_field(0, "GREEN-MAT", Some(0));
+    let green_dna_data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "GREEN-DNA")
+        .unwrap();
+    let card_index = runner.game.next_card_index();
+    runner.game.players[0]
+        .hand
+        .push(CardSource::new(green_dna_data_idx, 0, card_index));
+    let hand_idx = runner.game.player(0).hand.len() - 1;
+
+    let memory_before = runner.game.memory;
+
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    runner.game.resolve_dna_digivolve_stage2_with_window(
+        0,
+        bt12_022_perm.index as usize,
+        1,
+        hand_idx,
+        digimon_engine::dna_digivolve::DnaRouteWindow::Main,
+    );
+
+    // BT12-022's observer fires (source_permanent = target_a in
+    // cost_target_permanents, dna_origin=true, target color=green) →
+    // gain 1 memory. The DNA cost is 0 so no offset from cost payment.
+    assert_eq!(
+        runner.game.memory,
+        memory_before + 1,
+        "BT12-022 must gain 1 memory when DNA digivolving into green Digimon"
+    );
 }
 
-/// DNA digivolving into a NON-green Digimon should NOT gain memory — BLOCKED.
+/// DNA digivolving into a NON-green Digimon must NOT gain memory.
 #[test]
-#[ignore = "pending: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET + G-BEFORE-PAY-COST-GAIN-MEMORY from qa/dsl-vocab-gaps.md"]
 fn bt12_022_dna_digivolving_into_non_green_does_not_gain_memory() {
-    // When gap closes: DNA digivolve into a red/blue Digimon → no memory gain.
+    use digimon_engine::card_data::{DnaCost, DnaRequirement};
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::enums::CardColor;
+
+    let mut red_dna = make_test_card("RED-DNA", "RedDNAResult");
+    red_dna.card_kind = CardKind::Digimon;
+    red_dna.level = Some(5);
+    red_dna.dp = Some(6000);
+    red_dna.play_cost = 8;
+    red_dna.colors = vec![CardColor::Red];
+    red_dna.dna_costs = vec![DnaCost {
+        memory_cost: 0,
+        requirement1: DnaRequirement {
+            level: 4,
+            card_colors: vec![CardColor::Blue],
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+        requirement2: DnaRequirement {
+            level: 4,
+            card_colors: vec![CardColor::Red],
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+    }];
+
+    let mut red_mat = make_test_card("RED-MAT", "RedMaterial");
+    red_mat.card_kind = CardKind::Digimon;
+    red_mat.level = Some(4);
+    red_mat.dp = Some(4000);
+    red_mat.colors = vec![CardColor::Red];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT12-022 in embedded DSL pack")
+        .add_card(red_dna)
+        .add_card(red_mat)
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    let bt12_022_perm = runner.place_on_field(0, CARD_ID, Some(0));
+    let _red_mat_perm = runner.place_on_field(0, "RED-MAT", Some(0));
+    let red_dna_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "RED-DNA")
+        .unwrap();
+    let card_index = runner.game.next_card_index();
+    runner.game.players[0]
+        .hand
+        .push(CardSource::new(red_dna_idx, 0, card_index));
+    let hand_idx = runner.game.player(0).hand.len() - 1;
+
+    let memory_before = runner.game.memory;
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    runner.game.resolve_dna_digivolve_stage2_with_window(
+        0,
+        bt12_022_perm.index as usize,
+        1,
+        hand_idx,
+        digimon_engine::dna_digivolve::DnaRouteWindow::Main,
+    );
+
+    // Target is RED, not green — observer must not fire.
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "memory must NOT change when DNA digivolving into a non-green Digimon"
+    );
 }
 
-/// On opponent's turn, the memory gain should NOT trigger — BLOCKED.
+/// On opponent's turn, the memory gain must NOT trigger (your_turn gate).
 #[test]
-#[ignore = "pending: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET + G-BEFORE-PAY-COST-GAIN-MEMORY from qa/dsl-vocab-gaps.md"]
 fn bt12_022_clause_0_does_not_fire_on_opponents_turn() {
-    // When gap closes: end_turn to opponent; opponent DNA digivolves BT12-022
-    // into green Digimon → memory gain should NOT fire (your_turn: true gate).
+    use digimon_engine::card_data::{DnaCost, DnaRequirement};
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::enums::CardColor;
+
+    let mut green_dna = make_test_card("GREEN-DNA", "GreenDNAResult");
+    green_dna.card_kind = CardKind::Digimon;
+    green_dna.level = Some(5);
+    green_dna.dp = Some(6000);
+    green_dna.play_cost = 8;
+    green_dna.colors = vec![CardColor::Green];
+    green_dna.dna_costs = vec![DnaCost {
+        memory_cost: 0,
+        requirement1: DnaRequirement {
+            level: 4,
+            card_colors: vec![CardColor::Blue],
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+        requirement2: DnaRequirement {
+            level: 4,
+            card_colors: vec![CardColor::Green],
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+    }];
+
+    let mut green_mat = make_test_card("GREEN-MAT", "GreenMaterial");
+    green_mat.card_kind = CardKind::Digimon;
+    green_mat.level = Some(4);
+    green_mat.dp = Some(4000);
+    green_mat.colors = vec![CardColor::Green];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT12-022 in embedded DSL pack")
+        .add_card(green_dna)
+        .add_card(green_mat)
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    // Place BT12-022 and GREEN-MAT on P1's side this time.
+    let bt12_022_perm = runner.place_on_field(1, CARD_ID, Some(0));
+    let _green_mat_perm = runner.place_on_field(1, "GREEN-MAT", Some(0));
+    let green_dna_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "GREEN-DNA")
+        .unwrap();
+    let card_index = runner.game.next_card_index();
+    runner.game.players[1]
+        .hand
+        .push(CardSource::new(green_dna_idx, 1, card_index));
+    let hand_idx = runner.game.player(1).hand.len() - 1;
+
+    let memory_before = runner.game.memory;
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    // Player 0 is still the active player. P1 is doing the DNA, so from
+    // BT12-022's perspective (controller = P1) it's opponent's turn.
+    runner.game.resolve_dna_digivolve_stage2_with_window(
+        1,
+        bt12_022_perm.index as usize,
+        1,
+        hand_idx,
+        digimon_engine::dna_digivolve::DnaRouteWindow::Main,
+    );
+
+    // your_turn checks `rctx.game.turn_player() == rctx.player`: P0 vs P1 = false.
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "memory must NOT change on opponent's turn (your_turn gate)"
+    );
 }
 
 // ─── Section 3 — Clause 1 behavioral (inherited Jamming) ─────────────────────

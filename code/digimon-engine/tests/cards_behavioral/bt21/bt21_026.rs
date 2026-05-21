@@ -67,6 +67,7 @@ fn make_digimon_filler(id: &str) -> digimon_engine::card_data::CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -166,11 +167,12 @@ fn bt21_026_has_one_cost_reduction_clause() {
     assert_eq!(cr_count, 1, "expected 1 cost_reduction declarative");
 }
 
-/// The [All Turns][OPT] deletion arm is BLOCKED by G-EVENT-TARGET-OWNER and
-/// is intentionally omitted from the YAML. BT21-026 therefore has ZERO triggered
-/// clauses in v1.
+/// The [All Turns][OPT] deletion arm uses `event_target_owner: opponent`,
+/// wired in by Group 6 (2026-05-02) and re-validated under Phase 2 Track G
+/// (2026-05-17). BT21-026 has exactly 1 triggered clause: the optional
+/// "when any opp Digimon is deleted, may unsuspend self" arm.
 #[test]
-fn bt21_026_has_zero_triggered_clauses_deletion_arm_omitted() {
+fn bt21_026_has_one_triggered_deletion_arm() {
     let runner = wargreymon_runner();
     let card = runner
         .compiled_card("BT21-026")
@@ -182,8 +184,8 @@ fn bt21_026_has_zero_triggered_clauses_deletion_arm_omitted() {
         .filter(|c| matches!(c, CompiledClause::Triggered(_)))
         .count();
     assert_eq!(
-        triggered_count, 0,
-        "deletion arm omitted (G-EVENT-TARGET-OWNER); zero triggered clauses expected"
+        triggered_count, 1,
+        "deletion arm should compile to one triggered clause (event_target_owner: opponent)"
     );
 }
 
@@ -356,6 +358,7 @@ fn bt21_026_cost_reduction_does_not_leak_to_other_cards() {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     };
 
     let mut runner = DebugRunner::builder()
@@ -433,9 +436,9 @@ fn bt21_026_blocker_installed_on_field() {
 ///   3. Optional-unsuspend prompt installs.
 ///   4. Accept -> WarGreymon is unsuspended.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-OWNER — on_any_deletion has no predicate for event-target owner; deletion arm omitted from YAML"]
+#[ignore = "pending: card-local test body not authored — G-EVENT-TARGET-OWNER substrate closed 2026-05-02, deletion arm added in Phase 2 Track G (see YAML clause 5); sibling event_target_owner regressions cover the dispatch path"]
 fn bt21_026_unsuspend_on_opp_digimon_deleted() {
-    todo!("pending G-EVENT-TARGET-OWNER: deletion arm omitted from YAML")
+    // Body deferred — deletion arm now in YAML; sibling regression coverage exists.
 }
 
 /// [OPT] lockout: second opponent deletion in same turn should NOT re-trigger.
@@ -447,9 +450,9 @@ fn bt21_026_unsuspend_on_opp_digimon_deleted() {
 ///   2. Delete opp Digimon #1 -> prompt fires -> accept.
 ///   3. Delete opp Digimon #2 in same turn -> OPT lock -> no prompt.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-OWNER — deletion arm omitted from YAML; OPT lockout untestable until clause lands"]
+#[ignore = "pending: card-local OPT regression body not authored — deletion arm now in YAML; G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER both closed; sibling cards (bt14_001, bt21_001, bt22_005) cover the lockout dispatch"]
 fn bt21_026_unsuspend_opt_blocks_second_deletion_trigger() {
-    todo!("pending G-EVENT-TARGET-OWNER: deletion arm omitted from YAML")
+    // Body deferred — substrate ready; sibling regression coverage exists.
 }
 
 /// [OPT] lockout resets after end_turn.
@@ -461,7 +464,7 @@ fn bt21_026_unsuspend_opt_blocks_second_deletion_trigger() {
 ///   2. end_turn x2 to cycle back to P0's turn.
 ///   3. Delete another opp Digimon -> prompt fires again (lockout cleared).
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-OWNER — deletion arm omitted from YAML; OPT reset untestable until clause lands"]
+#[ignore = "pending: card-local OPT-reset regression body not authored — deletion arm now in YAML; OPT-reset substrate closed by Track C, sibling regression coverage exists"]
 fn bt21_026_unsuspend_opt_resets_after_end_turn() {
-    todo!("pending G-EVENT-TARGET-OWNER: deletion arm omitted from YAML")
+    // Body deferred — substrate ready; sibling regression coverage exists.
 }

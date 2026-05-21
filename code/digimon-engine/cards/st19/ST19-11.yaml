@@ -13,7 +13,7 @@ alt_paths:
 
 effects:
   - when: [on_play, when_digivolving]
-    summary: "1 opponent Digimon gets -3000 DP for the turn"
+    summary: "1 opponent Digimon gets -3000 DP for the turn; if 3+ total Digimon increase by another -3000"
     process:
       - select_opponent_permanent:
           bind_as: target
@@ -23,14 +23,19 @@ effects:
           target: target
           value: -3000
           expiry: end_of_turn
-
-  # BLOCKED: the printed "If there are 3 or more Digimon, increase the DP
-  # reduction by -3000" branch is omitted rather than approximated.
-  #
-  # Required reusable capability:
-  # - Subjectless `if:` predicates must evaluate `count_gte` / `count_lte`
-  #   aggregates over battle-area permanents, or modifier formulas need a
-  #   threshold/clamp/add expression that can encode "extra -3000 at count >= 3".
+      # "If there are 3 or more Digimon, increase the DP reduction of this
+      # effect by -3000." Counts Digimon across BOTH battle areas (owner: any).
+      # The `target` binding is still in scope for the inner add_dp_modifier.
+      - if:
+          condition:
+            count_gte:
+              filter: { kind: digimon, owner: any }
+              n: 3
+          then:
+            - add_dp_modifier:
+                target: target
+                value: -3000
+                expiry: end_of_turn
 
   - kind: replacement
     scope: inherited

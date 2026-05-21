@@ -215,7 +215,7 @@ fn bt21_013_has_inherited_aura_clause() {
 /// BLOCKED: G-WHEN-DIGIVOLVING-DISPATCH — WhenDigivolving effects are not
 /// dispatched in the Rust engine's digivolution flow.
 #[test]
-#[ignore = "BLOCKED: G-WHEN-DIGIVOLVING-DISPATCH — WhenDigivolving triggered dispatch not wired in Rust engine"]
+#[ignore = "pending: test fixture — test places BASE-LV3 filler (not BT21-013/Agunimon) on field; firing WhenDigivolving on BASE-LV3 reaches no Agunimon effects. WhenDigivolving dispatch from the perm and from below-top inherited sources is closed (Phase 2 Track D regression); fix the fixture to either place Agunimon or to install Agunimon as a below-top inherited source"]
 fn bt21_013_when_digivolving_installs_selection_with_hybrid_in_hand() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(AGUNIMON_YAML)
@@ -246,7 +246,7 @@ fn bt21_013_when_digivolving_installs_selection_with_hybrid_in_hand() {
 ///
 /// BLOCKED: G-WHEN-DIGIVOLVING-DISPATCH
 #[test]
-#[ignore = "BLOCKED: G-WHEN-DIGIVOLVING-DISPATCH — WhenDigivolving triggered dispatch not wired in Rust engine"]
+#[ignore = "pending: test fixture — test places BASE-LV3 filler (not BT21-013/Agunimon) on field; firing WhenDigivolving on BASE-LV3 reaches no Agunimon effects. WhenDigivolving dispatch from the perm and from below-top inherited sources is closed (Phase 2 Track D regression); fix the fixture to either place Agunimon or to install Agunimon as a below-top inherited source"]
 fn bt21_013_when_digivolving_no_selection_without_hybrid_or_hero() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(AGUNIMON_YAML)
@@ -280,7 +280,7 @@ fn bt21_013_when_digivolving_no_selection_without_hybrid_or_hero() {
 ///
 /// BLOCKED: G-WHEN-DIGIVOLVING-DISPATCH
 #[test]
-#[ignore = "BLOCKED: G-WHEN-DIGIVOLVING-DISPATCH — WhenDigivolving triggered dispatch not wired in Rust engine"]
+#[ignore = "pending: test fixture — test places BASE-LV3 filler (not BT21-013/Agunimon) on field; firing WhenDigivolving on BASE-LV3 reaches no Agunimon effects. WhenDigivolving dispatch from the perm and from below-top inherited sources is closed (Phase 2 Track D regression); fix the fixture to either place Agunimon or to install Agunimon as a below-top inherited source"]
 fn bt21_013_when_digivolving_from_hand_places_hybrid_as_bottom_source() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(AGUNIMON_YAML)
@@ -334,7 +334,7 @@ fn bt21_013_when_digivolving_from_hand_places_hybrid_as_bottom_source() {
 ///
 /// BLOCKED: G-WHEN-DIGIVOLVING-DISPATCH
 #[test]
-#[ignore = "BLOCKED: G-WHEN-DIGIVOLVING-DISPATCH — WhenDigivolving triggered dispatch not wired in Rust engine"]
+#[ignore = "pending: test fixture — test places BASE-LV3 filler (not BT21-013/Agunimon) on field; firing WhenDigivolving on BASE-LV3 reaches no Agunimon effects. WhenDigivolving dispatch from the perm and from below-top inherited sources is closed (Phase 2 Track D regression); fix the fixture to either place Agunimon or to install Agunimon as a below-top inherited source"]
 fn bt21_013_when_digivolving_from_trash_places_hero_as_bottom_source() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(AGUNIMON_YAML)
@@ -413,8 +413,16 @@ fn bt21_013_when_attacking_installs_hand_selection_with_hybrid_in_hand() {
 
     runner.attack_digimon(attacker, defender, false);
 
-    // The WhenAttacking clause is optional, so if the prompt installs it's
-    // of kind Hand (select_hand step).
+    // The WhenAttacking clause is optional ("This Digimon may digivolve ...")
+    // and its body's first step is a mandatory select_hand, so an outer
+    // accept/decline prompt installs first (G-OUTER-OPTIONAL-NOT-INSTALLED).
+    if runner.pending_kind() == Some(SelectionKind::Replacement) {
+        runner
+            .accept_optional_trigger()
+            .expect("accept the outer optional-trigger prompt");
+    }
+
+    // After accepting, the inner select_hand prompt installs (kind Hand).
     let pending = runner.pending_selection();
     if let Some(p) = pending {
         assert!(

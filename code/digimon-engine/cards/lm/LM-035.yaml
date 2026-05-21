@@ -44,8 +44,11 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
 
   # [Main] <Delay> Gain 2 memory.
+  # `trigger: delayed` — player-visible [Main]-phase activation (PUPPETS-G009):
+  # the controller trashes the parked Option to activate the body on a later
+  # main phase; it never auto-fires (RULES_CONTEXT 16-16).
   - kind: delay
-    trigger: end_of_your_next_turn
+    trigger: delayed
     summary: "[Main]<Delay> Gain 2 memory"
     process:
       - gain_memory: 2

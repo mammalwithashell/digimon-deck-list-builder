@@ -32,15 +32,11 @@
 //!    is present (printed `evo_costs`).
 //!
 //! 2. **Self-target on_suspend gate** — Printed text says "When THIS Digimon
-//!    becomes suspended". The DSL has `event_target_owner` and
-//!    `event_target_kind` predicate leaves but no `event_target_is_source` /
-//!    `event_target_is_self` predicate that compares the suspended-permanent
-//!    handle against the source permanent. The DSL `equals: [...]` predicate
-//!    only compares integers (literals + integer bindings), not permanent
-//!    handles. Without this gate, the clause uses the AD1-014 pattern
-//!    (`event_target_owner: you, event_target_kind: digimon`), which over-fires
-//!    when ANY of the controller's Digimon (including allies) suspend. New
-//!    DSL gap: G-DSL-EVENT-TARGET-IS-SELF.
+//!    becomes suspended". The `event_permanent_is_source: true` BoolPredicate
+//!    leaf compares the suspended-permanent handle against the source
+//!    permanent, so the clause fires only when this card's own permanent is
+//!    suspended — DCGO's `permanent == card.PermanentOfThisCard()`. An ally
+//!    Digimon suspending no longer over-fires the clause.
 //!
 //! 3. **Repeat-N selection over BattleArea** — `select_count_capped_multi`
 //!    only supports Hand and Trash zones (see
@@ -362,7 +358,6 @@ fn bt15_101_on_self_suspend_offers_optional_unsuspend_prompt() {
 }
 
 #[test]
-#[ignore = "pending: G-DSL-EVENT-TARGET-IS-SELF — DSL has no predicate to assert the suspended permanent equals the source permanent; the on_suspend clause uses the AD1-014 pattern (event_target_owner: you, event_target_kind: digimon), so it over-fires when an ALLY suspends rather than only when this Digimon suspends. Negative case held until the predicate ships."]
 fn bt15_101_on_ally_suspend_does_not_consume_opt_or_offer_prompt() {
     // Printed text: "When THIS Digimon becomes suspended, you may unsuspend it."
     // The clause must NOT fire on an ally suspending — only on self.

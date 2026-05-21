@@ -54,27 +54,31 @@ dp: 4000
 traits: [Mythical Dragon]
 
 effects:
-  # ─── Clause 0 — BLOCKED ──────────────────────────────────────────────────────
+  # ─── Clause 0 — IMPLEMENTED [Phase 2 Track H] ────────────────────────────────
   #
   # "[Your Turn] When this Digimon would DNA digivolve into a green Digimon
   #  card, gain 1 memory."
   #
-  # BLOCKED on G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (BeforePayCost trigger with
-  # target-card predicate threading) and G-BEFORE-PAY-COST-GAIN-MEMORY (no
-  # triggered gain_memory form at BeforePayCost timing). Both gaps filed in
-  # qa/dsl-vocab-gaps.md. See card header for full analysis.
+  # Closed by Phase 2 Track H. Substrate landed:
+  #   - `before_pay_cost_observe` triggered timing fires observer bodies at
+  #     BeforePayCost cost-calc dispatch without coupling to cost reduction.
+  #   - `cost_target: { ... }` predicate evaluates against the card being
+  #     digivolved into.
+  #   - `source_is_cost_target_permanent: true` gates to "THIS Digimon is one
+  #     of the digivolve target permanents" (a DNA material, here).
+  #   - `dna_origin: true` is set during DNA cost-calc dispatch so the
+  #     observer fires only on DNA paths.
   #
-  # Stub (commented — uncomment when both gaps close):
-  #
-  # - scope: own
-  #   kind: cost_reduction           # wrong kind — need triggered gain_memory
-  #   reduction_timing: before_pay_cost
-  #   when_this_digivolves_into:
-  #     target_color_is: green       # NEW: G-EVENT-CARD-COLOR-IS gap
-  #     target_kind_is: digimon
-  #     dna_only: true               # G-BEFORE-PAY-COST-DIGIVOLVE-TARGET
-  #   active_when: { your_turn: true }
-  #   # effect: gain_memory: 1       # needs triggered form, not cost_reduction
+  - when: before_pay_cost_observe
+    active_when:
+      all_of:
+        - your_turn: true
+        - dna_origin: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { color_is: green, kind: digimon }
+    summary: "[Your Turn] When DNA digivolving into a green Digimon card, gain 1 memory"
+    process:
+      - gain_memory: 1
 
   # ─── Clause 1 — Inherited [Your Turn] <Jamming> ────────────────────────────
   #

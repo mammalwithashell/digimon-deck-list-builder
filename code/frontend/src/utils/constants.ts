@@ -1,4 +1,4 @@
-// ─── Action Space Ranges (2120 discrete actions) ───────────────────
+// ─── Action Space Ranges (2192 discrete actions) ───────────────────
 
 export const ACTION = {
   MULLIGAN_KEEP: 0,
@@ -22,14 +22,18 @@ export const ACTION = {
   EFFECT_END: 1999,
   TRASH_MAIN_START: 1150,
   TRASH_MAIN_END: 1194,
+  // Battle-area source selection.
   SOURCE_START: 2000,
   SOURCE_END: 2167,
+  // Breeding-area carrier source selection (King Drasil — Task S1.3).
+  // 2 carriers x 12 sources, keyed by carrier owner.
+  BREEDING_SOURCE_START: 2168,
+  BREEDING_SOURCE_END: 2191,
 } as const;
 
 // Board layout constants
 export const FIELD_SLOTS = 14;
 export const BREEDING_SLOT = FIELD_SLOTS;  // 14
-export const MAX_SOURCES = 11;
 
 // Attack formula: 100 + attacker * 15 + target
 export const ATTACK_TARGETS_PER_SLOT = 15;

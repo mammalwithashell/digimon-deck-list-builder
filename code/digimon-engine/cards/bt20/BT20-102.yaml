@@ -55,41 +55,104 @@ effects:
   #   5. (Unconditional, outside IsOmniOrXAntiSource check) If opp has Digimon:
   #      select 1 to return to bottom of deck (canNoSelect: false, mode: PutLibraryBottom)
   #
-  # Implemented via raw_rust because two DSL gaps block pure YAML expression:
+  # MIGRATED 2026-05-20 — clause (d) body is now PURE DSL. The previous
+  # raw_rust escape (`bt20_102_boardwipe_and_return`) is removed.
   #
-  # GAP G-SELF-DIGIVOLUTION-CONTAINS-NAME [new — hybrid]:
-  #   The digivolution-stack condition "If [Omnimon] or [X Antibody] is in this
-  #   Digimon's digivolution cards" requires checking THIS permanent's own
-  #   card_sources array for a card whose name contains "Omnimon" or "X Antibody".
-  #   DSL predicate `source_name_contains` applies to the SOURCE PERMANENT (the
-  #   Digimon this card is stacked under, in inherited contexts) — not to this
-  #   card's own digivolution stack at all. No DSL BoolPredicate leaf maps to
-  #   `Permanent::contains_card_name()` from the condition closure of a triggered
-  #   clause on the card itself.
-  #   - Engine API (exists): `Permanent::contains_card_name(name, data)` scans
-  #     `card_sources` including top card.
-  #   - Suggested DSL syntax: `self_digivolution_contains_name: "Omnimon"` as a
-  #     BoolPredicate leaf evaluating `rctx.source_permanent()?.contains_card_name(name, &rctx.game.card_data)`.
-  #   - Gap kind: hybrid — engine has the method; DSL needs the predicate leaf AND
-  #     `lower_triggered.rs` must pass a `PredicateSubject::Permanent(source_h)` to
-  #     the condition closure (currently passes `PredicateSubject::None`).
+  # G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY (RESOLVED 2026-05-19):
+  #   The digivolution-stack condition "If [Omnimon] or [X Antibody] is in
+  #   this Digimon's digivolution cards" checks only the SOURCE cards beneath
+  #   the carrier — NOT the carrier's own top card. The pre-existing
+  #   `self_digivolution_contains_name` predicate calls
+  #   `Permanent::contains_card_name`, which scans the top card too — so a
+  #   card NAMED "Omnimon (X Antibody)" always self-matches "Omnimon" /
+  #   "X Antibody" and the negative case ("no Omnimon in the digivolution
+  #   cards") was inexpressible. The new `self_digivolution_sources_contain_name`
+  #   predicate scans ONLY the digivolution source cards (excluding the
+  #   carrier's top card) — matching DCGO's `DigivolutionCards.Count(...)`.
+  #   The clause `condition:` below uses it directly, so the board-wipe fires
+  #   only when an Omnimon / X Antibody card is genuinely in the stack.
   #
-  # GAP G-FOR-EACH-EXCLUDE-BINDING [new — dsl]:
-  #   "Delete all OTHER Digimon" (all except the two saved) requires a for_each
-  #   over both players' battle areas filtered to exclude handles in a named binding
-  #   (the "saved" list). No `not_in_binding` / `exclude_binding` predicate exists
-  #   in the DSL. The engine can express this in raw_rust.
-  #   - Engine API (exists): iterate battle_area snapshots, check handle not in Vec.
-  #   - Suggested DSL syntax: `not_in_binding: saved` CandidatePredicate leaf in
-  #     `for_each { over: { of: any, kind: digimon }, filter: { not_in_binding: saved }, ... }`.
+  # G-FOR-EACH-EXCLUDE-BINDING (RESOLVED 2026-05-20 — pure DSL):
+  #   "Delete all OTHER Digimon" (all Digimon except the two saved) is now a
+  #   `for_each` over both players' battle-area Digimon (`of: any`) with a
+  #   `not_in_binding` exclusion of the two protect-bindings. The subtlety:
+  #   `not_in_binding` against an ABSENT binding currently evaluates to
+  #   "subject IS in the (missing) set" → the candidate would be wrongly
+  #   excluded from deletion. A protect-binding is absent whenever that
+  #   player had no Digimon to protect (the `select_*_permanent` step
+  #   silently short-circuits on an empty candidate set). To stay faithful
+  #   WITHOUT an engine change, each exclusion is wrapped as
+  #   `any_of: [{ binding_absent: <save> }, { not_in_binding: <save> }]`:
+  #   when the save slot is unbound the `binding_absent` leaf passes (the
+  #   exclude-set is empty → nothing protected on that side); when it is
+  #   bound, `not_in_binding` excludes exactly the one saved permanent.
+  #   This reproduces the raw_rust per-player branch logic precisely.
   #
-  # Note: DCGO fires step 5 (return to deck) OUTSIDE the IsOmniOrXAntiSource block,
-  # meaning it applies regardless of whether the condition was met. The raw_rust
-  # function implements this faithfully.
+  # Step ordering vs DCGO (BT20_102.cs OnEnterFieldAnyone):
+  #   1-2. select_opponent_permanent / select_own_permanent — choose 1 to
+  #        protect per player. Non-optional ("choose 1" is mandatory); the
+  #        engine silently no-ops the select when that player has no Digimon
+  #        (matches DCGO `canNoSelect: false` + the empty-set skip).
+  #   3.   for_each delete — delete every battle-area Digimon not protected.
+  #        `for_each` snapshots stable top-card identities, so the
+  #        per-iteration removals do not invalidate the iteration
+  #        (G-FOR-EACH-DELETE-INDEX-SHIFT).
+  #   4.   select_opponent_permanent + return_to_deck bottom — DCGO step 5.
+  #        After the board-wipe only the protected opponent Digimon remains;
+  #        it is the return target. Non-optional, silently no-ops when the
+  #        opponent has no surviving Digimon.
+  #
+  # PRINTED-TEXT NUANCE: step 4 ("Then, return …") is grammatically part of
+  # the same conditional sentence as the board-wipe in the printed text
+  # ("If [Omnimon] or [X Antibody] is in this Digimon's digivolution cards,
+  # choose … and delete … . Then, return …"). DCGO places its step 5 outside
+  # the source check, but the printed "Then," chains it to the conditional
+  # clause — so gating the whole clause on the stack condition (the
+  # `condition:` below) is faithful to the printed text. (If a divergence is
+  # ever observed, printed text wins per the source-priority policy.)
+  #
+  # Same shape as AD1-025 Omnimon clause (d): `for_each` board mutation
+  # followed by sequential `select_opponent_permanent` + body steps.
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] Omnimon/X Antibody in stack → choose 1 to protect per player, delete rest; return 1 opp Digimon to bottom of deck"
+    summary: "[On Play][When Digivolving] If Omnimon/X Antibody in digivolution cards → choose 1 to protect per player, delete rest; return 1 opp Digimon to bottom of deck"
+    condition:
+      any_of:
+        - self_digivolution_sources_contain_name: "Omnimon"
+        - self_digivolution_sources_contain_name: "X Antibody"
     process:
-      - raw_rust: { fn: bt20_102_boardwipe_and_return }
+      # Step 1: choose 1 of the opponent's Digimon to protect.
+      - select_opponent_permanent:
+          bind_as: saved_opp
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to protect from deletion"
+      # Step 2: choose 1 of your Digimon to protect.
+      - select_own_permanent:
+          bind_as: saved_own
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to protect from deletion"
+      # Step 3: delete every battle-area Digimon that is not protected.
+      - for_each:
+          over:
+            all_of:
+              - kind: digimon
+              - of: any
+              - any_of:
+                  - binding_absent: saved_opp
+                  - not_in_binding: saved_opp
+              - any_of:
+                  - binding_absent: saved_own
+                  - not_in_binding: saved_own
+          bind_as: wipe_target
+          body:
+            - delete_permanent: { target: wipe_target }
+      # Step 4: return 1 of the opponent's (surviving) Digimon to deck bottom.
+      - select_opponent_permanent:
+          bind_as: return_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to return to the bottom of their deck"
+      - return_to_deck:
+          target: return_target
+          position: bottom
 
   # ─── Clause (e): [End of Your Turn][Once Per Turn] Rush + attack ──────────
   #

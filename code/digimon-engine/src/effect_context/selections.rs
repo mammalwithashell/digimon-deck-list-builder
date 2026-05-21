@@ -35,13 +35,18 @@ use crate::selection::{
 ///
 /// - `Hand`  — action IDs map to `PLAY_HAND_START + i` (range 0–29)
 /// - `Trash` — action IDs map to `TRASH_EFFECT_START + i` (range 1150–1194)
-/// - `Material(PermanentHandle)` — action IDs map to
-///   `SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD + source_index`
-///   (range 2000–2167). Candidates are the digivolution *sources* of the
-///   named permanent — i.e., `card_sources[0..len-1]` — **excluding** the
-///   top card (`card_sources.last()`). This matches DCGO's `DigivolutionCards`
-///   which also excludes `TopCard`. Used by `Fragment(N)`, `ArmorPurge`, and
-///   `MaterialSave(N)`.
+/// - `Material(PermanentHandle)` — candidates are the digivolution *sources*
+///   of the named permanent — i.e., `card_sources[0..len-1]` — **excluding**
+///   the top card (`card_sources.last()`). This matches DCGO's
+///   `DigivolutionCards` which also excludes `TopCard`. Used by `Fragment(N)`,
+///   `ArmorPurge`, and `MaterialSave(N)`.
+///
+///   For a **battle-area** carrier (`index != BREEDING_TARGET`) action IDs
+///   map to `SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD +
+///   source_index` (range 2000–2167). For a **breeding-area** carrier
+///   (the `index == BREEDING_TARGET` sentinel — King Drasil), action IDs map
+///   to `encode_breeding_source_select(carrier_owner, source_index)` (range
+///   2168–2191). See `material_zone_geometry` for the single branch point.
 ///
 /// # Stack indexing convention
 /// `Permanent.card_sources` is a `Vec` where index 0 is the **bottom** card
@@ -316,26 +321,21 @@ impl<'a> EffectContext<'a> {
         F: Fn(&Game, usize) -> bool,
         C: FnOnce(&mut EffectContext<'_>, usize) + Send + Sync + 'static,
     {
-        use crate::action::space::{SOURCES_PER_FIELD, SOURCE_SELECT_START};
+        use crate::action::space::SOURCES_PER_FIELD;
 
-        let field_index = of_permanent.index as u16;
-        let stack_len = match self
-            .game
-            .player(of_permanent.player)
-            .battle_area
-            .get(of_permanent.index as usize)
-        {
-            Some(perm) => perm.card_sources.len(),
+        // material_zone_geometry branches battle-area vs. breeding-area
+        // (BREEDING_TARGET sentinel) carriers — same single branch point as
+        // the multi-pick `CountCappedZone::Material` path.
+        let (source_count, range_start) = match material_zone_geometry(self.game, of_permanent) {
+            Some(geom) => geom,
             None => return,
         };
         // Mirror CountCappedZone::Material: top card is never a candidate.
-        let source_count = stack_len.saturating_sub(1);
         let cap = source_count.min(SOURCES_PER_FIELD as usize);
         let mut valid_action_ids: Vec<u16> = Vec::with_capacity(cap);
         for i in 0..cap {
             if filter(self.game, i) {
-                valid_action_ids
-                    .push(SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD + i as u16);
+                valid_action_ids.push(range_start + i as u16);
             }
         }
         if valid_action_ids.is_empty() {
@@ -365,7 +365,10 @@ impl<'a> EffectContext<'a> {
             source_permanent,
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
-                let (_, source_idx) = crate::action::space::decode_source_select(action_id);
+                // Recover the source index via `range_start` rather than
+                // `decode_source_select`, so a breeding-carrier action ID
+                // (in the BREEDING_SOURCE_SELECT range) decodes correctly.
+                let source_idx = action_id.saturating_sub(range_start) as usize;
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -374,7 +377,7 @@ impl<'a> EffectContext<'a> {
                     controller,
                     override_pin,
                 );
-                user_callback(&mut ctx, source_idx as usize);
+                user_callback(&mut ctx, source_idx);
             }),
             on_decline: None,
         });
@@ -512,6 +515,60 @@ impl<'a> EffectContext<'a> {
             override_pin,
             prompt.to_string(),
             dp_budget,
+            min_picks,
+            Vec::new(),
+            std::sync::Arc::new(filter),
+            source_card,
+            source_permanent,
+            source_kind,
+            previous_phase,
+            Box::new(move |game, picked| {
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                );
+                callback(&mut ctx, picked);
+            }),
+        );
+    }
+
+    /// Play-cost-budget analog of `select_opponent_permanents_by_dp_budget`.
+    /// The player picks `min_picks..N` opponent permanents whose running
+    /// printed-play-cost sum never exceeds `play_cost_budget`; any single
+    /// permanent whose individual play cost exceeds the budget is excluded.
+    /// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+    pub fn select_opponent_permanents_by_play_cost_budget<F, C>(
+        &mut self,
+        prompt: &str,
+        play_cost_budget: i32,
+        min_picks: u8,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, PermanentHandle) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<PermanentHandle>) + Send + Sync + 'static,
+    {
+        let selecting_player = self.override_selecting_player.unwrap_or(self.player);
+        let controller = self.player;
+        let opponent = self.game.next_clockwise(self.player);
+        let override_pin = self.override_selecting_player;
+        let source_card = self.source_card;
+        let source_permanent = self.source_permanent;
+        let source_kind = self.source_kind;
+        let previous_phase = self.game.current_phase;
+
+        install_play_cost_budget_selection(
+            self.game,
+            opponent,
+            controller,
+            selecting_player,
+            override_pin,
+            prompt.to_string(),
+            play_cost_budget,
             min_picks,
             Vec::new(),
             std::sync::Arc::new(filter),
@@ -883,6 +940,12 @@ impl<'a> EffectContext<'a> {
     /// `usize` index), this helper's filter receives `&CardSource` so cross-zone
     /// predicates can inspect the card directly without branching on whether the
     /// index is a hand or trash index.
+    /// Prompt for a card from the union of `zones` (hand ∪ trash). The
+    /// `callback` receives the picked card's `CardHandle` **and** the
+    /// [`UnionZoneOrigin`](crate::selection::UnionZoneOrigin) of the zone it
+    /// came from, so a downstream consumer can act on the card's true origin
+    /// (e.g. play it back from hand vs trash). The origin is recovered from
+    /// the encoded `action_id` range (`PLAY_HAND` vs `TRASH_EFFECT`).
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: PlayerId,
@@ -893,7 +956,13 @@ impl<'a> EffectContext<'a> {
         callback: C,
     ) where
         F: Fn(&Game, &CardSource) -> bool,
-        C: FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync + 'static,
+        C: FnOnce(
+                &mut EffectContext<'_>,
+                crate::card_source::CardHandle,
+                crate::selection::UnionZoneOrigin,
+            ) + Send
+            + Sync
+            + 'static,
     {
         use crate::action::space::{
             HAND_MAIN_LIMIT, PLAY_HAND_END, PLAY_HAND_START, TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
@@ -940,7 +1009,12 @@ impl<'a> EffectContext<'a> {
         let source_permanent = self.source_permanent;
         let source_kind = self.source_kind;
         let user_callback: Box<
-            dyn FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync,
+            dyn FnOnce(
+                    &mut EffectContext<'_>,
+                    crate::card_source::CardHandle,
+                    crate::selection::UnionZoneOrigin,
+                ) + Send
+                + Sync,
         > = Box::new(callback);
 
         let previous_phase = self.game.current_phase;
@@ -962,14 +1036,21 @@ impl<'a> EffectContext<'a> {
                     "select_union_zone: action_id {} falls in gap between PLAY_HAND ({}..{}) and TRASH_EFFECT ({}..); valid_action_ids was populated incorrectly",
                     action_id, PLAY_HAND_START, PLAY_HAND_END, TRASH_EFFECT_START
                 );
-                // Disambiguate by range.
-                let handle = if action_id >= TRASH_EFFECT_START {
+                // Disambiguate by range — the action_id range also records
+                // the picked card's origin zone.
+                let (handle, origin) = if action_id >= TRASH_EFFECT_START {
                     let idx = (action_id - TRASH_EFFECT_START) as usize;
-                    game.player(of_player).trash[idx].handle()
+                    (
+                        game.player(of_player).trash[idx].handle(),
+                        crate::selection::UnionZoneOrigin::Trash,
+                    )
                 } else {
                     // PLAY_HAND_START range (0-29)
                     let idx = action_id.saturating_sub(PLAY_HAND_START) as usize;
-                    game.player(of_player).hand[idx].handle()
+                    (
+                        game.player(of_player).hand[idx].handle(),
+                        crate::selection::UnionZoneOrigin::Hand,
+                    )
                 };
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
@@ -979,7 +1060,7 @@ impl<'a> EffectContext<'a> {
                     controller,
                     override_pin,
                 );
-                user_callback(&mut ctx, handle);
+                user_callback(&mut ctx, handle, origin);
             }),
             on_decline: None,
         });
@@ -1101,19 +1182,61 @@ impl<'a> EffectContext<'a> {
             + Sync
             + 'static,
     {
+        self.select_count_capped_multi_min(
+            of_player,
+            zone,
+            0,
+            max,
+            prompt,
+            is_optional_zero,
+            distinct_by,
+            filter,
+            callback,
+        );
+    }
+
+    /// Like `select_count_capped_multi` but with a minimum-pick floor.
+    /// `min` is the number of cards that MUST be picked before the player can
+    /// finish (PASS becomes available only at `picked >= effective_min`,
+    /// where `effective_min = max(min, if is_optional_zero {0} else {1})`).
+    /// If fewer than `min` candidates pass the filter the selection silently
+    /// no-ops WITHOUT firing `callback` — the required cost is unpayable.
+    /// G-SELECT-MULTI-MIN.
+    #[allow(clippy::too_many_arguments)]
+    pub fn select_count_capped_multi_min<F, C>(
+        &mut self,
+        of_player: PlayerId,
+        zone: CountCappedZone,
+        min: u8,
+        max: u8,
+        prompt: &str,
+        is_optional_zero: bool,
+        distinct_by: Option<DistinctByMode>,
+        filter: F,
+        callback: C,
+    ) where
+        F: Fn(&Game, &CardSource) -> bool + Send + Sync + 'static,
+        C: FnOnce(&mut EffectContext<'_>, Vec<crate::card_source::CardHandle>)
+            + Send
+            + Sync
+            + 'static,
+    {
         debug_assert!(max <= 10, "select_count_capped_multi: max must be <= 10");
+        debug_assert!(min <= max, "select_count_capped_multi: min must be <= max");
 
         use crate::action::space::{
-            HAND_MAIN_LIMIT, PLAY_HAND_START, SOURCES_PER_FIELD, SOURCE_SELECT_START,
-            TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
+            HAND_MAIN_LIMIT, PLAY_HAND_START, SOURCES_PER_FIELD, TRASH_EFFECT_START,
+            TRASH_MAIN_LIMIT,
         };
 
         // Collect valid candidates at install time using the filter.
         //
-        // For Material: action IDs encode as
-        //   SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD + source_index
-        // The range_start here is the base for source_index 0 of this permanent.
-        // zone_len = number of sources excluding the top card (card_sources.len() - 1).
+        // For Material: action IDs encode either as a battle-area
+        // source-select ID or a breeding-carrier source-select ID — see
+        // `material_zone_geometry`, the single branch point. `range_start`
+        // is the base for source_index 0 of this carrier; threading it
+        // through `install_count_capped_step` keeps every recursive step
+        // consistent. zone_len = sources excluding the top card.
         let (zone_len, range_start) = match zone {
             CountCappedZone::Hand => {
                 let len = self.game.player(of_player).hand.len().min(HAND_MAIN_LIMIT);
@@ -1129,21 +1252,13 @@ impl<'a> EffectContext<'a> {
                 (len, TRASH_EFFECT_START)
             }
             CountCappedZone::Material(perm_handle) => {
-                let stack_len = self
-                    .game
-                    .player(perm_handle.player)
-                    .battle_area
-                    .get(perm_handle.index as usize)
-                    .map(|p| p.card_sources.len())
-                    .unwrap_or(0);
-                // Exclude top card: sources are indices 0..stack_len-1.
-                let source_count = stack_len.saturating_sub(1);
+                let (source_count, base) = material_zone_geometry(self.game, perm_handle)
+                    .unwrap_or((0, 0));
                 debug_assert!(
                     source_count <= SOURCES_PER_FIELD as usize,
-                    "Material zone: source_count {} exceeds SOURCES_PER_FIELD {} for field_index {}",
-                    source_count, SOURCES_PER_FIELD, perm_handle.index
+                    "Material zone: source_count {} exceeds SOURCES_PER_FIELD {} for carrier {:?}",
+                    source_count, SOURCES_PER_FIELD, perm_handle
                 );
-                let base = SOURCE_SELECT_START + perm_handle.index as u16 * SOURCES_PER_FIELD;
                 (source_count, base)
             }
         };
@@ -1157,8 +1272,8 @@ impl<'a> EffectContext<'a> {
                 CountCappedZone::Trash => self.game.player(of_player).trash[i].clone(),
                 CountCappedZone::Material(perm_handle) => {
                     // index i corresponds to card_sources[i] (0 = bottom, excludes top).
-                    self.game.player(perm_handle.player).battle_area[perm_handle.index as usize]
-                        .card_sources[i]
+                    material_zone_slice(self.game, perm_handle)
+                        .expect("material carrier present (zone_len computed from it)")[i]
                         .clone()
                 }
             };
@@ -1167,7 +1282,16 @@ impl<'a> EffectContext<'a> {
             }
         }
 
+        // Fewer candidates than the required minimum → the cost is unpayable.
+        // Silently no-op WITHOUT firing the callback (no partial pick).
+        // G-SELECT-MULTI-MIN.
+        if min > 0 && candidate_indices.len() < min as usize {
+            return;
+        }
+
         // Empty filter → invoke final callback immediately; no selection installed.
+        // (Only reachable when `min == 0` — the `min > 0` short-circuit above
+        // already handled the unpayable case.)
         if candidate_indices.is_empty() {
             callback(self, Vec::new());
             return;
@@ -1203,6 +1327,7 @@ impl<'a> EffectContext<'a> {
             of_player,
             zone,
             range_start,
+            min,
             max,
             is_optional_zero,
             distinct_by,
@@ -1591,7 +1716,13 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
         callback: C,
     ) where
         F: Fn(&crate::game::Game, &crate::card_source::CardSource) -> bool,
-        C: FnOnce(&mut EffectContext<'_>, crate::card_source::CardHandle) + Send + Sync + 'static,
+        C: FnOnce(
+                &mut EffectContext<'_>,
+                crate::card_source::CardHandle,
+                crate::selection::UnionZoneOrigin,
+            ) + Send
+            + Sync
+            + 'static,
     {
         let prev = self.ctx.override_selecting_player.take();
         self.ctx.override_selecting_player = Some(self.selecting_player);
@@ -2457,6 +2588,218 @@ fn install_dp_budget_selection(
     });
 }
 
+// ── material-zone (digivolution-source) geometry ─────────────────────────────
+
+/// Resolve the `&Permanent` a `CountCappedZone::Material` / `select_material`
+/// carrier handle points at. Branches **once** on the `BREEDING_TARGET`
+/// sentinel: a breeding-area carrier reads `player.breeding_area`, a
+/// battle-area carrier reads `player.battle_area[index]`. Returns `None` if
+/// the carrier is absent (empty breeding area, or out-of-range field index).
+///
+/// All material-zone reads (candidate collection, the per-pick filter clone
+/// loop, and the three re-derivations inside the count-capped resolution
+/// callback) MUST route through this so a breeding carrier and a battle
+/// carrier behave identically.
+pub(crate) fn material_carrier_permanent(
+    game: &Game,
+    perm: PermanentHandle,
+) -> Option<&crate::permanent::Permanent> {
+    if perm.index == crate::action::space::BREEDING_TARGET as u8 {
+        game.player(perm.player).breeding_area.as_ref()
+    } else {
+        game.player(perm.player).battle_area.get(perm.index as usize)
+    }
+}
+
+/// The carrier's `card_sources` slice — the bottom-up digivolution stack
+/// (index 0 = bottom, `last()` = top/active card). Routes through
+/// `material_carrier_permanent` so battle-area and breeding-area carriers
+/// are read identically. `None` if the carrier is absent.
+pub(crate) fn material_zone_slice(game: &Game, perm: PermanentHandle) -> Option<&[CardSource]> {
+    material_carrier_permanent(game, perm).map(|p| p.card_sources.as_slice())
+}
+
+/// `(source_count, range_start)` for a material-zone carrier.
+///
+/// - `source_count` — number of selectable sources, i.e. the stack length
+///   minus the top card (same contract for battle and breeding carriers).
+/// - `range_start` — the action ID for `source_index == 0` of this carrier:
+///   `SOURCE_SELECT_START + field_index * SOURCES_PER_FIELD` for a
+///   battle-area carrier, `encode_breeding_source_select(owner, 0)` for a
+///   breeding-area carrier.
+///
+/// `range_start` is computed once and threaded through the recursive
+/// count-capped trampoline, so the encoding stays consistent across every
+/// step of a multi-pick. `None` if the carrier is absent.
+pub(crate) fn material_zone_geometry(game: &Game, perm: PermanentHandle) -> Option<(usize, u16)> {
+    use crate::action::space::{
+        encode_breeding_source_select, BREEDING_TARGET, SOURCES_PER_FIELD, SOURCE_SELECT_START,
+    };
+    let stack_len = material_carrier_permanent(game, perm)?.card_sources.len();
+    // Exclude the top card: selectable sources are indices 0..stack_len-1.
+    let source_count = stack_len.saturating_sub(1);
+    let range_start = if perm.index == BREEDING_TARGET as u8 {
+        // A breeding carrier is keyed by its owning player, not a field index.
+        encode_breeding_source_select(perm.player, 0)?
+    } else {
+        SOURCE_SELECT_START + perm.index as u16 * SOURCES_PER_FIELD
+    };
+    Some((source_count, range_start))
+}
+
+// ── opponent play-cost-budget permanent multi-select trampoline ──────────────
+//
+// Play-cost analog of the DP-budget trampoline above. The only structural
+// differences are: the per-candidate metric is printed play cost (not
+// effective DP) and the SelectionKind variant carries `remaining_play_cost`.
+// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+
+type PlayCostBudgetFilter = std::sync::Arc<dyn Fn(&Game, PermanentHandle) -> bool + Send + Sync>;
+type PlayCostBudgetFinalCallback =
+    Box<dyn FnOnce(&mut Game, Vec<PermanentHandle>) + Send + Sync + 'static>;
+
+fn play_cost_budget_candidates(
+    game: &Game,
+    opponent: PlayerId,
+    remaining_play_cost: i32,
+    picked: &[PermanentHandle],
+    filter: &PlayCostBudgetFilter,
+) -> Vec<(u16, PermanentHandle, i32)> {
+    use crate::action::space::encode_attack;
+
+    let mut out = Vec::new();
+    for (index, perm) in game.player(opponent).battle_area.iter().enumerate() {
+        let handle = PermanentHandle {
+            player: opponent,
+            index: index as u8,
+        };
+        if picked.contains(&handle) {
+            continue;
+        }
+        if !(filter)(game, handle) {
+            continue;
+        }
+        let play_cost = i32::from(perm.top_card().play_cost(&game.card_data));
+        if play_cost <= remaining_play_cost {
+            out.push((encode_attack(0, index as u16), handle, play_cost));
+        }
+    }
+    out
+}
+
+#[allow(clippy::too_many_arguments)]
+fn install_play_cost_budget_selection(
+    game: &mut Game,
+    opponent: PlayerId,
+    controller: PlayerId,
+    selecting_player: PlayerId,
+    override_pin: Option<PlayerId>,
+    prompt: String,
+    remaining_play_cost: i32,
+    min_picks: u8,
+    picked: Vec<PermanentHandle>,
+    filter: PlayCostBudgetFilter,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    source_kind: crate::enums::EffectSourceKind,
+    previous_phase: GamePhase,
+    final_callback: PlayCostBudgetFinalCallback,
+) {
+    use crate::action::space::PASS;
+    use std::sync::{Arc, Mutex};
+
+    let candidates =
+        play_cost_budget_candidates(game, opponent, remaining_play_cost, &picked, &filter);
+    if candidates.is_empty() {
+        if picked.len() >= min_picks as usize {
+            final_callback(game, picked);
+        }
+        return;
+    }
+
+    let mut valid_action_ids: Vec<u16> = candidates
+        .iter()
+        .map(|(action_id, _, _)| *action_id)
+        .collect();
+    if picked.len() >= min_picks as usize {
+        valid_action_ids.push(PASS);
+    }
+
+    let shared_cb: Arc<Mutex<Option<PlayCostBudgetFinalCallback>>> =
+        Arc::new(Mutex::new(Some(final_callback)));
+    let shared_cb_decline = Arc::clone(&shared_cb);
+    let action_to_target = Arc::new(candidates);
+    let prompt_for_next = prompt.clone();
+    let filter_for_next = Arc::clone(&filter);
+    let picked_for_pick = picked.clone();
+    let picked_for_decline = picked.clone();
+
+    game.current_phase = GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::PlayCostBudget {
+            remaining_play_cost,
+            picked: picked.len() as u8,
+        },
+        selecting_player,
+        previous_phase,
+        valid_action_ids,
+        is_optional: picked.len() >= min_picks as usize,
+        prompt,
+        effect_choices: None,
+        source_card,
+        source_permanent,
+        source_kind,
+        callback: Box::new(move |game: &mut Game, action_id: u16| {
+            let (_, chosen, play_cost) = action_to_target
+                .iter()
+                .find(|(candidate_action, _, _)| *candidate_action == action_id)
+                .copied()
+                .expect("play-cost-budget action must have been in valid_action_ids");
+            let mut next_picked = picked_for_pick;
+            next_picked.push(chosen);
+
+            let next_cb: PlayCostBudgetFinalCallback = Box::new(move |game, picks| {
+                let cb_opt = shared_cb.lock().unwrap().take();
+                debug_assert!(
+                    cb_opt.is_some(),
+                    "play-cost-budget final callback already consumed"
+                );
+                if let Some(cb) = cb_opt {
+                    cb(game, picks);
+                }
+            });
+
+            install_play_cost_budget_selection(
+                game,
+                opponent,
+                controller,
+                selecting_player,
+                override_pin,
+                prompt_for_next,
+                remaining_play_cost - play_cost,
+                min_picks,
+                next_picked,
+                filter_for_next,
+                source_card,
+                source_permanent,
+                source_kind,
+                previous_phase,
+                next_cb,
+            );
+        }),
+        on_decline: Some(Box::new(move |game: &mut Game| {
+            let cb_opt = shared_cb_decline.lock().unwrap().take();
+            debug_assert!(
+                cb_opt.is_some(),
+                "play-cost-budget final callback already consumed"
+            );
+            if let Some(cb) = cb_opt {
+                cb(game, picked_for_decline);
+            }
+        })),
+    });
+}
+
 // ── count-capped multi-select trampoline ─────────────────────────────────────
 
 /// Install one step of a count-capped multi-select into `game`.
@@ -2485,6 +2828,7 @@ fn install_count_capped_step(
     of_player: PlayerId,
     zone: CountCappedZone,
     range_start: u16,
+    min: u8,
     max: u8,
     is_optional_zero: bool,
     distinct_by: Option<DistinctByMode>,
@@ -2504,8 +2848,12 @@ fn install_count_capped_step(
     let picked = accum.len() as u8;
 
     // `is_optional` drives PASS gating in `resolve_generic_selection` and the
-    // mask builder. True when the player is allowed to commit early at this step.
-    let is_optional = is_optional_zero || picked >= 1;
+    // mask builder. True when the player is allowed to commit early at this
+    // step — i.e. when `picked` has reached the required floor. The floor is
+    // `min` (G-SELECT-MULTI-MIN) raised to at least 1 unless `is_optional_zero`
+    // permits a zero-pick finish.
+    let effective_min = min.max(if is_optional_zero { 0 } else { 1 });
+    let is_optional = picked >= effective_min;
 
     // Build valid_action_ids from remaining candidate indices.
     let valid_action_ids: Vec<u16> = candidate_indices
@@ -2562,8 +2910,9 @@ fn install_count_capped_step(
                 CountCappedZone::Trash => game.player(of_player).trash[pick_zone_idx].handle(),
                 CountCappedZone::Material(perm_handle) => {
                     // pick_zone_idx is a card_sources index (0 = bottom; top excluded).
-                    game.player(perm_handle.player).battle_area[perm_handle.index as usize]
-                        .card_sources[pick_zone_idx]
+                    // material_zone_slice branches battle vs. breeding carrier.
+                    material_zone_slice(game, perm_handle)
+                        .expect("material carrier present at pick resolution")[pick_zone_idx]
                         .handle()
                 }
             };
@@ -2600,9 +2949,8 @@ fn install_count_capped_step(
                         let zone_slice: &[crate::card_source::CardSource] = match zone {
                             CountCappedZone::Hand => &game.player(of_player).hand,
                             CountCappedZone::Trash => &game.player(of_player).trash,
-                            CountCappedZone::Material(ph) => {
-                                &game.player(ph.player).battle_area[ph.index as usize].card_sources
-                            }
+                            CountCappedZone::Material(ph) => material_zone_slice(game, ph)
+                                .expect("material carrier present for distinct_by accum lookup"),
                         };
                         zone_slice
                             .iter()
@@ -2627,8 +2975,10 @@ fn install_count_capped_step(
                         CountCappedZone::Hand => game.player(of_player).hand[i].data_index,
                         CountCappedZone::Trash => game.player(of_player).trash[i].data_index,
                         CountCappedZone::Material(ph) => {
-                            game.player(ph.player).battle_area[ph.index as usize].card_sources[i]
-                                .data_index
+                            material_zone_slice(game, ph)
+                                .expect("material carrier present for distinct_by candidate lookup")
+                                [i]
+                            .data_index
                         }
                     };
                     let cand_data = &game.card_data[cand_data_idx];
@@ -2685,6 +3035,7 @@ fn install_count_capped_step(
                 of_player,
                 zone,
                 range_start,
+                min,
                 max,
                 is_optional_zero,
                 distinct_by,

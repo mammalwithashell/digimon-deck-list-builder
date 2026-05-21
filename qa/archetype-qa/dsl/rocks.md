@@ -60,15 +60,28 @@ Implemented or partial YAML/test passes:
 - Batch 8: `EX10-063`, `EX7-049`, `LM-031`, `LM-032` - source-trash Tamer memory, De-Digivolve, and Scramble main digivolve slices.
 - Batch 9: `BT23-096`, `BT8-094`, `EX10-069`, `ST22-11` - security/main De-Digivolve, security play, and Unique Emblem hand/trash play slices.
 
-Blocked after pass:
+Blocked after pass (Phase 2 Track E 2026-05-17 update — BT9-103 advanced to IMPLEMENTED):
 
 - `BT20-055`: face-up security lifecycle and security end-of-opponent-turn play timing.
 - `BT21-021`: conditional inherited keyword, Save, and Xros Heart play routing.
-- `BT9-103`: play-cost-filtered player attack restriction and opponent security-add lock.
+- ~~`BT9-103`~~: **IMPLEMENTED** 2026-05-17 via Phase 2 Track E. Authored with
+  `add_player_modifier` (CannotAddSecurityByEffect) + `for_each` +
+  `add_modifier` (CannotAttackPlayer, `play_cost_lte: 7`, expiry
+  `end_of_opponents_turn`). See `code/digimon-engine/cards/bt9/BT9-103.yaml`
+  + `code/digimon-engine/tests/cards_behavioral/bt9/bt9_103.rs`.
 - `EX10-003`: attack cancellation by trashing three Mineral/Rock sources.
 - `EX11-065`: hand-or-source costs plus source placement from hand/trash.
 - `EX8-070`: source-cost selection, temporary protection, and lowest-play-cost security delete.
 - `P-130`: effect move-from-breeding and on-move suspend-memory trigger.
+
+Phase 2 Track E (2026-05-17) PARTIAL → IMPLEMENTED advancements:
+
+- `P-167`: `[Start of Your Main Phase][When Digivolving]` reveal/source-trash/search/source-placement clause now authored using the new `choose_from_reveal` + `order_remainder` DSL verbs. Inherited source-trash De-Digivolve clause unchanged.
+- `EX8-047`: `[On Play]` reveal/two-pick clause (Mineral/Rock + LIBERATOR → hand, remainder to deck bottom) authored using the same new verbs. Inherited source-trash delete unchanged.
+
+Phase 2 Track E (2026-05-17) DSL modernization (no status change):
+
+- `P-206`: inherited security clause's `raw_rust { fn: p_206_add_self_to_hand }` replaced with native `add_this_option_to_hand: {}` (identical engine call). `G-ADD-OPTION-SELF-TO-HAND` closed.
 
 Pulled-main update:
 

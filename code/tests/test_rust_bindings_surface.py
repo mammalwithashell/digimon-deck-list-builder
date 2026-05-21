@@ -291,7 +291,9 @@ class TestLoadImplementedCardIds:
 class TestActionAndTensorConstants:
     def test_action_space_size(self):
         from digimon_engine import ACTION_SPACE_SIZE
-        assert ACTION_SPACE_SIZE == 2168
+        # Task S1.3 raised the action space 2168 -> 2192 (appended a
+        # breeding-carrier source-selection sub-range).
+        assert ACTION_SPACE_SIZE == 2192
 
     def test_tensor_size(self):
         from digimon_engine import TENSOR_SIZE
@@ -360,10 +362,11 @@ class TestTensorProfiles:
 
         assert layout["profile_id"] == "standard_lite_v2"
         assert layout["tensor_version"] == 2
-        assert layout["feature_schema_version"] == "standard_lite_v2.1"
-        assert layout["tensor_size"] == 8320
-        assert len(layout["card_id_positions"]) == 542
-        assert len(layout["scalar_positions"]) == 7778
+        # Task S1.4: PERM_MAX_SOURCES 11 -> 12; tensor_size 8320 -> 8410.
+        assert layout["feature_schema_version"] == "standard_lite_v2.2"
+        assert layout["tensor_size"] == 8410
+        assert len(layout["card_id_positions"]) == 572
+        assert len(layout["scalar_positions"]) == 7838
         assert layout["layout_hash"].startswith("sha256:")
         assert len(layout["layout_hash"]) == len("sha256:") + 64
         assert layout["sections"][0] == {
@@ -380,8 +383,8 @@ class TestTensorProfiles:
         game = RustHeadlessGame(deck, deck, seed=1, observation_profile="standard_lite_v2")
 
         assert game.observation_profile_id == "standard_lite_v2"
-        assert game.get_observation_layout()["tensor_size"] == 8320
-        assert game.get_board_tensor(1).shape == (8320,)
+        assert game.get_observation_layout()["tensor_size"] == 8410
+        assert game.get_board_tensor(1).shape == (8410,)
 
 
 def _starter_decks():

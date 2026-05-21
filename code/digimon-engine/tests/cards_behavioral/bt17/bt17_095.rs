@@ -57,7 +57,7 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
-use digimon_engine::selection::TriggerSource;
+use digimon_engine::selection::{SelectionKind, TriggerSource, UnionZoneSet};
 
 const BT17_095_YAML: &str = include_str!("../../../cards/bt17/BT17-095.yaml");
 
@@ -306,24 +306,84 @@ fn bt17_095_main_no_panic_when_no_eligible_named_digimon_anywhere() {
     // Primary assertion: no panic.
 }
 
-/// G-DSL-UNION-PLAY-FREE: with the workaround in place, the engine cannot
-/// auto-collapse the From-hand / From-trash decision to the populated zone
-/// (DCGO does this via `SetBool(...)` when only one zone is non-empty). The
-/// player must always pick one of the two branches.
-///
-/// When the gap closes (`select_union_zone` widened to bind the picked card
-/// as a HandIndex/TrashIndex), this card's Main clause should be rewritten
-/// to use a single `select_union_zone` step and this test should be enabled
-/// to assert the auto-collapse behavior.
+/// G-DSL-UNION-PLAY-FREE CLOSED: `select_union_zone` binds a zone-tagged
+/// index, so a single union step spans hand + trash. When only one zone has
+/// an eligible [Agumon]/[Gabumon], the union selection's only valid card
+/// action points at that zone — the engine effectively auto-collapses to the
+/// populated zone (no separate From-hand/From-trash effect-choice prompt).
 #[test]
-#[ignore = "pending: G-DSL-UNION-PLAY-FREE — select_union_zone binds Card, not HandIndex/TrashIndex"]
 fn bt17_095_main_auto_collapses_zone_choice_when_only_one_zone_eligible() {
-    // Placeholder test. When G-DSL-UNION-PLAY-FREE closes:
-    //   1. Seed P0 with BT17-095 in hand and an Agumon ONLY in trash.
-    //   2. Activate Main.
-    //   3. Assert that the FIRST pending selection is the trash-card pick
-    //      (engine collapsed the empty hand branch).
-    unimplemented!("blocked on G-DSL-UNION-PLAY-FREE");
+    let agumon = make_named_red_digimon("BT17095-AGU", "Agumon");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(agumon.clone())
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .hand(0, &["BT17-095"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    // Seed an Agumon ONLY into P0's trash (hand has no eligible card).
+    let agu_seed = runner.game.players[0]
+        .deck
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "FILL");
+    let _ = agu_seed;
+    // Place an Agumon card source directly in P0's trash.
+    let agu_data_index = runner
+        .game
+        .card_data
+        .iter()
+        .position(|d| d.card_id == "BT17095-AGU")
+        .expect("Agumon card data registered");
+    let agu_card_index = runner.game.next_card_index();
+    runner.game.players[0].trash.push(CardSource::new(
+        agu_data_index,
+        0,
+        agu_card_index,
+    ));
+
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired, "BT17-095 Main must activate");
+
+    // The FIRST installed selection must be the union-zone pick — NOT an
+    // effect-choice zone prompt. Its only valid card action targets the
+    // trash-seated Agumon (no eligible hand card exists).
+    let sel = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("union-zone selection installs");
+    assert_eq!(
+        sel.kind,
+        SelectionKind::UnionZone {
+            zones: UnionZoneSet::HAND | UnionZoneSet::TRASH
+        },
+        "the first prompt must be the union-zone pick (no separate zone-choice)"
+    );
+    use digimon_engine::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
+    let card_actions: Vec<u16> = sel
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != digimon_engine::action::space::PASS)
+        .collect();
+    assert_eq!(
+        card_actions.len(),
+        1,
+        "exactly one eligible card (the trash Agumon); got {card_actions:?}"
+    );
+    assert!(
+        card_actions[0] >= TRASH_EFFECT_START,
+        "the only eligible card action must be a trash slot (>= TRASH_EFFECT_START), \
+         not a hand slot ({}); got {}",
+        PLAY_HAND_START,
+        card_actions[0]
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -445,84 +505,311 @@ fn bt17_095_replacement_does_not_fire_for_own_l6_unmatched_name() {
     );
 }
 
-/// G-DSL-DNA-FROM-HAND-PARTNER: the printed body's DNA-digivolve sub-clause
-/// (where the second material lives in the controller's hand) cannot be
-/// expressed with the current `effect_initiated_dna_digivolve` verb. Until
-/// the engine grows a hand-partner variant, the DNA reward is omitted from
-/// Clause B and the leaving Digimon proceeds without merging into Omnimon.
-///
-/// This test is the reminder that the DNA leg exists in the printed text but
-/// is not asserted positively in the current implementation. When the gap
-/// closes:
-///   1. Seed P0 with BT17-095 on field as a Delay-Option.
-///   2. Seed P0 with a level-6 Greymon-named Digimon on field.
-///   3. Seed P0 with an Omnimon-name level-7 hand card and a matching DNA
-///      partner card in hand.
-///   4. Trigger leave (own-effect deletion of the Greymon).
-///   5. Drive the DNA prompts; assert the merged Omnimon permanent appears
-///      with the leaving Greymon's stack underneath.
-#[test]
-#[ignore = "pending: G-DSL-DNA-FROM-HAND-PARTNER — effect_initiated_dna_digivolve cannot accept hand-card target_b"]
-fn bt17_095_replacement_dna_digivolves_into_omnimon_when_eligible() {
-    unimplemented!("blocked on G-DSL-DNA-FROM-HAND-PARTNER");
+// ─── G-DSL-DNA-FROM-HAND-PARTNER — Clause B DNA reward (CLOSED) ────────────────
+
+/// A level-7 Omnimon-name Digimon used as the DNA result card in hand.
+fn make_l7_omnimon(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Omnimon");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(7);
+    c.dp = Some(13000);
+    c.play_cost = 13;
+    c.colors = vec![CardColor::Red, CardColor::Blue];
+    c
 }
 
-/// G-DSL-DNA-FROM-HAND-PARTNER: when the DNA leg is implemented, fires that
-/// the leaving subject does NOT proceed to the trash if a successful DNA
-/// merge consumes it (it migrates into the merged Omnimon permanent's stack).
-/// Until then, this assertion is unreachable — the leaving subject always
-/// proceeds (default Proceed outcome).
+/// A level-6 Digimon used as the hand-card DNA partner.
+fn make_l6_hand_partner(id: &str) -> CardData {
+    let mut c = make_test_card(id, "GarurumonPartner");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(6);
+    c.dp = Some(11000);
+    c.play_cost = 11;
+    c.colors = vec![CardColor::Blue];
+    c
+}
+
+/// Seat the BT17-095 option permanent at `handle` as a Delay-Option so its
+/// Clause B `when_would_leave_battle_area` replacement can fire — Clause B is
+/// gated on `source_is_delayed_option`. Placing a card on the field via
+/// `place_on_field` yields a Standard option, so the delay state is set here
+/// directly (mirroring `place_self_as_delay_option_permanent`).
+fn seat_as_delay_option(runner: &mut DebugRunner, handle: digimon_engine::permanent::PermanentHandle) {
+    use digimon_engine::permanent::OptionState;
+    let turn = runner.game.turn_count;
+    let perm = &mut runner.game.players[handle.player as usize].battle_area[handle.index as usize];
+    perm.option_state = OptionState::Delayed {
+        owner: handle.player,
+        trash_on_turn: turn + 2,
+        trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+        placed_on_turn: turn,
+    };
+}
+
+/// G-DSL-DNA-FROM-HAND-PARTNER (closed): BT17-095 Clause B's printed DNA reward
+/// — "That Digimon and a card in the hand may DNA digivolve into a Digimon card
+/// with [Omnimon] in its name in the hand."
+///
+/// Setup: BT17-095 seated as a Delay-Option; an own level-6 Greymon-named
+/// Digimon on the field; an Omnimon-name level-7 card and a level-6 DNA partner
+/// in hand. Triggering the Greymon's leave fires the replacement; the player
+/// accepts, selects the Omnimon result and the hand partner, and the merged
+/// Omnimon permanent appears with the leaving Greymon's stack underneath.
 #[test]
-#[ignore = "pending: G-DSL-DNA-FROM-HAND-PARTNER — leaving subject always proceeds with DNA omitted"]
+fn bt17_095_replacement_dna_digivolves_into_omnimon_when_eligible() {
+    let greymon = make_l6_digimon_named("BT17095-FIELD-GREY", "Greymon");
+    let omnimon = make_l7_omnimon("BT17095-OMNI");
+    let partner = make_l6_hand_partner("BT17095-PARTNER");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(greymon)
+        .add_card(omnimon)
+        .add_card(partner)
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .hand(0, &["BT17095-OMNI", "BT17095-PARTNER"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
+    seat_as_delay_option(&mut runner, bt17_095);
+    let greymon_handle = runner.place_on_field(0, "BT17095-FIELD-GREY", None);
+    let greymon_card = runner.top_card(greymon_handle);
+
+    // Trigger the leave of the field Greymon (own-effect, outside battle).
+    runner.game.delete_permanent_with_cause(
+        greymon_handle,
+        digimon_engine::replacement::ReplacementCause::OwnEffect,
+    );
+
+    // The optional replacement installs an accept prompt first.
+    {
+        let accept = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("optional replacement accept prompt installs");
+        let action = accept.valid_action_ids[0];
+        let player = accept.selecting_player;
+        runner
+            .game
+            .resolve_selection(player, action)
+            .expect("accept replacement");
+    }
+
+    // Drive every installed EffectChoice selection by picking its first valid
+    // card action: result Omnimon → hand partner.
+    let mut steps = 0;
+    while runner.game.pending_selection.is_some() && steps < 20 {
+        let (player, action) = {
+            let sel = runner.game.pending_selection.as_ref().unwrap();
+            let action = sel
+                .valid_action_ids
+                .iter()
+                .copied()
+                .find(|&a| a != digimon_engine::action::space::PASS)
+                .unwrap_or(sel.valid_action_ids[0]);
+            (sel.selecting_player, action)
+        };
+        let _ = runner.game.resolve_selection(player, action);
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+    runner.game.drain_effect_queue();
+
+    // A merged permanent topped with the Omnimon card must now exist on P0's
+    // field, with the leaving Greymon as one of its digivolution sources.
+    let merged = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "BT17095-OMNI")
+        .expect("merged Omnimon permanent must exist after DNA digivolve");
+
+    assert!(
+        merged
+            .card_sources
+            .iter()
+            .any(|s| s.handle() == greymon_card),
+        "the leaving Greymon must be a digivolution source under the merged Omnimon"
+    );
+    assert!(
+        merged.card_sources.len() >= 3,
+        "merged stack must hold Greymon + hand partner + Omnimon result; got {}",
+        merged.card_sources.len()
+    );
+
+    // Both hand cards were consumed.
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        0,
+        "the Omnimon result and the DNA partner must both leave the hand"
+    );
+}
+
+/// G-DSL-DNA-FROM-HAND-PARTNER (closed): a successful DNA merge consumes the
+/// leaving subject INTO the merged Omnimon permanent — the Greymon does NOT
+/// proceed to the trash (the replacement is Cancelled).
+#[test]
 fn bt17_095_replacement_dna_consumes_leaving_subject_into_merged_permanent() {
-    unimplemented!("blocked on G-DSL-DNA-FROM-HAND-PARTNER");
+    let greymon = make_l6_digimon_named("BT17095-FIELD-GREY2", "Greymon");
+    let omnimon = make_l7_omnimon("BT17095-OMNI2");
+    let partner = make_l6_hand_partner("BT17095-PARTNER2");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(greymon)
+        .add_card(omnimon)
+        .add_card(partner)
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .hand(0, &["BT17095-OMNI2", "BT17095-PARTNER2"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
+    seat_as_delay_option(&mut runner, bt17_095);
+    let greymon_handle = runner.place_on_field(0, "BT17095-FIELD-GREY2", None);
+    let greymon_card = runner.top_card(greymon_handle);
+
+    runner.game.delete_permanent_with_cause(
+        greymon_handle,
+        digimon_engine::replacement::ReplacementCause::OwnEffect,
+    );
+
+    {
+        let accept = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("optional replacement accept prompt installs");
+        let action = accept.valid_action_ids[0];
+        let player = accept.selecting_player;
+        runner
+            .game
+            .resolve_selection(player, action)
+            .expect("accept replacement");
+    }
+
+    let mut steps = 0;
+    while runner.game.pending_selection.is_some() && steps < 20 {
+        let (player, action) = {
+            let sel = runner.game.pending_selection.as_ref().unwrap();
+            let action = sel
+                .valid_action_ids
+                .iter()
+                .copied()
+                .find(|&a| a != digimon_engine::action::space::PASS)
+                .unwrap_or(sel.valid_action_ids[0]);
+            (sel.selecting_player, action)
+        };
+        let _ = runner.game.resolve_selection(player, action);
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+    runner.game.drain_effect_queue();
+
+    // The leaving Greymon must NOT be in P0's trash — it was consumed into the
+    // merged permanent.
+    let greymon_in_trash = runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.handle() == greymon_card);
+    assert!(
+        !greymon_in_trash,
+        "the leaving Greymon must NOT proceed to the trash — a successful DNA \
+         merge consumes it into the merged Omnimon permanent"
+    );
+
+    // The Greymon card is now a source under the merged Omnimon.
+    let merged = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "BT17095-OMNI2")
+        .expect("merged Omnimon permanent must exist");
+    assert!(
+        merged
+            .card_sources
+            .iter()
+            .any(|s| s.handle() == greymon_card),
+        "the leaving Greymon must live inside the merged Omnimon's stack"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Section 4 — Clause C: [Security] (inherited) Tai Kamiya / Matt Ishida
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Smoke test: firing the Security clause on a placed BT17-095 with no
-/// eligible Tai/Matt cards anywhere completes without panic.
+/// With BT17-095 in the defender's security and the defender holding no
+/// eligible [Tai Kamiya]/[Matt Ishida] card in hand or trash, a real attack on
+/// the defender's security still runs BT17-095's inherited [Security] clause:
+/// the optional union-zone play has no eligible target (nothing played), but
+/// the mandatory `add_this_option_to_hand` tail still routes BT17-095 to the
+/// defender's hand and removes it from the security stack.
+///
+/// Driven through the real combat/security-check path. The previous
+/// `enqueue_triggered(SecuritySkill, Permanent(..))` shortcut became a silent
+/// no-op for inherited-scope [Security] clauses after PR #490's
+/// `enqueue_from_permanent` over-fire fix (the top-card scan now skips
+/// inherited-scoped effects), so the old "no panic" assertion passed vacuously
+/// — the effect never fired at all. This rewrite asserts real post-state.
 #[test]
 fn bt17_095_security_no_panic_with_empty_hand_and_trash() {
+    let mut attacker = make_filler("BT17095-ATK-EMPTY");
+    attacker.dp = Some(6000);
+
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT17_095_YAML)
         .expect("BT17-095 YAML parses")
+        .add_card(attacker.clone())
         .add_card(make_filler("FILL"))
         .memory(10)
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
+        .security(1, &["BT17-095"])
         .start();
 
-    let field_handle = runner.place_on_field(0, "BT17-095", Some(0));
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let attacker_handle = runner.place_on_field(0, "BT17095-ATK-EMPTY", Some(0));
+    assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
+    assert_eq!(runner.trash_size(1), 0, "precondition: defender trash empty");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: BT17-095 in security"
     );
-    runner.game.drain_effect_queue();
 
-    // Drain any selections — the workaround installs a zone choice prompt.
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 30 {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        let _ = runner.game.resolve_selection(player, action);
-        runner.game.drain_effect_queue();
-        steps += 1;
-    }
-    // Primary assertion: no panic.
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
+
+    // No eligible Tai/Matt card in hand or trash → nothing played.
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "no card played from an empty hand and trash"
+    );
+    // The mandatory tail still ran: BT17-095 left security and went to hand.
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "BT17-095 left the security stack"
+    );
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "BT17-095's mandatory add_this_option_to_hand tail must add it to the \
+         defender's hand even with an empty hand and trash"
+    );
+    let hand_id = runner.game.players[1].hand[0]
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(
+        hand_id, "BT17-095",
+        "the card added to the defender's hand must be BT17-095 itself"
+    );
 }
 
 /// Positive: when defender's Security has BT17-095 and they have a Tai Kamiya
@@ -579,11 +866,78 @@ fn bt17_095_security_adds_card_to_hand_after_play() {
     );
 }
 
-/// G-DSL-UNION-PLAY-FREE: same as Clause A — the security clause cannot
-/// auto-collapse the From-hand / From-trash branch. Disabled until the gap
-/// closes.
+/// G-DSL-UNION-PLAY-FREE CLOSED: the Security clause uses the same
+/// `select_union_zone` step. With a Tai Kamiya card ONLY in the defender's
+/// trash, the union selection's only valid card action targets the trash slot.
+///
+/// Driven through the real combat/security-check path. The previous
+/// `enqueue_triggered(SecuritySkill, Permanent(..))` shortcut became a silent
+/// no-op for inherited-scope [Security] clauses after PR #490's
+/// `enqueue_from_permanent` over-fire fix, so the union-zone selection never
+/// installed and the test panicked.
 #[test]
-#[ignore = "pending: G-DSL-UNION-PLAY-FREE — select_union_zone binding type"]
 fn bt17_095_security_auto_collapses_zone_when_only_trash_eligible() {
-    unimplemented!("blocked on G-DSL-UNION-PLAY-FREE");
+    let tamer = make_named_tamer("BT17095-TAI", "Tai Kamiya");
+    let mut attacker = make_filler("BT17095-ATK-COLLAPSE");
+    attacker.dp = Some(6000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(tamer.clone())
+        .add_card(attacker.clone())
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["BT17095-TAI"])
+        .security(1, &["BT17-095"])
+        .start();
+
+    // Seed a Tai Kamiya card ONLY into the defender's trash.
+    let trash_seed = runner.game.players[1]
+        .deck
+        .pop()
+        .expect("Tamer seed in deck");
+    runner.game.players[1].trash.push(trash_seed);
+
+    let attacker_handle = runner.place_on_field(0, "BT17095-ATK-COLLAPSE", Some(0));
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: BT17-095 in security"
+    );
+
+    let _ = runner.attack_player(attacker_handle, 1, false);
+
+    // The security check flips BT17-095 and runs its inherited [Security]
+    // clause for the defender; the union-zone pick is its first prompt.
+    let sel = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("union-zone selection installs for the security clause");
+    assert_eq!(
+        sel.kind,
+        SelectionKind::UnionZone {
+            zones: UnionZoneSet::HAND | UnionZoneSet::TRASH
+        },
+        "the security prompt must be the union-zone pick"
+    );
+    use digimon_engine::action::space::{PASS, TRASH_EFFECT_START};
+    let card_actions: Vec<u16> = sel
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .collect();
+    assert_eq!(
+        card_actions.len(),
+        1,
+        "exactly one eligible card (the trash Tai Kamiya); got {card_actions:?}"
+    );
+    assert!(
+        card_actions[0] >= TRASH_EFFECT_START,
+        "the only eligible card action must be a trash slot; got {}",
+        card_actions[0]
+    );
 }

@@ -12,7 +12,7 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 | `SLOT_SIZE` | 40 | `1 + 6 + MAX_SOURCES * 3` |
 | `SOURCE_ENTRY_SIZE` | 3 | `card_id + opt_state + dp_contribution` |
 | `FIELD_SLOTS` | 14 | Battle area slots per player |
-| `MAX_SOURCES` | 11 | Max digivolution stack depth |
+| `MAX_SOURCES` | 11 | Max digivolution stack depth (`standard_compact_v1`). The v2 profiles use `PERM_MAX_SOURCES = 12` — see `standard_lite_v2` below |
 | `MAX_HAND` | 20 | |
 | `MAX_TRASH` | 45 | |
 | `MAX_SECURITY` | 10 | |
@@ -20,24 +20,36 @@ happens inside the `CardEmbeddingExtractor` on the GPU, not in the tensor writer
 
 ## Tensor Profiles
 
-The default pilot observation profile is `standard_lite_v2`: an `8320`-float, fair-information Standard-mode tensor. It is selected by the Rust observation API via `observation::default_observation_profile()` and is exposed to Python as `digimon_engine.DEFAULT_OBSERVATION_PROFILE`.
+The default pilot observation profile is `standard_lite_v2`: an `8410`-float, fair-information Standard-mode tensor. It is selected by the Rust observation API via `observation::default_observation_profile()` and is exposed to Python as `digimon_engine.DEFAULT_OBSERVATION_PROFILE`.
 
 `standard_compact_v1` remains the `1375`-float compact compatibility and baseline profile. The Rust `tensor::TENSOR_SIZE` and PyO3 `digimon_engine.TENSOR_SIZE` constants still describe this compact profile for legacy imports and compact-profile checks; new pilot training and model metadata should use observation layout metadata instead of assuming that global constant is the active profile size.
 
 ### `standard_lite_v2`
+
+> **Task S1.4:** the v2 `PERM_MAX_SOURCES` grew `11 → 12` so the tensor
+> surfaces every digivolution-source slot the action space can select. The
+> `SOURCE_SELECT` and `BREEDING_SOURCE_SELECT` action ranges use
+> `SOURCES_PER_FIELD = 12`; previously only 11 source slots were encoded, so
+> source index 11 — including a breeding-carrier's 12th source reachable via
+> `BREEDING_SOURCE_SELECT` — was selectable but invisible to the agent. Each
+> permanent slot grew 3 floats (`slot_size` `96 → 99`), `permanent_slots`
+> `2880 → 2970`, `tensor_size` `8320 → 8410`, every section after
+> `permanent_slots` shifted `+90`, and `feature_schema_version` bumped to
+> `standard_lite_v2.2`. `standard_compact_v1` (`MAX_SOURCES` stays 11) is
+> unchanged.
 
 | Field | Value |
 |---|---:|
 | `id` | `standard_lite_v2` |
 | `version` | 2 |
 | `tensor_version` | 2 |
-| `feature_schema_version` | `standard_lite_v2.1` |
-| `tensor_size` | 8320 |
+| `feature_schema_version` | `standard_lite_v2.2` |
+| `tensor_size` | 8410 |
 | `field_slots` | 15 |
-| `slot_size` | 96 |
-| `max_sources` | 11 |
-| `card_id_slot_count` | 542 |
-| `scalar_slot_count` | 7778 |
+| `slot_size` | 99 |
+| `max_sources` | 12 |
+| `card_id_slot_count` | 572 |
+| `scalar_slot_count` | 7838 |
 
 Top-level sections:
 
@@ -45,30 +57,46 @@ Top-level sections:
 |---|---:|---:|---:|
 | `global_features` | 0 | `[64]` | 64 |
 | `player_summary` | 64 | `[2][32]` | 64 |
-| `permanent_slots` | 128 | `[2][15][96]` | 2880 |
-| `own_hand` | 3008 | `[30][32]` | 960 |
-| `known_zone_cards` | 3968 | `[120][8]` | 960 |
-| `decision_context` | 4928 | `[64]` | 64 |
-| `pending_choice_features` | 4992 | `[32][96]` | 3072 |
-| `reserved` | 8064 | `[256]` | 256 |
+| `permanent_slots` | 128 | `[2][15][99]` | 2970 |
+| `own_hand` | 3098 | `[30][32]` | 960 |
+| `known_zone_cards` | 4058 | `[120][8]` | 960 |
+| `decision_context` | 5018 | `[64]` | 64 |
+| `pending_choice_features` | 5082 | `[32][96]` | 3072 |
+| `reserved` | 8154 | `[256]` | 256 |
 
-`standard_lite_v2` card ID positions total `542`; scalar positions total `7778`. These lists, the section table, layout hash, tensor version, and feature schema version are exported by `digimon_engine.get_observation_layout("standard_lite_v2")`.
+`standard_lite_v2` card ID positions total `572`; scalar positions total `7838`. These lists, the section table, layout hash, tensor version, and feature schema version are exported by `digimon_engine.get_observation_layout("standard_lite_v2")`.
 
 ### `standard_full_v2`
 
 `standard_full_v2` is an opt-in experimental profile. `standard_lite_v2`
 remains the default pilot observation profile. Full v2 extends
-`standard_lite_v2` with `action_id_features[2168][16]`.
+`standard_lite_v2` with `action_id_features[2192][16]`.
+
+> **Task S1.3:** `ACTION_SPACE_SIZE` grew `2168 → 2192` (appended
+> breeding-carrier source-selection sub-range). `action_id_features` has
+> one row per action ID, so it gained 24 rows (`24 * 16 = 384` floats):
+> `tensor_size` `43008 → 43392`, `reserved` shifted `42752 → 43136`, and
+> `feature_schema_version` bumped to `standard_full_v2.2`. The
+> `ACTION_SPACE_SIZE`-independent `standard_compact_v1` and `standard_lite_v2`
+> profiles are unchanged in size (their action mask, delivered separately,
+> grows `2168 → 2192` automatically).
+
+> **Task S1.4:** `standard_full_v2` re-exports the `standard_lite_v2`
+> layout constants, so the v2 `PERM_MAX_SOURCES` `11 → 12` bump cascades:
+> `permanent_slots` grew `2880 → 2970`, every section after it shifted
+> `+90` (`action_id_features` `8064 → 8154`, `reserved` `43136 → 43226`),
+> `tensor_size` grew `43392 → 43482`, and `feature_schema_version` bumped
+> to `standard_full_v2.3`.
 
 | Field | Value |
 |---|---:|
 | `id` | `standard_full_v2` |
 | `version` | 2 |
 | `tensor_version` | 2 |
-| `feature_schema_version` | `standard_full_v2.1` |
-| `tensor_size` | 43008 |
-| `card_id_slot_count` | 542 |
-| `scalar_slot_count` | 42466 |
+| `feature_schema_version` | `standard_full_v2.3` |
+| `tensor_size` | 43482 |
+| `card_id_slot_count` | 572 |
+| `scalar_slot_count` | 42910 |
 
 Top-level sections:
 
@@ -76,13 +104,13 @@ Top-level sections:
 |---|---:|---:|---:|
 | `global_features` | 0 | `[64]` | 64 |
 | `player_summary` | 64 | `[2][32]` | 64 |
-| `permanent_slots` | 128 | `[2][15][96]` | 2880 |
-| `own_hand` | 3008 | `[30][32]` | 960 |
-| `known_zone_cards` | 3968 | `[120][8]` | 960 |
-| `decision_context` | 4928 | `[64]` | 64 |
-| `pending_choice_features` | 4992 | `[32][96]` | 3072 |
-| `action_id_features` | 8064 | `[2168][16]` | 34688 |
-| `reserved` | 42752 | `[256]` | 256 |
+| `permanent_slots` | 128 | `[2][15][99]` | 2970 |
+| `own_hand` | 3098 | `[30][32]` | 960 |
+| `known_zone_cards` | 4058 | `[120][8]` | 960 |
+| `decision_context` | 5018 | `[64]` | 64 |
+| `pending_choice_features` | 5082 | `[32][96]` | 3072 |
+| `action_id_features` | 8154 | `[2192][16]` | 35072 |
+| `reserved` | 43226 | `[256]` | 256 |
 
 `action_id_features[action_id]` fields:
 
@@ -312,4 +340,4 @@ The `CardEmbeddingExtractor` is layout-driven. Training code passes the active o
 4. Concatenates embedded card IDs with scalar positions.
 5. Projects through `Linear(..., 512) + ReLU` to produce the 512-dim feature vector used by MLP or LSTM policy/value heads.
 
-For `standard_lite_v2`, this means `542` card-ID positions embedded to `542 × 16 = 8672` floats, concatenated with `7778` scalar positions before projection. For `standard_compact_v1`, the compatibility path remains `520` card-ID positions and `855` scalar positions.
+For `standard_lite_v2`, this means `572` card-ID positions embedded to `572 × 16 = 9152` floats, concatenated with `7838` scalar positions before projection. For `standard_compact_v1`, the compatibility path remains `520` card-ID positions and `855` scalar positions.

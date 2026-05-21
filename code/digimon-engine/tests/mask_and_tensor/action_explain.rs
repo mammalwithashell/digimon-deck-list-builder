@@ -2,8 +2,9 @@ use std::collections::HashMap;
 
 use digimon_engine::action::explain::{explain_action, ActionKind, ActionZone};
 use digimon_engine::action::space::{
-    encode_attack, encode_digivolve, BREEDING_TARGET, EFFECTS_PER_PERMANENT,
-    FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, HATCH, PASS, SECURITY_TARGET,
+    encode_attack, encode_breeding_source_select, encode_digivolve, encode_source_select,
+    BREEDING_TARGET, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, HATCH,
+    PASS, SECURITY_TARGET,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::enums::{CardKind, GamePhase};
@@ -170,4 +171,51 @@ fn explains_breeding_field_effect_with_breeding_card_context() {
     assert_eq!(explanation.card_id.as_deref(), Some("BT1-001"));
     assert_eq!(explanation.card_name.as_deref(), Some("Koromon"));
     assert!(explanation.label.contains("breeding area"));
+}
+
+#[test]
+fn explains_battle_area_source_select() {
+    let mut game = playable_game();
+    let pid = game.turn_player();
+    game.current_phase = GamePhase::SelectMaterial;
+    // Battle-area carrier at field slot 1, source index 3.
+    let action = encode_source_select(1, 3).expect("valid battle source-select");
+
+    let explanation = explain_action(&game, pid, action);
+
+    assert_eq!(explanation.kind, ActionKind::SourceSelect);
+    assert_eq!(explanation.source_zone, Some(ActionZone::Source));
+    assert_eq!(explanation.source_index, Some(3));
+    assert_eq!(explanation.target_zone, Some(ActionZone::Battle));
+    assert_eq!(explanation.target_index, Some(1));
+}
+
+#[test]
+fn explains_breeding_carrier_source_select() {
+    let mut game = playable_game();
+    let pid = game.turn_player();
+    game.current_phase = GamePhase::SelectBudgeted;
+    // Player 1's breeding-area carrier, source index 2.
+    let action = encode_breeding_source_select(1, 2).expect("valid breeding source-select");
+
+    let explanation = explain_action(&game, pid, action);
+
+    assert_eq!(explanation.kind, ActionKind::SourceSelect);
+    assert_eq!(explanation.source_zone, Some(ActionZone::Source));
+    assert_eq!(explanation.source_index, Some(2));
+    assert_eq!(
+        explanation.target_zone,
+        Some(ActionZone::Breeding),
+        "breeding-carrier source-select targets the Breeding zone"
+    );
+    assert_eq!(
+        explanation.target_index,
+        Some(1),
+        "target_index carries the breeding carrier's owning player"
+    );
+    assert!(
+        explanation.label.contains("breeding-area"),
+        "label mentions the breeding-area carrier: {}",
+        explanation.label
+    );
 }

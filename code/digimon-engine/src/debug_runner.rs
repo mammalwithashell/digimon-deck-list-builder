@@ -601,6 +601,36 @@ impl DebugRunner {
         self.game.resolve_selection(player, action_id)
     }
 
+    /// Accept a pending outer optional-trigger prompt (`SelectionKind::
+    /// Replacement`, installed by `G-OUTER-OPTIONAL-NOT-INSTALLED`). Resolves
+    /// the `REPLACEMENT_ACCEPT` action so the optional effect's body runs.
+    /// Panics if no such prompt is pending.
+    pub fn accept_optional_trigger(&mut self) -> Result<(), SelectionError> {
+        let (player, action_id) = {
+            let sel = self
+                .pending_selection()
+                .ok_or(SelectionError::NoPendingSelection)?;
+            (
+                sel.selecting_player,
+                sel.valid_action_ids
+                    .first()
+                    .copied()
+                    .ok_or(SelectionError::InvalidAction)?,
+            )
+        };
+        self.execute_action(player, action_id)
+    }
+
+    /// Decline a pending outer optional-trigger prompt — resolves PASS so the
+    /// optional effect's body is skipped cleanly.
+    pub fn decline_optional_trigger(&mut self) -> Result<(), SelectionError> {
+        let player = self
+            .pending_selection()
+            .ok_or(SelectionError::NoPendingSelection)?
+            .selecting_player;
+        self.execute_action(player, crate::action::space::PASS)
+    }
+
     pub fn execute_branch(&mut self, branch_index: usize) -> Result<(), SelectionError> {
         let (player, action_id) = {
             let sel = self
@@ -1025,6 +1055,7 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
         ace_overflow: card.ace_overflow,
         dual: card.dual.as_ref().map(compiled_dual_to_engine),
         digixros_aliases: card.digixros_aliases.clone(),
+        also_treated_as: card.also_treated_as.clone(),
     }
 }
 
@@ -1072,6 +1103,7 @@ pub fn make_test_card(card_id: &str, card_name: &str) -> CardData {
         ace_overflow: None,
         dual: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -1143,6 +1175,7 @@ pub fn make_test_egg(card_id: &str, card_name: &str) -> CardData {
         ace_overflow: None,
         dual: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 

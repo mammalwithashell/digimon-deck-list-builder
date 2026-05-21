@@ -89,6 +89,106 @@ Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`),
 > Royal Knights, TS Olympos, Zephagamon). All reusable primitives
 > called out by those documents are already represented by an entry
 > in this file or as an open verb in `qa/dsl-vocab-gaps.md`.
+>
+> **Tracker hygiene sweep — Phase 2 rollup (2026-05-17, Tracks A–J, PR #480):**
+> The Phase 2 pilot-archetype unblock work landed as 10 tracks in PR #480
+> (`claude/musing-ishizaka-c4b355` against `main`). Substrate items closed:
+>
+> - **Track B (commit `2c2c4632`)** — `Effect::activation_cost(...)` builder
+>   hook + `ctx.suspend_self_as_cost()` / `ctx.return_self_to_deck_bottom_as_cost()`
+>   helpers. Cost failure consumes the OPT slot per Working Rule §17. Already
+>   marked in the at-a-glance table at line 185.
+> - **Track C (commit `dd9b8a46`)** — `G-OPT-TRIGGERED` and
+>   `G-OPT-RESET-VIA-ATTACK-CYCLE` diagnosed as already-closed; substrate
+>   verified correct, 23 stale `#[ignore]` annotations removed. Already
+>   marked in the at-a-glance table at lines 186–187.
+> - **Track D (commit `bc852640`)** — Inherited triggered-effect dispatch
+>   walk in `enqueue_from_permanent` completed. The 2026-05-15 sweep had
+>   already redirected the entry to `qa/resolved-gaps.md` (see line 684
+>   below); Track D added the dedicated regression test in
+>   `tests/timing_dispatch.rs` and un-ignored 18 dependent tests.
+> - **Track F (commit `5cae5006`)** — `EffectContext::place_top_source_as_bottom`
+>   helper (substrate); chained `select_own_permanent → select_* →
+>   effect_initiated_digivolve` dispatcher confirmed already-correct
+>   (phantom gap); `AltPathSpec.direction: into` schema for warp-shape
+>   alt-paths. Closes G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET
+>   without engine code changes (just tests un-ignored).
+> - **Track G (commit `48e1255f`)** — `opponent_security_count_lte` /
+>   `_gte` predicates, Plug-In Link DSL surface (consuming Track I's
+>   substrate), Medusamon card-author sweep. EX11-054 [All Turns] clause
+>   migrated to Track B's `activation_cost`. **Killed the long-standing
+>   `ex11_054` Medusamon flake.**
+> - **Track H (commit `2b083c5a`)** — BeforePayCost substrate extensions:
+>   `cost_target` + `source_is_cost_target_permanent` predicates (digivolve
+>   target predicate evaluation), `Effect::before_pay_cost_observe(card)`
+>   sibling builder for BeforePayCost gain-memory clauses,
+>   `select_trash` declined-optional outer-tail continuation,
+>   `PlayFromHandFreeArgs.bind_as` for delayed-return clauses. DEFERRED:
+>   G-COST-REDUCE-ALLY-DIGIVOLVE per Track H's discovery rider.
+> - **Track I (commit `26e27ccc`)** — `applies_to_opponent_security_dp`
+>   inherited aura flag (PUPPETS-G008 / G-OPPONENT-SECURITY-DP-AURA);
+>   Plug-In re-link substrate (`Game::orphan_linked_plug_in`,
+>   `Game::relink_plug_in`, `OptionFieldState::LinkedPlugIn` /
+>   `OrphanedPlugIn`); end-of-attack mandatory self-delete chain (already
+>   marked in table line 198); PUPPETS-G009 Delay [Main] action — see
+>   "Standard Delay main-phase activation action" §346 below, now closed.
+> - **Track J (commits `48fbfd76` + `3a6aaee1`)** — RK-G001 breeding
+>   permanent target predicate filter
+>   (`SelectOwnBreedingPermanentArgs::filter`); RK-G002 via Track B's
+>   `activation_cost`; RK-G003 via existing replacement framework + Armor
+>   Purge keyword. Token registry entries for Atho / Rene / Por.
+>
+> **Tracks A, E, F (DSL), G (DSL), H (some), I (some)** lowered to DSL-only
+> sweeps tracked in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md).
+>
+> **Net cumulative test deltas:** `cards_behavioral` 2355 pass / 0 fail /
+> 355 ignored — was ~2300 / 1 pre-existing flake / 596 ignored.
+> See `qa/resolved-gaps.md` for full per-track closure details.
+
+> **Tracker hygiene sweep — Phase 2 Track E (2026-05-17):** Rocks-pilot
+> author-facing residual closures. The Rocks gap-input doc's
+> `G-ROCKS-REVEAL-ORDERING`, `G-ROCKS-OPTION-SELF-DISPOSITION`, and
+> `G-ROCKS-PLAYER-SCOPED-PASSIVE-MODIFIERS` entries are all closed by a
+> single PR. The new `choose_from_reveal` + `order_remainder` DSL verbs
+> (see `qa/dsl-vocab-gaps.md` "Phase 2 Track E (2026-05-17)" block and
+> `qa/resolved-gaps.md` "Phase 2 Track E closure" block) lower onto the
+> already-shipped `select_reveal` / `select_effect_choice` /
+> `select_ordered_permutation` / `place_remainder_on_deck` engine
+> helpers — no new engine substrate. The "Selection: ordered
+> permutation" headline (already RESOLVED 2026-05-15 in
+> `qa/resolved-gaps.md`) stays closed; this PR consumes the substrate
+> through an author-facing DSL surface. Authored card drivers:
+> P-167 (full reveal/source-placement clause via the new verbs), EX8-047
+> (two-pick reveal clause), BT9-103 (Main + Security mirror via
+> `add_player_modifier` + `for_each` + `add_modifier`); P-206 raw_rust
+> shim removed in favour of native `add_this_option_to_hand`.
+
+> **DNA Omnimon completion closure — 2026-05-20:** The
+> `complete-dna-omnimon-archetype` change drove the DNA Omnimon archetype
+> (64 cards) to **62 IMPLEMENTED / 2 PARTIAL / 0 BLOCKED** (Phase A
+> baseline 34 / 25 / 5). ~20+ engine/DSL substrate gaps were closed and
+> ~18 stale-tracker gaps were confirmed and used; full per-gap closure
+> record in [`qa/resolved-gaps.md`](../qa/resolved-gaps.md) § "Phase 2 /
+> DNA Omnimon completion closure — 2026-05-20". Engine-level substrate
+> closed by this change includes `effect_initiated_dna_digivolve_with_hand_partner`
+> (G-DSL-DNA-FROM-HAND-PARTNER), `ForEach` stable per-iteration top-card
+> identity (G-FOR-EACH-DELETE-INDEX-SHIFT), `OnLeaveField` timing fired
+> from deletion + return paths, AD1-012's defender-side
+> effect-initiated DNA mid-attack-interrupt, `source_dp` /
+> `source_material_count` formula inputs, `play_security_card` +
+> `EffectContext::play_from_security_card`, and
+> `Modifiers::granted_security_attack_keyword_bonus`. Two gaps remain
+> genuinely OPEN — both are engine-level and account for the 2 PARTIAL
+> cards:
+>
+> - **G-DYNAMIC-NAME-ALIAS-FROM-STACK** — BT17-102 Greymon's `[All Turns]`
+>   material-name-alias clause. Engine-level: declarative identity /
+>   effective-name. Tracked below as "Digivolution-stack name overlay
+>   ("has all names of materials")".
+> - **G-DSL-DELAY-ON-ATTACK-EVENT** — BT23-096 Comet Hammer's
+>   `<Delay>`-on-attack clause. Engine-level: delay/attack-event
+>   dispatch. Tracked below as "Delay-on-attack-event dispatch
+>   (`<Delay>` body gated on an attack event)".
 
 There are two related assessment workflows:
 
@@ -114,7 +214,7 @@ Each entry lists the cards that surfaced it, but the entry itself describes a re
 | Archetype | Audited | Cards | 🟢 Supported | 🟡 Partial | 🔴 Blocked |
 |---|---|---|---|---|---|
 | Medusamon | 2026-04-17 | — | — | — | — |
-| DNA Omnimon | 2026-04-17 | 64 | 1 | 4 | 59 |
+| DNA Omnimon | 2026-04-17; completed 2026-05-20 | 64 | 62 | 2 | 0 |
 | TS Olympos | 2026-04-18 | 105 | 1 | 4 | 100 |
 | Rocks | 2026-04-18; refreshed 2026-04-28 | 47 | 0 | 0 | 47 |
 | Dark Masters | 2026-04-18 | 58 | 0 | 0 | 58 |
@@ -154,19 +254,28 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Option card play flow residual: place-Option-in-battle-area + [Hand][Main] Plug-In flow](#option-card-play-flow-residual-place-option-in-battle-area--handmain-plug-in-flow) | 🟡 | 11 | `game.rs`, `effect.rs`, `effect_context.rs`, `action/` |
 | [Standard Delay main-phase activation action](#standard-delay-main-phase-activation-action) | 🟡 | 3+ | `game_actions.rs`, `action/mask.rs`, `effect_context.rs` |
 | [Trait-filter helpers on `CardSource` / `Permanent`](#trait-filter-helpers-on-cardsource--permanent) | 🟡 | pervasive | `card_source.rs`, `permanent.rs` |
-| [Digivolution-stack name overlay ("has all names of materials")](#digivolution-stack-name-overlay-has-all-names-of-materials) | 🔴 | 1 | `effect.rs`, `card_source.rs`, `permanent.rs` |
+| [Digivolution-stack name overlay ("has all names of materials") (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`)](#digivolution-stack-name-overlay-has-all-names-of-materials) | 🔴 | 1 | `effect.rs`, `card_source.rs`, `permanent.rs` |
+| [Delay-on-attack-event dispatch (`<Delay>` body gated on an attack event) (`G-DSL-DELAY-ON-ATTACK-EVENT`)](#delay-on-attack-event-dispatch-delay-body-gated-on-an-attack-event) | 🔴 | 1 | `lower_delay.rs`, `combat.rs`, `effect_queue.rs` |
 | [Decode residual: EX10-061 Apocalymon batch + different-name source play DSL sugar](#decode-residual-ex10-061-apocalymon-batch--different-name-source-play-dsl-sugar) | 🟡 | 1 | `effect.rs` |
 | [Ergonomics partials](#ergonomics-partials) | 🟡 | pervasive | `effect.rs`, `effect_context.rs` |
 | [Grant Security A. ±N modifier — targeted typed sugar](#grant-security-a-n-modifier-to-a-targeted-permanent-parametric-securityattackchange) | 🟡 | 3+ | `effect_context.rs` |
 | [Play / digivolve origin context flag — effect-spawned cleanup token half](#play--digivolve-origin-context-flag-if-played-by-effects-if-digivolved-by-this-effect) | 🟡 | 4+ | `effect.rs`, `effect_context.rs` |
 | [Generic `pop_top_digivolution_source` for arbitrary re-routing (BT24-093)](#digivolution-stack-source-extraction-pop_top_source-from-named-permanent) | 🟡 | 1 | `effect_context.rs`, `permanent.rs` |
 | [Conditional digivolve-target restriction (filter on candidate top-card name/trait/level/color)](#conditional-digivolve-target-restriction-filter-on-candidate-top-card-nametraitlevelcolor) | 🔴 | 7+ | `modifiers.rs`, `effect.rs` |
-| [Effect-spawned permanent with end-of-turn deletion rider](#effect-spawned-permanent-with-end-of-turn-deletion-rider-delete-the-digimon-this-effect-played) | 🔴 | 7+ | `game.rs`, `effect_context.rs` |
+| ~~[Effect-spawned permanent with end-of-turn deletion rider](#effect-spawned-permanent-with-end-of-turn-deletion-rider-delete-the-digimon-this-effect-played)~~ — RESOLVED 2026-05-20 (Puppets substrate sweep, see `qa/resolved-gaps.md`) | ✅ | — | — |
 | [Cast-time stack-construction for cost reduction (BT15-102 Apocalymon)](#cast-time-stack-construction-for-cost-reduction-place-n-differently-named-cards-from-battle-areatrash-under-the-played-card) | 🔴 | 1 | `game.rs`, `effect_context.rs` |
 | [Cross-card effect re-firing — foreign-card source-card variant (BT15-102)](#cross-card-effect-re-firing--activate-a-foreign-cards-on-play-effect-attributed-to-the-source) | 🟡 | 1 | `effect_context.rs` |
 | [Reveal-zone overlay (declarative type/level synthesized while card is in deck or being revealed)](#reveal-zone-overlay-declarative-typelevel-synthesized-while-card-is-in-deck-or-being-revealed) | 🔴 | 1 | `effect.rs`, `card_source.rs` |
 | [Effect-initiated play from face-up security stack (search-then-play-free)](#effect-initiated-play-from-face-up-security-stack-search-then-play-free) | 🔴 | 5+ | `effect_context.rs` |
-| [Generic `.activation_cost(...)` builder hook for triggered abilities](#generic-activation_cost-builder-hook-for-triggered-abilities-suspend-self--pay-as-cost-on-triggered-abilities) | 🔴 | 7+ | `effect.rs`, `effect_context.rs` |
+| ~~Generic `.activation_cost(...)` builder hook for triggered abilities~~ — RESOLVED 2026-05-17 (Phase 2 Track B) | ✅ | — | — |
+| ~~Once-per-turn enforcement for triggered effects (`G-OPT-TRIGGERED`)~~ — RESOLVED 2026-05-17 (Phase 2 Track C: diagnosed as already-closed; 23 stale `#[ignore]` annotations removed, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~OPT slot reset across turn cycle (`G-OPT-RESET-VIA-ATTACK-CYCLE`)~~ — RESOLVED 2026-05-17 (Phase 2 Track C: misdiagnosis; test-setup-only fix, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~Inherited triggered-effect dispatch (`enqueue_from_permanent` digivolution-stack walk)~~ — RESOLVED 2026-05-17 (Phase 2 Track D: substrate completion + regression test + 18 tests un-ignored, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~Standard Delay main-phase activation action (`PUPPETS-G009`)~~ — RESOLVED 2026-05-20 (Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~BeforePayCost cost-target predicate + sibling observer builder (`G-BEFORE-PAY-COST-DIGIVOLVE-TARGET` + `G-BEFORE-PAY-COST-GAIN-MEMORY`)~~ — RESOLVED 2026-05-17 (Phase 2 Track H, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~`play_from_hand_free` `bind_as` PermanentHandle output (`G-PLAY-FROM-HAND-FREE-BIND-AS`)~~ — RESOLVED 2026-05-17 (Phase 2 Track H, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~Inherited aura `applies_to_opponent_security_dp` (`PUPPETS-G008` / `G-OPPONENT-SECURITY-DP-AURA`)~~ — RESOLVED 2026-05-17 (Phase 2 Track I, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~Filtered breeding permanent target selection (`RK-G001`)~~ — RESOLVED 2026-05-17 (Phase 2 Track J PR 1, see `qa/resolved-gaps.md`) | ✅ | — | — |
 | [Per-N-suspended scaling threshold residual (count-bound multi-select + formula downstream filter)](#per-n-suspended-scaling-threshold-for-deletion--damage-effects-count-bounded-multi-select-with-derived-threshold) | 🟡 | 1 | `effect_context.rs` |
 | [Player-scope mass `CannotSuspend` aura on opponent (condition-gated)](#player-scope-mass-cannotsuspend-aura-on-opponent-condition-gated-and--or-stack-depth-filtered) | 🔴 | 2 | `modifiers.rs`, `effect.rs` |
 | [Conditional security-in-stack trigger residual: start-of-turn / start-of-opponent-turn variants](#conditional-security-in-stack-trigger-security-end-of-opponents-turn--security-start-of-your-turn-etc) | 🟡 | 1 | `enums.rs`, `effect_queue.rs` |
@@ -174,10 +283,12 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Global `OnOptionCardTrashed` observer residual: legacy Option trash paths](#global-onoptioncardtrashed-observer-timing) | 🟡 | 1 | `effect_queue.rs`, `game.rs` |
 | [Plug-In re-link from battle area source zone residual](#plug-in-re-link-from-battle-area-source-zone) | 🟡 | 1 | `effect_context.rs` |
 | [`ctx.move_from_breeding()` optional level-filtered prompt wrapper](#ctxmove_from_breeding-effectcontext-helper) | 🟡 | 1 | `effect_context.rs` |
-| [Costed self-digivolve stable source binding (UNCLEAR)](#costed-self-digivolve-stable-source-binding) | 🔴 | 1 | unclear |
-| [Narrow opponent-effect protection for DP reduction and De-Digivolve](#narrow-opponent-effect-protection-for-dp-reduction-and-de-digivolve) | 🔴 | 1 | `modifiers.rs`, `effect.rs` |
-| [Effect play with played-Digimon On Play suppression](#effect-play-with-played-digimon-on-play-suppression) | 🔴 | 3+ | `effect_context.rs`, `game.rs` |
-| [End-of-attack mandatory self-delete chain (UNCLEAR — EX4-074)](#end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch) | 🔴 | 1 | unclear |
+| ~~[Costed self-digivolve stable source binding](#costed-self-digivolve-stable-source-binding)~~ — RESOLVED 2026-05-20 (Puppets substrate sweep, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~[Narrow opponent-effect protection for DP reduction and De-Digivolve](#narrow-opponent-effect-protection-for-dp-reduction-and-de-digivolve)~~ — RESOLVED 2026-05-20 (Puppets substrate sweep, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~[Effect play with played-Digimon On Play suppression (`PUPPETS-G030`)](#effect-play-with-played-digimon-on-play-suppression)~~ — RESOLVED 2026-05-20 (Puppets substrate sweep; `suppress_on_play` wired through `play_from_trash_free`, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~Ally-played may-attack observer (`G-ALLY-PLAYED-MAY-ATTACK`)~~ — already-composable, no engine change | ✅ | — | RESOLVED 2026-05-20 (Phase 2 Track J Task S2.1) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine--dsl-gap-g-ally-played-may-attack--already-composable-2026-05-20-phase-2-track-j-task-s21) |
+| ~~Union hand/trash name-excluded play (`G-UNION-HAND-TRASH-NAME-EXCLUSION`)~~ — `select_union_zone` lowering now applies its `filter`; new `name_not_shared_by_field_digimon` predicate leaf | ✅ | — | RESOLVED 2026-05-20 (Phase 2 Track J Task S2.2) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine--dsl-gap-g-union-hand-trash-name-exclusion--resolved-2026-05-20-phase-2-track-j-task-s22) |
+| ~~End-of-attack mandatory self-delete chain (EX4-074)~~ | ✅ | — | RESOLVED 2026-05-17 (Track I first-test confirmed existing primitives suffice) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine-gap-end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch--resolved-2026-05-17-track-i) |
 
 **Group 5 contract note (2026-05-02):** Group 5 did not change ACTION_SPACE_SIZE or TENSOR_SIZE. New Link/Delay choices reuse existing pending-selection masks.
 
@@ -210,9 +321,9 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Discovered in:** Medusamon (2026-04-17); DNA Omnimon (2026-04-17); Rocks (2026-04-18)
 - **Card(s):** Self-stack material multi-select (EX4-073-style with level filter); cost-time placement variants. Headline aggregate-sum / count-capped primitive closed by Group 2 / Phase 4 — see [`qa/resolved-gaps.md`](../qa/resolved-gaps.md).
 - **Effect text:** "Choose any number of … whose total DP adds up to N or less and delete them" (closed); residual sub-shapes are self-stack material multi-select with a level/trait filter and cost-time multi-pick placement under the played card.
-- **What's missing:** A `select_materials_multi` sibling primitive that filters on level/trait across the source stack rather than across a battle area; a cost-time placement multi-pick that decides between battle-area and trash sources at cast time (couples with EX8-074-style aggregate threshold derivations and EX10-061 Apocalymon-style cast-time stack-construction).
-- **Suggested API shape:** Extend `select_count_capped_multi` to accept a source-stack zone selector; or add `select_materials_multi(target, max, filter, callback)` plus a cast-time multi-pick variant on the play hook.
-- **Workaround:** Sequence single-source `select_material` picks + closure-captured running threshold — fidelity-preserving but burns extra RL decision points.
+- **What's missing:** A cost-time placement multi-pick that decides between battle-area and trash sources at cast time (couples with EX8-074-style aggregate threshold derivations and EX10-061 Apocalymon-style cast-time stack-construction). **Updated 2026-05-19 (Track J S1.2):** the count-capped source-stack multi-select sub-shape is CLOSED — the `select_materials` DSL step (lowering to `select_count_capped_multi` + `CountCappedZone::Material` + `DistinctByMode`) covers level/trait/name-uniqueness filters over a carrier's digivolution sources. Only the cast-time placement multi-pick remains.
+- **Suggested API shape:** A cast-time multi-pick variant on the play hook (battle-area-vs-trash source selection at cast time).
+- **Workaround:** For the cast-time placement form: sequence single-source `select_material` picks + closure-captured running threshold — fidelity-preserving but burns extra RL decision points.
 - **Related:** "Per-N-suspended scaling threshold for deletion / damage effects (count-bounded multi-select with derived threshold)" entry — same family.
 
 ### Selection: ordered permutation (place N cards in any order)
@@ -325,14 +436,13 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 ### `<Delay>` keyword + placement-turn gating for Option cards
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-delay-keyword--placement-turn-gating-for-option-cards--resolved-2026-05-15-group-5-2026-05-02) by the 2026-05-15 hygiene sweep.
 
-### Standard Delay main-phase activation action
-- **Severity:** 🟡 PARTIAL
+### Standard Delay main-phase activation action — RESOLVED 2026-05-20 (Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`)
+- **Status:** Closed. PUPPETS-G009 closure shipped in the Puppets substrate sweep (commits `44ce72a4` + `9afdfdb7`, 2026-05-20, branch `claude/stoic-moser-0ef79e`). The earlier Track I entry (commit `26e27ccc`, 2026-05-17) was optimistic — `DelayTrigger::MainPhaseActivated` and the main-phase activation action mask path did not actually exist before this sweep. Standard `<Delay>` Options on the field now expose a `[Main]` activation action through the normal main-phase action mask after the placing turn — the action trashes the Option as cost, then runs the stored Delay body. Pass/decline leaves the Option in the battle area for later legal activation. No `ACTION_SPACE_SIZE` change (Working Rule §1). Full closure details in `qa/resolved-gaps.md` § "Engine Gap: Standard Delay main-phase activation action (PUPPETS-G009)".
+- **Severity (legacy):** 🟡 PARTIAL
 - **Discovered in:** Puppets (2026-05-03 batch implementation)
 - **Card(s):** P-037 Yellow Memory Boost!, P-105 Physical Training, LM-035 Physical Training, LM-037 Yellow Scramble, LM-054 Treadmill Training; also standard Memory Boost/Training/Scramble cards whose `<Delay>` text is activated by the controller during a later main phase.
 - **Effect text:** "`<Delay>` (By trashing this card after the placing turn, activate the effect below.)"
-- **What's missing:** The Group 5 Delay lifecycle supports persistent delayed Options, placement-turn gating, start/end/event drains, and replacement-aware self-trash costs. Standard main-phase Delay cards are still modeled in DSL/YAML as scheduled automatic effects such as `end_of_your_next_turn`, which hides the player's later `[Main]` decision to activate or decline the Delay effect after the placing turn. Batch 7 added `P-105` and `LM-054` with this partial scheduled workaround and ignored action-mask tests for the true later Main-phase activation.
-- **Suggested API shape:** Expose delayed Option field effects through the normal main-phase action mask after the placing turn. Choosing the action trashes the Option as cost, then runs the stored Delay body; passing/declining must leave the Option in the battle area for a later legal activation. The action should reuse existing field-effect or pending-selection surfaces without expanding `ACTION_SPACE_SIZE`.
-- **Workaround:** Scheduled automatic activation is acceptable only for PARTIAL card YAML while this gap is open; it is not faithful enough for full IMPLEMENT status.
+- **What was missing (legacy):** The Group 5 Delay lifecycle supports persistent delayed Options, placement-turn gating, start/end/event drains, and replacement-aware self-trash costs. Standard main-phase Delay cards were still modeled in DSL/YAML as scheduled automatic effects such as `end_of_your_next_turn`, which hid the player's later `[Main]` decision to activate or decline the Delay effect after the placing turn.
 - **Related:** `PUPPETS-G009` in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`; Option card play flow; Group 5 Delay lifecycle.
 
 ### Raid target-switch interrupt (scripting-surface, not mask-only) + effect-driven attack redirect
@@ -449,24 +559,44 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-declarative-aura-sourced-from-security-zone--resolved-2026-05-15-track-h-5-pr-467) by the 2026-05-15 hygiene sweep.
 
 ### Digivolution-stack name overlay ("has all names of materials")
+- **Gap ID:** `G-DYNAMIC-NAME-ALIAS-FROM-STACK`
 - **Severity:** 🔴 BLOCKING
+- **Status:** OPEN — re-verified open against code by the `complete-dna-omnimon-archetype` change (2026-05-20). BT17-102 is otherwise IMPLEMENTED; this one `[All Turns]` clause is omitted and test `bt17_102_all_turns_aliases_low_level_material_names` is left `#[ignore]`'d. Accounts for one of the 2 PARTIAL cards in the completed DNA Omnimon ledger.
 - **Discovered in:** DNA Omnimon (2026-04-17)
 - **Card(s):** BT17-102 Greymon ("[All Turns] This Digimon has all the names of level 3 and lower cards in its digivolution cards.")
 - **Effect text:** As above.
-- **What's missing:** `Permanent::contains_card_name` already walks the stack for self-checks, but external name lookups on this permanent from other cards see only the top card's printed name. No "virtual name overlay" mechanism that synthesizes additional names for external queries (e.g., another Tamer's aura that checks "[Koromon]" should see the overlay names).
-- **Suggested API shape:** `Effect::declarative(card).name_overlay_from_sources(|src, data| src.level(data).map_or(false, |l| l <= 3))`; update all name-lookup surfaces (aura filters, inherited-effect name checks, trait-from-name derivations) to union overlays into the lookup set.
-- **Workaround:** None — BLOCKED for external observers that query names on this permanent.
-- **Related:** "Named-target declarative aura".
+- **What's missing:** `Permanent::contains_card_name` already walks the stack for self-checks, but external name lookups on this permanent from other cards see only the top card's printed name. The DSL identity layer carries only static `name_aliases` — there is NO engine consumer for a *dynamic* alias derived from the live digivolution-source stack. No "virtual name overlay" mechanism that synthesizes additional names for external queries (e.g., another Tamer's aura that checks "[Koromon]" should see the overlay names).
+- **Suggested API shape:** A `Permanent`-level effective-name-set query (union of printed name + dynamic overlay names) consulted by every name predicate, e.g. `Effect::declarative(card).name_overlay_from_sources(|src, data| src.level(data).map_or(false, |l| l <= 3))`; update all name-lookup surfaces (aura filters, inherited-effect name checks, trait-from-name derivations) to union overlays into the lookup set.
+- **Workaround:** None — BLOCKED for external observers that query names on this permanent; the clause is OMITTED per no-approximations.
+- **Related:** "Named-target declarative aura"; DSL/identity-layer face tracked in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md) (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`).
+
+### Delay-on-attack-event dispatch (`<Delay>` body gated on an attack event)
+- **Gap ID:** `G-DSL-DELAY-ON-ATTACK-EVENT`
+- **Severity:** 🔴 BLOCKING
+- **Status:** OPEN — filed by the `complete-dna-omnimon-archetype` change (2026-05-20). BT23-096 is otherwise IMPLEMENTED; the `<Delay>`-on-attack clause is omitted and its test is left `#[ignore]`'d. Accounts for one of the 2 PARTIAL cards in the completed DNA Omnimon ledger.
+- **Discovered in:** DNA Omnimon (2026-05-20)
+- **Card(s):** BT23-096 Comet Hammer (`<Delay>` body gated on an ally-attack event).
+- **Effect text:** `<Delay>` body that activates off an attack event.
+- **What's missing:** A 3-part engine blocker prevents an attack event from triggering a `<Delay>` body —
+  1. `lower_delay.rs` does not map attack timings to `DelayTrigger::OnEvent`;
+  2. `combat.rs` dispatches `OnAllyAttack` via `TriggerSource::PlayerBattleArea`, which `effect_queue.rs` never fans out to event-gated delays;
+  3. `attacker_trait_has` resolves the attacker only via `attack_target_change()`, which is unset for a plain attack.
+- **Already-present substrate (NOT the blocker):** `G-DSL-ON-ALLY-ATTACK-TIMING` (on-ally-attack timing token) and `G-ATK-TRAIT-FILTER` (attacker-trait predicate) both exist; the gap is delay/attack-event dispatch wiring.
+- **Suggested API shape:** Map attack timings to `DelayTrigger::OnEvent` in `lower_delay.rs`; fan `OnAllyAttack` dispatch out to event-gated delays in `effect_queue.rs`; resolve the attacker for a plain attack (not only via `attack_target_change()`).
+- **Workaround:** None faithful — the clause is OMITTED per no-approximations.
+- **Related:** "Standard Delay main-phase activation action" (RESOLVED Track I); DSL face tracked in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md) (`G-DSL-DELAY-ON-ATTACK-EVENT`).
 
 ### Decode keyword (play from own digivolution stack without paying cost on non-battle leave)
-- **Severity:** 🟡 PARTIAL (audit 2026-05-15: narrowed; BT22-015 Red/Black Decode, EX4-060 BlitzGreymon/CresGarurumon ladder, and EX9-021 End-of-Attack source-play all close. Residual: EX10-061 Apocalymon batch + different-name source play DSL sugar — higher-level DSL ergonomic ask over `select_material` + `play_from_materials`.)
+- **Severity:** 🟡 PARTIAL (audit 2026-05-15: narrowed; BT22-015 Red/Black Decode, EX4-060 BlitzGreymon/CresGarurumon ladder, and EX9-021 End-of-Attack source-play all close. **Updated 2026-05-19 (Track J substrate S1.2):** the batch / different-name source-play DSL sugar is now CLOSED — see "What's closed" below. Residual is the native `Keyword::Decode` parsing sugar only.)
 - **Discovered in:** DNA Omnimon (2026-04-17); Dark Masters (2026-04-18)
-- **Card(s):** BT22-015 Omnimon ("＜Decode (Red/Black Lv.3)＞ — When this Digimon would leave the battle area other than in battle, you may play 1 Red or Black Level 3 Digimon card from its digivolution cards without paying the cost.") — Dark Masters adds: EX10-061 Apocalymon ("[On Play] [When Digivolving] You may play 1 of each [Dark Masters] trait card with different names from this Digimon's digivolution cards without paying the costs" — needs `select_source` + `play_material_without_paying`, distinct from Decode's leave-field trigger but shares the underlying material-extraction-and-play helpers)
+- **Card(s):** BT22-015 Omnimon ("＜Decode (Red/Black Lv.3)＞ — When this Digimon would leave the battle area other than in battle, you may play 1 Red or Black Level 3 Digimon card from its digivolution cards without paying the cost.") — Dark Masters adds: EX10-061 Apocalymon ("[On Play] [When Digivolving] You may play 1 of each [Dark Masters] trait card with different names from this Digimon's digivolution cards without paying the costs").
 - **Effect text:** As above.
 - **Status:** Partially closed 2026-05-07 for BT22-015; narrowed again 2026-05-08 for EX4-060 and EX9-021. `select_material` now honors card predicates over the source stack, and `play_from_materials.source_index` may consume the selected `CardHandle` binding. `play_from_materials.bind_as` records a successful source play for follow-up gates. BT22-015's Red/Black Lv.3 and Blue/Yellow Lv.3 Decode clauses are faithful optional non-cancelling replacement subscribers. EX4-060's mandatory BlitzGreymon + CresGarurumon sequence is authored through sequential material selections, with its self-to-security tail handled by `place_permanent_on_security_and_handle_replacement`. EX9-021's End of Attack sequence is authored through the same source-play steps plus `binding_exists` and `place_permanent_on_security`. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_015`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex4_060`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_021`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- replacement`.
-- **What's missing:** The reusable material-extraction substrate exists for single and sequential selected source plays from the triggering stack, but the native `Keyword::Decode(Vec<Color>, u8)` sugar is not generalized yet, and batch / different-name source plays such as EX10-061 Apocalymon still need higher-level DSL ergonomics.
-- **Suggested API shape:** `Keyword::Decode(Vec<Color>, u8)` + auto-emission in the leave-field replacement path; higher-level DSL sugar over `select_material` + `play_from_materials` for batch / different-name material plays.
-- **Workaround:** For remaining batch multi-source forms, none — auto-selecting a material violates §17 no-approximations; faking a "top-of-stack" play misses the selection semantics of "any material card" which the card text grants.
+- **What's closed (2026-05-19, Track J S1.2):** the batch / different-name source-play DSL sugar landed. A new `select_materials` DSL step picks *up to N* digivolution sources of a carrier permanent in ONE count-capped multi-pick, optionally constrained by `uniqueness: name` ("1 of each different name"). It lowers to `EffectContext::select_count_capped_multi` with `CountCappedZone::Material` + `DistinctByMode`. `play_from_materials` now consumes a `CardList` binding as a batch (each picked source becomes a fresh permanent), composing with the S1.1 `suppress_on_play` flag. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- select_materials`.
+- **What's closed (2026-05-20, Track J S1.3):** the breeding-area carrier source-select residual. `select_material` / `select_materials` against a breeding-resident carrier (King Drasil) now install a real `pending_selection` whose action IDs use the appended `BREEDING_SOURCE_SELECT` sub-range (`2168..2192`, keyed by carrier owner; `ACTION_SPACE_SIZE` raised 2168→2192 — a deliberate version bump, existing trained RL models must be retrained). `material_zone_geometry` is the single battle-vs-breeding branch point. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection -- breeding_carrier`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- select_materials::select_materials_breeding_carrier`.
+- **What's missing:** Only the native `Keyword::Decode(Vec<Color>, u8)` printed-keyword parsing sugar + auto-emission in the leave-field replacement path. The batch / different-name source play is fully expressible today via `select_materials` + `play_from_materials`. EX10-061 Apocalymon's remaining blocker is its *cast-time* stack-construction half (see "Cast-time stack-construction for cost reduction"), not the source-play extraction.
+- **Suggested API shape:** `Keyword::Decode(Vec<Color>, u8)` + auto-emission in the leave-field replacement path.
+- **Workaround:** None needed for batch / different-name source plays — `select_materials` covers them faithfully without auto-selection.
 - **Related:** "WhenWouldBeDeleted / leave-field replacement-effect framework"; "Zone-manipulation: return-to-hand / return-to-deck / bounce self" (sibling for trash-stack-to-destination disposition); `select_source` is listed as 🔴-residual in RUST_PYTHON_PARITY §4.6d.
 
 ### Ergonomics partials
@@ -558,14 +688,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 - **Related:** "Player-scoped modifier registry"; "Zone-manipulation: effect-initiated digivolve"; RUST_ENGINE_API.md §9.
 
 ### Effect-spawned permanent with end-of-turn deletion rider (`delete the Digimon this effect played`)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** Dark Masters (2026-04-18)
-- **Card(s):** EX10-012 MetalSeadramon, EX10-020 Puppetmon, EX10-035 Machinedramon, EX10-057 Piedmon, EX10-061 Apocalymon, EX10-072 Spiral Mountain, P-216 WaruMonzaemon — Puppets adds: P-165 ShoeShoemon ("delete that token" at the end of the opponent's turn)
-- **Effect text:** "At turn end, delete the Digimon this effect played." / "The Digimon this effect played can't digivolve and is deleted at turn end." / "At the end of your opponent's turn, delete that token."
-- **What's missing:** No mechanism for an Effect to (a) capture the `PermanentHandle` of the card it just played via a free-play helper and (b) schedule a deferred end-of-turn cleanup tied to that specific permanent (no-op if the card was already deleted earlier in the turn). `Permanent` has no `played_by_effect: Option<{source_card, effect_slot, expiry}>` provenance field. The end-of-turn drain (existing for transient Options under "Scheduled end-of-turn effect queue") does not key on per-permanent identity. Sibling-but-distinct from that scheduled-EOT entry: that gap covers arbitrary closures from trash; this gap covers per-permanent provenance-anchored cleanup that survives stack shifts.
-- **Suggested API shape:** `ctx.play_from_X_free_then(...)` variants returning the resulting `PermanentHandle`, paired with `ctx.schedule_delete_at_end_of_turn(handle: PermanentHandle, source: CardHandle)` that enqueues a closure surviving stack-shift (snapshot the card_index, look it up at EOT, no-op if absent). Backed by `Game.scheduled_eot_deletions: Vec<{card_index, source}>` drained inside `end_turn` after standard `EndOfYourTurn` triggers but before memory reset. Alternative: `ModifierType::DeleteAtEndOfTurn` permanent-scoped modifier consumed by the EOT pass.
-- **Workaround:** "None — BLOCKED." Hand-rolling a `Vec<PermanentHandle>` snapshot in a closure desyncs after stack shifts; an unconditional EOT scan would over-delete unrelated permanents.
-- **Related:** "Scheduled end-of-turn effect queue (for transient Options)" (sibling — generic closure scheduling vs. provenance-anchored deletion); "Zone-manipulation: play-from-hand / trash without paying cost (+ cost override)" (the play-free helpers must return a handle for this to chain); "Token creation + `CardKind::Token` + Petrification Token definition" (P-165 needs the token sibling: `play_token` must bind the newly created token handle before the cleanup can target exactly "that token").
+> Resolved by the Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). `schedule_delete_played_at_turn_end` provenance-bound turn-end self-delete (`PUPPETS-G003`) and `play_token` `bind_as` + opponent-turn-end cleanup (`PUPPETS-G016`) both landed. Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md).
 
 ### Effect-driven play of a Digimon from hand to an empty breeding-area slot (without paying cost)
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-effect-driven-play-of-a-digimon-from-hand-to-an-empty-breeding-area-slot-without-paying-cost--resolved-2026-05-15-group-4) by the 2026-05-15 hygiene sweep.
@@ -632,14 +755,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-global-onownsecurityremoved-observer-timing-mirror-of-onopponentsecurityremoved--resolved-2026-05-15-track-a-2026-05-06) by the 2026-05-15 hygiene sweep.
 
 ### Generic `.activation_cost(...)` builder hook for triggered abilities (suspend-self / pay-as-cost on triggered abilities)
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** Dark Masters (2026-04-18)
-- **Card(s):** BT4-097 Kari Kamiya, BT8-090 Kari Kamiya, ST6-14 Matt Ishida, BT8-094 Digimon Emperor, EX9-068 Analogman, BT13-102 Keenan Crier, RB1-035 Hokuto Amanokawa — Puppets adds: BT13-101 Miki Kurosaki & Megumi Shirakawa (suspend this Tamer cost on a color-gated play observer), P-136 Arisa Kinosaki (suspend this Tamer cost on a Puppet-digivolve observer), BT22-088 Arisa Kinosaki (return this Tamer to bottom deck as Start-of-Main activation cost).
-- **Effect text:** "by suspending this Tamer, gain 1 memory" / "by suspending this Tamer to <Draw 1>" / "by suspending this Tamer, gain 1 memory if that Digimon is level 4 or higher, and <Draw 1> if it is level 3" / "By returning this Tamer to the bottom of the deck..."
-- **What's missing:** Distinct from "Dynamic cost reduction at BeforePayCost" which lists suspend-self-as-cost only in the context of cost reduction for plays/digivolves. These cards have no cost-reduction component — the entire ability body is cost-payment-gated on suspending the source permanent itself, on a triggered ability (not on a play action). Requires (a) a generic `EffectBuilder::activation_cost(|ctx| bool)` hook usable for any triggered timing, (b) a `ctx.suspend_self_as_cost() -> bool` helper that returns false if the permanent is already suspended, (c) propagation of the cost-failure path so the body does not execute. Distinct from `.optional()` — cost-failure is not a player decline.
-- **Suggested API shape:** `EffectBuilder::activation_cost(predicate: Fn(&mut Ctx) -> bool)` — runs predicate before `process`; if it returns false the effect is consumed without firing. `ctx.suspend_self_as_cost() -> bool`. Pairs with `.optional()` (player accepts the prompt, then must successfully pay cost).
-- **Workaround:** "None — faithful." Ad-hoc inline `if !perm.suspended { suspend; gain_memory(1); }` skips the failure-on-already-suspended path and cannot be re-used across cards.
-- **Related:** "Dynamic cost reduction at BeforePayCost (closure-valued + selection-gated + suspend/self-return as cost)" (same generic `.pay_cost` builder hook in scope, currently scoped only to cost-reduction usage); "Ergonomics partials" (if-effect-didn't-resolve on-decline callback).
+> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-generic-activation_cost-builder-hook-for-triggered-abilities--resolved-2026-05-17-phase-2-track-b) by Phase 2 Track B on 2026-05-17.
 
 ### Per-N-suspended scaling threshold for deletion / damage effects (count-bounded multi-select with derived threshold)
 - **Severity:** 🟡 PARTIAL (audit 2026-05-15: narrowed; formula leaf `suspended_count` landed in `digimon-dsl/src/formula.rs:137` per Track J 2026-05-10. Residual: chained count-bound multi-select followed by formula-threshold downstream filter — the DSL/Rust shape that lets a downstream `select_opponent_permanent` consume an upstream pick count as a derived threshold.)
@@ -671,7 +787,7 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-forced-opponent-hand-reduction-primitive-ctxtrash_opponent_hand_to_count--resolved-2026-05-15-pr-454-track-e) by the 2026-05-15 hygiene sweep.
 
 ### Inherited triggered-effect dispatch: `enqueue_from_permanent` must walk digivolution stack
-> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-inherited-triggered-effect-dispatch-enqueue_from_permanent-must-walk-digivolution-stack--resolved-2026-05-15-2026-05-06) by the 2026-05-15 hygiene sweep.
+> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-inherited-triggered-effect-dispatch-enqueue_from_permanent-must-walk-digivolution-stack--resolved-2026-05-15-2026-05-06) by the 2026-05-15 hygiene sweep. **Phase 2 Track D (commit `bc852640`) completed the closure** with a dedicated regression test (`tests/timing_dispatch.rs`) and 18 dependent tests un-ignored across `cards_behavioral` (BT22-005, BT24-012, BT24-016, BT21-025, BT16-040, BT17-015, BT17-018, BT21-001, BT21-017, BT22-005, P-189, EX4-003, EX11-008, BT14-001 + others). G-WHEN-DIGIVOLVING-DISPATCH absorbed by the same walk. See `qa/resolved-gaps.md` § "Phase 2 Track D closure" for full closure details.
 
 ### `CannotAttackPlayer` modifier enforcement (mask + combat)
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-cannotattackplayer-modifier-enforcement-mask--combat--resolved-2026-05-15-track-d-2026-05-08) by the 2026-05-15 hygiene sweep.
@@ -786,15 +902,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 ## Puppets Batch 5/6 Residual Engine Gaps
 
 ### Costed self-digivolve stable source binding
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** Puppets Batch 5 (2026-05-04)
-- **Card(s):** `EX9-032` Karakurumon
-- **Effect text:** "[On Play] [When Digivolving] By deleting 1 of your Tokens or other [Puppet] trait Digimon, this Digimon may digivolve into a [Puppet] trait Digimon card in your hand without paying the cost."
-- **What's missing:** Effect resolution needs a stable binding for the resolving source permanent before paying a deletion cost. If the chosen cost body is earlier in the battle-area vector, deleting it shifts indices before a later self-digivolve step resolves. Preflight also needs to prove that a legal Token/Puppet cost body exists while excluding the source itself.
-- **Suggested API shape:** Bind the source as a `PermanentHandle` or equivalent stable identity at trigger dispatch, evaluate cost predicates against that binding, and let effect-initiated digivolve consume the stable handle instead of `target: self` as a mutable index.
-- **Workaround:** None faithful. Omitting the active slice is safer than hidden auto-costing or index-based self-digivolve.
-- **First test:** Trigger `EX9-032`, delete a lower-index own Puppet as the cost, and assert the original `EX9-032` stack digivolves into the selected hand Puppet.
-- **Updated 2026-05-15 (audit):** Audit (2026-05-15) flagged as UNCLEAR — write the EX9-032 first-test per the entry's own "First test" note before further engine work. The substrate may already be correct via existing `ctx.source_permanent` snapshot semantics; the EX9-032 test may need writing to confirm. See [`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md).
+> Resolved by the Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). Stable `source_permanent` re-locate by `CardHandle` across mid-body delete (`PUPPETS-G018`) landed. Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md).
 
 ### Inherited Token/Puppet leave-prevention replacement dispatch
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-inherited-tokenpuppet-leave-prevention-replacement-dispatch--resolved-2026-05-15-track-b-2026-05-08) by the 2026-05-15 hygiene sweep.
@@ -806,38 +914,18 @@ Items where the existing primitive **likely works** but no behavioral test cover
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-suspend-this-tamer-deletion-observer-with-overclock-cause-branch--resolved-2026-05-15-2026-05-06) by the 2026-05-15 hygiene sweep.
 
 ### Narrow opponent-effect protection for DP reduction and De-Digivolve
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** Puppets Batch 8 (2026-05-04)
-- **Card(s):** `BT16-055` Namakemon
-- **Effect text:** "While you have 3 or more security cards, this Digimon isn't affected by your opponent's DP reduction effects and can't be de-digivolved by their effects."
-- **What's missing:** A category-scoped protection modifier that blocks only opponent DP reduction and opponent De-Digivolve effects under a live security-count predicate. Existing broad immunity would over-block legal effects; source-scoped zone-return immunity does not cover DP reduction.
-- **Suggested API shape:** Add effect-category protection entries such as `ModifierType::ImmuneToOpponentDpReduction` and `ModifierType::ImmuneToOpponentDeDigivolve`, or a parametric `EffectCategoryProtection { source_player, categories, predicate }`, and consult them at DP-reduction and De-Digivolve effect sites.
-- **Workaround:** None faithful. Do not model this as `CannotBeAffected`.
-- **First test:** With `BT16-055` in battle and 3 security, resolve opponent DP reduction and De-Digivolve effects against it and assert both are blocked; repeat at 2 security and assert both apply.
+> Resolved by the Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). Security-gated narrow opponent-effect protection (`grant_narrow_opponent_effect_protection`, `PUPPETS-G024`) landed. Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md).
 
 ### Trash-resident observer with effect digivolve from trash
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-trash-resident-observer-with-effect-digivolve-from-trash--resolved-2026-05-15-2026-05-06) by the 2026-05-15 hygiene sweep.
 
 ### Effect play with played-Digimon On Play suppression
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** Puppets Batch 9 (2026-05-04)
-- **Card(s):** `BT5-106` Demonic Disaster. Royal Knights has adjacent source-play consumers (`BT13-110`, `BT13-112`) that also care about On Play suppression.
-- **Effect text:** "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
-- **What's missing:** Effect-play helpers need provenance that suppresses only the played permanent's On Play enqueue for this play event. Ordinary play-from-trash support is insufficient because it fires On Play normally; broad global On Play suppression would affect unrelated permanents/effects.
-- **Suggested API shape:** Add a `PlayOptions { suppress_on_play: bool, ... }` or equivalent parameter to effect-play helpers, carry it through the play event context, and make On Play enqueue skip the just-played permanent's On Play clauses when set. DSL consumers should expose this as `suppress_on_play: true`.
-- **Workaround:** None faithful. Omit the security slice until the played-Digimon On Play suppression flag is available.
-- **First test:** Security-check `BT5-106`, select a level 3 purple Digimon from trash with a visible On Play memory-gain effect, and assert the Digimon enters play while its On Play effect does not fire.
+> Resolved by the Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`, 2026-05-20). `suppress_on_play` flag on effect-play helpers (`PUPPETS-G030`) landed. Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md). DSL `suppress_on_play: true` is honored ONLY by `play_from_trash_free` (compiled to `play_from_trash_free_unsuspended_suppress_on_play`); the compiler rejects it on `play_from_hand` / `play_from_trash`. BT5-106's [Security] slice is authored in `code/digimon-engine/cards/bt5/BT5-106.yaml`.
+>
+> **Deferred follow-up:** `suppress_on_play` for `play_from_materials` (Royal Knights source-play payoffs that play a Digimon from a digivolution-source stack with its [On Play] suppressed) is NOT yet wired — the merged engine threads suppression only through `play_from_trash_free`. Re-wiring it for the `play_from_materials` path is follow-up work for when the RK source-play cards are authored.
 
 ### End-of-attack mandatory self-delete chain with recovery and conditional hatch
-- **Severity:** 🔴 BLOCKING
-- **Discovered in:** Puppets resolver Batch 10 (2026-05-04)
-- **Card(s):** `EX4-074` ShineGreymon: Ruin Mode
-- **Effect text:** "[End of Attack] Delete this Digimon and 1 of your opponent's Digimon, and <Recovery +1 (Deck)>. Then, if you have a Tamer in play, hatch 1 Digi-Egg card to an empty space in your breeding area."
-- **What's missing:** This chain needs faithful continuation across several edge cases: deleting the resolving source while preserving the rest of the queued chain, selecting/deleting one opponent Digimon without hiding a target choice, running Recovery +1 even when no opponent target exists if rules require the mandatory chain to continue, and conditionally hatching only when the player has a Tamer and an empty breeding area. The individual movement verbs exist, but this exact mandatory chain needs a card/engine fidelity pass.
-- **Suggested API shape:** Support source-stable self-delete inside a triggered chain, mandatory target-selection continuation semantics for no-eligible-target branches, and a guarded hatch step such as `hatch_if: { condition: has_own_tamer, requires_empty_breeding: true }` that does not expose a no-op hatch action.
-- **Workaround:** None faithful. Auto-selecting the opponent Digimon or dropping later tail steps would violate no-approximations and printed mandatory sequencing.
-- **First test:** Attack with `EX4-074`, resolve End of Attack with a Tamer and a legal opponent Digimon, and assert Ruin Mode deletes itself, the chosen opponent Digimon is deleted, Recovery +1 resolves, and a Digi-Egg is hatched only when the Tamer/breeding conditions are met.
-- **Updated 2026-05-15 (audit):** Audit (2026-05-15) flagged as UNCLEAR — first-test write recommended per the entry's own "First test" note before further engine work. All individual verbs exist; the EX4-074 mandatory chain likely works with existing primitives but needs proof via behavioral test. See [`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md).
+> Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch--resolved-2026-05-17-track-i) by the 2026-05-17 Track I first-test confirmation. Existing primitives (`delete_permanent { target: source }`, `select_opponent_permanent { optional: true }`, `recover`, `if { any_field_permanent + can_hatch } then hatch`) compose into a faithful chain — see `code/digimon-engine/cards/ex4/EX4-074.yaml` Clause 2 and `code/digimon-engine/tests/cards_behavioral/ex4/ex4_074.rs::ex4_074_end_of_attack_self_deletes_opponent_delete_recovers_and_hatches_with_tamer`.
 
 ### BEATBREAK / DATA SQUAD Tamer face-down stash substrate (place under chosen Tamer + cost-form trash bottom face-down)
 - **Severity:** 🔴 BLOCKING — Phase A substrate landed 2026-05-17; residual Phases B–F remain blocking (see Status footer)

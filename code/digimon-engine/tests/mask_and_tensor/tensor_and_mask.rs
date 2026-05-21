@@ -228,7 +228,7 @@ fn mask_size_correct() {
 
     let mask = build_action_mask(&game, 0);
     assert_eq!(mask.len(), ACTION_SPACE_SIZE);
-    assert_eq!(mask.len(), 2168);
+    assert_eq!(mask.len(), 2192);
 }
 
 #[test]
@@ -331,7 +331,7 @@ fn mask_main_no_attack_with_summoning_sickness() {
 
 #[test]
 fn mask_action_space_size_constant() {
-    assert_eq!(ACTION_SPACE_SIZE, 2168);
+    assert_eq!(ACTION_SPACE_SIZE, 2192);
     // Validate that no encode function exceeds the action space
     assert!(encode_attack(19, 14) < ACTION_SPACE_SIZE as u16);
     assert!(encode_digivolve(29, 14) < ACTION_SPACE_SIZE as u16);

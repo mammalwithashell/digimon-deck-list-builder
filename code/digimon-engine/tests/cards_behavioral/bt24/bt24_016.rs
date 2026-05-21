@@ -242,7 +242,7 @@ fn bt24_016_activated_path_extra_cost_has_two_steps() {
 /// place a card, and their top security is trashed. Requires WhenDigivolving
 /// dispatch, as_selecting_player, place_on_security + trash_top_security.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED (WhenDigivolving dispatch) + G-AS-SELECTING-PLAYER"]
+#[ignore = "pending: G-AS-SELECTING-PLAYER (test body not written; OPT closed in Phase 2 Track C)"]
 fn bt24_016_when_digivolving_opponent_places_and_top_security_trashed() {
     // Scaffolding (to be filled once the gaps close):
     //
@@ -276,9 +276,9 @@ fn bt24_016_when_digivolving_opponent_places_and_top_security_trashed() {
 /// OPT lockout: clause 3 must not fire twice in the same turn even if both
 /// WhenDigivolving and WhenAttacking trigger in the same turn.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED"]
+#[ignore = "pending: card-local OPT regression body not authored — G-OPT-TRIGGERED closed by Phase 2 Track C; sibling cards cover dispatch"]
 fn bt24_016_clause3_opt_fires_at_most_once_per_turn() {
-    todo!("implement once G-OPT-TRIGGERED OPT lockout enforcement lands");
+    // Body deferred — substrate ready; sibling regression coverage exists.
 }
 
 // ── §4 Clause 4 behavioral (Inherited OnOpponentSecurityRemoved OPT) ────────
@@ -289,7 +289,7 @@ fn bt24_016_clause3_opt_fires_at_most_once_per_turn() {
 /// Positive: when the opponent's security is removed from, the controller may
 /// play a qualifying Reptile or Dragonkin Digimon (DP ≤ 5000) free from hand.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH"]
+#[ignore = "pending: test body not written (substrate closed by Phase 2 Track D)"]
 fn bt24_016_inherited_on_security_removed_play_free_positive() {
     // Scaffolding:
     //
@@ -316,7 +316,7 @@ fn bt24_016_inherited_on_security_removed_play_free_positive() {
 /// hand, the optional prompt must still install but offer no valid targets
 /// (or not install if the engine skips empty selections).
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH"]
+#[ignore = "pending: test body not written (substrate closed by Phase 2 Track D)"]
 fn bt24_016_inherited_on_security_removed_no_target_no_selection() {
     // Scaffolding:
     //
@@ -334,15 +334,15 @@ fn bt24_016_inherited_on_security_removed_no_target_no_selection() {
 /// The inherited clause must not fire when the Digimon carrying this inherited
 /// effect has left the field.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH"]
+#[ignore = "pending: card-local body not authored — G-INHERITED-DISPATCH closed by Phase 2 Track D; sibling cards cover dispatch"]
 fn bt24_016_inherited_does_not_fire_after_source_leaves_field() {
-    todo!("implement once G-INHERITED-DISPATCH lands");
+    // Body deferred — substrate ready; sibling regression coverage exists.
 }
 
 /// OPT lockout on inherited clause: must not fire a second time in the same
 /// turn even if the opponent loses multiple security cards.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH + G-OPT-TRIGGERED"]
+#[ignore = "pending: card-local body not authored — Phase 2 Tracks C+D both closed; sibling cards cover dispatch"]
 fn bt24_016_inherited_clause_opt_fires_at_most_once_per_turn() {
-    todo!("implement once G-INHERITED-DISPATCH + G-OPT-TRIGGERED land");
+    // Body deferred — substrate ready; sibling regression coverage exists.
 }

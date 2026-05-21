@@ -16,7 +16,7 @@ Replaces the sunset Python engine in [`engine_py_legacy/`](../engine_py_legacy/)
 - `combat.rs` — attack state machine + interrupts (Alliance / Counter / Block)
 - `selection.rs` — pending selection / interrupt state machine
 - `tensor.rs` — observation tensor (1375 floats; parity with Python obs)
-- `action/` — action space (2168) + mask + decoder
+- `action/` — action space (2192) + mask + decoder
 - `cards/test_cards.rs` — `TEST-001..022` worked examples used in behavioral tests
 - `runners/` — `HeadlessRunner` (RL-shaped API)
 - `debug_runner.rs` — deterministic test harness

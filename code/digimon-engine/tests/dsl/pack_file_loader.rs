@@ -28,7 +28,9 @@ fn round_trip_registry_through_temp_pack_file() {
     let loaded = digimon_engine::dsl_registry::from_pack_file(&temp).expect("from_pack_file");
     assert_eq!(loaded.len(), registry.len());
     assert_eq!(loaded.manifest.pack_id, "test-pack");
-    assert!(loaded.lookup("ST2-13").is_some());
+    // BT17-015 is a curated `_examples/` fixture (ST2-13 was promoted to the
+    // per-set folder on 2026-05-20, so it no longer lives under `_examples`).
+    assert!(loaded.lookup("BT17-015").is_some());
 
     // Cleanup.
     let _ = std::fs::remove_file(&temp);

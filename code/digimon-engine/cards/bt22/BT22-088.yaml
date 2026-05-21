@@ -18,17 +18,46 @@ traits: [LIBERATOR]
 #
 # Supported faithfully:
 # - Security plays this Tamer without paying the cost.
-# - All Turns own Token/Puppet played observer with a visible suspend-this-Tamer
-#   activation choice before Draw 1.
-#
-# Omitted rather than approximated:
-# - The start-of-main clause needs a visible optional activation before the
-#   return-this-Tamer-to-bottom-deck cost is paid. Current single optional
-#   triggered effects auto-fire, and `optional` process bodies do not expose a
-#   decline choice, so paying the cost would be hidden/forced
-#   (G-OPTIONAL-TRIGGER-COST).
+# - All Turns own Token/Puppet played observer with a Track B
+#   `activation_cost: { suspend_self: true }` cost-pay before Draw 1.
+# - Start of Your Main Phase: optional trigger; activation_cost:
+#   { return_self_to_deck_bottom: true }; then optionally play 1 exact-name
+#   [Arisa Kinosaki] from hand free; then if no Digimon on field, optionally
+#   play 1 exact-name [Shoemon] from trash free. (PUPPETS-G028 closure.)
 
 effects:
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "[Start of Your Main Phase] By returning this Tamer to deck bottom, may play 1 [Arisa Kinosaki] from hand free, then if no Digimon may play 1 [Shoemon] from trash free"
+    process:
+      - activation_cost: { return_self_to_deck_bottom: true }
+      - select_hand:
+          of: you
+          bind_as: arisa_pick
+          optional: true
+          filter:
+            name_is: "Arisa Kinosaki"
+          prompt: "Play 1 [Arisa Kinosaki] from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: arisa_pick
+      - if:
+          condition:
+            no_permanent:
+              of: you
+              kind: digimon
+          then:
+            - select_trash:
+                of: you
+                bind_as: shoemon_pick
+                optional: true
+                filter:
+                  name_is: "Shoemon"
+                prompt: "Play 1 [Shoemon] from your trash without paying the cost"
+            - play_from_trash_free:
+                of: you
+                hand_index: shoemon_pick
+
   - when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
@@ -40,19 +69,11 @@ effects:
     condition:
       all_of:
         - event_target_owner: you
-        - source_is_unsuspended: true
         - any_of:
             - event_target_kind: token
             - all_of:
                 - event_target_kind: digimon
                 - event_target_trait_has: Puppet
     process:
-      - select_effect_choice:
-          labels: ["Suspend this Tamer", "Decline"]
-          bind_as: arisa_choice
-          prompt: "Suspend Arisa Kinosaki to Draw 1?"
-      - if:
-          condition: { equals: [arisa_choice, 0] }
-          then:
-            - suspend: { target: source }
-            - draw: { of: you, count: 1 }
+      - activation_cost: { suspend_self: true }
+      - draw: { of: you, count: 1 }

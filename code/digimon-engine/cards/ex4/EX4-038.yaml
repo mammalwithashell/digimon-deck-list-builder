@@ -222,18 +222,21 @@ effects:
   #
   # Condition: `event_target_owner: you, event_target_kind: digimon` —
   # standard DCGO `IsPermanentExistsOnOwnerBattleAreaDigimon` mapping. The
-  # "OTHER Digimon" sub-clause (`perm != card.PermanentOfThisCard()`) cannot
-  # be expressed today — G-DSL-EVENT-TARGET-IS-SELF gap. The workaround
-  # over-fires when the carrier itself digivolves while EX4-038 is in its
-  # source stack; tests asserting that exclusion are `#[ignore]`'d.
+  # "OTHER Digimon" sub-clause (`perm != card.PermanentOfThisCard()`) maps
+  # to `event_permanent_is_source: false` — the predicate evaluator
+  # compares `current_trigger_context.event_permanent` against the
+  # inherited clause's source carrier (`rctx.source_permanent`). `false`
+  # rejects the fire when the digivolving permanent IS EX4-038's own host
+  # carrier, faithfully implementing the printed "other Digimon" exclusion.
   - scope: inherited
     when: on_digivolve
     once_per_turn: true
     active_when: { your_turn: true }
-    summary: "[Your Turn][OPT] When ally Digimon digivolves, gain 1 memory (G-DSL-EVENT-TARGET-IS-SELF: 'other' exclusion is approximated)"
+    summary: "[Your Turn][OPT] When one of your other Digimon digivolves, gain 1 memory"
     condition:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
+        - event_permanent_is_source: false
     process:
       - gain_memory: 1

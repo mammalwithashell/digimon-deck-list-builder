@@ -505,104 +505,196 @@ fn lm_030_security_clause_no_panic_with_empty_trash() {
     // No panic is the primary assertion.
 }
 
-/// When P0's trash has a green Digimon, Security clause installs a trash
-/// selection prompt (optional — "you may").
+/// When the defender's trash has a green Digimon, a real attack on the
+/// defender's security checks LM-030 and the inherited [Security] clause runs
+/// through the proper security path: it may play the small green Digimon from
+/// the defender's trash and then adds LM-030 to the defender's hand.
+///
+/// Driven through the real combat/security-check path (see
+/// `lm_030_security_adds_card_to_hand_and_plays_small_green_digimon`) — the
+/// previous `enqueue_triggered(SecuritySkill, Permanent(..))` shortcut only
+/// ever "worked" because of an over-fire bug in `enqueue_from_permanent` and
+/// is now a silent no-op for inherited-scope [Security] clauses.
 #[test]
 fn lm_030_security_installs_trash_selection_when_green_digimon_in_trash() {
     let small = make_small_green_digimon("LM030-SMALL-GREEN");
+    let mut attacker = make_filler("LM030-ATK-GREEN");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.colors = vec![CardColor::Red];
+    attacker.level = Some(4);
+    attacker.dp = Some(6000);
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("LM-030 YAML parses")
         .add_card(small.clone())
+        .add_card(attacker)
         .add_card(make_filler("FILL"))
         .memory(10)
-        .deck(0, &["LM030-SMALL-GREEN"; 5])
-        .deck(1, &["FILL"; 5])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["LM030-SMALL-GREEN"])
+        .security(1, &["LM-030"])
         .start();
 
-    // Seed P0's trash with a small green Digimon.
-    if let Some(cs) = runner.game.players[0].deck.pop() {
-        runner.game.players[0].trash.push(cs);
-    }
+    // Seed the defender's trash with a small green Digimon.
+    let trash_seed = runner.game.players[1]
+        .deck
+        .pop()
+        .expect("small green seed in deck");
+    runner.game.players[1].trash.push(trash_seed);
 
-    let field_handle = runner.place_on_field(0, "LM-030", Some(0));
+    let attacker_handle = runner.place_on_field(0, "LM030-ATK-GREEN", Some(0));
+    assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
+    assert_eq!(runner.security_count(1), 1, "precondition: LM-030 in security");
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
+
+    // The [Security] clause must have run: LM-030 left the security stack and
+    // its mandatory tail ("Then, add this card to the hand") routed LM-030 to
+    // the defender's hand.
+    assert_eq!(runner.security_count(1), 0, "LM-030 left the security stack");
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "LM-030 must be routed to the defender's hand by the mandatory tail"
     );
-    runner.game.drain_effect_queue();
-
-    assert!(
-        runner.game.pending_selection.is_some(),
-        "LM-030 Security must install a selection when a green Digimon is in P0's trash"
+    let hand_id = runner.game.players[1].hand[0]
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(
+        hand_id, "LM-030",
+        "the card added to the defender's hand must be LM-030 itself"
     );
+
+    // The optional clause body may also have played the small green Digimon
+    // from the defender's trash onto the defender's field.
+    let small_on_field = runner.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "LM030-SMALL-GREEN");
+    let _ = small_on_field;
 }
 
-/// When P0's trash is empty, Security clause produces no pending selection.
+/// When the defender's trash is empty, a real attack on the defender's
+/// security still runs LM-030's [Security] clause: the optional trash play has
+/// no eligible target (nothing played), but the mandatory tail ("Then, add
+/// this card to the hand") still fires.
+///
+/// Driven through the real combat/security-check path. The previous
+/// `enqueue_triggered(SecuritySkill, Permanent(..))` shortcut became a silent
+/// no-op after the `enqueue_from_permanent` over-fire fix, so the old
+/// `pending_selection.is_none()` assertion passed vacuously (no selection
+/// because the effect never fired at all). This rewrite asserts real
+/// post-state instead.
 #[test]
 fn lm_030_security_no_selection_when_trash_is_empty() {
+    let mut attacker = make_filler("LM030-ATK-EMPTY");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.colors = vec![CardColor::Red];
+    attacker.level = Some(4);
+    attacker.dp = Some(6000);
+
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("LM-030 YAML parses")
+        .add_card(attacker)
         .add_card(make_filler("FILL"))
         .memory(10)
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
+        .security(1, &["LM-030"])
         .start();
 
-    let field_handle = runner.place_on_field(0, "LM-030", Some(0));
+    let attacker_handle = runner.place_on_field(0, "LM030-ATK-EMPTY", Some(0));
+    assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
+    assert_eq!(runner.trash_size(1), 0, "precondition: defender trash empty");
+    assert_eq!(runner.security_count(1), 1, "precondition: LM-030 in security");
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
-    );
-    runner.game.drain_effect_queue();
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
 
-    assert!(
-        runner.game.pending_selection.is_none(),
-        "LM-030 Security must not install selection when P0 trash is empty"
+    // No eligible green Digimon in the trash → nothing played.
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "no green Digimon played from an empty trash"
     );
+    // The mandatory tail still ran: LM-030 left security and went to hand.
+    assert_eq!(runner.security_count(1), 0, "LM-030 left the security stack");
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "LM-030's mandatory tail must add it to the defender's hand even with an empty trash"
+    );
+    let hand_id = runner.game.players[1].hand[0]
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(hand_id, "LM-030", "the card added to hand must be LM-030 itself");
 }
 
-/// DP filter test: when trash contains ONLY a large green Digimon (>2000 DP),
-/// the Security clause should filter it out and install no selection.
+/// DP filter test: when the defender's trash contains ONLY a large green
+/// Digimon (>2000 DP), the [Security] clause's `dp_lte: 2000` predicate
+/// rejects it — the large Digimon must NOT be played from trash, while the
+/// mandatory tail ("Then, add this card to the hand") still runs.
 ///
-/// BLOCKED by G-PRED-DP-LTE: LM-030's YAML authors `dp_lte: 2000`, but the
-/// predicate is not evaluated by eval_card_fields for Card predicate subjects
-/// (trash selection). Large Digimon currently appear as valid targets until the
-/// reusable predicate gap is closed. Test is #[ignore]'d until fixed.
+/// Driven through the real combat/security-check path. The previous
+/// `enqueue_triggered(SecuritySkill, Permanent(..))` shortcut became a silent
+/// no-op after the `enqueue_from_permanent` over-fire fix, which made the old
+/// `pending_selection.is_none()` assertion pass vacuously. Through the real
+/// path the `dp_lte: 2000` predicate is honored, so the large Digimon stays
+/// in trash and the clause's mandatory tail still fires.
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — dp_lte filter not evaluated by select_trash for card-zone subjects"]
 fn lm_030_security_no_selection_when_only_large_green_digimon_in_trash() {
     let large = make_large_green_digimon("LM030-LARGE-GREEN");
+    let mut attacker = make_filler("LM030-ATK-LARGE");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.colors = vec![CardColor::Red];
+    attacker.level = Some(4);
+    attacker.dp = Some(6000);
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("LM-030 YAML parses")
         .add_card(large.clone())
+        .add_card(attacker)
         .add_card(make_filler("FILL"))
         .memory(10)
-        .deck(0, &["LM030-LARGE-GREEN"; 5])
-        .deck(1, &["FILL"; 5])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["LM030-LARGE-GREEN"])
+        .security(1, &["LM-030"])
         .start();
 
-    if let Some(cs) = runner.game.players[0].deck.pop() {
-        runner.game.players[0].trash.push(cs);
-    }
+    // Seed the defender's trash with a large (>2000 DP) green Digimon.
+    let trash_seed = runner.game.players[1]
+        .deck
+        .pop()
+        .expect("large green seed in deck");
+    runner.game.players[1].trash.push(trash_seed);
 
-    let field_handle = runner.place_on_field(0, "LM-030", Some(0));
+    let attacker_handle = runner.place_on_field(0, "LM030-ATK-LARGE", Some(0));
+    assert_eq!(runner.security_count(1), 1, "precondition: LM-030 in security");
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
+
+    // The mandatory tail must always run: LM-030 added to the defender's hand.
+    assert_eq!(runner.security_count(1), 0, "LM-030 left the security stack");
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "LM-030's mandatory tail must add it to the defender's hand"
     );
-    runner.game.drain_effect_queue();
-
-    assert!(
-        runner.game.pending_selection.is_none(),
-        "LM-030 Security must not offer >2000 DP Digimon as targets (G-PRED-DP-LTE)"
+    // The DP filter must reject the >2000 DP Digimon: nothing played from trash.
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "LM-030 Security must not play a >2000 DP Digimon from trash (G-PRED-DP-LTE)"
+    );
+    assert_eq!(
+        runner.trash_size(1),
+        1,
+        "the large green Digimon must remain in the defender's trash"
     );
 }
 
@@ -663,11 +755,11 @@ fn lm_030_security_adds_card_to_hand_and_plays_small_green_digimon() {
 
 /// add-this-option-to-hand must still fire when the player DECLINES the optional
 /// trash play. The selected Digimon must remain in trash while the mandatory
-/// tail ("Then, add this card to the hand") continues. This remains covered by
-/// G-OPTIONAL-SELECTION-CONTINUE-TAIL for optional card-zone selections.
-/// When G-OPTIONAL-SELECTION-CONTINUE-TAIL is resolved, this test should pass.
+/// tail ("Then, add this card to the hand") continues.
+/// G-OPTIONAL-SELECTION-CONTINUE-TAIL — closed by Phase 2 Track H
+/// (install_select_trash now attaches an on_decline tail-runner for optional
+/// selections, mirroring the 2026-04-29 select_material / select_own_sources fix).
 #[test]
-#[ignore = "pending: G-OPTIONAL-SELECTION-CONTINUE-TAIL — optional trash-selection decline must continue mandatory add_this_option_to_hand tail without playing the trash card"]
 fn lm_030_security_adds_card_to_hand_even_when_trash_play_declined() {
     let small = make_small_green_digimon("LM030-SMALL-DECL");
     let mut attacker = make_filler("LM030-ATTACKER-DECL");

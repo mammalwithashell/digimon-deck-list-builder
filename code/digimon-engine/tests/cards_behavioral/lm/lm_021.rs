@@ -386,7 +386,6 @@ fn lm_021_when_attacking_no_op_with_empty_opponent_security() {
 /// `run_queued_effect_inner` in effect_queue.rs does not check it for triggered
 /// effects. Effect fires twice until gap is closed.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — OPT for triggered effects not enforced in effect_queue.rs"]
 fn lm_021_when_attacking_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(LM_021_YAML)
@@ -422,7 +421,6 @@ fn lm_021_when_attacking_opt_blocks_second_trigger_same_turn() {
 
 /// OPT lockout must clear after end_turn.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — OPT for triggered effects not enforced in effect_queue.rs"]
 fn lm_021_when_attacking_opt_clears_after_end_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(LM_021_YAML)

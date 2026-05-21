@@ -52,9 +52,7 @@ effects:
     reduction_timing: before_pay_cost
     when_playing_this: true
     condition:
-      count_lte:
-        filter: { zone: [security], owner: opponent }
-        n: 3
+      opponent_security_count_lte: 3
     amount: 4
     summary: "Cost -4 when opponent has ≤3 security"
   - when: main_from_hand

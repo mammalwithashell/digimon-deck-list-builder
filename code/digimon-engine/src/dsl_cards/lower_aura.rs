@@ -62,8 +62,30 @@ pub fn lower_all(
     grant_keyword: Option<CompiledGrantKeywordValue>,
     modifier: Option<String>,
     while_condition: Option<CompiledPredicate>,
+    applies_to_opponent_security_dp: bool,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Vec<Effect> {
+    if applies_to_opponent_security_dp {
+        // PUPPETS-G008: this is NOT a target-permanent aura — it rides on the
+        // attacker's effect chain during the security battle. Lower directly
+        // to a declarative inherited effect with the `dp_modifier` flag
+        // wired through `applies_to_opponent_security_dp()`. The other aura
+        // fields (target, target_player, grant_keyword, modifier, ...) are
+        // ignored on this code path; the YAML author should leave them unset.
+        let mut builder = Effect::declarative(card).name("Aura (opponent security DP)");
+        if matches!(scope, CompiledScope::Inherited) {
+            builder = builder.inherited();
+        }
+        if let Some(aw) = active_when.map(Arc::new) {
+            builder = builder
+                .condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None));
+        }
+        if let Some(dp) = dp_modifier {
+            builder = builder.dp_modifier(dp);
+        }
+        builder = builder.applies_to_opponent_security_dp();
+        return vec![builder.build()];
+    }
     if let Some(predicate) = while_condition.clone() {
         let is_self_aura = target == CompiledPredicate::default();
         let supports = is_self_aura

@@ -417,10 +417,8 @@ fn bt22_026_when_digivolving_branch_1_only_lowest_level_is_a_legal_target() {
 /// FROM-HAND-WITH-PERMANENT-TARGET. Same gap as BT17-015 branch 1 /
 /// BT22-013 branch 0.
 #[test]
-#[ignore = "BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — \
-            select_own_permanent + select_hand + effect_initiated_digivolve(target: <binding>) \
-            chain terminates after the permanent pick; the hand-pick prompt never installs. \
-            Same gap blocks BT17-015 branch 1 and BT22-013 branch 0."]
+// Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
+// WITH-PERMANENT-TARGET resolved as phantom (see BT17-015 sister test).
 fn bt22_026_when_digivolving_branch_0_digivolves_agumon_into_wargreymon_free() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -512,15 +510,11 @@ fn bt22_026_inherited_when_attacking_omnimon_top_unsuspends_self() {
 }
 
 /// Negative condition: stack has only MetalGarurumon (BT22-026) at top —
-/// name gate must block the unsuspend. **BLOCKED**: G-DSL-SOURCE-NAME-CONTAINS
-/// — the predicate is parsed but never evaluated; the clause fires anyway.
-/// Same gap as BT17-015 / BT22-013 analogous negative tests.
+/// name gate must block the unsuspend. `source_name_contains` is evaluated
+/// by the engine predicate path (`predicate.rs:284`), so the inherited
+/// [When Attacking] gate correctly blocks when the top card is not
+/// Omnimon-named.
 #[test]
-#[ignore = "BLOCKED: G-DSL-SOURCE-NAME-CONTAINS — source_name_contains predicate is parsed and \
-            compiled but never evaluated in code/digimon-engine/src/dsl_cards/predicate.rs; \
-            the inherited [When Attacking] gate degenerates to true and incorrectly unsuspends \
-            the attacker even when top card is not Omnimon-named. Same gap blocks BT17-015 / \
-            BT22-013 analogous negative tests."]
 fn bt22_026_inherited_when_attacking_metalgarurumon_top_does_not_unsuspend() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -618,14 +612,6 @@ fn bt22_026_inherited_when_attacking_opt_blocks_second_activation() {
 /// activated_digivolve path. Substrate is ready (G-ALT-PATH-CONDITION
 /// RESOLVED 2026-05-15); same authoring gap as BT22-013 / BT24-016.
 #[test]
-#[ignore = "PENDING card-local authoring: BT22-026.yaml does not populate \
-            `condition:` on the activated_digivolve alt-path to gate on Nokia \
-            Shiramine. Substrate is ready (G-ALT-PATH-CONDITION RESOLVED \
-            2026-05-15 — AltPathSpec.condition field + consumer wired in \
-            dna_digivolve.rs). Until the YAML is updated, the alt-path is \
-            offered whenever a Gabumon is on field, regardless of Nokia \
-            presence (over-permissive). Same authoring gap blocks BT22-013 \
-            and BT24-016."]
 fn bt22_026_activated_digivolve_blocked_without_nokia_tamer() {
     // Setup: Gabumon on field, BT22-026 in hand, NO Nokia Shiramine tamer.
     // The activated_digivolve alt-path MUST NOT be offered as a play option.
@@ -661,8 +647,6 @@ fn bt22_026_activated_digivolve_blocked_without_nokia_tamer() {
 /// gate test. Once the gap closes, this becomes the positive sister of the
 /// negative test above.
 #[test]
-#[ignore = "Pending G-ALT-PATH-CONDITION — see negative-case sibling above. Once the gap closes, \
-            promote this to active and add the corresponding action-introspection assertion."]
 fn bt22_026_activated_digivolve_available_with_nokia_and_gabumon() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)

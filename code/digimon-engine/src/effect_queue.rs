@@ -20,7 +20,7 @@
 //! `_resolve_effect_stack` max=50 bound.
 
 use crate::action::space::{
-    BREEDING_TARGET, HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS,
+    BREEDING_TARGET, HAND_EFFECT_END, HAND_EFFECT_START, HAND_MAIN_LIMIT, PASS, REPLACEMENT_ACCEPT,
 };
 use crate::card_source::CardHandle;
 use crate::effect::ReFireableEffect;
@@ -41,6 +41,36 @@ use crate::trigger_context::TriggerContext;
 /// Max iterations the drainer will take before aborting a suspected infinite
 /// chain. Matches Python's `_resolve_effect_stack` limit.
 pub const MAX_CHAIN_DEPTH: u16 = 50;
+
+/// RAII guard that installs a `TriggerContext` onto `Game.current_trigger_context`
+/// for the lifetime of the guard and restores the previous value on drop —
+/// including on panic. Used to evaluate a triggered effect's condition with the
+/// queued effect's trigger context outside the normal `run_queued_effect`
+/// drain path (e.g. the pre-cost-prompt decision in `drain_effect_queue`).
+///
+/// The guard borrows `&mut Game` for its whole lifetime, so callers reach the
+/// game through `guard.game` while the trigger context is installed. The
+/// previous value is restored on `Drop`, so an early return or panic during
+/// condition evaluation cannot leak the temporary context.
+struct TriggerContextGuard<'g> {
+    game: &'g mut Game,
+    previous: Option<TriggerContext>,
+}
+
+impl<'g> TriggerContextGuard<'g> {
+    /// Install `trigger_context`, saving whatever was there before.
+    fn install(game: &'g mut Game, trigger_context: Option<TriggerContext>) -> Self {
+        let previous = game.current_trigger_context.take();
+        game.current_trigger_context = trigger_context;
+        Self { game, previous }
+    }
+}
+
+impl Drop for TriggerContextGuard<'_> {
+    fn drop(&mut self) {
+        self.game.current_trigger_context = self.previous.take();
+    }
+}
 
 fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
     match kind {
@@ -194,7 +224,7 @@ impl Game {
     pub fn enqueue_triggered(&mut self, timing: EffectTiming, source: TriggerSource) {
         match source {
             TriggerSource::Permanent(handle) => {
-                let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                 self.enqueue_from_permanent(timing, handle, Some(trigger_context));
             }
             TriggerSource::PlayerBattleArea(player) => {
@@ -206,7 +236,7 @@ impl Game {
                         player,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
@@ -215,11 +245,11 @@ impl Game {
                     player,
                     index: BREEDING_TARGET as u8,
                 };
-                let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                 self.enqueue_from_breeding_permanent(timing, handle, Some(trigger_context));
             }
             TriggerSource::SecurityRevealed { defender, card } => {
-                let trigger_context = self.trigger_context_for_source(&source, None);
+                let trigger_context = self.trigger_context_for_source(&source, None, timing);
                 self.enqueue_from_security_card(
                     timing,
                     defender,
@@ -238,7 +268,7 @@ impl Game {
                 }
             }
             TriggerSource::SecurityStackCard { player, card } => {
-                let trigger_context = self.trigger_context_for_source(&source, None);
+                let trigger_context = self.trigger_context_for_source(&source, None, timing);
                 self.enqueue_from_security_stack_card(timing, player, card, Some(trigger_context));
             }
             TriggerSource::OnSecurityCheck { defender, .. } => {
@@ -254,7 +284,7 @@ impl Game {
                         player: defender,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
@@ -265,7 +295,7 @@ impl Game {
                         player,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
@@ -279,7 +309,7 @@ impl Game {
                             index: i as u8,
                         };
                         let trigger_context =
-                            self.trigger_context_for_source(&source, Some(handle));
+                            self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
                 }
@@ -301,12 +331,12 @@ impl Game {
                             index: i as u8,
                         };
                         let trigger_context =
-                            self.trigger_context_for_source(&source, Some(handle));
+                            self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
                 }
                 if timing == EffectTiming::OnAllyPlayed {
-                    let trigger_context = self.trigger_context_for_source(&source, None);
+                    let trigger_context = self.trigger_context_for_source(&source, None, timing);
                     self.enqueue_from_player_trash(timing, player, Some(trigger_context));
                 }
             }
@@ -320,7 +350,7 @@ impl Game {
                             index: i as u8,
                         };
                         let trigger_context =
-                            self.trigger_context_for_source(&source, Some(handle));
+                            self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
                     let breeding_handle = PermanentHandle {
@@ -328,7 +358,7 @@ impl Game {
                         index: BREEDING_TARGET as u8,
                     };
                     let trigger_context =
-                        self.trigger_context_for_source(&source, Some(breeding_handle));
+                        self.trigger_context_for_source(&source, Some(breeding_handle), timing);
                     self.enqueue_from_breeding_permanent(
                         timing,
                         breeding_handle,
@@ -346,7 +376,7 @@ impl Game {
                             index: i as u8,
                         };
                         let trigger_context =
-                            self.trigger_context_for_source(&source, Some(handle));
+                            self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
                     let breeding_handle = PermanentHandle {
@@ -354,7 +384,7 @@ impl Game {
                         index: BREEDING_TARGET as u8,
                     };
                     let trigger_context =
-                        self.trigger_context_for_source(&source, Some(breeding_handle));
+                        self.trigger_context_for_source(&source, Some(breeding_handle), timing);
                     self.enqueue_from_breeding_permanent(
                         timing,
                         breeding_handle,
@@ -372,13 +402,13 @@ impl Game {
                             index: i as u8,
                         };
                         let trigger_context =
-                            self.trigger_context_for_source(&source, Some(handle));
+                            self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
                 }
             }
             TriggerSource::SourceTrashedFromStack { player, card, .. } => {
-                let trigger_context = self.trigger_context_for_source(&source, None);
+                let trigger_context = self.trigger_context_for_source(&source, None, timing);
                 self.enqueue_from_trashed_source(timing, player, card, Some(trigger_context));
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
@@ -389,7 +419,7 @@ impl Game {
                             index: i as u8,
                         };
                         let trigger_context =
-                            self.trigger_context_for_source(&source, Some(handle));
+                            self.trigger_context_for_source(&source, Some(handle), timing);
                         self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                     }
                 }
@@ -403,7 +433,7 @@ impl Game {
                         player: observer_player,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
                 let breeding_handle = PermanentHandle {
@@ -411,7 +441,7 @@ impl Game {
                     index: BREEDING_TARGET as u8,
                 };
                 let trigger_context =
-                    self.trigger_context_for_source(&source, Some(breeding_handle));
+                    self.trigger_context_for_source(&source, Some(breeding_handle), timing);
                 self.enqueue_from_breeding_permanent(
                     timing,
                     breeding_handle,
@@ -427,7 +457,7 @@ impl Game {
                         player: affected_player,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle));
+                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
                 let breeding_handle = PermanentHandle {
@@ -435,7 +465,7 @@ impl Game {
                     index: BREEDING_TARGET as u8,
                 };
                 let trigger_context =
-                    self.trigger_context_for_source(&source, Some(breeding_handle));
+                    self.trigger_context_for_source(&source, Some(breeding_handle), timing);
                 self.enqueue_from_breeding_permanent(
                     timing,
                     breeding_handle,
@@ -447,7 +477,7 @@ impl Game {
                 card,
                 ..
             } => {
-                let trigger_context = self.trigger_context_for_source(&source, None);
+                let trigger_context = self.trigger_context_for_source(&source, None, timing);
                 self.enqueue_from_security_card(
                     timing,
                     affected_player,
@@ -460,7 +490,7 @@ impl Game {
             source,
             TriggerSource::EventObserved { .. } | TriggerSource::AttackTargetChanged { .. }
         ) {
-            let trigger_context = self.trigger_context_for_source(&source, None);
+            let trigger_context = self.trigger_context_for_source(&source, None, timing);
             self.enqueue_event_gated_delayed_options(timing, trigger_context);
         }
     }
@@ -630,14 +660,127 @@ impl Game {
 
             if bundle.len() == 1 {
                 let idx = bundle[0];
-                // Single trigger — auto-fire into its body. Optionality is
-                // exposed by the body's first actionable pending selection;
-                // this avoids prompting for optional effects whose filters
-                // produce no legal follow-up.
+                // Single trigger with activation_cost_fn + optional: true →
+                // expose a TriggerOrder selection (with PASS) BEFORE running
+                // the cost closure. This lets the player decline the
+                // activation cost itself (e.g. "By returning this Tamer to
+                // the bottom of the deck, you may …"). Without this branch
+                // the cost would fire automatically and the player could
+                // not avoid it.
+                //
+                // For optional triggers without activation_cost_fn,
+                // optionality is exposed by the body's first actionable
+                // pending selection; auto-fire is intentional there so we
+                // don't prompt when filters produce no legal follow-up.
+                let needs_pre_cost_prompt = {
+                    let (
+                        is_optional,
+                        card_id,
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        controller,
+                        effect_slot,
+                        trigger_context,
+                    ) = {
+                        let qe = &self.effect_queue[idx];
+                        (
+                            qe.is_optional,
+                            qe.card_id.clone(),
+                            qe.source_card,
+                            qe.source_permanent,
+                            qe.source_kind,
+                            qe.controller,
+                            qe.effect_slot as usize,
+                            qe.trigger_context.clone(),
+                        )
+                    };
+                    if is_optional {
+                        if let Some(effects) = self.effects_for_card(&card_id, source_card) {
+                            if let Some(eff) = effects.get(effect_slot) {
+                                // Only install a pre-cost prompt when the
+                                // effect has an activation_cost AND the
+                                // condition (if any) currently passes. If the
+                                // condition would suppress the effect anyway,
+                                // auto-fire so it silently skips — no prompt.
+                                let has_cost = eff.activation_cost_fn.is_some();
+                                let condition_passes = if has_cost {
+                                    if let Some(cond) = &eff.condition {
+                                        // The condition must see the queued
+                                        // effect's trigger context — DSL
+                                        // predicates like `event_target_owner`
+                                        // / `event_target_trait_has` and
+                                        // deleted-object snapshots read
+                                        // `current_trigger_context`. The real
+                                        // evaluation path (`run_queued_effect`
+                                        // → `run_queued_effect_inner`) sets it
+                                        // before its condition check; mirror
+                                        // that here so the pre-cost decision
+                                        // is faithful. The RAII guard restores
+                                        // the previous value even on panic.
+                                        let trigger_guard = TriggerContextGuard::install(
+                                            self,
+                                            trigger_context,
+                                        );
+                                        let ctx = EffectContext::new_with_source_kind(
+                                            &mut *trigger_guard.game,
+                                            source_card,
+                                            source_permanent,
+                                            source_kind,
+                                            controller,
+                                        );
+                                        cond(&ctx.as_read())
+                                    } else {
+                                        true
+                                    }
+                                } else {
+                                    false
+                                };
+                                has_cost && condition_passes
+                            } else {
+                                false
+                            }
+                        } else {
+                            false
+                        }
+                    } else {
+                        false
+                    }
+                };
+                if needs_pre_cost_prompt {
+                    self.install_trigger_order_selection(chooser, &bundle, true);
+                    return;
+                }
                 let qe = self
                     .effect_queue
                     .remove(idx)
                     .expect("bundle index in-bounds by construction");
+                // Composition note: `needs_pre_cost_prompt` (cost-bearing
+                // optional trigger) and `needs_outer_optional_prompt` below
+                // are mutually exclusive in practice. The pre-cost branch
+                // above `return`s and its TriggerOrder callback runs the
+                // effect directly via `run_queued_effect`, bypassing this
+                // outer-prompt check — so a cost-bearing optional effect
+                // gets exactly one decline gate (the pre-cost PASS), and a
+                // cost-free optional effect gets exactly one (the outer
+                // prompt). No double-prompt.
+                //
+                // G-OUTER-OPTIONAL-NOT-INSTALLED: a lone OPTIONAL triggered
+                // effect ("you may …") whose body's first step is a mandatory
+                // selection must surface an explicit outer accept/decline
+                // prompt BEFORE its body runs — otherwise the body forces an
+                // action the printed "you may" says the player can refuse.
+                // The DSL lowering sets `needs_outer_optional_prompt` only for
+                // that case (when the first body step already exposes a
+                // declinable PASS, the inner PASS is the decline path and the
+                // flag stays false). The outer prompt is skipped entirely
+                // when the effect's preconditions already fail.
+                if qe.is_optional
+                    && self.queued_effect_wants_outer_optional_prompt(&qe)
+                {
+                    self.install_outer_optional_trigger_selection(qe);
+                    return;
+                }
                 self.run_queued_effect(qe);
                 continue;
             }
@@ -674,6 +817,15 @@ impl Game {
             // Cap at HAND_MAIN_LIMIT (30) to fit the reused 30-59 action
             // range. Overflow auto-fires in collection order after the prompt
             // completes (rare; see the cap handling inside install_*).
+            //
+            // Note: the pre-cost decline prompt above is only installed for a
+            // single-trigger bundle (`bundle.len() == 1`). For a multi-copy
+            // bundle (`bundle.len() >= 2`), once the player picks the first
+            // trigger here, that trigger's `activation_cost_fn` fires inside
+            // `run_queued_effect` without a separate per-trigger decline.
+            // This is a pre-existing limitation, kept intentional: the
+            // TriggerOrder PASS bit declines the whole bundle, not a single
+            // copy mid-resolution.
             let any_mandatory = bundle.iter().any(|&i| !self.effect_queue[i].is_optional);
             self.install_trigger_order_selection(chooser, &bundle, !any_mandatory);
             return;
@@ -695,12 +847,24 @@ impl Game {
         &self,
         source: &TriggerSource,
         source_permanent: Option<PermanentHandle>,
+        timing: EffectTiming,
     ) -> TriggerContext {
         let mut context = match *source {
             TriggerSource::Permanent(handle) => TriggerContext {
                 target_permanent: Some(handle),
                 target_card: self.top_card_handle(handle),
                 source_player: Some(handle.player),
+                // `cause` is only meaningful for the OnDeletion timing: it
+                // forwards the active deletion cause (set by
+                // delete_permanent_with_cause before enqueueing OnDeletion,
+                // override-first via observed_deletion_event_cause) so
+                // event_cause predicates in on_deletion YAML clauses can
+                // inspect it (e.g. "not battle"). `TriggerSource::Permanent`
+                // is shared by non-deletion timings (OnPlay, OnDigivolve,
+                // CounterEffect, …) — leave `cause` at `None` for those.
+                cause: (timing == EffectTiming::OnDeletion)
+                    .then(|| self.observed_deletion_event_cause())
+                    .flatten(),
                 ..TriggerContext::default()
             },
             TriggerSource::PlayerBattleArea(player) => TriggerContext {
@@ -1304,22 +1468,6 @@ impl Game {
             return;
         }
 
-        // Defensive guard — not reachable through current dispatch paths but
-        // prevents future double-enqueue if a caller fires a timing directly on
-        // a Training permanent with an effect authored .inherited(). Today no
-        // such card pattern exists; see Phase 8 Task 5 design for rationale.
-        let skip_inherited = self
-            .players
-            .get(handle.player as usize)
-            .and_then(|p| p.battle_area.get(handle.index as usize))
-            .map(|p| {
-                matches!(
-                    p.option_state,
-                    crate::permanent::OptionState::Training { .. }
-                )
-            })
-            .unwrap_or(false);
-
         if let Some(effects) = self.effects_for_card(&card_id, source_card) {
             for (slot, effect) in effects.iter().enumerate() {
                 if !timing_flag_matches(effect, timing) {
@@ -1328,7 +1476,16 @@ impl Game {
                 if effect.linked {
                     continue;
                 }
-                if skip_inherited && effect.inherited {
+                // An inherited effect (the lower portion of a digi card) is
+                // active ONLY while that card is a digivolution source beneath
+                // another card — the top Digimon activates it (RULES 15-3-1).
+                // The card scanned here is the carrier's *top* card, never a
+                // source, so its own inherited clauses stay dormant. Below-top
+                // sources dispatch their inherited effects through the dedicated
+                // `inherited_sources` scan further down. Mirrors
+                // `enqueue_from_breeding_permanent`, which likewise skips
+                // inherited effects unconditionally on its top-card scan.
+                if effect.inherited {
                     continue;
                 }
                 self.effect_queue.push_back(QueuedEffect {
@@ -1498,6 +1655,14 @@ impl Game {
             }
         }
 
+        // Phase 2 Track D: walk every below-top digivolution source on the
+        // carrier. `card_sources` is `[base, evo1, evo2, ..., top]`; the
+        // top-card slot was already scanned above. Each below-top source
+        // dispatches its INHERITED effects through this carrier permanent,
+        // with `source_card` set to the stacked card's handle so OPT-slot
+        // keying (Track C) and predicates that read source identity remain
+        // per-source-slot stable. `allow_below_top_liveness: true` lets the
+        // liveness gate accept the stacked source as a valid origin.
         let inherited_sources: Vec<(String, CardHandle, EffectSourceKind)> = {
             let Some(perm) = self
                 .players
@@ -1771,10 +1936,11 @@ impl Game {
 
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
+                let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
                 let Some(activation_count) = self.source_permanent_activation_count(
                     perm_handle,
                     qe.source_card,
-                    qe.effect_slot,
+                    opt_key,
                 ) else {
                     return;
                 };
@@ -1837,9 +2003,129 @@ impl Game {
             }
         }
 
+        // Activation-cost hook — distinct from pay_cost_fn (Phase 2 Track B).
+        // Runs on triggered-ability resolution between the condition gate
+        // and the body process closure. Failure path:
+        //   - body process does NOT run
+        //   - OPT slot IS consumed for the same activation key, so a card
+        //     that can't pay its cost this trigger doesn't get to retry on
+        //     a fresh trigger event in the same turn (Working Rule 17 — no
+        //     silent retries; Track C may reshape OPT keying in a follow-up
+        //     but the semantic is "cost-failed firings count toward the OPT
+        //     cap identically to successful firings").
+        // Success path: the body MUST run even when the activation cost
+        // legitimately removed the source permanent (e.g. "return this
+        // Tamer to the bottom of the deck"). The standard source-liveness
+        // re-check in `run_queued_effect_process_tail` would reject this
+        // case, so we route through
+        // `run_queued_effect_process_tail_after_activation_cost` which
+        // keeps OPT bookkeeping but skips the source-is-live gate (the
+        // cost just established that the trigger fired and the source
+        // intentionally left).
+        let mut activation_cost_paid = false;
+        if effect.activation_cost_fn.is_some() {
+            let max_per_turn = effect.max_per_turn;
+            let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+            // Re-lookup is necessary because invoking the closure needs
+            // `&mut self`, which conflicts with the borrow into `effects`.
+            let cost_outcome = {
+                let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+                    return;
+                };
+                let Some(effect) = effects.get(qe.effect_slot as usize) else {
+                    return;
+                };
+                let Some(activation_cost) = &effect.activation_cost_fn else {
+                    return;
+                };
+                let mut ctx = EffectContext::new_with_source_kind(
+                    self,
+                    qe.attribution_source_card.unwrap_or(qe.source_card),
+                    qe.source_permanent,
+                    qe.attribution_source_kind.unwrap_or(qe.source_kind),
+                    qe.controller,
+                );
+                activation_cost(&mut ctx)
+            };
+            if !cost_outcome {
+                if max_per_turn > 0 && !qe.bypass_once_per_turn {
+                    if let Some(perm_handle) = qe.source_permanent {
+                        self.record_source_permanent_activation(
+                            perm_handle,
+                            qe.source_card,
+                            opt_key,
+                        );
+                    }
+                }
+                return;
+            }
+            activation_cost_paid = true;
+        }
+
         let event_delay_source = self.event_gated_delay_source(&qe);
-        self.run_queued_effect_process_tail(&qe);
+        if activation_cost_paid {
+            self.run_queued_effect_process_tail_after_activation_cost(&qe);
+        } else {
+            self.run_queued_effect_process_tail(&qe);
+        }
         self.trash_event_gated_delay_after_activation(event_delay_source);
+    }
+
+    /// Variant of [`Self::run_queued_effect_process_tail`] used after a
+    /// successful `activation_cost_fn`. Skips the source-liveness re-check
+    /// because the cost may have intentionally removed the source (e.g.
+    /// `return_self_to_deck_bottom_as_cost`); OPT bookkeeping is preserved
+    /// so a successful firing counts toward the cap.
+    fn run_queued_effect_process_tail_after_activation_cost(&mut self, qe: &QueuedEffect) {
+        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+            return;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return;
+        };
+        let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+        if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
+            if let Some(perm_handle) = qe.source_permanent {
+                let Some(activation_count) = self.source_permanent_activation_count(
+                    perm_handle,
+                    qe.source_card,
+                    opt_key,
+                ) else {
+                    // Source removed by the cost — OPT bookkeeping not
+                    // applicable, body still runs.
+                    if let Some(process) = &effect.process {
+                        let mut ctx = EffectContext::new_with_source_kind(
+                            self,
+                            qe.attribution_source_card.unwrap_or(qe.source_card),
+                            qe.source_permanent,
+                            qe.attribution_source_kind.unwrap_or(qe.source_kind),
+                            qe.controller,
+                        );
+                        process(&mut ctx);
+                    }
+                    return;
+                };
+                if activation_count >= effect.max_per_turn {
+                    return;
+                }
+                self.record_source_permanent_activation(
+                    perm_handle,
+                    qe.source_card,
+                    opt_key,
+                );
+            }
+        }
+
+        if let Some(process) = &effect.process {
+            let mut ctx = EffectContext::new_with_source_kind(
+                self,
+                qe.attribution_source_card.unwrap_or(qe.source_card),
+                qe.source_permanent,
+                qe.attribution_source_kind.unwrap_or(qe.source_kind),
+                qe.controller,
+            );
+            process(&mut ctx);
+        }
     }
 
     fn run_queued_effect_process_tail(&mut self, qe: &QueuedEffect) {
@@ -1854,12 +2140,13 @@ impl Game {
             return;
         }
 
+        let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let Some(activation_count) = self.source_permanent_activation_count(
                     perm_handle,
                     qe.source_card,
-                    qe.effect_slot,
+                    opt_key,
                 ) else {
                     return;
                 };
@@ -1869,7 +2156,7 @@ impl Game {
                 self.record_source_permanent_activation(
                     perm_handle,
                     qe.source_card,
-                    qe.effect_slot,
+                    opt_key,
                 );
             }
         }
@@ -2040,6 +2327,14 @@ impl Game {
             })
             .unwrap_or(false);
         top_matches || linked_matches || inherited_source_matches || training_matches
+    }
+
+    /// Resolve the once-per-turn counter key for an effect. A multi-timing
+    /// OPT cluster sets `Effect::shared_opt_group` so all of its timings draw
+    /// on one counter; otherwise the per-slot `effect_slot` is the key.
+    /// `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
+    fn opt_slot_key(effect: &crate::effect::Effect, effect_slot: u8) -> u8 {
+        effect.shared_opt_group.unwrap_or(effect_slot)
     }
 
     fn source_permanent_activation_count(
@@ -2350,6 +2645,107 @@ impl Game {
     /// 30-59 action ID range. If the caller passes more, the overflow
     /// entries are auto-fired in collection order after the prompt
     /// resolves — documented-worst-case behavior, not expected in practice.
+    /// True when a lone OPTIONAL queued effect should install an explicit
+    /// outer accept/decline prompt (`G-OUTER-OPTIONAL-NOT-INSTALLED`). Two
+    /// conditions must both hold: the DSL lowering flagged this effect with
+    /// `needs_outer_optional_prompt` (its body's first step is mandatory),
+    /// AND the effect would actually do something if run — i.e. its source is
+    /// live, its OPT counter is not exhausted, and its `condition` passes.
+    /// An optional effect whose preconditions already fail must not prompt.
+    fn queued_effect_wants_outer_optional_prompt(&self, qe: &QueuedEffect) -> bool {
+        // Granted inline bodies have no Effect metadata and never carry the
+        // outer-prompt flag — never prompt for them.
+        if qe.granted_effect_id.is_some() {
+            return false;
+        }
+        let Some(effects) = self.effects_for_card(&qe.card_id, qe.source_card) else {
+            return false;
+        };
+        let Some(effect) = effects.get(qe.effect_slot as usize) else {
+            return false;
+        };
+        if !effect.needs_outer_optional_prompt {
+            return false;
+        }
+        if !self.queued_effect_source_is_live(qe, effect) {
+            return false;
+        }
+        if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
+            if let Some(perm_handle) = qe.source_permanent {
+                let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
+                match self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key) {
+                    Some(count) if count >= effect.max_per_turn => return false,
+                    None => return false,
+                    _ => {}
+                }
+            }
+        }
+        // SecuritySkill effects skip the condition gate (Python parity, see
+        // `run_queued_effect_inner`). For every other timing, an unsatisfied
+        // condition means the body would no-op — do not prompt.
+        let attribution_source_card = qe.attribution_source_card.unwrap_or(qe.source_card);
+        let attribution_source_kind = qe.attribution_source_kind.unwrap_or(qe.source_kind);
+        let rctx = EffectReadContext::new_with_source_kind(
+            self,
+            attribution_source_card,
+            qe.source_permanent,
+            attribution_source_kind,
+            qe.controller,
+        );
+        if qe.timing != EffectTiming::SecuritySkill {
+            if let Some(cond) = &effect.condition {
+                if !cond(&rctx) {
+                    return false;
+                }
+            }
+        }
+        // Body-actionability guard: when the body's first step is a
+        // selection, only prompt if it has at least one candidate — DCGO
+        // does not prompt for an optional ability with no legal target.
+        if let Some(guard) = &effect.outer_optional_guard {
+            if !guard(&rctx) {
+                return false;
+            }
+        }
+        true
+    }
+
+    /// Install an outer accept/decline `PendingSelection` for a single
+    /// OPTIONAL triggered effect. ACCEPT runs the queued effect's body;
+    /// PASS/decline skips it cleanly. `G-OUTER-OPTIONAL-NOT-INSTALLED`.
+    fn install_outer_optional_trigger_selection(&mut self, qe: QueuedEffect) {
+        let chooser = qe.controller;
+        let source_card = qe.source_card;
+        let source_permanent = qe.source_permanent;
+        let source_kind = qe.source_kind;
+        let prompt = format!("You may activate {}'s triggered effect", qe.card_id);
+
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::EffectChoice;
+
+        self.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Replacement,
+            selecting_player: chooser,
+            previous_phase,
+            valid_action_ids: vec![REPLACEMENT_ACCEPT],
+            is_optional: true,
+            prompt,
+            effect_choices: None,
+            source_card,
+            source_permanent,
+            source_kind,
+            // ACCEPT: the parked QueuedEffect is moved into this `FnOnce`
+            // and its body runs. The generic resolver drains the queue after.
+            callback: Box::new(move |game: &mut Game, _action_id: u16| {
+                game.run_queued_effect(qe);
+            }),
+            // DECLINE: do nothing — the QueuedEffect (already removed from
+            // `effect_queue`) is simply dropped; its body never runs. The
+            // generic resolver resumes draining the rest of the queue.
+            on_decline: Some(Box::new(|_game: &mut Game| {})),
+        });
+    }
+
     fn install_trigger_order_selection(
         &mut self,
         chooser: PlayerId,

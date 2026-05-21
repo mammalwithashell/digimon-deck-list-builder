@@ -233,7 +233,7 @@ Selections are the heart of agent-safe card scripting. They install a `PendingSe
 Use:
 
 - Field permanents: `select_own_permanent`, `select_opponent_permanent`, `select_any_permanent`, `select_own_breeding_permanent`.
-- Zones: `select_hand`, `select_trash`, `select_security`, `select_union_zone`.
+- Zones: `select_hand`, `select_trash`, `select_security`, `select_union_zone`. A `select_union_zone` pick (hand ∪ trash) records the **origin zone** of the chosen card in its `bind_as` binding, not just the card handle. Pair it with `play_union_bound_free: { binding: <name>, bind_as: <opt> }` to replay that card for free from its true zone (`play_from_hand_free` for a hand pick, `play_from_trash` Free for a trash pick). If the `select_union_zone` is `optional`, declining still runs all mandatory tail steps.
 - Reveal pools: `select_reveal`, `select_reveal_buckets`, `select_ordered_permutation`, `select_count_capped_multi`.
 - Stacks / sources: `select_own_sources`, `select_material`, `digi_burst` (Burst-style material picks), `select_dna_pair`.
 - Modal / cost shapes: `select_effect_choice` for printed modal choices, `select_opponent_dp_budget` for "delete Digimon up to DP X total".
@@ -262,9 +262,11 @@ Use these instead of mutating engine internals:
 
 - Hand / deck / trash: `draw`, `trash_from_top`, `add_to_hand_from_deck`, `add_to_hand_from_trash`, `add_to_hand_from_security`, `trash_from_hand_by_index`, `shuffle_deck`, `return_all_trash_to_deck_bottom`, `trash_opponent_hand_to_count`.
 - Reveal: `reveal_top_deck`, `add_to_hand_from_reveal`, `return_to_deck_from_reveal`, `trash_from_reveal`, `place_remainder_on_deck`.
-- Field: `play_from_hand`, `play_from_hand_free`, `play_from_trash`, `play_from_trash_free`, `play_from_security`, `play_from_materials`, `return_to_hand`, `return_to_deck`, `delete_permanent`, `delete_bound_permanents`, `suspend`, `unsuspend`, `de_digivolve`, `hatch`, `play_token`, `bind_permanent_property` (capture a permanent's static metadata into a binding for later predicate lookups).
+- Field: `play_from_hand`, `play_from_hand_free`, `play_from_trash`, `play_from_trash_free`, `play_union_bound_free` (play a `select_union_zone`-bound card for free from its true origin zone — see Selection note below), `play_from_security`, `play_from_materials`, `return_to_hand`, `return_to_deck`, `delete_permanent`, `delete_bound_permanents`, `schedule_delete_played_at_turn_end` (schedule a `bind_as` permanent for deletion at this turn's end — see Control flow below), `suspend`, `unsuspend`, `de_digivolve`, `hatch`, `play_token`, `bind_permanent_property` (capture a permanent's static metadata into a binding for later predicate lookups).
 - Stack / source: `place_as_bottom_source`, `trash_top_source`, `trash_all_sources`, `select_own_sources`, `trash_selected_sources`, `play_selected_sources_free`, `trash_top_n_digivolution_cards_of_each`.
-- Security: `trash_top_security`, `add_top_security_to_hand`, `may_add_top_security_to_hand`, `recover`, `place_on_security`, `add_this_option_to_hand`, `search_own_security_stack`, `mark_security_face_up`, `shuffle_security`, `security_place_stacked_card`, `security_place_top_stacked_card`, `bounce_self`, `place_self_at_security`, `place_self_option_at_security`. The `..._and_cancel_replacement` and `..._and_handle_replacement` variants exist for replacement-flow card text (`trash_top_security_and_cancel_replacement`, `place_permanent_on_security_and_handle_replacement`, etc.) — use them only inside a `kind: replacement` clause's `process:`.
+- Security: `trash_top_security`, `trash_bottom_security`, `add_top_security_to_hand`, `may_add_top_security_to_hand`, `recover`, `place_on_security`, `add_this_option_to_hand`, `search_own_security_stack`, `mark_security_face_up`, `shuffle_security`, `security_place_stacked_card`, `security_place_top_stacked_card`, `bounce_self`, `place_self_at_security`, `place_self_option_at_security`. The `..._and_cancel_replacement` and `..._and_handle_replacement` variants exist for replacement-flow card text (`trash_top_security_and_cancel_replacement`, `place_permanent_on_security_and_handle_replacement`, etc.) — use them only inside a `kind: replacement` clause's `process:`.
+
+`play_from_trash_free` accepts an optional `suppress_on_play: true` flag (default `false`). When set, the played Digimon's own `[On Play]` effects do **not** activate for that play event — for card text like "Any [On Play] effects on Digimon played with this effect don't activate." (BT5-106 Demonic Disaster). The suppression is scoped strictly to the just-played permanent and that single play: other permanents' On Play, and every other timing (`OnEnterFieldAnyone` / `OnAllyPlayed`), still fire normally. The flag is honored only by `play_from_trash_free`; setting it on `play_from_hand` / `play_from_trash` is a compile error.
 
 Example search pattern:
 
@@ -325,6 +327,14 @@ Use `add_dp_modifier`, `add_modifier`, `add_player_modifier`, and `grant_effect_
     expiry: end_of_opponents_turn
 ```
 
+Use `grant_narrow_opponent_effect_protection` for the narrow "can't have its DP reduced **by your opponent's effects** and isn't affected by ＜De-Digivolve＞ effects" protection bundle (BT16-055 Namakemon). It installs two genuinely opponent-effect-scoped modifiers: an `ImmuneFromDPMinus` with an opponent-only filter (only negative `ChangeDp` deltas from an opponent effect are suppressed — the controller's own DP-reduction still applies) and a `CannotBeDeDigivolved` via the passive-replacement route (`OpponentEffect` cause filter — own-side De-Digivolve still applies). Do NOT hand-roll this with `add_modifier`: a plain `add_modifier: { modifier: ImmuneFromDPMinus }` / `{ modifier: CannotBeDeDigivolved }` installs the *broad* unscoped variant and over-protects against the controller's own effects.
+
+```yaml
+- grant_narrow_opponent_effect_protection:
+    target: ally
+    expiry: end_of_opponents_turn
+```
+
 Use `grant_triggered_effect` (Track H, PR #467) to install a granted triggered ability on each matching target permanent — DCGO `AddSkillClass.cs` analog. The granted body fires on the carrier's matching `timing:` and carries an `expiry:`. Source attribution remains the grantor for "by [card]" checks; carrier semantics apply for "this Digimon" reads. EX1-068 Ice Wall! is the canonical fixture.
 
 Use `kind: aura` or `kind: flood_gate` only when the effect is continuous. Aura supports `dp_modifier` / `dp_modifier_fn`, the new `security_attack` / `security_attack_fn` (Track H §1), `grant_keyword`, named `modifier:` grants, and `while_condition:` for install-once UntilCondition gates. Mask-affecting keywords and restrictions must be enforced by the engine mask and decoder, not just represented in YAML.
@@ -362,7 +372,13 @@ These step verbs are only legal inside a `kind: replacement` clause's `process:`
 
 ### Control flow
 
-`if` (with `condition` / `then` / `else`), `for_each`, `per_selected`, `optional`, `schedule_delayed` (delayed sub-process), `place_self_as_delay_option` (resolve this Option onto field as a Delay), and `link_to_own_digimon` (Link Option attachment). See [`step.rs`](../code/digimon-dsl/src/step.rs) for argument shapes.
+`if` (with `condition` / `then` / `else`), `for_each`, `per_selected`, `optional`, `schedule_delayed` (delayed sub-process), `schedule_delete_played_at_turn_end`, `place_self_as_delay_option` (resolve this Option onto field as a Delay), and `link_to_own_digimon` (Link Option attachment). See [`step.rs`](../code/digimon-dsl/src/step.rs) for argument shapes.
+
+`schedule_delete_played_at_turn_end: { binding: <name> }` — for card text "At turn end, delete the Digimon this effect played." `binding` must name a `bind_as` from a preceding free-play step (`play_union_bound_free`, `play_from_hand_free`, `play_token`, …). The deletion is keyed to the played permanent's stable provenance identity, so it hits the right permanent even after battle-area indices shift, and is a silent no-op if that permanent already left the battle area (or the optional play was declined). Drained in `end_turn` after the `EndOfYourTurn` observers, as the controller's own effect. Canonical fixtures: EX11-022 Karakurumon, EX11-061 Mirai Kinosaki.
+
+Optional `at` field selects the turn boundary:
+- `at: your_turn` (default, matches the behaviour above — omit for EX11-022 / EX11-061 style).
+- `at: opponents_turn` — deletion fires at the end of the **opponent's** turn instead (`rotate_turn_player` drain, after `EndOfOpponentsTurn` observers). Used for card text "At the end of your opponent's turn, delete that token." Canonical fixture: P-165 ShoeShoemon.
 
 ## 6. Predicate and Formula API
 
@@ -388,9 +404,9 @@ Common predicate families (full list in [`predicate.rs`](../code/digimon-dsl/src
 
 - Identity: `kind`, `level_eq`, `level_eq_binding`, `level_lte`, `level_gte`, `color_is`, `color_only`, `color_matches_any_field_digimon`, `color_matches_binding`, `trait_has`, `form_is`, `attribute_is`, `name_is`, `name_contains`, `name_in`, `card_number_is`, `play_cost_lte`, `can_digivolve_from_source`.
 - Permanent state: `dp_eq`, `dp_lte`, `dp_gte`, `is_suspended`, `is_unsuspended`, `materials_count_lte`, `materials_count_gte`, `stack_size_lte`, `stack_size_gte`, `has_keyword`, `has_inherited` (nested predicate), `of_permanent`.
-- Source-relative (resolves against `ctx.source_card` / `ctx.source_permanent`): `source_is_tamer`, `source_name_contains`, `source_permanent_trait_has`, `source_is_unsuspended` (PR #472 — checks the source permanent's suspension state from a triggered clause), `self_digivolution_contains_name`.
+- Source-relative (resolves against `ctx.source_card` / `ctx.source_permanent`): `source_is_tamer`, `source_name_contains`, `source_permanent_trait_has`, `source_is_unsuspended` (PR #472 — checks the source permanent's suspension state from a triggered clause), `self_digivolution_contains_name`, `rules_text_contains` (string — case-insensitive substring match against the subject (or `source_permanent`) permanent's printed rules text: `effect_text + inherited_text + security_text` of its top card; in an inherited `active_when` gate the subject resolves to the carrier Digimon; card driver: BT16-055 Namakemon "[All Turns] While this Digimon has [Pulsemon] in its text, it gets +1000 DP"; PUPPETS-G025).
 - Context / global: `your_turn`, `opponents_turn`, `all_turns`, `memory_lte`, `memory_gte`, `security_count_lte`, `security_count_gte`, `can_hatch`, `in_breeding`, `on_field`, `dna_origin`.
-- Event payloads (PR #451 event-payload contract — only valid inside event-driven triggers): `event_target_kind`, `event_target_trait_has`, `event_target_owner`, `event_target_is_player`, `event_target_was_self`, `event_permanent_is_source`, `event_is_effect_initiated`, `event_card_trait_has`, `event_card_name_contains`, `event_cause`, `attacker_trait_has`, `attack_target_change_reason`, `host_permanent_trait_has`, `trashed_source_trait_has`, `trashed_source_card_id_is`.
+- Event payloads (PR #451 event-payload contract — only valid inside event-driven triggers): `event_target_kind`, `event_target_trait_has`, `event_target_owner`, `event_target_is_player`, `event_target_was_self`, `event_permanent_is_source`, `event_is_effect_initiated`, `event_card_trait_has`, `event_card_name_contains`, `event_card_color_only` (list — true when every color of the triggering event card is in the given set; pair with `event_card_color_count` to express exact multi-color constraints, e.g. "2-color black/yellow only"; PUPPETS-G023), `event_card_color_count` (integer — true when the triggering event card has exactly N distinct colors; PUPPETS-G023), `event_cause`, `attacker_trait_has`, `attack_target_change_reason`, `host_permanent_trait_has`, `trashed_source_trait_has`, `trashed_source_card_id_is`.
 - Replacement payloads (Track B, only valid inside `kind: replacement` clauses): `replacement_cause`, `replacement_source_is_opponent`, `replacement_subject_is_mine`.
 - Bindings: `not_in_binding`, `binding_owner`, `binding_exists`, `binding_present`, `binding_absent`, `equals`, `not_equals`.
 - Effect-history rollups (used to gate follow-on clauses, e.g. "if you returned a card by this effect"): `effect_suspended_any_own_digimon`, `effect_returned_any_card`, `effect_deleted_any_own_digimon`, `effect_deleted_any_opponent_digimon`, `effect_played_any_digimon`, `effect_digivolved_any_digimon`, `effect_added_any_card_to_hand`.
@@ -518,6 +534,17 @@ Used by Scrambles, Memory Boosts, Training cards, Royal Knights options, Puppets
 Preferred shape:
 
 - `kind: delay` for Delay effects with explicit `trigger` and `process`.
+  - Standard printed `<Delay>` ("By trashing this card after the placing turn,
+    activate the effect below") uses **`trigger: delayed`** — a player-visible
+    `[Main]`-phase activation action. The Option parks on the battle area and
+    its controller chooses, on any later main phase, to trash it (the
+    activation cost) to run the body. It never auto-fires; the choice surfaces
+    through the `FIELD_EFFECT` action range, and the placing turn is gated out
+    (RULES_CONTEXT 16-16). Standard Memory Boost / Training / Scramble Options
+    take this trigger.
+  - `trigger: start_of_your_turn` / `end_of_your_turn` and event triggers
+    (`on_suspend`, …) remain engine-scheduled auto-fire Delay timings used by
+    start/end-of-turn and event-gated Delay bodies.
 - `place_self_as_delay_option` when the main effect places the resolving Option.
 - `add_this_option_to_hand` when a security Option moves itself to hand.
 - `kind: flood_gate` for color/use-requirement bypasses only when action-mask enforcement exists.

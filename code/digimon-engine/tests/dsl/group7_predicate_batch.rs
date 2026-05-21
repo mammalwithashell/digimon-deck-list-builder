@@ -142,6 +142,57 @@ effects:
             == Some(digimon_dsl::compiled::CompiledPlayerRef::You)));
 }
 
+/// G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2): the
+/// `name_not_shared_by_field_digimon` predicate leaf compiles, and a
+/// `select_union_zone` step's `filter` survives compilation (the lowering
+/// previously dropped it before applying it at install time).
+#[test]
+fn name_not_shared_by_field_digimon_compiles_in_select_union_zone_filter() {
+    let yaml = r#"
+card: T-G7-UNION-NAME-EXCL
+name: Union Name Exclusion Predicate
+kind: digimon
+level: 6
+color: [white]
+cost: 6
+dp: 6000
+effects:
+  - when: on_play
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          prompt: Play 1 Sistermon from hand or trash
+          filter:
+            all_of:
+              - name_contains: Sistermon
+              - name_not_shared_by_field_digimon: { of: you }
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let digimon_dsl::compiled::CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let digimon_dsl::compiled::CompiledStep::SelectUnionZone { filter, .. } = &triggered.process[0]
+    else {
+        panic!("expected select_union_zone");
+    };
+    // The whole filter survives compilation — both leaves are present.
+    assert!(
+        filter
+            .all_of
+            .iter()
+            .any(|p| p.name_contains.as_deref() == Some("Sistermon")),
+        "name_contains leaf must survive into the compiled union-zone filter"
+    );
+    assert!(
+        filter.all_of.iter().any(|p| p.name_not_shared_by_field_digimon
+            == Some(digimon_dsl::compiled::CompiledPlayerRef::You)),
+        "name_not_shared_by_field_digimon leaf must compile into the union-zone filter"
+    );
+}
+
 #[test]
 fn self_digivolution_contains_name_compiles_in_when_digivolving_condition() {
     let yaml = r#"
@@ -224,6 +275,80 @@ effects:
     runner.game.drain_effect_queue();
 
     assert_eq!(runner.memory(), 1);
+}
+
+#[test]
+fn has_on_deletion_effect_predicate_matches_save_keyword_carriers() {
+    // Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — EX1-021's
+    // [When Attacking] target filter selects "Digimon that has an
+    // [On Deletion] effect". The Save keyword auto-installs an
+    // OnDeletion-timed effect, so a Save-carrying card must match;
+    // a plain card must not.
+    let mut save_card = make_test_card("SAVE-PERM", "Save Permanent");
+    save_card.keywords.push(Keyword::Save);
+    save_card.card_kind = CardKind::Digimon;
+    save_card.dp = Some(5000);
+    let mut plain_card = make_test_card("PLAIN-PERM", "Plain Permanent");
+    plain_card.card_kind = CardKind::Digimon;
+    plain_card.dp = Some(5000);
+    let src_card_data = make_test_card("PRED-SRC", "Pred Src");
+
+    let mut runner = DebugRunner::builder()
+        .add_card(src_card_data)
+        .add_card(save_card)
+        .add_card(plain_card)
+        .hand(0, &["PRED-SRC"])
+        .build();
+    let save_perm = runner.place_on_field(0, "SAVE-PERM", None);
+    let plain_perm = runner.place_on_field(0, "PLAIN-PERM", None);
+    let src = runner.game.players[0].hand[0].handle();
+    let rctx = EffectReadContext::new(&runner.game, src, None, 0);
+
+    let pred_true = CompiledPredicate {
+        has_on_deletion_effect: Some(true),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(
+            &pred_true,
+            &rctx,
+            PredicateSubject::Permanent(save_perm),
+            None
+        ),
+        "Save keyword carrier matches has_on_deletion_effect: true"
+    );
+    assert!(
+        !eval_predicate_with_bindings(
+            &pred_true,
+            &rctx,
+            PredicateSubject::Permanent(plain_perm),
+            None
+        ),
+        "plain Digimon does not match has_on_deletion_effect: true"
+    );
+
+    let pred_false = CompiledPredicate {
+        has_on_deletion_effect: Some(false),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(
+            &pred_false,
+            &rctx,
+            PredicateSubject::Permanent(plain_perm),
+            None
+        ),
+        "plain Digimon matches has_on_deletion_effect: false"
+    );
+    assert!(
+        !eval_predicate_with_bindings(
+            &pred_false,
+            &rctx,
+            PredicateSubject::Permanent(save_perm),
+            None
+        ),
+        "Save keyword carrier does not match has_on_deletion_effect: false"
+    );
 }
 
 #[test]
@@ -582,6 +707,66 @@ effects:
     ));
     assert!(filter.materials_count_lte.is_some());
     assert!(filter.stack_size_gte.is_some());
+}
+
+#[test]
+fn opponent_security_count_lte_evaluates_opponent_stack() {
+    // Phase 2 Track G — G-OPP-SECURITY-COUNT-LTE eval arm.
+    //
+    // Build a runner where the active player (controller = 0) has 5
+    // security cards and the opponent (player 1) has 2. The new
+    // `opponent_security_count_lte` predicate should consult the
+    // opponent's stack, not the controller's.
+    let src = make_test_card("PRED-SRC", "Pred Src");
+    let s = make_test_card("SECCARD", "Sec");
+    let runner = DebugRunner::builder()
+        .add_card(src)
+        .add_card(s)
+        .hand(0, &["PRED-SRC"])
+        .security(0, &["SECCARD", "SECCARD", "SECCARD", "SECCARD", "SECCARD"])
+        .security(1, &["SECCARD", "SECCARD"])
+        .build();
+    let source_card = runner.game.players[0].hand[0].handle();
+    let rctx = EffectReadContext::new(&runner.game, source_card, None, 0);
+
+    let pred_lte_3 = CompiledPredicate {
+        opponent_security_count_lte: Some(CompiledDpConstraint::Literal(3)),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(&pred_lte_3, &rctx, PredicateSubject::None, None),
+        "opponent has 2 ≤ 3 → predicate matches"
+    );
+
+    let pred_lte_1 = CompiledPredicate {
+        opponent_security_count_lte: Some(CompiledDpConstraint::Literal(1)),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&pred_lte_1, &rctx, PredicateSubject::None, None),
+        "opponent has 2 > 1 → predicate fails"
+    );
+
+    let pred_gte_3 = CompiledPredicate {
+        opponent_security_count_gte: Some(CompiledDpConstraint::Literal(3)),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&pred_gte_3, &rctx, PredicateSubject::None, None),
+        "opponent has 2 < 3 → predicate fails"
+    );
+
+    // Sanity: controller-side `security_count_lte` reads the controller's
+    // stack (5 cards), not the opponent's — confirms the new predicate is
+    // a distinct field, not a re-routing of the existing one.
+    let pred_self_lte_3 = CompiledPredicate {
+        security_count_lte: Some(CompiledDpConstraint::Literal(3)),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&pred_self_lte_3, &rctx, PredicateSubject::None, None),
+        "controller has 5 > 3 → existing security_count_lte still reads controller"
+    );
 }
 
 #[test]

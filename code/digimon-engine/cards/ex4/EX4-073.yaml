@@ -65,9 +65,9 @@
 # | Special digivolve Lv.7 w/[Omnimon] in name / Cost 2                          | IMPLEMENTED (alt_paths kind: digivolve, ignore_requirements: false matches DCGO) |
 # | [When Digivolving] <De-Digivolve 3> 1 opp Digimon                            | IMPLEMENTED (select + de_digivolve amount:3 stop_at_level:3) |
 # | [When Digivolving] Then, delete up to 6 play cost's total worth opp Digimon  | BLOCKED — G-MULTI-SELECT-OPP-PLAY-COST-SUM (NEW) |
-# | [When Attacking] Trash up to 3 own Lv≥6 digivolution sources                 | BLOCKED — G-DSL-SELECT-OWN-SOURCES-FILTER (NEW) |
-# | [When Attacking] Per trash: delete 1 opp Digimon/Tamer with lowest play cost | BLOCKED — G-PLAY-COST-AGGREGATE (sibling of G-PLAY-COST-LTE; aggregate "lowest play cost" predicate missing — same gap surfaced by BT9-112 clause C, which uses a per-card raw_rust escape hatch we are not authorising for this card) |
-# | [When Attacking] If trashed 3, trash top 2 opp security                      | IMPLEMENTED form available (lose_security with formula) but blocked by trash-count binding from sources |
+# | [When Attacking] Trash up to 3 own Lv≥6 digivolution sources                 | IMPLEMENTED — `select_own_sources` `filter: { level_gte: 6 }` (G-DSL-SELECT-OWN-SOURCES-FILTER CLOSED) |
+# | [When Attacking] Per trash: delete 1 opp Digimon/Tamer with lowest play cost | IMPLEMENTED — `per_selected` over the source_refs binding + `selector: lowest_play_cost` |
+# | [When Attacking] If trashed 3, trash top 2 opp security                      | IMPLEMENTED — `binding_count_eq` gate + 2× `trash_top_security` |
 #
 # ─── DSL-GAP — Multi-select of opponent permanents by running PLAY-COST sum cap [G-MULTI-SELECT-OPP-PLAY-COST-SUM] ─
 #
@@ -113,57 +113,28 @@
 #
 # Tests for this clause are #[ignore]'d under G-MULTI-SELECT-OPP-PLAY-COST-SUM.
 #
-# ─── DSL-GAP — Filter on select_own_sources [G-DSL-SELECT-OWN-SOURCES-FILTER] ─
-#
-# (NEW — surfaces a missing filter clause on the existing
-# `select_own_sources` DSL verb. The verb itself was added when
-# G-ROCKS-SOURCE-SELECTION-DSL closed; the underlying engine API
-# `EffectContext::select_own_sources` already accepts a `candidate_filter`
-# closure but the DSL `SelectOwnSourcesArgs` exposes only `min`/`max`/
-# `bind_as`/`prompt`/`then` — no `filter:` field. The lowering at
-# `code/digimon-engine/src/dsl_cards/step/selections.rs:1330` passes
-# `|_game, _source| true` as the accept-all candidate filter.)
+# ─── G-DSL-SELECT-OWN-SOURCES-FILTER — filter on select_own_sources (CLOSED) ──
 #
 # Printed text: "By trashing up to 3 level 6 or higher cards in this Digimon's
 # digivolution cards"
 #
 # DCGO models this with a SelectCardEffect whose CanSelectCardCondition is
-# `cardSource.Level >= 6 AND HasLevel AND !cardSource.CanNotTrashFromDigivolutionCards
-# (activateClass)`. The level filter is per-source and authoritative for
-# eligibility (you can't pick a Lv3-or-lower source).
+# `cardSource.Level >= 6 AND HasLevel`. The level filter is per-source and
+# authoritative for eligibility (you can't pick a Lv3-or-lower source).
 #
-# Closing this gap requires:
-#   A. Add `filter: PredicateSpec` (or `filter: CardPredicateSpec`) to
-#      `SelectOwnSourcesArgs` in `code/digimon-dsl/src/step.rs`.
-#   B. Compile path: thread the parsed predicate through
-#      `CompiledStep::SelectOwnSources` (currently doesn't carry a filter
-#      payload).
-#   C. Lowering: `install_select_own_sources` (selections.rs:1330) builds a
-#      `move |game, source_handle| { eval_card_predicate_against_source(...) }`
-#      closure from the compiled filter and passes it to
-#      `ctx.select_own_sources` instead of accept-all.
-#   D. Predicate evaluator: a small `eval_card_predicate_against_source(game,
-#      source_handle, &predicate)` function that mirrors `eval_card_fields`
-#      for non-permanent CardSource references (level / color / kind / name
-#      filters all read from the underlying CardData on the source stack).
+# RESOLVED: `SelectOwnSourcesArgs` carries a `filter: PredicateSpec`, threaded
+# through `CompiledStep::SelectOwnSources` and applied per-source in
+# `install_select_own_sources` (`eval_predicate_with_bindings` against each
+# candidate `SourceSelectionRef.card`). Clause C below uses
+# `filter: { level_gte: 6 }`.
 #
-# Until the gap closes the [When Attacking] outer "trash up to 3 Lv≥6 sources"
-# step is unrepresentable in faithful form (an unfiltered `select_own_sources`
-# would let the player trash Lv≤5 sources, which the printed text forbids).
-# Per no-approximations the entire [When Attacking] clause is OMITTED.
+# Two supporting substrate additions landed alongside:
+#   - `per_selected` now iterates a `source_refs` binding (runs its body once
+#     per trashed source) — "for each card trashed, activate the effect below".
+#   - `binding_count_eq: { binding, n }` predicate leaf — gates the
+#     "if you trashed 3 cards" tail.
 #
-# Also blocks: BT5-092 (Omnimon Zwart) "trash 1 Lv6 source from this Digimon"
-# and any future Lv-gated source-trash pattern.
-#
-# Tests for this clause are #[ignore]'d under G-DSL-SELECT-OWN-SOURCES-FILTER
-# (and G-PLAY-COST-AGGREGATE — see below — which independently blocks the
-# "lowest play cost" inner per-trash effect).
-#
-# ─── DSL-GAP — Aggregate "lowest play cost" predicate [G-PLAY-COST-AGGREGATE] ─
-#
-# (NEW — sibling of `G-PLAY-COST-LTE` which closed for the LITERAL form
-# `play_cost_lte: <int>` on 2026-05-01. This entry covers the AGGREGATE
-# variant analogous to `lowest_dp` / `highest_dp` / `lowest_level`.)
+# ─── G-PLAY-COST-AGGREGATE — `lowest_play_cost` field selector (RESOLVED) ────
 #
 # Printed text: "Delete 1 of your opponent's Digimon or Tamers with the lowest
 # play cost."
@@ -173,36 +144,29 @@
 # equals the minimum play_cost across all opp battle-area permanents (Digimon
 # OR Tamer; the `false` arg includes Tamers in the comparison set).
 #
-# The DSL `PredicateSpec` exposes `dp_lte`, `dp_gte`, `lowest_dp` (closed
-# group) and `play_cost_lte` (closed by P-189). It does not expose
-# `lowest_play_cost` / `highest_play_cost` aggregate variants — same shape as
-# the long-blocked BT9-112 clause C "delete all opp Digimon with the lowest
-# play cost" which had to fall back to a per-card raw_rust escape hatch
-# (`bt9_112_delete_lowest_cost_digimon`).
+# RESOLVED 2026-05-19: a `lowest_play_cost` variant was added to the
+# `FieldSelector` enum (the `selector:` mechanism on `select_*_permanent`
+# steps, sibling of `lowest_dp` / `highest_dp`) and to the formula
+# `AggregateSelector`. On a `select_opponent_permanent` step,
+# `selector: lowest_play_cost` restricts the candidate set to the
+# permanent(s) with the lowest printed play cost. Substrate coverage:
+# `tests/dsl/selection_dp_extrema.rs::selector_lowest_play_cost_only_offers
+# _cheapest_candidates`.
 #
-# Closing this gap requires:
-#   A. Add `lowest_play_cost: bool` (and optionally `highest_play_cost: bool`)
-#      to `PredicateSpec` in `code/digimon-dsl/src/predicate.rs`. Mirrors the
-#      `lowest_dp` / `highest_dp` shape.
-#   B. Compile path: thread through `CompiledPredicate` enum.
-#   C. Engine evaluator: extend `eval_predicate_with_bindings` /
-#      `existential_any` aggregate scan in
-#      `code/digimon-engine/src/dsl_cards/predicate.rs` to compute
-#      `min_play_cost = filter_set.iter().filter_map(card_data.play_cost).min()`
-#      then return `card_data.play_cost == Some(min_play_cost)`.
+# NOTE: clause C is STILL BLOCKED — the [When Attacking] clause needs the
+# outer `select_own_sources` filter (G-DSL-SELECT-OWN-SOURCES-FILTER) and a
+# `for_each` over the trashed-source-refs binding, neither of which exists
+# yet. The `lowest_play_cost` selector is ready for the inner per-trash
+# delete; it cannot be exercised until the outer source-select lands.
 #
-# Until the gap closes the inner "Delete 1 ... with the lowest play cost" arm
-# of [When Attacking] is unrepresentable. Combined with
-# G-DSL-SELECT-OWN-SOURCES-FILTER (the outer trash-source step) the entire
-# [When Attacking] clause is OMITTED.
-#
-# Per no-approximations no raw_rust hatch is authored; the BT9-112 precedent
-# (which has a raw_rust hatch for the same primitive) is grandfathered but
-# new authorings should not extend it. When G-PLAY-COST-AGGREGATE closes,
-# BT9-112 clause C should also be migrated off raw_rust to the native
-# `lowest_play_cost` predicate.
-#
-# Tests for this clause are #[ignore]'d under G-PLAY-COST-AGGREGATE.
+# When G-DSL-SELECT-OWN-SOURCES-FILTER + for_each-over-source-refs close,
+# clause C's inner delete should use:
+#   - select_opponent_permanent:
+#       bind_as: low_cost
+#       filter: { any_of: [ { kind: digimon }, { kind: tamer } ] }
+#       selector: lowest_play_cost
+#       prompt: "Delete 1 opponent Digimon/Tamer with the lowest play cost"
+#   - delete_permanent: { target: low_cost }
 
 card: EX4-073
 name: "Omnimon Alter-B"
@@ -257,25 +221,18 @@ effects:
   # `stop_at_level: 3` matching DCGO's IDegeneration behavior (BT9-112 uses
   # the same shape with amount: 1).
   #
-  # Arm 2 (BLOCKED — G-MULTI-SELECT-OPP-PLAY-COST-SUM): "delete up to 6 play
-  # cost's total worth of their Digimon" requires the play-cost-budget
-  # multi-select primitive that does not yet exist (only DP-budget exists).
-  # The arm is OMITTED rather than approximated. When the gap closes, append
-  # the second arm to this clause's process list:
-  #
-  #   - select_opponent_play_cost_budget:                  # ← BLOCKED
-  #       play_cost_budget: 6
-  #       min_picks: 0
-  #       prompt: "Delete opponent Digimon with total play cost ≤ 6"
-  #       # The inner step list of select_opponent_play_cost_budget should
-  #       # auto-delete each picked permanent (mirrors existing dp_budget
-  #       # behaviour — selection mode is Destroy).
-  #
-  # Per no-approximations, no single-pick fallback approximation is added
-  # (BT17-018 has one but it's grandfathered; new authorings should not
-  # extend it).
+  # Arm 2 (IMPLEMENTED — G-MULTI-SELECT-OPP-PLAY-COST-SUM CLOSED): "delete up
+  # to 6 play cost's total worth of their Digimon". The
+  # `select_opponent_play_cost_budget` step is the play-cost analog of
+  # `select_opponent_dp_budget` — the player picks 0..N opponent Digimon
+  # whose running printed-play-cost sum never exceeds 6, and any single
+  # Digimon costing more than 6 is excluded outright (DCGO
+  # `permanent.TopCard.GetCostItself <= 6` per-card cap +
+  # `canEndSelectCondition` running-sum cap). `min_picks: 0` mirrors DCGO's
+  # `canEndNotMax: true` — the player may stop early (or pick zero). The
+  # `then` body deletes each picked permanent (selection mode Destroy).
   - when: when_digivolving
-    summary: "[When Digivolving] <De-Digivolve 3> 1 opp Digimon (delete-up-to-6-cost arm BLOCKED on G-MULTI-SELECT-OPP-PLAY-COST-SUM)"
+    summary: "[When Digivolving] <De-Digivolve 3> 1 opp Digimon; then delete up to 6 play cost worth of opp Digimon"
     condition:
       any_permanent:
         of: opponent
@@ -292,9 +249,19 @@ effects:
           target: dd_target
           amount: 3
           stop_at_level: 3
-      # Arm 2: BLOCKED — see G-MULTI-SELECT-OPP-PLAY-COST-SUM above.
+      # Arm 2: delete up to 6 play cost's total worth of opponent Digimon.
+      # `filter: { kind: digimon }` scopes to opponent Digimon only (printed
+      # "their Digimon" — Tamers are not eligible).
+      - select_opponent_play_cost_budget:
+          play_cost_budget: 6
+          min_picks: 0
+          filter: { kind: digimon }
+          bind_as: deleted_targets
+          prompt: "Delete up to 6 play cost's total worth of opponent Digimon"
+          then:
+            - delete_bound_permanents: { binding: deleted_targets }
 
-  # ─── Clause C (BLOCKED) — [When Attacking] trash sources / lowest-cost / sec ─
+  # ─── Clause C — [When Attacking] trash sources / lowest-cost / security ──────
   #
   # Printed: "[When Attacking] By trashing up to 3 level 6 or higher cards in
   # this Digimon's digivolution cards, for each card trashed, activate the
@@ -306,66 +273,59 @@ effects:
   # operations:
   #   1. SelectCardEffect over THIS permanent's DigivolutionCards filtered by
   #      `Level >= 6 AND HasLevel`, max 3, canNoSelect+canEndNotMax true.
-  #      → BLOCKED: G-DSL-SELECT-OWN-SOURCES-FILTER.
   #   2. ITrashDigivolutionCards on selected sources.
-  #   3. For each trashed source (1..=trashCount loops):
-  #      SelectPermanentEffect over opp permanents matching IsMinCost(perm,
-  #      Enemy, false) (Digimon OR Tamer with min play_cost), maxCount
-  #      Min(1, candidates), canNoSelect: false.
-  #      → BLOCKED: G-PLAY-COST-AGGREGATE (no `lowest_play_cost` predicate).
+  #   3. For each trashed source: SelectPermanentEffect over opp permanents
+  #      matching IsMinCost(perm, Enemy, false) (Digimon OR Tamer with min
+  #      play_cost), maxCount Min(1, candidates), canNoSelect: false.
   #   4. If trashCount == 3: IDestroySecurity(opp, 2, fromTop: true).
-  #      → Even if standalone steps existed (lose_security with formula does
-  #      lower), the trashCount binding from step 1 isn't surfaced from the
-  #      blocked source-select, so the conditional cannot be authored either.
   #
-  # The entire clause is OMITTED. Per no-approximations no partial / single-
-  # pick / count-only fallback is authored. When all three gaps close, the
-  # clause should be authored along these lines (illustrative; subject to
-  # final DSL syntax once the gaps close):
+  # G-DSL-SELECT-OWN-SOURCES-FILTER CLOSED — `select_own_sources` accepts a
+  # `filter:` (per-source predicate), so the `level_gte: 6` source filter is
+  # representable. `per_selected` now iterates a `source_refs` binding (runs
+  # the inner body once per trashed source), and `binding_count_eq` gates the
+  # "if you trashed 3 cards" tail. The inner per-trash delete uses
+  # `selector: lowest_play_cost` (G-PLAY-COST-AGGREGATE) over the Digimon-or-
+  # Tamer filter — the cheapest-cost candidate(s) are the only ones offered,
+  # recomputed per pick (so deleting one shifts the next pick's candidate set).
   #
-  #   - when: when_attacking
-  #     optional: true
-  #     summary: "[When Attacking] Trash up to 3 Lv≥6 sources; per-trash delete lowest-cost opp permanent; if 3 trashed, trash 2 opp security"
-  #     condition:
-  #       any_source:                                       # ← may need a new aggregate predicate
-  #         of: source
-  #         filter: { level_gte: 6 }
-  #     process:
-  #       - select_own_sources:                             # ← needs G-DSL-SELECT-OWN-SOURCES-FILTER closed
-  #           target: source
-  #           min: 0
-  #           max: 3
-  #           filter: { level_gte: 6 }
-  #           bind_as: trashed_sources
-  #           prompt: "Select up to 3 Lv≥6 digivolution cards to trash"
-  #       - trash_selected_sources: { source_refs: trashed_sources }
-  #       - for_each:
-  #           over: { binding: trashed_sources }            # ← needs for_each over a source_refs binding
-  #           bind_as: _ignore
-  #           body:
-  #             - if:
-  #                 condition:
-  #                   any_permanent:
-  #                     of: opponent
-  #                     zone: [battle_area]
-  #                     filter: { lowest_play_cost: true }   # ← needs G-PLAY-COST-AGGREGATE closed
-  #                 then:
-  #                   - select_opponent_permanent:
-  #                       bind_as: low_cost
-  #                       filter:
-  #                         any_of:
-  #                           - kind: digimon
-  #                           - kind: tamer
-  #                         all_of:
-  #                           - lowest_play_cost: true
-  #                       prompt: "Delete 1 opponent Digimon/Tamer with the lowest play cost"
-  #                   - delete_permanent: { target: low_cost }
-  #       - if:
-  #           condition:
-  #             count_eq:
-  #               binding: trashed_sources
-  #               n: 3
-  #           then:
-  #             - lose_security:
-  #                 of: opponent
-  #                 amount: 2
+  # `optional: true` mirrors DCGO `isOptional: true` / `canNoSelect: true` on
+  # the source-select — the player may decline the whole clause (`min: 0`).
+  - when: when_attacking
+    optional: true
+    summary: "[When Attacking] Trash up to 3 Lv6+ sources; per-trash delete lowest-cost opp Digimon/Tamer; if 3 trashed, trash 2 opp security"
+    process:
+      - select_own_sources:
+          target: source
+          min: 0
+          max: 3
+          filter: { level_gte: 6 }
+          bind_as: trashed_sources
+          prompt: "Trash up to 3 level 6 or higher cards in this Digimon's digivolution cards"
+          then:
+            - trash_selected_sources: { source_refs: trashed_sources }
+            # For each card trashed, delete 1 opp Digimon/Tamer with the
+            # lowest play cost. `selector: lowest_play_cost` recomputes the
+            # cheapest candidate per pick.
+            - per_selected:
+                selection: trashed_sources
+                bind_as: _trashed_source
+                body:
+                  - select_opponent_permanent:
+                      bind_as: low_cost
+                      filter:
+                        any_of:
+                          - kind: digimon
+                          - kind: tamer
+                      selector: lowest_play_cost
+                      prompt: "Delete 1 of your opponent's Digimon or Tamers with the lowest play cost"
+                  - delete_permanent: { target: low_cost }
+            # Then, if you trashed 3 cards, trash the top 2 cards of the
+            # opponent's security stack.
+            - if:
+                condition:
+                  binding_count_eq:
+                    binding: trashed_sources
+                    n: 3
+                then:
+                  - trash_top_security: { of: opponent }
+                  - trash_top_security: { of: opponent }

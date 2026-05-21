@@ -360,7 +360,6 @@ fn bt22_036_inherited_replacement_does_not_prevent_own_effect_or_no_cost_leave()
 }
 
 #[test]
-#[ignore = "BLOCKED: G-HAND-MAIN-TRASH-PREFLIGHT - hand [Main] mask cannot prove a required ShoeShoemon exists in trash"]
 fn bt22_036_hand_main_is_masked_without_shoeshoemon_in_trash() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-036")
@@ -381,7 +380,6 @@ fn bt22_036_hand_main_is_masked_without_shoeshoemon_in_trash() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-HAND-MAIN-SELF-DIGIVOLVE - prove chained trash-to-bottom-source then effect digivolve from resolving hand card"]
 fn bt22_036_hand_main_places_shoeshoemon_under_shoemon_then_digivolves_from_hand() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-036")

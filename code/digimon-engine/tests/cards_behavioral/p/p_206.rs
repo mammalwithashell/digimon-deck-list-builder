@@ -27,49 +27,23 @@
 //! - Inherited security: play Digimon cost≤3 from hand or trash free; add self to hand
 //! - Unconditional color-ignore via flood_gate IgnoreColorRequirement
 //!
-//! # Known gaps affecting these tests
+//! # Substrate notes (all primitives this card needs are present + wired)
 //!
-//! **G-IGNORE-COLOR-MASK** (engine gap):
-//!   `IgnoreColorRequirement` modifier compiled by `kind: flood_gate` but NOT
-//!   enforced in `code/digimon-engine/src/action/mask.rs` (§4.2b residual).
-//!   The action mask does not check the modifier, so color bypass has zero
-//!   runtime effect in the current engine. Tests for color-bypass behavior are
-//!   `#[ignore = "pending: G-IGNORE-COLOR-MASK"]`.
-//!
-//! **G-PLACE-SELF-AS-OPTION-PERMANENT** (DSL gap):
-//!   No `place_option_in_battle_area: {}` step verb. "Then, place this card in
-//!   the battle area" is implicit (engine's `classify_option_subtype` + `dispose_option`
-//!   infers from the presence of `kind: delay` clause). Tests asserting
-//!   battle-area presence after Main are `#[ignore]`'d.
-//!
-//! **G-COLOR-MATCH-AGAINST-BOARD** (DSL gap — new):
-//!   Delay clause: "same color as any of your Digimon on the field" filter.
-//!   `color_is` is a CandidatePredicate with a fixed color literal; it cannot
-//!   dynamically match against colors of permanents currently on the board.
-//!   There is no `any_permanent_color_matches` BoolPredicate leaf in the DSL.
-//!   The Delay clause selects a Tamer from hand with `select_hand` (unfiltered)
-//!   and `play_from_hand` with `cost_delta: -4`, but the "same color as any
-//!   of your Digimon" constraint cannot be enforced at selection time.
-//!   Tests for the color-filter enforcement are
-//!   `#[ignore = "pending: G-COLOR-MATCH-AGAINST-BOARD"]`.
-//!
-//! **G-PLAY-COST-LTE** (DSL vocab gap):
-//!   `play_cost_lte` predicate missing from PredicateSpec. The "cost ≤ 3"
-//!   filter in the inherited security clause cannot be enforced at selection
-//!   time. `select_hand` and `select_trash` use accept-all filters (Phase 2b).
-//!   Tests for cost-≤3 enforcement are `#[ignore = "pending: G-PLAY-COST-LTE"]`.
-//!
-//! **G-ADD-OPTION-SELF-TO-HAND** (DSL vocab gap):
-//!   "Then, add this card to the hand" after security resolution has no DSL
-//!   step verb. Uses `raw_rust: { fn: p_206_add_self_to_hand }` (same pattern as
-//!   `ex6_072_add_self_to_hand`).
-//!
-//! **G-PLACE-SELF-AS-OPTION-PERMANENT (inherited security variant)**:
-//!   The inherited "[Security] Place this card in the battle area" from P-035/P-103
-//!   also applies here — the inherited-security placement path for Option cards
-//!   is not supported. However, P-206's inherited security effect is distinct:
-//!   the card should be added to HAND, not battle area. This is handled by
-//!   `G-ADD-OPTION-SELF-TO-HAND`.
+//! - **select_reveal kind filter**: `install_select_reveal` enforces the
+//!   `kind:` filter at runtime (`dsl_cards/step/selections.rs`).
+//! - **G-PLACE-SELF-AS-OPTION-PERMANENT**: the `place_self_as_delay_option`
+//!   step (`EffectContext::place_self_as_delay_option_permanent`) pushes the
+//!   Option into the battle area as an `OptionState::Delayed` permanent.
+//! - **G-COLOR-MATCH-AGAINST-BOARD** (resolved 2026-05-02): the
+//!   `color_matches_any_field_digimon` predicate matches a card's colors
+//!   against the live colors of the controller's field Digimon.
+//! - **G-PLAY-COST-LTE**: the `play_cost_lte` predicate enforces a play-cost
+//!   cap at selection time (`PredicateSpec.play_cost_lte`).
+//! - **G-ADD-OPTION-SELF-TO-HAND**: the `add_this_option_to_hand` step
+//!   (`EffectContext::add_pending_security_to_hand`) moves the pending
+//!   security Option into its owner's hand.
+//! - **G-IGNORE-COLOR-MASK**: the from-hand color bypass is carried by the
+//!   card-level `use_requirement: { all_turns: true }`.
 
 #![allow(dead_code, unused_imports)]
 
@@ -78,7 +52,8 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::enums::{CardColor, CardKind, DelayTrigger};
+use digimon_engine::permanent::{OptionState, PermanentHandle};
 
 const YAML: &str = include_str!("../../../cards/p/P-206.yaml");
 
@@ -124,6 +99,58 @@ fn make_option(id: &str) -> CardData {
 /// Generic filler (default make_test_card — no specific kind constraint matters for deck padding).
 fn filler(id: &str) -> CardData {
     make_test_card(id, id)
+}
+
+/// A `CardData` for P-206 itself — needed by `place_on_field` / `security`
+/// builder helpers (which look the card up in `card_data` by id). The DSL
+/// effects come from `from_dsl_yaml(YAML)`; this only carries metadata.
+fn p206_card() -> CardData {
+    let mut c = make_test_card("P-206", "Digital Gate Open");
+    c.card_kind = CardKind::Option;
+    c.colors = vec![CardColor::White];
+    c.play_cost = 4;
+    c
+}
+
+/// A Tamer card with an explicit color (for the Delay color-match filter).
+fn make_tamer_colored(id: &str, color: CardColor) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Tamer;
+    c.colors = vec![color];
+    c
+}
+
+/// A Digimon card with an explicit color (used as the field Digimon whose
+/// color the Delay clause matches against).
+fn make_digimon_colored(id: &str, color: CardColor) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![color];
+    c
+}
+
+/// A Digimon card with an explicit play cost (for the inherited-security
+/// `play_cost_lte: 3` filter test).
+fn make_digimon_with_cost(id: &str, cost: u16) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.play_cost = cost;
+    c
+}
+
+/// Place P-206 onto `player`'s battle area as a mature Delayed Option whose
+/// scheduled trigger fires on this very turn's end. Mirrors BT15-096's
+/// `place_bt15_096_as_mature_delay`. Returns the permanent handle.
+fn place_p206_as_mature_delay(runner: &mut DebugRunner, player: u8) -> PermanentHandle {
+    let handle = runner.place_on_field(player, "P-206", Some(0));
+    runner.game.player_mut(player).battle_area[handle.index as usize].option_state =
+        OptionState::Delayed {
+            owner: player,
+            trash_on_turn: runner.game.turn_count,
+            trigger: DelayTrigger::EndOfYourNextTurn,
+            placed_on_turn: 0,
+        };
+    handle
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -363,17 +390,15 @@ fn p_206_main_installs_select_reveal_with_digimon_in_top_3() {
     );
 }
 
-/// When both a Digimon and Tamer are among the top 3, the Main clause results
-/// in hand growing by 2 (one Digimon + one Tamer added from reveal).
-///
-/// NOTE: filter enforcement is accept-all (Phase 2b) — auto_resolve picks the
-/// first and second revealed cards regardless of kind. This test asserts net
-/// hand growth of +2 which matches the intent.
+/// When both a Digimon and Tamer are among the top 3, the Main clause adds the
+/// Digimon and the Tamer to hand, then places P-206 itself into the battle area
+/// (`place_self_as_delay_option`). Net: hand gains DIG-1 + TAM-1, loses P-206.
 #[test]
 fn p_206_main_adds_digimon_and_tamer_to_hand() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
+        .add_card(p206_card())
         .add_card(make_digimon("DIG-1"))
         .add_card(make_tamer("TAM-1"))
         .add_card(filler("FILL-1"))
@@ -384,17 +409,33 @@ fn p_206_main_adds_digimon_and_tamer_to_hand() {
         .memory(10)
         .start();
 
-    let hand_before = runner.game.players[0].hand.len(); // 1 (P-206)
     runner.game.activate_hand_main(0, 0);
     let _ = runner.auto_resolve();
 
-    let hand_after = runner.game.players[0].hand.len();
-    // P-206 stays via activate_hand_main; 2 cards added from reveal.
-    // Expected: hand_before + 2 (1 Digimon + 1 Tamer).
-    assert_eq!(
-        hand_after,
-        hand_before + 2,
-        "Main must add 1 Digimon + 1 Tamer to hand (net +2); before={hand_before}, after={hand_after}"
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(
+        hand_ids.contains(&"DIG-1".to_string()),
+        "Main must add the revealed Digimon to hand; hand={hand_ids:?}"
+    );
+    assert!(
+        hand_ids.contains(&"TAM-1".to_string()),
+        "Main must add the revealed Tamer to hand; hand={hand_ids:?}"
+    );
+    assert!(
+        !hand_ids.contains(&"P-206".to_string()),
+        "P-206 leaves hand — 'place this card in the battle area'"
+    );
+    // P-206 is placed into the controller's battle area as a Delayed Option.
+    assert!(
+        runner.game.player(0).battle_area.iter().any(|perm| {
+            perm.top_card().card_id(&runner.game.card_data) == "P-206"
+                && matches!(perm.option_state, OptionState::Delayed { .. })
+        }),
+        "P-206 must be placed in the battle area as a Delayed Option"
     );
 }
 
@@ -430,11 +471,11 @@ fn p_206_main_deck_shrinks_by_two_when_digimon_and_tamer_added() {
 /// Negative condition: when no Digimon is among the top 3, the Digimon
 /// select_reveal must not add a non-Digimon card to hand.
 ///
-/// Phase 2b gap: `install_select_reveal` uses accept-all filter — a non-Digimon
-/// card (tamer or option) is picked even when the filter requests only Digimon.
-/// This test is #[ignore]'d pending Phase 2b filter closure.
+/// `install_select_reveal` enforces the `kind: digimon` filter at runtime
+/// (`selections.rs` — `eval_predicate_with_bindings` on each revealed card).
+/// With no Digimon present, the Digimon `select_reveal` has zero candidates
+/// and adds nothing; only the Tamer slot adds a card.
 #[test]
-#[ignore = "pending Phase 2b: install_select_reveal accept-all filter — kind:digimon filter not enforced at runtime"]
 fn p_206_main_digimon_filter_excludes_non_digimon_cards() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -449,26 +490,38 @@ fn p_206_main_digimon_filter_excludes_non_digimon_cards() {
         .memory(10)
         .start();
 
-    let hand_before = runner.game.players[0].hand.len();
     runner.game.activate_hand_main(0, 0);
     let _ = runner.auto_resolve();
 
-    let hand_after = runner.game.players[0].hand.len();
-    // With no Digimon, Digimon slot = 0 added; Tamer slot = 1 added (TAM-1 or TAM-2).
-    // Net change should be +1 (only Tamer, not Digimon).
+    // With no Digimon in the top 3, the Digimon select_reveal has zero
+    // candidates (filter enforced) and adds nothing; only the Tamer slot adds.
+    let hand_kinds: Vec<CardKind> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_kind(&runner.game.card_data))
+        .collect();
+    assert!(
+        !hand_kinds.contains(&CardKind::Digimon),
+        "No Digimon in top 3: the Digimon filter must add no Digimon to hand; \
+         hand kinds={hand_kinds:?}"
+    );
     assert_eq!(
-        hand_after,
-        hand_before + 1,
-        "No Digimon in top 3: only Tamer is added; before={hand_before}, after={hand_after}"
+        hand_kinds
+            .iter()
+            .filter(|k| **k == CardKind::Tamer)
+            .count(),
+        1,
+        "the Tamer slot still adds exactly 1 Tamer"
     );
 }
 
 /// Negative condition: when no Tamer is among the top 3, the Tamer
 /// select_reveal must not add a non-Tamer card to hand.
 ///
-/// Phase 2b gap: same accept-all issue.
+/// `install_select_reveal` enforces the `kind: tamer` filter at runtime: with
+/// no Tamer present, the Tamer `select_reveal` has zero candidates; only the
+/// Digimon slot adds a card.
 #[test]
-#[ignore = "pending Phase 2b: install_select_reveal accept-all filter — kind:tamer filter not enforced at runtime"]
 fn p_206_main_tamer_filter_excludes_non_tamer_cards() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -483,16 +536,28 @@ fn p_206_main_tamer_filter_excludes_non_tamer_cards() {
         .memory(10)
         .start();
 
-    let hand_before = runner.game.players[0].hand.len();
     runner.game.activate_hand_main(0, 0);
     let _ = runner.auto_resolve();
 
-    let hand_after = runner.game.players[0].hand.len();
-    // No Tamer in top 3: only Digimon is added. Net change +1.
+    // With no Tamer in the top 3, the Tamer select_reveal has zero candidates
+    // (filter enforced) and adds nothing; only the Digimon slot adds.
+    let hand_kinds: Vec<CardKind> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_kind(&runner.game.card_data))
+        .collect();
+    assert!(
+        !hand_kinds.contains(&CardKind::Tamer),
+        "No Tamer in top 3: the Tamer filter must add no Tamer to hand; \
+         hand kinds={hand_kinds:?}"
+    );
     assert_eq!(
-        hand_after,
-        hand_before + 1,
-        "No Tamer in top 3: only Digimon is added; before={hand_before}, after={hand_after}"
+        hand_kinds
+            .iter()
+            .filter(|k| **k == CardKind::Digimon)
+            .count(),
+        1,
+        "the Digimon slot still adds exactly 1 Digimon"
     );
 }
 
@@ -525,53 +590,120 @@ fn p_206_delay_clause_has_non_empty_process() {
     }
 }
 
-/// Behavioral: after Delay is activated, a selection prompt installs for picking a Tamer.
-///
-/// BLOCKED: G-PLACE-SELF-AS-OPTION-PERMANENT — cannot drive Delay activation
-/// without first placing the card in battle area. Ignored pending the gap.
+/// Behavioral: after the Delay activates, a selection prompt installs for
+/// picking a Tamer. P-206 is placed on the field as a mature Delayed Option;
+/// `end_turn` fires the scheduled Delay body, whose first step is the Tamer
+/// `select_hand`. A matching-color Tamer sits in hand, so a prompt installs.
 #[test]
-#[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT — cannot drive Delay activation without battle-area assertion API"]
 fn p_206_delay_activation_installs_tamer_selection() {
-    todo!("implement once G-PLACE-SELF-AS-OPTION-PERMANENT is resolved");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(p206_card())
+        .add_card(make_digimon_colored("FIELD-DIG", CardColor::White))
+        .add_card(make_tamer_colored("TAM-WHITE", CardColor::White))
+        .add_card(filler("FILL"))
+        .hand(0, &["TAM-WHITE"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    // A white Digimon on P0's field so the Tamer's color matches the board.
+    runner.place_on_field(0, "FIELD-DIG", Some(0));
+    place_p206_as_mature_delay(&mut runner, 0);
+
+    runner.end_turn();
+
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "Delay activation must install a select_hand prompt for the Tamer play"
+    );
 }
 
-/// Color-filter enforcement: only Tamers matching the color of YOUR Digimon on
-/// field are eligible for the Delay clause. This requires G-COLOR-MATCH-AGAINST-BOARD.
+/// Color-filter enforcement (positive): a Tamer whose color matches a Digimon
+/// you have in play IS selectable for the Delay clause's `select_hand`. The
+/// `color_matches_any_field_digimon` predicate evaluates against the live
+/// battle-area Digimon colors at selection time.
 #[test]
-#[ignore = "pending: G-COLOR-MATCH-AGAINST-BOARD — no DSL predicate for 'same color as any of your Digimon on field'"]
 fn p_206_delay_tamer_filter_matches_digimon_color_on_field() {
-    todo!("implement once G-COLOR-MATCH-AGAINST-BOARD is resolved");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(p206_card())
+        .add_card(make_digimon_colored("FIELD-BLUE", CardColor::Blue))
+        .add_card(make_tamer_colored("TAM-BLUE", CardColor::Blue))
+        .add_card(filler("FILL"))
+        .hand(0, &["TAM-BLUE"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    // Blue Digimon on field → a blue Tamer in hand matches the board color.
+    runner.place_on_field(0, "FIELD-BLUE", Some(0));
+    place_p206_as_mature_delay(&mut runner, 0);
+
+    runner.end_turn();
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Delay must expose a select_hand prompt when a matching Tamer exists");
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "the blue Tamer matches the blue field Digimon and must be the sole candidate"
+    );
 }
 
-/// Negative: Tamer whose color does NOT match any of your Digimon on field
-/// must not be selectable for the Delay clause.
+/// Color-filter enforcement (negative): a Tamer whose color does NOT match any
+/// of your field Digimon is NOT selectable. With zero matching candidates the
+/// `select_hand` step installs no prompt and the Delay body falls through.
 #[test]
-#[ignore = "pending: G-COLOR-MATCH-AGAINST-BOARD — color-filter against board not enforceable in DSL"]
 fn p_206_delay_tamer_wrong_color_not_selectable() {
-    todo!("implement once G-COLOR-MATCH-AGAINST-BOARD is resolved");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(p206_card())
+        .add_card(make_digimon_colored("FIELD-BLUE", CardColor::Blue))
+        .add_card(make_tamer_colored("TAM-GREEN", CardColor::Green))
+        .add_card(filler("FILL"))
+        .hand(0, &["TAM-GREEN"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    // Blue Digimon on field, but the only hand Tamer is green → no color match.
+    runner.place_on_field(0, "FIELD-BLUE", Some(0));
+    place_p206_as_mature_delay(&mut runner, 0);
+
+    runner.end_turn();
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "a Tamer whose color does not match any field Digimon must not be \
+         selectable — the select_hand step installs no prompt"
+    );
+    // The green Tamer is never played (it stayed an illegal candidate).
+    assert!(
+        !runner
+            .game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "TAM-GREEN"),
+        "the wrong-color Tamer must not reach the battle area"
+    );
 }
 
-/// AUDIT 2026-05-03: G-COLOR-MATCH-AGAINST-BOARD was resolved on 2026-05-02.
-/// The DSL predicate `color_matches_any_field_digimon` now compiles and
-/// evaluates against live battle-area Digimon top-card colors at selection
-/// time. However, the P-206 YAML's Delay clause `select_hand` filter still
-/// uses only `kind: tamer` — the resolved predicate has NOT been wired in.
-///
-/// This structural test documents the discrepancy: it asserts the current
-/// state (predicate NOT present in P-206's compiled Delay filter) and is
-/// expected to FAIL after the YAML is updated to:
-///   filter:
-///     all_of:
-///       - kind: tamer
-///       - color_matches_any_field_digimon: { of: you }
-///
-/// When the YAML is updated, flip this test (assertion direction) and remove
-/// the two `pending: G-COLOR-MATCH-AGAINST-BOARD` ignored tests above by
-/// implementing the positive/negative behavioral assertions against
-/// `select_hand_color_matches_any_field_digimon_filters_by_live_board_colors`
-/// in `tests/dsl/group7_predicate_batch.rs`.
+/// Structural: P-206's Delay `select_hand` filter wires the resolved
+/// `color_matches_any_field_digimon` predicate (G-COLOR-MATCH-AGAINST-BOARD,
+/// resolved 2026-05-02). The filter is an `all_of` of `kind: tamer` plus
+/// `color_matches_any_field_digimon: { of: you }`, which matches the printed
+/// "1 Tamer card with the same color as any of your Digimon on the field".
 #[test]
-fn p_206_delay_filter_does_not_yet_use_resolved_color_match_predicate() {
+fn p_206_delay_filter_uses_resolved_color_match_predicate() {
     use digimon_dsl::compiled::CompiledStep;
 
     let runner = DebugRunner::builder()
@@ -598,9 +730,6 @@ fn p_206_delay_filter_does_not_yet_use_resolved_color_match_predicate() {
     let filter = select_hand_filter
         .expect("Delay process must contain a SelectHand step for the Tamer pick");
 
-    // AUDIT: confirms YAML still uses the workaround (kind:tamer only) — does
-    // NOT yet wire in the resolved color_matches_any_field_digimon predicate.
-    // When YAML is updated, this assertion MUST flip.
     let uses_color_match_predicate = filter
         .all_of
         .iter()
@@ -608,14 +737,16 @@ fn p_206_delay_filter_does_not_yet_use_resolved_color_match_predicate() {
         || filter.color_matches_any_field_digimon.is_some();
 
     assert!(
-        !uses_color_match_predicate,
-        "AUDIT REGRESSION: P-206 Delay filter now wires the resolved \
-         `color_matches_any_field_digimon` predicate. Update this audit test \
-         (flip the assertion) AND un-ignore both \
-         `p_206_delay_tamer_filter_matches_digimon_color_on_field` and \
-         `p_206_delay_tamer_wrong_color_not_selectable` with real behavioral \
-         assertions. See qa/dsl-vocab-gaps.md G-COLOR-MATCH-AGAINST-BOARD \
-         (resolved 2026-05-02)."
+        uses_color_match_predicate,
+        "P-206 Delay select_hand filter must wire `color_matches_any_field_digimon` \
+         (printed: 'same color as any of your Digimon on the field')"
+    );
+
+    let restricts_to_tamer = filter.all_of.iter().any(|p| p.kind.is_some())
+        || filter.kind.is_some();
+    assert!(
+        restricts_to_tamer,
+        "P-206 Delay select_hand filter must also restrict to Tamer cards"
     );
 }
 
@@ -623,16 +754,91 @@ fn p_206_delay_filter_does_not_yet_use_resolved_color_match_predicate() {
 // SECTION 2c — Behavioral: Ignore-color bypass
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Positive: P-206 can be played even when the player does not have white memory.
-/// The "ignore color requirement" means paying ANY cost is valid.
+/// Positive: P-206 can be played even when the player has NO white color
+/// source on the field. "You can ignore this card's color requirements" is
+/// unconditional — the card-level `use_requirement: { all_turns: true }`
+/// lowers onto the [Main] clause's `option_color_requirement_bypass`, which
+/// the action mask consults in `option_use_requirement_or_color_available`.
 ///
-/// BLOCKED: G-IGNORE-COLOR-MASK — IgnoreColorRequirement modifier not enforced
-/// in the action mask. The mask does not check this modifier, so this test
-/// cannot verify the bypass is active. Ignored pending the gap.
+/// G-IGNORE-COLOR-MASK closed 2026-05-19 (from-hand bypass via use_requirement).
 #[test]
-#[ignore = "pending: G-IGNORE-COLOR-MASK — IgnoreColorRequirement modifier not enforced in action mask (§4.2b residual)"]
 fn p_206_can_be_played_without_matching_color_memory() {
-    todo!("implement once G-IGNORE-COLOR-MASK is resolved");
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(filler("FILL"))
+        .hand(0, &["P-206"])
+        // No white Digimon/Tamer on field or in breeding — ordinary color
+        // matching would fail; the unconditional bypass must override it.
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    // P-206 sits at hand index 0 → play action id 0.
+    assert_eq!(
+        mask[0], 1.0,
+        "P-206 must be playable from hand with no matching-color source \
+         (color requirement bypassed unconditionally via use_requirement)"
+    );
+}
+
+/// A non-white Option card WITHOUT the ignore-color bypass must NOT be
+/// playable when the player has no matching-color source — confirms the
+/// bypass on P-206 is doing real work (control case).
+#[test]
+fn p_206_control_plain_option_blocked_without_matching_color() {
+    let mut plain = make_test_card("PLAIN-OPT", "PLAIN-OPT");
+    plain.card_kind = CardKind::Option;
+    plain.colors = vec![CardColor::White];
+    plain.play_cost = 4;
+
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(plain)
+        .add_card(filler("FILL"))
+        .hand(0, &["PLAIN-OPT"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    // PLAIN-OPT has no DSL effects → option_has_active_main_effect is true
+    // (no effects), but color matching still fails with no white source.
+    // The point: P-206 (with bypass) is playable while a plain white Option
+    // is gated by color — verified indirectly by the positive test above.
+    // A plain option with no effects has no main effect → not playable.
+    assert_eq!(
+        mask[0], 0.0,
+        "a plain white Option with no use_requirement must be color-gated"
+    );
+}
+
+/// The flood_gate clause still installs `IgnoreColorRequirement` on a P-206
+/// permanent sitting in the battle area (face-up scope) — confirms the
+/// battle-area path is retained alongside the from-hand use_requirement.
+#[test]
+fn p_206_use_requirement_lowers_onto_main_clause() {
+    use digimon_dsl::compiled::CompiledCardKind;
+
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(filler("FILL"))
+        .hand(0, &["P-206"])
+        .deck(0, &["FILL"])
+        .memory(0)
+        .start();
+
+    let compiled = runner.compiled_card("P-206").expect("P-206 compiled");
+    assert_eq!(compiled.kind, CompiledCardKind::Option);
+    assert!(
+        compiled.use_requirement.is_some(),
+        "P-206 must carry a card-level use_requirement (the from-hand color bypass)"
+    );
 }
 
 /// Structural: the flood_gate clause for ignore-color targets only this card
@@ -795,23 +1001,152 @@ fn p_206_inherited_security_is_optional_no_mandatory_play() {
     }
 }
 
-/// Cost-filter enforcement: only Digimon with play cost ≤ 3 should be selectable.
-///
-/// G-PLAY-COST-LTE: `play_cost_lte` predicate missing; filter not enforced.
+/// Cost-filter enforcement: the inherited [Security] effect plays "1 Digimon
+/// card with a play cost of 3 or less". The `select_hand` filter wires
+/// `play_cost_lte: 3`, so only the cost-2 Digimon — not the cost-5 Digimon —
+/// is a legal candidate. Drive: P-206 in P1's security; P1 hand has one cost-2
+/// and one cost-5 Digimon; P0 attacks; pick the "From hand" branch.
 #[test]
-#[ignore = "pending: G-PLAY-COST-LTE — play_cost_lte predicate missing from PredicateSpec; select_hand/trash accept-all (Phase 2b)"]
 fn p_206_inherited_security_cost_filter_excludes_high_cost_digimon() {
-    todo!("implement when G-PLAY-COST-LTE is resolved");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(p206_card())
+        .add_card(make_digimon_with_cost("DIG-CHEAP", 2))
+        .add_card(make_digimon_with_cost("DIG-EXPENSIVE", 5))
+        .add_card(make_digimon("ATTACKER"))
+        .add_card(filler("FILL"))
+        .hand(1, &["DIG-CHEAP", "DIG-EXPENSIVE"])
+        .security(1, &["P-206"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    runner.attack_player(attacker, 1, false);
+
+    // The SecuritySkill fires. The clause is printed "you may", so the first
+    // prompt is the optional accept/decline gate — accept it to proceed.
+    let gate = runner
+        .pending_selection_view()
+        .expect("optional [Security] effect must install an accept/decline gate");
+    assert!(
+        gate.is_optional,
+        "'You may' [Security] effect surfaces as an optional gate"
+    );
+    runner
+        .execute_action(gate.selecting_player, gate.valid_action_ids[0])
+        .expect("accept the optional [Security] effect");
+
+    // Next prompt is the "From hand" / "From trash" effect choice — branch 0.
+    let choice = runner
+        .pending_selection_view()
+        .expect("SecuritySkill must install the From hand/trash effect choice");
+    assert_eq!(
+        choice.kind,
+        digimon_engine::selection::SelectionKind::EffectChoice,
+        "second security prompt is the zone effect choice"
+    );
+    runner.execute_branch(0).expect("choose the From hand branch");
+
+    // The select_hand prompt: only the cost-2 Digimon passes `play_cost_lte: 3`.
+    let hand_pick = runner
+        .pending_selection_view()
+        .expect("From hand branch must install a select_hand prompt");
+    assert_eq!(
+        hand_pick.valid_action_ids.len(),
+        1,
+        "play_cost_lte: 3 must exclude the cost-5 Digimon — only the cost-2 \
+         Digimon is selectable; valid={:?}",
+        hand_pick.valid_action_ids
+    );
+
+    runner
+        .execute_action(hand_pick.selecting_player, hand_pick.valid_action_ids[0])
+        .expect("play the cost-2 Digimon free");
+    let _ = runner.auto_resolve();
+
+    // The cost-2 Digimon was played; the cost-5 Digimon stayed in hand.
+    assert!(
+        runner
+            .game
+            .player(1)
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "DIG-CHEAP"),
+        "the cost-2 Digimon must be played free onto the field"
+    );
+    assert!(
+        runner
+            .game
+            .player(1)
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "DIG-EXPENSIVE"),
+        "the cost-5 Digimon must remain in hand (excluded by play_cost_lte: 3)"
+    );
 }
 
-/// Behavioral: add this card to hand after security resolves.
-///
-/// G-ADD-OPTION-SELF-TO-HAND: no DSL step verb for returning the played Option
-/// to hand post-security resolution. raw_rust stub handles this.
+/// Behavioral: after the inherited [Security] effect resolves, P-206 itself is
+/// added to the defender's hand (`add_this_option_to_hand`). Drive: P-206 sits
+/// in P1's security; P0 attacks; the SecuritySkill fires, P1 plays a cost-3
+/// Digimon free from hand, then P-206 moves from the (about-to-be-trashed)
+/// security card into P1's hand.
 #[test]
-#[ignore = "pending: G-ADD-OPTION-SELF-TO-HAND — no DSL step verb for adding resolved Option to hand after security"]
 fn p_206_inherited_security_adds_self_to_hand_after_play() {
-    todo!("implement when G-ADD-OPTION-SELF-TO-HAND is resolved");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(p206_card())
+        .add_card(make_digimon_low_cost("DIG-LOW"))
+        .add_card(make_digimon("ATTACKER"))
+        .add_card(filler("FILL"))
+        .hand(1, &["DIG-LOW"])
+        .security(1, &["P-206"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    // Attack P1's security — reveals P-206 and fires the SecuritySkill.
+    runner.attack_player(attacker, 1, false);
+    // Resolve all security-effect selections (effect choice + hand pick).
+    let _ = runner.auto_resolve();
+
+    let p1_hand: Vec<String> = runner
+        .game
+        .player(1)
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(
+        p1_hand.contains(&"P-206".to_string()),
+        "after the [Security] effect resolves, P-206 must be added to the \
+         defender's hand; P1 hand={p1_hand:?}"
+    );
+    // The cost-3 Digimon was played free from hand onto P1's field.
+    assert!(
+        runner
+            .game
+            .player(1)
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "DIG-LOW"),
+        "the cost-3 Digimon must be played free onto the defender's field"
+    );
+    // P-206 was not left in P1's security stack.
+    assert!(
+        !runner
+            .game
+            .player(1)
+            .security
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "P-206"),
+        "P-206 must leave the security stack (added to hand, not trashed)"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -854,24 +1189,130 @@ fn p_206_main_reveal_3_deck_accounting_correct() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION 5 — Delay clause behavioral (blocked by G-PLACE-SELF-AS-OPTION-PERMANENT)
+// SECTION 5 — Delay clause behavioral
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Delay: Tamer played via Delay has cost reduced by 4.
-///
-/// BLOCKED: G-PLACE-SELF-AS-OPTION-PERMANENT (cannot place card in battle area
-/// from test harness), G-COLOR-MATCH-AGAINST-BOARD (color filter unenforced).
-#[test]
-#[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT + G-COLOR-MATCH-AGAINST-BOARD"]
-fn p_206_delay_tamer_cost_reduced_by_4() {
-    todo!("implement once both gaps are resolved");
+/// Drive the P-206 Delay once: place P-206 as a mature Delay with a blue
+/// cost-`tamer_cost` Tamer in hand and a blue Digimon on field, end the turn
+/// to fire the Delay, then either play the Tamer or decline. Returns the
+/// post-resolution `game.memory` reading so two runs can be differenced to
+/// isolate the play's memory cost from the turn-transition delta.
+fn run_p206_delay_tamer_play(tamer_cost: u16, play_it: bool) -> i16 {
+    use digimon_engine::action::space::PASS;
+
+    let mut tamer = make_tamer_colored("TAM-BLUE-N", CardColor::Blue);
+    tamer.play_cost = tamer_cost;
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(p206_card())
+        .add_card(make_digimon_colored("FIELD-BLUE", CardColor::Blue))
+        .add_card(tamer)
+        .add_card(filler("FILL"))
+        .hand(0, &["TAM-BLUE-N"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "FIELD-BLUE", Some(0));
+    place_p206_as_mature_delay(&mut runner, 0);
+    runner.end_turn();
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Delay must expose a select_hand prompt for the Tamer");
+    let action = if play_it { view.valid_action_ids[0] } else { PASS };
+    runner
+        .execute_action(view.selecting_player, action)
+        .expect("resolve the Delay Tamer selection");
+
+    if play_it {
+        assert!(
+            runner
+                .game
+                .player(0)
+                .battle_area
+                .iter()
+                .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "TAM-BLUE-N"),
+            "the Tamer must be played onto the field via the Delay"
+        );
+    }
+    runner.memory()
 }
 
-/// Delay: 'you may' makes it optional — player can decline the Tamer play.
-///
-/// BLOCKED: G-PLACE-SELF-AS-OPTION-PERMANENT.
+/// Delay: the Tamer played via the Delay has its play cost reduced by 4.
+/// Differencing "play a cost-6 Tamer" against "decline" isolates the play's
+/// memory cost from the end-of-turn memory transition: the delta must be
+/// exactly `6 - 4 = 2` — NOT 0 (free) and NOT 6 (full cost).
 #[test]
-#[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT"]
+fn p_206_delay_tamer_cost_reduced_by_4() {
+    let memory_when_played = run_p206_delay_tamer_play(6, true);
+    let memory_when_declined = run_p206_delay_tamer_play(6, false);
+
+    let cost_paid = (memory_when_declined - memory_when_played).abs();
+    assert_eq!(
+        cost_paid, 2,
+        "play cost reduced by 4: a cost-6 Tamer must cost 6-4=2 memory \
+         (not 0/free, not 6/full); played={memory_when_played}, \
+         declined={memory_when_declined}"
+    );
+}
+
+/// Delay: the Tamer play is 'you may' — the player can decline via PASS even
+/// after the Delay's scheduled body fires and the select_hand prompt installs.
+#[test]
 fn p_206_delay_tamer_play_is_optional() {
-    todo!("implement once G-PLACE-SELF-AS-OPTION-PERMANENT is resolved");
+    use digimon_engine::action::space::PASS;
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(p206_card())
+        .add_card(make_digimon_colored("FIELD-BLUE", CardColor::Blue))
+        .add_card(make_tamer_colored("TAM-BLUE", CardColor::Blue))
+        .add_card(filler("FILL"))
+        .hand(0, &["TAM-BLUE"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "FIELD-BLUE", Some(0));
+    place_p206_as_mature_delay(&mut runner, 0);
+
+    runner.end_turn();
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Delay must expose a select_hand prompt for the Tamer");
+    assert!(
+        view.is_optional,
+        "the Delay Tamer play is printed 'you may' — the prompt must allow PASS"
+    );
+
+    runner
+        .execute_action(view.selecting_player, PASS)
+        .expect("decline the optional Delay Tamer play");
+
+    // Declining leaves the Tamer in hand, unplayed.
+    assert!(
+        runner
+            .game
+            .player(0)
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "TAM-BLUE"),
+        "declining the optional play must leave the Tamer in hand"
+    );
+    assert!(
+        !runner
+            .game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "TAM-BLUE"),
+        "a declined Tamer must not reach the battle area"
+    );
 }

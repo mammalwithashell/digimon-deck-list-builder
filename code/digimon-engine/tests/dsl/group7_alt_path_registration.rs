@@ -35,6 +35,7 @@ fn colored_digimon_level(id: &str, color: CardColor, level: u8) -> CardData {
         norm_id: 0.0,
         dual: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
         ace_overflow: None,
     }
 }
@@ -190,6 +191,164 @@ fn registered_dna_action_uses_registered_materials_and_cost() {
     );
     assert_eq!(runner.game.memory, 3);
     assert_eq!(runner.game.current_phase, GamePhase::EndOfTurnAction);
+}
+
+// ── Phase 2 Track F (G-ALT-PATH-DIRECTION-INTO) ─────────────────────────────
+
+fn into_direction_warp_yaml(hand_target_name: &str, cost: i32) -> String {
+    // Source card carries an alt-path with direction:into pointing at a
+    // specific hand card. ST20-10 Agumon's [Your Turn] warp into WarGreymon
+    // is the canonical fixture, but here we use a synthetic carrier to
+    // isolate the substrate from the unrelated G-DSL-DISTINCT-TAMER-COLORS
+    // gate still blocking ST20-10's full clause.
+    format!(
+        r#"
+card: T-G7-INTO
+name: Into Direction Carrier
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+alt_paths:
+  - kind: digivolve
+    direction: into
+    from:
+      zone: [hand]
+      of: you
+      name_is: "{hand_target_name}"
+    cost: {cost}
+    ignore_requirements: true
+"#
+    )
+}
+
+#[test]
+fn alt_path_direction_into_compiles_and_preserves_field() {
+    let compiled = compile_yaml(&into_direction_warp_yaml("WarGreymon", 4));
+    let path = &compiled.alt_paths[0];
+    assert_eq!(path.kind, CompiledAltPathKind::Digivolve);
+    assert_eq!(
+        path.direction,
+        digimon_dsl::compiled::CompiledAltPathDirection::Into
+    );
+    assert!(path.ignore_requirements);
+}
+
+#[test]
+fn alt_path_direction_from_defaults_when_omitted() {
+    // Back-compat: existing YAML without `direction:` lowers to
+    // CompiledAltPathDirection::From and behaves exactly as before.
+    let yaml = r#"
+card: T-G7-DEFAULT
+name: Default Direction
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+"#;
+    let compiled = compile_yaml(yaml);
+    assert_eq!(
+        compiled.alt_paths[0].direction,
+        digimon_dsl::compiled::CompiledAltPathDirection::From
+    );
+}
+
+#[test]
+fn alt_path_direction_into_routes_hand_card_digivolve_onto_carrier() {
+    // End-to-end: an Into-direction alt-path on the field permanent (the
+    // CARRIER, ST20-10 in printed form) allows the named hand card
+    // (WarGreymon analog) to digivolve onto it for the literal alt-path
+    // cost. The standard rules-based route would reject this (the level/
+    // color mismatch), so a successful digivolve proves the alt-path
+    // substrate took over.
+    let yaml = into_direction_warp_yaml("WARP-TARGET", 4);
+    let mut warp_target = colored_digimon_level("WARP-TARGET", CardColor::Red, 6);
+    warp_target.dp = Some(12000);
+    warp_target.play_cost = 12;
+    // Empty evo_costs so the rules-based route cannot succeed — only the
+    // Into-direction alt-path can satisfy this digivolve.
+    warp_target.evo_costs = Vec::new();
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("warp-into YAML compiles")
+        .add_card(warp_target)
+        .hand(0, &["WARP-TARGET"])
+        .memory(10)
+        .start();
+
+    let carrier = runner.place_on_field(0, "T-G7-INTO", None);
+    let memory_before = runner.game.memory;
+
+    // End-to-end: digivolve succeeds; carrier's top is now the hand card;
+    // memory reduced by the alt-path cost. The standard rules route is
+    // unavailable (empty evo_costs on WARP-TARGET), so a successful
+    // digivolve proves the Into-direction substrate took over.
+    assert!(
+        runner.game.digivolve_from_hand(
+            0,
+            0,
+            carrier.index as usize,
+            digimon_engine::enums::PlaySource::ByHand,
+        ),
+        "digivolve_from_hand must succeed for Into-direction warp"
+    );
+    let top = runner.game.players[0].battle_area[carrier.index as usize].top_card();
+    assert_eq!(
+        top.card_id(&runner.game.card_data),
+        "WARP-TARGET",
+        "carrier top is now the warp target"
+    );
+    assert_eq!(
+        memory_before - runner.game.memory,
+        4,
+        "memory cost matches alt-path cost"
+    );
+}
+
+#[test]
+fn alt_path_direction_into_filter_rejects_non_matching_hand_card() {
+    // Negative case: the Into-direction alt-path filter restricts to a
+    // single named card. A different hand card must NOT receive a route
+    // via this path.
+    let yaml = into_direction_warp_yaml("WARP-TARGET", 4);
+    let mut other = colored_digimon_level("OTHER", CardColor::Red, 6);
+    other.dp = Some(12000);
+    other.play_cost = 12;
+    other.evo_costs = Vec::new();
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&yaml)
+        .expect("warp-into YAML compiles")
+        .add_card(other)
+        .hand(0, &["OTHER"])
+        .memory(10)
+        .start();
+
+    let carrier = runner.place_on_field(0, "T-G7-INTO", None);
+
+    assert!(
+        !runner.game.digivolve_from_hand(
+            0,
+            0,
+            carrier.index as usize,
+            digimon_engine::enums::PlaySource::ByHand,
+        ),
+        "Into-direction filter must reject hand cards that don't match `from:`"
+    );
+    // Top card unchanged.
+    assert_eq!(
+        runner.game.players[0].battle_area[carrier.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "T-G7-INTO"
+    );
 }
 
 #[test]

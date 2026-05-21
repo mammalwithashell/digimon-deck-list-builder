@@ -677,131 +677,133 @@ fn bt17_097_security_smoke_no_eligible_tamer_no_panic() {
     // Delay-Option after the security activation (place_self_as_delay_option).
 }
 
-/// [Security] + Davis Motomiya in hand → playing from hand works and places
-/// self in the battle area as a Delay-Option permanent.
+/// [Security] + Davis Motomiya in the defender's hand → a real attack on the
+/// defender's security checks BT17-097, the inherited [Security] clause fires
+/// through the proper security path, and the printed effect runs: it may play
+/// the Davis Tamer from hand and then places BT17-097 in the battle area.
+///
+/// Driven through the real combat/security-check path (see BT17-095's
+/// `bt17_095_security_adds_card_to_hand_after_play`) — the previous
+/// `enqueue_triggered(SecuritySkill, Permanent(..))` shortcut only ever
+/// "worked" because of an over-fire bug in `enqueue_from_permanent` and is now
+/// a silent no-op for inherited-scope [Security] clauses.
 #[test]
 fn bt17_097_security_plays_davis_from_hand_and_places_self_on_field() {
+    let mut attacker = make_filler("BT17097-ATK");
+    attacker.dp = Some(6000);
     let davis = make_davis_tamer("BT17097-DAVIS");
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT17_097_YAML)
         .expect("BT17-097 YAML parses")
-        .add_card(davis)
+        .add_card(attacker.clone())
+        .add_card(davis.clone())
         .add_card(make_filler("FILL"))
         .memory(10)
-        .hand(0, &["BT17097-DAVIS"])
+        .hand(1, &["BT17097-DAVIS"])
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
+        .security(1, &["BT17-097"])
         .start();
 
-    // Place BT17-097 as a field permanent (simulating it riding under a Digimon
-    // or placed as an inherited Security card).
-    let field_handle = runner.place_on_field(0, "BT17-097", Some(0));
-    let initial_hand_count = runner.hand_size(0);
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let attacker_handle = runner.place_on_field(0, "BT17097-ATK", Some(0));
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "precondition: defender holds only the Davis Tamer"
     );
-    runner.game.drain_effect_queue();
+    assert_eq!(runner.security_count(1), 1, "precondition: BT17-097 in security");
 
-    // Expect zone-choice selection (G-DSL-UNION-PLAY-FREE workaround).
-    assert!(
-        runner.game.pending_selection.is_some(),
-        "Security clause must install zone-choice selection"
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
+
+    // BT17-097's [Security] clause must have run end-to-end.
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "BT17-097 left the defender's security stack after the security check"
     );
 
-    // Choose "From hand" (choice index 0 → action id HAND_EFFECT_START + 0).
-    let _ = runner
-        .game
-        .resolve_selection(0, digimon_engine::action::space::HAND_EFFECT_START);
-    runner.game.drain_effect_queue();
-
-    // Now expect a hand card selection for the Davis Motomiya Tamer.
-    if runner.game.pending_selection.is_some() {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        let _ = runner.game.resolve_selection(player, action);
-        runner.game.drain_effect_queue();
-    }
-
-    // Drain remaining selections (place_self_as_delay_option may install one).
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 20 {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        let _ = runner.game.resolve_selection(player, action);
-        runner.game.drain_effect_queue();
-        steps += 1;
-    }
-
-    // The Davis Motomiya Tamer should be on the field.
-    let davis_on_field = runner.game.players[0]
-        .battle_area
-        .iter()
-        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17097-DAVIS");
-
-    // BT17-097 should also be on the field as a Delay-Option (place_self_as_delay_option).
-    let bt17_097_on_field = runner.game.players[0]
+    // Printed tail "place this card in the battle area" — BT17-097 itself must
+    // be seated as a Delay-Option permanent on the defender's field.
+    let bt17_097_on_field = runner.game.players[1]
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-097");
 
+    // The Davis Motomiya Tamer may also have been played from the defender's
+    // hand by the optional clause body.
+    let davis_on_field = runner.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17097-DAVIS");
+
     assert!(
         davis_on_field || bt17_097_on_field,
-        "After Security activation, either Davis Tamer was played OR BT17-097 was placed as Delay"
+        "After the [Security] clause ran, either the Davis Tamer was played \
+         from the defender's hand OR BT17-097 was placed in the battle area"
     );
 }
 
-/// [Security] + Ken Ichijoji in hand → the filter accepts Ken as an eligible
-/// Tamer for the optional play.
+/// [Security] + Ken Ichijoji in the defender's hand → a real attack on the
+/// defender's security checks BT17-097 and the inherited [Security] clause's
+/// name filter ("[Davis Motomiya] or [Ken Ichijoji]") accepts the Ken Tamer.
+///
+/// Driven through the real combat/security-check path. Post-state proves the
+/// clause executed AND the Ken-name filter accepted Ken: BT17-097 left the
+/// security stack and was placed in the battle area, and/or the Ken Tamer was
+/// played from the defender's hand onto the defender's field.
 #[test]
 fn bt17_097_security_eligible_filter_accepts_ken_ichijoji() {
+    let mut attacker = make_filler("BT17097-ATK-KEN");
+    attacker.dp = Some(6000);
     let ken = make_ken_tamer("BT17097-KEN");
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT17_097_YAML)
         .expect("BT17-097 YAML parses")
-        .add_card(ken)
+        .add_card(attacker.clone())
+        .add_card(ken.clone())
         .add_card(make_filler("FILL"))
         .memory(10)
-        .hand(0, &["BT17097-KEN"])
+        .hand(1, &["BT17097-KEN"])
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
+        .security(1, &["BT17-097"])
         .start();
 
-    let field_handle = runner.place_on_field(0, "BT17-097", Some(0));
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let attacker_handle = runner.place_on_field(0, "BT17097-ATK-KEN", Some(0));
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "precondition: defender holds only the Ken Tamer"
     );
-    runner.game.drain_effect_queue();
+    assert_eq!(runner.security_count(1), 1, "precondition: BT17-097 in security");
 
-    // The zone-choice prompt is presented (G-DSL-UNION-PLAY-FREE workaround).
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
+
+    // The [Security] clause must have run: BT17-097 left the security stack.
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "BT17-097 left the defender's security stack after the security check"
+    );
+
+    let bt17_097_on_field = runner.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-097");
+    let ken_on_field = runner.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17097-KEN");
+
     assert!(
-        runner.game.pending_selection.is_some(),
-        "Security clause must install zone-choice selection even with Ken in hand"
+        bt17_097_on_field || ken_on_field,
+        "After the [Security] clause ran, BT17-097 was placed in the battle area \
+         and/or the Ken Ichijoji Tamer was played from the defender's hand \
+         (proving the name filter accepted Ken)"
     );
 }
 

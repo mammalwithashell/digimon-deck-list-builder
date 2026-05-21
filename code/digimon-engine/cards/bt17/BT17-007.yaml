@@ -1,0 +1,94 @@
+# BT17-007 Agumon — Digimon, Lv.3, Red, DP 1000, Cost 3.
+# Traits: Reptile. Attribute: Vaccine.
+#
+# Printed card text (data/cards.json):
+#
+#   [Start of Your Main Phase] If you have a Tamer with [Tai Kamiya] in its
+#   name, return 1 card with [Garurumon], [Greymon] or [Omnimon] in its name
+#   from your trash to the hand.
+#
+# Inherited (ESS):
+#   [End of Your Turn] This Digimon and any of your other Digimon may DNA
+#   digivolve into a Digimon card in the hand.
+#
+# Digivolve: [Koromon]: Cost 0 (printed `xros_req`); evo_costs lists Lv.2 Red
+# cost 0 as well — both describe the same alternate digivolution path.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT17/Red/BT17_007.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartMainPhase` ActivateClass.
+#   `SetUpActivateClass(..., -1, false, ...)` — `isOptional: false`, so the
+#   trigger is MANDATORY once gated. `CanActivateCondition` requires (a) an
+#   own Tamer permanent whose top card contains "Tai Kamiya"/"TaiKamiya" and
+#   (b) a matching card in own trash. `SelectCardEffect.SetUp(canNoSelect:
+#   () => false, ...)` — declining the pick is not exposed. Printed text has
+#   no "may" → matches the mandatory reading. `optional: false` so no outer
+#   accept/decline prompt installs.
+#
+# Clause 2 (inherited) — `EffectTiming.OnEndTurn` ActivateClass with
+#   `SetUpActivateClass(..., -1, true, ...)` — `isOptional: true`, matching
+#   the printed "may DNA digivolve". Authored as an `alt_path_registration`
+#   declarative clause (`kind: dna_digivolve`, `scope: inherited`,
+#   `trigger: end_of_your_turn`) per the resolved DNA-digivolve idiom
+#   (qa/dsl-vocab-gaps.md BT22-008/BT22-017).
+#
+# Promoted from cards/_examples/BT17-007.yaml on 2026-05-20 (DNA Omnimon
+# missing-card authoring pass). The `_examples` draft was AUDITED-OK; the
+# only correction folded in was setting the start-of-main clause to
+# `optional: false` to match the no-"may" printed text + DCGO `isOptional:
+# false` (the inner `select_trash` was already mandatory at runtime).
+
+card: BT17-007
+name: Agumon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+traits: [Reptile]
+alt_paths:
+  - kind: digivolve
+    from: { name_is: Koromon }
+    cost: 0
+
+effects:
+  # ─── Clause 1: [Start of Your Main Phase] return a card from trash ─────────
+  #
+  # MANDATORY (no "may"; DCGO `isOptional: false`). `optional: false` so no
+  # outer accept/decline prompt installs — once the Tai-Kamiya gate clears
+  # and a matching trash card exists the controller MUST resolve the return.
+  # The inner `select_trash` picker is itself mandatory (DCGO
+  # `canNoSelect: () => false`); when no valid target exists the trigger
+  # simply does not fire (the `condition` gate fails).
+  - when: start_of_your_main_phase
+    optional: false
+    summary: "[Start of Main] If you have a [Tai Kamiya] Tamer, return 1 [Garurumon]/[Greymon]/[Omnimon] from trash to hand"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        name_contains: "Tai Kamiya"
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          filter:
+            any_of:
+              - name_contains: "Garurumon"
+              - name_contains: "Greymon"
+              - name_contains: "Omnimon"
+          prompt: "Return a card to hand"
+      - add_to_hand_from_trash: { of: you, card: pick }
+
+  # ─── Clause 2: [End of Your Turn] inherited DNA digivolve ─────────────────
+  - kind: alt_path_registration
+    scope: inherited
+    trigger: end_of_your_turn
+    registers:
+      kind: dna_digivolve
+    applies_to:
+      of: you
+      zone: [battle_area]

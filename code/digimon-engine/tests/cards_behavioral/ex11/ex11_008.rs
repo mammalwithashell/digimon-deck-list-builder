@@ -22,13 +22,13 @@
 //! breeding area to the battle area. The Rust engine dispatches
 //! `EffectTiming::OnMove` with moved-card event context.
 //!
-//! ## Inherited effects from digivolution stack sources — ENGINE GAP
-//! The engine's enqueue_from_permanent() scans the TOP CARD of each permanent
-//! for effects (including inherited ones). Digivolution-source cards in
-//! card_sources[] are NOT scanned for triggered effects. However, if EX11-008
-//! IS the top card of a permanent on the field, its inherited effects DO fire
-//! correctly. Tests use EX11-008 as the top card to verify the inherited
-//! clause; the digivolution-source path is an engine gap.
+//! ## Inherited effects from digivolution stack sources
+//! An inherited effect (the lower portion of a digi card) is active only while
+//! that card is a digivolution SOURCE sitting beneath another card in a stack
+//! (RULES_CONTEXT.md 15-3-1). The engine's `enqueue_from_permanent` runs a
+//! dedicated source scan that dispatches such effects. Tests place EX11-008 as
+//! a digivolution source under a generic top card to verify the inherited
+//! clause from its legitimate position.
 //!
 //! # Patterns this test covers
 //! - D1 temporary DP buff granted to a selected target (end_of_turn expiry)
@@ -37,7 +37,7 @@
 //!   condition; in practice always true since Elizamon itself has Reptile)
 //! - Mandatory selection (canNoSelect=false) when the effect fires
 //! - Inherited OPT on_opponent_security_removed, Your Turn gate
-//!   (tested with EX11-008 as top card on field — see engine gap note above)
+//!   (tested with EX11-008 as a digivolution source — see note above)
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -427,16 +427,16 @@ fn ex11_008_when_moving_installs_selection_after_breeding_move() {
 // ────────────────────────────────────────────────────────────────────────────
 // Section 4: Inherited — on_opponent_security_removed
 //
-// These tests use EX11-008 as the TOP CARD of a permanent on P0's field.
-// The engine dispatches triggered inherited effects from the top card
-// (enqueue_from_permanent scans top card effects including inherited-scope
-// ones). Having EX11-008 as a digivolution-source in card_sources[] would
-// NOT fire its inherited triggered effects (engine gap — digivolution-source
-// triggered effects are not dispatched).
+// These tests place EX11-008 as a digivolution SOURCE beneath a generic top
+// card on P0's field. An inherited effect is active only while its card is a
+// digivolution source under another card (RULES_CONTEXT.md 15-3-1); the
+// engine's enqueue_from_permanent source scan dispatches such effects from
+// that position.
 // ────────────────────────────────────────────────────────────────────────────
 
-/// Helper: build a runner where P0 has an EX11-008 permanent directly on the
-/// field as the top card (so the inherited effect is dispatched on P0's turn).
+/// Helper: build a runner where P0 has a permanent whose digivolution source
+/// is EX11-008 (a plain FILLER Digimon is the top card), so the inherited
+/// effect is dispatched on P0's turn through the source scan.
 ///
 /// Memory starts at 5 (not 10) so that gain_memory(1) is observable — the
 /// memory_range max is 10, and starting at 10 would mean +1 is capped away.
@@ -451,8 +451,10 @@ fn build_runner_with_elizamon_on_field(
     let builder = extra_builder(builder);
     let mut runner = builder.memory(5).start();
 
-    // Place EX11-008 directly on P0's field as the top card.
-    let elizamon_h = runner.place_on_field(0, "EX11-008", Some(0));
+    // Place EX11-008 as a digivolution source under a plain FILLER top card so
+    // its inherited effect fires through the source scan. EX11-008 is not the
+    // attacker in these tests, so the FILLER top just sits in P0's battle area.
+    let elizamon_h = runner.place_stack(0, &["EX11-008", "FILLER"]);
 
     (runner, elizamon_h)
 }
@@ -520,7 +522,6 @@ fn ex11_008_inherited_does_not_fire_when_not_your_turn() {
 /// tracks `activation_count` during queue drain, this test would fire twice.
 /// Tracked in qa/dsl-vocab-gaps.md.
 #[test]
-#[ignore = "engine gap: OPT not enforced for triggered effects via queue"]
 fn ex11_008_inherited_opt_blocks_second_trigger_same_turn() {
     let (mut runner, _elizamon_h) = build_runner_with_elizamon_on_field(|b| {
         // P1 needs 3+ security to trigger twice.

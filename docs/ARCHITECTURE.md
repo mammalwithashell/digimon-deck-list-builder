@@ -71,7 +71,7 @@ Detailed architecture documentation extracted from CLAUDE.md. For project overvi
 
 ### Action Contract
 
-- Action space size: `2168`
+- Action space size: `2192`
 - `SECURITY_TARGET=14`, `BREEDING_SLOT=14` (= `FIELD_SLOTS`)
 - `SOURCES_PER_FIELD=12` (stride for source selection)
 - Phase-aware decoding in `Game.decode_action`

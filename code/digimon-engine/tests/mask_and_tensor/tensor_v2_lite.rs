@@ -367,6 +367,124 @@ fn v2_lite_pending_choice_rows_encode_effect_category_metadata() {
     assert_eq!(tensor[base + 45], 1.0);
 }
 
+/// Build a stack of `count` distinctly-named test cards on `player`'s field
+/// and relocate it into the breeding area, returning the runner. The breeding
+/// carrier's `card_sources` holds `count` entries (sources 0..count-1).
+fn runner_with_breeding_stack(player: u8, count: usize) -> DebugRunner {
+    let mut builder = DebugRunner::builder();
+    let ids: Vec<String> = (0..count).map(|i| format!("BSRC-{i:02}")).collect();
+    for (i, id) in ids.iter().enumerate() {
+        builder = builder.add_card(make_test_card(id, &format!("BreedSource{i}")));
+    }
+    let mut r = builder.start();
+    let id_refs: Vec<&str> = ids.iter().map(String::as_str).collect();
+    let handle = r.place_stack(player, &id_refs);
+    // Relocate the freshly-built stack into the breeding area (mirrors
+    // DebugRunner::place_in_breeding, which only handles a single card).
+    let perm = r.game.players[player as usize]
+        .battle_area
+        .remove(handle.index as usize);
+    r.game.players[player as usize].breeding_area = Some(perm);
+    r
+}
+
+/// Task S1.4: a breeding-area carrier (e.g. King Drasil) with a 12-card
+/// digivolution stack must surface every source slot in the tensor —
+/// including source index 11 — because `BREEDING_SOURCE_SELECT` makes all
+/// 12 slots (`SOURCES_PER_FIELD == 12`) selectable in the action space.
+#[test]
+fn v2_lite_breeding_carrier_encodes_twelfth_source_slot() {
+    let count = digimon_engine::action::space::SOURCES_PER_FIELD as usize; // 12
+    let r = runner_with_breeding_stack(0, count);
+    let registry = registry_from_runner(&r);
+    let tensor = v2_lite_tensor(&r, 0, &registry);
+
+    let breeding_base = v2_lite::OFF_PERMANENT_SLOTS + 14 * v2_lite::PERMANENT_SLOT_SIZE;
+    assert_eq!(tensor[breeding_base], 1.0, "breeding slot 14 occupied");
+
+    // Assert every card-source SLOT index 0..count of the permanent's
+    // encoded `card_sources` is observable (non-zero card identity) in the
+    // tensor.
+    for source_idx in 0..count {
+        let source_base = breeding_base
+            + v2_lite::PERM_SOURCE_START_OFFSET
+            + source_idx * v2_lite::PERM_SOURCE_ENTRY_SIZE
+            + v2_lite::PERM_SOURCE_CARD_ID_OFFSET;
+        assert!(
+            source_base < v2_lite::OFF_PERMANENT_SLOTS + v2_lite::PERMANENT_SLOTS_SIZE,
+            "source slot {source_idx} falls outside permanent_slots section"
+        );
+        assert_ne!(
+            tensor[source_base], 0.0,
+            "breeding source slot {source_idx} card identity not encoded"
+        );
+    }
+}
+
+/// The same gap exists for the battle-area twin: a battle permanent with a
+/// 12-card digivolution stack must surface source index 11.
+#[test]
+fn v2_lite_battle_permanent_encodes_twelfth_source_slot() {
+    let count = digimon_engine::action::space::SOURCES_PER_FIELD as usize; // 12
+    let mut builder = DebugRunner::builder();
+    let ids: Vec<String> = (0..count).map(|i| format!("BATSRC-{i:02}")).collect();
+    for (i, id) in ids.iter().enumerate() {
+        builder = builder.add_card(make_test_card(id, &format!("BattleSource{i}")));
+    }
+    let mut r = builder.start();
+    let id_refs: Vec<&str> = ids.iter().map(String::as_str).collect();
+    r.place_stack(0, &id_refs);
+    let registry = registry_from_runner(&r);
+    let tensor = v2_lite_tensor(&r, 0, &registry);
+
+    let perm_base = v2_lite::OFF_PERMANENT_SLOTS;
+    assert_eq!(tensor[perm_base], 1.0, "battle slot 0 occupied");
+    for source_idx in 0..count {
+        let source_base = perm_base
+            + v2_lite::PERM_SOURCE_START_OFFSET
+            + source_idx * v2_lite::PERM_SOURCE_ENTRY_SIZE
+            + v2_lite::PERM_SOURCE_CARD_ID_OFFSET;
+        assert!(
+            source_base < v2_lite::OFF_PERMANENT_SLOTS + v2_lite::PERMANENT_SLOTS_SIZE,
+            "source slot {source_idx} falls outside permanent_slots section"
+        );
+        assert_ne!(
+            tensor[source_base], 0.0,
+            "battle source slot {source_idx} card identity not encoded"
+        );
+    }
+}
+
+/// Action ↔ observation consistency: for a breeding carrier, every source
+/// index for which `encode_breeding_source_select(owner, s)` is a legal
+/// action must have an observable source slot in the tensor.
+#[test]
+fn v2_lite_breeding_source_select_actions_all_observable() {
+    use digimon_engine::action::space::{encode_breeding_source_select, SOURCES_PER_FIELD};
+
+    let count = SOURCES_PER_FIELD as usize;
+    let r = runner_with_breeding_stack(0, count);
+    let registry = registry_from_runner(&r);
+    let tensor = v2_lite_tensor(&r, 0, &registry);
+    let breeding_base = v2_lite::OFF_PERMANENT_SLOTS + 14 * v2_lite::PERMANENT_SLOT_SIZE;
+
+    for source in 0..SOURCES_PER_FIELD {
+        // owner carrier index 0 is the observer-relative "own" breeding carrier.
+        assert!(
+            encode_breeding_source_select(0, source).is_some(),
+            "encode_breeding_source_select(0, {source}) should be legal"
+        );
+        let source_base = breeding_base
+            + v2_lite::PERM_SOURCE_START_OFFSET
+            + source as usize * v2_lite::PERM_SOURCE_ENTRY_SIZE
+            + v2_lite::PERM_SOURCE_CARD_ID_OFFSET;
+        assert_ne!(
+            tensor[source_base], 0.0,
+            "BREEDING_SOURCE_SELECT slot {source} selectable but not observable"
+        );
+    }
+}
+
 #[test]
 fn v2_lite_opponent_permanent_rows_do_not_get_attack_affordances() {
     let mut r = DebugRunner::builder()

@@ -1,0 +1,113 @@
+# BT22-084 Nokia Shiramine — Tamer, Red+Blue, Cost 5.
+#
+# Printed card text (data/cards.json):
+#
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [Start of Your Main Phase] [On Play] If you have 1 or fewer Digimon, you
+#   may play 1 [Agumon] or [Gabumon] from your hand without paying the cost.
+#   [All Turns] All your Digimon with [Greymon], [Garurumon] or [Omnimon] in
+#   their names get +1000 DP.
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT22/Red/BT22_084.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartTurn` → `CardEffectFactory
+#   .SetMemoryTo3TamerEffect(card)`. The factory sets memory to 3 only when
+#   the current memory is <= 2 (an unconditional "set 3" gated by the
+#   factory's internal memory check). DSL: `condition: { memory_lte: 2 }` +
+#   `process: [set_memory: 3]`. Not player-optional; no [Once Per Turn].
+#
+# Clause 2 — `EffectTiming.OnStartMainPhase` + `EffectTiming.OnEnterFieldAnyone`
+#   (two ActivateClass entries sharing one coroutine). `SetUpActivateClass(...,
+#   isOptional: true, ...)` — truly optional ("you may"). The gate is "1 or
+#   fewer Digimon" → `CanActivateCondition` counts the controller's
+#   battle-area Digimon. `SelectHandEffect.SetUp(canNoSelect: true, ...)`
+#   with filter `cardSource.IsDigimon && (EqualsCardName("Agumon") ||
+#   EqualsCardName("Gabumon"))`; `mode: PlayForCost` with the cost fixed to
+#   0 (`play ... without paying the cost`). DSL collapses the two timings
+#   into one clause with `when: [start_of_your_main_phase, on_play]` (BT17-015
+#   / AD1-010 idiom). The printed bracketed `[Agumon]`/`[Gabumon]` is a
+#   conventional substring name reference (Comprehensive Rules §16) — the
+#   YAML uses `name_contains`, matching sibling cards BT17-007 / BT17-015.
+#
+# Clause 3 — `ChangeDPStaticEffect`, `changeValue: 1000`, `permanentCondition`
+#   = owner's battle-area Digimon whose TopCard contains "Greymon" /
+#   "Garurumon" / "Omnimon". `isInheritedEffect: false`; `condition` =
+#   `IsExistOnBattleArea(card)` (Nokia on field). DSL: `kind: aura`,
+#   `active_when: { all_turns: true }`, `owner: you`, `dp_modifier: 1000`.
+#   Nokia is a Tamer (no DP) so the predicate can never match her — no
+#   `other:` flag needed.
+#
+# Clause 4 (Security) — `EffectTiming.SecuritySkill` →
+#   `CardEffectFactory.PlaySelfTamerSecurityEffect(card)`. Standard
+#   play_from_security pattern (sister cards: BT22-094, BT17-093, BT18-087,
+#   BT21-015, BT9-092, EX11-054). Mandatory (no [Security] effect is opt-out
+#   per the rules manual §16 / RULES_CONTEXT.md).
+#
+# Promoted from cards/_examples/BT22-084.yaml on 2026-05-20 (DNA Omnimon
+# missing-card authoring pass). The clause-2 gate uses the now-wired
+# non-security `count_lte` aggregate predicate (G-COUNT-LTE-EVAL resolved —
+# predicate.rs:424 evaluates `count_lte` against `count_matching`).
+
+card: BT22-084
+name: Nokia Shiramine
+kind: tamer
+color: [red, blue]
+cost: 5
+
+effects:
+  # ─── Clause 1: [Start of Your Turn] memory <= 2 → set to 3 ────────────────
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  # ─── Clause 2: [Start of Your Main Phase] [On Play] free-play Agumon/Gabumon
+  #
+  # "If you have 1 or fewer Digimon, you may play 1 [Agumon] or [Gabumon] from
+  # your hand without paying the cost." The clause-level `optional: true`
+  # installs an outer accept/decline prompt (G-OUTER-OPTIONAL-NOT-INSTALLED,
+  # closed 2026-05-20) before the inner mandatory `select_hand` picker — so a
+  # player may decline cleanly. `count_lte: 1` over the controller's
+  # battle-area Digimon gates the clause.
+  - when: [start_of_your_main_phase, on_play]
+    optional: true
+    summary: "[Start of Main][On Play] If <=1 Digimon, may free-play 1 [Agumon]/[Gabumon] from hand"
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: digimon }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter:
+            any_of:
+              - name_contains: "Agumon"
+              - name_contains: "Gabumon"
+          prompt: "Play 1 [Agumon] or [Gabumon] from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  # ─── Clause 3: [All Turns] +1000 DP filtered aura ─────────────────────────
+  - kind: aura
+    summary: "[All Turns] Your [Greymon]/[Garurumon]/[Omnimon] Digimon get +1000 DP"
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      any_of:
+        - name_contains: "Greymon"
+        - name_contains: "Garurumon"
+        - name_contains: "Omnimon"
+    dp_modifier: 1000
+
+  # ─── Clause 4: [Security] play self without paying the cost ───────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

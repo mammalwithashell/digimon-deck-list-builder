@@ -333,6 +333,18 @@ fn bt21_081_end_of_turn_with_reptile_installs_selection() {
 
     runner.game.end_turn();
 
+    // The [End of Your Turn] clause is optional ("By suspending this Tamer")
+    // and its body's first step is a mandatory suspend, so an outer
+    // accept/decline prompt installs first (G-OUTER-OPTIONAL-NOT-INSTALLED).
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "[EOT] optional clause must install an outer accept/decline prompt"
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
+
     // Should see a pending selection to choose the Reptile/Dragonkin Digimon.
     let kind = runner.pending_kind();
     assert!(
@@ -379,6 +391,11 @@ fn bt21_081_end_of_turn_selected_reptile_gains_piercing() {
     let mut runner = owen_on_field_with_reptile();
 
     runner.game.end_turn();
+
+    // Accept the outer optional-trigger prompt (G-OUTER-OPTIONAL-NOT-INSTALLED).
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
 
     // Should have a pending selection for the Reptile.
     assert!(
@@ -432,9 +449,13 @@ fn bt21_081_end_of_turn_selected_reptile_gains_piercing() {
 fn bt21_081_piercing_expires_end_of_turn() {
     let mut runner = owen_on_field_with_reptile();
 
-    // Step 1: P0 ends their turn. Owen fires EOT effect — suspends self and
-    // installs a selection prompt (pick Reptile/Dragonkin).
+    // Step 1: P0 ends their turn. Owen's EOT clause is optional — accept the
+    // outer accept/decline prompt (G-OUTER-OPTIONAL-NOT-INSTALLED) so the
+    // body runs (suspends self, installs the Reptile/Dragonkin pick).
     runner.game.end_turn();
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
 
     // Step 2: resolve the selection to grant Piercing.
     if let Some(ref pending) = runner.game.pending_selection {
@@ -544,6 +565,11 @@ fn bt21_081_end_of_turn_selected_digimon_attacks_after_piercing_grant() {
     let mut runner = owen_on_field_with_reptile();
 
     runner.game.end_turn();
+
+    // Accept the outer optional-trigger prompt (G-OUTER-OPTIONAL-NOT-INSTALLED).
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
 
     if let Some(ref pending) = runner.game.pending_selection {
         let action = pending.valid_action_ids[0];

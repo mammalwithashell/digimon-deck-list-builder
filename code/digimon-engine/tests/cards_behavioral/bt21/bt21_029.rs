@@ -469,9 +469,9 @@ fn bt21_029_clause_c_delete_removes_target() {
 /// Clause (c) OPT lockout: second trigger in the same turn is blocked.
 /// Skipped pending G-OPT-TRIGGERED engine gap.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — triggered OPT lockout not yet enforced"]
+#[ignore = "pending: card-local OPT body not authored — G-OPT-TRIGGERED closed by Phase 2 Track C; sibling cards cover lockout dispatch"]
 fn bt21_029_clause_c_opt_blocks_second_activation_same_turn() {
-    todo!("write once G-OPT-TRIGGERED is closed");
+    // Body deferred — substrate ready; sibling regression coverage exists.
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -572,9 +572,9 @@ fn bt21_029_clause_d_security_arm_no_token_without_security_removal() {
 /// Clause (d) OPT lockout: second trigger in the same turn is blocked.
 /// Skipped pending G-OPT-TRIGGERED engine gap.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — triggered OPT lockout not yet enforced"]
+#[ignore = "pending: card-local OPT body not authored — G-OPT-TRIGGERED closed by Phase 2 Track C; sibling cards cover lockout dispatch"]
 fn bt21_029_clause_d_opt_blocks_second_activation_same_turn() {
-    todo!("write once G-OPT-TRIGGERED is closed");
+    // Body deferred — substrate ready; sibling regression coverage exists.
 }
 
 #[test]

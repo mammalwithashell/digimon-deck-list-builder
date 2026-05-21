@@ -8,6 +8,41 @@ Related: [DEPLOYMENT.md](DEPLOYMENT.md) covers DigitalOcean Spaces
 provisioning; [TOOLS.md §7.1](TOOLS.md) documents the `export_onnx.py`
 CLI this workflow depends on.
 
+> ## ⚠️ Action-space break — 2026-05-20 (Task S1.3)
+>
+> Task S1.3 raised the engine action space `ACTION_SPACE_SIZE` from **2168**
+> to **2192** (appended a breeding-carrier source-selection sub-range). This
+> changes the **width of every policy's action head** (and the value/mask
+> wiring). **All ONNX models exported before 2026-05-20 are incompatible
+> with engine builds at or after this change and must be retrained and
+> re-exported.** A 2168-wide policy head loaded against a 2192-action
+> engine will mis-map or reject actions.
+>
+> The project owner has explicitly accepted this break. Operators must:
+> - bump `min_engine_version` on every new `model_versions` row to the
+>   first engine release carrying the 2192 action space, and
+> - retrain + re-export (`export_onnx.py`) every model still in rotation
+>   before pinning it to a post-S1.3 engine.
+>
+> The `standard_full_v2` observation profile also grew (`action_id_features`
+> +24 rows; `tensor_size` 43008 → 43392; `feature_schema_version`
+> `standard_full_v2.2`) — see [TENSOR_SPEC.md](TENSOR_SPEC.md). The default
+> `standard_lite_v2` observation tensor is size-unchanged, but its action
+> **mask** array grows 2168 → 2192.
+
+> ## ⚠️ Observation break — 2026-05-20 (Task S1.4)
+>
+> Task S1.4 raised the v2 profiles' `PERM_MAX_SOURCES` from **11** to **12**
+> so every action-space digivolution-source slot is observable. This grows
+> the **`standard_lite_v2` observation tensor 8320 → 8410** floats
+> (`feature_schema_version` `standard_lite_v2.2`) and **`standard_full_v2`
+> 43392 → 43482** (`standard_full_v2.3`) — see
+> [TENSOR_SPEC.md](TENSOR_SPEC.md). **Models predating `standard_lite_v2.2`
+> are observation-incompatible and must be retrained** — a `standard_lite_v2`
+> policy expects an 8320-wide input layer. Bundle this retrain with the
+> S1.3 action-space break above: one breaking checkpoint covers both. The
+> `standard_compact_v1` (`1375`) profile is unchanged.
+
 ## Overview
 
 ```

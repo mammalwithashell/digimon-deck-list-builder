@@ -144,6 +144,15 @@ pub fn evaluate_with_bindings(
             .and_then(|handle| ctx.game.effective_dp(handle))
             .unwrap_or(0),
         CompiledFormula::BindingPlayCost(name) => binding_play_cost(ctx, name, bindings),
+        CompiledFormula::SourceDp => ctx
+            .source_permanent
+            .and_then(|handle| ctx.game.effective_dp(handle))
+            .unwrap_or(0),
+        CompiledFormula::SourceMaterialCount => ctx
+            .source_permanent
+            .and_then(|handle| target_permanent(ctx, handle))
+            .map(|perm| perm.card_sources.len().saturating_sub(1) as i32)
+            .unwrap_or(0),
         CompiledFormula::SourceStackDpSum {
             target: target_name,
             filter,
@@ -276,6 +285,15 @@ fn evaluate_read_with_raw_and_bindings(
             .and_then(|handle| ctx.game.effective_dp(handle))
             .unwrap_or(0),
         CompiledFormula::BindingPlayCost(name) => binding_play_cost_read(ctx, name, bindings),
+        CompiledFormula::SourceDp => ctx
+            .source_permanent
+            .and_then(|handle| ctx.game.effective_dp(handle))
+            .unwrap_or(0),
+        CompiledFormula::SourceMaterialCount => ctx
+            .source_permanent
+            .and_then(|handle| target_permanent_read(ctx, handle))
+            .map(|perm| perm.card_sources.len().saturating_sub(1) as i32)
+            .unwrap_or(0),
         CompiledFormula::SourceStackDpSum {
             target: target_name,
             filter,
@@ -1067,7 +1085,7 @@ fn evaluate_aggregate(
     });
 
     match sel {
-        A::LowestDp | A::LowestLevel => values.min().unwrap_or(0),
+        A::LowestDp | A::LowestLevel | A::LowestPlayCost => values.min().unwrap_or(0),
         A::HighestDp | A::HighestLevel => values.max().unwrap_or(0),
     }
 }
@@ -1086,7 +1104,7 @@ fn evaluate_aggregate_read(
         });
 
     match sel {
-        A::LowestDp | A::LowestLevel => values.min().unwrap_or(0),
+        A::LowestDp | A::LowestLevel | A::LowestPlayCost => values.min().unwrap_or(0),
         A::HighestDp | A::HighestLevel => values.max().unwrap_or(0),
     }
 }
@@ -1111,6 +1129,14 @@ fn aggregate_value(
             .get(index)?
             .level(&ctx.game.card_data)
             .map(i32::from),
+        A::LowestPlayCost => Some(i32::from(
+            ctx.game
+                .player(player)
+                .battle_area
+                .get(index)?
+                .top_card()
+                .play_cost(&ctx.game.card_data),
+        )),
     }
 }
 
@@ -1131,6 +1157,9 @@ fn aggregate_value_read(
         }
         CompiledAggregateSelector::LowestLevel | CompiledAggregateSelector::HighestLevel => {
             perm.level(ctx.card_data()).map(i32::from)
+        }
+        CompiledAggregateSelector::LowestPlayCost => {
+            Some(i32::from(perm.top_card().play_cost(ctx.card_data())))
         }
     }
 }

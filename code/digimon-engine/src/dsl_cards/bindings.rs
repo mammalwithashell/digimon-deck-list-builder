@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use crate::card_source::CardHandle;
 use crate::enums::PlayerId;
 use crate::permanent::PermanentHandle;
-use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef};
+use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef, UnionZoneOrigin};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum BindingValue {
@@ -18,6 +18,15 @@ pub enum BindingValue {
     CardList(Vec<CardHandle>),
     SourceRefs(Vec<SourceSelectionRef>),
     BreedingPermanentRef(BreedingPermanentSelectionRef),
+    /// A card picked via `select_union_zone` (hand ∪ trash), tagged with the
+    /// `origin` zone it was in and the `owner` of that zone. Carrying the
+    /// origin lets a downstream consumer (`play_union_bound_free`) replay
+    /// the card from its *true* zone — a bare `CardHandle` cannot.
+    UnionCard {
+        card: CardHandle,
+        origin: UnionZoneOrigin,
+        owner: PlayerId,
+    },
 }
 
 #[derive(Debug, Default, Clone)]
@@ -141,6 +150,28 @@ impl Bindings {
 
     pub fn insert_card(&mut self, name: &str, h: CardHandle) {
         self.insert(name, BindingValue::Card(h));
+    }
+
+    /// Record a union-zone (hand ∪ trash) pick together with its origin zone
+    /// and owner. Used by `select_union_zone`'s success callback so a later
+    /// `play_union_bound_free` step can replay the card from its true zone.
+    pub fn insert_union_card(
+        &mut self,
+        name: &str,
+        card: CardHandle,
+        origin: UnionZoneOrigin,
+        owner: PlayerId,
+    ) {
+        self.insert(name, BindingValue::UnionCard { card, origin, owner });
+    }
+
+    /// Fetch a union-zone pick `(card, origin, owner)`. Returns `None` if the
+    /// binding is absent or holds a different `BindingValue` kind.
+    pub fn get_union_card(&self, name: &str) -> Option<(CardHandle, UnionZoneOrigin, PlayerId)> {
+        match self.get(name)? {
+            BindingValue::UnionCard { card, origin, owner } => Some((card, origin, owner)),
+            _ => None,
+        }
     }
 
     pub fn insert_hand_index(&mut self, name: &str, player: PlayerId, i: u16) {

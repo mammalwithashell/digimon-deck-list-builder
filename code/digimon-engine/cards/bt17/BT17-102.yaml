@@ -150,7 +150,7 @@ alt_paths:
     ignore_requirements: true
 
 effects:
-  # ─── Clause 1 — [When Digivolving] +3000 DP if [Koromon] in stack ──────────
+  # ─── Clause 1 — [When Digivolving] +3000 DP if [Koromon], then delete ──────
   #
   # Printed text:
   #   "[When Digivolving] If this Digimon's name is [Koromon], it gets +3000
@@ -161,32 +161,46 @@ effects:
   #   - +3000 DP if Koromon: IMPLEMENTED via `self_digivolution_contains_name:
   #     "Koromon"` (the [All Turns] alias makes Koromon-in-stack equivalent to
   #     "name is Koromon" per DCGO's dynamic ChangeCardNamesClass).
-  #   - Delete sub-clause: BLOCKED (G-FORMULA-SOURCE-DP) — see header docs.
-  #     Omitted from this clause body until the gap closes; including a
-  #     `kind: digimon` delete without the DP filter would over-target
-  #     opponents with arbitrary DP, violating no-approximations.
+  #   - Delete sub-clause: IMPLEMENTED (G-FORMULA-SOURCE-DP resolved
+  #     2026-05-19). `dp_lte: { formula: { source_dp: {} } }` reads the
+  #     carrier permanent's effective DP — exactly DCGO's
+  #     `card.PermanentOfThisCard().DP`. Shared with P-182's [When
+  #     Digivolving] delete.
+  #
+  # The buff is CONDITIONAL on Koromon ("If this Digimon's name is
+  # [Koromon]"); the delete is UNCONDITIONAL ("Then, delete ..."). The
+  # clause therefore carries NO clause-level condition — the +3000 DP is an
+  # `if`-gated step, and the delete always runs.
   #
   # DCGO ordering: DP buff is applied first (only if Koromon-name), then the
-  # delete check uses the now-buffed DP. Once the delete sub-clause is unblocked,
-  # the +3000 buff must precede the delete step in `process:` to preserve this.
+  # delete check uses the now-buffed DP. The `if` buff step precedes the
+  # delete step in `process:` so the `source_dp` formula sees the buffed DP.
   - when: when_digivolving
-    summary: "[When Digivolving] +3000 DP if [Koromon] in digi-stack (delete sub-clause BLOCKED — see header)"
-    condition:
-      self_digivolution_contains_name: "Koromon"
+    summary: "[When Digivolving] +3000 DP if [Koromon] in digi-stack, then delete 1 opp Digimon with DP ≤ this Digimon"
     process:
-      - add_dp_modifier:
-          target: source
-          value: 3000
-          expiry: end_of_turn
-    # BLOCKED follow-up step (uncomment when G-FORMULA-SOURCE-DP closes):
-    #   - select_opponent_permanent:
-    #       bind_as: tgt
-    #       filter:
-    #         all_of:
-    #           - kind: digimon
-    #           - dp_lte: { formula: { source_dp: {} } }   # NEW formula primitive
-    #       prompt: "Delete 1 opp Digimon (DP ≤ this Digimon)"
-    #   - delete_permanent: { target: tgt }
+      - if:
+          condition:
+            self_digivolution_contains_name: "Koromon"
+          then:
+            - add_dp_modifier:
+                target: source
+                value: 3000
+                expiry: end_of_turn
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_opponent_permanent:
+                bind_as: tgt
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: { formula: { source_dp: {} } }
+                prompt: "Delete 1 opp Digimon (DP ≤ this Digimon)"
+            - delete_permanent: { target: tgt }
 
   # ─── Clause 2 — [All Turns] Dynamic name aliasing  [BLOCKED] ───────────────
   #

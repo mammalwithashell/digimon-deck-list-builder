@@ -12,11 +12,47 @@ alt_paths:
     from: { level_eq: 2, color_is: black }
     cost: 0
 
-# Printed [On Play] two-bucket reveal clause is not authored in this pass:
-# add 1 [Mineral]/[Rock] card and 1 [LIBERATOR] card among the top 3, then
-# return the rest to the bottom.
-
+# ─── Clause 0: [On Play] reveal/search two-pick ──────────────────────────────
+#
+# "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the
+# [Mineral] or [Rock] trait and 1 card with the [LIBERATOR] trait among
+# them to the hand. Return the rest to the bottom of the deck."
+#
+# Phase 2 Track E (2026-05-17): authored via two sequential
+# `choose_from_reveal` picks (Mineral/Rock first, then LIBERATOR) followed
+# by `order_remainder { destinations: [deck_bottom] }`. Both picks are
+# optional — if no candidate matches the filter, the pick is skipped (the
+# revealed card stays in the pool until order_remainder routes it).
+#
+# Equivalent to P-206's main reveal clause structure with a different
+# filter pair.
 effects:
+  - when: on_play
+    optional: false
+    summary: "[On Play] Reveal top 3; add 1 Mineral/Rock and 1 LIBERATOR to hand; rest to bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - choose_from_reveal:
+          of: you
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          destination: hand
+          bind_as: mineral_rock_pick
+          prompt: "Add 1 Mineral or Rock card to your hand"
+          optional: true
+      - choose_from_reveal:
+          of: you
+          filter: { trait_has: LIBERATOR }
+          destination: hand
+          bind_as: liberator_pick
+          prompt: "Add 1 LIBERATOR card to your hand"
+          optional: true
+      - order_remainder:
+          of: you
+          destinations: [deck_bottom]
+
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:

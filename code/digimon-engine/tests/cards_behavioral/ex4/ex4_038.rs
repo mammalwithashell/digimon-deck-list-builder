@@ -714,10 +714,11 @@ fn ex4_038_inherited_does_not_fire_on_opponents_turn() {
     );
 }
 
-/// Negative (G-DSL-EVENT-TARGET-IS-SELF — pending): when the carrier hosting
-/// EX4-038 is itself the digivolving permanent, the inherited clause must
-/// NOT fire (printed text says "your OTHER Digimon"). Today the engine
-/// over-fires because there is no `event_target_is_source` predicate.
+/// Negative: when the carrier hosting EX4-038 is itself the digivolving
+/// permanent, the inherited clause must NOT fire (printed text says "your
+/// OTHER Digimon"). The clause's `event_permanent_is_source: false`
+/// predicate compares the digivolving permanent against EX4-038's source
+/// carrier and rejects the fire when they are the same.
 ///
 /// Setup: place EX4-038 as a source under a Lv3 BASE carrier (i.e., the
 /// carrier IS itself currently a Lv3 with EX4-038 in its stack — synthetic
@@ -726,8 +727,6 @@ fn ex4_038_inherited_does_not_fire_on_opponents_turn() {
 /// the digivolving permanent. Per printed text, "other Digimon" excludes
 /// the carrier so no memory should be gained.
 #[test]
-#[ignore = "pending: G-DSL-EVENT-TARGET-IS-SELF (no event_target_is_source predicate; \
-            EX4-038 inherited clause over-fires when carrier itself digivolves)"]
 fn ex4_038_inherited_does_not_fire_when_carrier_self_digivolves() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -770,8 +769,6 @@ fn ex4_038_inherited_does_not_fire_when_carrier_self_digivolves() {
 /// is not yet enforced by the engine queue-drain path. Ignored pending
 /// engine fix.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED (engine queue-drain does not enforce \
-            same-turn lockout for triggered clauses)"]
 fn ex4_038_inherited_once_per_turn_locks_out_second_trigger() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)

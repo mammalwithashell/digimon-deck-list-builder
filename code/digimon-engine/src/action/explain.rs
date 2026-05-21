@@ -1,12 +1,13 @@
 use serde::{Deserialize, Serialize};
 
 use crate::action::space::{
-    decode_attack, decode_digivolve, decode_field_effect, decode_source_select, ACTION_SPACE_SIZE,
-    ATTACK_END, ATTACK_START, BREEDING_TARGET, DIGIVOLVE_END, DIGIVOLVE_START, DNA_DIGIVOLVE_END,
-    DNA_DIGIVOLVE_START, FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START,
-    HAND_EFFECT_END, HAND_EFFECT_START, HATCH, MOVE_FROM_BREEDING, PASS, PLAY_HAND_END,
-    PLAY_HAND_START, SECURITY_TARGET, SOURCE_SELECT_END, SOURCE_SELECT_START, TRASH_EFFECT_END,
-    TRASH_EFFECT_START,
+    decode_attack, decode_breeding_source_select, decode_digivolve, decode_field_effect,
+    decode_source_select, ACTION_SPACE_SIZE, ATTACK_END, ATTACK_START, BREEDING_SOURCE_SELECT_END,
+    BREEDING_SOURCE_SELECT_START, BREEDING_TARGET, DIGIVOLVE_END, DIGIVOLVE_START,
+    DNA_DIGIVOLVE_END, DNA_DIGIVOLVE_START, FIELD_EFFECT_END, FIELD_EFFECT_SLOT_FOR_MAIN,
+    FIELD_EFFECT_START, HAND_EFFECT_END, HAND_EFFECT_START, HATCH, MOVE_FROM_BREEDING, PASS,
+    PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET, SOURCE_SELECT_END, SOURCE_SELECT_START,
+    TRASH_EFFECT_END, TRASH_EFFECT_START,
 };
 use crate::card_source::CardSource;
 use crate::enums::{GamePhase, PlayerId};
@@ -408,6 +409,26 @@ fn explain_selection(game: &Game, player_id: PlayerId, action_id: u16) -> Action
         e.source_index = Some(source);
         e.target_zone = Some(ActionZone::Battle);
         e.target_index = Some(field);
+        return e;
+    }
+
+    // Breeding-carrier source selection (Task S1.3): a source within a
+    // breeding-area digivolving stack (King Drasil). Keyed by carrier owner.
+    if (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&action_id) {
+        let (carrier_owner, source) = decode_breeding_source_select(action_id);
+        let mut e = base(
+            game,
+            player_id,
+            action_id,
+            ActionKind::SourceSelect,
+            format!(
+                "Select source {source} of player {carrier_owner}'s breeding-area Digimon"
+            ),
+        );
+        e.source_zone = Some(ActionZone::Source);
+        e.source_index = Some(source);
+        e.target_zone = Some(ActionZone::Breeding);
+        e.target_index = Some(carrier_owner);
         return e;
     }
 

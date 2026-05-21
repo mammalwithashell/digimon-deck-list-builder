@@ -27,10 +27,11 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
     CompiledDeclarativeClause, CompiledReplacementCause, CompiledScope, CompiledStep,
 };
+use digimon_engine::action::space::{PLAY_HAND_START, TRASH_EFFECT_START};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::CardKind;
 use digimon_engine::replacement::ReplacementCause;
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::selection::{SelectionKind, UnionZoneSet};
 
 fn digimon(id: &str, level: u8, dp: i32, traits: &[&str]) -> digimon_engine::card_data::CardData {
     let mut card = make_test_card(id, id);
@@ -276,23 +277,366 @@ fn ex11_022_inherited_leave_prevention_uses_token_or_other_puppet_and_is_once_pe
     );
 }
 
+/// PUPPETS-G021 (Task 6): union-zone DP filter for hidden-zone candidates.
+///
+/// The selection must offer ONLY Puppet Digimon cards with DP ≤ 4000 from
+/// both hand and trash. Non-Puppet cards and Puppet cards above 4000 DP must
+/// be absent from `valid_action_ids`. The play consumer and turn-end cleanup
+/// are deferred to later tasks (PUPPETS-G014 / PUPPETS-G003, Tasks 7/8).
 #[test]
-#[ignore = "pending: G-HAND-TRASH-CARD-DP-FILTER + PUPPETS-G003 - hidden-zone card DP predicates and identity-stable effect-play cleanup are required"]
-fn ex11_022_on_play_may_play_only_puppet_dp_4000_or_less_from_hand_or_trash_then_cleanup() {
-    let _runner = load_runner();
-    // Required behavior:
-    // - optional prompt is visible;
-    // - legal picks are Puppet trait Digimon cards with printed DP <= 4000
-    //   from hand and trash;
-    // - non-Puppet cards and Puppet cards above 4000 DP are absent from the
-    //   mask;
-    // - the selected card is played from its original zone without cost;
-    // - at turn end, the exact played permanent is deleted even if field
-    //   indices shift before cleanup.
+fn ex11_022_on_play_union_selection_filter_excludes_non_puppet_and_high_dp() {
+    // Cards in hand (after EX11-022 is played from index 0):
+    //   index 0: PUPPET-HAND   — Puppet, DP 3000  → should be OFFERED   (action PLAY_HAND_START+0)
+    //   index 1: PUPPET-HIGH   — Puppet, DP 5000  → should be EXCLUDED  (DP > 4000)
+    //   index 2: NON-PUPPET    — Beast,  DP 2000  → should be EXCLUDED  (not Puppet)
+    // Cards in trash:
+    //   index 0: PUPPET-TRASH  — Puppet, DP 4000  → should be OFFERED   (action TRASH_EFFECT_START+0)
+    //   index 1: PUPPET-HIGH-T — Puppet, DP 6000  → should be EXCLUDED  (DP > 4000)
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-022")
+        .expect("EX11-022 YAML loads")
+        .add_card(digimon("PUPPET-HAND", 4, 3000, &["Puppet"]))
+        .add_card(digimon("PUPPET-HIGH", 4, 5000, &["Puppet"]))
+        .add_card(digimon("NON-PUPPET", 4, 2000, &["Beast"]))
+        .add_card(digimon("PUPPET-TRASH", 4, 4000, &["Puppet"]))
+        .add_card(digimon("PUPPET-HIGH-T", 5, 6000, &["Puppet"]))
+        .hand(0, &["EX11-022", "PUPPET-HAND", "PUPPET-HIGH", "NON-PUPPET"])
+        .memory(10)
+        .start();
+
+    // Push cards to player 0's trash.
+    let puppet_trash_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "PUPPET-TRASH")
+        .expect("PUPPET-TRASH in registry");
+    let puppet_high_t_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "PUPPET-HIGH-T")
+        .expect("PUPPET-HIGH-T in registry");
+    use digimon_engine::card_source::CardSource;
+    let ci0 = runner.game.next_card_index();
+    runner.game.players[0]
+        .trash
+        .push(CardSource::new(puppet_trash_idx, 0, ci0));
+    let ci1 = runner.game.next_card_index();
+    runner.game.players[0]
+        .trash
+        .push(CardSource::new(puppet_high_t_idx, 0, ci1));
+
+    // Play EX11-022 from hand index 0. This triggers the On Play effect.
+    runner.play(0, 0).expect("EX11-022 plays from hand");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("union zone selection must be installed by On Play");
+
+    assert_eq!(
+        view.kind,
+        SelectionKind::UnionZone {
+            zones: UnionZoneSet::HAND | UnionZoneSet::TRASH
+        },
+        "pending selection must be a union-zone prompt"
+    );
+    assert!(view.is_optional, "the selection must be optional ('you may')");
+
+    // Exactly 2 eligible candidates: PUPPET-HAND (hand[0]) + PUPPET-TRASH (trash[0]).
+    assert_eq!(
+        view.valid_action_ids.len(),
+        2,
+        "only PUPPET-HAND and PUPPET-TRASH should be eligible; got {:?}",
+        view.valid_action_ids
+    );
+
+    // Hand index 0 maps to PLAY_HAND_START + 0.
+    assert!(
+        view.valid_action_ids.contains(&(PLAY_HAND_START + 0)),
+        "PUPPET-HAND (hand index 0, DP 3000, Puppet) must be offered"
+    );
+    // Trash index 0 maps to TRASH_EFFECT_START + 0.
+    assert!(
+        view.valid_action_ids.contains(&(TRASH_EFFECT_START + 0)),
+        "PUPPET-TRASH (trash index 0, DP 4000, Puppet) must be offered"
+    );
+
+    // Verify the excluded cards are absent.
+    assert!(
+        !view.valid_action_ids.contains(&(PLAY_HAND_START + 1)),
+        "PUPPET-HIGH (DP 5000) must be excluded"
+    );
+    assert!(
+        !view.valid_action_ids.contains(&(PLAY_HAND_START + 2)),
+        "NON-PUPPET (Beast trait) must be excluded"
+    );
+    assert!(
+        !view.valid_action_ids.contains(&(TRASH_EFFECT_START + 1)),
+        "PUPPET-HIGH-T (DP 6000) must be excluded"
+    );
 }
 
+/// PUPPETS-G003 (Task 11): On Play union-zone play + turn-end cleanup.
+///
+/// Playing EX11-022 plays a [Puppet] Digimon free from hand; at turn end the
+/// exact played permanent is deleted while EX11-022 itself survives.
 #[test]
-#[ignore = "pending: G-HAND-TRASH-CARD-DP-FILTER + PUPPETS-G003 - same blocked body as On Play must fire on When Digivolving"]
+fn ex11_022_on_play_selected_puppet_is_played_free_and_deleted_at_turn_end() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-022")
+        .expect("EX11-022 YAML loads")
+        .add_card(digimon("PUPPET-HAND", 4, 3000, &["Puppet"]))
+        .hand(0, &["EX11-022", "PUPPET-HAND"])
+        .memory(10)
+        .start();
+    runner.game.enter_main_phase();
+
+    // Play EX11-022 from hand index 0 — fires the On Play union pick.
+    runner.play(0, 0).expect("EX11-022 plays from hand");
+    let view = runner
+        .pending_selection_view()
+        .expect("On Play union-zone selection installs");
+    assert_eq!(view.valid_action_ids.len(), 1, "only PUPPET-HAND is eligible");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("pick PUPPET-HAND");
+    runner.auto_resolve().expect("finish On Play body");
+
+    // PUPPET-HAND is now on field, played for free.
+    let field = card_ids_on_field(&runner, 0);
+    assert!(
+        field.contains(&"PUPPET-HAND".to_string()),
+        "the picked Puppet must be played to the battle area"
+    );
+    assert!(
+        field.contains(&"EX11-022".to_string()),
+        "EX11-022 itself is on the field"
+    );
+
+    // End the turn — the cleanup rider deletes the effect-played permanent.
+    runner.end_turn();
+    runner.auto_resolve().expect("finish end-of-turn cleanup");
+
+    let field_after = card_ids_on_field(&runner, 0);
+    assert!(
+        !field_after.contains(&"PUPPET-HAND".to_string()),
+        "the effect-played Puppet must be deleted at turn end"
+    );
+    assert!(
+        field_after.contains(&"EX11-022".to_string()),
+        "EX11-022 itself must NOT be deleted — only the Digimon it played"
+    );
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "PUPPET-HAND"),
+        "the deleted Puppet is in the trash"
+    );
+}
+
+/// PUPPETS-G003 (Task 11): the cleanup must target the EXACT effect-played
+/// permanent even after battle-area indices shift. Another permanent is played
+/// at a lower index after the Puppet; the cleanup must still hit the Puppet
+/// and leave the unrelated permanent alone.
+#[test]
+fn ex11_022_turn_end_cleanup_survives_index_shift_and_deletes_only_played_puppet() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-022")
+        .expect("EX11-022 YAML loads")
+        .add_card(digimon("PUPPET-HAND", 4, 3000, &["Puppet"]))
+        .add_card(digimon("UNRELATED", 3, 2000, &["Puppet"]))
+        .hand(0, &["EX11-022", "PUPPET-HAND", "UNRELATED"])
+        .memory(20)
+        .start();
+    runner.game.enter_main_phase();
+
+    // Play EX11-022, pick PUPPET-HAND via the On Play union selection.
+    runner.play(0, 0).expect("EX11-022 plays from hand");
+    let view = runner
+        .pending_selection_view()
+        .expect("On Play union-zone selection installs");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("pick PUPPET-HAND");
+    runner.auto_resolve().expect("finish On Play body");
+
+    // Capture the played Puppet's stable card identity now, before any shift.
+    let puppet_field_idx = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == "PUPPET-HAND")
+        .expect("PUPPET-HAND on field");
+    let puppet_card_index = runner.game.players[0].battle_area[puppet_field_idx]
+        .top_card()
+        .card_index;
+
+    // Delete EX11-022 (a lower field index) so the Puppet's index shifts down.
+    let kara_idx = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == "EX11-022")
+        .expect("EX11-022 on field");
+    let kara_handle = runner.perm_handle(0, kara_idx);
+    runner
+        .game
+        .delete_permanent_with_cause(kara_handle, ReplacementCause::OwnEffect);
+    runner.auto_resolve().expect("finish EX11-022 deletion");
+
+    // Play a fresh UNRELATED Puppet — it must NOT be deleted at turn end.
+    let unrelated_hand_idx = runner.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "UNRELATED")
+        .expect("UNRELATED in hand");
+    runner
+        .play(0, unrelated_hand_idx)
+        .expect("UNRELATED plays from hand");
+    runner.auto_resolve().expect("finish UNRELATED play");
+
+    // The played Puppet is still on field (at a possibly different index).
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_index == puppet_card_index),
+        "the effect-played Puppet is still on the field before turn end"
+    );
+
+    // End the turn — cleanup must resolve the Puppet by stable identity.
+    runner.end_turn();
+    runner.auto_resolve().expect("finish end-of-turn cleanup");
+
+    let field_after = card_ids_on_field(&runner, 0);
+    assert!(
+        !runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_index == puppet_card_index),
+        "the exact effect-played Puppet must be deleted despite the index shift"
+    );
+    assert!(
+        field_after.contains(&"UNRELATED".to_string()),
+        "the unrelated Puppet played later must NOT be deleted"
+    );
+}
+
+/// PUPPETS-G003 (Task 11): no-op cleanup. If the effect-played permanent has
+/// already left the battle area before turn end, the scheduled deletion is a
+/// silent no-op (it does not delete a substitute or panic).
+#[test]
+fn ex11_022_turn_end_cleanup_is_noop_if_played_puppet_already_left() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-022")
+        .expect("EX11-022 YAML loads")
+        .add_card(digimon("PUPPET-HAND", 4, 3000, &["Puppet"]))
+        .add_card(digimon("BYSTANDER", 3, 2000, &["Puppet"]))
+        .hand(0, &["EX11-022", "PUPPET-HAND"])
+        .memory(10)
+        .start();
+    runner.game.enter_main_phase();
+
+    runner.play(0, 0).expect("EX11-022 plays from hand");
+    let view = runner
+        .pending_selection_view()
+        .expect("On Play union-zone selection installs");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("pick PUPPET-HAND");
+    runner.auto_resolve().expect("finish On Play body");
+
+    // A bystander Puppet that must survive — it must not be deleted in place of
+    // the already-gone scheduled target.
+    runner.place_on_field(0, "BYSTANDER", Some(0));
+
+    // The effect-played Puppet leaves early (deleted by an unrelated effect).
+    let puppet_idx = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == "PUPPET-HAND")
+        .expect("PUPPET-HAND on field");
+    let puppet_handle = runner.perm_handle(0, puppet_idx);
+    runner
+        .game
+        .delete_permanent_with_cause(puppet_handle, ReplacementCause::OwnEffect);
+    runner.auto_resolve().expect("finish early Puppet deletion");
+
+    // End the turn — the scheduled cleanup is a no-op.
+    runner.end_turn();
+    runner.auto_resolve().expect("finish end-of-turn cleanup");
+
+    let field_after = card_ids_on_field(&runner, 0);
+    assert!(
+        field_after.contains(&"BYSTANDER".to_string()),
+        "the bystander Puppet must NOT be deleted by the no-op cleanup"
+    );
+    assert!(
+        field_after.contains(&"EX11-022".to_string()),
+        "EX11-022 itself is unaffected"
+    );
+}
+
+/// PUPPETS-G003 (Task 11): the When-Digivolving timing fires the same optional
+/// union-zone play + turn-end cleanup body as On Play.
+#[test]
 fn ex11_022_when_digivolving_uses_same_optional_play_and_cleanup_body() {
-    let _runner = load_runner();
+    let mut base = make_test_card("BASE-LV4", "BaseLv4");
+    base.card_kind = CardKind::Digimon;
+    base.level = Some(4);
+    base.dp = Some(4000);
+    base.colors = vec![digimon_engine::enums::CardColor::Yellow];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-022")
+        .expect("EX11-022 YAML loads")
+        .add_card(base)
+        .add_card(digimon("PUPPET-HAND", 4, 3000, &["Puppet"]))
+        .hand(0, &["EX11-022", "PUPPET-HAND"])
+        .memory(20)
+        .start();
+
+    let base_handle = runner.place_on_field(0, "BASE-LV4", Some(0));
+    runner.game.enter_main_phase();
+
+    // Digivolve EX11-022 (hand index 0) onto the Lv.4 yellow base.
+    let kara_hand_idx = runner.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "EX11-022")
+        .expect("EX11-022 in hand");
+    let ok = runner.game.digivolve_from_hand(
+        0,
+        kara_hand_idx,
+        base_handle.index as usize,
+        digimon_engine::enums::PlaySource::ByDigivolve,
+    );
+    assert!(ok, "digivolve EX11-022 onto the Lv.4 base must succeed");
+    runner.game.drain_effect_queue();
+
+    // The When-Digivolving union pick installs.
+    let view = runner
+        .pending_selection_view()
+        .expect("When Digivolving union-zone selection installs");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("pick PUPPET-HAND");
+    runner.auto_resolve().expect("finish When Digivolving body");
+
+    assert!(
+        card_ids_on_field(&runner, 0).contains(&"PUPPET-HAND".to_string()),
+        "the picked Puppet is played by the When Digivolving effect"
+    );
+
+    runner.end_turn();
+    runner.auto_resolve().expect("finish end-of-turn cleanup");
+
+    assert!(
+        !card_ids_on_field(&runner, 0).contains(&"PUPPET-HAND".to_string()),
+        "the effect-played Puppet must be deleted at turn end"
+    );
+    assert!(
+        card_ids_on_field(&runner, 0).contains(&"EX11-022".to_string()),
+        "the EX11-022 stack itself must survive"
+    );
 }

@@ -38,6 +38,7 @@ fn fixture_delay(scope: CompiledScope, trigger: CompiledTiming) -> CompiledCard 
         ace_overflow: None,
         identity: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
         dual: None,
         use_requirement: None,
         alt_paths: vec![],
@@ -75,6 +76,26 @@ fn delay_end_of_your_turn_maps_to_end_of_this_turn() {
         effects[0].delay_trigger,
         Some(DelayTrigger::EndOfThisTurn),
         "EndOfYourTurn must map to EndOfThisTurn"
+    );
+}
+
+/// PUPPETS-G009 — `CompiledTiming::Delayed` (`trigger: delayed` in YAML) maps
+/// to `DelayTrigger::MainPhaseActivated`: the standard printed `<Delay>`
+/// player-visible `[Main]`-phase activation. The emitted effect still has
+/// `timing == DelayEffect`.
+#[test]
+fn delay_delayed_trigger_maps_to_main_phase_activated() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_delay(
+        CompiledScope::FaceUp,
+        CompiledTiming::Delayed,
+    )));
+    let effects = dsl.effects(CardHandle(0));
+    assert_eq!(effects.len(), 1);
+    assert_eq!(effects[0].timing, EffectTiming::DelayEffect);
+    assert_eq!(
+        effects[0].delay_trigger,
+        Some(DelayTrigger::MainPhaseActivated),
+        "`delayed` trigger must map to the player-activated MainPhaseActivated"
     );
 }
 

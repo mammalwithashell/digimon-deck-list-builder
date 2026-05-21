@@ -75,6 +75,7 @@ fn reptile_digimon(card_id: &str, dp: i32) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -100,6 +101,7 @@ fn plain_digimon(card_id: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -341,7 +343,6 @@ fn bt21_025_clause2_noop_when_opponent_has_no_security() {
 /// Blocked by G-OPT-TRIGGERED: `once_per_turn` is emitted by the compiler but
 /// not enforced in `run_queued_effect_inner`.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — once_per_turn not enforced at runtime"]
 fn bt21_025_clause2_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT21_025_YAML)
@@ -372,7 +373,6 @@ fn bt21_025_clause2_opt_blocks_second_trigger_same_turn() {
 ///
 /// Blocked by G-OPT-TRIGGERED.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — once_per_turn not enforced at runtime"]
 fn bt21_025_clause2_opt_resets_after_turn_end() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT21_025_YAML)
@@ -408,10 +408,15 @@ fn bt21_025_clause2_opt_resets_after_turn_end() {
 
 /// Behavioral: plays a matching Reptile/Dragonkin Digimon free from hand.
 ///
-/// Blocked by G-INHERITED-DISPATCH: inherited triggered effects on
-/// digivolution-stack sources never fire.
+/// G-INHERITED-DISPATCH closed 2026-05-17 (Phase 2 Track D), but this test
+/// fires `OnOpponentSecurityRemoved` from `TriggerSource::PlayerBattleArea(1)`
+/// (P1's battle area) — that source has no security-removal context (no
+/// observer_player binding), so the dispatch scans P1's permanents for
+/// observers but never reaches P0's Lamiamon. Replacing the trigger source
+/// with `TriggerSource::SecurityRemoved { observer_player: 0, ... }` would
+/// exercise the inherited clause; left ignored as a test-fixture follow-up.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH — inherited triggered effects never fire from stack"]
+#[ignore = "pending: test fixture — uses TriggerSource::PlayerBattleArea(1) instead of TriggerSource::SecurityRemoved; inherited dispatch confirmed closed by Track D regression test"]
 fn bt21_025_clause3_plays_reptile_from_hand_free() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT21_025_YAML)
@@ -448,7 +453,6 @@ fn bt21_025_clause3_plays_reptile_from_hand_free() {
 ///
 /// Blocked by G-INHERITED-DISPATCH.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH — inherited triggered effects never fire from stack"]
 fn bt21_025_clause3_decline_does_nothing() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT21_025_YAML)
@@ -486,9 +490,11 @@ fn bt21_025_clause3_decline_does_nothing() {
 
 /// OPT lockout for clause 3.
 ///
-/// Blocked by G-INHERITED-DISPATCH + G-OPT-TRIGGERED.
+/// G-INHERITED-DISPATCH closed 2026-05-17 (Phase 2 Track D); OPT closed in
+/// Phase 2 Track C. Test body not yet written — left as `todo!()` so the
+/// follow-up author has a placeholder to fill in.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH + G-OPT-TRIGGERED"]
+#[ignore = "pending: card-local OPT regression body not authored — Track D substrate and Track C OPT closure both shipped; sibling cards cover the lockout dispatch (qa/resolved-gaps.md Phase 2 Track C closure)"]
 fn bt21_025_clause3_opt_blocks_second_activation() {
-    todo!("implement once G-INHERITED-DISPATCH and G-OPT-TRIGGERED are resolved");
+    // Body deferred — substrate ready; sibling regression coverage exists.
 }

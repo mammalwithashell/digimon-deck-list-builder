@@ -80,7 +80,21 @@ fn bt15_003_yaml_loads_as_inherited_when_attacking_opt_clause() {
 
 #[test]
 fn bt15_003_when_attacking_offers_top_bottom_security_choice() {
-    let runner = start_attack_with_nyaromon(nyaromon_runner(&["SEC-BOTTOM", "SEC-TOP"]), true);
+    let mut runner = start_attack_with_nyaromon(nyaromon_runner(&["SEC-BOTTOM", "SEC-TOP"]), true);
+
+    // The clause is `optional: true` and its first body step (`select_effect_
+    // choice`) is itself mandatory once entered — so G-OUTER-OPTIONAL-NOT-
+    // INSTALLED surfaces an explicit outer accept/decline prompt first
+    // (faithful to the printed "By trashing ... gain 1 memory" optional cost).
+    {
+        let view = runner
+            .pending_selection_view()
+            .expect("outer optional-trigger prompt must be pending");
+        assert_eq!(view.kind, SelectionKind::Replacement);
+    }
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
 
     let view = runner
         .pending_selection_view()
@@ -108,6 +122,9 @@ fn bt15_003_top_branch_trashes_top_security_and_gains_memory() {
     let security_before = runner.security_count(0);
 
     runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
+    runner
         .execute_branch(0)
         .expect("choose top security branch");
     runner.auto_resolve().expect("top branch resolves");
@@ -122,12 +139,14 @@ fn bt15_003_top_branch_trashes_top_security_and_gains_memory() {
 }
 
 #[test]
-#[ignore = "pending: DSL/engine gap for trashing a selected or bottom security card"]
 fn bt15_003_bottom_branch_trashes_bottom_security_and_gains_memory() {
     let mut runner = start_attack_with_nyaromon(nyaromon_runner(&["SEC-BOTTOM", "SEC-TOP"]), true);
     let memory_before = runner.memory();
     let security_before = runner.security_count(0);
 
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
     runner
         .execute_branch(1)
         .expect("choose bottom security branch");

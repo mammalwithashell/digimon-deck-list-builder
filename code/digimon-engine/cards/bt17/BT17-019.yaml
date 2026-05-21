@@ -17,7 +17,7 @@
 #  digivolve since Tsunomon IS a Lv.2 Blue Digimon. We do not author it
 #  separately — it would create a duplicate alt-path with no behavioral
 #  difference. Sister card BT17-007 (Agumon) has the same DCGO pattern
-#  for "Koromon" and its YAML in cards/_examples/BT17-007.yaml similarly
+#  for "Koromon" and its YAML in cards/bt17/BT17-007.yaml similarly
 #  authors only the standard digivolve alt-path. See test docstring for
 #  the cross-check.)
 #
@@ -40,7 +40,7 @@
 # Sister card:
 #   BT17-007 (Agumon, Tai Kamiya) — same shape, swaps the Matt-Ishida
 #   tamer for Tai-Kamiya and the Draw 1 payload for a name-filtered
-#   trash-to-hand select. See cards/_examples/BT17-007.yaml for the
+#   trash-to-hand select. See cards/bt17/BT17-007.yaml for the
 #   reference template this YAML adapts.
 
 card: BT17-019

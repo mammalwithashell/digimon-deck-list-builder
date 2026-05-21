@@ -233,7 +233,7 @@ class TestAdminModelsCRUD:
         body = resp.json()
 
         assert body["tensor_size"] == 1375
-        assert body["action_space_size"] == 2168
+        assert body["action_space_size"] == 2192
         assert body["state"] == "uploaded"
         assert body["file_size_bytes"] > 0
 
@@ -255,7 +255,7 @@ class TestAdminModelsCRUD:
         assert resp.status_code == 200, resp.text
         body = resp.json()
         assert body["tensor_size"] == 1375
-        assert body["action_space_size"] == 2168
+        assert body["action_space_size"] == 2192
 
     async def test_confirm_fails_if_onnx_missing_obs_input(
         self, client: AsyncClient, session_factory, invalid_no_obs_path: Path
