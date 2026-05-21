@@ -359,7 +359,9 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
                 return true;
             };
-            let _ = ctx.place_as_bottom_source(source_ref, target_handle);
+            // `face_down: false` — DSL `place_as_bottom_source` step has no
+            // face-down flag yet; Task A1.3 will add one.
+            let _ = ctx.place_as_bottom_source(source_ref, target_handle, false);
             true
         }
         CompiledStep::TrashTopSource { target } => {

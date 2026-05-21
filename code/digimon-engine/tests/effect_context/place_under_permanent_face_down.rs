@@ -12,8 +12,9 @@
 //!     `CardSource.face_down == false` (preserves prior face-up default).
 
 use digimon_engine::card_data::CardData;
-use digimon_engine::card_source::CardSource;
+use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{CardColor, CardKind, CardSourceRef};
 use digimon_engine::permanent::{Permanent, PermanentHandle};
 
@@ -65,6 +66,21 @@ fn make_tamer(id: &str) -> CardData {
         ace_overflow: None,
         digixros_aliases: Vec::new(),
     }
+}
+
+/// Push a card into player 0's hand directly, returning its handle.
+fn push_to_hand(r: &mut DebugRunner, card_id: &str) -> CardHandle {
+    let g = r.game_mut();
+    let data_idx = g
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("push_to_hand: unknown card_id {}", card_id));
+    let card_idx = g.next_card_index();
+    let card = CardSource::new(data_idx, 0, card_idx);
+    let handle = card.handle();
+    g.players[0].hand.push(card);
+    handle
 }
 
 /// Seed a single-card permanent on player 0's battle area.
@@ -152,5 +168,45 @@ fn place_hand_card_under_digimon_face_up_leaves_flag_clear() {
     assert!(
         !bottom.face_down,
         "the placed source must stay face-up when face_down=false was passed"
+    );
+}
+
+/// Task A1.2 — `EffectContext::place_card_under_permanent_bottom` gains a
+/// `face_down` axis. Tucking a hand card under a Digimon with `face_down: true`
+/// marks the inserted source face-down.
+#[test]
+fn place_card_under_permanent_bottom_face_down_sets_flag() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("BASE"))
+        .add_card(make_digimon("TUCK"))
+        .start();
+
+    let base = seed_permanent(&mut r, "BASE");
+    let tuck = push_to_hand(&mut r, "TUCK");
+    assert_eq!(r.hand_size(0), 1, "hand has the tuck card before");
+
+    {
+        let mut ctx = EffectContext::new(&mut r.game, tuck, None, 0);
+        ctx.place_card_under_permanent_bottom(tuck, base, true);
+    }
+
+    assert_eq!(r.hand_size(0), 0, "hand emptied after placement");
+
+    let perm = &r.game.player(0).battle_area[base.index as usize];
+    assert_eq!(perm.card_sources.len(), 2, "base now has 2 sources");
+    let bottom = &perm.card_sources[0];
+    assert_eq!(
+        bottom.card_id(&r.game.card_data),
+        "TUCK",
+        "tuck card lands at the bottom of the stack"
+    );
+    assert!(
+        bottom.face_down,
+        "the placed source must be face-down when face_down=true was passed"
+    );
+    assert_eq!(
+        perm.top_card().card_id(&r.game.card_data),
+        "BASE",
+        "base's own card stays at the top"
     );
 }

@@ -2818,11 +2818,10 @@ impl<'a> EffectContext<'a> {
         &mut self,
         source: crate::enums::CardSourceRef,
         target: PermanentHandle,
+        face_down: bool,
     ) -> bool {
-        // `face_down: false` — ordinary face-up placement. Task A1.2 will give
-        // this wrapper its own `face_down` parameter for Tamer-stash callers.
         self.game
-            .place_as_bottom_source_observed(source, target, self.player, false)
+            .place_as_bottom_source_observed(source, target, self.player, face_down)
     }
 
     pub fn place_permanent_as_bottom_sources(
@@ -2869,8 +2868,13 @@ impl<'a> EffectContext<'a> {
     /// programming error (passing an invalid or already-moved handle).
     ///
     /// Used by: `<Save>`, `<Material Save N>`.
-    pub fn place_card_under_permanent_bottom(&mut self, card: CardHandle, target: PermanentHandle) {
-        let taken = self
+    pub fn place_card_under_permanent_bottom(
+        &mut self,
+        card: CardHandle,
+        target: PermanentHandle,
+        face_down: bool,
+    ) {
+        let mut taken = self
             .game
             .remove_card_from_any_zone(card)
             .unwrap_or_else(|| {
@@ -2884,9 +2888,12 @@ impl<'a> EffectContext<'a> {
         if (target.index as usize) >= target_player.battle_area.len() {
             // Safe-fail: target permanent no longer exists; route to its
             // controller's trash rather than dropping the card on the floor.
+            // Trashed cards are not face-down sources, so `face_down` is not
+            // applied on this path.
             target_player.trash.push(taken);
             return;
         }
+        taken.face_down = face_down;
         target_player.battle_area[target.index as usize].push_under(taken);
     }
 

@@ -579,7 +579,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                         // `battle_area` and fires `OnAnyDeletion` — so
                         // observers like Fortitude will see the
                         // deletion event.
-                        ctx.place_card_under_permanent_bottom(self_card, tamer);
+                        ctx.place_card_under_permanent_bottom(self_card, tamer, false);
                     },
                 );
             })
@@ -1029,7 +1029,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                                 // of the Tamer's stack, mirroring DCGO's
                                 // `AddDigivolutionCardsBottom`.
                                 for source in picks {
-                                    ctx.place_card_under_permanent_bottom(source, tamer);
+                                    ctx.place_card_under_permanent_bottom(source, tamer, false);
                                 }
                             },
                         );
