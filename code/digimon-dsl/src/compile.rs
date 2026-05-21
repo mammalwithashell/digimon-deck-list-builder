@@ -1551,6 +1551,7 @@ fn compile_step(
         S::PlaceAsBottomSource(a) => CompiledStep::PlaceAsBottomSource {
             source: compile_binding_ref(&a.source),
             target: compile_binding_ref(&a.target),
+            face_down: a.face_down.unwrap_or(false),
         },
         S::TrashTopSource(a) => CompiledStep::TrashTopSource {
             target: compile_binding_ref(&a.target),

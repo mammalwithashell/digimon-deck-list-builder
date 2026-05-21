@@ -101,6 +101,7 @@ mod phase4_raw_rust_formula;
 mod phase4_raw_rust_registry;
 mod phase4_raw_rust_step;
 mod phase4_retirement_guard;
+mod place_as_bottom_source_face_down;
 mod pretty;
 mod raw_rust_registry;
 mod real_cards_json;

@@ -345,7 +345,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             );
             true
         }
-        CompiledStep::PlaceAsBottomSource { source, target } => {
+        CompiledStep::PlaceAsBottomSource {
+            source,
+            target,
+            face_down,
+        } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
                 _ => return true,
@@ -359,9 +363,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
                 return true;
             };
-            // `face_down: false` — DSL `place_as_bottom_source` step has no
-            // face-down flag yet; Task A1.3 will add one.
-            let _ = ctx.place_as_bottom_source(source_ref, target_handle, false);
+            let _ = ctx.place_as_bottom_source(source_ref, target_handle, *face_down);
             true
         }
         CompiledStep::TrashTopSource { target } => {

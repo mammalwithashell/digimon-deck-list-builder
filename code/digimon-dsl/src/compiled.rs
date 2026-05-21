@@ -761,6 +761,7 @@ pub enum CompiledStep {
     PlaceAsBottomSource {
         source: CompiledBindingRef,
         target: CompiledBindingRef,
+        face_down: bool,
     },
     TrashTopSource {
         target: CompiledBindingRef,

@@ -93,6 +93,7 @@ fn place_as_bottom_source_step_tucks_hand_card_under_target_permanent() {
     let step = CompiledStep::PlaceAsBottomSource {
         source: CompiledBindingRef::Named("src".into()),
         target: CompiledBindingRef::Named("tgt".into()),
+        face_down: false,
     };
 
     {
@@ -148,6 +149,7 @@ fn place_as_bottom_source_uses_bound_hand_owner() {
     let step = CompiledStep::PlaceAsBottomSource {
         source: CompiledBindingRef::Named("src".into()),
         target: CompiledBindingRef::Named("tgt".into()),
+        face_down: false,
     };
 
     {
