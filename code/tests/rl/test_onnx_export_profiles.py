@@ -24,11 +24,13 @@ def _load_tool(module_name: str):
 
 
 def _profile() -> SimpleNamespace:
+    # Synthetic fixture; keep it consistent with the real standard_lite_v2
+    # layout (Task S1.4: schema v2.2, tensor_size 8410).
     return SimpleNamespace(
         id="standard_lite_v2",
         tensor_version=2,
-        feature_schema_version="standard_lite_v2.1",
-        tensor_size=8320,
+        feature_schema_version="standard_lite_v2.2",
+        tensor_size=8410,
         layout_hash="sha256:test-layout",
     )
 
@@ -116,8 +118,8 @@ def test_export_onnx_writes_profile_metadata(tmp_path) -> None:
     assert metadata == {
         "observation_profile": "standard_lite_v2",
         "tensor_version": 2,
-        "feature_schema_version": "standard_lite_v2.1",
-        "tensor_size": 8320,
+        "feature_schema_version": "standard_lite_v2.2",
+        "tensor_size": 8410,
         "tensor_layout_hash": "sha256:test-layout",
         "action_space_size": export_onnx.ACTION_SPACE_SIZE,
         "card_registry_capacity": export_onnx.REGISTRY_CAPACITY,
@@ -127,7 +129,7 @@ def test_export_onnx_writes_profile_metadata(tmp_path) -> None:
 
 def test_export_onnx_checkpoint_observation_profile_match_passes() -> None:
     export_onnx = _load_tool("export_onnx")
-    model = SimpleNamespace(observation_space=SimpleNamespace(shape=(8320,)))
+    model = SimpleNamespace(observation_space=SimpleNamespace(shape=(8410,)))
 
     export_onnx.validate_checkpoint_observation_profile(model, _profile())
 
@@ -142,7 +144,7 @@ def test_export_onnx_checkpoint_observation_profile_mismatch_fails() -> None:
     message = str(exc_info.value)
     assert "SB3 checkpoint observation size 1375" in message
     assert "requested tensor profile 'standard_lite_v2'" in message
-    assert "expected tensor size 8320" in message
+    assert "expected tensor size 8410" in message
     assert "Pass the correct --tensor-profile or retrain" in message
 
 
@@ -156,8 +158,8 @@ def test_export_random_onnx_writes_profile_metadata(tmp_path) -> None:
     assert metadata == {
         "observation_profile": "standard_lite_v2",
         "tensor_version": 2,
-        "feature_schema_version": "standard_lite_v2.1",
-        "tensor_size": 8320,
+        "feature_schema_version": "standard_lite_v2.2",
+        "tensor_size": 8410,
         "tensor_layout_hash": "sha256:test-layout",
         "action_space_size": export_random_onnx.ACTION_SPACE_SIZE,
         "card_registry_capacity": export_random_onnx.REGISTRY_CAPACITY,

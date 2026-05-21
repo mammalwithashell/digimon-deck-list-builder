@@ -523,6 +523,9 @@ fn compile_predicate(
         name_contains: p.name_contains.clone(),
         effect_text_contains: p.effect_text_contains.clone(),
         name_in: p.name_in.clone(),
+        name_not_shared_by_field_digimon: p
+            .name_not_shared_by_field_digimon
+            .map(|s| compile_player_ref(s.player())),
         card_number_is: p.card_number_is.clone(),
         play_cost_lte: p
             .play_cost_lte
@@ -2114,6 +2117,16 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+        },
+        S::SelectMaterials(a) => CompiledStep::SelectMaterials {
+            of_permanent: compile_binding_ref(&a.of_permanent),
+            max: compile_count_bound(&a.max, &format!("{prefix}.max"), card_id, errors),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            uniqueness: a.uniqueness.map(compile_distinct_by),
+            bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+            prompt_key: a.prompt_key.clone(),
+            optional_zero: a.optional_zero,
         },
         S::SelectOwnSources(a) => CompiledStep::SelectOwnSources {
             target: a

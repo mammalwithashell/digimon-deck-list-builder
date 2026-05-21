@@ -507,6 +507,51 @@ pub fn try_install(
             );
             selection_result(ctx)
         }
+        CompiledStep::SelectMaterials {
+            of_permanent,
+            max,
+            filter,
+            uniqueness,
+            bind_as,
+            prompt,
+            optional_zero,
+            ..
+        } => {
+            let perm = match resolve_binding_ref(of_permanent, ctx, &bindings) {
+                Some(ResolvedBinding::Permanent(h)) => h,
+                // Missing binding or wrong type: silent no-op (2b/2c convention).
+                _ => return InstallResult::Continue,
+            };
+            let max_value = resolve_count_bound(ctx, max, &bindings);
+            // Whether the carrier yields any source matching the filter at
+            // install time — drives the synchronous-completion accounting
+            // (mirrors `SelectCountCappedMulti`). Battle-area AND breeding-area
+            // (`BREEDING_TARGET` sentinel) carriers are both handled: the
+            // engine multi-pick encodes breeding sources in the
+            // `BREEDING_SOURCE_SELECT` action range (Task S1.3).
+            let has_candidates = has_material_candidates(ctx, perm, filter, Some(&bindings));
+            let completes_synchronously = !has_candidates || max_value == 0;
+            install_select_materials(
+                ctx,
+                perm,
+                max_value,
+                filter.clone(),
+                map_distinct_by(*uniqueness),
+                bind_as.clone(),
+                prompt.clone(),
+                *optional_zero,
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            );
+            if ctx.game.pending_selection.is_some() {
+                InstallResult::Parked
+            } else if completes_synchronously {
+                InstallResult::TailAlreadyRan
+            } else {
+                InstallResult::Continue
+            }
+        }
         CompiledStep::SelectOwnSources {
             target,
             filter,
@@ -739,10 +784,11 @@ fn has_material_candidates(
     bindings: Option<&Bindings>,
 ) -> bool {
     let read = ctx.as_read();
-    ctx.game
-        .player(perm.player)
-        .battle_area
-        .get(perm.index as usize)
+    // material_carrier_permanent branches battle-area vs. breeding-area
+    // (BREEDING_TARGET sentinel) carriers — so a King Drasil breeding
+    // carrier yields its real digivolution sources here, keeping the
+    // `completes_synchronously` accounting correct for breeding carriers.
+    crate::effect_context::material_carrier_permanent(ctx.game, perm)
         .map(|p| {
             p.card_sources
                 .iter()
@@ -1895,10 +1941,8 @@ fn install_select_material(
         &prompt,
         optional,
         move |game, src_idx| {
-            let Some(card) = game
-                .player(perm.player)
-                .battle_area
-                .get(perm.index as usize)
+            // material_carrier_permanent branches battle vs. breeding carrier.
+            let Some(card) = crate::effect_context::material_carrier_permanent(game, perm)
                 .and_then(|p| p.card_sources.get(src_idx))
             else {
                 return false;
@@ -1920,17 +1964,96 @@ fn install_select_material(
         move |cb_ctx, src_idx| {
             let mut b = bindings.clone();
             if let Some(name) = &bind_as {
-                let perm_owner = perm.player;
-                let perm_index = perm.index as usize;
-                if let Some(card) = cb_ctx
-                    .game
-                    .player(perm_owner)
-                    .battle_area
-                    .get(perm_index)
-                    .and_then(|p| p.card_sources.get(src_idx))
+                // material_carrier_permanent branches battle vs. breeding.
+                if let Some(card) =
+                    crate::effect_context::material_carrier_permanent(cb_ctx.game, perm)
+                        .and_then(|p| p.card_sources.get(src_idx))
                 {
                     b.insert_card(name, card.handle());
                 }
+            }
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+        },
+    );
+}
+
+/// Install a count-capped / name-unique multi-pick over `perm`'s
+/// digivolution-source stack. The batch sibling of `install_select_material`.
+///
+/// Lowers to `EffectContext::select_count_capped_multi` with
+/// `CountCappedZone::Material(perm)` — REUSING the existing count-capped
+/// selection mask/decoder (no `ACTION_SPACE_SIZE` change). `uniqueness`
+/// is forwarded as the engine's `DistinctByMode`, which shapes the legal
+/// action mask after each pick (no auto-selection — every pick is a
+/// player choice, per CLAUDE.md §17).
+///
+/// The picked sources are bound as a `CardList`, so a follow-on
+/// `play_from_materials` can consume the whole batch.
+#[allow(clippy::too_many_arguments)]
+fn install_select_materials(
+    ctx: &mut EffectContext<'_>,
+    perm: PermanentHandle,
+    max: u8,
+    filter: CompiledPredicate,
+    uniqueness: Option<DistinctByMode>,
+    bind_as: Option<String>,
+    prompt: String,
+    optional_zero: bool,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    if max == 0 {
+        // Zero-cap: bind an empty pick list and run the tail synchronously.
+        let mut b = bindings.clone();
+        if let Some(name) = &bind_as {
+            b.insert_card_list(name, Vec::new());
+        }
+        run_tail_preserving_trigger_context(
+            ctx,
+            ctx.game.current_trigger_context.clone(),
+            &tail,
+            &mut b,
+            &runtime,
+        );
+        return;
+    }
+
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
+    ctx.select_count_capped_multi(
+        // The carrier's owner — `Material` candidates come from
+        // `perm.player`'s battle area regardless of `of_player`.
+        perm.player,
+        CountCappedZone::Material(perm),
+        max,
+        &prompt,
+        optional_zero,
+        uniqueness,
+        move |game, card| {
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Card(card.handle()),
+                Some(&filter_bindings),
+            )
+        },
+        move |cb_ctx, picks| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                b.insert_card_list(name, picks);
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },

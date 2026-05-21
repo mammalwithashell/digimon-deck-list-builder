@@ -59,7 +59,7 @@ code/digimon-engine/
 │   ├── tensor.rs               # Compact compatibility tensor (standard_compact_v1, 1375 floats)
 │   ├── tensor_v2_lite.rs       # Default pilot observation writer (standard_lite_v2, 8320 floats)
 │   ├── tensor_profiles/        # Profile layout metadata and card/scalar positions
-│   ├── action/                 # Action space + mask (2168 actions, matches Python)
+│   ├── action/                 # Action space + mask (2192 actions, matches Python)
 │   ├── cards.rs                # CardEffectRegistry + registration glue
 │   ├── cards/test_cards.rs     # TEST-001..005 — hand-written examples
 │   └── debug_runner.rs         # Deterministic test harness
@@ -4101,6 +4101,59 @@ Effect::on_play(card)
     then:
       # follow-up that only happens if the source was actually played
 ```
+
+### `select_materials` (count-capped / name-unique batch source pick)
+
+**DSL wrapper.** `select_materials` is the *batch sibling* of `select_material`:
+it picks **up to N** digivolution sources of a carrier permanent in ONE
+count-capped multi-pick (excluding the carrier's top card), optionally
+constrained by a per-pick `uniqueness` predicate. `uniqueness: name` enforces
+"1 of each different name" — after each pick, any remaining source sharing a
+picked card's name is removed from the next step's legal action mask. Every
+pick surfaces through `pending_selection`; the uniqueness constraint *shapes
+the mask*, it never auto-picks (CLAUDE.md §17).
+
+It lowers to `EffectContext::select_count_capped_multi` with
+`CountCappedZone::Material` + `DistinctByMode`, REUSING the existing
+count-capped action mask — no `ACTION_SPACE_SIZE` change. The picked sources
+are bound as a `CardList`.
+
+`play_from_materials.source_index` accepts that `CardList` binding and consumes
+the **whole batch**: each picked source is removed from the stack and played as
+a fresh permanent (each handle is re-resolved to its current stack index right
+before its play, since each play shifts later indices down). Each played source
+fires its own [On Play] normally — `play_from_materials` does NOT carry a
+`suppress_on_play` flag (suppression is wired only through `play_from_trash_free`;
+see PUPPETS-G030).
+
+```yaml
+- select_materials:
+    of_permanent: carrier        # battle-area carrier permanent
+    max: 4
+    uniqueness: name             # "1 of each different name"
+    filter: { trait_has: "Royal Knight" }
+    bind_as: picked
+- play_from_materials:
+    target: carrier
+    source_index: picked         # batch — all picked sources played
+    cost_delta: free
+```
+
+`select_materials` exposes its carrier-binding field as `of_permanent`, matching
+the single-pick sibling `select_material` for authoring-surface consistency.
+
+**Batch `play_from_materials` `bind_as` binds only the last-played permanent.**
+When `source_index` is a batch `CardList` (as produced by `select_materials`),
+`play_from_materials`'s `bind_as` records *only the last* permanent it played —
+not all of them. A future card needing "do X to each played source" will
+require a `PermanentList` binding; until then only the last-played source is
+addressable downstream.
+
+A `BREEDING_TARGET`-sentinel carrier binding is accepted but resolves to zero
+candidates today — the source-select action range covers only the 14
+battle-area field slots, so a breeding-resident carrier's sources have no
+action encoding. Engine lowering coverage:
+`code/digimon-engine/tests/dsl/select_materials.rs`.
 
 ### `place_permanent_on_security`
 

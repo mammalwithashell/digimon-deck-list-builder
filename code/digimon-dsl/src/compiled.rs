@@ -205,6 +205,10 @@ pub struct CompiledPredicate {
     /// `security_text`). G-DSL-PREDICATE-TEXT-CONTAINS.
     pub effect_text_contains: Option<String>,
     pub name_in: Option<Vec<String>>,
+    /// G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2) —
+    /// card-subject leaf: true when no battle-area Digimon of the scoped
+    /// player shares the candidate card's name.
+    pub name_not_shared_by_field_digimon: Option<CompiledPlayerRef>,
     pub card_number_is: Option<String>,
     pub play_cost_lte: Option<CompiledDpConstraint>,
     pub play_cost_gte: Option<CompiledDpConstraint>,
@@ -1178,6 +1182,20 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+    },
+    /// Count-capped / name-unique multi-pick over a carrier permanent's
+    /// digivolution-source stack — the batch sibling of `SelectMaterial`.
+    /// Lowers to `EffectContext::select_count_capped_multi` with
+    /// `CountCappedZone::Material`; `uniqueness` maps to `DistinctByMode`.
+    SelectMaterials {
+        of_permanent: CompiledBindingRef,
+        max: CompiledCountBound,
+        filter: CompiledPredicate,
+        uniqueness: Option<CompiledDistinctBy>,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        optional_zero: bool,
     },
     SelectOwnSources {
         target: Option<CompiledBindingRef>,

@@ -18,6 +18,12 @@ pub use selections::{
     CountCappedZone, DistinctByMode, EffectContextSelectorScope, RevealBucketSelection,
 };
 
+/// Material-zone carrier resolver — branches battle-area vs. breeding-area
+/// (`BREEDING_TARGET` sentinel) carriers. Used by the DSL `select_material*`
+/// step lowering so its filter/bind closures read the same stack the engine
+/// selection helper does.
+pub(crate) use selections::material_carrier_permanent;
+
 pub use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef};
 
 use crate::action::mask::effect_attack_target_action_ids;

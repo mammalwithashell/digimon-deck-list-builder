@@ -8,12 +8,16 @@
 
 use std::sync::{Arc, Mutex};
 
-use digimon_engine::action::space::{PASS, PLAY_HAND_START, TRASH_EFFECT_START};
+use digimon_engine::action::space::{
+    BREEDING_SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START, BREEDING_TARGET, PASS,
+    PLAY_HAND_START, TRASH_EFFECT_START,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::{CountCappedZone, EffectContext};
-use digimon_engine::enums::{CardColor, CardKind, GamePhase};
+use digimon_engine::enums::{CardColor, CardKind, GamePhase, PlayerId};
+use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionError, SelectionKind};
 
 fn make_card(id: &str) -> CardData {
@@ -631,5 +635,133 @@ fn empty_filter_is_noop() {
     assert_eq!(
         r.game.current_phase, phase_before,
         "phase must be unchanged for empty-filter no-op"
+    );
+}
+
+// ── Breeding-carrier source selection (S1.3) ─────────────────────────────────
+
+/// Build a breeding-area carrier for `player` whose digivolution stack
+/// (bottom→top) is `card_ids`. The last id is the active breeding Digimon;
+/// the rest are digivolution sources. Returns the breeding sentinel handle
+/// (`index == BREEDING_TARGET`).
+fn breeding_carrier(r: &mut DebugRunner, player: PlayerId, card_ids: &[&str]) -> PermanentHandle {
+    // place_stack builds it in the battle area; move it into breeding_area.
+    let handle = r.place_stack(player, card_ids);
+    let perm = r.game.players[player as usize]
+        .battle_area
+        .remove(handle.index as usize);
+    r.game.players[player as usize].breeding_area = Some(perm);
+    PermanentHandle {
+        player,
+        index: BREEDING_TARGET as u8,
+    }
+}
+
+/// `select_count_capped_multi` with `CountCappedZone::Material` pointed at a
+/// breeding-area carrier must install a real `PendingSelection` whose
+/// action IDs live in the breeding-source range — NOT no-op (the pre-S1.3
+/// bug, where `battle_area.get(14)` returned `None` → zero candidates).
+#[test]
+fn breeding_carrier_multi_select_installs_pending() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_card("BSRC0"))
+        .add_card(make_card("BSRC1"))
+        .add_card(make_card("BTOP"))
+        .start();
+    let tp = r.game.turn_player();
+    // Breeding stack bottom→top: BSRC0, BSRC1, BTOP. Two sources.
+    let carrier = breeding_carrier(&mut r, tp, &["BSRC0", "BSRC1", "BTOP"]);
+
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, tp);
+        ctx.select_count_capped_multi(
+            tp,
+            CountCappedZone::Material(carrier),
+            2,
+            "pick up to 2 breeding sources",
+            false,
+            None,
+            |_, _| true,
+            |_, _| {},
+        );
+    }
+
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("breeding-carrier select_count_capped_multi must install a pending selection");
+    assert_eq!(r.game.current_phase, GamePhase::SelectBudgeted);
+    assert!(
+        matches!(sel.kind, SelectionKind::CountCappedMultiSelect { .. }),
+        "kind must be CountCappedMultiSelect"
+    );
+    assert_eq!(sel.valid_action_ids.len(), 2, "two breeding sources offered");
+    for &aid in &sel.valid_action_ids {
+        assert!(
+            (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&aid),
+            "action id {aid} must be in the breeding-source range"
+        );
+    }
+    // P0's carrier → sources encode at 2168 + 0*12 + i.
+    assert!(sel.valid_action_ids.contains(&BREEDING_SOURCE_SELECT_START));
+    assert!(sel
+        .valid_action_ids
+        .contains(&(BREEDING_SOURCE_SELECT_START + 1)));
+}
+
+/// Multi-pick over a breeding carrier, resolving picks one at a time. The
+/// resolution callback re-derives the breeding stack each step; this proves
+/// the recursive re-install path reads the breeding area, not battle_area.
+#[test]
+fn breeding_carrier_multi_select_resolves_picks() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_card("BS0"))
+        .add_card(make_card("BS1"))
+        .add_card(make_card("BS2"))
+        .add_card(make_card("BST"))
+        .start();
+    let tp = r.game.turn_player();
+    // Three sources BS0, BS1, BS2 then top BST.
+    let carrier = breeding_carrier(&mut r, tp, &["BS0", "BS1", "BS2", "BST"]);
+
+    let picked: Arc<Mutex<Vec<CardHandle>>> = Arc::new(Mutex::new(Vec::new()));
+    let sink = Arc::clone(&picked);
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, tp);
+        ctx.select_count_capped_multi(
+            tp,
+            CountCappedZone::Material(carrier),
+            3,
+            "pick up to 3 breeding sources",
+            false,
+            None,
+            |_, _| true,
+            move |_, picks| {
+                *sink.lock().unwrap() = picks;
+            },
+        );
+    }
+
+    // Resolve all three picks: the recursive re-install path runs twice.
+    for _ in 0..3 {
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("pending must re-arm between breeding-source picks");
+        let aid = sel.valid_action_ids[0];
+        let sp = sel.selecting_player;
+        r.game.resolve_selection(sp, aid).expect("resolve pick");
+    }
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "multi-pick auto-commits at max=3"
+    );
+    assert_eq!(
+        picked.lock().unwrap().len(),
+        3,
+        "all three breeding sources delivered to the final callback"
     );
 }

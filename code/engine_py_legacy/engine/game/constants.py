@@ -36,8 +36,18 @@ EFFECTS_PER_PERM = 10             # effect sub-indices per permanent
 SOURCES_PER_FIELD = 12            # source sub-indices per field slot (accommodates MAX_SOURCES=11)
 DP_NORM = 30000.0                 # DP normalization factor (covers rare ~30k buffed archetypes)
 
-# Action space size: max source action = 2000 + (FIELD_SLOTS-1)*SOURCES_PER_FIELD + (SOURCES_PER_FIELD-1)
-ACTION_SPACE_SIZE = 2000 + FIELD_SLOTS * SOURCES_PER_FIELD  # 2168
+# Action space layout:
+#   - battle-area source selection: 2000 .. 2000 + FIELD_SLOTS*SOURCES_PER_FIELD (= 2168)
+#   - breeding-carrier source selection (Rust Task S1.3): an appended
+#     2-carrier x SOURCES_PER_FIELD sub-range, 2168 .. 2192.
+# The sunset Python engine has no breeding-source effects, so the trailing
+# 24 slots are always zero — but ACTION_SPACE_SIZE is kept in sync with the
+# Rust engine (the source of truth) so the transitional cross-engine parity
+# harness (`tests/rl/test_rust_python_parity.py`) compares same-shaped masks.
+# See docs/RUST_PYTHON_PARITY.md.
+BATTLE_SOURCE_SELECT_END = 2000 + FIELD_SLOTS * SOURCES_PER_FIELD  # 2168
+BREEDING_SOURCE_CARRIERS = 2
+ACTION_SPACE_SIZE = BATTLE_SOURCE_SELECT_END + BREEDING_SOURCE_CARRIERS * SOURCES_PER_FIELD  # 2192
 
 # Tensor layout offsets (compact: card IDs are single integer indices, not embeddings)
 _GLOBAL = 10
