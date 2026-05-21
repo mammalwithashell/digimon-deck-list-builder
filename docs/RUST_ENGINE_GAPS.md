@@ -285,6 +285,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | ~~[Narrow opponent-effect protection for DP reduction and De-Digivolve](#narrow-opponent-effect-protection-for-dp-reduction-and-de-digivolve)~~ — RESOLVED 2026-05-20 (Puppets substrate sweep, see `qa/resolved-gaps.md`) | ✅ | — | — |
 | ~~[Effect play with played-Digimon On Play suppression](#effect-play-with-played-digimon-on-play-suppression)~~ — RESOLVED 2026-05-20 (Puppets substrate sweep, see `qa/resolved-gaps.md`) | ✅ | — | — |
 | ~~End-of-attack mandatory self-delete chain (EX4-074)~~ | ✅ | — | RESOLVED 2026-05-17 (Track I first-test confirmed existing primitives suffice) — see [qa/resolved-gaps.md](../qa/resolved-gaps.md#engine-gap-end-of-attack-mandatory-self-delete-chain-with-recovery-and-conditional-hatch--resolved-2026-05-17-track-i) |
+| ~~Return a selected digivolution-stack source card to its owner's hand (`G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME`)~~ — RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`, see `qa/resolved-gaps.md`) | ✅ | — | — |
+| ~~Player-scoped one-shot future-digivolve cost reducer with a paid cost (`G-COST-REDUCE-ALLY-DIGIVOLVE`)~~ — RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`, see `qa/resolved-gaps.md`) | ✅ | — | — |
 
 **Group 5 contract note (2026-05-02):** Group 5 did not change ACTION_SPACE_SIZE or TENSOR_SIZE. New Link/Delay choices reuse existing pending-selection masks.
 
@@ -785,6 +787,117 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 ### `CannotAttackPlayer` modifier enforcement (mask + combat)
 > Moved to [`qa/resolved-gaps.md`](../qa/resolved-gaps.md#engine-gap-cannotattackplayer-modifier-enforcement-mask--combat--resolved-2026-05-15-track-d-2026-05-08) by the 2026-05-15 hygiene sweep.
+
+### Return a selected digivolution-stack source card to its owner's hand — RESOLVED 2026-05-21
+> Closed by `bg-imperial-substrate-closeout` — `EffectContext::return_card_source_to_hand`
+> + `return_selected_sources_to_hand` DSL verb landed; BT12-031 → IMPLEMENTED. See
+> [`qa/resolved-gaps.md`](../qa/resolved-gaps.md) § "Follow-up engine gaps closed
+> (2026-05-21)". Scoping detail retained below for reference.
+
+- **Severity:** 🟡 PARTIAL (*ergonomics / primitive-with-fidelity-cost* — the selection half is fully closed; only the source-to-hand movement primitive is missing, and there is no faithful workaround for it, but the gap is narrow)
+- **Gap ID:** `G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME` (canonical engine-gap record; supersedes the same ID in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md), which is now a redirect)
+- **Discovered in:** BG Imperial (2026-05-04, BT12-031 `batch-implement-cards-rust-dsl`); diagnosis corrected from "DSL-only" to engine gap 2026-05-21 (`bg-imperial-substrate-closeout`)
+- **Card(s):** BT12-031 Imperialdramon: Paladin Mode (Clause 0, Step C — the last non-IMPLEMENTED clause; card verdict PARTIAL, 2 tests `#[ignore]`'d)
+- **Effect text:** "By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's digivolution cards to its owner's hand, return all of your opponent's suspended Digimon to the bottom of their owners' decks instead."
+- **What's missing:** There is **no `EffectContext` method or DSL verb that returns a single selected digivolution-stack source card to its owner's hand.** `select_own_sources` already binds stable `SourceSelectionRef`s (`effect_context/selections.rs:383`, name-filtered via the `filter:` arg since 2026-05-08), and the `binding_present` branch for the optional-decline fall-through is solved card-side. But the only two consumers of those bound source refs are `TrashSelectedSources` → `ctx.trash_card_source` (routes the source `Card` to `owner.trash`, `effect_context/mod.rs:3477`) and `PlaySelectedSourcesFree` → `ctx.play_selected_sources_without_cost` (`effect_context/mod.rs:3616`). `EffectContext::return_to_hand` (`effect_context/mod.rs:3625`) bounces a whole **permanent** (top card + entire stack) — it cannot extract one below-top source. So a source card selected out of a digivolution stack can be trashed or replayed, but not handed back to its owner.
+- **Suggested API shape:**
+  - **`EffectContext` method** — sibling of `trash_card_source`, differing only in the destination zone (push to `owner.hand` instead of `owner.trash`); same `OnDigivolutionCardTrashed`-class observer fan-out is NOT appropriate (this is a return-to-hand, not a trash), but the source-leaves-stack event should still fire so leave-stack observers see it:
+    ```rust
+    /// Remove a single digivolution source card from `perm`'s stack and
+    /// route it to its owner's hand. Mirrors `trash_card_source` but the
+    /// destination is the owner's hand, not trash. Fires the source-leaves-
+    /// stack observer path (NOT the trash-specific OnDigivolutionCardTrashed).
+    pub fn return_card_source_to_hand(
+        &mut self,
+        perm: PermanentHandle,
+        card: CardHandle,
+    ) -> bool
+    ```
+    A `Vec`-taking convenience wrapper (`return_selected_sources_to_hand(&mut self, selected: Vec<SourceSelectionRef>)`) keeps parity with `play_selected_sources_without_cost`.
+  - **DSL verb / `CompiledStep`** — mirror `TrashSelectedSources` exactly: a new `ReturnSelectedSourcesToHand { source_refs: String }` `CompiledStep` (`digimon-dsl/src/compiled.rs`, alongside line 1247), a `StepSpec::ReturnSelectedSourcesToHand(TrashSelectedSourcesArgs)` reusing the existing `TrashSelectedSourcesArgs { source_refs: String }` struct (`digimon-dsl/src/step.rs:1333`), the `compile.rs` arm (alongside line 1766), and the consumer arm in `dsl_cards/step/zone_moves.rs` (alongside the `TrashSelectedSources` arm at line 206) that reads `bindings.get_source_refs(...)` and calls the new `EffectContext` method per ref.
+  - **YAML form:**
+    ```yaml
+    - select_own_sources:
+        from: source            # restrict to this Digimon's own stack
+        filter: { name_contains: "Imperialdramon: Dragon Mode" }
+        min: 0
+        max: 1
+        bind_as: dragon_mode_source
+        prompt: "..."
+        then:
+          - return_selected_sources_to_hand: { source_refs: dragon_mode_source }
+          # binding_present branch then runs the return-all-to-bottom outcome
+    ```
+- **Workaround:** None faithful. Trashing the source instead of returning it to hand changes the printed cost; omitting Step C (current state) drops the entire alternative outcome.
+- **Likely files:** `code/digimon-engine/src/effect_context/mod.rs` (new method next to `trash_card_source`), `code/digimon-engine/src/dsl_cards/step/zone_moves.rs` (consumer arm), `code/digimon-dsl/src/compiled.rs` + `code/digimon-dsl/src/step.rs` + `code/digimon-dsl/src/compile.rs` (verb plumbing), `code/digimon-engine/cards/bt12/BT12-031.yaml` (un-block Step C), `code/digimon-engine/tests/cards_behavioral/bt12/bt12_031.rs` (un-ignore 2 tests).
+- **Complexity estimate:** Small. One ~20-line `EffectContext` method (a near-copy of `trash_card_source` with the destination `Vec` swapped) + the standard 4-file DSL-verb plumbing. No new selection state, no mask change, no `ACTION_SPACE_SIZE` impact — the selection is already a closed `select_own_sources` flow.
+- **First test:** `bt3`-style behavioral test under `tests/cards_behavioral/bt12/bt12_031.rs` (un-ignore the existing `#[ignore]`'d Step C tests at lines 345/362): set up Imperialdramon: Paladin Mode with an `Imperialdramon: Dragon Mode` card in its digivolution stack and 2+ suspended opponent Digimon; resolve the [When Digivolving] effect; accept the optional `select_own_sources` pick; assert the Dragon Mode source card lands in its owner's hand AND every suspended opponent Digimon is at the bottom of its owner's deck. The decline path test asserts that passing the optional selection falls through to the base "return 1 suspended opponent Digimon to hand" outcome with the Dragon Mode source untouched.
+- **Known interactions / risks:**
+  - Owner routing: the moved card must go to the source card's `owner` (the `CardSource.owner` field), not the controller's hand — `trash_card_source` already reads `removed.owner`; the new method must do the same so a source owned by the opponent (rare, but possible via control-transfer plays) routes correctly.
+  - Stack invariant: extracting a below-top source must not disturb the host permanent's top card or remaining stack ordering — `trash_card_source` removes by `position(...)` rather than `pop()`, so the new method should do likewise.
+  - Observer dispatch: this is a *return-to-hand*, so it must NOT fire `OnDigivolutionCardTrashed` (which would mis-attribute the move as a trash to Rocks-style source-trash listeners). Decide explicitly whether any source-leaves-stack observer should fire — the safest first cut fires nothing trash-specific.
+
+### Player-scoped one-shot future-digivolve cost reducer with a paid cost — RESOLVED 2026-05-21
+> Closed by `bg-imperial-substrate-closeout` — new `player_cost_reducer.rs`
+> (`PlayerDigivolveCostReducer`), `EffectContext::arm_player_digivolve_cost_reducer`,
+> a pre-cost accept/decline + suspend-cost `PendingSelection` chain in a split
+> `digivolve_from_hand` / `digivolve_from_hand_inner` (the synchronous
+> `scan_before_pay_cost_reduction_with_target` hot path was NOT touched), and the
+> `arm_digivolve_cost_reducer` DSL step. BT3-103 → IMPLEMENTED. See
+> [`qa/resolved-gaps.md`](../qa/resolved-gaps.md) § "Follow-up engine gaps closed
+> (2026-05-21)". Scoping detail retained below for reference.
+
+- **Severity:** 🔴 BLOCKING
+- **Gap ID:** `G-COST-REDUCE-ALLY-DIGIVOLVE` (umbrella; also covers the `G-COST-REDUCE-NEXT-SINGLE-FIRE` and `G-PAY-COST-SELECT-ARBITRARY-SUSPEND` sub-IDs cited in the BT3-103 test header — they are three facets of this one missing primitive)
+- **Discovered in:** BG Imperial (2026-05-03 cross-archetype assessment, `G-BG-01`); explicitly **DEFERRED** by Phase 2 Track H's discovery rider (see line 127 above)
+- **Card(s):** BT3-103 Hidden Potential Discovered! (Option, Green, cost 4 — the last non-IMPLEMENTED BG Imperial card; Clause 0 omitted from `BT3-103.yaml`, 5 tests `#[ignore]`'d). Cross-archetype: green/yellow Memory Boost / Training Options frequently install "the next time one of your Digimon would digivolve this turn" reducers with a paid condition.
+- **Effect text:** "[Main] For the turn, when one of your green Digimon would next digivolve, by suspending 1 of your Digimon, reduce the digivolution cost by 5."
+- **What's missing:** A **player-scoped, one-shot, paid future-digivolve cost reducer** installed by a [Main] effect. No part of this shape exists today:
+  1. **No player-scoped reducer registry.** `before_pay_cost_source_infos` (`game_actions.rs:4214`) gathers `BeforePayCost` effects only from battle-area permanents, breeding-area permanents, and the cost-target card itself. An Option that resolves and trashes itself (BT3-103 is not a Plug-In / not a Delay — it leaves the field on resolution) has no field permanent to host the reducer effect, so it can never be scanned. The `player_modifiers` registry (`modifiers.rs:707`, `PlayerModifierEntry`) is a passive *data* registry — `value` / `payload` / `expiry` only — with no slot for a `condition` / `cost_reduction_fn` / `pay_cost_fn` closure, so a reducer cannot live there either.
+  2. **The digivolve cost path cannot prompt an optional/paid reducer.** `scan_before_pay_cost_reduction_with_target` (`game_actions.rs:3965`) — the function the digivolve cost-calc calls — **explicitly skips `candidate.optional` reducers** (line 3982: `if candidate.optional || (candidate.has_pay_cost && cost_target.is_none()) { continue; }`). The interactive accept/decline pending-selection chain (`continue_play_from_hand_cost_reduction_chain`, `game_actions.rs:465`) exists **only for `CostReductionKind::Play`** (play-from-hand). The digivolve path has no equivalent chain, so even a field-hosted optional reducer cannot surface its choice during a digivolution.
+  3. **No "fires exactly once, then consumes itself" lifecycle.** `max_per_turn` (`inspect_cost_reduction_candidate`, `game_actions.rs:4100`) caps activations *per turn* but is keyed to a `source_permanent` via `cost_reducer_activation_count` (`game_actions.rs:4176`) — there is no permanent to key against here, and "next digivolve" means single-fire then removal, not a per-turn cap.
+  4. **No `select`-an-arbitrary-Digimon-to-suspend cost inside the `BeforePayCost` flow.** `pay_cost_fn` runs synchronously inside `apply_cost_reduction_candidate` (`game_actions.rs:4156`); `suspend_self_as_cost` (`effect_context/mod.rs:2341`) only suspends the source. BT3-103's "by suspending 1 of your Digimon" requires a player-visible `select_own_permanent` *inside* the cost payment — an interactive selection nested in the cost flow.
+- **Suggested API shape:**
+  - **A closure-bearing player-scoped reducer registry.** Either (a) a new `Game` field `player_cost_reducers: HashMap<PlayerId, Vec<PlayerCostReducer>>` where `PlayerCostReducer` carries the same `condition` / `cost_reduction` / `pay_cost_fn` (or `activation_cost_fn`) closures as `Effect`, plus a `consumed: bool` / single-fire flag and a `CostReductionKind` filter; or (b) extend `before_pay_cost_source_infos` to also yield infos sourced from a player-scoped store. A new builder constructor:
+    ```rust
+    // Effect builder — install a turn-scoped, single-fire reducer onto a player.
+    Effect::before_pay_cost_player_scoped(card)
+        .cost_kind(CostReductionKind::Digivolve)
+        .single_fire()                       // consume on first successful application
+        .expiry(Expiry::EndOfTurn)           // "For the turn" upper bound
+        .condition(|rctx| /* cost target permanent is a green Digimon */)
+        .cost_reduction(5)
+        .activation_cost(|ctx| ctx.select_one_own_digimon_to_suspend_as_cost())
+    ```
+    and an `EffectContext` install helper: `ctx.arm_player_digivolve_cost_reducer(player, reducer)`.
+  - **Generalize the optional/paid reducer pending-selection chain to the digivolve path.** Factor the accept/decline `PendingSelection` loop currently inside `continue_play_from_hand_cost_reduction_chain` so the digivolve cost-calc (`scan_before_pay_cost_reduction_with_target`) can also install it instead of skipping optional/paid candidates. Decline must leave the unreduced cost; the reducer must NOT be consumed on decline.
+  - **A cost-flow nested selection helper:** `ctx.select_one_own_digimon_to_suspend_as_cost()` — an interactive `select_own_permanent` (filter: own, unsuspended) returning `true` only after a suspend completes, surfaced through `pending_selection` so the RL action space sees it (Working Rule §17).
+  - **YAML form (illustrative — exact verb naming TBD with DSL author):**
+    ```yaml
+    clauses:
+      - timing: main
+        process:
+          - arm_digivolve_cost_reducer:
+              scope: { of: you }
+              expiry: this_turn
+              single_fire: true
+              target_filter: { color_has: green }   # the digivolving Digimon
+              amount: 5
+              pay_cost:
+                - select_own_permanent:
+                    filter: { suspended: false }
+                    prompt: "Suspend 1 of your Digimon"
+                    then: [ suspend: { target: selected } ]
+    ```
+- **Workaround:** None — BLOCKED. A static unconditional `-5` modifier hides the printed "by suspending 1 of your Digimon" choice, can apply to the wrong digivolution, and ignores the single-fire semantics. Auto-suspending violates §17.
+- **Likely files:** `code/digimon-engine/src/game_actions.rs` (player-scoped reducer collection in `before_pay_cost_source_infos`; lift the optional/paid pending-selection chain out of `continue_play_from_hand_cost_reduction_chain` and reuse it on the digivolve path), `code/digimon-engine/src/effect.rs` (new `before_pay_cost_player_scoped` builder + single-fire flag), `code/digimon-engine/src/modifiers.rs` or a new `Game` field (the closure-bearing player-scoped store), `code/digimon-engine/src/effect_context/` (install helper + `select_one_own_digimon_to_suspend_as_cost`), `code/digimon-engine/src/action/mask.rs` (the nested suspend-cost selection must be maskable), `code/digimon-dsl/src/step.rs` + `code/digimon-engine/src/dsl_cards/step/` (the `arm_digivolve_cost_reducer` verb + lowering), `code/digimon-engine/cards/bt3/BT3-103.yaml` + `code/digimon-engine/tests/cards_behavioral/bt3/bt3_103.rs` (un-block Clause 0, un-ignore 5 tests).
+- **Complexity estimate:** Large. Three substantive sub-systems: (1) a net-new closure-bearing player-scoped store with a single-fire/expiry lifecycle; (2) generalizing the optional/paid reducer accept/decline `PendingSelection` chain from the play-from-hand path to the digivolve path (a refactor touching live cost-calc code on every digivolution); (3) a selection nested inside `pay_cost`/`activation_cost` (interactive cost payment, mask-visible). Each carries regression risk against existing `BeforePayCost` behavior. The cross-archetype `qa/archetype-qa/dsl/bg-imperial-cross-archetype-gaps-2026-05-03.md` § `G-BG-01` sketch is directionally correct but **stale on one point**: it lists `code/digimon-engine/src/cost_hooks/` as a likely file — no such directory exists; the BeforePayCost machinery lives entirely in `game_actions.rs`. The sketch also predates Track B's `activation_cost` builder hook, which is the natural attachment point for the suspend cost.
+- **First test:** `tests/cards_behavioral/bt3/bt3_103.rs` (un-ignore `bt3_103_main_arms_digivolve_cost_reduction_for_turn` and siblings). Play BT3-103 with one unsuspended own Digimon available; attempt a green digivolution; assert a suspend-cost prompt (`PendingSelection`) appears before the reduced cost is paid; **decline** keeps the unreduced cost and leaves the reducer armed; **accept** suspends the selected Digimon and applies `-5` exactly once; a second green digivolution in the same turn must NOT get the reduction (single-fire consumed); a non-green digivolution must never see the prompt (target-color filter).
+- **Known interactions / risks:**
+  - **Single most important risk:** generalizing the optional/paid reducer pending-selection chain to the digivolve path means inserting an interactive prompt into `scan_before_pay_cost_reduction_with_target` — a function on the hot path of *every* digivolution. It currently returns an `i32` synchronously; converting it to a possibly-suspending flow (pending-selection mid-cost-calc) risks regressing the many existing field-hosted mandatory reducers and the DNA / Blast digivolve cost paths that all call it. The play-from-hand chain proves the pattern is feasible but the digivolve cost-calc has more call sites (normal digivolve, DNA digivolve, Blast) that must each tolerate a `Pending` result.
+  - Stacked reducers: a player-scoped reducer plus a field-hosted reducer must compose; processing order and whether each can independently decline must be defined (the play-from-hand chain already threads `processed: Vec<CostReductionKey>` for this).
+  - Single-fire timing: "next digivolve" consumes on the first *successful* application — a declined prompt must leave it armed; a green digivolution where the player has no Digimon to suspend (cost-impossible) must also leave it armed (or define explicitly), unlike `activation_cost`'s silent-collapse-consumes-OPT rule.
+  - `CannotReduceDigivolveCost` / `OpponentCannotReduceDigivolveCost` flood-gates (`collect_before_pay_cost_reducers`, `game_actions.rs:4025-4033`) must continue to suppress the player-scoped reducer too.
 
 ## Deferred — verification / test coverage only
 

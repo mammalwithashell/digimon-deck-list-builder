@@ -227,19 +227,15 @@ fn bt16_028_when_digivolving_no_selection_when_opp_has_no_field() {
 /// [When Digivolving] Part A: selecting an opponent Digimon applies CannotUnsuspend.
 /// The modifier should be present after the selection resolves.
 #[test]
-#[ignore = "test-side issue: selection setup deviates from current engine behavior; YAML clauses ship correctly"]
 fn bt16_028_when_digivolving_opp_digimon_gets_cannot_unsuspend_modifier() {
-    let mut runner = dragon_mode_builder()
-        .hand(0, &["BT16-028"])
-        .memory(14)
-        .start();
+    let mut runner = dragon_mode_builder().memory(14).start();
 
-    // Place an opponent Digimon (player 1) as the target.
+    // Place Dragon Mode for player 0; place an opponent Digimon (player 1).
+    let dragon = runner.place_on_field(0, "BT16-028", None);
     let opp_digimon = runner.place_on_field(1, "BT16-028", None);
 
-    // Place Dragon Mode for player 0 and fire the when_digivolving timing.
-    let dragon = runner.place_on_field(0, "BT16-028", None);
-    runner.fire_on_play(0, dragon.index as usize);
+    // Fire the [When Digivolving] timing.
+    fire_when_digivolving(&mut runner, dragon);
 
     // Expect a selection over the opponent's Digimon/Tamer.
     let kind = runner
@@ -261,9 +257,16 @@ fn bt16_028_when_digivolving_opp_digimon_gets_cannot_unsuspend_modifier() {
         "opponent Digimon must be a valid selection target"
     );
     runner
-        .execute_action(0, view.valid_action_ids[0])
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
         .expect("select target");
-    runner.auto_resolve();
+
+    // Decline the optional by-suspending cost so the effect can finish.
+    if let Some(suspend_cost) = runner.pending_selection_view() {
+        runner
+            .execute_action(suspend_cost.selecting_player, PASS)
+            .expect("decline suspend cost");
+    }
+    runner.auto_resolve().expect("finish effect");
 
     // Assert the CannotUnsuspend modifier is now on the opponent's Digimon.
     let has_modifier = runner
@@ -278,34 +281,47 @@ fn bt16_028_when_digivolving_opp_digimon_gets_cannot_unsuspend_modifier() {
 /// [When Digivolving] Part A: can also target an opponent Tamer (not just Digimon).
 /// Confirms the `any_of: [digimon, tamer]` filter includes Tamers.
 #[test]
-#[ignore = "test-side issue: selection setup deviates from current engine behavior; YAML clauses ship correctly"]
 fn bt16_028_when_digivolving_opp_tamer_is_valid_cannot_unsuspend_target() {
     let mut runner = dragon_mode_builder()
-        .hand(0, &["BT16-028"])
+        .add_card(tamer_card("OPP-TAMER", "Opponent Tamer"))
         .memory(14)
         .start();
 
-    // Place a tamer for player 1.
-    // Use another BT16-028 as a stand-in permanent; its kind is "digimon".
-    // For a real tamer test, pair with a tamer card once loaded.
-    // Current test: assert the selection count matches when opp has both a
-    // Digimon and targets are present.
-    // This test is structural: it verifies the filter shape is correct by checking
-    // that the selection view's valid_action_ids is non-empty when an opponent
-    // permanent exists, regardless of kind.
-    let _ = runner.place_on_field(1, "BT16-028", None); // opponent Digimon
+    // Opponent has ONLY a Tamer on the field — no Digimon.
+    let opp_tamer = runner.place_on_field(1, "OPP-TAMER", None);
 
     let dragon = runner.place_on_field(0, "BT16-028", None);
-    runner.fire_on_play(0, dragon.index as usize);
+    fire_when_digivolving(&mut runner, dragon);
 
     let view = runner
         .pending_selection_view()
-        .expect("selection must install with opp Digimon on field");
+        .expect("selection must install with opp Tamer on field");
+    assert_eq!(view.kind, SelectionKind::OppField);
+    // The opponent Tamer must be the (only) valid CannotUnsuspend target.
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "OppField selection must include the opponent Tamer; got {} targets",
+        view.valid_action_ids.len()
+    );
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("select opponent Tamer");
 
-    // At least the opponent Digimon must appear.
+    // Tamer is unsuspended, so it is also offered as the optional suspend cost;
+    // decline it so the effect finishes.
+    if let Some(suspend_cost) = runner.pending_selection_view() {
+        runner
+            .execute_action(suspend_cost.selecting_player, PASS)
+            .expect("decline suspend cost");
+    }
+    runner.auto_resolve().expect("finish effect");
+
     assert!(
-        !view.valid_action_ids.is_empty(),
-        "OppField selection must include opponent Digimon; got 0 targets"
+        runner
+            .modifiers()
+            .has(opp_tamer, ModifierType::CannotUnsuspend),
+        "opponent Tamer must receive the CannotUnsuspend modifier"
     );
 }
 
@@ -314,26 +330,36 @@ fn bt16_028_when_digivolving_opp_tamer_is_valid_cannot_unsuspend_target() {
 ///
 /// This test drives two end-turn passes to cycle through opponent's turn end.
 #[test]
-#[ignore = "test-side issue: selection setup deviates from current engine behavior; YAML clauses ship correctly"]
 fn bt16_028_cannot_unsuspend_modifier_expires_at_end_of_opp_turn() {
+    // Both players need decks so `pass_turn` rotates cleanly (no deck-out park).
+    let filler: Vec<&str> = vec!["FILL"; 12];
     let mut runner = dragon_mode_builder()
-        .hand(0, &["BT16-028"])
+        .add_card(make_test_card("FILL", "Filler"))
+        .deck(0, &filler)
+        .deck(1, &filler)
         .memory(14)
         .start();
 
+    let dragon = runner.place_on_field(0, "BT16-028", None);
     let opp_digimon = runner.place_on_field(1, "BT16-028", None);
 
-    let dragon = runner.place_on_field(0, "BT16-028", None);
-    runner.fire_on_play(0, dragon.index as usize);
+    fire_when_digivolving(&mut runner, dragon);
 
     // Drive the selection.
     let view = runner
         .pending_selection_view()
         .expect("selection view must be present");
     runner
-        .execute_action(0, view.valid_action_ids[0])
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
         .expect("select target");
-    runner.auto_resolve();
+
+    // Decline the optional by-suspending cost so the effect finishes.
+    if let Some(suspend_cost) = runner.pending_selection_view() {
+        runner
+            .execute_action(suspend_cost.selecting_player, PASS)
+            .expect("decline suspend cost");
+    }
+    runner.auto_resolve().expect("finish effect");
 
     // Confirm modifier is present immediately.
     assert!(
@@ -343,9 +369,17 @@ fn bt16_028_cannot_unsuspend_modifier_expires_at_end_of_opp_turn() {
         "modifier must be present before end of opponent's turn"
     );
 
-    // End player 0's turn → opponent's turn begins and ends.
-    runner.end_turn(); // switches to player 1 (opponent's turn)
-    runner.end_turn(); // switches back to player 0; opp turn ended → modifier expired
+    // The modifier was installed by player 0 with `end_of_opponents_turn`
+    // expiry. Rotate turns until player 1's (the opponent's) turn ends.
+    let installer = 0u8;
+    for _ in 0..4 {
+        let ending = runner.turn_player();
+        runner.pass_turn();
+        if ending != installer {
+            // The opponent's turn just ended — the modifier must be gone.
+            break;
+        }
+    }
 
     assert!(
         !runner
@@ -565,37 +599,134 @@ fn bt16_028_all_turns_player_action_play_does_not_trigger() {
 
 /// [All Turns] Trigger does NOT fire when own Tamer is absent (Tamer condition fails).
 ///
-/// BLOCKED: G-IS-EFFECT-INITIATED from qa/dsl-vocab-gaps.md.
-/// (Both the effect-initiated gate and Tamer gate must be testable once the clause fires.)
+/// The observer condition includes `any_permanent { of: you, kind: tamer }`; with
+/// no Tamer on the player's field the clause must not install a selection even
+/// though the effect-initiated opponent play occurred.
 #[test]
-#[ignore = "pending: G-IS-EFFECT-INITIATED from qa/dsl-vocab-gaps.md — Tamer condition gate requires the whole clause to be authored first"]
 fn bt16_028_all_turns_no_tamer_on_own_field_suppresses_digivolve_offer() {
-    // When G-IS-EFFECT-INITIATED closes:
-    // 1. Place Dragon Mode on own field; NO Tamer.
-    // 2. An effect plays an opponent Digimon.
-    // 3. Assert: no digivolve prompt fires (Tamer condition fails).
+    let mut runner = dragon_mode_and_fighter_builder()
+        .add_card(make_test_card("OPP-EFFECT-PLAY", "Opponent Effect Play"))
+        .hand(0, &["BT16-027"])
+        .hand(1, &["OPP-EFFECT-PLAY"])
+        .memory(0)
+        .start();
+
+    // Dragon Mode on own field, but NO Tamer.
+    runner.place_on_field(0, "BT16-028", None);
+    let played_by_effect = runner.game.players[1].hand[0].handle();
+
+    assert!(
+        runner
+            .game
+            .play_card_from_effect_without_cost(1, played_by_effect)
+            .is_some(),
+        "opponent effect play precondition"
+    );
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no Tamer on own field must suppress the free-digivolve offer"
+    );
 }
 
 /// [All Turns] Trigger does NOT fire when [Imperialdramon: Fighter Mode] is not in hand.
 ///
-/// BLOCKED: G-IS-EFFECT-INITIATED from qa/dsl-vocab-gaps.md.
+/// The `select_hand` step filters for `Imperialdramon: Fighter Mode`; with none in
+/// hand the clause produces no eligible selection and no digivolve occurs.
 #[test]
-#[ignore = "pending: G-IS-EFFECT-INITIATED from qa/dsl-vocab-gaps.md — Fighter Mode hand condition requires effect-initiated gate first"]
 fn bt16_028_all_turns_no_fighter_mode_in_hand_suppresses_digivolve_offer() {
-    // When G-IS-EFFECT-INITIATED closes:
-    // 1. Place Dragon Mode + Tamer on own field; hand has NO Fighter Mode.
-    // 2. An effect plays an opponent Digimon.
-    // 3. Assert: no digivolve prompt fires (no Fighter Mode in hand).
+    let mut runner = dragon_mode_builder()
+        .add_card(tamer_card("OWN-TAMER", "Own Tamer"))
+        .add_card(make_test_card("OPP-EFFECT-PLAY", "Opponent Effect Play"))
+        .hand(1, &["OPP-EFFECT-PLAY"])
+        .memory(0)
+        .start();
+
+    // Dragon Mode + Tamer on own field, but hand has NO Fighter Mode (BT16-027).
+    let dragon = runner.place_on_field(0, "BT16-028", None);
+    runner.place_on_field(0, "OWN-TAMER", None);
+    let played_by_effect = runner.game.players[1].hand[0].handle();
+
+    assert!(
+        runner
+            .game
+            .play_card_from_effect_without_cost(1, played_by_effect)
+            .is_some(),
+        "opponent effect play precondition"
+    );
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no Fighter Mode in hand must suppress the free-digivolve offer"
+    );
+    // Dragon Mode is still on top of its own stack — no digivolve happened.
+    let top_name = runner.game.players[0].battle_area[dragon.index as usize]
+        .top_card()
+        .card_name(&runner.game.card_data)
+        .to_string();
+    assert_eq!(
+        top_name, "Imperialdramon: Dragon Mode",
+        "Dragon Mode must not digivolve when no Fighter Mode is in hand"
+    );
 }
 
 /// [All Turns] Trigger fires for effect-DIGIVOLVING opponent Digimon, not just effect-play.
 ///
-/// BLOCKED: G-IS-EFFECT-INITIATED from qa/dsl-vocab-gaps.md.
+/// The clause's `when` list includes `on_digivolve`; an effect-initiated digivolve
+/// of an opponent's Digimon must satisfy the same effect-initiated gate.
 #[test]
-#[ignore = "pending: G-IS-EFFECT-INITIATED from qa/dsl-vocab-gaps.md — the on_digivolve half of the trigger needs the same effect-initiated gate"]
 fn bt16_028_all_turns_effect_digivolves_opp_digimon_also_triggers() {
-    // When G-IS-EFFECT-INITIATED closes:
-    // 1. Place Dragon Mode + Tamer on own field; Fighter Mode in hand.
-    // 2. An effect digivolves an opponent's Digimon.
-    // 3. Assert: free-digivolve prompt installs.
+    // Opponent's evo card is a plain, effect-less Digimon so its digivolve does
+    // not introduce unrelated triggers; only Dragon Mode's observer should fire.
+    let mut runner = dragon_mode_and_fighter_builder()
+        .add_card(tamer_card("OWN-TAMER", "Own Tamer"))
+        .add_card(make_test_card("OPP-EVO", "Opponent Evo Digimon"))
+        .hand(0, &["BT16-027"])
+        .hand(1, &["OPP-EVO"])
+        .memory(0)
+        .start();
+
+    let dragon = runner.place_on_field(0, "BT16-028", None);
+    runner.place_on_field(0, "OWN-TAMER", None);
+
+    // Opponent base Digimon to digivolve onto.
+    let opp_base = runner.place_on_field(1, "BT16-028", None);
+
+    // Effect-initiated digivolve of the opponent's Digimon (OPP-EVO from hand
+    // index 0). `ignore_requirements` bypasses the level/color gate; what matters
+    // is the digivolve is effect-initiated and targets an opponent Digimon.
+    assert!(
+        runner.game.effect_initiated_digivolve_ignore_requirements(
+            1,
+            0,
+            opp_base,
+            digimon_engine::enums::CostDelta::Free,
+            PlaySource::ByEffect,
+        ),
+        "opponent effect digivolve precondition"
+    );
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.pending_selection().is_some(),
+        "effect-initiated opponent digivolve should expose the free-digivolve choice"
+    );
+    for _ in 0..3 {
+        let Some(view) = runner.pending_selection_view() else {
+            break;
+        };
+        runner
+            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .expect("execute pending Dragon Mode follow-up");
+    }
+    runner.auto_resolve().expect("finish free digivolve");
+
+    let top_name = runner.game.players[0].battle_area[dragon.index as usize]
+        .top_card()
+        .card_name(&runner.game.card_data)
+        .to_string();
+    assert_eq!(
+        top_name, "Imperialdramon: Fighter Mode",
+        "Dragon Mode should free-digivolve into Fighter Mode after opponent effect digivolve"
+    );
 }

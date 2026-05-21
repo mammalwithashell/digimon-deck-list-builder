@@ -535,6 +535,34 @@ pub fn try_install(
             );
             selection_result(ctx)
         }
+        CompiledStep::SelectOpponentSources {
+            target,
+            filter,
+            min,
+            max,
+            bind_as,
+            prompt,
+            then,
+        } => {
+            if min > max || *max == 0 || !has_opponent_source_candidates(ctx) {
+                return InstallResult::Continue;
+            }
+            let mut inner_tail = then.clone();
+            inner_tail.extend_from_slice(tail);
+            install_select_opponent_sources(
+                ctx,
+                filter.clone(),
+                *min,
+                *max,
+                target.clone(),
+                bind_as.clone(),
+                prompt.clone(),
+                inner_tail,
+                bindings,
+                runtime.clone(),
+            );
+            selection_result(ctx)
+        }
         CompiledStep::SelectOpponentDpBudget {
             dp_budget,
             min_picks,
@@ -727,6 +755,18 @@ pub fn try_install(
 fn has_own_source_candidates(ctx: &EffectContext<'_>) -> bool {
     ctx.game
         .player(ctx.player)
+        .battle_area
+        .iter()
+        .any(|perm| perm.card_sources.len() > 1)
+}
+
+/// Opponent-side mirror of `has_own_source_candidates`: true when at least one
+/// of the controller's OPPONENT's battle-area permanents has a digivolution
+/// source below its top card. G-SELECT-OPPONENT-SOURCES.
+fn has_opponent_source_candidates(ctx: &EffectContext<'_>) -> bool {
+    let opponent = ctx.game.next_clockwise(ctx.player);
+    ctx.game
+        .player(opponent)
         .battle_area
         .iter()
         .any(|perm| perm.card_sources.len() > 1)
@@ -1969,6 +2009,77 @@ fn install_select_own_sources(
     let player = ctx.player;
     let filter_bindings = bindings.clone();
     ctx.select_own_sources(
+        &prompt,
+        min,
+        max,
+        move |game, source| {
+            if target_resolution_failed {
+                return false;
+            }
+            if target_permanent.is_some_and(|handle| source.permanent != handle) {
+                return false;
+            }
+            let read = EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read,
+                PredicateSubject::Card(source.card),
+                Some(&filter_bindings),
+            )
+        },
+        move |cb_ctx, source_refs| {
+            let mut b = bindings.clone();
+            if let Some(name) = &bind_as {
+                b.insert_source_refs(name, source_refs);
+            }
+            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+        },
+    );
+}
+
+/// Opponent-side mirror of `install_select_own_sources`. The candidate set is
+/// drawn from the controller's OPPONENT's battle-area stacks via
+/// `EffectContext::select_opponent_sources`; `target` (when present) restricts
+/// the picker to a single opponent permanent binding. G-SELECT-OPPONENT-SOURCES.
+#[allow(clippy::too_many_arguments)]
+fn install_select_opponent_sources(
+    ctx: &mut EffectContext<'_>,
+    filter: CompiledPredicate,
+    min: u8,
+    max: u8,
+    target: Option<CompiledBindingRef>,
+    bind_as: Option<String>,
+    prompt: String,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    if min > max || max == 0 {
+        return;
+    }
+
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let target_permanent =
+        target
+            .as_ref()
+            .and_then(|target| match resolve_binding_ref(target, ctx, &bindings) {
+                Some(ResolvedBinding::Permanent(handle)) => Some(handle),
+                _ => None,
+            });
+    let target_resolution_failed = target.is_some() && target_permanent.is_none();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
+    ctx.select_opponent_sources(
         &prompt,
         min,
         max,

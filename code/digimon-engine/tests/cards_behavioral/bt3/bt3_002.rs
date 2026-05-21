@@ -14,10 +14,12 @@
 //! once the Jamming condition passes), but the condition gate makes the whole
 //! effect conditional on the carrier having Jamming.
 //!
-//! # DSL predicate audit
-//! The YAML now authors `condition: { has_keyword: Jamming }`, but the negative
-//! behavioral test still proves current runtime lowering/evaluation does not
-//! gate this inherited trigger with the keyword predicate.
+//! # DSL predicate audit (verified)
+//! The YAML authors `condition: { has_keyword: Jamming }`. `has_keyword`
+//! resolves against the CARRIER permanent for inherited clauses
+//! (`enqueue_from_permanent` sets `source_permanent` to the carrier handle), so
+//! the negative test below proves the draw is correctly suppressed when the
+//! carrier lacks <Jamming>, and the positive test proves it fires when present.
 //!
 //! # Patterns this test covers (RUST_DSL_TEST_API.md §4.3)
 //! - G4: Inherited When Attacking on DigiEgg (OPT, no cost, no branch selection)
@@ -177,10 +179,10 @@ fn bt3_002_fires_when_carrier_has_jamming() {
     );
 }
 
-/// NEGATIVE (condition gate): Carrier WITHOUT Jamming -> no draw should fire.
-/// This guards the inherited-carrier `condition: { has_keyword: Jamming }`
-/// path. Current runtime behavior still over-fires even with the condition
-/// authored in YAML.
+/// NEGATIVE (condition gate): Carrier WITHOUT Jamming -> no draw fires.
+/// Guards the inherited-carrier `condition: { has_keyword: Jamming }` path —
+/// `has_keyword` resolves against the carrier permanent, so the draw is
+/// correctly suppressed when the carrier lacks <Jamming>.
 #[test]
 fn bt3_002_does_not_fire_without_jamming() {
     let mut runner = demiveemon_runner();

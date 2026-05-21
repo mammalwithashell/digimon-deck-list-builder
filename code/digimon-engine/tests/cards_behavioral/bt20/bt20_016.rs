@@ -25,40 +25,31 @@
 //! Sub-clause "Then, this Digimon may attack." is implemented through
 //! `may_attack_now` on the source permanent.
 //!
-//! ## Clause 2 — [All Turns] deletion observer — raw_rust declarative
+//! ## Clause 2 — [All Turns] deletion observer — non-cancelling replacement
 //! The "when any of YOUR Paildramon or Dinobeemon would be deleted" clause is
-//! a CROSS-PERMANENT deletion observer. DSL `kind: replacement` is blocked by
-//! the `subject_matches` guard in `lower_replacement.rs` (lines 83–91), which
-//! fires ONLY when the subject IS the carrier permanent. A cross-permanent
-//! observer requires the `kind: raw_rust` declarative path, which produces a
-//! hand-written `WhenWouldBeDeleted` effect that can inspect any subject.
+//! a CROSS-PERMANENT deletion observer authored as `kind: replacement` on the
+//! `when_would_leave_battle_area` trigger. G-EVENT-TARGET-OWNER is resolved:
+//! the `replacement_subject_is_mine` predicate exposes the deletion subject's
+//! controller, so the clause filters for "your [Paildramon]/[Dinobeemon]"
+//! without the carrier-only `subject_matches` gate.
 //!
-//! DCGO uses `ActivateClass` (not a replacement class), meaning deletion is NOT
-//! cancelled — only an optional DNA digivolve is triggered. The implementation
-//! mirrors this: the raw_rust function is a no-op (returns empty Vec<Effect>)
-//! pending resolution of the following hybrid gap:
-//!
-//! **G-EVENT-TARGET-OWNER**: No predicate in `ReplacementContext` exposes which
-//! player controls the subject permanent. Without it, a hand-written
-//! `WhenWouldBeDeleted` effect can't filter for "your Paildramon/Dinobeemon"
-//! (only controller-of-subject check is missing). Tracked in engine-gaps.md.
-//!
-//! **subject_matches gate**: `lower_replacement.rs` enforces self-only subjects;
-//! cross-permanent deletion observers must bypass this gate via `raw_rust`.
+//! The clause carries no cancel/prevent step — the optional DNA digivolve runs
+//! and the original deletion still commits (non-cancelling observer, mirroring
+//! DCGO's `ActivateClass` and the BT20-091 Cool Boy / RK-G004 idiom).
 //!
 //! ## Clause 3 — Inherited <Security A. +1>
 //! Uses `kind: grant_keyword` with `keyword: SecurityAttackPlus` and `value: 1`.
-//! Blocked by G-DECLARATIVE-KEYWORD: declarative `grant_keyword` clauses compile
-//! but are never fired at runtime (EffectTiming::Declarative not enqueued).
-//! Tracked in qa/dsl-vocab-gaps.md.
+//! G-DECLARATIVE-KEYWORD does NOT block this: inherited declarative
+//! `grant_keyword` clauses materialize at runtime via
+//! `Game::tick_declarative_effects`, which runs inherited declarative effects
+//! from buried digivolution sources. Verified behaviorally below.
 //!
 //! # Patterns this test covers
 //! - H3 / Piercing keyword grant (end_of_turn expiry, on_play / when_digivolving)
 //! - D1 / Temporary +4000 DP buff (end_of_turn expiry)
-//! - G2-adjacent / DNA digivolve observer pattern (raw_rust declarative, PARTIAL)
-//! - H11 / Security A.+1 inherited keyword (G-DECLARATIVE-KEYWORD gap noted)
+//! - G2 / DNA digivolve non-cancelling deletion observer (kind: replacement)
+//! - H11 / Security A.+1 inherited keyword (declarative materialization)
 //! - Effect-created `may_attack_now` sub-clause
-//! - G-EVENT-TARGET-OWNER blocked sub-clause (cross-permanent deletion observer)
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -66,7 +57,7 @@
 mod dsl_card_data;
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::{encode_attack, PASS, SECURITY_TARGET};
@@ -214,19 +205,21 @@ fn bt20_016_on_play_when_digivolving_clause_is_mandatory_and_not_opt() {
 }
 
 #[test]
-fn bt20_016_has_raw_rust_declarative_clause_for_all_turns() {
-    // The All Turns deletion observer is registered as `kind: raw_rust` declarative
-    // (cross-permanent deletion observer blocked by subject_matches gate + G-EVENT-TARGET-OWNER).
+fn bt20_016_has_replacement_clause_for_all_turns_deletion_observer() {
+    // The [All Turns] "when own Paildramon/Dinobeemon would be deleted"
+    // observer is a non-cancelling `kind: replacement` clause on the
+    // when_would_leave_battle_area trigger (G-EVENT-TARGET-OWNER resolved).
     let compiled = compiled_bt20_016();
-    let has_raw_rust = compiled.effects.iter().any(|c| {
+    let has_replacement = compiled.effects.iter().any(|c| {
         matches!(
             c,
-            CompiledClause::Declarative(CompiledDeclarativeClause::RawRust { .. })
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { trigger, .. })
+                if trigger == "when_would_leave_battle_area"
         )
     });
     assert!(
-        has_raw_rust,
-        "BT20-016 must have a RawRust declarative clause for the All Turns deletion observer"
+        has_replacement,
+        "BT20-016 must have a when_would_leave_battle_area replacement clause for the All Turns deletion observer"
     );
 }
 
@@ -620,61 +613,234 @@ fn bt20_016_after_when_digivolving_this_digimon_may_attack() {
     );
 }
 
-// ─── Section 5: All Turns clause — structural (raw_rust) ─────────────────────
+// ─── Section 5: All Turns clause — structural (replacement) ──────────────────
 
 #[test]
-fn bt20_016_raw_rust_clause_has_fn_name_bt20_016_dna_on_deletion() {
-    // Verify the raw_rust declarative clause names the correct registered function.
+fn bt20_016_deletion_replacement_clause_is_optional_and_non_cancelling() {
+    // The deletion observer is `optional: true` (printed "may DNA digivolve").
+    // It is a non-cancelling observer: the compiled Replacement clause carries
+    // no cancel/prevent step in its process body — the lowered effect leaves
+    // the replacement outcome as Proceed, so the deletion still commits.
+    // Mirrors DCGO's ActivateClass and BT20-091 Cool Boy.
     let compiled = compiled_bt20_016();
-    let fn_name = compiled.effects.iter().find_map(|c| match c {
-        CompiledClause::Declarative(CompiledDeclarativeClause::RawRust { fn_name, .. }) => {
-            Some(fn_name.as_str())
-        }
-        _ => None,
-    });
-    assert_eq!(
-        fn_name,
-        Some("bt20_016_dna_on_deletion"),
-        "raw_rust clause must reference 'bt20_016_dna_on_deletion' function"
+    let clause = compiled
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
+                trigger,
+                optional,
+                process,
+                ..
+            }) if trigger == "when_would_leave_battle_area" => {
+                Some((*optional, process.clone()))
+            }
+            _ => None,
+        })
+        .expect("BT20-016 must have a when_would_leave_battle_area replacement clause");
+
+    assert!(
+        clause.0,
+        "deletion observer must be optional (printed 'may DNA digivolve')"
+    );
+
+    // No cancel/prevent step anywhere in the body → the deletion proceeds.
+    fn has_cancel(steps: &[CompiledStep]) -> bool {
+        steps.iter().any(|s| {
+            let name = format!("{s:?}");
+            name.contains("CancelReplacement")
+                || name.contains("PreventDeletion")
+                || matches!(
+                    s,
+                    CompiledStep::If { then, else_branch, .. }
+                        if has_cancel(then) || has_cancel(else_branch)
+                )
+                || matches!(s, CompiledStep::Optional(steps) if has_cancel(steps))
+        })
+    }
+    assert!(
+        !has_cancel(&clause.1),
+        "deletion observer must NOT cancel the deletion (non-cancelling observer); \
+         process={:?}",
+        clause.1
     );
 }
 
-// ─── Section 6: BLOCKED — All Turns DNA digivolve observer ───────────────────
+// ─── Section 6: All Turns DNA digivolve observer (replacement) ───────────────
+//
+// G-EVENT-TARGET-OWNER resolved: `replacement_subject_is_mine` exposes the
+// deletion subject's controller, so the cross-permanent observer can filter
+// for "your [Paildramon]/[Dinobeemon]".
 
+use digimon_engine::replacement::ReplacementCause;
+
+/// When P0's [Paildramon] would be deleted by an opponent effect, the [All
+/// Turns] deletion observer fires and offers the optional DNA-digivolve prompt.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-OWNER — no predicate to filter which player controls an event-target permanent in replacement/trigger conditions (qa/archetype-qa/engine-gaps.md)"]
 fn bt20_016_all_turns_fires_when_own_paildramon_would_be_deleted() {
-    // BLOCKED: G-EVENT-TARGET-OWNER
-    // The `bt20_016_dna_on_deletion` raw_rust function needs to filter for
-    // "your Paildramon or Dinobeemon" — i.e., a WhenWouldBeDeleted effect where
-    // the subject is controlled by the same player as the carrier. The engine
-    // does not expose the subject's controller in the ReplacementContext, and
-    // lower_replacement.rs's subject_matches gate prevents non-self subjects.
-    // Until this gap closes, the raw_rust function returns an empty Vec<Effect>.
-    // See qa/archetype-qa/engine-gaps.md — G-EVENT-TARGET-OWNER.
-    unimplemented!()
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT20-016 YAML loads")
+        .add_card(paildramon_card())
+        .add_card(imperialdramon_dm_card())
+        .add_card(ally_digimon())
+        .memory(10)
+        .hand(0, &["TST-IMP-DM"])
+        .build();
+
+    // Carrier BT20-016 on field (the observer source) + a separate own
+    // [Paildramon] permanent that will be deleted + a second own Digimon so
+    // the DNA-digivolve has two materials available.
+    let _carrier = runner.place_on_field(0, "BT20-016", Some(0));
+    let victim = runner.place_on_field(0, "TST-PAILDRAMON", Some(0));
+    runner.place_on_field(0, "ALLY-DIG", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(victim, ReplacementCause::OpponentEffect);
+
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "deletion observer must fire when own [Paildramon] would be deleted"
+    );
 }
 
+/// When the OPPONENT's [Paildramon] would be deleted, the observer must NOT
+/// fire (`replacement_subject_is_mine` rejects opponent-controlled subjects).
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-OWNER — cross-permanent deletion observer not implementable (qa/archetype-qa/engine-gaps.md)"]
 fn bt20_016_all_turns_does_not_fire_for_opponent_paildramon_deletion() {
-    // BLOCKED: same gap. The filter "any of YOUR [Paildramon] or [Dinobeemon]"
-    // excludes the opponent's cards of the same name. Without the controller
-    // predicate in ReplacementContext, accurate filtering is not possible.
-    unimplemented!()
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT20-016 YAML loads")
+        .add_card(paildramon_card())
+        .add_card(imperialdramon_dm_card())
+        .memory(10)
+        .hand(0, &["TST-IMP-DM"])
+        .build();
+
+    let _carrier = runner.place_on_field(0, "BT20-016", Some(0));
+    // The deletion victim is the OPPONENT's [Paildramon].
+    let opp_victim = runner.place_on_field(1, "TST-PAILDRAMON", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(opp_victim, ReplacementCause::OpponentEffect);
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "deletion observer must NOT fire for the opponent's [Paildramon] \
+         (replacement_subject_is_mine gate)"
+    );
 }
 
+/// When a non-Paildramon/Dinobeemon own Digimon would be deleted, the observer
+/// must NOT fire (name filter rejects it).
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-OWNER + G-MAY-ATTACK-NOW — DNA digivolve triggered by deletion observer (qa/archetype-qa/engine-gaps.md)"]
-fn bt20_016_all_turns_offers_dna_into_imperialdramon_from_hand_when_paildramon_deleted() {
-    // BLOCKED: requires the deletion observer to fire (G-EVENT-TARGET-OWNER) and
-    // the DNA selection + effect_initiated_dna_digivolve to work from that context.
-    // After both gaps close, this test verifies:
-    //   - When P0's Paildramon (TST-PAILDRAMON) would be deleted, the [All Turns]
-    //     clause offers an optional prompt.
-    //   - With "Imperialdramon: Dragon Mode" in hand and 2 own Digimon on field,
-    //     the DNA digivolve completes successfully.
-    unimplemented!()
+fn bt20_016_all_turns_does_not_fire_for_non_named_own_digimon_deletion() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT20-016 YAML loads")
+        .add_card(ally_digimon())
+        .add_card(imperialdramon_dm_card())
+        .memory(10)
+        .hand(0, &["TST-IMP-DM"])
+        .build();
+
+    let _carrier = runner.place_on_field(0, "BT20-016", Some(0));
+    // ALLY-DIG is named "Ally Digimon" — not Paildramon/Dinobeemon.
+    let victim = runner.place_on_field(0, "ALLY-DIG", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(victim, ReplacementCause::OpponentEffect);
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "deletion observer must NOT fire for a non-[Paildramon]/[Dinobeemon] own Digimon"
+    );
+}
+
+/// Full flow: when own [Paildramon] would be deleted, with Imperialdramon:
+/// Dragon Mode in hand and 2 own Digimon available as DNA materials, the
+/// player may DNA digivolve them into Imperialdramon: Dragon Mode. The
+/// original deletion still commits (non-cancelling observer).
+#[test]
+fn bt20_016_all_turns_offers_dna_into_imperialdramon_and_deletion_still_commits() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT20-016 YAML loads")
+        .add_card(paildramon_card())
+        .add_card(dinobeemon_card())
+        .add_card(imperialdramon_dm_card())
+        .add_card(ally_digimon())
+        .memory(10)
+        .hand(0, &["TST-IMP-DM"])
+        .build();
+
+    let _carrier = runner.place_on_field(0, "BT20-016", Some(0));
+    let victim = runner.place_on_field(0, "TST-PAILDRAMON", Some(0));
+    // Two other own Digimon to serve as DNA materials.
+    runner.place_on_field(0, "TST-DINOBEEMON", Some(0));
+    runner.place_on_field(0, "ALLY-DIG", Some(0));
+
+    let victim_index = victim.index;
+
+    runner
+        .game
+        .delete_permanent_with_cause(victim, ReplacementCause::OpponentEffect);
+
+    // The observer offers an optional accept/decline prompt; drive through
+    // every selection accepting the DNA digivolve.
+    let mut steps = 0;
+    while runner.game.pending_selection.is_some() && steps < 40 {
+        let sel = runner.game.pending_selection.as_ref().unwrap();
+        let player = sel.selecting_player;
+        // Prefer a non-PASS action so the DNA digivolve is actually taken.
+        let action = sel
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .unwrap_or(PASS);
+        let _ = runner.game.resolve_selection(player, action);
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+
+    // The victim [Paildramon] is gone — the non-cancelling observer let the
+    // deletion commit.
+    let victim_still_present = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "TST-PAILDRAMON");
+    assert!(
+        !victim_still_present,
+        "the original deletion must still commit (non-cancelling observer)"
+    );
+
+    // Imperialdramon: Dragon Mode left the hand (the DNA digivolve consumed it).
+    let imp_in_hand = runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "TST-IMP-DM");
+    assert!(
+        !imp_in_hand,
+        "Imperialdramon: Dragon Mode must leave hand when the DNA digivolve resolves"
+    );
+    // Imperialdramon: Dragon Mode is now on the field as the DNA-digivolved top card.
+    let imp_on_field = runner.game.players[0]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "TST-IMP-DM");
+    assert!(
+        imp_on_field,
+        "Imperialdramon: Dragon Mode must be on the field after the DNA digivolve"
+    );
+    let _ = victim_index;
 }
 
 // ─── Section 7: Inherited Security A.+1 ─────────────────────────────────────
@@ -701,14 +867,30 @@ fn bt20_016_inherited_security_attack_plus_clause_is_inherited_scope() {
     );
 }
 
+/// Behavioral: BT20-016's inherited `<Security A. +1>` must install at runtime.
+/// When BT20-016 sits as a digivolution source UNDER another Digimon, the
+/// inherited declarative `grant_keyword: SecurityAttackPlus` materializes via
+/// `tick_declarative_effects`, so the carrier permanent's security-attack
+/// keyword bonus is +1.
 #[test]
-#[ignore = "pending: G-DECLARATIVE-KEYWORD — declarative grant_keyword clauses compile but are never fired at runtime (qa/dsl-vocab-gaps.md)"]
 fn bt20_016_inherited_security_attack_plus_grants_modifier_at_runtime() {
-    // BLOCKED: G-DECLARATIVE-KEYWORD
-    // The EffectTiming::Declarative is not enqueued by the effect queue.
-    // When this gap closes, verify that placing BT20-016 on the field as a
-    // digivolution source installs a SecurityAttackPlus modifier on the carrier
-    // permanent via the ModifierRegistry.
-    // See qa/dsl-vocab-gaps.md — G-DECLARATIVE-KEYWORD.
-    unimplemented!()
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT20-016 YAML loads")
+        .add_card(ally_digimon())
+        .memory(10)
+        .build();
+
+    // Stack: BT20-016 (buried digivolution source) under ALLY-DIG (top card).
+    let carrier = runner.place_stack(0, &["BT20-016", "ALLY-DIG"]);
+
+    // Materialize declarative state from on-field sources.
+    runner.game.tick_declarative_effects();
+
+    let bonus = runner.game.security_attack_keyword_bonus(carrier);
+    assert_eq!(
+        bonus, 1,
+        "BT20-016's inherited <Security A. +1> must grant +1 security-attack \
+         keyword bonus to its carrier; got {bonus}"
+    );
 }

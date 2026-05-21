@@ -65,37 +65,82 @@ effects:
   # 2 of your Digimon may DNA digivolve into [Imperialdramon: Dragon Mode] in the hand.
   #
   # This clause is a CROSS-PERMANENT deletion observer: the carrier (this Paildramon)
-  # watches for the deletion of OTHER Paildramon or Dinobeemon permanents it controls.
+  # watches for the deletion of OWN Paildramon or Dinobeemon permanents.
   #
-  # DCGO uses ActivateClass at WhenPermanentWouldBeDeleted timing — deletion is NOT
-  # cancelled, only an optional DNA digivolve is triggered. This is NOT a replacement
-  # class (WillBeDeletedClass); the printed text says "would be deleted", but the DCGO
-  # implementation proceeds with deletion regardless of DNA digivolve acceptance.
+  # G-EVENT-TARGET-OWNER resolved: the `replacement_subject_is_mine` predicate now
+  # exposes the deletion subject's controller, so the cross-permanent subject can
+  # be filtered to "your [Paildramon]/[Dinobeemon]" without the carrier-only
+  # `subject_matches` gate.
   #
-  # DSL `kind: replacement` is BLOCKED for this pattern:
-  # `lower_replacement.rs` (lines 83–91) enforces a `subject_matches` guard that only
-  # fires when the subject IS the carrier permanent — cross-permanent subjects are silently
-  # dropped. See code/digimon-engine/src/dsl_cards/lower_replacement.rs.
+  # Non-cancelling observer: this is a `kind: replacement` clause on the
+  # would-leave trigger, but it deliberately omits `outcome: prevent` — the body
+  # runs (the optional DNA digivolve) and the original deletion still commits.
+  # This mirrors DCGO's `ActivateClass` (not a `WillBeDeletedClass`): the printed
+  # text says "would be deleted", but deletion proceeds regardless of whether the
+  # DNA digivolve is accepted. Same non-cancelling-observer idiom as BT20-091
+  # Cool Boy (Royal Knights RK-G004).
   #
-  # BLOCKED (hybrid): G-EVENT-TARGET-OWNER
-  # Engine gap: no predicate in ReplacementContext exposes the subject permanent's
-  # controller. Without it, a hand-written WhenWouldBeDeleted effect cannot filter for
-  # "your Paildramon/Dinobeemon" (cards controlled by the same player as the carrier).
-  # DSL gap: no `event_target_controller_eq: you` predicate exists.
-  # The raw_rust function `bt20_016_dna_on_deletion` returns an empty Vec<Effect>
-  # (no-op placeholder) until this gap is resolved.
-  # See qa/archetype-qa/engine-gaps.md — G-EVENT-TARGET-OWNER.
-  - kind: raw_rust
-    fn: bt20_016_dna_on_deletion
+  # `optional: true` — printed "may DNA digivolve"; the player may decline.
+  # Body: pick the Imperialdramon: Dragon Mode card in hand, pick 2 own Digimon
+  # as DNA materials, then `effect_initiated_dna_digivolve`. The whole body is
+  # wrapped in `- optional: [...]` so the player gets a single accept/decline
+  # prompt up front (the AD1-009 / AD1-012 idiom).
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - any_of:
+            - name_contains: "Paildramon"
+            - name_contains: "Dinobeemon"
+    summary: "[All Turns] When own [Paildramon]/[Dinobeemon] would be deleted, may DNA digivolve 2 own Digimon into [Imperialdramon: Dragon Mode] in hand; the deletion proceeds"
+    process:
+      - optional:
+          # Step 1: pick the Imperialdramon: Dragon Mode card in hand.
+          - select_hand:
+              of: you
+              bind_as: dna_card
+              filter:
+                all_of:
+                  - kind: digimon
+                  - name_contains: "Imperialdramon: Dragon Mode"
+              prompt: "Select Imperialdramon: Dragon Mode from hand to DNA digivolve into"
+          # Step 2: pick the 2 own Digimon as DNA materials.
+          - select_dna_pair:
+              left_filter:
+                all_of:
+                  - kind: digimon
+                  - of: you
+              right_filter:
+                all_of:
+                  - kind: digimon
+                  - of: you
+              bind_left_as: dna_src_a
+              bind_right_as: dna_src_b
+              prompt: "Select 2 of your Digimon to DNA digivolve into Imperialdramon: Dragon Mode"
+          # Step 3: execute the DNA digivolve. Cost paid normally per dna_costs.
+          - effect_initiated_dna_digivolve:
+              target_a: dna_src_a
+              target_b: dna_src_b
+              from_hand: dna_card
+              cost: 0
+              ignore_requirements: false
 
   # ─── Inherited: <Security A. +1> ─────────────────────────────────────────────
   #
   # Grants Security Attack +1 as a permanent inherited modifier.
   # DCGO: ChangeSelfSAttackStaticEffect(changeValue: 1, isInheritedEffect: true).
   #
-  # Note G-DECLARATIVE-KEYWORD: `kind: grant_keyword` declarative clauses compile
-  # correctly but EffectTiming::Declarative is never enqueued by the effect queue,
-  # so this modifier is never installed at runtime. Tracked in qa/dsl-vocab-gaps.md.
+  # G-DECLARATIVE-KEYWORD: inherited `kind: grant_keyword` declarative clauses
+  # DO materialize at runtime — `Game::tick_declarative_effects` collects
+  # buried digivolution sources (with `inherited_source = true`) and runs their
+  # inherited declarative effects, calling `grant_declarative_keyword` on the
+  # carrier. `Game::security_attack_keyword_bonus` then folds in the granted
+  # `SecurityAttackPlus` keyword from the modifier registry. Verified by
+  # `bt20_016_inherited_security_attack_plus_grants_modifier_at_runtime`.
   - kind: grant_keyword
     scope: inherited
     keyword: SecurityAttackPlus

@@ -465,6 +465,15 @@ fn validate_predicate(
     if let Some(sub) = &pred.not {
         validate_predicate(sub, &format!("{prefix}.not"), card_id, ctx, errors);
     }
+    if let Some(sub) = &pred.returned_card_matching {
+        validate_predicate(
+            sub,
+            &format!("{prefix}.returned_card_matching"),
+            card_id,
+            ctx,
+            errors,
+        );
+    }
     if let Some(ex) = &pred.any_permanent {
         validate_predicate(
             &ex.predicate,
@@ -1046,6 +1055,25 @@ fn validate_step_binding_scope(
             );
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::SelectOpponentSources(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            let mut child = scope.clone();
+            declare_optional_binding(&mut child, &args.bind_as);
+            validate_steps_binding_scope(
+                &args.then,
+                &format!("{prefix}.then"),
+                card_id,
+                &mut child,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::DigiBurst(args) => {
             let mut child = scope.clone();
             declare_optional_binding(&mut child, &args.bind_as);
@@ -1406,6 +1434,15 @@ fn validate_predicate_binding_scope(
     }
     if let Some(sub) = &pred.not {
         validate_predicate_binding_scope(sub, &format!("{prefix}.not"), card_id, scope, errors);
+    }
+    if let Some(sub) = &pred.returned_card_matching {
+        validate_predicate_binding_scope(
+            sub,
+            &format!("{prefix}.returned_card_matching"),
+            card_id,
+            scope,
+            errors,
+        );
     }
     if let Some(inh) = &pred.has_inherited {
         validate_predicate_binding_scope(

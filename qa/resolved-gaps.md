@@ -9,6 +9,80 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
 
+## BG Imperial substrate closeout — 2026-05-20
+
+The `bg-imperial-substrate-closeout` change (OpenSpec) re-audited the 24-card BG
+Imperial pool and closed the genuinely-remaining DSL substrate gaps. ~12 gap IDs
+that the BG trackers still listed as open were verified stale (closed by Phase 2
+Tracks A–J, DNA Omnimon completion, Puppets sweep) — see
+`openspec/changes/bg-imperial-substrate-closeout/phase-0-audit.md`. The 5 genuine
+substrate gaps below landed. Engine/DSL only — no card YAML re-authored (the BG
+card re-authoring sweep runs separately); no `ACTION_SPACE_SIZE` / tensor changes.
+
+**Audit correction:** the Phase 0 audit initially flagged 9 gaps, but a second
+review found 4 of them already covered by pre-existing engine capability — they
+were NOT genuine gaps and no new predicate was added for them:
+
+- **G-PRED-STACK-SIZE-LTE-SOURCE / G-DSL-STACK-SIZE-LTE-SOURCE** — already
+  expressible as `materials_count_lte: { formula: { source_material_count: {} } }`
+  (the `source_material_count` formula resolves the source permanent's
+  digivolution-card count). BT16-027 / AD1-025 use this path.
+- **G-DSL-CARRIER-HAS-KEYWORD** — already covered: `has_keyword` resolves against
+  the carrier permanent for inherited clauses (`enqueue_from_permanent` sets
+  `source_permanent` to the carrier handle).
+- **G-DSL-AURA-TARGET-SOURCE-PERMANENT** — already covered: a `kind: aura` with
+  `scope: inherited` + `target: {}` is a carrier-only self-aura.
+- **G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT** — EX1-014's `[Free]`-trait arm is
+  covered by the existing `source_permanent_trait_has` predicate.
+
+### Tier 1 — DSL predicate leaves (genuinely new)
+
+- **G-DSL-EFFECT-SUSPENDED-RESULT** — `effect_suspended_any_opponent_digimon` result
+  predicate; opponent-side read-time filter on the existing owner-agnostic suspend
+  result log. Driver BT16-025 clause 2.
+- **G-EVENT-CARD-COLOR-IS** — `event_card_color_has` predicate: event card has ≥1 of
+  the listed colors (intersection; sibling of subset-semantics `event_card_color_only`).
+  Driver BT16-085.
+
+Test: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group7_predicate_batch`
+
+### Tier 2 — engine-touching DSL verbs
+
+- **G-SELECT-OPPONENT-SOURCES** — `select_opponent_sources` step + `EffectContext::select_opponent_sources`;
+  opponent-side mirror of `select_own_sources` (exact-N / up-to-N, PASS-after-min,
+  `filter:`, `target:`, stable refs). Driver BT16-085.
+  Test: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl phase2g_select_sources`
+- **G-ZONE-SELECTED-TRASH-TO-DECK-TOP** — `move_trash_card_to_deck_top` verb: a single
+  `select_trash`-bound card → owner's deck top. Driver LM-030 clause B.
+- **G-ANY-RETURNED-CARD-PREDICATE** — `returned_card_matching` filtered result predicate
+  (distinct from the bare-bool `any_returned_card` alias); result log records returned
+  card handles. BT17-077 clause-1b player-choice-of-trash verified already composable
+  via `select_effect_choice` + `if`. Driver BT17-077.
+  Test: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl zone_movement_verbs`
+
+### Follow-up engine gaps closed (2026-05-21)
+
+The two engine gaps that left BG Imperial at 22/24 were scoped and then closed,
+bringing the archetype to **24/24 IMPLEMENTED**.
+
+- **G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME** — `EffectContext::return_card_source_to_hand(perm, card)`
+  (sibling of `trash_card_source`, routes the extracted source `Card` to its
+  owner's hand; does NOT fire `OnDigivolutionCardTrashed`) + the `Vec`-taking
+  `return_selected_sources_to_hand` wrapper + the `return_selected_sources_to_hand`
+  DSL verb (mirrors `trash_selected_sources`). Closes BT12-031 Step C → BT12-031
+  IMPLEMENTED. Test: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt12_031`.
+- **G-COST-REDUCE-ALLY-DIGIVOLVE** (umbrella over `G-COST-REDUCE-NEXT-SINGLE-FIRE`
+  + `G-PAY-COST-SELECT-ARBITRARY-SUSPEND`) — new `player_cost_reducer.rs` module
+  (`PlayerDigivolveCostReducer` data struct), `Game` fields, `EffectContext::arm_player_digivolve_cost_reducer`,
+  and a pre-cost accept/decline + suspend-cost `PendingSelection` chain wired into
+  a split `digivolve_from_hand` / `digivolve_from_hand_inner`. The synchronous
+  `scan_before_pay_cost_reduction_with_target` hot path was deliberately NOT
+  touched (the prompt runs before it) — normal/DNA/Blast digivolve confirmed
+  unregressed. DSL surface: `arm_digivolve_cost_reducer` step. End-of-turn expiry
+  wired in `rotate_turn_player`. Closes BT3-103 Clause 0 → BT3-103 IMPLEMENTED.
+  Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cost_hooks player_digivolve_reducer`;
+  `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt3_103`.
+
 ## Phase 2 / DNA Omnimon completion closure — 2026-05-20
 
 The `complete-dna-omnimon-archetype` change drove the DNA Omnimon archetype (64 cards)

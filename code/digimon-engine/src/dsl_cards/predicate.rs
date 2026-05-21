@@ -505,7 +505,9 @@ fn eval_result_bound_fields(
 ) -> bool {
     let Some(bindings) = bindings else {
         return pred.effect_suspended_any_own_digimon != Some(true)
+            && pred.effect_suspended_any_opponent_digimon != Some(true)
             && pred.effect_returned_any_card != Some(true)
+            && pred.returned_card_matching.is_none()
             && pred.effect_deleted_any_own_digimon != Some(true)
             && pred.effect_deleted_any_opponent_digimon != Some(true)
             && pred.effect_played_any_digimon != Some(true)
@@ -519,9 +521,40 @@ fn eval_result_bound_fields(
             return false;
         }
     }
+    // G-DSL-EFFECT-SUSPENDED-RESULT — opponent-side sibling. The result
+    // log records every suspend regardless of owner (`record_suspended`
+    // is owner-agnostic); the own/opponent split happens here at read
+    // time, mirroring `effect_deleted_any_opponent_digimon`.
+    if let Some(want) = pred.effect_suspended_any_opponent_digimon {
+        let actual = log.suspended.iter().any(|h| h.player != rctx.player);
+        if actual != want {
+            return false;
+        }
+    }
     if let Some(want) = pred.effect_returned_any_card {
         let actual = !log.returned_to_deck.is_empty();
         if actual != want {
+            return false;
+        }
+    }
+    // G-ANY-RETURNED-CARD-PREDICATE — filtered result-set predicate. True when
+    // at least one card identity recorded by a preceding return / zone-move
+    // step in this effect satisfies the inner card-shape predicate. Each
+    // returned `CardHandle` is resolved to its identity via
+    // `card_data_for_handle` (zone-agnostic) and evaluated as a `Card` subject.
+    if let Some(inner) = &pred.returned_card_matching {
+        let any_match = log
+            .returned_to_deck
+            .iter()
+            .any(|&handle| {
+                eval_predicate_with_bindings(
+                    inner,
+                    rctx,
+                    PredicateSubject::Card(handle),
+                    Some(bindings),
+                )
+            });
+        if !any_match {
             return false;
         }
     }
@@ -1167,6 +1200,29 @@ fn eval_event_fields(
             .colors
             .iter()
             .any(|c| !allowed.iter().any(|a| color_matches(*a, *c)))
+        {
+            return false;
+        }
+    }
+    if let Some(ref allowed) = pred.event_card_color_has {
+        // G-EVENT-CARD-COLOR-IS — at least one color of the triggering
+        // event card must appear in `allowed` (intersection / "has"
+        // semantics). Distinct from `event_card_color_only`'s subset test.
+        let Some(card) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.event_card)
+        else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if !data
+            .colors
+            .iter()
+            .any(|c| allowed.iter().any(|a| color_matches(*a, *c)))
         {
             return false;
         }

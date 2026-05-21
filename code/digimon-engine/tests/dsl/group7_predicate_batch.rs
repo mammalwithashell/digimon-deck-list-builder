@@ -1095,3 +1095,179 @@ fn select_trash_uses_play_cost_lte_for_valid_actions() {
         .expect("select_trash should install a pending selection");
     assert_eq!(pending.valid_action_ids, vec![TRASH_EFFECT_START]);
 }
+
+// ─── BG Imperial Tier 1 substrate (S1–S6) ────────────────────────────────────
+//
+// `bg-imperial-substrate-closeout` Tier 1 — six new DSL predicate leaves.
+// Each predicate gets a compile-from-YAML test plus a positive/negative
+// runtime-eval test.
+
+// ─── S2 `effect_suspended_any_opponent_digimon` (G-DSL-EFFECT-SUSPENDED-RESULT) ─
+
+#[test]
+fn effect_suspended_any_opponent_digimon_compiles_from_yaml() {
+    let yaml = r#"
+card: T-S2-SUSPEND-OPP
+name: Suspended Opponent Result
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 9000
+effects:
+  - when: on_play
+    process:
+      - if:
+          condition: { effect_suspended_any_opponent_digimon: false }
+          then:
+            - gain_memory: 1
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let CompiledStep::If { condition, .. } = &triggered.process[0] else {
+        panic!("expected if step");
+    };
+    assert_eq!(condition.effect_suspended_any_opponent_digimon, Some(false));
+}
+
+#[test]
+fn effect_suspended_any_opponent_digimon_reads_opponent_suspends_from_result_log() {
+    // Positive: suspending an opponent Digimon sets the result-log flag.
+    let mut runner = runner_with_dp_cards();
+    let opp = runner.place_on_field(1, "LOW-DP", None);
+    let source = src_card(&runner);
+    let steps = vec![
+        CompiledStep::Suspend {
+            target: digimon_dsl::compiled::CompiledBindingRef::Binding("target".to_string()),
+        },
+        CompiledStep::If {
+            condition: CompiledPredicate {
+                effect_suspended_any_opponent_digimon: Some(true),
+                ..Default::default()
+            },
+            then: vec![CompiledStep::GainMemory(1)],
+            else_branch: vec![],
+        },
+    ];
+    let before = runner.game.memory;
+    let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("target", opp);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    assert_eq!(
+        runner.game.memory,
+        before + 1,
+        "opponent-suspend result predicate should fire after suspending an opponent Digimon"
+    );
+}
+
+#[test]
+fn effect_suspended_any_opponent_digimon_ignores_own_suspends() {
+    // Negative: suspending an OWN Digimon must not set the opponent flag.
+    let mut runner = runner_with_dp_cards();
+    let own = runner.place_on_field(0, "LOW-DP", None);
+    let source = src_card(&runner);
+    let steps = vec![
+        CompiledStep::Suspend {
+            target: digimon_dsl::compiled::CompiledBindingRef::Binding("target".to_string()),
+        },
+        CompiledStep::If {
+            condition: CompiledPredicate {
+                effect_suspended_any_opponent_digimon: Some(true),
+                ..Default::default()
+            },
+            then: vec![CompiledStep::GainMemory(1)],
+            else_branch: vec![],
+        },
+    ];
+    let before = runner.game.memory;
+    let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("target", own);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    assert_eq!(
+        runner.game.memory, before,
+        "opponent-suspend result predicate must not fire for own suspends"
+    );
+}
+
+// ─── S3 `event_card_color_has` (G-EVENT-CARD-COLOR-IS) ───────────────────────
+
+#[test]
+fn event_card_color_has_compiles_from_yaml() {
+    let yaml = r#"
+card: T-S3-COLOR-HAS
+name: Event Card Color Has
+kind: digimon
+level: 4
+color: [blue]
+cost: 4
+dp: 5000
+effects:
+  - when: on_digivolve
+    condition: { event_card_color_has: [blue, green] }
+    process:
+      - gain_memory: 1
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let condition = triggered.condition.as_ref().expect("condition");
+    assert_eq!(
+        condition.event_card_color_has,
+        Some(vec![
+            digimon_dsl::compiled::CompiledColor::Blue,
+            digimon_dsl::compiled::CompiledColor::Green,
+        ])
+    );
+}
+
+#[test]
+fn event_card_color_has_matches_when_any_listed_color_present() {
+    // Event card is Green-only. `event_card_color_has: [blue, green]`
+    // matches via the green intersection; `[blue]` does not.
+    let src = make_test_card("PRED-SRC", "Pred Src");
+    let mut green = make_test_card("GREEN-EVT", "Green Event");
+    green.colors = vec![CardColor::Green];
+    let mut runner = DebugRunner::builder()
+        .add_card(src)
+        .add_card(green)
+        .hand(0, &["PRED-SRC", "GREEN-EVT"])
+        .build();
+    let source_card = runner.game.players[0].hand[0].handle();
+    let event_card = runner.game.players[0].hand[1].handle();
+    runner.game.current_trigger_context =
+        Some(digimon_engine::trigger_context::TriggerContext {
+            event_card: Some(event_card),
+            ..Default::default()
+        });
+    let rctx = EffectReadContext::new(&runner.game, source_card, None, 0);
+
+    let has_blue_green = CompiledPredicate {
+        event_card_color_has: Some(vec![
+            digimon_dsl::compiled::CompiledColor::Blue,
+            digimon_dsl::compiled::CompiledColor::Green,
+        ]),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(&has_blue_green, &rctx, PredicateSubject::None, None),
+        "green event card matches `has: [blue, green]`"
+    );
+
+    let has_blue_only = CompiledPredicate {
+        event_card_color_has: Some(vec![digimon_dsl::compiled::CompiledColor::Blue]),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&has_blue_only, &rctx, PredicateSubject::None, None),
+        "green event card does not match `has: [blue]`"
+    );
+}

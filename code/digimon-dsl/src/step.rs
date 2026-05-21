@@ -139,6 +139,13 @@ pub enum StepSpec {
     TrashTopSource(TargetArg),
     TrashAllSources(TargetArg),
     TrashSelectedSources(TrashSelectedSourcesArgs),
+    /// G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME (2026-05-21) — return each
+    /// `select_own_sources`-bound digivolution source card to its owner's
+    /// hand. Mirrors `TrashSelectedSources` but routes the source `Card` to
+    /// the owner's hand instead of trash; fires no `OnDigivolutionCardTrashed`
+    /// (this is a return, not a trash). Closes BT12-031's Imperialdramon:
+    /// Dragon Mode alt-cost.
+    ReturnSelectedSourcesToHand(TrashSelectedSourcesArgs),
     BindPermanentProperty(BindPermanentProperty),
     Hatch(PlayerArg),
 
@@ -172,6 +179,7 @@ pub enum StepSpec {
     SecurityPlaceTopStackedCard(SecurityPlaceTopStackedCardArgs),
     ReturnAllTrashToDeckBottom(PlayerArg),
     ReturnTrashListToDeckBottom(ReturnTrashListToDeckBottomArgs),
+    MoveTrashCardToDeckTop(MoveTrashCardToDeckTopArgs),
     TrashTopNDigivolutionCardsOfEach(TrashTopNDigivolutionCardsOfEachArgs),
     TrashOpponentHandToCount(TrashOpponentHandToCountArgs),
     SearchOwnSecurityStack(SearchOwnSecurityStackArgs),
@@ -205,6 +213,7 @@ pub enum StepSpec {
     SelectTrash(SelectZoneArgs),
     SelectMaterial(SelectMaterialArgs),
     SelectOwnSources(SelectOwnSourcesArgs),
+    SelectOpponentSources(SelectOpponentSourcesArgs),
     DigiBurst(DigiBurstArgs),
     SelectOpponentDpBudget(SelectOpponentDpBudgetArgs),
     SelectOpponentPlayCostBudget(SelectOpponentPlayCostBudgetArgs),
@@ -242,6 +251,15 @@ pub enum StepSpec {
     HandleReplacement(EmptyArgs),
     RedirectReplacement(RedirectReplacementArgs),
     SubstituteReplacement(SubstituteReplacementArgs),
+
+    /// G-COST-REDUCE-ALLY-DIGIVOLVE — install a player-scoped one-shot
+    /// future-digivolve cost reducer. Used by BT3-103 Hidden Potential
+    /// Discovered!'s `[Main]` clause: "For the turn, when one of your green
+    /// Digimon would next digivolve, by suspending 1 of your Digimon,
+    /// reduce the digivolution cost by 5." The reducer fires at the next
+    /// qualifying digivolution; if `suspend_cost` is set the player is
+    /// prompted to suspend 1 of their own Digimon (a player-visible cost).
+    ArmDigivolveCostReducer(ArmDigivolveCostReducerArgs),
 
     // Escape hatch (step-level)
     RawRust(RawRustStep),
@@ -312,6 +330,9 @@ impl Serialize for StepSpec {
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
             StepSpec::TrashAllSources(v) => kv!(s, "trash_all_sources", v),
             StepSpec::TrashSelectedSources(v) => kv!(s, "trash_selected_sources", v),
+            StepSpec::ReturnSelectedSourcesToHand(v) => {
+                kv!(s, "return_selected_sources_to_hand", v)
+            }
             StepSpec::BindPermanentProperty(v) => kv!(s, "bind_permanent_property", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             // Play / digivolve
@@ -363,6 +384,9 @@ impl Serialize for StepSpec {
             StepSpec::ReturnTrashListToDeckBottom(v) => {
                 kv!(s, "return_trash_list_to_deck_bottom", v)
             }
+            StepSpec::MoveTrashCardToDeckTop(v) => {
+                kv!(s, "move_trash_card_to_deck_top", v)
+            }
             StepSpec::TrashTopNDigivolutionCardsOfEach(v) => {
                 kv!(s, "trash_top_n_digivolution_cards_of_each", v)
             }
@@ -389,6 +413,7 @@ impl Serialize for StepSpec {
             StepSpec::SelectTrash(v) => kv!(s, "select_trash", v),
             StepSpec::SelectMaterial(v) => kv!(s, "select_material", v),
             StepSpec::SelectOwnSources(v) => kv!(s, "select_own_sources", v),
+            StepSpec::SelectOpponentSources(v) => kv!(s, "select_opponent_sources", v),
             StepSpec::DigiBurst(v) => kv!(s, "digi_burst", v),
             StepSpec::SelectOpponentDpBudget(v) => kv!(s, "select_opponent_dp_budget", v),
             StepSpec::SelectOpponentPlayCostBudget(v) => {
@@ -429,6 +454,7 @@ impl Serialize for StepSpec {
             StepSpec::HandleReplacement(v) => kv!(s, "handle_replacement", v),
             StepSpec::RedirectReplacement(v) => kv!(s, "redirect_replacement", v),
             StepSpec::SubstituteReplacement(v) => kv!(s, "substitute_replacement", v),
+            StepSpec::ArmDigivolveCostReducer(v) => kv!(s, "arm_digivolve_cost_reducer", v),
             // Escape hatch
             StepSpec::RawRust(v) => kv!(s, "raw_rust", v),
             StepSpec::ActivationCost(v) => kv!(s, "activation_cost", v),
@@ -514,6 +540,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
             "trash_all_sources" => StepSpec::TrashAllSources(map.next_value()?),
             "trash_selected_sources" => StepSpec::TrashSelectedSources(map.next_value()?),
+            "return_selected_sources_to_hand" => {
+                StepSpec::ReturnSelectedSourcesToHand(map.next_value()?)
+            }
             "bind_permanent_property" => StepSpec::BindPermanentProperty(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
 
@@ -565,6 +594,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "return_trash_list_to_deck_bottom" => {
                 StepSpec::ReturnTrashListToDeckBottom(map.next_value()?)
             }
+            "move_trash_card_to_deck_top" => {
+                StepSpec::MoveTrashCardToDeckTop(map.next_value()?)
+            }
             "trash_top_n_digivolution_cards_of_each" => {
                 StepSpec::TrashTopNDigivolutionCardsOfEach(map.next_value()?)
             }
@@ -593,6 +625,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "select_trash" => StepSpec::SelectTrash(map.next_value()?),
             "select_material" => StepSpec::SelectMaterial(map.next_value()?),
             "select_own_sources" => StepSpec::SelectOwnSources(map.next_value()?),
+            "select_opponent_sources" => StepSpec::SelectOpponentSources(map.next_value()?),
             "digi_burst" => StepSpec::DigiBurst(map.next_value()?),
             "select_opponent_dp_budget" => StepSpec::SelectOpponentDpBudget(map.next_value()?),
             "select_opponent_play_cost_budget" => {
@@ -635,6 +668,11 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "handle_replacement" => StepSpec::HandleReplacement(map.next_value()?),
             "redirect_replacement" => StepSpec::RedirectReplacement(map.next_value()?),
             "substitute_replacement" => StepSpec::SubstituteReplacement(map.next_value()?),
+
+            // G-COST-REDUCE-ALLY-DIGIVOLVE
+            "arm_digivolve_cost_reducer" => {
+                StepSpec::ArmDigivolveCostReducer(map.next_value()?)
+            }
 
             // Escape hatch
             "raw_rust" => StepSpec::RawRust(map.next_value()?),
@@ -684,6 +722,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_top_source",
                         "trash_all_sources",
                         "trash_selected_sources",
+                        "return_selected_sources_to_hand",
                         "bind_permanent_property",
                         "hatch",
                         "play_from_hand",
@@ -711,6 +750,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "security_place_top_stacked_card",
                         "return_all_trash_to_deck_bottom",
                         "return_trash_list_to_deck_bottom",
+                        "move_trash_card_to_deck_top",
                         "trash_top_n_digivolution_cards_of_each",
                         "trash_opponent_hand_to_count",
                         "search_own_security_stack",
@@ -729,6 +769,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "select_trash",
                         "select_material",
                         "select_own_sources",
+                        "select_opponent_sources",
                         "digi_burst",
                         "select_opponent_dp_budget",
                         "select_opponent_play_cost_budget",
@@ -760,6 +801,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "handle_replacement",
                         "redirect_replacement",
                         "substitute_replacement",
+                        "arm_digivolve_cost_reducer",
                         "raw_rust",
                         "activation_cost",
                     ],
@@ -800,6 +842,19 @@ pub struct DeleteBoundPermanentsArgs {
 pub struct ReturnTrashListToDeckBottomArgs {
     pub of: PlayerRef,
     pub cards: BindingRef,
+}
+
+/// Move a single selected trash card to the TOP of the deck. `card` names a
+/// single-card binding produced by a prior `select_trash` step (a `TrashIndex`
+/// or `Card` binding). `of` identifies whose trash the card is currently in;
+/// the card always returns to its OWNER's deck. Selected-trash analog of
+/// `return_trash_list_to_deck_bottom`, but single-card and deck-TOP.
+/// G-ZONE-SELECTED-TRASH-TO-DECK-TOP — driver LM-030 clause B.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MoveTrashCardToDeckTopArgs {
+    pub of: PlayerRef,
+    pub card: BindingRef,
 }
 
 /// Target of an `add_modifier:` step — either a named binding (from a
@@ -875,6 +930,43 @@ pub struct ActivationCostArgs {
 
 fn is_false(b: &bool) -> bool {
     !*b
+}
+
+/// Args for the `arm_digivolve_cost_reducer:` DSL step
+/// (`G-COST-REDUCE-ALLY-DIGIVOLVE`).
+///
+/// YAML shape (BT3-103 Hidden Potential Discovered!):
+/// ```yaml
+/// - arm_digivolve_cost_reducer:
+///     amount: 5
+///     single_fire: true
+///     target_color: green
+///     suspend_cost: true
+/// ```
+///
+/// Installs a player-scoped, turn-scoped ("For the turn") cost reducer.
+/// At the next qualifying digivolution (the digivolving permanent's top
+/// card includes `target_color`, when set), the player is offered an
+/// accept/decline prompt; on accept, `suspend_cost` prompts the player to
+/// suspend 1 of their own Digimon. `single_fire` consumes the reducer on
+/// the first successful application.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ArmDigivolveCostReducerArgs {
+    /// Memory by which the digivolution cost is reduced.
+    pub amount: i32,
+    /// When `true`, the reducer fires exactly once ("would next digivolve")
+    /// then removes itself.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub single_fire: bool,
+    /// When set, the digivolving permanent's top card must include this
+    /// color for the reducer to fire. Omit for "any color".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_color: Option<crate::spec::ColorSpec>,
+    /// When `true`, applying the reduction prompts the player to suspend 1
+    /// of their own Digimon (an interactive, player-visible cost).
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub suspend_cost: bool,
 }
 
 fn is_zero_u8(n: &u8) -> bool {
@@ -1701,6 +1793,30 @@ pub struct SelectOwnSourcesArgs {
     pub target: Option<BindingRef>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub from: Option<BindingRef>,
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
+    pub min: u8,
+    pub max: u8,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    #[serde(default = "default_select_sources_prompt")]
+    pub prompt: String,
+    #[serde(default)]
+    pub then: Vec<StepSpec>,
+}
+
+/// Opponent-side mirror of `SelectOwnSourcesArgs`. The candidate set is drawn
+/// from the OPPONENT's battle-area digivolution-source stacks (every card below
+/// the top card of each opponent permanent), with the same exact-N / up-to-N
+/// `min`/`max` counts, PASS exposed once the minimum is met, optional `filter:`,
+/// and stable cross-permanent source refs. `target:` restricts the picker to a
+/// single opponent permanent binding (e.g. the opponent Digimon picked just
+/// before). G-SELECT-OPPONENT-SOURCES — driver BT16-085 DNA branch.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectOpponentSourcesArgs {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target: Option<BindingRef>,
     #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
     pub filter: PredicateSpec,
     pub min: u8,

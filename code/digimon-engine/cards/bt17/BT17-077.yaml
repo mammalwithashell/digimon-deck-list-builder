@@ -56,11 +56,11 @@
 #   `return_all_trash_to_deck_bottom` drains only that chosen trash.
 #
 #   Clause 1c: "If this effect returned a white level 7 card, gain 3 memory."
-#   IMPLEMENTED by pre-checking the chosen trash with `count_gte` for a white
-#   Lv.7 card, then returning that whole trash and gaining memory afterward.
-#   Because the effect returns every card in the chosen trash, the pre-check is
-#   equivalent to a returned-card predicate for this card and does not inspect
-#   the unchosen trash.
+#   IMPLEMENTED with the `returned_card_matching` result predicate: after the
+#   chosen trash is returned, the per-effect result log holds every returned
+#   card handle, and `returned_card_matching: { color_is: white, level_eq: 7 }`
+#   branches directly on whether the effect actually returned a white Lv.7 card.
+#   This is the faithful result-based reading (no pre-check approximation).
 #
 # Clause 2 — [When Attacking] by-return-opp-no-digi unsuspend self
 #   IMPLEMENTABLE. See process body below.
@@ -141,11 +141,12 @@ effects:
   # Step 1b is a player-visible choice. The effect controller chooses whose
   # trash is returned; only the chosen trash is drained.
   #
-  # Step 1c uses a faithful pre-check per the audit: since the chosen trash is
-  # returned in full, "chosen trash contains a white Lv.7" is equivalent to
-  # "this effect returned a white Lv.7." The unchosen trash is not inspected.
+  # Step 1c branches on `returned_card_matching` — a result-log predicate that
+  # inspects the cards this effect actually returned to the deck. After the
+  # chosen trash is bottom-decked, the rider gains 3 memory iff a white Lv.7
+  # card was among the returned cards.
   - when: [on_play, when_digivolving]
-    summary: "[On Play][When Digivolving] Trash all opp digi sources; choose a trash to bottom-deck; +3 memory if chosen trash returned white Lv.7"
+    summary: "[On Play][When Digivolving] Trash all opp digi sources; choose a trash to bottom-deck; +3 memory if a returned card is white Lv.7"
     process:
       - for_each:
           over:
@@ -165,38 +166,15 @@ effects:
       - if:
           condition: { equals: [whose_trash, 0] }
           then:
-            - if:
-                condition:
-                  count_gte:
-                    filter:
-                      of: you
-                      zone: [trash]
-                      color_is: white
-                      level_eq: 7
-                    n: 1
-                then:
-                  - return_all_trash_to_deck_bottom: { of: you }
-                  - gain_memory: 3
-                else:
-                  - return_all_trash_to_deck_bottom: { of: you }
+            - return_all_trash_to_deck_bottom: { of: you }
+          else:
+            - return_all_trash_to_deck_bottom: { of: opponent }
 
+      # Clause 1c — if this effect returned a white Lv.7 card, gain 3 memory.
       - if:
-          condition: { equals: [whose_trash, 1] }
+          condition: { returned_card_matching: { color_is: white, level_eq: 7 } }
           then:
-            - if:
-                condition:
-                  count_gte:
-                    filter:
-                      of: opponent
-                      zone: [trash]
-                      color_is: white
-                      level_eq: 7
-                    n: 1
-                then:
-                  - return_all_trash_to_deck_bottom: { of: opponent }
-                  - gain_memory: 3
-                else:
-                  - return_all_trash_to_deck_bottom: { of: opponent }
+            - gain_memory: 3
 
   # ─── Clause 2 — [When Attacking] return opp Digimon (no digi cards) → unsuspend ─
   #

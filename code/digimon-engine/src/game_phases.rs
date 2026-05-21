@@ -265,6 +265,13 @@ impl Game {
         }
         // Phase 6: expire player-scoped flood-gate modifiers.
         self.modifiers.expire_player_end_of_turn(ending_player);
+        // G-COST-REDUCE-ALLY-DIGIVOLVE: expire "For the turn" player-scoped
+        // digivolve cost reducers installed by the ending player.
+        self.player_digivolve_cost_reducers.retain(|r| {
+            !(r.player == ending_player
+                && r.expiry
+                    == crate::player_cost_reducer::PlayerCostReducerExpiry::EndOfTurn)
+        });
         self.mark_until_condition_dirty();
 
         // EndOfOpponentsTurn: every non-ending-player observes the turn ending.

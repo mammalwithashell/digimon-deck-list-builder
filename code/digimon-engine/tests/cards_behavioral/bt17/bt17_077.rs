@@ -30,7 +30,7 @@
 //! - G4  Named ancestor digivolve bonus (Lv.6 Imperialdramon / cost 5)
 //! - [On Play][When Digivolving] for_each/trash_all_sources over all opponent Digimon
 //! - [On Play][When Digivolving] player chooses which trash to return to deck bottom
-//! - [On Play][When Digivolving] pre-check chosen trash for white Lv.7 memory rider
+//! - [On Play][When Digivolving] returned_card_matching result rider for white Lv.7
 //! - [When Attacking] by-cost-return opp Digimon (no digi cards) → unsuspend self
 //! - Condition gate: at least 1 opp Digimon with no digi cards required
 
@@ -733,6 +733,52 @@ fn bt17_077_on_play_does_not_gain_memory_for_white_lv7_in_unchosen_trash() {
         runner.trash_size(1),
         1,
         "unchosen white Lv.7 must remain in opponent trash"
+    );
+}
+
+/// Clause 1c negative: the chosen trash is returned but contains no white Lv.7
+/// card — `returned_card_matching` must not fire, so no memory is gained.
+#[test]
+fn bt17_077_on_play_does_not_gain_memory_when_returned_cards_are_not_white_lv7() {
+    let mut runner = paladin_runner();
+    // A blue Lv.7 (wrong color) and a white Lv.6 (wrong level) — neither
+    // satisfies `returned_card_matching: { color_is: white, level_eq: 7 }`.
+    runner.game.card_data.push(make_colored_digimon(
+        "BLUE-LV7",
+        "BlueLv7",
+        7,
+        12000,
+        vec![CardColor::Blue],
+    ));
+    runner.game.card_data.push(make_colored_digimon(
+        "WHITE-LV6",
+        "WhiteLv6",
+        6,
+        9000,
+        vec![CardColor::White],
+    ));
+    add_to_trash(&mut runner, 1, 1, "BLUE-LV7");
+    add_to_trash(&mut runner, 1, 1, "WHITE-LV6");
+
+    let memory_before = runner.game.memory;
+    let paladin = runner.place_on_field(0, "BT17-077", None);
+    runner.fire_on_play(0, paladin.index as usize);
+
+    let choice = runner
+        .pending_selection_view()
+        .expect("trash owner choice prompt");
+    runner
+        .execute_action(choice.selecting_player, choice.valid_action_ids[1])
+        .expect("choose opponent trash");
+
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "no white Lv.7 among the returned cards — the memory rider must not fire"
+    );
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "the chosen opponent trash must still be fully returned"
     );
 }
 
