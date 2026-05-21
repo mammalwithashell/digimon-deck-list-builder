@@ -1175,6 +1175,9 @@ pub enum CompiledBindingRef {
     Permanent(String),
     Binding(String),
     OfPermanent(String),
+    /// Top card of a player's deck — resolves to `CardSourceRef::DeckTop`.
+    /// Card-source binding only (never a permanent/card handle).
+    DeckTop(CompiledPlayerRef),
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

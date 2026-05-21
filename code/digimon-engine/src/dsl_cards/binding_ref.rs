@@ -63,6 +63,10 @@ pub fn resolve_binding_ref(
                     .or(t.target_card)
             })
             .map(ResolvedBinding::Card),
+        // `DeckTop` is a card-source-only binding: it has no `ResolvedBinding`
+        // (permanent / card-handle) form. Card-source steps resolve it
+        // directly via `resolve_card_source_ref`; here it resolves to nothing.
+        CompiledBindingRef::DeckTop(_) => None,
     }
 }
 

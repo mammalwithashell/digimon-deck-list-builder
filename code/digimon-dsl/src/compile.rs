@@ -1353,6 +1353,7 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
             permanent,
             binding,
             of_permanent,
+            deck_top,
             ..
         }) => {
             if let Some(p) = permanent {
@@ -1361,6 +1362,8 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
                 CompiledBindingRef::Binding(b.clone())
             } else if let Some(o) = of_permanent {
                 CompiledBindingRef::OfPermanent(o.clone())
+            } else if let Some(p) = deck_top {
+                CompiledBindingRef::DeckTop(compile_player_ref(*p))
             } else {
                 CompiledBindingRef::Named(String::new())
             }

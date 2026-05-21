@@ -700,6 +700,11 @@ pub struct StructuredBindingRef {
     pub zone: Option<Zone>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub of_permanent: Option<String>,
+    /// Top card of a player's deck — a card-source binding (not a permanent).
+    /// Used by card-source steps such as `place_as_bottom_source` to stash
+    /// the deck top under a Tamer. YAML: `{ deck_top: you }`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deck_top: Option<PlayerRef>,
 }
 
 // ── Argument structs (one per verb family) ──────────────────────────
