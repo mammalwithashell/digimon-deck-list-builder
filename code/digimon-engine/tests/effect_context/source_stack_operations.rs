@@ -150,7 +150,7 @@ fn place_as_bottom_source_from_security_fires_loss_observer_and_moves_exact_card
 
     let ok = {
         let mut ctx = EffectContext::new(&mut runner.game, target_top, Some(target), 0);
-        ctx.place_as_bottom_source(CardSourceRef::Security(0, 1), target)
+        ctx.place_as_bottom_source(CardSourceRef::Security(0, 1), target, false)
     };
 
     assert!(ok);
@@ -191,7 +191,7 @@ fn place_as_bottom_source_from_material_moves_exact_source() {
 
     let ok = {
         let mut ctx = EffectContext::new(&mut runner.game, target_top, Some(target), 0);
-        ctx.place_as_bottom_source(CardSourceRef::Material(source_perm, 1), target)
+        ctx.place_as_bottom_source(CardSourceRef::Material(source_perm, 1), target, false)
     };
 
     assert!(ok);

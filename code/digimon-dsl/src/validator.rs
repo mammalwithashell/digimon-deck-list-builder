@@ -830,6 +830,24 @@ fn validate_step(
                 errors,
             );
         }
+        StepSpec::SelectMaterials(args) => {
+            if let crate::step::CountBound::Formula { formula } = &args.max {
+                validate_formula(
+                    formula,
+                    &format!("{prefix}.max.formula"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
+            validate_predicate(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
         StepSpec::SelectUnionZone(args) => {
             validate_predicate(
                 &args.filter,
@@ -1027,6 +1045,16 @@ fn validate_step_binding_scope(
             }
         }
         StepSpec::SelectMaterial(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::SelectMaterials(args) => {
             validate_predicate_binding_scope(
                 &args.filter,
                 &format!("{prefix}.filter"),
@@ -1623,6 +1651,7 @@ fn validate_binding_ref(
         permanent,
         source_permanent,
         of_permanent,
+        deck_top,
         ..
     }) = binding_ref
     else {
@@ -1637,10 +1666,15 @@ fn validate_binding_ref(
         });
     }
 
-    let populated = [binding, permanent, of_permanent]
-        .iter()
-        .filter(|field| field.is_some())
-        .count();
+    let populated = [
+        binding.is_some(),
+        permanent.is_some(),
+        of_permanent.is_some(),
+        deck_top.is_some(),
+    ]
+    .iter()
+    .filter(|present| **present)
+    .count();
     if populated == 0 {
         errors.push(ValidationError {
             card_id: card_id.into(),

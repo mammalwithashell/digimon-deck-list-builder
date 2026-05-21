@@ -66,6 +66,7 @@ impl TokenDef {
             ace_overflow: None,
             dual: None,
             digixros_aliases: Vec::new(),
+            also_treated_as: Vec::new(),
         }
     }
 }
@@ -110,8 +111,8 @@ impl TokenRegistry {
 
 /// Build the default token registry. Currently: Petrification (Medusamon),
 /// Familiar (TS Olympos), Atho/René/Por (Royal Knights — BT20-017 Jesmon,
-/// BT23-013 Jesmon CS). Additional tokens land as their archetypes are
-/// ported.
+/// BT23-013 Jesmon CS), Hinukamuy (Royal Knights — BT23-057 Gankoomon).
+/// Additional tokens land as their archetypes are ported.
 pub fn build_registry() -> TokenRegistry {
     let mut r = TokenRegistry::new();
     r.insert(TokenDef {
@@ -150,6 +151,18 @@ pub fn build_registry() -> TokenRegistry {
             Keyword::Blocker,
             Keyword::Decoy((1u8 << CardColor::Red as u8) | (1u8 << CardColor::Black as u8)),
         ],
+    });
+    // [Hinukamuy] — printed stats and keywords from BT23-057 Gankoomon:
+    // "(Digimon/White/6000 DP/<Alliance> <Reboot> <Blocker>)".
+    r.insert(TokenDef {
+        name: "hinukamuy".to_string(),
+        card_id: "TOKEN_HINUKAMUY".to_string(),
+        card_name: "Hinukamuy Token".to_string(),
+        colors: vec![CardColor::White],
+        dp: Some(6000),
+        level: None,
+        traits: Vec::new(),
+        keywords: vec![Keyword::Alliance, Keyword::Reboot, Keyword::Blocker],
     });
     r
 }
@@ -217,6 +230,33 @@ mod tests {
         let cd = def.to_card_data();
         assert_eq!(cd.card_kind, CardKind::Token);
         assert_eq!(cd.dp, Some(6000));
+        assert!(cd.keywords.contains(&Keyword::Reboot));
+        assert!(cd.keywords.contains(&Keyword::Blocker));
+    }
+
+    #[test]
+    fn hinukamuy_registered_with_printed_stats_and_keywords() {
+        let r = build_registry();
+        let def = r.get("hinukamuy").expect("Hinukamuy missing");
+        assert_eq!(def.card_id, "TOKEN_HINUKAMUY");
+        assert_eq!(def.card_name, "Hinukamuy Token");
+        assert_eq!(def.colors, vec![CardColor::White]);
+        assert_eq!(def.dp, Some(6000));
+        assert!(def.level.is_none());
+        assert!(def.traits.is_empty());
+        assert!(def.keywords.contains(&Keyword::Alliance));
+        assert!(def.keywords.contains(&Keyword::Reboot));
+        assert!(def.keywords.contains(&Keyword::Blocker));
+    }
+
+    #[test]
+    fn hinukamuy_card_data_carries_keywords() {
+        let r = build_registry();
+        let def = r.get("hinukamuy").unwrap();
+        let cd = def.to_card_data();
+        assert_eq!(cd.card_kind, CardKind::Token);
+        assert_eq!(cd.dp, Some(6000));
+        assert!(cd.keywords.contains(&Keyword::Alliance));
         assert!(cd.keywords.contains(&Keyword::Reboot));
         assert!(cd.keywords.contains(&Keyword::Blocker));
     }

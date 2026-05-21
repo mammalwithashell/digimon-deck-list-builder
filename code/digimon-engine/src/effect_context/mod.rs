@@ -18,6 +18,12 @@ pub use selections::{
     CountCappedZone, DistinctByMode, EffectContextSelectorScope, RevealBucketSelection,
 };
 
+/// Material-zone carrier resolver — branches battle-area vs. breeding-area
+/// (`BREEDING_TARGET` sentinel) carriers. Used by the DSL `select_material*`
+/// step lowering so its filter/bind closures read the same stack the engine
+/// selection helper does.
+pub(crate) use selections::material_carrier_permanent;
+
 pub use crate::selection::{BreedingPermanentSelectionRef, SourceSelectionRef};
 
 use crate::action::mask::effect_attack_target_action_ids;
@@ -3116,13 +3122,20 @@ impl<'a> EffectContext<'a> {
     /// status is unchanged. Gating here would over-restrict relative to
     /// DCGO and break parity with cards that intentionally route a source
     /// under an opponent's Progress attacker.
+    ///
+    /// `face_down: true` marks the inserted digivolution source face-down
+    /// (Tamer-stash callers); `false` is ordinary face-up placement. Note
+    /// that `face_down` is NOT honored for `CardSourceRef::Security` sources
+    /// — those are always placed face-up (see the `Game::place_as_bottom_source`
+    /// doc caveat).
     pub fn place_as_bottom_source(
         &mut self,
         source: crate::enums::CardSourceRef,
         target: PermanentHandle,
+        face_down: bool,
     ) -> bool {
         self.game
-            .place_as_bottom_source_observed(source, target, self.player)
+            .place_as_bottom_source_observed(source, target, self.player, face_down)
     }
 
     pub fn place_permanent_as_bottom_sources(
@@ -3161,6 +3174,7 @@ impl<'a> EffectContext<'a> {
         self.place_as_bottom_source(
             crate::enums::CardSourceRef::Material(target, top_stacked_idx),
             target,
+            false,
         )
     }
 
@@ -3194,14 +3208,22 @@ impl<'a> EffectContext<'a> {
     /// them in normal play. `revealed_cards` is included to handle cards that
     /// are mid-reveal when a Save effect resolves.
     ///
+    /// `face_down: true` marks the placed source face-down; `false` is
+    /// ordinary face-up placement.
+    ///
     /// # Panics
     ///
     /// Panics if `card` cannot be located in any zone — this represents a
     /// programming error (passing an invalid or already-moved handle).
     ///
     /// Used by: `<Save>`, `<Material Save N>`.
-    pub fn place_card_under_permanent_bottom(&mut self, card: CardHandle, target: PermanentHandle) {
-        let taken = self
+    pub fn place_card_under_permanent_bottom(
+        &mut self,
+        card: CardHandle,
+        target: PermanentHandle,
+        face_down: bool,
+    ) {
+        let mut taken = self
             .game
             .remove_card_from_any_zone(card)
             .unwrap_or_else(|| {
@@ -3215,9 +3237,12 @@ impl<'a> EffectContext<'a> {
         if (target.index as usize) >= target_player.battle_area.len() {
             // Safe-fail: target permanent no longer exists; route to its
             // controller's trash rather than dropping the card on the floor.
+            // Trashed cards are not face-down sources, so `face_down` is not
+            // applied on this path.
             target_player.trash.push(taken);
             return;
         }
+        taken.face_down = face_down;
         target_player.battle_area[target.index as usize].push_under(taken);
     }
 
@@ -3494,6 +3519,38 @@ impl<'a> EffectContext<'a> {
         // rather than misroute; in practice unreachable.
     }
 
+    /// Place the top card of `target.player`'s deck as the bottom digivolution
+    /// source of `target`. Generalizes `training_place_deck_top_under_self_face_down`
+    /// to an arbitrary target permanent (Tamer or Digimon, in either player's
+    /// battle area).
+    ///
+    /// Returns `Some(card_handle)` on success or `None` if the controller's
+    /// deck is empty (silent no-op on empty deck, mirroring `Player::draw`).
+    ///
+    /// `face_down: true` marks the placed source face-down (Tamer-stash
+    /// callers); `false` is ordinary face-up placement.
+    ///
+    /// Used by: ST-23 BEATBREAK / ST-24 DATA SQUAD Tamer-stash placement cards
+    /// (e.g. ST23-13 Tomoro Tenma & Kyo Sawashiro, ST24-09 Sunflowmon).
+    pub fn place_deck_top_under_permanent(
+        &mut self,
+        target: PermanentHandle,
+        face_down: bool,
+    ) -> Option<CardHandle> {
+        let card_handle = self.game.player(target.player).deck.last()?.handle();
+        let ok = self.game.place_as_bottom_source_observed(
+            crate::enums::CardSourceRef::DeckTop(target.player),
+            target,
+            self.player,
+            face_down,
+        );
+        if ok {
+            Some(card_handle)
+        } else {
+            None
+        }
+    }
+
     /// Trash a specific digivolution source from a permanent.
     ///
     /// Used by:
@@ -3710,6 +3767,79 @@ impl<'a> EffectContext<'a> {
         // sources-below-top dispatch in `Game::return_to_hand` /
         // `Game::return_to_deck`. Enqueue once per player so observers on
         // either side of the field pick it up.
+        self.game.fire_digivolution_card_trashed(
+            target.player,
+            target,
+            host_card,
+            source_card,
+            crate::trigger_context::EventCause::from(self.game.infer_effect_cause(target.player)),
+        );
+        true
+    }
+
+    /// Trash the bottom-most face-down digivolution source from `target`,
+    /// fire `OnDigivolutionCardTrashed`, and drain the observer queue. Returns
+    /// `true` iff a face-down source was found at `card_sources[0]` and
+    /// trashed; returns `false` with no mutation otherwise (no face-down
+    /// bottom source, or `target` missing).
+    ///
+    /// This is the cost-form trash primitive for ST-23 BEATBREAK and ST-24
+    /// DATA SQUAD cards whose printed text reads "by trashing the bottom
+    /// face-down card from under any of your Tamers, ...".
+    ///
+    /// The trashed source routes to the source's own `owner` trash, matching
+    /// the standard `OnDigivolutionCardTrashed` ownership semantics (mirrors
+    /// `trash_card_source` / `trash_top_source`).
+    ///
+    /// Unlike `trash_top_source`, this helper does NOT honor
+    /// `ImmuneFromStackTrashing`: that modifier guards against involuntary
+    /// stack-peeling by opponent effects, whereas this is a voluntary
+    /// activation cost the controller chooses to pay (the controller earlier
+    /// stashed the face-down card under their own Tamer). The omission is by
+    /// design — do not add the check.
+    ///
+    /// Used by: ST23-01 Kekkomon, ST23-03 Cougarmon, ST23-04 Murasamemon,
+    /// ST23-08 Monarchlizamon, ST23-11 Wolvermon, ST23-12 Chiropmon,
+    /// ST24-01 Koromon, ST24-06 RizeGreymon, ST24-10 Lilamon, ST24-11 Rosemon,
+    /// ST24-12 Falcomon.
+    pub fn trash_bottom_face_down_source(&mut self, target: PermanentHandle) -> bool {
+        // Inspect `card_sources[0]`: it must exist AND be face-down. Reject
+        // before any mutation otherwise (missing target, empty stack, or a
+        // face-up bottom source — e.g. an un-stashed Tamer whose only source
+        // is its own face-up card).
+        let removed = {
+            let permanent = match self
+                .game
+                .player_mut(target.player)
+                .battle_area
+                .get_mut(target.index as usize)
+            {
+                Some(p) => p,
+                None => return false,
+            };
+            match permanent.card_sources.first() {
+                Some(bottom) if bottom.face_down => {}
+                _ => return false,
+            }
+            permanent.card_sources.remove(0)
+        };
+        let source_card = removed.handle();
+        let owner = removed.owner;
+        self.game.player_mut(owner).trash.push(removed);
+
+        // Compute the host's CURRENT top card AFTER the removal — the
+        // permanent still exists with its remaining sources / its own top
+        // card. A Tamer always retains its own card as the top.
+        //
+        // The direct index (not `.get()`) is infallible by construction here:
+        // the permanent was validated present at the top of this function, and
+        // only a source — never the permanent — was removed.
+        let host_card = self.game.player(target.player).battle_area[target.index as usize]
+            .top_card()
+            .handle();
+
+        // Fire OnDigivolutionCardTrashed for the trashed bottom source, the
+        // same observer dispatch as `trash_card_source` / `trash_top_source`.
         self.game.fire_digivolution_card_trashed(
             target.player,
             target,

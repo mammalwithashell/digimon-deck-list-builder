@@ -7,9 +7,16 @@ pub const PROFILE_ID: &str = "standard_lite_v2";
 pub const GAME_MODE: &str = "standard";
 pub const VERSION: u32 = 2;
 pub const TENSOR_VERSION: u16 = 2;
-pub const FEATURE_SCHEMA_VERSION: &str = "standard_lite_v2.1";
+// Task S1.4: PERM_MAX_SOURCES 11 -> 12 so every action-space source slot is
+// observable. SOURCES_PER_FIELD (12) governs the `SOURCE_SELECT` and
+// `BREEDING_SOURCE_SELECT` action ranges; the v2 tensor must surface all 12
+// source slots (incl. a breeding-carrier's 12th source via
+// BREEDING_SOURCE_SELECT) so the RL agent never picks a slot blind.
+// This grows each permanent slot by 3 floats (96 -> 99), shifting every
+// section after `permanent_slots` and bumping tensor_size 8320 -> 8410.
+pub const FEATURE_SCHEMA_VERSION: &str = "standard_lite_v2.2";
 pub const LAYOUT_HASH: &str =
-    "sha256:66d471ee6a172f2eb309ec9b09e565c1faf262635730daabf96e1e3b47c16d05";
+    "sha256:e9cef3987168ea77bd7e99fee731cb66ec365245cb9ec1df3d12636f5c00d823";
 
 pub const GLOBAL_FEATURES_SIZE: usize = 64;
 pub const PLAYER_SUMMARY_PLAYERS: usize = 2;
@@ -18,7 +25,10 @@ pub const PLAYER_SUMMARY_SIZE: usize = PLAYER_SUMMARY_PLAYERS * PLAYER_SUMMARY_R
 pub const PERMANENT_PLAYERS: usize = 2;
 pub const PERMANENT_SLOTS_PER_PLAYER: usize = 15;
 pub const PERMANENT_ROW_COUNT: usize = PERMANENT_PLAYERS * PERMANENT_SLOTS_PER_PLAYER;
-pub const PERMANENT_SLOT_SIZE: usize = 96;
+// Derived from the source-block layout: 63 header floats + one
+// PERM_SOURCE_ENTRY_SIZE-wide entry per PERM_MAX_SOURCES slot.
+pub const PERMANENT_SLOT_SIZE: usize =
+    PERM_SOURCE_START_OFFSET + PERM_MAX_SOURCES * PERM_SOURCE_ENTRY_SIZE;
 pub const PERMANENT_SLOTS_SIZE: usize = PERMANENT_ROW_COUNT * PERMANENT_SLOT_SIZE;
 pub const OWN_HAND_ROWS: usize = 30;
 pub const OWN_HAND_ROW_SIZE: usize = 32;
@@ -51,7 +61,7 @@ pub const PERM_OPT_TOTAL_OFFSET: usize = 25;
 pub const PERM_OPT_USED_OFFSET: usize = 26;
 pub const PERM_SOURCE_START_OFFSET: usize = 63;
 pub const PERM_SOURCE_ENTRY_SIZE: usize = 3;
-pub const PERM_MAX_SOURCES: usize = 11;
+pub const PERM_MAX_SOURCES: usize = 12;
 pub const PERM_SOURCE_CARD_ID_OFFSET: usize = 0;
 pub const PERM_SOURCE_OPT_STATE_OFFSET: usize = 1;
 pub const PERM_SOURCE_DP_CONTRIBUTION_OFFSET: usize = 2;

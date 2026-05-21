@@ -3173,6 +3173,7 @@ mod current_attacker_tests {
             dual: None,
             ace_overflow: None,
             digixros_aliases: Vec::new(),
+            also_treated_as: Vec::new(),
         }
     }
 

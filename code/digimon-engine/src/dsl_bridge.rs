@@ -123,6 +123,7 @@ pub fn enrich_card_data_with_dsl_alt_paths(
         };
         card.ace_overflow = compiled.ace_overflow;
         card.digixros_aliases = compiled.digixros_aliases.clone();
+        card.also_treated_as = compiled.also_treated_as.clone();
         for dna_cost in compiled_dna_costs(compiled) {
             if !card.dna_costs.contains(&dna_cost) {
                 card.dna_costs.push(dna_cost);

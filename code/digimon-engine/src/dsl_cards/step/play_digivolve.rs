@@ -80,12 +80,16 @@ fn resolve_card_source_ref(
     ctx: &EffectContext<'_>,
     bindings: &Bindings,
 ) -> Option<CardSourceRef> {
+    // `DeckTop` is a card-source-only binding (no `ResolvedBinding` form):
+    // resolve the owning player and address the top of their deck directly.
+    if let digimon_dsl::compiled::CompiledBindingRef::DeckTop(of) = source {
+        return Some(CardSourceRef::DeckTop(resolve_player(ctx, *of)));
+    }
     match resolve_binding_ref(source, ctx, bindings)? {
         ResolvedBinding::HandIndex(owner, i) => Some(CardSourceRef::Hand(owner, i as usize)),
         ResolvedBinding::TrashIndex(owner, i) => Some(CardSourceRef::Trash(owner, i as usize)),
         ResolvedBinding::Card(h) => resolve_card_handle_source_ref(ctx, h),
-        // DeckTop and other kinds: no IR binding produces them today.
-        // Future: widen as IR evolves.
+        // Other kinds (permanent / list): not addressable as a card source.
         _ => None,
     }
 }
@@ -119,6 +123,27 @@ fn resolve_card_handle_source_ref(ctx: &EffectContext<'_>, h: CardHandle) -> Opt
         return Some(CardSourceRef::Reveal(h));
     }
     None
+}
+
+/// Resolve a `CardHandle` to its current index within `carrier`'s
+/// digivolution-source stack, or `None` if the handle is not (or no
+/// longer) a source of that permanent. Used by `PlayFromMaterials` to
+/// re-resolve each batched pick immediately before its play — the index
+/// must be looked up fresh because each play shifts later indices down.
+fn source_index_of(
+    ctx: &EffectContext<'_>,
+    carrier: crate::permanent::PermanentHandle,
+    card: CardHandle,
+) -> Option<usize> {
+    ctx.game
+        .player(carrier.player)
+        .battle_area
+        .get(carrier.index as usize)
+        .and_then(|perm| {
+            perm.card_sources
+                .iter()
+                .position(|source| source.handle() == card)
+        })
 }
 
 /// Try to handle `step` as a play / digivolve / placement variant.
@@ -329,30 +354,65 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 Some(ResolvedBinding::Permanent(h)) => h,
                 _ => return true,
             };
-            let src_idx = match resolve_binding_ref(source_index, ctx, bindings) {
-                Some(ResolvedBinding::Literal(v)) if v >= 0 => v as usize,
-                Some(ResolvedBinding::Card(card)) => ctx
-                    .game
-                    .player(target_handle.player)
-                    .battle_area
-                    .get(target_handle.index as usize)
-                    .and_then(|perm| {
-                        perm.card_sources
-                            .iter()
-                            .position(|source| source.handle() == card)
-                    })
-                    .unwrap_or(usize::MAX),
-                _ => return true,
-            };
-            if src_idx == usize::MAX {
-                return true;
-            }
             let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
-            if let Some(played) = ctx.play_from_materials(target_handle, src_idx, delta) {
-                bindings.record_played(played);
-                if let Some(name) = bind_as {
-                    bindings.insert_permanent(name, played);
+
+            // `source_index` addresses the carrier's digivolution source(s)
+            // to play. Three binding shapes are accepted:
+            //   - `Literal(n)`  — a single fixed `card_sources` index.
+            //   - `Card(h)`     — a single source identified by its handle.
+            //   - `CardList(v)` — a BATCH of sources (e.g. the picks from a
+            //     `select_materials` multi-pick); every one is played.
+            // For the batch path each handle is re-resolved to its CURRENT
+            // index immediately before its play, because `play_from_materials`
+            // removes the consumed source and shifts later indices down.
+            match resolve_binding_ref(source_index, ctx, bindings) {
+                Some(ResolvedBinding::Literal(v)) if v >= 0 => {
+                    if let Some(played) =
+                        ctx.play_from_materials(target_handle, v as usize, delta)
+                    {
+                        bindings.record_played(played);
+                        if let Some(name) = bind_as {
+                            bindings.insert_permanent(name, played);
+                        }
+                    }
                 }
+                Some(ResolvedBinding::Card(card)) => {
+                    if let Some(idx) = source_index_of(ctx, target_handle, card) {
+                        if let Some(played) =
+                            ctx.play_from_materials(target_handle, idx, delta)
+                        {
+                            bindings.record_played(played);
+                            if let Some(name) = bind_as {
+                                bindings.insert_permanent(name, played);
+                            }
+                        }
+                    }
+                }
+                Some(ResolvedBinding::CardList(cards)) => {
+                    // Batch source play: each picked source becomes a fresh
+                    // battle-area permanent. The last successful play is
+                    // recorded under `bind_as` (matches the single-card path's
+                    // single-handle binding contract).
+                    let mut last_played = None;
+                    for card in cards {
+                        let Some(idx) = source_index_of(ctx, target_handle, card) else {
+                            // Handle no longer in the carrier's stack (already
+                            // consumed earlier in this batch, or removed) —
+                            // skip it; the remaining picks still play.
+                            continue;
+                        };
+                        if let Some(played) =
+                            ctx.play_from_materials(target_handle, idx, delta)
+                        {
+                            bindings.record_played(played);
+                            last_played = Some(played);
+                        }
+                    }
+                    if let (Some(name), Some(played)) = (bind_as, last_played) {
+                        bindings.insert_permanent(name, played);
+                    }
+                }
+                _ => {}
             }
             true
         }
@@ -534,7 +594,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             );
             true
         }
-        CompiledStep::PlaceAsBottomSource { source, target } => {
+        CompiledStep::PlaceAsBottomSource {
+            source,
+            target,
+            face_down,
+        } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
                 _ => return true,
@@ -548,7 +612,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
                 return true;
             };
-            let _ = ctx.place_as_bottom_source(source_ref, target_handle);
+            let _ = ctx.place_as_bottom_source(source_ref, target_handle, *face_down);
             true
         }
         CompiledStep::PlaceTopSourceAsBottom { target } => {

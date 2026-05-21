@@ -59,7 +59,7 @@ async def test_resolve_manifest_writes_to_sha_keyed_cache(db_session, tmp_path, 
         name="test",
         model_type="mlp",
         tensor_size=1375,
-        action_space_size=2168,
+        action_space_size=2192,
         spaces_key=f"models/{model_id}/policy.onnx",
         file_sha256=expected_sha,
         file_size_bytes=len(payload),
@@ -93,7 +93,7 @@ async def test_resolve_manifest_hits_cache_on_second_call(db_session, tmp_path, 
     expected_sha = hashlib.sha256(payload).hexdigest()
     db_session.add(AIModel(
         id=model_id, name="t", model_type="mlp",
-        tensor_size=1375, action_space_size=2168,
+        tensor_size=1375, action_space_size=2192,
         spaces_key=f"models/{model_id}/policy.onnx",
         file_sha256=expected_sha, file_size_bytes=len(payload),
         state="uploaded", published=True,
@@ -133,7 +133,7 @@ async def test_prepare_model_returns_filename_and_caches(
     sha = hashlib.sha256(payload).hexdigest()
     db_session.add(AIModel(
         id=model_id, name="t", model_type="mlp",
-        tensor_size=1375, action_space_size=2168,
+        tensor_size=1375, action_space_size=2192,
         spaces_key=f"models/{model_id}/policy.onnx",
         file_sha256=sha, file_size_bytes=len(payload),
         state="uploaded", published=True,
@@ -167,7 +167,7 @@ async def test_prepare_model_reports_cache_hit_on_second_call(
     sha = hashlib.sha256(payload).hexdigest()
     db_session.add(AIModel(
         id=model_id, name="t", model_type="mlp",
-        tensor_size=1375, action_space_size=2168,
+        tensor_size=1375, action_space_size=2192,
         spaces_key=f"models/{model_id}/policy.onnx",
         file_sha256=sha, file_size_bytes=len(payload),
         state="uploaded", published=True,
@@ -196,7 +196,7 @@ async def test_resolve_manifest_rejects_sha_mismatch(db_session, tmp_path, monke
     claimed_sha = "a" * 64  # intentional mismatch
     db_session.add(AIModel(
         id=model_id, name="t", model_type="mlp",
-        tensor_size=1375, action_space_size=2168,
+        tensor_size=1375, action_space_size=2192,
         spaces_key=f"models/{model_id}/policy.onnx",
         file_sha256=claimed_sha, file_size_bytes=10,
         state="uploaded", published=True,

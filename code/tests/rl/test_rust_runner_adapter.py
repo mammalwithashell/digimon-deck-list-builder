@@ -33,10 +33,11 @@ def test_digimon_env_uses_requested_standard_lite_v2_profile(monkeypatch):
     obs, info = env.reset(seed=7)
 
     assert env.tensor_profile == "standard_lite_v2"
-    assert env.observation_space.shape == (8320,)
-    assert obs.shape == (8320,)
+    # Task S1.4: PERM_MAX_SOURCES 11 -> 12; tensor_size 8320 -> 8410.
+    assert env.observation_space.shape == (8410,)
+    assert obs.shape == (8410,)
     assert info["tensor_profile"] == "standard_lite_v2"
-    assert info["tensor_feature_schema_version"] == "standard_lite_v2.1"
+    assert info["tensor_feature_schema_version"] == "standard_lite_v2.2"
     assert info["tensor_layout_hash"].startswith("sha256:")
 
 

@@ -8,7 +8,7 @@ A Digimon TCG rules engine with a Gymnasium RL environment, React frontend, Fast
 
 - **Rules engine, two-track** — Rust engine (`code/digimon-engine/`) is the target source of truth, with PyO3 bindings (`code/digimon-engine-py/`) exposing it to Python as `RustHeadlessGame` (switchable via `DIGIMON_BACKEND=rust`). A sunset Python engine (`code/engine_py_legacy/engine/`) remains as reference-only during the card-script migration. Both are reference-checked against the **DCGO C# client** (`DCGO/` submodule), which is the behavioral source of truth for card effects.
 - **No-approximations policy** — every card effect faithfully implements all card text. No stubs, no auto-selections; every choice surfaces through `pending_selection` so the RL action space sees it and agents can learn to pick optimally. Gaps are marked BLOCKED and logged to [qa/archetype-qa/engine-gaps.md](qa/archetype-qa/engine-gaps.md) / [docs/RUST_ENGINE_GAPS.md](docs/RUST_ENGINE_GAPS.md).
-- **Gymnasium RL environment** — 1375-float observation tensor, 2168 discrete actions with phase-aware masking, dense reward shaping.
+- **Gymnasium RL environment** — 1375-float observation tensor, 2192 discrete actions with phase-aware masking, dense reward shaping.
 - **Multiplayer PvP** — WebSocket real-time gameplay with lobby matchmaking, join codes, and spectating (with hidden-information filtering).
 - **Desktop app** — Tauri v2 shell with the embedded Rust engine (no Python at runtime); ONNX models downloaded at runtime from the hosted API's manifest.
 - **Admin AI pipeline** — LLM-powered card script transpilation, automated fixes, batch orchestration with safe-apply checks (hosted API only).
@@ -64,7 +64,7 @@ config, and runtime data.
 | `code/digimon-engine/src/game.rs` | Turn state machine, phases |
 | `code/digimon-engine/src/effect.rs`, `effect_context.rs`, `effect_queue.rs` | Card-scripting API and triggered-effect queue |
 | `code/digimon-engine/src/combat.rs`, `selection.rs` | Attack state machine, pending-selection / interrupt handling |
-| `code/digimon-engine/src/tensor.rs`, `action/` | 1375-float observation + 2168-action mask/decoder |
+| `code/digimon-engine/src/tensor.rs`, `action/` | 1375-float observation + 2192-action mask/decoder |
 | `code/digimon-engine/src/cards/`, `debug_runner.rs` | Hand-written `CardEffect` impls + deterministic test harness |
 | `code/digimon-engine/src/inference/` | Rust ONNX inference (MLP + LSTM) used by the desktop app |
 | `code/digimon-engine-py/` | PyO3 bindings (`RustHeadlessGame`), built via `maturin` |
@@ -146,7 +146,7 @@ DIGIMON_BACKEND=rust python -m pytest code/tests/engine/test_rust_backend_parity
 
 ```bash
 python -c "from digimon_gym.digimon_gym import DigimonEnv; env=DigimonEnv(); obs,info=env.reset(); print(obs.shape, info['action_mask'].shape)"
-# expect: (1375,) (2168,)
+# expect: (1375,) (2192,)
 ```
 
 ### Run Tests
@@ -199,7 +199,7 @@ Start at [docs/INDEX.md](docs/INDEX.md) for the full catalog.
 | [AGENTS.md](AGENTS.md) | RL agent architecture, wrapper chain, gauntlet orchestration |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | API surface, RL contracts, frontend components, desktop distribution |
 | [docs/TENSOR_SPEC.md](docs/TENSOR_SPEC.md) | 1375-float observation tensor layout |
-| [docs/ACTION_SPEC.md](docs/ACTION_SPEC.md) | 2168-action space and phase-aware decoding |
+| [docs/ACTION_SPEC.md](docs/ACTION_SPEC.md) | 2192-action space and phase-aware decoding |
 | [docs/RULES_CONTEXT.md](docs/RULES_CONTEXT.md) | Comprehensive Digimon TCG rules reference |
 | [docs/RUST_ENGINE_API.md](docs/RUST_ENGINE_API.md) | Rust scripting API: `EffectContext`, `Effect`, `CardEffect`, TDD walkthrough |
 | [docs/RUST_PYTHON_PARITY.md](docs/RUST_PYTHON_PARITY.md) | Live cross-engine divergence tracker (transitional) |

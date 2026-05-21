@@ -146,6 +146,7 @@ pub enum StepSpec {
     /// (this is a return, not a trash). Closes BT12-031's Imperialdramon:
     /// Dragon Mode alt-cost.
     ReturnSelectedSourcesToHand(TrashSelectedSourcesArgs),
+    TrashBottomFaceDownSourceUnderTamer(TrashBottomFaceDownSourceUnderTamerArgs),
     BindPermanentProperty(BindPermanentProperty),
     Hatch(PlayerArg),
 
@@ -212,6 +213,7 @@ pub enum StepSpec {
     SelectHand(SelectZoneArgs),
     SelectTrash(SelectZoneArgs),
     SelectMaterial(SelectMaterialArgs),
+    SelectMaterials(SelectMaterialsArgs),
     SelectOwnSources(SelectOwnSourcesArgs),
     SelectOpponentSources(SelectOpponentSourcesArgs),
     DigiBurst(DigiBurstArgs),
@@ -333,6 +335,9 @@ impl Serialize for StepSpec {
             StepSpec::ReturnSelectedSourcesToHand(v) => {
                 kv!(s, "return_selected_sources_to_hand", v)
             }
+            StepSpec::TrashBottomFaceDownSourceUnderTamer(v) => {
+                kv!(s, "trash_bottom_face_down_source_under_tamer", v)
+            }
             StepSpec::BindPermanentProperty(v) => kv!(s, "bind_permanent_property", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             // Play / digivolve
@@ -412,6 +417,7 @@ impl Serialize for StepSpec {
             StepSpec::SelectHand(v) => kv!(s, "select_hand", v),
             StepSpec::SelectTrash(v) => kv!(s, "select_trash", v),
             StepSpec::SelectMaterial(v) => kv!(s, "select_material", v),
+            StepSpec::SelectMaterials(v) => kv!(s, "select_materials", v),
             StepSpec::SelectOwnSources(v) => kv!(s, "select_own_sources", v),
             StepSpec::SelectOpponentSources(v) => kv!(s, "select_opponent_sources", v),
             StepSpec::DigiBurst(v) => kv!(s, "digi_burst", v),
@@ -543,6 +549,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "return_selected_sources_to_hand" => {
                 StepSpec::ReturnSelectedSourcesToHand(map.next_value()?)
             }
+            "trash_bottom_face_down_source_under_tamer" => {
+                StepSpec::TrashBottomFaceDownSourceUnderTamer(map.next_value()?)
+            }
             "bind_permanent_property" => StepSpec::BindPermanentProperty(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
 
@@ -624,6 +633,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "select_hand" => StepSpec::SelectHand(map.next_value()?),
             "select_trash" => StepSpec::SelectTrash(map.next_value()?),
             "select_material" => StepSpec::SelectMaterial(map.next_value()?),
+            "select_materials" => StepSpec::SelectMaterials(map.next_value()?),
             "select_own_sources" => StepSpec::SelectOwnSources(map.next_value()?),
             "select_opponent_sources" => StepSpec::SelectOpponentSources(map.next_value()?),
             "digi_burst" => StepSpec::DigiBurst(map.next_value()?),
@@ -768,6 +778,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "select_hand",
                         "select_trash",
                         "select_material",
+                        "select_materials",
                         "select_own_sources",
                         "select_opponent_sources",
                         "digi_burst",
@@ -889,6 +900,11 @@ pub struct StructuredBindingRef {
     pub zone: Option<Zone>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub of_permanent: Option<String>,
+    /// Top card of a player's deck — a card-source binding (not a permanent).
+    /// Used by card-source steps such as `place_as_bottom_source` to stash
+    /// the deck top under a Tamer. YAML: `{ deck_top: you }`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deck_top: Option<PlayerRef>,
 }
 
 // ── Argument structs (one per verb family) ──────────────────────────
@@ -896,6 +912,15 @@ pub struct StructuredBindingRef {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlayerArg {
+    pub of: PlayerRef,
+}
+
+/// Args for `trash_bottom_face_down_source_under_tamer` — bundles "pick one of
+/// `of`'s Tamers that carries a face-down stash → trash its bottom face-down
+/// source". Used as an activation cost by BEATBREAK / DATA SQUAD cards.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashBottomFaceDownSourceUnderTamerArgs {
     pub of: PlayerRef,
 }
 
@@ -1393,6 +1418,10 @@ pub struct PlayTokenArgs {
 pub struct PlaceAsBottomSourceArgs {
     pub source: BindingRef,
     pub target: BindingRef,
+    /// When `true`, the placed bottom digivolution source is marked
+    /// face-down. Omitted → face-up (the default).
+    #[serde(default)]
+    pub face_down: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1415,7 +1444,7 @@ pub struct PlayFromHandArgs {
     /// suppression is scoped to the just-played permanent and this single
     /// play; other permanents' On Play and every other timing are
     /// unaffected. `false` (the default) preserves prior behavior.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub suppress_on_play: bool,
 }
 
@@ -1776,6 +1805,50 @@ pub struct SelectMaterialArgs {
     pub prompt: String,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
+    /// Optional localization-key override for `prompt`. If absent, derived
+    /// positionally from `(card_id, clause_index, step_path)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
+}
+
+/// Count-capped / different-name multi-pick over a carrier permanent's
+/// digivolution-source stack — the batch sibling of `select_material`.
+///
+/// YAML shape:
+///
+/// ```yaml
+/// - select_materials:
+///     of_permanent: <carrier-binding>   # battle-area permanent (or BREEDING_TARGET)
+///     max: 4
+///     uniqueness: name            # "1 of each different name"
+///     filter: { trait_has: "Royal Knight" }
+///     bind_as: picked
+/// ```
+///
+/// Picks are surfaced one-at-a-time through `pending_selection` (the
+/// count-capped multi-select state machine); `uniqueness` shapes the
+/// legal action mask after each pick — it never auto-picks. The bound
+/// `CardList` can be consumed as a batch by `play_from_materials`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelectMaterialsArgs {
+    /// Carrier permanent whose digivolution sources are the candidate pool.
+    pub of_permanent: BindingRef,
+    /// Upper bound on the number of sources the player may pick.
+    pub max: CountBound,
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
+    /// Per-pick uniqueness constraint. `name` means "at most one pick per
+    /// distinct card name" — the printed-text "1 of each different name".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub uniqueness: Option<crate::alt_path::DistinctBy>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    pub prompt: String,
+    /// When `true`, the player may commit zero picks. Default `false`:
+    /// PASS only becomes legal after at least one pick.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional_zero: bool,
     /// Optional localization-key override for `prompt`. If absent, derived
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]

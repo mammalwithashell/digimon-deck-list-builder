@@ -65,6 +65,15 @@ pub struct PredicateSpec {
     pub effect_text_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_in: Option<Vec<String>>,
+    /// Card-subject leaf: true when NO battle-area Digimon belonging to the
+    /// scoped player shares the candidate card's name. Models the printed
+    /// "This effect can't play cards with the same names as any of your
+    /// Digimon" exclusion on the Jesmon family (BT23-013) — applied as a
+    /// filter on a `select_union_zone` (hand+trash) play candidate set so
+    /// the in-play names are masked out, never auto-picked.
+    /// G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_not_shared_by_field_digimon: Option<PlayerRefSelector>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card_number_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -108,6 +117,10 @@ pub struct PredicateSpec {
     pub has_on_deletion_effect: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_color_count_gte: Option<u8>,
+    /// Permanent-subject predicate. Matches whether the permanent's
+    /// digivolution stack contains at least one face-down source.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_face_down_source: Option<bool>,
     /// True when the observer's Tamers (battle-area Tamer permanents)
     /// collectively have at least N distinct colors. A no-subject
     /// global predicate — does not inspect the candidate. Used by
@@ -141,6 +154,23 @@ pub struct PredicateSpec {
     pub source_permanent_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_digivolution_contains_name: Option<String>,
+    /// Source-subject predicate (Tamer face-down stash). Matches `CardSource.face_down`.
+    /// Only meaningful when the predicate subject is a digivolution-stack source
+    /// (e.g. inside a `select_own_sources` filter).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_face_down: Option<bool>,
+    /// Source-subject predicate. Matches whether the source sits at
+    /// `card_sources` index 0 (the bottom of the digivolution stack).
+    /// Only meaningful when the predicate subject is a digivolution-stack source
+    /// (e.g. inside a `select_own_sources` filter).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_bottom_source: Option<bool>,
+    /// Source-subject predicate. Matches the `CardKind` of the host
+    /// permanent's top card (e.g. `tamer` for a source stashed under a Tamer).
+    /// Only meaningful when the predicate subject is a digivolution-stack source
+    /// (e.g. inside a `select_own_sources` filter).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub host_kind_is: Option<CardKind>,
     /// Like `self_digivolution_contains_name` but scans ONLY the
     /// digivolution *source* cards beneath the carrier — the carrier's
     /// own top card is excluded. `self_digivolution_contains_name` calls

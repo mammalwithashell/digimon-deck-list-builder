@@ -32,6 +32,7 @@ fn evo_lv4(card_id: &str) -> CardData {
         dual: None,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
         effect_class_name: card_id.replace('-', "_"),
         index: 0,
         norm_id: 0.0,

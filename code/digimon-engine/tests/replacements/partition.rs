@@ -31,6 +31,7 @@ fn colored_card(id: &str, color: CardColor, level: u8) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 

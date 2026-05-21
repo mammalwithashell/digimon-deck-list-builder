@@ -36,7 +36,10 @@ use serde_json::Value;
 
 use pyo3::wrap_pyfunction;
 
-use ::digimon_engine::action::space::ACTION_SPACE_SIZE;
+use ::digimon_engine::action::space::{
+    ACTION_SPACE_SIZE, BREEDING_SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START, SOURCE_SELECT_END,
+    SOURCE_SELECT_START,
+};
 use ::digimon_engine::card_data::CardData;
 use ::digimon_engine::card_registry::{CardRegistry as RustCardRegistry, REGISTRY_CAPACITY};
 use ::digimon_engine::deck_tools;
@@ -1049,6 +1052,13 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(get_models_dir, m)?)?;
     m.add_function(wrap_pyfunction!(load_implemented_card_ids, m)?)?;
     m.add("ACTION_SPACE_SIZE", ACTION_SPACE_SIZE)?;
+    // Source-selection sub-range boundaries — Python callers (digimon_gym)
+    // pin ACTION_SOURCE_END to SOURCE_SELECT_END - 1, and use the breeding
+    // constants for the appended breeding-carrier source-select range.
+    m.add("SOURCE_SELECT_START", SOURCE_SELECT_START)?;
+    m.add("SOURCE_SELECT_END", SOURCE_SELECT_END)?;
+    m.add("BREEDING_SOURCE_SELECT_START", BREEDING_SOURCE_SELECT_START)?;
+    m.add("BREEDING_SOURCE_SELECT_END", BREEDING_SOURCE_SELECT_END)?;
     m.add("TENSOR_SIZE", TENSOR_SIZE)?;
     Ok(())
 }

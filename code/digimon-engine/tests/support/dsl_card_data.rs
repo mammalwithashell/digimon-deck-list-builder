@@ -70,6 +70,7 @@ pub fn card_data_from_compiled(card_id: &str) -> CardData {
         index: 0,
         norm_id: 0.0,
         digixros_aliases: card.digixros_aliases,
+        also_treated_as: card.also_treated_as,
     }
 }
 

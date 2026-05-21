@@ -126,23 +126,23 @@ ELEM_FLOAT = 1
 
 # Use a factored (rank-1 bottleneck) approach so models stay under 1MB.
 # moto 4.x on Windows corrupts objects > 1MB via chunked HTTP encoding.
-# W = w1 @ w2 where w1:(1375,1) and w2:(1,2168) are each only a few KB.
+# W = w1 @ w2 where w1:(1375,1) and w2:(1,2192) are each only a few KB.
 _ZEROS_1375x1 = bytes(1375 * 4)     # 5.5 KB
-_ZEROS_1x2168 = bytes(2168 * 4)     # 8.5 KB
+_ZEROS_1x2192 = bytes(2192 * 4)     # 8.6 KB
 
 
 def _build_valid_mlp(path: Path) -> None:
-    """MLP: obs[None,1375] → hidden[None,1] → logits[None,2168].
+    """MLP: obs[None,1375] → hidden[None,1] → logits[None,2192].
 
     Uses a rank-1 bottleneck so the total model size stays well under 1 MB,
     avoiding a moto chunked-encoding corruption bug on Windows.
     """
     w1 = _tensor_initializer("w1_mlp", (1375, 1), _ZEROS_1375x1)
-    w2 = _tensor_initializer("w2_mlp", (1, 2168), _ZEROS_1x2168)
+    w2 = _tensor_initializer("w2_mlp", (1, 2192), _ZEROS_1x2192)
     n1 = _node("MatMul", ["obs", "w1_mlp"], ["hidden_mlp"], "mm1_mlp")
     n2 = _node("MatMul", ["hidden_mlp", "w2_mlp"], ["logits"], "mm2_mlp")
     obs_vi    = _value_info("obs",    ELEM_FLOAT, ["batch", 1375])
-    logits_vi = _value_info("logits", ELEM_FLOAT, ["batch", 2168])
+    logits_vi = _value_info("logits", ELEM_FLOAT, ["batch", 2192])
     graph = _graph("mlp_graph", [n1, n2], [w1, w2], [obs_vi], [logits_vi])
     path.write_bytes(_model(graph))
 
@@ -154,7 +154,7 @@ def _build_valid_lstm(path: Path) -> None:
     obs/logits (the LSTM hidden/cell state pass-throughs).
     """
     w1 = _tensor_initializer("w1_lstm", (1375, 1), _ZEROS_1375x1)
-    w2 = _tensor_initializer("w2_lstm", (1, 2168), _ZEROS_1x2168)
+    w2 = _tensor_initializer("w2_lstm", (1, 2192), _ZEROS_1x2192)
     n1 = _node("MatMul", ["obs", "w1_lstm"], ["hidden_lstm"], "mm1_lstm")
     n2 = _node("MatMul", ["hidden_lstm", "w2_lstm"], ["logits"], "mm2_lstm")
     h_node = _node("Identity", ["h_in"], ["h_out"], "h_pass")
@@ -163,7 +163,7 @@ def _build_valid_lstm(path: Path) -> None:
     obs_vi    = _value_info("obs",    ELEM_FLOAT, ["batch", 1375])
     h_in_vi   = _value_info("h_in",  ELEM_FLOAT, [1, 1, 64])
     c_in_vi   = _value_info("c_in",  ELEM_FLOAT, [1, 1, 64])
-    logits_vi = _value_info("logits", ELEM_FLOAT, ["batch", 2168])
+    logits_vi = _value_info("logits", ELEM_FLOAT, ["batch", 2192])
     h_out_vi  = _value_info("h_out", ELEM_FLOAT, [1, 1, 64])
     c_out_vi  = _value_info("c_out", ELEM_FLOAT, [1, 1, 64])
 
@@ -180,11 +180,11 @@ def _build_valid_lstm(path: Path) -> None:
 def _build_invalid_no_obs(path: Path) -> None:
     """Bad model: input named 'x' (not 'obs') → logits.  Confirm should reject."""
     w1 = _tensor_initializer("w1_bad", (1375, 1), _ZEROS_1375x1)
-    w2 = _tensor_initializer("w2_bad", (1, 2168), _ZEROS_1x2168)
+    w2 = _tensor_initializer("w2_bad", (1, 2192), _ZEROS_1x2192)
     n1 = _node("MatMul", ["x", "w1_bad"], ["hidden_bad"], "mm1_bad")
     n2 = _node("MatMul", ["hidden_bad", "w2_bad"], ["logits"], "mm2_bad")
     x_vi      = _value_info("x",      ELEM_FLOAT, ["batch", 1375])
-    logits_vi = _value_info("logits", ELEM_FLOAT, ["batch", 2168])
+    logits_vi = _value_info("logits", ELEM_FLOAT, ["batch", 2192])
     graph = _graph("bad_graph", [n1, n2], [w1, w2], [x_vi], [logits_vi])
     path.write_bytes(_model(graph))
 

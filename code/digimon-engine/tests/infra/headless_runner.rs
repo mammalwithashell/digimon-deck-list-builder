@@ -100,8 +100,8 @@ fn runner_default_observation_profile_is_standard_lite_v2() {
     let runner = sample_runner();
 
     assert_eq!(runner.observation_profile_id(), "standard_lite_v2");
-    assert_eq!(runner.observation_layout().tensor_size, 8320);
-    assert_eq!(runner.get_board_tensor(None).len(), 8320);
+    assert_eq!(runner.observation_layout().tensor_size, 8410);
+    assert_eq!(runner.get_board_tensor(None).len(), 8410);
 }
 
 #[test]
@@ -120,7 +120,7 @@ fn runner_test_setter_accepts_observation_profile_aliases() {
     runner.set_observation_profile_for_test("v2_lite").unwrap();
 
     assert_eq!(runner.observation_profile_id(), "standard_lite_v2");
-    assert_eq!(runner.get_board_tensor(None).len(), 8320);
+    assert_eq!(runner.get_board_tensor(None).len(), 8410);
 }
 
 #[test]

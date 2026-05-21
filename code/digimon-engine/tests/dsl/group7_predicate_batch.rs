@@ -142,6 +142,57 @@ effects:
             == Some(digimon_dsl::compiled::CompiledPlayerRef::You)));
 }
 
+/// G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2): the
+/// `name_not_shared_by_field_digimon` predicate leaf compiles, and a
+/// `select_union_zone` step's `filter` survives compilation (the lowering
+/// previously dropped it before applying it at install time).
+#[test]
+fn name_not_shared_by_field_digimon_compiles_in_select_union_zone_filter() {
+    let yaml = r#"
+card: T-G7-UNION-NAME-EXCL
+name: Union Name Exclusion Predicate
+kind: digimon
+level: 6
+color: [white]
+cost: 6
+dp: 6000
+effects:
+  - when: on_play
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          prompt: Play 1 Sistermon from hand or trash
+          filter:
+            all_of:
+              - name_contains: Sistermon
+              - name_not_shared_by_field_digimon: { of: you }
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let digimon_dsl::compiled::CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let digimon_dsl::compiled::CompiledStep::SelectUnionZone { filter, .. } = &triggered.process[0]
+    else {
+        panic!("expected select_union_zone");
+    };
+    // The whole filter survives compilation — both leaves are present.
+    assert!(
+        filter
+            .all_of
+            .iter()
+            .any(|p| p.name_contains.as_deref() == Some("Sistermon")),
+        "name_contains leaf must survive into the compiled union-zone filter"
+    );
+    assert!(
+        filter.all_of.iter().any(|p| p.name_not_shared_by_field_digimon
+            == Some(digimon_dsl::compiled::CompiledPlayerRef::You)),
+        "name_not_shared_by_field_digimon leaf must compile into the union-zone filter"
+    );
+}
+
 #[test]
 fn self_digivolution_contains_name_compiles_in_when_digivolving_condition() {
     let yaml = r#"

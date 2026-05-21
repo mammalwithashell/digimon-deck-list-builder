@@ -4,7 +4,7 @@
 
 use std::collections::HashMap;
 
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{ACTION_SPACE_SIZE, PASS};
 use digimon_engine::card_data::CardData;
 use digimon_engine::policies::{GreedyPolicy, Policy};
 use digimon_engine::{HeadlessRunner, RandomPolicy};
@@ -68,7 +68,7 @@ fn empty_mask_returns_pass() {
     )
     .unwrap();
     let mut greedy = GreedyPolicy::new();
-    let empty = vec![0.0f32; 2168];
+    let empty = vec![0.0f32; ACTION_SPACE_SIZE];
     let action = greedy.select(&runner.game, &empty);
     assert_eq!(action, PASS);
 }

@@ -6,13 +6,15 @@
 //! `GamePhase::SelectMaterial` with kind `SelectionKind::Material`.
 
 use digimon_engine::action::space::{
-    decode_source_select, PASS, SOURCES_PER_FIELD, SOURCE_SELECT_START,
+    decode_source_select, BREEDING_SOURCE_SELECT_END, BREEDING_SOURCE_SELECT_START, BREEDING_TARGET,
+    PASS, SOURCES_PER_FIELD, SOURCE_SELECT_START,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{CardColor, CardKind, GamePhase};
+use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionError, SelectionKind};
 
 fn make_digimon(id: &str) -> CardData {
@@ -37,6 +39,7 @@ fn make_digimon(id: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -147,6 +150,103 @@ fn empty_after_filter_does_not_park() {
     );
     // Phase untouched.
     assert_ne!(r.game.current_phase, GamePhase::SelectMaterial);
+}
+
+// ── Breeding-carrier single-pick select_material (S1.3) ──────────────────────
+
+/// `select_material` against a breeding-area carrier (King Drasil) must
+/// install a real `SelectMaterial` prompt with breeding-source action IDs —
+/// NOT no-op (the pre-S1.3 bug, where `battle_area.get(14)` returned `None`).
+#[test]
+fn breeding_carrier_select_material_emits_breeding_source_ids() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("KD-BASE"))
+        .add_card(make_digimon("KD-MID"))
+        .add_card(make_digimon("KD-TOP"))
+        .start();
+    let tp = r.game.turn_player();
+    // Build a 3-card breeding stack: KD-BASE, KD-MID, KD-TOP.
+    let handle = r.place_stack(tp, &["KD-BASE", "KD-MID", "KD-TOP"]);
+    let perm = r.game.players[tp as usize]
+        .battle_area
+        .remove(handle.index as usize);
+    r.game.players[tp as usize].breeding_area = Some(perm);
+    let carrier = PermanentHandle {
+        player: tp,
+        index: BREEDING_TARGET as u8,
+    };
+
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, tp);
+        ctx.select_material(carrier, "pick a breeding material", true, |_, _| true, |_, _| {});
+    }
+
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("breeding-carrier select_material must install a SelectMaterial prompt");
+    assert_eq!(sel.kind, SelectionKind::Material);
+    assert_eq!(r.game.current_phase, GamePhase::SelectMaterial);
+    // Two sources (KD-BASE, KD-MID); KD-TOP excluded as the active card.
+    assert_eq!(sel.valid_action_ids.len(), 2);
+    for &aid in &sel.valid_action_ids {
+        assert!(
+            (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&aid),
+            "action id {aid} must be a breeding-source ID"
+        );
+    }
+    // tp == 0 in DebugRunner default → 2168 + 0*12 + i.
+    assert_eq!(sel.valid_action_ids[0], BREEDING_SOURCE_SELECT_START);
+    assert_eq!(sel.valid_action_ids[1], BREEDING_SOURCE_SELECT_START + 1);
+}
+
+/// Resolving a breeding-carrier `select_material` pick delivers the correct
+/// source index to the callback — proves the callback recovers the index via
+/// `range_start`, not `decode_source_select` (which would mis-decode a
+/// breeding-source action ID).
+#[test]
+fn breeding_carrier_select_material_callback_receives_source_index() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("KD-BASE"))
+        .add_card(make_digimon("KD-MID"))
+        .add_card(make_digimon("KD-TOP"))
+        .start();
+    let tp = r.game.turn_player();
+    let handle = r.place_stack(tp, &["KD-BASE", "KD-MID", "KD-TOP"]);
+    let perm = r.game.players[tp as usize]
+        .battle_area
+        .remove(handle.index as usize);
+    r.game.players[tp as usize].breeding_area = Some(perm);
+    let carrier = PermanentHandle {
+        player: tp,
+        index: BREEDING_TARGET as u8,
+    };
+
+    let received: std::sync::Arc<std::sync::Mutex<Option<usize>>> =
+        std::sync::Arc::new(std::sync::Mutex::new(None));
+    let sink = std::sync::Arc::clone(&received);
+    {
+        let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, tp);
+        ctx.select_material(
+            carrier,
+            "pick a breeding material",
+            false,
+            |_, _| true,
+            move |_, src_idx| {
+                *sink.lock().unwrap() = Some(src_idx);
+            },
+        );
+    }
+
+    // Pick the second source (KD-MID, source index 1).
+    let action = BREEDING_SOURCE_SELECT_START + 1;
+    r.game.resolve_selection(tp, action).expect("resolve pick");
+    assert_eq!(
+        *received.lock().unwrap(),
+        Some(1),
+        "callback must receive source index 1, recovered via range_start"
+    );
 }
 
 #[test]

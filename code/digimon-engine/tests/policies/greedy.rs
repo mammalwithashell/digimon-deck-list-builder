@@ -125,7 +125,7 @@ fn empty_mask_returns_pass() {
         Some(1),
     )
     .unwrap();
-    let empty = vec![0.0f32; 2168];
+    let empty = vec![0.0f32; ACTION_SPACE_SIZE];
     assert_eq!(greedy_action(&runner.game, &empty), PASS);
 }
 
