@@ -58,16 +58,17 @@ pub fn eval_predicate_with_bindings(
     // Source subjects: evaluate source-stack-metadata leaves here, then
     // degrade the subject to Card so every existing card-identity leaf
     // (trait_has / kind / name / etc.) continues to work unchanged.
-    // `is_face_down` is only satisfiable for a Source subject — on any
-    // non-Source subject a present `is_face_down` leaf is an unconditional
-    // non-match.
+    // `is_face_down` / `is_bottom_source` are only satisfiable for a Source
+    // subject — on any non-Source subject a present source-subject leaf is an
+    // unconditional non-match.
     //
     // The degrade is *node-local*: `subject` below is the degraded value
     // used by THIS node's leaf checks, but `original_subject` is preserved
     // un-degraded so the combinator arms (`all_of`/`any_of`/`none_of`/`not`)
     // recurse with it. Each recursive call then re-runs this same degrade
     // block for its own node — so a `Source` subject's source-stack leaves
-    // (e.g. `is_face_down`) stay evaluable at any combinator nesting depth.
+    // (e.g. `is_face_down` / `is_bottom_source`) stay evaluable at any
+    // combinator nesting depth.
     let original_subject = subject;
     let subject = if let PredicateSubject::Source(sref) = subject {
         if let Some(want) = pred.is_face_down {
@@ -83,9 +84,15 @@ pub fn eval_predicate_with_bindings(
                 _ => return false,
             }
         }
+        if let Some(want) = pred.is_bottom_source {
+            let actual = sref.source_index == 0;
+            if actual != want {
+                return false;
+            }
+        }
         PredicateSubject::Card(sref.card)
     } else {
-        if pred.is_face_down.is_some() {
+        if pred.is_face_down.is_some() || pred.is_bottom_source.is_some() {
             return false;
         }
         subject

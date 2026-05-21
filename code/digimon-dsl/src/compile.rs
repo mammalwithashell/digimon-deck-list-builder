@@ -541,6 +541,7 @@ fn compile_predicate(
         source_name_contains: p.source_name_contains.clone(),
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
         is_face_down: p.is_face_down,
+        is_bottom_source: p.is_bottom_source,
         self_digivolution_contains_name: p.self_digivolution_contains_name.clone(),
         memory_lte: p
             .memory_lte

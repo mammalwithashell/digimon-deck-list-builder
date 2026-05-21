@@ -120,6 +120,12 @@ pub struct PredicateSpec {
     /// (e.g. inside a `select_own_sources` filter).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_face_down: Option<bool>,
+    /// Source-subject predicate. Matches whether the source sits at
+    /// `card_sources` index 0 (the bottom of the digivolution stack).
+    /// Only meaningful when the predicate subject is a digivolution-stack source
+    /// (e.g. inside a `select_own_sources` filter).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_bottom_source: Option<bool>,
 
     // Leaf — global / observer
     #[serde(skip_serializing_if = "Option::is_none")]
