@@ -14,6 +14,7 @@ mod effect_refiring;
 mod material_zone_select;
 mod override_persistence;
 mod place_under_permanent;
+mod place_under_permanent_face_down;
 mod play_from_hand_free;
 mod play_from_materials;
 mod play_from_security;

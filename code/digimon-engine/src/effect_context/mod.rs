@@ -2819,8 +2819,10 @@ impl<'a> EffectContext<'a> {
         source: crate::enums::CardSourceRef,
         target: PermanentHandle,
     ) -> bool {
+        // `face_down: false` — ordinary face-up placement. Task A1.2 will give
+        // this wrapper its own `face_down` parameter for Tamer-stash callers.
         self.game
-            .place_as_bottom_source_observed(source, target, self.player)
+            .place_as_bottom_source_observed(source, target, self.player, false)
     }
 
     pub fn place_permanent_as_bottom_sources(

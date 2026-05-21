@@ -3427,12 +3427,18 @@ impl Game {
     /// source card is taken from the zone specified by `source` (hand slot,
     /// trash slot, deck top, security slot, material stack slot, or reveal
     /// pool). Returns false if the source or target is invalid.
+    ///
+    /// `face_down` sets the inserted `CardSource.face_down` flag (the DCGO
+    /// `IsFlipped` analog for digivolution-stack sources). Pass `true` to
+    /// stash a face-down source (e.g. a Tamer face-down stash); `false`
+    /// preserves the ordinary face-up placement.
     pub fn place_as_bottom_source(
         &mut self,
         source: crate::enums::CardSourceRef,
         target: PermanentHandle,
+        face_down: bool,
     ) -> bool {
-        self.place_as_bottom_source_observed(source, target, target.player)
+        self.place_as_bottom_source_observed(source, target, target.player, face_down)
     }
 
     pub(crate) fn place_as_bottom_source_observed(
@@ -3440,6 +3446,7 @@ impl Game {
         source: crate::enums::CardSourceRef,
         target: PermanentHandle,
         observer_player: PlayerId,
+        face_down: bool,
     ) -> bool {
         if let crate::enums::CardSourceRef::Security(defender, index) = source {
             if target.index == crate::action::space::BREEDING_TARGET as u8 {
@@ -3482,7 +3489,9 @@ impl Game {
                 let _ = self.restore_card_source_ref(source, taken);
                 return false;
             };
-            breeding.push_under(taken.card);
+            let mut card = taken.card;
+            card.face_down = face_down;
+            breeding.push_under(card);
             return true;
         }
 
@@ -3491,7 +3500,9 @@ impl Game {
             let _ = self.restore_card_source_ref(source, taken);
             return false;
         }
-        target_player.battle_area[target.index as usize].push_under(taken.card);
+        let mut card = taken.card;
+        card.face_down = face_down;
+        target_player.battle_area[target.index as usize].push_under(card);
         true
     }
 
