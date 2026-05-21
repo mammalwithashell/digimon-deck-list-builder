@@ -90,9 +90,29 @@ pub fn eval_predicate_with_bindings(
                 return false;
             }
         }
+        if let Some(want) = pred.host_kind_is {
+            // The host permanent's top card is the visible Digimon/Tamer the
+            // source sits beneath. If the host permanent or its top card's
+            // CardData cannot be resolved, the predicate does not match.
+            let actual_kind = rctx
+                .game
+                .player(sref.permanent.player)
+                .battle_area
+                .get(sref.permanent.index as usize)
+                .map(|perm| perm.top_card().handle())
+                .and_then(|card| rctx.game.card_data_for_handle(card))
+                .map(|data| data.card_kind);
+            match actual_kind {
+                Some(kind) if kind_matches(want, kind) => {}
+                _ => return false,
+            }
+        }
         PredicateSubject::Card(sref.card)
     } else {
-        if pred.is_face_down.is_some() || pred.is_bottom_source.is_some() {
+        if pred.is_face_down.is_some()
+            || pred.is_bottom_source.is_some()
+            || pred.host_kind_is.is_some()
+        {
             return false;
         }
         subject

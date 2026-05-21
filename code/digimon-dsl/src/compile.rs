@@ -542,6 +542,7 @@ fn compile_predicate(
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
         is_face_down: p.is_face_down,
         is_bottom_source: p.is_bottom_source,
+        host_kind_is: p.host_kind_is.map(compile_card_kind),
         self_digivolution_contains_name: p.self_digivolution_contains_name.clone(),
         memory_lte: p
             .memory_lte

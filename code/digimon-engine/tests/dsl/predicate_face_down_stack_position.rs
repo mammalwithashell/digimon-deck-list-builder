@@ -16,12 +16,15 @@
 //!
 //! This file will also host A3.3/A3.4 tests later.
 
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledPredicate, CompiledStep};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledCardKind, CompiledPredicate, CompiledStep,
+};
 use digimon_engine::action::space::encode_source_select;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::{run_steps, RunOutcome};
 use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::CardKind;
 
 #[test]
 fn select_own_sources_is_face_down_filter_offers_only_face_down_sources() {
@@ -496,5 +499,197 @@ fn select_own_sources_face_down_and_bottom_all_of_offers_only_that_source() {
     assert!(
         !pending.valid_action_ids.contains(&upper_action),
         "a face-up non-bottom source must NOT be a candidate under `all_of`"
+    );
+}
+
+// --- Task A3.3 — `host_kind_is` source-subject predicate leaf -------------
+
+/// Build a `CardData` like `make_test_card` but with the given `CardKind` so
+/// a carrier's TOP card can be a Tamer rather than the default Digimon.
+fn make_test_card_kind(card_id: &str, card_name: &str, kind: CardKind) -> digimon_engine::card_data::CardData {
+    let mut d = make_test_card(card_id, card_name);
+    d.card_kind = kind;
+    d
+}
+
+#[test]
+fn select_own_sources_host_kind_is_tamer_offers_only_tamer_hosted_source() {
+    // Two own permanents:
+    //   - a Tamer carrier with one digivolution source (TAMER-SRC)
+    //   - a Digimon carrier with one digivolution source (DIGI-SRC)
+    // `host_kind_is: tamer` must offer ONLY the Tamer-hosted source.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TAMER-SRC", "Tamer Stash Source"))
+        .add_card(make_test_card_kind("TAMER-TOP", "Hosting Tamer", CardKind::Tamer))
+        .add_card(make_test_card("DIGI-SRC", "Digimon Stash Source"))
+        .add_card(make_test_card("DIGI-TOP", "Hosting Digimon"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let tamer_carrier = runner.place_stack(0, &["TAMER-SRC", "TAMER-TOP"]);
+    let digi_carrier = runner.place_stack(0, &["DIGI-SRC", "DIGI-TOP"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    let mut filter = CompiledPredicate::default();
+    filter.host_kind_is = Some(CompiledCardKind::Tamer);
+
+    let steps = vec![CompiledStep::SelectOwnSources {
+        target: None,
+        filter,
+        min: 1,
+        max: 1,
+        bind_as: Some("chosen".to_string()),
+        prompt: "Choose a Tamer-hosted source".to_string(),
+        then: vec![CompiledStep::GainMemory(1)],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    assert_eq!(outcome, RunOutcome::Parked);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("source selection should be pending");
+
+    // `select_own_sources` only offers digivolution-stack sources (index 0 of
+    // each two-card carrier); the top card is the permanent itself.
+    let tamer_source_action =
+        encode_source_select(tamer_carrier.index as u16, 0).expect("tamer-hosted source action");
+    let digi_source_action =
+        encode_source_select(digi_carrier.index as u16, 0).expect("digimon-hosted source action");
+
+    assert!(
+        pending.valid_action_ids.contains(&tamer_source_action),
+        "the Tamer-hosted source must be a candidate under `host_kind_is: tamer`"
+    );
+    assert!(
+        !pending.valid_action_ids.contains(&digi_source_action),
+        "a Digimon-hosted source must NOT be a candidate under `host_kind_is: tamer`"
+    );
+}
+
+#[test]
+fn select_own_sources_host_kind_is_digimon_offers_only_digimon_hosted_source() {
+    // Inverse: `host_kind_is: digimon` must offer ONLY the Digimon-hosted
+    // source and exclude the one stashed under a Tamer.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TAMER-SRC", "Tamer Stash Source"))
+        .add_card(make_test_card_kind("TAMER-TOP", "Hosting Tamer", CardKind::Tamer))
+        .add_card(make_test_card("DIGI-SRC", "Digimon Stash Source"))
+        .add_card(make_test_card("DIGI-TOP", "Hosting Digimon"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let tamer_carrier = runner.place_stack(0, &["TAMER-SRC", "TAMER-TOP"]);
+    let digi_carrier = runner.place_stack(0, &["DIGI-SRC", "DIGI-TOP"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    let mut filter = CompiledPredicate::default();
+    filter.host_kind_is = Some(CompiledCardKind::Digimon);
+
+    let steps = vec![CompiledStep::SelectOwnSources {
+        target: None,
+        filter,
+        min: 1,
+        max: 1,
+        bind_as: Some("chosen".to_string()),
+        prompt: "Choose a Digimon-hosted source".to_string(),
+        then: vec![CompiledStep::GainMemory(1)],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    assert_eq!(outcome, RunOutcome::Parked);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("source selection should be pending");
+
+    let tamer_source_action =
+        encode_source_select(tamer_carrier.index as u16, 0).expect("tamer-hosted source action");
+    let digi_source_action =
+        encode_source_select(digi_carrier.index as u16, 0).expect("digimon-hosted source action");
+
+    assert!(
+        pending.valid_action_ids.contains(&digi_source_action),
+        "the Digimon-hosted source must be a candidate under `host_kind_is: digimon`"
+    );
+    assert!(
+        !pending.valid_action_ids.contains(&tamer_source_action),
+        "a Tamer-hosted source must NOT be a candidate under `host_kind_is: digimon`"
+    );
+}
+
+#[test]
+fn select_own_sources_host_kind_is_inside_all_of_combinator() {
+    // Regression for the degrade-to-Card path: a `host_kind_is` leaf nested
+    // inside an `all_of` combinator must still see the `Source` subject's
+    // host-permanent metadata. With the degrade bug it would recurse with the
+    // already-degraded `Card` subject and unconditionally fail.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TAMER-SRC", "Tamer Stash Source"))
+        .add_card(make_test_card_kind("TAMER-TOP", "Hosting Tamer", CardKind::Tamer))
+        .add_card(make_test_card("DIGI-SRC", "Digimon Stash Source"))
+        .add_card(make_test_card("DIGI-TOP", "Hosting Digimon"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let tamer_carrier = runner.place_stack(0, &["TAMER-SRC", "TAMER-TOP"]);
+    let digi_carrier = runner.place_stack(0, &["DIGI-SRC", "DIGI-TOP"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    let mut nested = CompiledPredicate::default();
+    nested.host_kind_is = Some(CompiledCardKind::Tamer);
+    let mut filter = CompiledPredicate::default();
+    filter.all_of = vec![nested];
+
+    let steps = vec![CompiledStep::SelectOwnSources {
+        target: None,
+        filter,
+        min: 1,
+        max: 1,
+        bind_as: Some("chosen".to_string()),
+        prompt: "Choose a Tamer-hosted source".to_string(),
+        then: vec![CompiledStep::GainMemory(1)],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    assert_eq!(outcome, RunOutcome::Parked);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("source selection should be pending");
+
+    let tamer_source_action =
+        encode_source_select(tamer_carrier.index as u16, 0).expect("tamer-hosted source action");
+    let digi_source_action =
+        encode_source_select(digi_carrier.index as u16, 0).expect("digimon-hosted source action");
+
+    assert!(
+        pending.valid_action_ids.contains(&tamer_source_action),
+        "the Tamer-hosted source must be a candidate under nested `all_of: [{{ host_kind_is: tamer }}]`"
+    );
+    assert!(
+        !pending.valid_action_ids.contains(&digi_source_action),
+        "a Digimon-hosted source must NOT be a candidate under nested `all_of: [{{ host_kind_is: tamer }}]`"
     );
 }

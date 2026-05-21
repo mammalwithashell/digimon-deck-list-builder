@@ -126,6 +126,12 @@ pub struct PredicateSpec {
     /// (e.g. inside a `select_own_sources` filter).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub is_bottom_source: Option<bool>,
+    /// Source-subject predicate. Matches the `CardKind` of the host
+    /// permanent's top card (e.g. `tamer` for a source stashed under a Tamer).
+    /// Only meaningful when the predicate subject is a digivolution-stack source
+    /// (e.g. inside a `select_own_sources` filter).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub host_kind_is: Option<CardKind>,
 
     // Leaf — global / observer
     #[serde(skip_serializing_if = "Option::is_none")]
