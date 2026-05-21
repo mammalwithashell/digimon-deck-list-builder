@@ -3367,6 +3367,67 @@ impl<'a> EffectContext<'a> {
         true
     }
 
+    /// Trash the bottom-most face-down digivolution source from `target` and
+    /// fire `OnDigivolutionCardTrashed`. Returns `true` iff a face-down source
+    /// was found at `card_sources[0]` and trashed; returns `false` with no
+    /// mutation otherwise (no face-down bottom source, or `target` missing).
+    ///
+    /// This is the cost-form trash primitive for ST-23 BEATBREAK and ST-24
+    /// DATA SQUAD cards whose printed text reads "by trashing the bottom
+    /// face-down card from under any of your Tamers, ...".
+    ///
+    /// The trashed source routes to the source's own `owner` trash, matching
+    /// the standard `OnDigivolutionCardTrashed` ownership semantics (mirrors
+    /// `trash_card_source` / `trash_top_source`).
+    ///
+    /// Used by: ST23-01 Kekkomon, ST23-03 Cougarmon, ST23-04 Murasamemon,
+    /// ST23-08 Monarchlizamon, ST23-11 Wolvermon, ST23-12 Chiropmon,
+    /// ST24-01 Koromon, ST24-06 RizeGreymon, ST24-10 Lilamon, ST24-11 Rosemon,
+    /// ST24-12 Falcomon.
+    pub fn trash_bottom_face_down_source(&mut self, target: PermanentHandle) -> bool {
+        // Inspect `card_sources[0]`: it must exist AND be face-down. Reject
+        // before any mutation otherwise (missing target, empty stack, or a
+        // face-up bottom source — e.g. an un-stashed Tamer whose only source
+        // is its own face-up card).
+        let removed = {
+            let permanent = match self
+                .game
+                .player_mut(target.player)
+                .battle_area
+                .get_mut(target.index as usize)
+            {
+                Some(p) => p,
+                None => return false,
+            };
+            match permanent.card_sources.first() {
+                Some(bottom) if bottom.face_down => {}
+                _ => return false,
+            }
+            permanent.card_sources.remove(0)
+        };
+        let source_card = removed.handle();
+        let owner = removed.owner;
+        self.game.player_mut(owner).trash.push(removed);
+
+        // Compute the host's CURRENT top card AFTER the removal — the
+        // permanent still exists with its remaining sources / its own top
+        // card. A Tamer always retains its own card as the top.
+        let host_card = self.game.player(target.player).battle_area[target.index as usize]
+            .top_card()
+            .handle();
+
+        // Fire OnDigivolutionCardTrashed for the trashed bottom source, the
+        // same observer dispatch as `trash_card_source` / `trash_top_source`.
+        self.game.fire_digivolution_card_trashed(
+            target.player,
+            target,
+            host_card,
+            source_card,
+            crate::trigger_context::EventCause::from(self.game.infer_effect_cause(target.player)),
+        );
+        true
+    }
+
     pub fn play_selected_sources_without_cost(
         &mut self,
         selected: Vec<SourceSelectionRef>,

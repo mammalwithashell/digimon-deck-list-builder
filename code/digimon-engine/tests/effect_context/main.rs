@@ -24,5 +24,6 @@ mod provenance_tokens;
 mod schedule_delayed;
 mod security_stack_operations;
 mod source_stack_operations;
+mod trash_bottom_face_down_source;
 mod trash_card_source;
 mod trash_top_source;
