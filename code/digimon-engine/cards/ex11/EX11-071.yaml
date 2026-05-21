@@ -5,14 +5,12 @@ color: [white]
 cost: 3
 traits: [LIBERATOR]
 
-# Printed [Main] is intentionally omitted.
-#
-# By returning this Tamer to the bottom of the deck, the player may play a
-# play-cost-4-or-higher [Royal Knight]/[LIBERATOR] card from hand with the play
-# cost reduced by 2. The current DSL has source-bound return costs for some
-# cost-reduction hooks, but this clause needs that source-bound return to feed a
-# Main-phase hand play selection with a reduced actual payment. Tracked as
-# RK-G002.
+# [Main] clause authored Phase 2 Track J PR 2 (RK-G002 closure). The
+# source-bound return cost lifts through Phase 2 Track B's
+# `activation_cost: { return_self_to_deck_bottom: true }` onto
+# `EffectBuilder::activation_cost(ctx.return_self_to_deck_bottom_as_cost)`;
+# after the Tamer leaves the field the chained body fires the hand
+# selection + reduced-cost play.
 
 effects:
   - when: on_play
@@ -41,3 +39,23 @@ effects:
       - add_to_hand_from_reveal: { of: you, card: omeka_or_omni_x }
       - add_to_hand_from_reveal: { of: you, card: rk_or_liberator }
       - place_remainder_on_deck: { of: you, position: bottom }
+
+  - when: main_on_field
+    optional: true
+    summary: "[Main] By returning self to deck bottom, may play 1 cost-4+ Royal Knight/LIBERATOR from hand at cost -2"
+    process:
+      - activation_cost: { return_self_to_deck_bottom: true }
+      - select_hand:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - play_cost_gte: 4
+              - any_of:
+                  - trait_has: "Royal Knight"
+                  - trait_has: LIBERATOR
+          prompt: "Play 1 cost-4+ Royal Knight/LIBERATOR Digimon from hand at cost -2"
+      - play_from_hand:
+          of: you
+          hand_index: pick
+          cost_delta: { reduce: 2 }

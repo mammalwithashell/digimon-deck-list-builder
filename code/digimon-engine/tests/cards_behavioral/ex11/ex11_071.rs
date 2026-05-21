@@ -1,14 +1,12 @@
 //! EX11-071 Cool Boy - Tamer, White, LIBERATOR.
 //!
-//! Supported slice:
+//! Implemented slice (Phase 2 Track J PR 2 closure of RK-G002):
 //! - [On Play] reveal top 3; add 1 [Omekamon]/[Omnimon (X Antibody)] and 1
 //!   [Royal Knight]/[LIBERATOR] trait card; bottom the rest.
-//!
-//! Gap-routed:
 //! - [Main] By returning this Tamer to the bottom of the deck, may play 1 cost
-//!   4+ [Royal Knight]/[LIBERATOR] from hand with play cost reduced by 2. This
-//!   needs a source-bound return-to-deck activation cost feeding a reduced-cost
-//!   hand play selection.
+//!   4+ [Royal Knight]/[LIBERATOR] from hand with play cost reduced by 2.
+//!   Lowers onto Phase 2 Track B's `activation_cost: { return_self_to_deck_bottom: true }`
+//!   plus a `play_cost_gte: 4` filter (predicate added in this PR).
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledPredicate, CompiledStackPosition,
@@ -72,8 +70,8 @@ fn ex11_071_on_play_uses_dual_reveal_buckets_and_bottoms_remainder() {
 
     assert_eq!(
         card.effects.len(),
-        1,
-        "Main return-self reduced play clause is intentionally omitted"
+        2,
+        "On Play search clause plus [Main] return-self reduced-cost play clause"
     );
     let on_play = card
         .effects
@@ -148,8 +146,84 @@ fn ex11_071_on_play_uses_dual_reveal_buckets_and_bottoms_remainder() {
     )));
 }
 
+/// The [Main] clause compiles to an `activation_cost: return_self_to_deck_bottom`
+/// step followed by `select_hand` filtered by `play_cost_gte: 4` and
+/// `Royal Knight`/LIBERATOR trait, then `play_from_hand` with `cost_delta:
+/// { reduce: 2 }`.
 #[test]
-#[ignore = "pending: RK-G002 — source-bound return-self activation cost into reduced-cost hand play"]
-fn ex11_071_main_returns_self_to_bottom_to_play_cost_four_rk_or_liberator_reduced_by_two() {
-    panic!("requires return-self cost and reduced-cost hand play selection support");
+fn ex11_071_main_clause_uses_activation_cost_and_reduced_play_from_hand() {
+    use digimon_dsl::compiled::{
+        CompiledActivationCostKind, CompiledCostDelta, CompiledDpConstraint,
+    };
+
+    let runner = runner();
+    let card = runner
+        .compiled_card("EX11-071")
+        .expect("EX11-071 compiled card present");
+
+    let main = card
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(triggered)
+                if triggered.when.contains(&CompiledTiming::MainOnField) =>
+            {
+                Some(triggered)
+            }
+            _ => None,
+        })
+        .expect("[Main] clause exists");
+
+    assert!(main.optional, "printed 'you may' surfaces as optional");
+
+    assert!(
+        main.process.iter().any(|step| matches!(
+            step,
+            CompiledStep::ActivationCost {
+                kind: CompiledActivationCostKind::ReturnSelfToDeckBottom,
+                ..
+            }
+        )),
+        "first step is activation_cost: return_self_to_deck_bottom"
+    );
+    let sel = main
+        .process
+        .iter()
+        .find_map(|step| match step {
+            CompiledStep::SelectHand { filter, .. } => Some(filter),
+            _ => None,
+        })
+        .expect("hand selection step exists");
+    fn play_cost_gte(p: &CompiledPredicate) -> Option<CompiledDpConstraint> {
+        if p.play_cost_gte.is_some() {
+            return p.play_cost_gte.clone();
+        }
+        for part in p.all_of.iter().chain(p.any_of.iter()) {
+            if let Some(v) = play_cost_gte(part) {
+                return Some(v);
+            }
+        }
+        None
+    }
+    assert_eq!(
+        play_cost_gte(sel),
+        Some(CompiledDpConstraint::Literal(4)),
+        "select filter requires play_cost_gte: 4"
+    );
+    assert!(
+        predicate_contains_trait(sel, "Royal Knight")
+            && predicate_contains_trait(sel, "LIBERATOR"),
+        "hand filter accepts Royal Knight or LIBERATOR"
+    );
+
+    assert!(
+        main.process.iter().any(|step| matches!(
+            step,
+            CompiledStep::PlayFromHand {
+                cost_delta: Some(CompiledCostDelta::Reduce(2)),
+                ..
+            }
+        )),
+        "play_from_hand uses cost_delta reduce 2"
+    );
 }

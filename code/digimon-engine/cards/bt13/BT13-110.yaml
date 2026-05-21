@@ -10,12 +10,16 @@ effects:
     summary: "[Main] Draw 1; place this card in the battle area"
     process:
       - draw: { of: you, count: 1 }
-      # BLOCKED: RK-G001 — optional hand Digimon placement under a filtered
-      # [King Drasil_7D6] in breeding.
+      # BLOCKED: G-OPTIONAL-BREEDING-SELECTION — RK-G001 filter shipped (Phase 2
+      # Track J PR 1) but `select_own_breeding_permanent` is hardcoded
+      # `is_optional: false`, so the printed "you may" placement clause can't
+      # surface a decline path. The placement step is omitted until that gap
+      # closes.
       - place_self_as_delay_option: {}
 
-  # BLOCKED: RK-G001 — Delay play from breeding digivolution sources with On
-  # Play suppression and Rush cannot be expressed without breeding-source play.
+  # BLOCKED: G-BREEDING-SOURCE-PLAY — Delay play from breeding digivolution
+  # sources with On Play suppression and Rush requires breeding-source
+  # selection/play substrate (out of Track J scope).
 
   - scope: inherited
     when: on_security
