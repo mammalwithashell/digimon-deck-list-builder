@@ -5,15 +5,22 @@
 //!   [Puppet] trait, reduce the digivolution cost by 1.
 //! - Inherited: [Your Turn] All of your opponent's Security Digimon get -3000 DP.
 //!
-//! Current verdict: PARTIAL. The card's printed metadata and yellow Lv2
-//! digivolution path are implemented in production DSL. Both printed effects are
-//! blocked by reusable DSL/engine vocabulary gaps already used by adjacent
-//! Puppet cards:
+//! Current verdict: PARTIAL. The printed metadata, yellow Lv2 digivolution
+//! path, and the inherited opponent-security -3000 DP aura are implemented in
+//! production DSL (PUPPETS-G008 / G-OPPONENT-SECURITY-DP-AURA, resolved Track I
+//! 2026-05-17 — lowers via `applies_to_opponent_security_dp: true`). The
+//! source-scoped digivolve-into-trait cost reduction remains blocked by a
+//! reusable DSL/engine vocabulary gap:
 //! - no `when_this_digivolves_into` + target-trait cost-reduction hook.
-//! - no YAML bridge to `EffectBuilder::applies_to_opponent_security_dp()`.
 
-use digimon_dsl::compiled::{CompiledAltPathKind, CompiledCardKind, CompiledColor, CompiledCost};
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_dsl::compiled::{
+    CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
+    CompiledDeclarativeClause,
+};
+use digimon_engine::card_source::CardSource;
+use digimon_engine::combat::AttackResult;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::CardKind;
 
 #[test]
 fn ex7_024_compiles_with_printed_stats_and_lv2_yellow_path() {
@@ -83,14 +90,90 @@ fn ex7_024_cost_reduction_only_applies_on_your_turn() {
     todo!("unignore when source-scoped [Your Turn] digivolution cost reduction is available")
 }
 
+/// Behavioral: EX7-024 carried as an inherited card under an 8000-DP attacker
+/// drops a 9000-DP opponent Security Digimon to 6000, so the attacker survives.
 #[test]
-#[ignore = "pending: G-OPPONENT-SECURITY-DP-AURA / PUPPETS-G008 - no DSL bridge to applies_to_opponent_security_dp"]
 fn ex7_024_inherited_security_dp_aura_drops_opponent_security_digimon_by_3000() {
-    todo!("unignore when inherited opponent security DP aura can be authored in YAML")
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX7-024")
+        .expect("EX7-024 YAML loads")
+        .add_card(attacker_lv4("ATK", 8000))
+        .add_card(digimon_security_card("SEC", 9000))
+        .security(1, &["SEC"])
+        .start();
+
+    let atk = runner.place_on_field(0, "ATK", Some(0));
+    {
+        let game = runner.game_mut();
+        let data_idx = game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "EX7-024")
+            .expect("EX7-024 registered");
+        let next = game.next_card_index();
+        let perm = &mut game.players[atk.player as usize].battle_area[atk.index as usize];
+        let mut src = CardSource::new(data_idx, atk.player, next);
+        src.card_index = next;
+        perm.card_sources.insert(0, src);
+    }
+
+    let result = runner.attack_player(atk, 1, false);
+    assert_eq!(
+        result,
+        AttackResult::SecurityCheckSurvived,
+        "8000 DP attacker survives after Shoemon's -3000 drops 9000 security Digimon to 6000"
+    );
+    assert_eq!(runner.battle_area_size(0), 1);
 }
 
+/// Structural: the consult site (`attacker_security_dp_adjustment`) is
+/// turn-agnostic and security battles only happen on the attacker's turn, so
+/// `[Your Turn]` is behaviorally redundant. This test asserts the printed
+/// qualifier is still faithfully encoded as an `active_when: your_turn` gate.
 #[test]
-#[ignore = "pending: G-OPPONENT-SECURITY-DP-AURA / PUPPETS-G008 - same as positive security DP aura test"]
 fn ex7_024_inherited_security_dp_aura_only_applies_on_your_turn() {
-    todo!("unignore when inherited opponent security DP aura can be authored in YAML")
+    let runner = DebugRunner::builder()
+        .dsl_card("EX7-024")
+        .expect("EX7-024 YAML loads")
+        .start();
+    let compiled = runner
+        .compiled_card("EX7-024")
+        .expect("EX7-024 must be compiled");
+
+    let active_when = compiled
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
+                active_when,
+                applies_to_opponent_security_dp,
+                ..
+            }) if *applies_to_opponent_security_dp => Some(active_when.clone()),
+            _ => None,
+        })
+        .expect("EX7-024 must compile an opponent-security DP aura")
+        .expect("the aura must carry an active_when gate");
+
+    assert_eq!(
+        active_when.your_turn,
+        Some(true),
+        "[Your Turn] printed qualifier must be encoded as a your_turn gate"
+    );
+}
+
+fn attacker_lv4(id: &str, dp: i32) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(dp);
+    card.play_cost = 5;
+    card
+}
+
+fn digimon_security_card(id: &str, dp: i32) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(dp);
+    card
 }
