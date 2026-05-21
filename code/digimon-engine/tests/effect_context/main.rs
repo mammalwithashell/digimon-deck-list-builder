@@ -13,6 +13,7 @@ mod effect_initiated_dna_digivolve;
 mod effect_refiring;
 mod material_zone_select;
 mod override_persistence;
+mod place_deck_top_under_permanent;
 mod place_under_permanent;
 mod place_under_permanent_face_down;
 mod play_from_hand_free;

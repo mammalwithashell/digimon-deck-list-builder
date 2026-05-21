@@ -3179,6 +3179,38 @@ impl<'a> EffectContext<'a> {
         // rather than misroute; in practice unreachable.
     }
 
+    /// Place the top card of `target.player`'s deck as the bottom digivolution
+    /// source of `target`. Generalizes `training_place_deck_top_under_self_face_down`
+    /// to an arbitrary target permanent (Tamer or Digimon, in either player's
+    /// battle area).
+    ///
+    /// Returns `Some(card_handle)` on success or `None` if the controller's
+    /// deck is empty (silent no-op on empty deck, mirroring `Player::draw`).
+    ///
+    /// `face_down: true` marks the placed source face-down (Tamer-stash
+    /// callers); `false` is ordinary face-up placement.
+    ///
+    /// Used by: ST-23 BEATBREAK / ST-24 DATA SQUAD Tamer-stash placement cards
+    /// (e.g. ST23-13 Tomoro Tenma & Kyo Sawashiro, ST24-09 Sunflowmon).
+    pub fn place_deck_top_under_permanent(
+        &mut self,
+        target: PermanentHandle,
+        face_down: bool,
+    ) -> Option<CardHandle> {
+        let card_handle = self.game.player(target.player).deck.last()?.handle();
+        let ok = self.game.place_as_bottom_source_observed(
+            crate::enums::CardSourceRef::DeckTop(target.player),
+            target,
+            self.player,
+            face_down,
+        );
+        if ok {
+            Some(card_handle)
+        } else {
+            None
+        }
+    }
+
     /// Trash a specific digivolution source from a permanent.
     ///
     /// Used by:
