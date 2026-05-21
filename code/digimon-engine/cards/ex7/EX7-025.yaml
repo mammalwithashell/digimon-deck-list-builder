@@ -28,5 +28,13 @@ effects:
           prompt: "Play 1 Arisa Kinosaki from hand"
       - play_from_hand_free: { of: you, hand_index: arisa }
 
-  # Inherited [Your Turn] "All opponent security Digimon get -3000 DP"
-  # omitted pending G-OPPONENT-SECURITY-DP-AURA / PUPPETS-G008.
+  # Inherited [Your Turn] "All of your opponent's security Digimon get -3000 DP".
+  # PUPPETS-G008: lowers via `applies_to_opponent_security_dp: true` to
+  # `EffectBuilder::applies_to_opponent_security_dp()` so the -3000 DP rides
+  # under the attacker's stack and surfaces during the security battle.
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    dp_modifier: -3000
+    applies_to_opponent_security_dp: true
+    summary: "[Inherited][Your Turn] All opponent security Digimon get -3000 DP"
