@@ -1,20 +1,28 @@
-//! Tasks A3.1 / A3.2 — source-subject predicate leaves (`is_face_down`,
-//! `is_bottom_source`).
+//! Tasks A3.1–A3.4 — Phase A3 predicate leaves: `is_face_down` (A3.1),
+//! `is_bottom_source` (A3.2), `host_kind_is` (A3.3), and
+//! `has_face_down_source` (A3.4).
 //!
-//! A `select_own_sources` step with `filter: { is_face_down: true }` must
-//! expose ONLY face-down digivolution-stack sources as selection candidates
-//! and exclude face-up ones. A `filter: { is_bottom_source: true }` must
-//! expose ONLY the `card_sources` index-0 source (the bottom of the
-//! digivolution stack). These prove the `PredicateSubject::Source` variant
-//! carries source-stack metadata (the `face_down` flag and the stack index)
-//! into the predicate evaluator.
+//! The first three are source-subject leaves: they filter
+//! `select_own_sources` candidates. A `select_own_sources` step with
+//! `filter: { is_face_down: true }` must expose ONLY face-down
+//! digivolution-stack sources as selection candidates and exclude face-up
+//! ones. A `filter: { is_bottom_source: true }` must expose ONLY the
+//! `card_sources` index-0 source (the bottom of the digivolution stack). A
+//! `filter: { host_kind_is: ... }` must expose ONLY sources whose host
+//! permanent matches the given card kind. These prove the
+//! `PredicateSubject::Source` variant carries source-stack metadata (the
+//! `face_down` flag, the stack index, and the host's kind) into the
+//! predicate evaluator.
+//!
+//! The last is a permanent-subject leaf: it filters `select_own_permanent`
+//! candidates. A `filter: { has_face_down_source: true }` must expose ONLY
+//! permanents that carry at least one face-down source in their digivolution
+//! stack.
 //!
 //! Pattern mirrors `phase2g_select_sources.rs`
 //! (`select_own_sources_filters_cards_from_source_carrier_only`): build a
 //! carrier stack, run a `SelectOwnSources` step, and inspect the parked
 //! selection's `valid_action_ids` for the per-source action IDs.
-//!
-//! This file will also host A3.3/A3.4 tests later.
 
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledCardKind, CompiledPredicate, CompiledStep,
