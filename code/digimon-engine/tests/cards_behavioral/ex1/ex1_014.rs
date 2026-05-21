@@ -15,15 +15,18 @@
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/EX1/Blue/EX1_014.cs
 //!
-//! # Verdict: PARTIAL
+//! # Verdict: IMPLEMENTED
 //!
 //! ## Clause 0 — face-up ＜Jamming＞
 //! Implemented via `kind: grant_keyword / keyword: Jamming` (unconditional,
-//! face-up). Resolves as G-DECLARATIVE-KEYWORD was RESOLVED 2026-05-02.
+//! face-up). G-DECLARATIVE-KEYWORD RESOLVED 2026-05-02.
 //!
 //! ## Clause 1 — [Inherited][Your Turn] conditional ＜Jamming＞
+//! Carrier-only self-aura (`kind: aura`, `scope: inherited`, `target: {}`).
 //! Name arm (carrier stack contains "Imperialdramon"): IMPLEMENTED.
 //! [Free] trait arm: IMPLEMENTED via source-permanent trait predicate.
+//! `your_turn: true` gate, carrier-only targeting (no spill), and the
+//! opponent-turn negative case are all covered by the tests below.
 //!
 //! # Patterns this test covers
 //! - H9 — face-up `＜Jamming＞` via declarative `grant_keyword`.

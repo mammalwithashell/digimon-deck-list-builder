@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-05-20",
+  "last_updated": "2026-05-21",
   "cards": {
     "BT21-093": {
       "card_name": "Raging Serpentine",
@@ -155,21 +155,21 @@
     },
     "BT20-016": {
       "card_name": "Paildramon",
-      "validated_date": "2026-04-27",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "HYBRID",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Medusamon Batch 11",
       "yaml_path": "code/digimon-engine/cards/bt20/BT20-016.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_016.rs",
-      "test_count": 23,
+      "test_count": 24,
       "patterns": [
         "H3",
         "D1",
         "G2-adjacent",
         "H11"
       ],
-      "notes": "18 active tests pass; 5 ignored pending gaps. Clause 1 ([On Play][When Digivolving] Piercing + +4000 DP) fully DSL-implemented. Clause 2 ([All Turns] cross-permanent deletion observer) registered as raw_rust declarative bt20_016_dna_on_deletion (no-op) pending G-EVENT-TARGET-OWNER. Inherited <Security A.+1> compiled but runtime-blocked by G-DECLARATIVE-KEYWORD. May-attack sub-clause blocked by G-MAY-ATTACK-NOW."
+      "notes": "Re-authored: clause 2 raw_rust -> kind: replacement (replacement_subject_is_mine, non-cancelling). G-DECLARATIVE-KEYWORD confirmed stale (inherited Security A.+1 works)."
     },
     "BT20-102": {
       "card_name": "Omnimon (X Antibody)",
@@ -1899,14 +1899,15 @@
     },
     "BT3-002": {
       "card_name": "DemiVeemon",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt3/BT3-002.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_002.rs",
-      "notes": "carrier_has_keyword predicate gap; over-fires"
+      "notes": "Verified already correct: has_keyword resolves to carrier for inherited clauses. Stale comments removed.",
+      "test_count": 9
     },
     "BT12-002": {
       "card_name": "DemiVeemon",
@@ -1932,14 +1933,14 @@
     },
     "P-117": {
       "card_name": "Veemon",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-h-bg-imperial-pilot-completion",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/p/P-117.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_117.rs",
-      "notes": "Phase 2 Track H closed G-BEFORE-PAY-COST-DIGIVOLVE-TARGET. Clause 0 cost reduction now uses cost_target + source_is_cost_target_permanent."
+      "notes": "Verified IMPLEMENTED; stale test-file doc comment corrected (clause 0 authored, Phase 2 Track H)."
     },
     "BT12-022": {
       "card_name": "ExVeemon",
@@ -1954,14 +1955,15 @@
     },
     "EX1-014": {
       "card_name": "ExVeemon",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/ex1/EX1-014.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex1/ex1_014.rs",
-      "notes": "Aura over-targets; trait arm of active_when blocked"
+      "notes": "Verified already correct: carrier-only self-aura (scope: inherited + target: {}) + source_permanent_trait_has. Stale PARTIAL docstring fixed.",
+      "test_count": 11
     },
     "BT21-037": {
       "card_name": "Lighdramon",
@@ -2031,98 +2033,103 @@
     },
     "BT12-028": {
       "card_name": "Paildramon",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt12/BT12-028.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_028.rs",
-      "notes": "All clauses gap-blocked: trash-top-N digi cards, DNA filter, source name"
+      "notes": "Stale BLOCKED verdict corrected: YAML fully authored (Track E verbs), all tests pass."
     },
     "BT16-025": {
       "card_name": "Paildramon",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt16/BT16-025.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_025.rs",
-      "notes": "Partition + DNA sub-clause + WhenAttacking ship; 2 clauses blocked"
+      "notes": "Re-authored: WD suspend-all via materials_count_lte+source_material_count formula; WA unsuspend-self fallback via effect_suspended_any_opponent_digimon.",
+      "test_count": 18
     },
     "BT16-027": {
       "card_name": "Imperialdramon: Fighter Mode",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt16/BT16-027.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_027.rs",
-      "notes": "Blast Digivolve + ACE -4 ship; OnPlay/EndOfAttack blocked"
+      "notes": "Re-authored: return opp Digimon <= source digi-cards via materials_count_lte+source_material_count formula.",
+      "test_count": 14
     },
     "ST9-06": {
       "card_name": "Imperialdramon Dragon Mode",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/st9/ST9-06.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st9/st9_06.rs",
-      "notes": "G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES (whole card)"
+      "notes": "Stale BLOCKED verdict corrected: YAML fully authored (select_own_sources + play_selected_sources_free), all tests pass."
     },
     "BT12-031": {
       "card_name": "Imperialdramon: Fighter Mode",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt12/BT12-031.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_031.rs",
-      "notes": "OPT suspend-all + return + +DP-per-color ship; alt-cost + 2+colors aura blocked"
+      "notes": "Fully IMPLEMENTED. Clause 1b (Security A.+1 + Blocker via self_color_count_gte while_condition) + Step C alt-cost via the new return_selected_sources_to_hand verb (G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME closed).",
+      "test_count": 16
     },
     "BT16-028": {
       "card_name": "Imperialdramon: Dragon Mode",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt16/BT16-028.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_028.rs",
-      "notes": "CannotUnsuspend ships; alt-cost branch + effect-initiated trigger blocked"
+      "notes": "Re-authored: effect-initiated observer via event_is_effect_initiated; 3 test-side setup fixes.",
+      "test_count": 15
     },
     "BT17-077": {
       "card_name": "Imperialdramon: Paladin Mode",
-      "validated_date": "2026-05-05",
-      "report": "implement-rust-dsl-archetype Royal Knights pool batches 9-15",
-      "status": "PARTIAL",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt17/BT17-077.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_077.rs",
-      "test_count": 2,
+      "test_count": 21,
       "tests_passing": 1,
       "tests_ignored": 1,
       "patterns": [
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "ACE metadata and source-trash-all-opponent-Digimon slice implemented; Blast Digivolve, bulk trash-to-deck, returned-card binding, and sourceless bottom-deck cost remain blocked."
+      "notes": "Re-authored: clause 1b player-choice trash via select_effect_choice; clause 1c via returned_card_matching."
     },
     "BT20-020": {
       "card_name": "Imperialdramon: Fighter Mode",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt20/BT20-020.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_020.rs",
-      "notes": "Raid + Piercing + WhenDigivolving ship; security-loss DP-LTE-source blocked"
+      "notes": "Re-authored: source-DP target gate via source_dp formula; G-OPT-TRIGGERED ignore was stale; alt-path test fixes.",
+      "test_count": 13
     },
     "BT3-093": {
       "card_name": "Davis Motomiya",
@@ -2137,47 +2144,51 @@
     },
     "BT16-085": {
       "card_name": "Davis Motomiya & Ken Ichijoji",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-h-bg-imperial-pilot-completion",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt16/BT16-085.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_085.rs",
-      "notes": "Phase 2 Track H closed G-PLAY-FROM-HAND-FREE-BIND-AS. Clause 0 free-play + delayed-return now fully implemented via bind_as. Clause 1's blue-or-green digivolve gate (G-EVENT-CARD-COLOR-IS) and DNA-only opponent source trash (G-SELECT-OPPONENT-SOURCES) remain blocked."
+      "notes": "Re-authored: color gate via event_card_color_has; DNA branch via select_opponent_sources.",
+      "test_count": 22
     },
     "BT3-103": {
       "card_name": "Hidden Potential Discovered!",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt3/BT3-103.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt3/bt3_103.rs",
-      "notes": "Security add-to-hand ships; Main cost reduction blocked"
+      "notes": "Fully IMPLEMENTED. Clause 0 [Main] one-shot future-digivolve cost reducer with selectable suspend cost via the new player-scoped arm_digivolve_cost_reducer substrate (G-COST-REDUCE-ALLY-DIGIVOLVE closed).",
+      "test_count": 10
     },
     "BT17-097": {
       "card_name": "Return to the Primogenitor",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt17/BT17-097.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_097.rs",
-      "notes": "Replaced fixture; Delay replacement + Security ship; effect-initiated digivolve blocked"
+      "notes": "Re-authored: security hand-or-trash play via native select_union_zone + play_union_bound_free (replaced zone-choice workaround).",
+      "test_count": 16
     },
     "LM-030": {
       "card_name": "Green Scramble",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-h-bg-imperial-pilot-completion",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
+      "validated_date": "2026-05-21",
+      "report": "bg-imperial-substrate-closeout",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/lm/LM-030.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_030.rs",
-      "notes": "Phase 2 Track H closed G-OPTIONAL-SELECTION-CONTINUE-TAIL \u2014 declining the optional security trash play now still adds the option to hand. Delay clause remains blocked (G-ZONE-SELECTED-TRASH-TO-DECK-TOP)."
+      "notes": "Re-authored: Delay clause B via move_trash_card_to_deck_top + dp_lte trash filter.",
+      "test_count": 21
     },
     "BT14-009": {
       "card_name": "Gotsumon",
@@ -3219,7 +3230,7 @@
         "DELAY",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass — visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
     },
     "LM-035": {
       "card_name": "Amber Memory Boost!",
@@ -3238,7 +3249,7 @@
         "DELAY",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass — visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
     },
     "LM-037": {
       "card_name": "Sepia Memory Boost!",
@@ -3257,7 +3268,7 @@
         "DELAY",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass — visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
     },
     "ST19-01": {
       "card_name": "Kyaromon",
@@ -3365,7 +3376,7 @@
         "UNION-ZONE-PLAY",
         "OPPONENT-SECURITY-DP-AURA"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G014 (origin-preserving union-zone play) closed; Security hand-or-trash LIBERATOR play and inherited opponent-security DP aura are now expressible. However, 1 test remains #[ignore] annotated for G-OPPONENT-SECURITY-DP-AURA / PUPPETS-G008 referencing inherited applies_to_opponent_security_dp — this annotation is stale (G008 closed Track I 2026-05-17) and needs cleanup in a separate pass."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G014 (origin-preserving union-zone play) closed; Security hand-or-trash LIBERATOR play and inherited opponent-security DP aura are now expressible. However, 1 test remains #[ignore] annotated for G-OPPONENT-SECURITY-DP-AURA / PUPPETS-G008 referencing inherited applies_to_opponent_security_dp \u00e2\u20ac\u201d this annotation is stale (G008 closed Track I 2026-05-17) and needs cleanup in a separate pass."
     },
     "ST19-11": {
       "card_name": "Chaperomon",
@@ -3678,7 +3689,7 @@
         "EFFECT-DIGIVOLVE",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass — visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
     },
     "LM-054": {
       "card_name": "Treadmill Training",
@@ -3697,7 +3708,7 @@
         "EFFECT-DIGIVOLVE",
         "SECURITY-PLACE-OPTION"
       ],
-      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass — visible post-placement [Main] activation/decline window is implemented."
+      "notes": "Substrate sweep 2026-05-20: PUPPETS-G009 (DelayTrigger::MainPhaseActivated) closed. All tests now pass \u00e2\u20ac\u201d visible post-placement [Main] activation/decline window is implemented."
     },
     "BT13-101": {
       "card_name": "Miki Kurosaki & Megumi Shirakawa",

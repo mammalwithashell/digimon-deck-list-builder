@@ -287,6 +287,9 @@ pub struct CompiledPredicate {
     pub event_card_name_contains: Option<String>,
     /// Every color of the triggering event card must be within this set.
     pub event_card_color_only: Option<Vec<CompiledColor>>,
+    /// The triggering event card must have at least one of these colors
+    /// (intersection / "has" semantics). G-EVENT-CARD-COLOR-IS.
+    pub event_card_color_has: Option<Vec<CompiledColor>>,
     /// The triggering event card must have exactly this many distinct colors.
     pub event_card_color_count: Option<u8>,
     pub event_permanent_is_source: Option<bool>,
@@ -301,7 +304,14 @@ pub struct CompiledPredicate {
     pub binding_present: Option<String>,
     pub binding_absent: Option<String>,
     pub effect_suspended_any_own_digimon: Option<bool>,
+    /// Opponent-side sibling of `effect_suspended_any_own_digimon`.
+    /// G-DSL-EFFECT-SUSPENDED-RESULT.
+    pub effect_suspended_any_opponent_digimon: Option<bool>,
     pub effect_returned_any_card: Option<bool>,
+    /// Filtered variant of `effect_returned_any_card`. When present, the inner
+    /// predicate is evaluated as a `Card` subject against each returned card
+    /// identity in the per-effect result log. G-ANY-RETURNED-CARD-PREDICATE.
+    pub returned_card_matching: Option<Box<CompiledPredicate>>,
     pub effect_deleted_any_own_digimon: Option<bool>,
     pub effect_deleted_any_opponent_digimon: Option<bool>,
     pub effect_played_any_digimon: Option<bool>,
@@ -1074,6 +1084,13 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         cards: CompiledBindingRef,
     },
+    /// Move a single selected trash card to the TOP of its owner's deck.
+    /// `of` identifies whose trash the card is in; the card returns to its
+    /// OWNER's deck. G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
+    MoveTrashCardToDeckTop {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+    },
     TrashTopNDigivolutionCardsOfEach {
         of: CompiledPlayerRef,
         n: CompiledFormula,
@@ -1221,6 +1238,18 @@ pub enum CompiledStep {
         prompt: String,
         then: Vec<CompiledStep>,
     },
+    /// Opponent-side mirror of `SelectOwnSources`. Candidate set drawn from the
+    /// OPPONENT's battle-area digivolution-source stacks.
+    /// G-SELECT-OPPONENT-SOURCES.
+    SelectOpponentSources {
+        target: Option<CompiledBindingRef>,
+        filter: CompiledPredicate,
+        min: u8,
+        max: u8,
+        bind_as: Option<String>,
+        prompt: String,
+        then: Vec<CompiledStep>,
+    },
     SelectOpponentDpBudget {
         dp_budget: i32,
         min_picks: u8,
@@ -1249,6 +1278,12 @@ pub enum CompiledStep {
         then: Vec<CompiledStep>,
     },
     TrashSelectedSources {
+        source_refs: String,
+    },
+    /// G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME — return each
+    /// `SelectOwnSources`-bound digivolution source card to its owner's hand
+    /// (mirror of `TrashSelectedSources`, hand destination instead of trash).
+    ReturnSelectedSourcesToHand {
         source_refs: String,
     },
     BindPermanentProperty {
@@ -1410,6 +1445,14 @@ pub enum CompiledStep {
     /// for variant-coverage and lowering-time inspection only.
     ActivationCost {
         kind: CompiledActivationCostKind,
+    },
+    /// G-COST-REDUCE-ALLY-DIGIVOLVE — install a player-scoped one-shot
+    /// future-digivolve cost reducer. BT3-103 Hidden Potential Discovered!.
+    ArmDigivolveCostReducer {
+        amount: i32,
+        single_fire: bool,
+        target_color: Option<CompiledColor>,
+        suspend_cost: bool,
     },
 }
 

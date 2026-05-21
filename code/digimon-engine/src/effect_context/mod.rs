@@ -2359,6 +2359,43 @@ impl<'a> EffectContext<'a> {
         true
     }
 
+    /// Install a player-scoped one-shot future-digivolve cost reducer
+    /// (`G-COST-REDUCE-ALLY-DIGIVOLVE`).
+    ///
+    /// Used by BT3-103 Hidden Potential Discovered!'s `[Main]` clause:
+    /// "For the turn, when one of your green Digimon would next digivolve,
+    /// by suspending 1 of your Digimon, reduce the digivolution cost by 5."
+    ///
+    /// The reducer is pushed onto `Game::player_digivolve_cost_reducers`
+    /// and is consulted at the top of each digivolve-from-hand cost path.
+    /// `target_color` gates which digivolutions qualify; `single_fire`
+    /// consumes the reducer on the first successful application; the
+    /// reducer expires at end of the installing player's turn.
+    ///
+    /// When `suspend_cost` is `true`, applying the reduction prompts the
+    /// player to suspend one of their own unsuspended Digimon — an
+    /// interactive, player-visible cost surfaced through `pending_selection`
+    /// (Working Rule §17). No auto-suspend.
+    pub fn arm_player_digivolve_cost_reducer(
+        &mut self,
+        amount: i32,
+        single_fire: bool,
+        target_color: Option<crate::enums::CardColor>,
+        suspend_cost: bool,
+    ) {
+        let reducer = crate::player_cost_reducer::PlayerDigivolveCostReducer {
+            player: self.player,
+            source_card: self.source_card,
+            kind: crate::player_cost_reducer::PlayerCostReducerKind::Digivolve,
+            expiry: crate::player_cost_reducer::PlayerCostReducerExpiry::EndOfTurn,
+            amount,
+            single_fire,
+            target_color,
+            suspend_cost,
+        };
+        self.game.player_digivolve_cost_reducers.push(reducer);
+    }
+
     /// Pay the source permanent's return-self-to-deck-bottom activation
     /// cost.
     ///
@@ -3557,6 +3594,76 @@ impl<'a> EffectContext<'a> {
             source_card,
             crate::trigger_context::EventCause::from(self.game.infer_effect_cause(perm.player)),
         );
+    }
+
+    /// Remove a single digivolution source card from `perm`'s stack and route
+    /// it to its **owner's** hand. Mirrors `trash_card_source` but the
+    /// destination is the owner's hand, not trash.
+    ///
+    /// Used by card effects that say "By returning N [card] from this
+    /// Digimon's digivolution cards to its owner's hand" (e.g. BT12-031's
+    /// Imperialdramon: Dragon Mode alt-cost).
+    ///
+    /// Owner-routing: the card is pushed to `removed.owner`'s hand (the
+    /// `CardSource.owner` field), NOT the controller's — so a source owned by
+    /// the opponent (rare, via control-transfer plays) returns to its true
+    /// owner. `trash_card_source` reads `removed.owner` for the same reason.
+    ///
+    /// Stack invariant: the source is removed by `position(...)` (anywhere in
+    /// the stack, not just the top), preserving the host permanent's top card
+    /// and the ordering of the remaining sources.
+    ///
+    /// Observer dispatch: this is a *return-to-hand*, NOT a trash, so it does
+    /// **not** fire `OnDigivolutionCardTrashed` (which would mis-attribute the
+    /// move to source-trash listeners). No trash-specific observer fires.
+    ///
+    /// Returns `true` when the source handle was found and moved; `false` if
+    /// the permanent slot is gone or the card is not in its stack.
+    pub fn return_card_source_to_hand(
+        &mut self,
+        perm: PermanentHandle,
+        card: CardHandle,
+    ) -> bool {
+        let removed = {
+            let permanent = match self
+                .game
+                .player_mut(perm.player)
+                .battle_area
+                .get_mut(perm.index as usize)
+            {
+                Some(p) => p,
+                None => return false,
+            };
+            let pos = match permanent
+                .card_sources
+                .iter()
+                .position(|c| c.handle() == card)
+            {
+                Some(pos) => pos,
+                None => return false,
+            };
+            permanent.card_sources.remove(pos)
+        };
+        let owner = removed.owner;
+        self.game.player_mut(owner).hand.push(removed);
+        true
+    }
+
+    /// `Vec`-taking convenience wrapper over `return_card_source_to_hand`,
+    /// keeping parity with `play_selected_sources_without_cost`. Each selected
+    /// source ref is returned to its owner's hand. Returns `true` if every
+    /// ref was successfully moved.
+    pub fn return_selected_sources_to_hand(
+        &mut self,
+        selected: Vec<SourceSelectionRef>,
+    ) -> bool {
+        let mut all_ok = true;
+        for source_ref in selected {
+            if !self.return_card_source_to_hand(source_ref.permanent, source_ref.card) {
+                all_ok = false;
+            }
+        }
+        all_ok
     }
 
     /// Trash every digivolution source below `target`'s top card, preserving
@@ -4771,6 +4878,34 @@ impl<'a> EffectContext<'a> {
             moved.push(handle);
         }
         moved
+    }
+
+    /// Move a single SELECTED card out of `player`'s trash to the TOP of the
+    /// deck (the position drawn from first). The card returns to its OWNER's
+    /// deck — `player` only identifies whose trash zone currently holds it.
+    /// Selected-trash analog of `return_trash_cards_to_deck_bottom`, but
+    /// single-card and deck-TOP. Returns true if the card was found and moved.
+    /// A handle not present in `player`'s trash is a silent no-op.
+    /// G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
+    pub fn move_trash_card_to_deck_top(
+        &mut self,
+        player: PlayerId,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        let Some(pos) = self
+            .game
+            .player(player)
+            .trash
+            .iter()
+            .position(|c| c.handle() == card)
+        else {
+            return false;
+        };
+        let removed = self.game.player_mut(player).trash.remove(pos);
+        let owner = removed.owner;
+        // Deck top = Vec end (drawn first) per engine convention.
+        self.game.player_mut(owner).deck.push(removed);
+        true
     }
 
     /// (Track A) Move a battle-area permanent to a player's security stack

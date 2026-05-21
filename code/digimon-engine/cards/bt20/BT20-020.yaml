@@ -201,37 +201,36 @@ effects:
   #   Timing: `on_opponent_security_removed` — fires when opponent's security is
   #   removed (equivalent to DCGO OnLoseSecurity filtered by opponent).
   #   `active_when: { all_turns: true }` — fires on both players' turns.
-  #   `once_per_turn: true` — enforces the [OPT] gate.
+  #   `once_per_turn: true` — enforces the [OPT] gate (Phase 2 Track C
+  #   enforces triggered once-per-turn at runtime).
   #
-  # BLOCKED sub-clause (delete with DP ≤ self):
-  #   The delete target filter requires `dp_lte: { formula: { source_dp: {} } }`
-  #   — a `source_dp` formula primitive that reads `ctx.source_permanent`'s
-  #   current effective DP, including buffs/debuffs. This primitive does not
-  #   exist in the DSL.
-  #   BLOCKED by G-FORMULA-SOURCE-DP (see BT17-102 and P-182 headers for full docs).
-  #
-  #   Under no-approximations, the delete step MUST be omitted:
-  #   - Including `select_opponent_permanent` without the DP filter would expose
-  #     ALL opponent Digimon as valid targets (no DP gating), violating the
-  #     printed card text and the no-approximations policy.
-  #   - Including the trigger without the body leaves a no-op [OPT] which is
-  #     preferable to an over-permissive body.
-  #
-  # The compiled clause structure (timing, active_when, once_per_turn, no body)
-  # gives the structural tests something to assert and documents the block point.
-  #
-  # Stub (commented — uncomment + remove BLOCKED note when G-FORMULA-SOURCE-DP closes):
-  #
-  # process:
-  #   - select_opponent_permanent:
-  #       bind_as: tgt
-  #       filter:
-  #         all_of:
-  #           - kind: digimon
-  #           - dp_lte: { formula: { source_dp: {} } }   # NEW formula primitive
-  #       prompt: "Delete 1 of opponent's Digimon (DP ≤ this Digimon)"
-  #   - delete_permanent: { target: tgt }
+  # Delete sub-clause (delete with DP ≤ self):
+  #   IMPLEMENTED — `dp_lte: { formula: { source_dp: {} } }` reads the carrier
+  #   permanent's effective DP at resolution time (including buffs/debuffs),
+  #   exactly DCGO's `card.PermanentOfThisCard().DP`. The `source_dp` formula
+  #   primitive is shared with BT17-102 Greymon and P-182 WarGreymon.
+  #   The select is guarded by an `any_permanent` precondition so the
+  #   selection only installs when a legal target exists; "delete 1" is
+  #   mandatory once an eligible Digimon is present.
   - when: on_opponent_security_removed
     once_per_turn: true
     active_when: { all_turns: true }
-    summary: "[All Turns][OPT] On opp security removed — delete body BLOCKED (G-FORMULA-SOURCE-DP)"
+    summary: "[All Turns][OPT] On opp security removed — delete 1 opp Digimon with DP ≤ this Digimon"
+    process:
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              all_of:
+                - kind: digimon
+                - dp_lte: { formula: { source_dp: {} } }
+          then:
+            - select_opponent_permanent:
+                bind_as: tgt
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: { formula: { source_dp: {} } }
+                prompt: "Delete 1 of opponent's Digimon (DP ≤ this Digimon)"
+            - delete_permanent: { target: tgt }
