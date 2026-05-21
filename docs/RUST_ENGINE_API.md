@@ -3407,7 +3407,7 @@ but from the player's Digi-Egg deck. DSL `reveal_top_deck` honors
 
 | Method | Purpose |
 |--------|---------|
-| `place_as_bottom_source(CardSourceRef, target: PermanentHandle)` → `bool` | Insert a card at the bottom of target's digivolution stack. |
+| `place_as_bottom_source(source: CardSourceRef, target: PermanentHandle, face_down: bool)` → `bool` | Insert a card at the bottom of target's digivolution stack. `face_down: true` places the source face-down (default is face-up). |
 | `place_permanent_as_bottom_sources(source: PermanentHandle, target: PermanentHandle)` → `bool` | (Track A) Remove a battle-area permanent and insert its whole stack under the target, preserving the source stack order. DSL `place_as_bottom_source` uses this when `source: { permanent: <binding> }`. |
 | `place_on_security(player, CardSourceRef, StackPosition, face_up: bool)` → `bool` | Move to security stack at Top/Bottom/Random; optionally face-up; fires `OnPlaceSecurity` with `EventCause::SecurityPlacement` after a successful commit. |
 | `place_permanent_on_security(player, target, position, face_up)` → `bool` | (Track A) Move a battle-area permanent into a player's security stack through the normal leave-field replacement window. For effects that initiate a new move-to-security, distinct from in-flight leave-replacement bodies. |

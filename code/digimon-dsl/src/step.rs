@@ -1038,8 +1038,8 @@ pub struct PlaceAsBottomSourceArgs {
     pub target: BindingRef,
     /// When `true`, the placed bottom digivolution source is marked
     /// face-down. Omitted → face-up (the default).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub face_down: Option<bool>,
+    #[serde(default)]
+    pub face_down: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
