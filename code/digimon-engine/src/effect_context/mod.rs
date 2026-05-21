@@ -2814,6 +2814,12 @@ impl<'a> EffectContext<'a> {
     /// status is unchanged. Gating here would over-restrict relative to
     /// DCGO and break parity with cards that intentionally route a source
     /// under an opponent's Progress attacker.
+    ///
+    /// `face_down: true` marks the inserted digivolution source face-down
+    /// (Tamer-stash callers); `false` is ordinary face-up placement. Note
+    /// that `face_down` is NOT honored for `CardSourceRef::Security` sources
+    /// — those are always placed face-up (see the `Game::place_as_bottom_source`
+    /// doc caveat).
     pub fn place_as_bottom_source(
         &mut self,
         source: crate::enums::CardSourceRef,
@@ -2861,6 +2867,9 @@ impl<'a> EffectContext<'a> {
     /// completeness but Save/MaterialSave callers will never route through
     /// them in normal play. `revealed_cards` is included to handle cards that
     /// are mid-reveal when a Save effect resolves.
+    ///
+    /// `face_down: true` marks the placed source face-down; `false` is
+    /// ordinary face-up placement.
     ///
     /// # Panics
     ///
