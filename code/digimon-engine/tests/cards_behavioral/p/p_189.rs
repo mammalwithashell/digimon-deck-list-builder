@@ -39,6 +39,7 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::CardKind;
 
 // ── Fixture builders ──────────────────────────────────────────────────────
 
@@ -56,6 +57,17 @@ fn make_non_liberator(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.traits = vec!["Reptile".to_string()];
     c.play_cost = 3;
+    c
+}
+
+/// A strong attacker for the security-attack path — DP high enough to win
+/// the DP battle against P-189 (6000 DP) so the check resolves cleanly.
+fn make_strong_attacker(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.dp = Some(9000);
+    c.level = Some(6);
+    c.play_cost = 8;
     c
 }
 
@@ -271,6 +283,76 @@ fn p_189_security_clause_compiled_process_prompts_zone_choice() {
     assert!(
         !sec.process.is_empty(),
         "Security clause must have a non-empty process (select_effect_choice + if/then/else branches)"
+    );
+}
+
+/// G-SECURITY-SKILL-RESUME-REFIRE repro: declining the optional [Security]
+/// clause must complete the security pipeline, not re-fire it.
+///
+/// P-189 sits in P1's security; P1 holds an eligible LIBERATOR cost-3 card.
+/// P0 attacks; the [Security] clause installs an optional selection that
+/// exposes PASS. The player declines. A healthy pipeline clears the
+/// selection in one PASS; the bug re-installs the same selection on every
+/// resume (`SecuritySkillDrain` re-enqueues `SecuritySkill` because the
+/// phase never advances past it), so the decline never terminates.
+///
+/// The PASS loop is bounded so the test fails with a clear message instead
+/// of hanging when the bug is present.
+#[test]
+fn p_189_security_clause_can_be_declined() {
+    use digimon_engine::action::space::PASS;
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(P189_YAML)
+        .expect("P-189 YAML parses")
+        .add_card(make_strong_attacker("ATK"))
+        .add_card(make_liberator_low_cost("LIB-1"))
+        .add_card(make_test_card("FILL", "Fill"))
+        .hand(1, &["LIB-1"])
+        .security(1, &["P-189"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(5)
+        .start();
+
+    let atk = runner.place_on_field(0, "ATK", Some(0));
+    runner.attack_player(atk, 1, false);
+
+    // The optional [Security] clause must install a selection exposing PASS.
+    assert!(
+        runner.pending_selection().is_some(),
+        "P-189's optional [Security] clause must install a selection on reveal"
+    );
+
+    // Decline. A healthy pipeline clears the selection in one PASS. The
+    // re-fire bug re-installs the clause on every resume — bound the PASSes
+    // so the test fails instead of hanging.
+    let mut passes = 0;
+    while runner.pending_selection().is_some() {
+        passes += 1;
+        assert!(
+            passes <= 5,
+            "[Security] clause re-fired after decline — {passes} consecutive \
+             PASSes never cleared pending_selection (G-SECURITY-SKILL-RESUME-REFIRE)"
+        );
+        let player = runner
+            .pending_selection()
+            .expect("checked Some above")
+            .selecting_player;
+        runner
+            .execute_action(player, PASS)
+            .expect("PASS must be legal on the optional [Security] selection");
+    }
+
+    // Nothing was played — the LIBERATOR card stays in P1's hand.
+    assert!(
+        runner
+            .game
+            .player(1)
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "LIB-1"),
+        "a declined [Security] clause must not play the LIBERATOR card"
     );
 }
 
