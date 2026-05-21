@@ -3432,6 +3432,11 @@ impl Game {
     /// `IsFlipped` analog for digivolution-stack sources). Pass `true` to
     /// stash a face-down source (e.g. a Tamer face-down stash); `false`
     /// preserves the ordinary face-up placement.
+    ///
+    /// NOTE: `face_down` is honored only for hand / trash / deck-top /
+    /// material / reveal sources placed into the breeding or battle area; it
+    /// is **not** honored for `CardSourceRef::Security` sources, which are
+    /// always placed face-up (DCGO parity).
     pub fn place_as_bottom_source(
         &mut self,
         source: crate::enums::CardSourceRef,
