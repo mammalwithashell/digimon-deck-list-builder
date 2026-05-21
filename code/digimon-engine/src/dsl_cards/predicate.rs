@@ -1418,6 +1418,22 @@ fn live_event_permanent_card(
     }
 }
 
+/// True when any of a candidate card's effective names satisfies `matches`.
+/// The effective names are the printed `card_name`, an optional
+/// reveal-overlay name, and every static "also treated as" identity alias.
+/// Shared by the `name_is` / `name_contains` / `name_in` leaves so a new
+/// name source only has to be wired in one place.
+fn any_effective_name_matches(
+    printed: &str,
+    overlay_name: Option<&str>,
+    aliases: &[String],
+    matches: impl Fn(&str) -> bool,
+) -> bool {
+    matches(printed)
+        || overlay_name.is_some_and(&matches)
+        || aliases.iter().any(|alias| matches(alias))
+}
+
 fn eval_card_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
@@ -1516,27 +1532,23 @@ fn eval_card_fields(
         // Same as form — attribute not yet tracked on CardData.
         return false;
     }
+    // `name_is` / `name_contains` / `name_in` all match against the printed
+    // name, an optional reveal-overlay name, and static "also treated as"
+    // identity aliases — see `any_effective_name_matches`.
     if let Some(ref n) = pred.name_is {
-        let overlay_match = overlay
-            .and_then(|o| o.name.as_ref())
-            .is_some_and(|name| name == n);
-        // Static identity aliases ("also treated as [X]") satisfy a
-        // generic name predicate alongside the printed name.
-        let alias_match = data.also_treated_as.iter().any(|alias| alias == n);
-        if data.card_name != *n && !overlay_match && !alias_match {
+        let overlay_name = overlay.and_then(|o| o.name.as_deref());
+        if !any_effective_name_matches(&data.card_name, overlay_name, &data.also_treated_as, |name| {
+            name == n.as_str()
+        }) {
             return false;
         }
     }
     if let Some(ref n) = pred.name_contains {
         let needle = n.to_lowercase();
-        let overlay_match = overlay
-            .and_then(|o| o.name.as_ref())
-            .is_some_and(|name| name.to_lowercase().contains(&needle));
-        let alias_match = data
-            .also_treated_as
-            .iter()
-            .any(|alias| alias.to_lowercase().contains(&needle));
-        if !data.card_name.to_lowercase().contains(&needle) && !overlay_match && !alias_match {
+        let overlay_name = overlay.and_then(|o| o.name.as_deref());
+        if !any_effective_name_matches(&data.card_name, overlay_name, &data.also_treated_as, |name| {
+            name.to_lowercase().contains(&needle)
+        }) {
             return false;
         }
     }
@@ -1553,14 +1565,10 @@ fn eval_card_fields(
         }
     }
     if let Some(ref names) = pred.name_in {
-        let overlay_match = overlay
-            .and_then(|o| o.name.as_ref())
-            .is_some_and(|name| names.iter().any(|n| n == name));
-        let alias_match = data
-            .also_treated_as
-            .iter()
-            .any(|alias| names.iter().any(|n| n == alias));
-        if !names.iter().any(|n| n == &data.card_name) && !overlay_match && !alias_match {
+        let overlay_name = overlay.and_then(|o| o.name.as_deref());
+        if !any_effective_name_matches(&data.card_name, overlay_name, &data.also_treated_as, |name| {
+            names.iter().any(|n| n.as_str() == name)
+        }) {
             return false;
         }
     }
