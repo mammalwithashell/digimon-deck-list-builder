@@ -3367,10 +3367,11 @@ impl<'a> EffectContext<'a> {
         true
     }
 
-    /// Trash the bottom-most face-down digivolution source from `target` and
-    /// fire `OnDigivolutionCardTrashed`. Returns `true` iff a face-down source
-    /// was found at `card_sources[0]` and trashed; returns `false` with no
-    /// mutation otherwise (no face-down bottom source, or `target` missing).
+    /// Trash the bottom-most face-down digivolution source from `target`,
+    /// fire `OnDigivolutionCardTrashed`, and drain the observer queue. Returns
+    /// `true` iff a face-down source was found at `card_sources[0]` and
+    /// trashed; returns `false` with no mutation otherwise (no face-down
+    /// bottom source, or `target` missing).
     ///
     /// This is the cost-form trash primitive for ST-23 BEATBREAK and ST-24
     /// DATA SQUAD cards whose printed text reads "by trashing the bottom
@@ -3379,6 +3380,13 @@ impl<'a> EffectContext<'a> {
     /// The trashed source routes to the source's own `owner` trash, matching
     /// the standard `OnDigivolutionCardTrashed` ownership semantics (mirrors
     /// `trash_card_source` / `trash_top_source`).
+    ///
+    /// Unlike `trash_top_source`, this helper does NOT honor
+    /// `ImmuneFromStackTrashing`: that modifier guards against involuntary
+    /// stack-peeling by opponent effects, whereas this is a voluntary
+    /// activation cost the controller chooses to pay (the controller earlier
+    /// stashed the face-down card under their own Tamer). The omission is by
+    /// design — do not add the check.
     ///
     /// Used by: ST23-01 Kekkomon, ST23-03 Cougarmon, ST23-04 Murasamemon,
     /// ST23-08 Monarchlizamon, ST23-11 Wolvermon, ST23-12 Chiropmon,
@@ -3412,6 +3420,10 @@ impl<'a> EffectContext<'a> {
         // Compute the host's CURRENT top card AFTER the removal — the
         // permanent still exists with its remaining sources / its own top
         // card. A Tamer always retains its own card as the top.
+        //
+        // The direct index (not `.get()`) is infallible by construction here:
+        // the permanent was validated present at the top of this function, and
+        // only a source — never the permanent — was removed.
         let host_card = self.game.player(target.player).battle_area[target.index as usize]
             .top_card()
             .handle();

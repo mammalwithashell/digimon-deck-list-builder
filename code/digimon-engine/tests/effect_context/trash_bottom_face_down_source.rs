@@ -11,7 +11,7 @@
 //!   - Otherwise (no face-down bottom source, or `target` missing) returns
 //!     `false` with NO mutation.
 
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
@@ -343,5 +343,100 @@ fn trash_bottom_face_down_source_fires_on_digivolution_card_trashed() {
         trash.last().unwrap().handle(),
         stash_handle,
         "the stashed source was trashed"
+    );
+}
+
+/// Captured `OnDigivolutionCardTrashed` event context.
+#[derive(Default)]
+struct CapturedTrashContext {
+    event_card: Option<digimon_engine::card_source::CardHandle>,
+    event_host_permanent: Option<PermanentHandle>,
+    event_host_card: Option<digimon_engine::card_source::CardHandle>,
+}
+
+/// A `CardEffect` that records the `OnDigivolutionCardTrashed` event context
+/// (trashed card + host permanent + host card) into a shared slot.
+struct DigCardTrashedContextObs {
+    captured: Arc<Mutex<CapturedTrashContext>>,
+}
+impl CardEffect for DigCardTrashedContextObs {
+    fn effects(&self, card: digimon_engine::card_source::CardHandle) -> Vec<Effect> {
+        let captured = self.captured.clone();
+        vec![Effect::on_digivolution_card_trashed(card)
+            .name("record trash context")
+            .process(move |ctx| {
+                let mut slot = captured.lock().expect("capture mutex poisoned");
+                slot.event_card = ctx.event_card();
+                slot.event_host_permanent = ctx.event_host_permanent();
+                slot.event_host_card = ctx.event_host_card();
+            })
+            .build()]
+    }
+}
+
+/// 5. The `OnDigivolutionCardTrashed` event threaded into
+///    `fire_digivolution_card_trashed` carries the trashed stash as
+///    `event_card` and the Tamer (NOT the trashed source) as the host
+///    permanent / host card — exercising the post-removal `host_card`
+///    recompute (the helper's trickiest line).
+#[test]
+fn trash_bottom_face_down_source_event_host_is_tamer_not_trashed_source() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_tamer("TAMER"))
+        .add_card(make_digimon("STASH"))
+        .add_card(make_digimon("OBS"))
+        .memory(5)
+        .start();
+
+    let captured = Arc::new(Mutex::new(CapturedTrashContext::default()));
+    r.register_effect(
+        "OBS",
+        Arc::new(DigCardTrashedContextObs {
+            captured: captured.clone(),
+        }),
+    );
+
+    // Place the observer on player 0's field.
+    let _obs = r.place_on_field(0, "OBS", Some(0));
+
+    let tamer = seed_permanent(&mut r, "TAMER");
+    let stash_handle = stash_bottom_source(&mut r, tamer, "STASH", true);
+    let tamer_own_card = r.game.player(0).battle_area[tamer.index as usize]
+        .top_card()
+        .handle();
+
+    let result = {
+        let mut ctx = EffectContext::new(&mut r.game, tamer_own_card, Some(tamer), 0);
+        ctx.trash_bottom_face_down_source(tamer)
+    };
+    assert!(result, "trash_bottom_face_down_source returns true");
+
+    let slot = captured.lock().expect("capture mutex poisoned");
+
+    // (a) The trashed card is the stashed face-down source.
+    assert_eq!(
+        slot.event_card,
+        Some(stash_handle),
+        "event_card should be the trashed face-down stash"
+    );
+
+    // (b) The host permanent is the Tamer itself — not the trashed source.
+    assert_eq!(
+        slot.event_host_permanent,
+        Some(tamer),
+        "event_host_permanent should be the Tamer the stash sat under"
+    );
+
+    // (b') The host card is the Tamer's own (top) card — the post-removal
+    // recompute must yield the Tamer's card, never the trashed source.
+    assert_eq!(
+        slot.event_host_card,
+        Some(tamer_own_card),
+        "event_host_card should be the Tamer's own card, not the trashed source"
+    );
+    assert_ne!(
+        slot.event_host_card,
+        Some(stash_handle),
+        "event_host_card must NOT be the trashed source handle"
     );
 }
