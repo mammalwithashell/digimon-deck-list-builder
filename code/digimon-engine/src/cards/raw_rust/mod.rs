@@ -526,53 +526,6 @@ fn lm_021_delete_dp_sum(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
     );
 }
 
-/// BT20-016 Paildramon — [All Turns] cross-permanent deletion observer no-op placeholder.
-///
-/// Printed effect: "[All Turns] When any of your [Paildramon] or [Dinobeemon] would be
-/// deleted, 2 of your Digimon may DNA digivolve into [Imperialdramon: Dragon Mode] in
-/// the hand."
-///
-/// This clause is a cross-permanent deletion observer: the carrier watches for the
-/// deletion of OTHER Paildramon / Dinobeemon permanents it controls, then optionally
-/// triggers a DNA digivolve from hand. DCGO uses `ActivateClass` at
-/// `WhenPermanentWouldBeDeleted` timing — deletion proceeds regardless (not cancelled).
-///
-/// This function is a no-op placeholder pending resolution of the following hybrid gap:
-///
-/// **G-EVENT-TARGET-OWNER** — the `ReplacementContext` (and `TriggerContext`) does not
-/// expose which player controls the subject permanent. Without a controller predicate,
-/// a `WhenWouldBeDeleted` effect cannot accurately filter for "your Paildramon or
-/// Dinobeemon" vs. an opponent's card of the same name. Additionally, the
-/// `lower_replacement.rs` `subject_matches` guard (lines 83–91) prevents DSL `kind:
-/// replacement` clauses from observing non-self subjects. Raw-rust declarative effects
-/// CAN register `WhenWouldBeDeleted` via `replacement_process`, but they still need
-/// the controller information to satisfy the "your" ownership condition.
-///
-/// When G-EVENT-TARGET-OWNER is closed, implement as follows:
-///   1. Build a `WhenWouldBeDeleted` replacement effect scoped to the carrier.
-///   2. In the replacement predicate:
-///      a. Check `rctx.subject == ReplacementSubject::Permanent(subj_h)`.
-///      b. Check `subj_h != carrier` (other permanent, not self).
-///      c. Check `subj_h.player == carrier.player` (owned by same player).
-///      d. Check the subject's top card name contains "Paildramon" or "Dinobeemon".
-///      e. Check 2 own Digimon exist (condition for DNA) and "Imperialdramon: Dragon Mode"
-///         is in the controller's hand.
-///   3. Do NOT cancel deletion (rctx.outcome remains Proceed — not a prevention effect).
-///   4. Present an optional DNA digivolve prompt:
-///      a. select_hand for Imperialdramon: Dragon Mode (from controller's hand)
-///      b. select_dna_pair for 2 own Digimon as DNA sources
-///      c. effect_initiated_dna_digivolve(src_a, src_b, from_hand, cost=0, ignore_requirements=false)
-///   5. Deletion of the original Paildramon/Dinobeemon proceeds regardless of DNA choice.
-///
-/// Tracked under G-EVENT-TARGET-OWNER in `qa/archetype-qa/engine-gaps.md`.
-fn bt20_016_dna_on_deletion(_handle: crate::card_source::CardHandle) -> Vec<Effect> {
-    // No-op: returns an empty effect list.
-    // Full implementation blocked by G-EVENT-TARGET-OWNER (subject controller
-    // attribution missing from ReplacementContext) and subject_matches gate in
-    // lower_replacement.rs.
-    vec![]
-}
-
 /// LM-027 Red Scramble — Delay placeholder no-op (G-DELAY-START-OF-TURN).
 ///
 /// The Delay clause in LM-027 fires at the START of the controller's turn
@@ -829,7 +782,6 @@ pub fn build_registry() -> EngineRawRustRegistry {
     // bt20_102_boardwipe_and_return was removed 2026-05-20 — BT20-102's
     // [On Play][When Digivolving] board-wipe + return clause is now pure DSL
     // (for_each + binding_absent/not_in_binding exclusion; G-FOR-EACH-EXCLUDE-BINDING).
-    r.register_declarative("bt20_016_dna_on_deletion", bt20_016_dna_on_deletion);
     r.register_declarative(
         "lm_027_delay_start_of_turn_noop",
         lm_027_delay_start_of_turn_noop,
