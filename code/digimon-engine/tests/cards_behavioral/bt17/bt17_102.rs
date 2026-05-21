@@ -95,7 +95,6 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledScope,
     CompiledTiming, CompiledTriggeredClause,
 };
-use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardKind, EffectTiming, ModifierType, PlayerId};
@@ -112,22 +111,29 @@ fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
     runner.game.drain_effect_queue();
 }
 
-/// Drain leading `SelectionKind::TriggerOrder` prompts by submitting the first
-/// legal action for each. BT17-102 has both a face-up [On Deletion] clause and
-/// an inherited [On Deletion] clause; when BT17-102 is itself deleted both
-/// queue and a TriggerOrder prompt asks the player to pick which fires first.
-/// Tests downstream of the order pick care only about the EffectChoice prompt
-/// that follows.
-fn skip_trigger_order_prompts(runner: &mut DebugRunner) {
-    while runner.pending_kind() == Some(SelectionKind::TriggerOrder) {
-        let view = runner
-            .pending_selection_view()
-            .expect("trigger-order prompt installed");
-        let first_action = view.valid_action_ids.first().copied().unwrap_or(PASS);
-        runner
-            .execute_action(0, first_action)
-            .expect("submit trigger-order pick");
-    }
+/// Accept the outer optional-trigger prompt that a lone, single optional
+/// [On Deletion] clause installs before its body runs.
+///
+/// When BT17-102 is deleted as a lone top-card Digimon, only its face-up
+/// [On Deletion] clause queues — its inherited clause stays dormant on a
+/// top-card Digimon (RULES 15-3-1). A single optional triggered clause whose
+/// body opens with a mandatory `select_effect_choice` surfaces its accept/
+/// decline as an outer `SelectionKind::Replacement` prompt
+/// (G-OUTER-OPTIONAL-NOT-INSTALLED).
+///
+/// This asserts that prompt is the pending selection before accepting it, so
+/// the test fails loudly *here* — rather than later with a confusing
+/// EffectChoice mismatch — if the engine's trigger flow changes.
+fn accept_on_deletion_optional(runner: &mut DebugRunner) {
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::Replacement),
+        "BT17-102's lone optional [On Deletion] clause must install an outer \
+         Replacement accept prompt before its EffectChoice body"
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
 }
 
 // ─── Fixture helpers ────────────────────────────────────────────────────────
@@ -550,12 +556,9 @@ fn bt17_102_own_on_deletion_play_branch_plays_tai_kamiya_free() {
         digimon_engine::replacement::ReplacementCause::OpponentEffect,
     );
 
-    // Both face-up and inherited [On Deletion] clauses are queued; drain the
-    // ordering prompt(s) to land on the EffectChoice for the first-resolved
-    // clause. Optional decline of the *whole* clause is surfaced via the
-    // TriggerOrder PASS, not at the EffectChoice prompt itself, so we don't
-    // assert optionality on the EffectChoice view.
-    skip_trigger_order_prompts(&mut runner);
+    // Lone BT17-102 fires only its face-up [On Deletion]; accept that single
+    // optional clause's outer prompt so its EffectChoice body installs.
+    accept_on_deletion_optional(&mut runner);
 
     let view = runner
         .pending_selection_view()
@@ -598,7 +601,7 @@ fn bt17_102_own_on_deletion_play_branch_plays_kari_kamiya_free() {
         perm,
         digimon_engine::replacement::ReplacementCause::OpponentEffect,
     );
-    skip_trigger_order_prompts(&mut runner);
+    accept_on_deletion_optional(&mut runner);
 
     let view = runner
         .pending_selection_view()
@@ -634,7 +637,7 @@ fn bt17_102_own_on_deletion_play_branch_rejects_unrelated_tamer() {
         perm,
         digimon_engine::replacement::ReplacementCause::OpponentEffect,
     );
-    skip_trigger_order_prompts(&mut runner);
+    accept_on_deletion_optional(&mut runner);
 
     let view = runner
         .pending_selection_view()
@@ -724,16 +727,9 @@ fn bt17_102_inherited_on_deletion_plays_tai_kamiya_when_carrier_deleted() {
         carrier,
         digimon_engine::replacement::ReplacementCause::OpponentEffect,
     );
-    skip_trigger_order_prompts(&mut runner);
-
-    // The [On Deletion] clause is optional ("You may play ... or hatch") and
-    // its body's first step is a mandatory select_effect_choice, so an outer
-    // accept/decline prompt installs first (G-OUTER-OPTIONAL-NOT-INSTALLED).
-    if runner.pending_kind() == Some(SelectionKind::Replacement) {
-        runner
-            .accept_optional_trigger()
-            .expect("accept the outer optional-trigger prompt");
-    }
+    // The inherited [On Deletion] clause is the only one that fires when the
+    // carrier is deleted; accept its single optional clause's outer prompt.
+    accept_on_deletion_optional(&mut runner);
 
     let view = runner
         .pending_selection_view()
