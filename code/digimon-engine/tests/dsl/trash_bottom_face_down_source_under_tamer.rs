@@ -335,3 +335,91 @@ fn trash_bottom_face_down_source_under_tamer_no_eligible_tamer_aborts_clause() {
         "the tail (gain_memory: 1) must NOT run when the cost is unpayable"
     );
 }
+
+/// Regression test for the Issue-1 bool-guard: a filter/action desync must not
+/// silently run the tail.
+///
+/// The eligibility filter `has_face_down_source` matches a Tamer if ANY source
+/// is face-down, but `trash_bottom_face_down_source` only succeeds when
+/// `card_sources[0]` (the BOTTOM) is face-down. The ST-23/ST-24 card pool cannot
+/// naturally produce a Tamer whose bottom source is face-UP while a higher
+/// source is face-DOWN (stashes always insert at index 0), so this test
+/// FABRICATES that stack state directly: `card_sources[0]` (bottom) is face-up
+/// and `card_sources[1]` is face-down. The filter therefore matches and offers
+/// the Tamer, but `trash_bottom_face_down_source` returns `false`.
+///
+/// The install function's callback guards the tail on that `bool` AND carries a
+/// `debug_assert!` that fires on the desync. The engine's tests run in debug
+/// mode (no `[profile.test]` opt-level override, CI runs `cargo test` without
+/// `--release`), so the `debug_assert!` is live — which is exactly the honest
+/// thing to assert here: `#[should_panic]` proves the desync is caught loudly
+/// rather than silently swallowed. The production `if trashed` guard (verified
+/// by reading the install function) covers the graceful-degradation half: in a
+/// release build the tail would be skipped, nothing trashed.
+#[test]
+#[should_panic(expected = "filter and action have desynced")]
+fn trash_bottom_face_down_source_under_tamer_face_up_bottom_desync_does_not_run_tail() {
+    // Seed: an own Tamer carrying a 3-card stack. We fabricate the desync stack
+    // state below: bottom source face-UP, middle source face-DOWN.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("TST-TBFDSUT", "TrashBottomFaceDownUnderTamer"))
+        .add_card(make_test_card("BOTTOM-SRC", "Face-Up Bottom Source"))
+        .add_card(make_test_card("MIDDLE-SRC", "Face-Down Middle Source"))
+        .add_card(make_test_card_kind("TAMER-DESYNC", "Desync Tamer", CardKind::Tamer))
+        .hand(0, &["TST-TBFDSUT"])
+        .start();
+
+    // Stack: card_sources = [BOTTOM-SRC (idx 0), MIDDLE-SRC (idx 1), TAMER (top)].
+    let tamer = runner.place_stack(0, &["BOTTOM-SRC", "MIDDLE-SRC", "TAMER-DESYNC"]);
+    {
+        let perm = &mut runner.game.players[0].battle_area[tamer.index as usize];
+        // Fabricate the desync: the BOTTOM source is face-UP, a HIGHER source is
+        // face-DOWN. `has_face_down_source` is true (idx 1 is face-down) so the
+        // filter matches, but `card_sources[0]` is face-up so the trash fails.
+        perm.card_sources[0].face_down = false;
+        perm.card_sources[1].face_down = true;
+    }
+
+    let src_card: CardHandle = runner.game.players[0].hand[0].handle();
+    let dsl_effect = DslCardEffect::new(compiled());
+    let effects = dsl_effect.effects(src_card);
+    let process = effects[0].process.as_ref().expect("OnPlay has a process");
+
+    let memory_before = runner.game.memory;
+    let trash_before = runner.game.players[0].trash.len();
+
+    // Invoke the process — the filter matches the fabricated Tamer (it has a
+    // face-down source), so a 1-option selection installs and parks.
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        process(&mut ctx);
+    }
+
+    let (action_id, selecting_player) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("the filter matches the fabricated Tamer — a selection installs");
+        assert_eq!(
+            pending.valid_action_ids.len(),
+            1,
+            "the fabricated Tamer is the sole candidate"
+        );
+        (pending.valid_action_ids[0], pending.selecting_player)
+    };
+
+    // Snapshot for the (unreachable-in-debug) graceful-degradation assertions:
+    // in a release build the panic would not fire and these would hold —
+    // nothing trashed, tail skipped. In debug the `debug_assert!` panics here.
+    let _ = (memory_before, trash_before);
+
+    // Resolving the selection runs the callback: `trash_bottom_face_down_source`
+    // returns `false` (bottom is face-up), the `debug_assert!` fires, this
+    // panics with "...filter and action have desynced" — caught by
+    // `#[should_panic(expected = ...)]`. The tail (gain_memory) never runs.
+    runner
+        .game
+        .resolve_selection(selecting_player, action_id)
+        .expect("resolve_selection dispatches the callback");
+}

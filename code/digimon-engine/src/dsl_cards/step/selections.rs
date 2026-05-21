@@ -272,7 +272,6 @@ pub fn try_install(
             }
             install_trash_bottom_face_down_source_under_tamer(
                 ctx,
-                player,
                 filter,
                 tail.to_vec(),
                 bindings,
@@ -936,10 +935,17 @@ fn install_select_own_permanent(
 /// clause's own `optional`, governed one level up.
 ///
 /// The callback trashes the picked Tamer's bottom face-down source via
-/// `EffectContext::trash_bottom_face_down_source`, then runs the captured tail.
+/// `EffectContext::trash_bottom_face_down_source`; the captured tail runs ONLY
+/// if that trash succeeded. The eligibility filter (`has_face_down_source`)
+/// matches a Tamer if ANY source is face-down, but `trash_bottom_face_down_source`
+/// only succeeds when `card_sources[0]` (the BOTTOM) is face-down. In the
+/// current ST-23/ST-24 pool these always agree (stashes insert at index 0), but
+/// this substrate is reusable: guarding the tail on the trash's `bool` keeps a
+/// future filter/action desync from running the effect without paying the cost
+/// (a no-approximations violation). The `debug_assert!` makes such a desync
+/// fail loudly in dev/test; production degrades gracefully by skipping the tail.
 fn install_trash_bottom_face_down_source_under_tamer(
     ctx: &mut EffectContext<'_>,
-    _player: u8,
     filter: CompiledPredicate,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
@@ -971,9 +977,26 @@ fn install_trash_bottom_face_down_source_under_tamer(
             )
         },
         move |cb_ctx, handle: PermanentHandle| {
-            cb_ctx.trash_bottom_face_down_source(handle);
-            let mut b = bindings.clone();
-            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+            let trashed = cb_ctx.trash_bottom_face_down_source(handle);
+            debug_assert!(
+                trashed,
+                "trash_bottom_face_down_source_under_tamer: eligibility filter \
+                 (has_face_down_source) offered a Tamer whose bottom source is not \
+                 face-down — filter and action have desynced"
+            );
+            // No-approximations: the tail (the effect) runs ONLY if the cost was
+            // actually paid. A `false` return means nothing was trashed, so the
+            // tail must not run.
+            if trashed {
+                let mut b = bindings.clone();
+                run_tail_preserving_trigger_context(
+                    cb_ctx,
+                    trigger_context,
+                    &tail,
+                    &mut b,
+                    &runtime,
+                );
+            }
         },
     );
 }
