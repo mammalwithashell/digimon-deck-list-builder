@@ -375,6 +375,7 @@ fn digimon_with_text(card_id: &str, effect_text: &str) -> CardData {
         keywords,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 

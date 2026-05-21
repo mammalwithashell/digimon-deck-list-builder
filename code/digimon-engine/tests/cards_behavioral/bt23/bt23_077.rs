@@ -3,11 +3,20 @@
 //! # Card text (cards.json)
 //!
 //! ```text
+//! Also Treated As [Sistermon Noir]
 //! <Blocker> (This Digimon can block in the blocker timing.)
 //! [On Play] Delete 1 of your opponent's Digimon with a play cost of 4 or less.
 //! [All Turns] When this Digimon suspends, <De-Digivolve 1> 1 of your opponent's Digimon.
 //! (Trash the top card. You can't trash past level 3 cards.)
 //! ```
+//!
+//! # Identity note
+//!
+//! "Also Treated As [Sistermon Noir]" is the card's printed identity line —
+//! it is not part of `cards.json`'s `effect_description_eng`, but is carried
+//! by the legacy Python script (`card.also_treated_as_names = ['Sistermon
+//! Noir']`) and DCGO `ChangeCardNamesClass`. Modeled via the DSL card-level
+//! `also_treated_as` field; generic name-matching predicates honor it.
 //!
 //! # Ingestion note
 //!
@@ -115,6 +124,43 @@ fn bt23_077_metadata_blocker_and_supported_clause_shape_match_printed_text() {
                 if triggered.scope == CompiledScope::Inherited
         )),
         "do not turn the duplicated ingestion text into inherited effects"
+    );
+}
+
+#[test]
+fn bt23_077_compiles_with_sistermon_noir_identity_alias() {
+    let runner = sistermon_runner().start();
+    let compiled = runner.compiled_card("BT23-077").expect("BT23-077 compiles");
+    assert_eq!(
+        compiled.also_treated_as,
+        vec!["Sistermon Noir".to_string()],
+        "BT23-077 Sistermon Ciel is also treated as [Sistermon Noir]"
+    );
+}
+
+#[test]
+fn bt23_077_is_name_matched_as_both_sistermon_ciel_and_sistermon_noir() {
+    let mut runner = sistermon_runner().start();
+    let ciel = runner.place_on_field(0, "BT23-077", Some(0));
+    let perm = &runner.game.players[ciel.player as usize].battle_area[ciel.index as usize];
+    let top = perm.top_card();
+
+    let names = top.card_names(&runner.game.card_data);
+    assert!(
+        names.contains(&"Sistermon Ciel"),
+        "the printed name must still resolve: {names:?}"
+    );
+    assert!(
+        names.contains(&"Sistermon Noir"),
+        "the [Sistermon Noir] identity alias must resolve: {names:?}"
+    );
+    assert!(
+        top.contains_card_name("Sistermon Noir", &runner.game.card_data),
+        "contains_card_name must honor the [Sistermon Noir] alias"
+    );
+    assert!(
+        top.contains_card_name("Sistermon Ciel", &runner.game.card_data),
+        "contains_card_name must still honor the printed name"
     );
 }
 

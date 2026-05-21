@@ -35,6 +35,7 @@ fn colored_digimon_level(id: &str, color: CardColor, level: u8) -> CardData {
         norm_id: 0.0,
         dual: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
         ace_overflow: None,
     }
 }

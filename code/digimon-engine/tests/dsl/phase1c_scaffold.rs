@@ -21,6 +21,7 @@ fn dsl_card_effect_with_no_clauses_emits_no_effects() {
         ace_overflow: None,
         identity: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
         dual: None,
         use_requirement: None,
         alt_paths: vec![],

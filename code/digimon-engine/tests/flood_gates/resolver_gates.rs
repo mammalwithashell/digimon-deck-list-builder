@@ -45,6 +45,7 @@ fn make_digimon(id: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -86,6 +87,7 @@ fn make_tamer(id: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -111,6 +113,7 @@ fn make_filler() -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -488,6 +491,7 @@ fn cannot_reduce_play_cost_suppresses_before_pay_cost_scan() {
             norm_id: 0.0,
             ace_overflow: None,
             digixros_aliases: Vec::new(),
+            also_treated_as: Vec::new(),
         })
         .add_card(make_filler())
         .hand(0, &["DIG-A"])
@@ -573,6 +577,7 @@ fn cannot_reduce_cost_suppresses_play_cost_reducers() {
             norm_id: 0.0,
             ace_overflow: None,
             digixros_aliases: Vec::new(),
+            also_treated_as: Vec::new(),
         })
         .add_card(make_filler())
         .hand(0, &["DIG-A"])
@@ -663,6 +668,7 @@ fn cannot_reduce_play_cost_suppresses_when_playing_this_hand_reducer() {
             norm_id: 0.0,
             ace_overflow: None,
             digixros_aliases: Vec::new(),
+            also_treated_as: Vec::new(),
         })
         .add_card(make_filler())
         .hand(0, &["SELF-REDUCER"])
@@ -784,6 +790,7 @@ fn make_attacker() -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 

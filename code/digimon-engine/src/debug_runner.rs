@@ -1055,6 +1055,7 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
         ace_overflow: card.ace_overflow,
         dual: card.dual.as_ref().map(compiled_dual_to_engine),
         digixros_aliases: card.digixros_aliases.clone(),
+        also_treated_as: card.also_treated_as.clone(),
     }
 }
 
@@ -1102,6 +1103,7 @@ pub fn make_test_card(card_id: &str, card_name: &str) -> CardData {
         ace_overflow: None,
         dual: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -1173,6 +1175,7 @@ pub fn make_test_egg(card_id: &str, card_name: &str) -> CardData {
         ace_overflow: None,
         dual: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 

@@ -66,6 +66,7 @@ impl TokenDef {
             ace_overflow: None,
             dual: None,
             digixros_aliases: Vec::new(),
+            also_treated_as: Vec::new(),
         }
     }
 }

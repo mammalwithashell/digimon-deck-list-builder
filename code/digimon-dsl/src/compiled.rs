@@ -27,6 +27,9 @@ pub struct CompiledCard {
     pub ace_overflow: Option<i32>,
     pub identity: Option<CompiledIdentity>,
     pub digixros_aliases: Vec<String>,
+    /// Static identity aliases — see `CardSpec::also_treated_as`.
+    /// Honored by generic name-matching predicates in every zone.
+    pub also_treated_as: Vec<String>,
     pub dual: Option<CompiledDual>,
     pub use_requirement: Option<CompiledPredicate>,
     pub alt_paths: Vec<CompiledAltPath>,
@@ -1503,6 +1506,7 @@ mod tests {
             ace_overflow: None,
             identity: None,
             digixros_aliases: vec![],
+            also_treated_as: vec![],
             dual: None,
             use_requirement: None,
             alt_paths: vec![],
@@ -1560,6 +1564,7 @@ mod tests {
             ace_overflow: None,
             identity: None,
             digixros_aliases: vec![],
+            also_treated_as: vec![],
             dual: None,
             use_requirement: None,
             alt_paths: vec![],
