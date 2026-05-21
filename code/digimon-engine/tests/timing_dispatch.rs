@@ -168,6 +168,7 @@ fn plain_digimon(card_id: &str, name: &str, play_cost: u16) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -213,6 +214,7 @@ fn option_card_with_cost(card_id: &str, name: &str, play_cost: u16, traits: &[&s
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -2201,6 +2203,7 @@ fn lv4_digimon(card_id: &str, name: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 

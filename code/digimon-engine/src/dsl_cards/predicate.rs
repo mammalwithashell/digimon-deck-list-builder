@@ -1520,7 +1520,10 @@ fn eval_card_fields(
         let overlay_match = overlay
             .and_then(|o| o.name.as_ref())
             .is_some_and(|name| name == n);
-        if data.card_name != *n && !overlay_match {
+        // Static identity aliases ("also treated as [X]") satisfy a
+        // generic name predicate alongside the printed name.
+        let alias_match = data.also_treated_as.iter().any(|alias| alias == n);
+        if data.card_name != *n && !overlay_match && !alias_match {
             return false;
         }
     }
@@ -1529,7 +1532,11 @@ fn eval_card_fields(
         let overlay_match = overlay
             .and_then(|o| o.name.as_ref())
             .is_some_and(|name| name.to_lowercase().contains(&needle));
-        if !data.card_name.to_lowercase().contains(&needle) && !overlay_match {
+        let alias_match = data
+            .also_treated_as
+            .iter()
+            .any(|alias| alias.to_lowercase().contains(&needle));
+        if !data.card_name.to_lowercase().contains(&needle) && !overlay_match && !alias_match {
             return false;
         }
     }
@@ -1549,7 +1556,11 @@ fn eval_card_fields(
         let overlay_match = overlay
             .and_then(|o| o.name.as_ref())
             .is_some_and(|name| names.iter().any(|n| n == name));
-        if !names.iter().any(|n| n == &data.card_name) && !overlay_match {
+        let alias_match = data
+            .also_treated_as
+            .iter()
+            .any(|alias| names.iter().any(|n| n == alias));
+        if !names.iter().any(|n| n == &data.card_name) && !overlay_match && !alias_match {
             return false;
         }
     }

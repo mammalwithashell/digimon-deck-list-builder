@@ -2135,3 +2135,13 @@ The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE
 - **Effect text:** "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
 - **Resolution:** `suppress_on_play: true` flag added to effect-play helpers and threaded through the play event context. On Play enqueue skips the just-played permanent's On Play clauses when the flag is set. DSL step: `play_from_trash_free: { filter: ..., suppress_on_play: true }`.
 - **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, 2026-05-20.
+
+## DSL Gap: Card-level "also treated as [Name]" identity alias — RESOLVED 2026-05-21
+
+- **Severity:** 🟡 PARTIAL (DSL-vocabulary gap + engine name-matching substrate)
+- **Discovered in:** Puppets / Royal Knights (BT23-077 Sistermon Ciel)
+- **Card(s):** `BT23-077` Sistermon Ciel ("Also Treated As [Sistermon Noir]")
+- **Effect text:** Printed identity line "Also Treated As [Sistermon Noir]" (DCGO `ChangeCardNamesClass`). Not part of `cards.json` `effect_description_eng`; carried by the legacy Python script as `card.also_treated_as_names = ['Sistermon Noir']`.
+- **Resolution:** Added card-level DSL field `also_treated_as: [Name, ...]` to `CardSpec`, lowered to `CompiledCard.also_treated_as` and threaded into a new static `CardData.also_treated_as` by the DSL→engine bridges (`dsl_bridge::enrich_card_data_with_dsl_alt_paths`, `debug_runner::card_data_from_compiled`, `tests/support/dsl_card_data.rs`). Generic name-matching honors the alias set: `eval_card_fields` `name_is` / `name_contains` / `name_in`, and `CardSource::card_names` / `contains_card_name`. Unlike `digixros_aliases` (DigiXros-recipe-scoped, deliberately overlay-blind to generic name predicates — see the DigiXros name-alias entry above), `also_treated_as` is an always-on identity alias visible to generic name predicates in every zone. `BT23-077.yaml` authored with `also_treated_as: [Sistermon Noir]`. Supersedes the legacy Python `CardSource.also_treated_as_names` resolution (2026-03-14) for the Rust engine.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- also_treated_as`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt23_077`.
+- **Closed by:** branch `claude/laughing-lehmann-5771d9`, 2026-05-21.

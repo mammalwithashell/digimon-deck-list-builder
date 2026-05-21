@@ -64,6 +64,7 @@ fn printed_only_digimon(id: &str, keywords: Vec<Keyword>) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -89,6 +90,7 @@ fn tamer_card(id: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -114,6 +116,7 @@ fn plain_digimon(id: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 

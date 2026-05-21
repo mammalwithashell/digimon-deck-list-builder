@@ -96,6 +96,7 @@ fn make_blue_card(id: &str) -> digimon_engine::card_data::CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -124,6 +125,7 @@ fn make_low_dp_red_card(id: &str) -> digimon_engine::card_data::CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -152,6 +154,7 @@ fn make_high_dp_red_card(id: &str) -> digimon_engine::card_data::CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
