@@ -840,7 +840,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Updated 2026-05-15 (audit):** Audit (2026-05-15) flagged as UNCLEAR — first-test write recommended per the entry's own "First test" note before further engine work. All individual verbs exist; the EX4-074 mandatory chain likely works with existing primitives but needs proof via behavioral test. See [`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md).
 
 ### BEATBREAK / DATA SQUAD Tamer face-down stash substrate (place under chosen Tamer + cost-form trash bottom face-down)
-- **Severity:** 🔴 BLOCKING
+- **Severity:** 🔴 BLOCKING — Phase A substrate landed 2026-05-17; residual Phases B–F remain blocking (see Status footer)
 - **Discovered in:** ST-23 BEATBREAK (2026-05-17); ST-24 DATA SQUAD (2026-05-17)
 - **Card(s):**
   - **Place side (face-down deck-top under chosen Tamer):** ST23-06 Gekkomon, ST23-13 Tomoro Tenma & Kyo Sawashiro, ST23-14 Reina Sakuya & Makoto Kuonji, ST24-03 Gaogamon, ST24-09 Sunflowmon, ST24-13 Marcus Damon & Thomas H. Norstein, ST24-14 Yoshino Fujieda & Keenan Crier.
@@ -864,7 +864,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
   - A3 — `is_face_down` / `is_bottom_source` / `host_kind_is` / `has_face_down_source` predicate leaves + `PredicateSubject::Source`.
   - A4 — `trash_bottom_face_down_source` helper + `trash_bottom_face_down_source_under_tamer` DSL verb. The helper does not honor `ImmuneFromStackTrashing` (voluntary cost, not involuntary peeling).
   - A5 — Tamer-host `OnDigivolutionCardTrashed` dispatch coverage confirmed.
-  The placement + cost-form trash + DSL predicate trio called out as "what's missing" in this entry is now closed; the engine/DSL API surface is documented in `docs/RUST_ENGINE_API.md` (§ Placement, § Track E zone-movement DSL verbs, § DSL Tamer Face-Down Stash Substrate). The remaining ST-23/ST-24 gaps (Phases B–F of the fix-plan: the `event_host_permanent_is_source` predicate, the Option-lifecycle exit, unified play-or-use, `BeforePayCost` selection-bearing `pay_cost_fn`, and the cost-reduction target-card predicate trigger — each filed as its own entry below) are NOT addressed by Phase A and remain open; the 🔴 BLOCKING severity now applies only to those residual non-substrate gaps.
+  The placement + cost-form trash + DSL predicate trio called out as "what's missing" in this entry is now closed. The engine/DSL API surface is documented in `docs/RUST_ENGINE_API.md` (§ Placement, § Track E zone-movement DSL verbs, § DSL Tamer Face-Down Stash Substrate). The remaining ST-23/ST-24 gaps (Phases B–F of the fix-plan: the `event_host_permanent_is_source` predicate, the Option-lifecycle exit, unified play-or-use, `BeforePayCost` selection-bearing `pay_cost_fn`, and the cost-reduction target-card predicate trigger — each filed as its own entry below) are NOT addressed by Phase A and remain open. The 🔴 BLOCKING severity now applies only to those residual non-substrate gaps.
 
 ### `event_host_permanent_is_source` DSL predicate for `OnDigivolutionCardTrashed` observers
 - **Severity:** 🔴 BLOCKING
