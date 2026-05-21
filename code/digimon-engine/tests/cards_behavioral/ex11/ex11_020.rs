@@ -189,6 +189,51 @@ fn ex11_020_inherited_decline_does_not_delete_or_end_attack() {
     );
 }
 
+/// Regression: a lone carrier stack (no other Digimon) must NOT end the
+/// opponent attack for free. The printed cost is "by deleting 1 of your other
+/// Digimon" — with nothing else on the field the cost is unpayable, so the
+/// `select_own_permanent` step finds zero candidates and short-circuits. The
+/// `delete_permanent` + `end_attack` payoff is gated behind
+/// `binding_present: sacrifice`, so neither runs and the attack proceeds.
+#[test]
+fn ex11_020_inherited_lone_carrier_cannot_end_attack_for_free() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX11-020")
+        .expect("EX11-020 YAML loads")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("ATTACKER", "Attacker"))
+        .add_card(make_test_card("SECURITY", "Security"))
+        .security(0, &["SECURITY"])
+        .start();
+    runner.place_stack(0, &["EX11-020", "CARRIER"]);
+    let attacker = runner.place_on_field(1, "ATTACKER", Some(0));
+    runner.end_turn();
+
+    runner.attack_player(attacker, 0, false);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "no other Digimon exists to pay the cost — no prompt must be parked"
+    );
+    assert_eq!(
+        runner.security_count(0),
+        0,
+        "the unpayable cost means the attack is NOT ended — security is checked"
+    );
+    assert_eq!(
+        runner.battle_area_size(0),
+        1,
+        "the lone carrier survives the opponent attack"
+    );
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "CARRIER"),
+        "the carrier stack remains on the field"
+    );
+}
+
 /// Regression for PUPPETS-G012 review Issue 2 — the deferred-replacement
 /// decline path must preserve the deletion cause.
 ///
