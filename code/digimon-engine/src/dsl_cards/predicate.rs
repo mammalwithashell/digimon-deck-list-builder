@@ -23,6 +23,11 @@ pub enum PredicateSubject {
     BreedingPermanent(PlayerId),
     Card(CardHandle),
     RevealedCard(CardHandle),
+    /// A digivolution-stack source carrying source-stack metadata (face-down
+    /// flag, host permanent, stack position). Source-subject leaves
+    /// (e.g. `is_face_down`) are evaluated against this, after which the
+    /// subject degrades to `Card` so card-identity leaves keep working.
+    Source(crate::selection::SourceSelectionRef),
     None,
 }
 
@@ -50,6 +55,34 @@ pub fn eval_predicate_with_bindings(
     subject: PredicateSubject,
     bindings: Option<&Bindings>,
 ) -> bool {
+    // Source subjects: evaluate source-stack-metadata leaves here, then
+    // degrade the subject to Card so every existing card-identity leaf
+    // (trait_has / kind / name / etc.) continues to work unchanged.
+    // `is_face_down` is only satisfiable for a Source subject — on any
+    // non-Source subject a present `is_face_down` leaf is an unconditional
+    // non-match.
+    let subject = if let PredicateSubject::Source(sref) = subject {
+        if let Some(want) = pred.is_face_down {
+            let actual = rctx
+                .game
+                .player(sref.permanent.player)
+                .battle_area
+                .get(sref.permanent.index as usize)
+                .and_then(|perm| perm.card_sources.get(sref.source_index as usize))
+                .map(|cs| cs.face_down);
+            match actual {
+                Some(face_down) if face_down == want => {}
+                _ => return false,
+            }
+        }
+        PredicateSubject::Card(sref.card)
+    } else {
+        if pred.is_face_down.is_some() {
+            return false;
+        }
+        subject
+    };
+
     // Game-state fields — independent of subject.
     if let Some(want) = pred.your_turn {
         let is_my = rctx.game.turn_player() == rctx.player;
@@ -322,6 +355,13 @@ pub fn eval_predicate_with_bindings(
         PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h, bindings),
         PredicateSubject::BreedingPermanent(player) => {
             eval_breeding_permanent_fields(pred, rctx, player, bindings)
+        }
+        // A `Source` subject is always degraded to `Card` by the
+        // degrade-to-Card block at the top of this function, so this arm
+        // is unreachable in practice; route it through the card path for
+        // exhaustiveness and forward-compat safety.
+        PredicateSubject::Source(sref) => {
+            eval_card_fields(pred, rctx, sref.card, false, None, bindings)
         }
         PredicateSubject::None => eval_no_subject_fields(pred),
     }
@@ -787,6 +827,7 @@ fn eval_event_fields(
             }),
             PredicateSubject::Card(_)
             | PredicateSubject::RevealedCard(_)
+            | PredicateSubject::Source(_)
             | PredicateSubject::None => rctx
                 .game
                 .current_trigger_context
@@ -1055,9 +1096,10 @@ fn subject_or_source_permanent<'a>(
         PredicateSubject::BreedingPermanent(player) => {
             rctx.game.player(player).breeding_area.as_ref()
         }
-        PredicateSubject::Card(_) | PredicateSubject::RevealedCard(_) | PredicateSubject::None => {
-            rctx.source_permanent()
-        }
+        PredicateSubject::Card(_)
+        | PredicateSubject::RevealedCard(_)
+        | PredicateSubject::Source(_)
+        | PredicateSubject::None => rctx.source_permanent(),
     }
 }
 

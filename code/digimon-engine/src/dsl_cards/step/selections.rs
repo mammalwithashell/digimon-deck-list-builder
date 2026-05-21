@@ -1720,7 +1720,7 @@ fn install_select_own_sources(
             eval_predicate_with_bindings(
                 &filter,
                 &read,
-                PredicateSubject::Card(source.card),
+                PredicateSubject::Source(source),
                 Some(&filter_bindings),
             )
         },

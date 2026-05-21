@@ -115,6 +115,11 @@ pub struct PredicateSpec {
     pub source_permanent_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_digivolution_contains_name: Option<String>,
+    /// Source-subject predicate (Tamer face-down stash). Matches `CardSource.face_down`.
+    /// Only meaningful when the predicate subject is a digivolution-stack source
+    /// (e.g. inside a `select_own_sources` filter).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_face_down: Option<bool>,
 
     // Leaf — global / observer
     #[serde(skip_serializing_if = "Option::is_none")]

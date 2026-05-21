@@ -103,6 +103,7 @@ mod phase4_raw_rust_step;
 mod phase4_retirement_guard;
 mod place_as_bottom_source_deck_top;
 mod place_as_bottom_source_face_down;
+mod predicate_face_down_stack_position;
 mod pretty;
 mod raw_rust_registry;
 mod real_cards_json;

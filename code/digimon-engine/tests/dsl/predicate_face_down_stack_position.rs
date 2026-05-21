@@ -1,0 +1,148 @@
+//! Task A3.1 — `is_face_down` source-subject predicate leaf.
+//!
+//! A `select_own_sources` step with `filter: { is_face_down: true }` must
+//! expose ONLY face-down digivolution-stack sources as selection candidates
+//! and exclude face-up ones. This proves the new `PredicateSubject::Source`
+//! variant carries source-stack metadata (the `face_down` flag) into the
+//! predicate evaluator.
+//!
+//! Pattern mirrors `phase2g_select_sources.rs`
+//! (`select_own_sources_filters_cards_from_source_carrier_only`): build a
+//! carrier stack, run a `SelectOwnSources` step, and inspect the parked
+//! selection's `valid_action_ids` for the per-source action IDs.
+//!
+//! This file will also host A3.2/A3.3/A3.4 tests later — for now it covers
+//! only `is_face_down`.
+
+use digimon_dsl::compiled::{CompiledBindingRef, CompiledPredicate, CompiledStep};
+use digimon_engine::action::space::encode_source_select;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::dsl_cards::bindings::Bindings;
+use digimon_engine::dsl_cards::step::{run_steps, RunOutcome};
+use digimon_engine::effect_context::EffectContext;
+
+#[test]
+fn select_own_sources_is_face_down_filter_offers_only_face_down_sources() {
+    // Carrier stack: bottom source FACE-DOWN, second source FACE-UP, top card.
+    // The `is_face_down: true` filter must offer only the bottom source.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("FD-SRC", "Face Down Source"))
+        .add_card(make_test_card("FU-SRC", "Face Up Source"))
+        .add_card(make_test_card("TOP-CARD", "Top Card"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let carrier = runner.place_stack(0, &["FD-SRC", "FU-SRC", "TOP-CARD"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    // Mark the bottom source (card_sources[0]) face-down; leave the others up.
+    {
+        let perm = &mut runner.game.players[0].battle_area[carrier.index as usize];
+        perm.card_sources[0].face_down = true;
+        assert!(!perm.card_sources[1].face_down, "second source stays face-up");
+        assert!(!perm.card_sources[2].face_down, "top card stays face-up");
+    }
+
+    let mut filter = CompiledPredicate::default();
+    filter.is_face_down = Some(true);
+
+    let steps = vec![CompiledStep::SelectOwnSources {
+        target: Some(CompiledBindingRef::Source),
+        filter,
+        min: 1,
+        max: 1,
+        bind_as: Some("chosen".to_string()),
+        prompt: "Choose a face-down source".to_string(),
+        then: vec![CompiledStep::GainMemory(1)],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(carrier), 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    assert_eq!(outcome, RunOutcome::Parked);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("source selection should be pending");
+
+    // `select_own_sources` only offers digivolution-stack sources (indices
+    // `0..len-1`); the top card (index 2) is the permanent itself and is
+    // never a candidate.
+    let fd_action = encode_source_select(carrier.index as u16, 0).expect("face-down source action");
+    let fu_action = encode_source_select(carrier.index as u16, 1).expect("face-up source action");
+
+    assert!(
+        pending.valid_action_ids.contains(&fd_action),
+        "the face-down source must be a candidate under `is_face_down: true`"
+    );
+    assert!(
+        !pending.valid_action_ids.contains(&fu_action),
+        "a face-up source must NOT be a candidate under `is_face_down: true`"
+    );
+}
+
+#[test]
+fn select_own_sources_is_face_down_false_filter_offers_only_face_up_sources() {
+    // Inverse: `is_face_down: false` must offer only face-up sources.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("FD-SRC", "Face Down Source"))
+        .add_card(make_test_card("FU-SRC", "Face Up Source"))
+        .add_card(make_test_card("TOP-CARD", "Top Card"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let carrier = runner.place_stack(0, &["FD-SRC", "FU-SRC", "TOP-CARD"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    {
+        let perm = &mut runner.game.players[0].battle_area[carrier.index as usize];
+        perm.card_sources[0].face_down = true;
+    }
+
+    let mut filter = CompiledPredicate::default();
+    filter.is_face_down = Some(false);
+
+    let steps = vec![CompiledStep::SelectOwnSources {
+        target: Some(CompiledBindingRef::Source),
+        filter,
+        min: 1,
+        max: 1,
+        bind_as: Some("chosen".to_string()),
+        prompt: "Choose a face-up source".to_string(),
+        then: vec![CompiledStep::GainMemory(1)],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(carrier), 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    assert_eq!(outcome, RunOutcome::Parked);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("source selection should be pending");
+
+    // `select_own_sources` only offers digivolution-stack sources (indices
+    // `0..len-1`); the top card (index 2) is the permanent itself and is
+    // never a candidate regardless of filter.
+    let fd_action = encode_source_select(carrier.index as u16, 0).expect("face-down source action");
+    let fu_action = encode_source_select(carrier.index as u16, 1).expect("face-up source action");
+
+    assert!(
+        !pending.valid_action_ids.contains(&fd_action),
+        "a face-down source must NOT be a candidate under `is_face_down: false`"
+    );
+    assert!(
+        pending.valid_action_ids.contains(&fu_action),
+        "the face-up source must be a candidate under `is_face_down: false`"
+    );
+}

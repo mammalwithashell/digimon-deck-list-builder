@@ -212,6 +212,7 @@ pub struct CompiledPredicate {
     pub source_is_unsuspended: Option<bool>,
     pub source_name_contains: Option<String>,
     pub source_permanent_trait_has: Option<String>,
+    pub is_face_down: Option<bool>,
     pub memory_lte: Option<CompiledDpConstraint>,
     pub memory_gte: Option<CompiledDpConstraint>,
     pub security_count_lte: Option<CompiledDpConstraint>,
