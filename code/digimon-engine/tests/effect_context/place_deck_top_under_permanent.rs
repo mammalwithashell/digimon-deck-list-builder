@@ -138,6 +138,58 @@ fn place_deck_top_under_chosen_tamer_face_down() {
     );
 }
 
+/// Placing the deck top under a chosen Tamer with `face_down: false` returns
+/// `Some(_)` and leaves the inserted source face-up (preserves the prior
+/// face-up default).
+#[test]
+fn place_deck_top_under_permanent_face_up_leaves_flag_clear() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_tamer("TAMER"))
+        .add_card(make_digimon("STASH"))
+        .deck(0, &["STASH"])
+        .start();
+
+    let tamer = seed_permanent(&mut r, "TAMER");
+    assert_eq!(r.deck_size(0), 1, "deck has the stash card before");
+
+    let tamer_card = r.game.player(0).battle_area[tamer.index as usize]
+        .top_card()
+        .handle();
+    let placed = {
+        let mut ctx = EffectContext::new(&mut r.game, tamer_card, Some(tamer), 0);
+        ctx.place_deck_top_under_permanent(tamer, false)
+    };
+
+    assert!(
+        placed.is_some(),
+        "place_deck_top_under_permanent returns Some on success"
+    );
+    assert_eq!(r.deck_size(0), 0, "deck emptied after placement");
+
+    let perm = &r.game.player(0).battle_area[tamer.index as usize];
+    assert_eq!(perm.card_sources.len(), 2, "tamer now has 2 sources");
+    let bottom = &perm.card_sources[0];
+    assert_eq!(
+        bottom.card_id(&r.game.card_data),
+        "STASH",
+        "stash card lands at the bottom of the tamer stack"
+    );
+    assert!(
+        !bottom.face_down,
+        "the placed source must stay face-up when face_down=false was passed"
+    );
+    assert_eq!(
+        bottom.handle(),
+        placed.unwrap(),
+        "returned handle matches the placed source"
+    );
+    assert_eq!(
+        perm.top_card().card_id(&r.game.card_data),
+        "TAMER",
+        "tamer's own card stays at the top"
+    );
+}
+
 /// With an empty deck, `place_deck_top_under_permanent` returns `None` and
 /// leaves the target's stack untouched.
 #[test]
