@@ -92,18 +92,22 @@ pub fn eval_predicate_with_bindings(
         }
         if let Some(want) = pred.host_kind_is {
             // The host permanent's top card is the visible Digimon/Tamer the
-            // source sits beneath. If the host permanent or its top card's
-            // CardData cannot be resolved, the predicate does not match.
+            // source sits beneath. If the host permanent cannot be resolved,
+            // the predicate does not match. An in-battle_area permanent always
+            // has a top card, so no empty-stack case is reachable (consistent
+            // with the A3.1 `is_face_down` leaf). The top `CardSource`'s
+            // `data_index` indexes `rctx.game.card_data` directly.
             let actual_kind = rctx
                 .game
                 .player(sref.permanent.player)
                 .battle_area
                 .get(sref.permanent.index as usize)
-                .map(|perm| perm.top_card().handle())
-                .and_then(|card| rctx.game.card_data_for_handle(card))
-                .map(|data| data.card_kind);
+                .map(|perm| rctx.game.card_data[perm.top_card().data_index].card_kind);
             match actual_kind {
-                Some(kind) if kind_matches(want, kind) => {}
+                // `host_kind_is` reads a field permanent's top card, so it uses
+                // the field-subject matcher (`Dual` coalesces to `Digimon`),
+                // consistent with this file's other field-subject kind checks.
+                Some(kind) if kind_matches_field(want, kind) => {}
                 _ => return false,
             }
         }
