@@ -202,6 +202,7 @@ pub struct CompiledPredicate {
     pub is_unsuspended: Option<bool>,
     pub has_keyword: Option<String>,
     pub self_color_count_gte: Option<u8>,
+    pub has_face_down_source: Option<bool>,
     pub zone: Vec<CompiledZone>,
     pub owner: Option<CompiledPlayerRef>,
     pub other: Option<bool>,

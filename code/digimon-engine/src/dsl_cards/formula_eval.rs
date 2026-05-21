@@ -1037,6 +1037,7 @@ fn predicate_has_card_zone_unsupported_leaf(pred: &CompiledPredicate) -> bool {
         || pred.has_inherited.is_some()
         || pred.is_suspended.is_some()
         || pred.is_unsuspended.is_some()
+        || pred.has_face_down_source.is_some()
         || pred.owner.is_some()
         || pred.other.is_some()
         || pred.of_permanent.is_some()

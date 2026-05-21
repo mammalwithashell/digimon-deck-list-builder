@@ -89,6 +89,10 @@ pub struct PredicateSpec {
     pub has_keyword: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_color_count_gte: Option<u8>,
+    /// Permanent-subject predicate. Matches whether the permanent's
+    /// digivolution stack contains at least one face-down source.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_face_down_source: Option<bool>,
 
     // Leaf — zone / owner
     #[serde(skip_serializing_if = "Vec::is_empty")]

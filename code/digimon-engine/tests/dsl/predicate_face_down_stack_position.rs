@@ -19,7 +19,7 @@
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledCardKind, CompiledPredicate, CompiledStep,
 };
-use digimon_engine::action::space::encode_source_select;
+use digimon_engine::action::space::{encode_attack, encode_source_select};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::{run_steps, RunOutcome};
@@ -691,5 +691,215 @@ fn select_own_sources_host_kind_is_inside_all_of_combinator() {
     assert!(
         !pending.valid_action_ids.contains(&digi_source_action),
         "a Digimon-hosted source must NOT be a candidate under nested `all_of: [{{ host_kind_is: tamer }}]`"
+    );
+}
+
+// --- Task A3.4 — `has_face_down_source` permanent-subject predicate leaf ---
+
+#[test]
+fn select_own_permanent_has_face_down_source_offers_only_tamer_with_face_down_stash() {
+    // Two own Tamers:
+    //   - one with a digivolution source marked face-down (a stash)
+    //   - one with a digivolution source that is purely face-up
+    // `select_own_permanent { kind: tamer, has_face_down_source: true }`
+    // must offer ONLY the Tamer carrying the face-down source.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("STASH-SRC", "Stash Source"))
+        .add_card(make_test_card_kind(
+            "TAMER-FD",
+            "Tamer With Stash",
+            CardKind::Tamer,
+        ))
+        .add_card(make_test_card("PLAIN-SRC", "Plain Source"))
+        .add_card(make_test_card_kind(
+            "TAMER-FU",
+            "Tamer Without Stash",
+            CardKind::Tamer,
+        ))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let tamer_fd = runner.place_stack(0, &["STASH-SRC", "TAMER-FD"]);
+    let tamer_fu = runner.place_stack(0, &["PLAIN-SRC", "TAMER-FU"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    // Mark the first Tamer's bottom source face-down; leave the second's up.
+    {
+        let perm = &mut runner.game.players[0].battle_area[tamer_fd.index as usize];
+        perm.card_sources[0].face_down = true;
+    }
+    {
+        let perm = &mut runner.game.players[0].battle_area[tamer_fu.index as usize];
+        assert!(
+            !perm.card_sources[0].face_down,
+            "the other Tamer's source stays face-up"
+        );
+    }
+
+    let mut filter = CompiledPredicate::default();
+    filter.kind = Some(CompiledCardKind::Tamer);
+    filter.has_face_down_source = Some(true);
+
+    let steps = vec![CompiledStep::SelectOwnPermanent {
+        filter,
+        bind_as: Some("chosen".to_string()),
+        selector: None,
+        prompt: "Choose a Tamer with a face-down stash".to_string(),
+        prompt_key: None,
+        optional: false,
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    assert_eq!(outcome, RunOutcome::Parked);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("permanent selection should be pending");
+
+    // `select_own_permanent` action IDs are `encode_attack(0, field_index)`.
+    let fd_action = encode_attack(0, tamer_fd.index as u16);
+    let fu_action = encode_attack(0, tamer_fu.index as u16);
+
+    assert!(
+        pending.valid_action_ids.contains(&fd_action),
+        "the Tamer with a face-down source must be a candidate under `has_face_down_source: true`"
+    );
+    assert!(
+        !pending.valid_action_ids.contains(&fu_action),
+        "a Tamer with only face-up sources must NOT be a candidate under `has_face_down_source: true`"
+    );
+}
+
+#[test]
+fn select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_sources() {
+    // A single own Tamer whose only digivolution source is face-up. A
+    // `has_face_down_source: true` filter must offer ZERO permanents (the
+    // selection short-circuits without parking).
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("PLAIN-SRC", "Plain Source"))
+        .add_card(make_test_card_kind(
+            "TAMER-FU",
+            "Tamer Without Stash",
+            CardKind::Tamer,
+        ))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let tamer_fu = runner.place_stack(0, &["PLAIN-SRC", "TAMER-FU"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    {
+        let perm = &mut runner.game.players[0].battle_area[tamer_fu.index as usize];
+        assert!(
+            !perm.card_sources[0].face_down,
+            "the Tamer's source is face-up"
+        );
+    }
+
+    let mut filter = CompiledPredicate::default();
+    filter.kind = Some(CompiledCardKind::Tamer);
+    filter.has_face_down_source = Some(true);
+
+    let steps = vec![CompiledStep::SelectOwnPermanent {
+        filter,
+        bind_as: Some("chosen".to_string()),
+        selector: None,
+        prompt: "Choose a Tamer with a face-down stash".to_string(),
+        prompt_key: None,
+        optional: false,
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    // No candidate → `select_own_permanent` no-ops without parking.
+    assert_eq!(
+        outcome,
+        RunOutcome::Synchronous,
+        "a Tamer with only face-up sources is not a candidate, so the step does not park"
+    );
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no selection should be installed when `has_face_down_source: true` matches nothing"
+    );
+}
+
+#[test]
+fn select_own_permanent_has_face_down_source_false_offers_only_tamer_without_stash() {
+    // Polarity check: `has_face_down_source: false` must offer ONLY the Tamer
+    // whose stack carries no face-down source.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("STASH-SRC", "Stash Source"))
+        .add_card(make_test_card_kind(
+            "TAMER-FD",
+            "Tamer With Stash",
+            CardKind::Tamer,
+        ))
+        .add_card(make_test_card("PLAIN-SRC", "Plain Source"))
+        .add_card(make_test_card_kind(
+            "TAMER-FU",
+            "Tamer Without Stash",
+            CardKind::Tamer,
+        ))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let tamer_fd = runner.place_stack(0, &["STASH-SRC", "TAMER-FD"]);
+    let tamer_fu = runner.place_stack(0, &["PLAIN-SRC", "TAMER-FU"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    {
+        let perm = &mut runner.game.players[0].battle_area[tamer_fd.index as usize];
+        perm.card_sources[0].face_down = true;
+    }
+
+    let mut filter = CompiledPredicate::default();
+    filter.kind = Some(CompiledCardKind::Tamer);
+    filter.has_face_down_source = Some(false);
+
+    let steps = vec![CompiledStep::SelectOwnPermanent {
+        filter,
+        bind_as: Some("chosen".to_string()),
+        selector: None,
+        prompt: "Choose a Tamer without a face-down stash".to_string(),
+        prompt_key: None,
+        optional: false,
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    assert_eq!(outcome, RunOutcome::Parked);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("permanent selection should be pending");
+
+    let fd_action = encode_attack(0, tamer_fd.index as u16);
+    let fu_action = encode_attack(0, tamer_fu.index as u16);
+
+    assert!(
+        !pending.valid_action_ids.contains(&fd_action),
+        "a Tamer with a face-down source must NOT be a candidate under `has_face_down_source: false`"
+    );
+    assert!(
+        pending.valid_action_ids.contains(&fu_action),
+        "the Tamer with only face-up sources must be a candidate under `has_face_down_source: false`"
     );
 }

@@ -524,6 +524,7 @@ fn compile_predicate(
         is_unsuspended: p.is_unsuspended,
         has_keyword: p.has_keyword.clone(),
         self_color_count_gte: p.self_color_count_gte,
+        has_face_down_source: p.has_face_down_source,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
         other: p.other,
