@@ -146,3 +146,140 @@ fn select_own_sources_is_face_down_false_filter_offers_only_face_up_sources() {
         "the face-up source must be a candidate under `is_face_down: false`"
     );
 }
+
+#[test]
+fn select_own_sources_is_face_down_inside_all_of_combinator() {
+    // Regression for the degrade-to-Card bug: an `is_face_down` leaf nested
+    // inside an `all_of` combinator must still see the `Source` subject's
+    // source-stack metadata. With the bug, the combinator recursed with the
+    // already-degraded `Card` subject, so the nested `is_face_down` leaf
+    // unconditionally returned false and the filter offered ZERO sources.
+    // After the fix, `all_of: [{ is_face_down: true }]` offers exactly the
+    // face-down source.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("FD-SRC", "Face Down Source"))
+        .add_card(make_test_card("FU-SRC", "Face Up Source"))
+        .add_card(make_test_card("TOP-CARD", "Top Card"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let carrier = runner.place_stack(0, &["FD-SRC", "FU-SRC", "TOP-CARD"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    {
+        let perm = &mut runner.game.players[0].battle_area[carrier.index as usize];
+        perm.card_sources[0].face_down = true;
+    }
+
+    // `all_of: [{ is_face_down: true }]` — the source leaf is nested one
+    // combinator level deep, so it only evaluates correctly if the
+    // recursion preserves the `Source` subject.
+    let mut nested = CompiledPredicate::default();
+    nested.is_face_down = Some(true);
+    let mut filter = CompiledPredicate::default();
+    filter.all_of = vec![nested];
+
+    let steps = vec![CompiledStep::SelectOwnSources {
+        target: Some(CompiledBindingRef::Source),
+        filter,
+        min: 1,
+        max: 1,
+        bind_as: Some("chosen".to_string()),
+        prompt: "Choose a face-down source".to_string(),
+        then: vec![CompiledStep::GainMemory(1)],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(carrier), 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    assert_eq!(outcome, RunOutcome::Parked);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("source selection should be pending");
+
+    let fd_action = encode_source_select(carrier.index as u16, 0).expect("face-down source action");
+    let fu_action = encode_source_select(carrier.index as u16, 1).expect("face-up source action");
+
+    assert!(
+        pending.valid_action_ids.contains(&fd_action),
+        "the face-down source must be a candidate under nested `all_of: [{{ is_face_down: true }}]`"
+    );
+    assert!(
+        !pending.valid_action_ids.contains(&fu_action),
+        "a face-up source must NOT be a candidate under nested `all_of: [{{ is_face_down: true }}]`"
+    );
+}
+
+#[test]
+fn select_own_sources_is_face_down_inside_any_of_combinator() {
+    // Companion regression: an `any_of` of two `is_face_down` arms covering
+    // both polarities must offer BOTH sources. With the degrade-to-Card bug
+    // each nested `is_face_down` leaf saw a `Card` subject and returned
+    // false, so the OR never matched and the filter offered ZERO sources.
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("FD-SRC", "Face Down Source"))
+        .add_card(make_test_card("FU-SRC", "Face Up Source"))
+        .add_card(make_test_card("TOP-CARD", "Top Card"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    let carrier = runner.place_stack(0, &["FD-SRC", "FU-SRC", "TOP-CARD"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    {
+        let perm = &mut runner.game.players[0].battle_area[carrier.index as usize];
+        perm.card_sources[0].face_down = true;
+    }
+
+    // `any_of: [{ is_face_down: true }, { is_face_down: false }]` — both
+    // arms are source leaves nested one combinator level deep; the OR
+    // matches every source regardless of polarity.
+    let mut down_arm = CompiledPredicate::default();
+    down_arm.is_face_down = Some(true);
+    let mut up_arm = CompiledPredicate::default();
+    up_arm.is_face_down = Some(false);
+    let mut filter = CompiledPredicate::default();
+    filter.any_of = vec![down_arm, up_arm];
+
+    let steps = vec![CompiledStep::SelectOwnSources {
+        target: Some(CompiledBindingRef::Source),
+        filter,
+        min: 1,
+        max: 1,
+        bind_as: Some("chosen".to_string()),
+        prompt: "Choose a source".to_string(),
+        then: vec![CompiledStep::GainMemory(1)],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(carrier), 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+
+    assert_eq!(outcome, RunOutcome::Parked);
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("source selection should be pending");
+
+    let fd_action = encode_source_select(carrier.index as u16, 0).expect("face-down source action");
+    let fu_action = encode_source_select(carrier.index as u16, 1).expect("face-up source action");
+
+    assert!(
+        pending.valid_action_ids.contains(&fd_action),
+        "the face-down source must be a candidate under nested `any_of` of both polarities"
+    );
+    assert!(
+        pending.valid_action_ids.contains(&fu_action),
+        "the face-up source must be a candidate under nested `any_of` of both polarities"
+    );
+}

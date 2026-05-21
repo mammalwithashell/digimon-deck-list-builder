@@ -61,6 +61,14 @@ pub fn eval_predicate_with_bindings(
     // `is_face_down` is only satisfiable for a Source subject — on any
     // non-Source subject a present `is_face_down` leaf is an unconditional
     // non-match.
+    //
+    // The degrade is *node-local*: `subject` below is the degraded value
+    // used by THIS node's leaf checks, but `original_subject` is preserved
+    // un-degraded so the combinator arms (`all_of`/`any_of`/`none_of`/`not`)
+    // recurse with it. Each recursive call then re-runs this same degrade
+    // block for its own node — so a `Source` subject's source-stack leaves
+    // (e.g. `is_face_down`) stay evaluable at any combinator nesting depth.
+    let original_subject = subject;
     let subject = if let PredicateSubject::Source(sref) = subject {
         if let Some(want) = pred.is_face_down {
             let actual = rctx
@@ -245,9 +253,11 @@ pub fn eval_predicate_with_bindings(
         }
     }
 
-    // Combinators — short-circuit on first failure.
+    // Combinators — short-circuit on first failure. Recurse with the
+    // un-degraded `original_subject` so a `Source` subject keeps its
+    // source-stack metadata; each child re-runs the degrade block above.
     for child in &pred.all_of {
-        if !eval_predicate_with_bindings(child, rctx, subject, bindings) {
+        if !eval_predicate_with_bindings(child, rctx, original_subject, bindings) {
             return false;
         }
     }
@@ -255,18 +265,18 @@ pub fn eval_predicate_with_bindings(
         let any_match = pred
             .any_of
             .iter()
-            .any(|c| eval_predicate_with_bindings(c, rctx, subject, bindings));
+            .any(|c| eval_predicate_with_bindings(c, rctx, original_subject, bindings));
         if !any_match {
             return false;
         }
     }
     for child in &pred.none_of {
-        if eval_predicate_with_bindings(child, rctx, subject, bindings) {
+        if eval_predicate_with_bindings(child, rctx, original_subject, bindings) {
             return false;
         }
     }
     if let Some(inner) = &pred.not {
-        if eval_predicate_with_bindings(inner, rctx, subject, bindings) {
+        if eval_predicate_with_bindings(inner, rctx, original_subject, bindings) {
             return false;
         }
     }
