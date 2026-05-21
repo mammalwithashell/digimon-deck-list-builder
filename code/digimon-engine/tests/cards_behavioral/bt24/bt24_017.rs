@@ -18,13 +18,6 @@
 //!
 //! # Known engine gaps that affect these tests
 //!
-//! G-PRED-DP-LTE: The `dp_lte` predicate is compiled into `CompiledPredicate`
-//!   but `eval_permanent_fields` in `dsl_cards/predicate.rs` does NOT evaluate
-//!   it for permanents.  The "lowest-DP" filter therefore behaves as an
-//!   unfiltered "any Digimon" filter until the gap closes.
-//!   Tests that assert only the lowest-DP target is offered are marked
-//!   `#[ignore = "pending gap: G-PRED-DP-LTE"]`.
-//!
 //! G-ZONE-TRASH-TO-DECK: No `return_trash_to_deck` engine API or DSL verb.
 //!   The YAML delegates to `raw_rust: { fn: bt24_017_return_selected_trash_to_deck_bottom }`,
 //!   which is unregistered in the test binary.  Any test that exercises the
@@ -212,9 +205,9 @@ fn bt24_017_grants_piercing_keyword() {
 /// pending OppField selection must be installed (the "delete lowest-DP
 /// Digimon" prompt).
 ///
-/// Note: G-PRED-DP-LTE means the filter shows all opp Digimon, not only
-/// lowest-DP.  The selection *count* is not asserted here; only that the
-/// selection installs as OppField.
+/// The selection *count* is not asserted here — see
+/// `bt24_017_delete_targets_only_lowest_dp_digimon` for the lowest-DP filter
+/// proof; this test only asserts the selection installs as OppField.
 #[test]
 fn bt24_017_when_digivolving_installs_opp_field_selection() {
     use digimon_engine::selection::SelectionKind;
@@ -259,12 +252,16 @@ fn bt24_017_when_digivolving_no_opp_digimon_does_not_panic() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// § 3  Lowest-DP target filter (GAP-gated)
+// § 3  Lowest-DP target filter
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// When multiple opponent Digimon are on the field the delete prompt must offer
-/// ONLY the lowest-DP Digimon.
-/// BLOCKED by G-PRED-DP-LTE: dp_lte predicate not evaluated for permanents.
+/// ONLY the lowest-DP Digimon, and resolving it must delete that Digimon —
+/// leaving the higher-DP one on the field.
+///
+/// This is the behavioral proof that the `selector: lowest_dp` field on the
+/// `select_opponent_permanent` step restricts candidates to the opponent's
+/// lowest-DP Digimon (mirrors `selection_dp_extrema.rs`).
 #[test]
 fn bt24_017_delete_targets_only_lowest_dp_digimon() {
     let mut low_dp = make_test_card("OPP-LOW", "OppLow");
@@ -277,6 +274,8 @@ fn bt24_017_delete_targets_only_lowest_dp_digimon() {
         .expect("YAML loads")
         .add_card(low_dp)
         .add_card(high_dp)
+        .add_card(make_test_card("TRASH-A", "TrashA"))
+        .add_card(make_test_card("TRASH-B", "TrashB"))
         .memory(20)
         .start();
 
@@ -284,15 +283,58 @@ fn bt24_017_delete_targets_only_lowest_dp_digimon() {
     runner.place_on_field(1, "OPP-LOW", None);
     runner.place_on_field(1, "OPP-HIGH", None);
 
+    // Give the opponent 2 trash cards so resolving the delete advances cleanly
+    // into the (separately gap-gated) trash-return selection and pauses there,
+    // rather than running off the end of the process into the raw_rust step.
+    for card_id in ["TRASH-A", "TRASH-B"] {
+        let data_idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == card_id)
+            .expect("card in card_data");
+        let idx = runner.game.next_card_index();
+        runner.game.players[1]
+            .trash
+            .push(digimon_engine::card_source::CardSource::new(
+                data_idx, 1, idx,
+            ));
+    }
+
     trigger_when_digivolving(&mut runner, bt24_handle);
 
-    let view = runner
-        .pending_selection_view()
-        .expect("selection installed");
+    let (player, action, candidate_count) = {
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("delete selection installed");
+        (
+            pending.selecting_player,
+            pending.valid_action_ids[0],
+            pending.valid_action_ids.len(),
+        )
+    };
     assert_eq!(
-        view.valid_action_ids.len(),
-        1,
+        candidate_count, 1,
         "only the lowest-DP (3000) Digimon should be a valid delete target"
+    );
+
+    runner
+        .game
+        .resolve_selection(player, action)
+        .expect("delete resolves");
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "exactly one opponent Digimon should remain after the delete"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area[0]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "OPP-HIGH",
+        "the lowest-DP OPP-LOW must be the deleted target; OPP-HIGH survives"
     );
 }
 
