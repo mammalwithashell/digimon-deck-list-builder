@@ -484,6 +484,9 @@ pub enum CompiledPerSelector {
     AllyCount,
     SuspendedCount {
         of: CompiledPlayerRef,
+        /// Exclude the effect's own source permanent from the count.
+        #[serde(default)]
+        exclude_source: bool,
     },
     DigivolutionColorCount,
     SameLevelPairsInSources,
@@ -1034,6 +1037,9 @@ pub enum CompiledStep {
     },
     TrashTopSecurity {
         of: CompiledPlayerRef,
+        /// Number of top security cards to trash, as a run-time formula.
+        /// `None` trashes exactly one (the historical behavior).
+        count: Option<CompiledFormula>,
     },
     TrashBottomSecurity {
         of: CompiledPlayerRef,
@@ -1267,6 +1273,8 @@ pub enum CompiledStep {
     SelectOpponentDpBudget {
         dp_budget: CompiledFormula,
         min_picks: u8,
+        /// Per-candidate predicate; `CompiledPredicate::default()` accepts all.
+        filter: CompiledPredicate,
         bind_as: Option<String>,
         prompt: String,
         then: Vec<CompiledStep>,

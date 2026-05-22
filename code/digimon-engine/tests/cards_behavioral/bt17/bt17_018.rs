@@ -424,6 +424,48 @@ fn bt17_018_on_play_zero_pick_is_invalid_when_targets_exist() {
     );
 }
 
+/// Running-DP-sum multi-select: two opponent 7000-DP Digimon (sum 14000 ≤
+/// the 15000 budget) must BOTH be deletable in a single multi-pick. The
+/// raw_rust bridge only ever installed a single mandatory pick, so this
+/// asserts the genuine multi-select behavior.
+#[test]
+fn bt17_018_on_play_multi_select_deletes_both_within_budget() {
+    use digimon_engine::action::space::PASS;
+    let mut opp_a = make_test_card("OPP-A7K", "OppA7K");
+    opp_a.dp = Some(7000);
+    let mut opp_b = make_test_card("OPP-B7K", "OppB7K");
+    opp_b.dp = Some(7000);
+    let mut r = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-018 YAML loads")
+        .add_card(opp_a)
+        .add_card(opp_b)
+        .memory(10)
+        .build();
+    r.place_on_field(1, "OPP-A7K", None);
+    r.place_on_field(1, "OPP-B7K", None);
+    let perm = r.place_on_field(0, "BT17-018", None);
+    r.fire_on_play(0, perm.index as usize);
+
+    // Drive the running-DP-sum multi-select: pick every eligible candidate.
+    let mut guard = 0;
+    while let Some(sel) = r.pending_selection() {
+        guard += 1;
+        assert!(guard < 12, "multi-select did not terminate");
+        let player = sel.selecting_player;
+        match sel.valid_action_ids.iter().find(|a| **a != PASS).copied() {
+            Some(pick) => r.execute_action(player, pick).expect("pick candidate"),
+            None => r.execute_action(player, PASS).expect("pass"),
+        }
+    }
+
+    assert_eq!(
+        r.battle_area_size(1),
+        0,
+        "both 7000-DP opp Digimon (sum 14000 ≤ 15000) must be deleted by the multi-select"
+    );
+}
+
 // --- Section 3b: Security trash behavioral ---
 
 #[test]

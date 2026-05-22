@@ -49,9 +49,13 @@ effects:
   # at least one when eligible targets exist; canEndNotMax: true allows ending
   # early with fewer than the maximum picks).
   #
-  # Native implementation: `select_opponent_dp_budget` enforces the running
-  # DP-sum cap after each pick, binds the selected permanents, then deletes the
-  # bound list. The condition mirrors DCGO CanActivateCondition.
+  # `select_opponent_dp_budget` is the running-DP-sum multi-select: each pick
+  # subtracts the picked Digimon's DP from the remaining budget and re-filters
+  # candidates to those still within it — DCGO's `canTargetConditionByPreSelected
+  # List` + `canEndSelectCondition`. `min_picks: 1` = mandatory (canNoSelect:
+  # false); `filter: { kind: digimon }` scopes to "their Digimon".
+  #
+  # Condition: ≥1 opponent Digimon in battle area (mirrors DCGO CanActivateCondition).
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete opp Digimon with total DP ≤ 15000"
     condition:
@@ -63,8 +67,9 @@ effects:
       - select_opponent_dp_budget:
           dp_budget: 15000
           min_picks: 1
+          filter: { kind: digimon }
           bind_as: targets
-          prompt: "Delete opponent Digimon whose total DP is 15000 or less"
+          prompt: "Choose any number of opponent Digimon with total DP ≤ 15000"
           then:
             - delete_bound_permanents: { binding: targets }
 
@@ -76,15 +81,10 @@ effects:
   # trash_top_security(opponent).
   #
   # No player choice involved — purely deterministic (count-driven loop).
-  # Implemented via raw_rust step `bt17_018_trash_security_per_ten_trash`.
-  #
-  # DSL gap note: The `lose_count_bound` verb described in the DSL spec is not
-  # yet implemented in `digimon-dsl/src/step.rs`. When closed, replace this
-  # raw_rust step with:
-  #   - lose_count_bound:
-  #       count: { floor_div: [{ card_count_in_zone: { zone: trash, of: any } }, 10] }
-  #       of: opponent
-  # Tracked in qa/dsl-vocab-gaps.md.
+  # `trash_top_security` takes a `count` formula: trash N security cards from
+  # the top where N = floor((both players' trash counts) / 10). The inner
+  # `base: 0 / per: card_count_in_zone(trash, any) / delta: 1` term yields the
+  # combined trash count; `floor_div` by 10 gives the iteration count.
   #
   # GAP G-OPT-TRIGGERED: once_per_turn: true is compiled to Effect::max_per_turn=1
   # but triggered OPT lockout is not yet enforced by run_queued_effect_inner.
@@ -93,4 +93,14 @@ effects:
     once_per_turn: true
     summary: "[When Attacking][Once Per Turn] Trash 1 security per 10 combined trash cards"
     process:
-      - raw_rust: { fn: bt17_018_trash_security_per_ten_trash }
+      - trash_top_security:
+          of: opponent
+          count:
+            floor_div:
+              - base: 0
+                per:
+                  card_count_in_zone:
+                    of: any
+                    zone: trash
+                delta: 1
+              - 10

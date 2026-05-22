@@ -1,6 +1,6 @@
 //! Phase 2g: DSL DP-budget selections bind opponent permanents for later steps.
 
-use digimon_dsl::compiled::{CompiledFormula, CompiledStep};
+use digimon_dsl::compiled::{CompiledFormula, CompiledPredicate, CompiledStep};
 use digimon_engine::action::space::encode_attack;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
@@ -23,6 +23,7 @@ fn dsl_select_dp_budget_binds_opponent_permanents() {
     let steps = vec![CompiledStep::SelectOpponentDpBudget {
         dp_budget: CompiledFormula::Literal(5000),
         min_picks: 1,
+        filter: CompiledPredicate::default(),
         bind_as: Some("targets".to_string()),
         prompt: "Choose opponents".to_string(),
         then: vec![CompiledStep::DeleteBoundPermanents {

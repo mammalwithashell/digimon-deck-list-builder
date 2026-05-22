@@ -752,32 +752,24 @@ test was already passing through the `count_lte` aggregate over
 
 ---
 
-## BT17-018 — `lose_count_bound` step verb (count-driven security trash loop)  [G-LOSE-COUNT-BOUND]
+## ~~BT17-018 — `lose_count_bound` step verb (count-driven security trash loop)~~  [G-LOSE-COUNT-BOUND] — RESOLVED 2026-05-22
 
-- Effect text: "[When Attacking][Once Per Turn] For every 10 cards in both players' trash, trash 1 card from the top of your opponent's security stack."
-- Missing DSL verb / step kind / predicate: `lose_count_bound` — a step that calls `trash_top_security(opponent)` N times where N = `floor(combined_trash_count / 10)`. This is a pure count-driven loop with no player choice. The DSL spec draft describes a `lose_count_bound` verb but it is not implemented in `digimon-dsl/src/step.rs` (`StepSpec` enum). The closest existing verb `trash_top_security: { of: opponent }` fires exactly once; there is no `repeat: { count_fn: ... }` combinator in the DSL.
-- Lowers to engine API: `EffectContext::trash_top_security(player)` — already exists. The gap is a DSL-side `repeat` or `lose_count_bound` verb that loops based on a computed integer (e.g., `floor_div(card_count_in_zone(trash, any), 10)`).
-- Suggested DSL syntax (when `lose_count_bound` is implemented):
+- **Resolved** by adding an optional `count: FormulaSpec` field to the existing
+  `trash_top_security` verb (`TrashTopSecurityArgs` in `digimon-dsl/src/step.rs`).
+  The engine handler (`step/draw.rs`) evaluates the formula and loops
+  `trash_top_security` that many times, bailing early when the stack empties.
+  A dedicated `lose_count_bound` / `repeat_n` combinator was not needed — the
+  `count` field on the existing verb is the smaller surface. BT17-018's
+  `[When Attacking]` clause now ships as pure DSL:
   ```yaml
-  - lose_count_bound:
-      count:
-        floor_div:
-          - card_count_in_zone: { zone: trash, of: any }
-          - 10
+  - trash_top_security:
       of: opponent
-  ```
-  Alternatively, a `repeat_n` step verb:
-  ```yaml
-  - repeat_n:
       count:
         floor_div:
-          - card_count_in_zone: { zone: trash, of: any }
+          - { base: 0, per: { card_count_in_zone: { of: any, zone: trash } }, delta: 1 }
           - 10
-      body:
-        - trash_top_security: { of: opponent }
   ```
-- Gap kind: dsl (engine has `trash_top_security`; DSL has no count-computed loop combinator).
-- Workaround: `raw_rust: { fn: bt17_018_trash_security_per_ten_trash }` — reads both players' trash sizes, computes `floor((p0 + p1) / 10)`, loops `ctx.trash_top_security(opponent)` that many times. When closed: replace the `raw_rust:` step with the native DSL verb.
+  raw_rust `bt17_018_trash_security_per_ten_trash` removed.
 - First reported: 2026-04-27 (BT17-018 batch-implement-cards-rust-dsl)
 
 ---

@@ -471,14 +471,80 @@ fn ex8_074_when_digivolving_delete_removes_opp_digimon() {
 // § 3a  Dynamic DP cap formula (pending raw_rust registration)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// With 1 other suspended Digimon (besides the source), the DP cap should be
-/// 8000 + 3000 = 11000. Requires `ex8_074_suspended_dp_cap` raw_rust formula.
-/// Until registered, dp_lte formula returns 0 and this test cannot pass.
+/// With 1 other suspended Digimon (besides the source), the DP cap is
+/// 8000 + 3000 = 11000. The suspended Digimon belongs to the OPPONENT —
+/// DCGO's `MatchConditionPermanentCount` scans BOTH battle areas, so the
+/// faithful formula must count opponent suspended Digimon too. With the
+/// controller-only count the cap would stay 8000 and the 10500-DP target
+/// would be untouchable.
 #[test]
 fn ex8_074_dp_cap_scales_with_other_suspended_digimon() {
-    // When resolved: set up 2 own Digimon (one pre-suspended), fire WD on EX8-074,
-    // verify that the delete selection shows opponents with DP <= 11000 only.
-    let _ = compiled_ex8_074();
+    use digimon_engine::action::space::PASS;
+
+    // The opponent's only Digimon: 10500 DP, pre-suspended.
+    let mut opp_target = make_test_card("OPP-TGT-10500", "OppTgt10500");
+    opp_target.dp = Some(10500);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("EX8-074 YAML loads")
+        .add_card(opp_target)
+        .memory(12)
+        .start();
+
+    let target = runner.place_on_field(1, "OPP-TGT-10500", Some(0));
+    // Pre-suspend the opponent's Digimon — a suspended Digimon raises the cap
+    // by 3000 (DCGO counts BOTH battle areas).
+    runner.game.players[1].battle_area[target.index as usize].is_suspended = true;
+
+    let ex8_perm = runner.place_on_field(0, "EX8-074", Some(0));
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(ex8_perm),
+    );
+    runner.game.drain_effect_queue();
+
+    // Sub-clause A (optional suspend): pick any non-PASS candidate to advance
+    // to the delete sub-clause (PASS would decline the whole optional clause).
+    // The opponent's Digimon is already suspended and the source is excluded,
+    // so the cap is 8000 + 3000×1 = 11000 regardless of what is picked here.
+    let sel = runner
+        .pending_selection()
+        .expect("suspend sub-clause installs");
+    let player = sel.selecting_player;
+    let suspend_pick = sel
+        .valid_action_ids
+        .iter()
+        .find(|a| **a != PASS)
+        .copied()
+        .expect("suspend sub-clause must offer a candidate");
+    runner
+        .execute_action(player, suspend_pick)
+        .expect("advance past the suspend sub-clause");
+    runner.game.drain_effect_queue();
+
+    // Sub-clause B: the 10500-DP opponent Digimon is an eligible delete target
+    // ONLY because the cap counted the opponent's suspended Digimon (→ 11000).
+    let view = runner
+        .pending_selection_view()
+        .expect("delete sub-clause installs — cap 11000 makes the 10500-DP Digimon eligible");
+    let delete_pick = view
+        .valid_action_ids
+        .iter()
+        .find(|a| **a != PASS)
+        .copied()
+        .expect("the 10500-DP opponent Digimon must be an eligible delete target");
+    runner
+        .execute_action(view.selecting_player, delete_pick)
+        .expect("delete the opponent Digimon");
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "the 10500-DP opponent Digimon must be deleted (cap 8000 + 3000×1 = 11000)"
+    );
 }
 
 /// With 0 other suspended Digimon, the DP cap should be 8000 (base only).

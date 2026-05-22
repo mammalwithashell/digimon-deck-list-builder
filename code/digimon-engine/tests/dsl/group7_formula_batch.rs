@@ -85,6 +85,7 @@ fn suspended_count_formula_counts_selected_players_battle_area() {
         base: 0,
         per: CompiledPerSelector::SuspendedCount {
             of: CompiledPlayerRef::Opponent,
+            exclude_source: false,
         },
         delta: 1,
     };
@@ -127,7 +128,8 @@ effects:
         max,
         digimon_dsl::compiled::CompiledCountBound::Formula(CompiledFormula::BasePerDelta {
             per: CompiledPerSelector::SuspendedCount {
-                of: CompiledPlayerRef::Opponent
+                of: CompiledPlayerRef::Opponent,
+                ..
             },
             ..
         })
