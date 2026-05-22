@@ -30,7 +30,7 @@
 //!   unsuspended Digimon/Tamers, then `binding_present` gates the own-unsuspend reward.
 //!
 //! - Clause 1 ([All Turns] effect-play/digivolve trigger → conditional free digivolve):
-//!   BLOCKED — G-IS-EFFECT-INITIATED (new gap; see qa/dsl-vocab-gaps.md).
+//!   IMPLEMENTED — historical G-IS-EFFECT-INITIATED gap is resolved.
 //!   The printed trigger requires distinguishing effect-initiated plays/digivolves from
 //!   player-action plays/digivolves. No DSL predicate leaf for `event_is_effect_initiated`
 //!   exists. The observer timings `on_enter_field_anyone` / `on_digivolve` fire on ALL

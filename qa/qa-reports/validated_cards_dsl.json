@@ -1967,25 +1967,27 @@
     },
     "BT21-037": {
       "card_name": "Lighdramon",
-      "validated_date": "2026-05-04",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "validated_date": "2026-05-22",
+      "report": "reconcile-bg-imperial-dsl-readiness",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-037.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_037.rs",
-      "notes": "G-DECLARATIVE-KEYWORD blocks runtime keyword install"
+      "notes": "Reconciled stale PARTIAL verdict. G-DECLARATIVE-KEYWORD blocker was stale; YAML now includes the printed [Digivolve] [Veemon]: Cost 2 alternate path plus Piercing, Armor Purge, and When Digivolving suspend/+DP coverage.",
+      "test_count": 12
     },
     "BT16-040": {
       "card_name": "Wormmon",
-      "validated_date": "2026-05-17",
-      "report": "phase-2-track-f-dna-omnimon",
+      "validated_date": "2026-05-22",
+      "report": "reconcile-bg-imperial-dsl-readiness",
       "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt16/BT16-040.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_040.rs",
-      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved as phantom — chain already worked. End-state test now active."
+      "notes": "Reconciled stale PARTIAL/BLOCKED comments. Phase 2 Track F showed the effect-initiated trash digivolve chain works; 2026-05-22 adds a count_gte own-trash precheck so no source-pick prompt installs when no eligible Lv.4 Insectoid/Free trash card exists.",
+      "test_count": 12
     },
     "BT12-047": {
       "card_name": "Wormmon",

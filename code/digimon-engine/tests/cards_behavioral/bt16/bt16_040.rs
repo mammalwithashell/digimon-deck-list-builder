@@ -32,7 +32,7 @@
 //!     SelectPermanentEffect(maxCount=1, canNoSelect=false, Mode.Tap).
 //!
 //! # Patterns this test covers
-//! - A5 Stack shift / digivolve from trash (clause 0) — PARTIAL (gap below)
+//! - A5 Stack shift / digivolve from trash (clause 0) — IMPLEMENTED
 //! - B1 Start-of-main triggered clause with dual timing (clause 0)
 //! - G4 Inherited [When Attacking][OPT] suspend opponent (clause 1)
 //!
@@ -40,21 +40,23 @@
 //!
 //! | Card-text element                                          | YAML clause                                                  | Status  |
 //! |------------------------------------------------------------|--------------------------------------------------------------|---------|
-//! | "[SOMP][On Play][Your Turn] digivolve from trash, cost -1" | dual `when:` + select_own_permanent + select_trash + eid    | PARTIAL |
+//! | "[SOMP][On Play][Your Turn] digivolve from trash, cost -1" | dual `when:` + trash `count_gte` guard + select_own_permanent + select_trash + eid | OK |
 //! | Dual timing: SOMP AND on play                             | `when: [start_of_your_main_phase, on_play]` array           | OK      |
 //! | "If it's your turn"                                       | `active_when: { your_turn: true }`                          | OK      |
 //! | "1 of your Digimon may" (optional)                        | `select_own_permanent { optional: true }`                   | OK *    |
 //! | "Lv4 Insectoid or Free from trash"                        | `select_trash { filter: level_eq:4 + Insectoid/Free }`     | OK *    |
-//! | "digivolution cost reduced by 1"                          | `effect_initiated_digivolve { cost: {reduce:1} }`           | BLOCKED |
+//! | "digivolution cost reduced by 1"                          | `effect_initiated_digivolve { cost: {reduce:1} }`           | OK      |
 //! | Inherited [When Attacking][OPT] Suspend 1 opp Digimon     | `scope: inherited, when_attacking, once_per_turn`           | OK      |
 //!
-//! ## DSL gap blocking clause 0 full execution  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET]
+//! ## Clause 0 implementation note
 //!
-//! The chain `select_own_permanent { bind_as: target } → select_trash { bind_as: evo }
-//! → effect_initiated_digivolve { target: target, source: evo }` terminates
-//! after the permanent pick. The trash-pick prompt never installs and the
-//! digivolve verb never executes. This is the same gap that blocked BT17-015
-//! branch 1 and BT17-027 branch 1 (see those files' gap analysis).
+//! Historical notes cited
+//! G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET as blocking this
+//! chain. That is stale: tail-preserving trigger continuation drives
+//! `select_own_permanent → select_trash → effect_initiated_digivolve`.
+//! The 2026-05-22 reconciliation also adds a `count_gte` trash precheck so the
+//! source-pick prompt does not install when no eligible Lv.4 Insectoid/Free
+//! Digimon card exists in trash.
 //!
 //! Note: `effect_initiated_digivolve` with `source: <trash_binding>` is
 //! sound — `resolve_card_source_ref` in `play_digivolve.rs` maps `TrashIndex`
@@ -298,7 +300,7 @@ fn bt16_040_effect_initiated_trash_digivolve_uses_source_field() {
     );
 }
 
-// ─── Section 2 — Clause 0: SOMP+OnPlay digivolve from trash (PARTIAL/BLOCKED) ─
+// ─── Section 2 — Clause 0: SOMP+OnPlay digivolve from trash ────────────────
 
 /// On play, the SOMP+OnPlay clause installs the OwnField selection and chains
 /// through select_trash + effect_initiated_digivolve.
@@ -368,17 +370,9 @@ fn bt16_040_on_play_chains_through_permanent_pick_trash_pick_and_effect_digivolv
     );
 }
 
-/// Negative: no eligible Lv4 Insectoid/Free in trash → clause 0 should be a
-/// no-op on play. Under the current DSL, the permanent pick may still install
-/// because the DSL filter does not pre-filter by downstream trash content.
-/// This test documents the ideal behavior per printed text.
+/// Negative: no eligible Lv4 Insectoid/Free in trash → clause 0 is gated out
+/// before the source-pick prompt installs.
 #[test]
-#[ignore = "BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — \
-            even the first OwnField pick might install since the DSL select_own_permanent \
-            filter only checks 'is a Digimon in battle_area', not whether downstream \
-            trash has eligible cards (DCGO's CanSelectPermanentCondition does this check \
-            but the DSL approximation omits it). True no-op requires both the gap closing \
-            and the permanent filter being tightened."]
 fn bt16_040_on_play_no_eligible_trash_is_noop() {
     let mut runner = wormmon_base()
         .add_card(make_own_digimon("ALLY"))

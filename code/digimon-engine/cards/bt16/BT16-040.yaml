@@ -40,15 +40,15 @@ alt_paths:
 #
 # DSL modelling:
 #   - when: [start_of_your_main_phase, on_play]
-#   - active_when: { your_turn: true }    → "if it's your turn"
+#   - active_when:
+#       * your_turn: true                 → "if it's your turn"
+#       * count_gte over own trash         → at least one eligible Lv.4
+#         Insectoid/Free Digimon card exists before the source pick installs
 #   - optional: true                       → "may"
 #   - process:
-#       1. select_own_permanent (optional: true, filter: digimon + has eligible
-#          trash card). The eligible-trash-card check on the permanent's frame
-#          is a runtime DCGO detail; the DSL filter below approximates it by
-#          requiring the permanent be a Digimon in the battle area. The trash
-#          card check is enforced implicitly by `select_trash` having no valid
-#          targets when trash is empty of eligible cards.
+#       1. select_own_permanent (optional: true, filter: digimon). The global
+#          eligible-trash precheck gates the prompt out when the effect cannot
+#          resolve, avoiding the old no-eligible-trash source-pick approximation.
 #       2. select_trash (filter: digimon + level_eq:4 + (Insectoid OR Free))
 #       3. effect_initiated_digivolve: { target: perm, source: evo,
 #          cost: { reduce: 1 } }
@@ -57,25 +57,28 @@ alt_paths:
 #          the engine call uses effect_initiated_digivolve_from_source with a
 #          Trash source.
 #
-# Known gaps:
-#   - G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET: the chain
-#     `select_own_permanent → select_trash → effect_initiated_digivolve`
-#     terminates after the permanent pick in the current engine dispatch path.
-#     The tail steps (select_trash and the digivolve itself) do not execute.
-#     The YAML is structurally faithful but the behavioral tests are
-#     #[ignore]'d until this gap closes.
-#   - G-OPT-MULTI-TIMING-SHARED-LOCKOUT: when clause fires at SOMP and again
-#     on play in the same turn, each timing is treated as an independent OPT
-#     window rather than a shared lockout. The printed text treats them as one
-#     clause so ideally they share a lockout.
-#
-# The clause is authored faithfully in YAML; gap constraints are documented
-# and test assertions that depend on chain continuation are #[ignore]'d.
+# Reconciliation status:
+#   Implemented in pure DSL. The historical
+#   G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET blocker was a
+#   phantom after tail-preserving trigger continuation landed, and the
+#   no-eligible-trash prompt approximation is closed by the `count_gte` guard.
 
 effects:
   - when: [start_of_your_main_phase, on_play]
     optional: true
-    active_when: { your_turn: true }
+    active_when:
+      all_of:
+        - your_turn: true
+        - count_gte:
+            filter:
+              owner: you
+              zone: [trash]
+              kind: digimon
+              level_eq: 4
+              any_of:
+                - trait_has: Insectoid
+                - trait_has: Free
+            n: 1
     summary: "[SOMP][On Play][Your Turn] May have 1 of your Digimon digivolve into Lv4 Insectoid/Free from trash, cost -1"
     process:
       - select_own_permanent:

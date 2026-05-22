@@ -1547,8 +1547,9 @@ is satisfiable today.
     clauses), G-DSL-AURA-TARGET-SOURCE-PERMANENT (`scope: inherited` +
     `target: {}` self-aura), G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT
     (`source_permanent_trait_has`). See qa/resolved-gaps.md § "BG Imperial
-    substrate closeout" → "Audit correction". Card YAML re-authoring to consume
-    the new + pre-existing vocabulary runs separately.
+    substrate closeout" → "Audit correction". The 2026-05-22 BG Imperial
+    readiness reconciliation verified that the deck-library pool now consumes
+    the new + pre-existing vocabulary without live raw_rust escapes.
   Verified per-card classification:
     openspec/changes/bg-imperial-substrate-closeout/phase-0-audit.md
 ─────────────────────────────────────────────────────────────────────── -->
@@ -1567,7 +1568,8 @@ is satisfiable today.
   2. In `mod.rs`, pass `active_when.clone()` to the call.
   3. Inside `lower_grant_keyword::lower`, add `if let Some(aw) = active_when { builder = builder.condition(move |rctx| eval_predicate(&aw, rctx, PredicateSubject::None)); }`.
 - Gap kind: dsl (engine has condition support on `Effect` struct; only the lowering wire-up is missing).
-- Workaround: Ship the clause without `active_when` (unconditional keyword grant, over-fires). Or omit the clause entirely. BT12-022 ships with `active_when` specified but unconditionally firing. Negative-condition tests are `#[ignore = "pending: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED from qa/dsl-vocab-gaps.md"]`.
+- Workaround: none needed. BT12-022 now ships with `active_when` consumed by
+  `grant_keyword` lowering and focused negative-condition coverage active.
 - Cards affected: BT12-022 ExVeemon (inherited conditional Jamming).
 - First reported: 2026-05-04 (BT12-022 batch-implement-cards-rust-dsl)
 
@@ -1696,8 +1698,10 @@ on the auto-resolved post-state. 5 tests now active.
 - Status: CLOSED for the reusable Track E DSL verb on 2026-05-09. YAML can now use `trash_top_n_digivolution_cards_of_each: { of: opponent, n: 3 }`, which lowers to `EffectContext::trash_top_n_digivolution_cards_of_each`. Evidence: `cargo test --manifest-path code/digimon-dsl/Cargo.toml --test parse_zone_movement_steps`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl zone_movement_verbs`.
 - Landed DSL verb / step kind: `trash_top_n_digivolution_cards_of_each: { of: opponent, n: 3 }`.
 - Lowers to engine API: `EffectContext::trash_top_n_digivolution_cards_of_each(target_player, n)`.
-- Gap kind: closed for the bounded top-N-each reusable primitive. BT17-077's "all sources" text remains a separate G-ASL-07 card-local/generalization gap.
-- Workaround: no longer needed for bounded top-N source trash; BT12-028 remains load-only until its DNA-gated follow-up can ship with the full printed clause.
+- Gap kind: closed for the bounded top-N-each reusable primitive. BT17-077's
+  "all sources" sibling is also covered by the later BG Imperial substrate
+  closeout.
+- Workaround: no longer needed; BT12-028 is implemented in production YAML.
 - First reported: 2026-05-04 (BT12-028 batch-implement-cards-rust-dsl).
 
 ---
@@ -1866,8 +1870,11 @@ on the auto-resolved post-state. 5 tests now active.
       else:
         - return_all_trash_to_deck_bottom: { of: opponent }  # ← new verb
   ```
-- Gap kind: partially closed. Engine bulk-move, DSL verb, and owner routing are closed; player-choice binding and returned-card result predicates remain open for BT17-077's full printed clause.
-- Workaround: Clause 1b (and the dependent Clause 1c memory rider) are omitted from BT17-077.yaml pending G-ASL-07 closure. Behavioral tests #[ignore]'d.
+- Gap kind: closed. Engine bulk-move, DSL verb, owner routing,
+  player-choice branching, and the returned-card predicate are covered for
+  BT17-077's full printed clause.
+- Workaround: none needed. BT17-077 Clause 1b and the dependent Clause 1c memory
+  rider ship in YAML and are covered by focused behavioral tests.
 - Cross-ref: G-ASL-07 (qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md) tracks the remaining all-source/player-choice/result-predicate family.
 - First reported: 2026-05-04 (BT17-077 batch-implement-cards-rust-dsl).
 
@@ -1896,7 +1903,8 @@ on the auto-resolved post-state. 5 tests now active.
         - gain_memory: 3
   ```
 - Gap kind: dsl (engine result-binding infrastructure would also need extending for the `bind_returned_as` step argument).
-- Workaround: Clause 1c is omitted from BT17-077.yaml; behavioral test #[ignore]'d.
+- Workaround: none needed. Clause 1c ships in BT17-077.yaml using
+  `returned_card_matching`.
 - Cross-ref: G-RETURN-ALL-TRASH-TO-DECK-BOTTOM (above) must close first (Clause 1b provides the moved-card set that Clause 1c predicates on).
 - First reported: 2026-05-04 (BT17-077 batch-implement-cards-rust-dsl).
 ---
