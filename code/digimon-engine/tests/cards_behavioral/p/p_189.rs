@@ -45,11 +45,11 @@
 //!
 //! # Engine gap discovered during this implementation — RESOLVED
 //! - G-SECURITY-SKILL-RESUME-REFIRE (engine, combat.rs) — RESOLVED 2026-05-21.
-//!   The `SecuritySkillDrain` arm of `drive_security_resolution` now records
-//!   `security_skill_drained` on `SecurityResolutionState`; a resume after a
-//!   **declined** optional `on_security` selection no longer re-enqueues
-//!   `EffectTiming::SecuritySkill` (which previously re-collected the same
-//!   effect from the still-parked `pending_security` card — an infinite loop).
+//!   The security-resolution drain arms now record `phase_enqueue_done` on
+//!   `SecurityResolutionState`; a resume after a **declined** optional
+//!   `on_security` selection no longer re-enqueues `EffectTiming::SecuritySkill`
+//!   (which previously re-collected the same effect from the still-parked
+//!   `pending_security` card — an infinite loop).
 //!   `p_189_security_clause_can_be_declined` pins the decline path.
 
 const P189_YAML: &str = include_str!("../../../cards/p/P-189.yaml");
@@ -60,7 +60,7 @@ use digimon_dsl::compiled::{
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::Keyword;
+use digimon_engine::enums::{CardKind, Keyword};
 use digimon_engine::selection::SelectionKind;
 
 // ── Fixture builders ──────────────────────────────────────────────────────
@@ -98,6 +98,18 @@ fn make_non_liberator(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.traits = vec!["Reptile".to_string()];
     c.play_cost = 3;
+    c
+}
+
+/// A strong attacker for the security-attack path — DP high enough to win
+/// the DP battle against P-189 (6000 DP) so the check resolves cleanly.
+#[allow(dead_code)]
+fn make_strong_attacker(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.dp = Some(9000);
+    c.level = Some(6);
+    c.play_cost = 8;
     c
 }
 
@@ -300,8 +312,8 @@ fn p_189_security_clause_optional_allows_decline() {
 /// is itself optional — declining it via PASS must play nothing.
 ///
 /// Regression for G-SECURITY-SKILL-RESUME-REFIRE (RESOLVED): the
-/// `SecuritySkillDrain` arm of `combat.rs::drive_security_resolution` now
-/// records `security_skill_drained` on `SecurityResolutionState`, so a
+/// security-resolution drain arms of `combat.rs::drive_security_resolution`
+/// now record `phase_enqueue_done` on `SecurityResolutionState`, so a
 /// resume after a **declined** optional `[Security]` selection advances past
 /// the security-skill phase instead of re-enqueuing `EffectTiming::SecuritySkill`
 /// (which previously re-collected the same effect — an infinite loop). The

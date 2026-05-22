@@ -41,18 +41,42 @@ effects:
           prompt: "Return 1 Puppet Digimon from trash to hand"
       - add_to_hand_from_trash: { of: you, card: pick }
 
+  # Inherited [Opponent's Turn] [Once Per Turn]
+  # "When one of your opponent's Digimon attacks, by deleting 1 of your other
+  #  Digimon, end that attack."
+  #
+  # The printed cost is "1 of your OTHER Digimon" — DCGO's
+  # CanSelectPermanentCondition requires `permanent != PermanentOfThisCard()`,
+  # so the EX9-024 carrier itself is never a legal cost. Modelled with
+  # `select_own_permanent` + an `other: true` + `kind: digimon` filter.
+  #
+  # "End that attack" is a PAID effect — it happens ONLY when the deletion
+  # cost is actually paid. The `delete_permanent` + `end_attack` steps are
+  # gated behind `if: { condition: { binding_present: sacrifice } }` so:
+  #   - lone carrier (no OTHER Digimon): `select_own_permanent` pre-filters to
+  #     an empty candidate pool, the `sacrifice` binding is absent, the gate
+  #     is false → the attack is NOT ended for free.
+  #   - player declines the optional pick: `sacrifice` is absent → the gate is
+  #     false → nothing is deleted and the attack proceeds to security.
+  #   - player picks an OTHER Digimon: `sacrifice` is present → that Digimon is
+  #     deleted and the attack ends. The EX9-024 carrier always survives.
+  # Mirrors the BT16-028 `select_*` → cost → `if binding_present` payoff idiom.
   - scope: inherited
     when: on_opponent_attack
     once_per_turn: true
     active_when: { opponents_turn: true }
-    summary: "Opponent's Turn OPT: by deleting this Digimon, end the attack"
+    summary: "Opponent's Turn OPT: by deleting 1 of your other Digimon, end the attack"
     process:
-      - select_effect_choice:
-          labels: ["Delete this Digimon and end the attack", "Decline"]
-          bind_as: cancel_choice
-          prompt: "Delete this Digimon to end the attack?"
+      - select_own_permanent:
+          bind_as: sacrifice
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - other: true
+          prompt: "Delete 1 of your other Digimon to end the attack"
       - if:
-          condition: { equals: [cancel_choice, 0] }
+          condition: { binding_present: sacrifice }
           then:
-            - delete_permanent: { target: this }
+            - delete_permanent: { target: sacrifice }
             - end_attack: true

@@ -51,7 +51,32 @@ use digimon_dsl::compiled::{
     CompiledDeclarativeClause, CompiledPlayerRef, CompiledScope, CompiledStep, CompiledTiming,
 };
 
+use digimon_dsl::compiled::CompiledPredicate;
+
 use crate::dsl_card_data::compiled;
+
+// ─── Alt-path predicate helpers ──────────────────────────────────────────────
+//
+// `alt_paths[].from` is a `CompiledPredicate`. When the YAML authors the `from`
+// as `{ all_of: [...] }`, the leaf fields (`level_eq`, `color_is`,
+// `name_contains`) live on the nested `all_of` children, not on the top-level
+// predicate. These helpers walk both the top-level field and the `all_of`
+// children so the assertions hold regardless of how the `from` is nested.
+
+fn pred_level_eq(p: &CompiledPredicate) -> Option<u8> {
+    p.level_eq.or_else(|| p.all_of.iter().find_map(pred_level_eq))
+}
+
+fn pred_color_is(p: &CompiledPredicate) -> Option<CompiledColor> {
+    p.color_is
+        .or_else(|| p.all_of.iter().find_map(pred_color_is))
+}
+
+fn pred_name_contains(p: &CompiledPredicate) -> Option<String> {
+    p.name_contains
+        .clone()
+        .or_else(|| p.all_of.iter().find_map(pred_name_contains))
+}
 
 // ─── Section 1 — Identity assertions ─────────────────────────────────────────
 
@@ -84,7 +109,6 @@ fn bt20_020_has_correct_identity() {
 
 /// Standard digivolve: Lv.5 Red / Cost 5 (per evo_costs in cards.json).
 #[test]
-#[ignore = "test-side issue: from{}.all_of nesting prevents direct field comparison; YAML alt_paths ship correctly"]
 fn bt20_020_has_standard_lv5_red_digivolve() {
     let card = compiled("BT20-020");
 
@@ -92,7 +116,7 @@ fn bt20_020_has_standard_lv5_red_digivolve() {
         path.kind == CompiledAltPathKind::Digivolve
             && path.cost == Some(CompiledCost::Literal(5))
             && path.from.as_ref().is_some_and(|from| {
-                from.level_eq == Some(5) && from.color_is == Some(CompiledColor::Red)
+                pred_level_eq(from) == Some(5) && pred_color_is(from) == Some(CompiledColor::Red)
             })
     });
 
@@ -106,7 +130,6 @@ fn bt20_020_has_standard_lv5_red_digivolve() {
 /// Per DCGO BT20_020.cs: AddSelfDigivolutionRequirementStaticEffect with
 /// PermanentCondition checking EqualsCardName("Imperialdramon: Dragon Mode").
 #[test]
-#[ignore = "test-side issue: from{}.all_of nesting prevents direct field comparison; YAML alt_paths ship correctly"]
 fn bt20_020_has_dragon_mode_alt_digivolve() {
     let card = compiled("BT20-020");
 
@@ -114,9 +137,8 @@ fn bt20_020_has_dragon_mode_alt_digivolve() {
         path.kind == CompiledAltPathKind::Digivolve
             && path.cost == Some(CompiledCost::Literal(2))
             && path.from.as_ref().is_some_and(|from| {
-                from.level_eq == Some(6)
-                    && from
-                        .name_contains
+                pred_level_eq(from) == Some(6)
+                    && pred_name_contains(from)
                         .as_deref()
                         .is_some_and(|n| n.contains("Imperialdramon"))
             })
@@ -359,10 +381,11 @@ fn bt20_020_clause3_is_on_opp_security_removed_opt() {
     );
 }
 
-/// Clause 3's process is empty (delete body BLOCKED by G-FORMULA-SOURCE-DP).
-/// This structural test documents the gap and will be updated when the gap closes.
+/// Clause 3's process carries the delete body: an If-gated
+/// select_opponent_permanent + delete_permanent. The DP filter uses the
+/// `source_dp` formula (G-FORMULA-SOURCE-DP resolved).
 #[test]
-fn bt20_020_clause3_has_no_process_body_pending_source_dp_gap() {
+fn bt20_020_clause3_has_delete_body_with_source_dp_filter() {
     let card = compiled("BT20-020");
 
     let clause = card
@@ -376,42 +399,168 @@ fn bt20_020_clause3_has_no_process_body_pending_source_dp_gap() {
         .expect("[OnOpponentSecurityRemoved] clause must exist");
 
     assert!(
-        clause.process.is_empty(),
-        "clause 3 delete body must be empty pending G-FORMULA-SOURCE-DP; \
-         when the gap closes, remove this assertion and add the delete-permanent steps"
+        !clause.process.is_empty(),
+        "clause 3 must carry the delete body now that G-FORMULA-SOURCE-DP is resolved"
+    );
+
+    // The delete body is gated behind an If step (legal-target precondition).
+    let has_if = clause
+        .process
+        .iter()
+        .any(|step| matches!(step, CompiledStep::If { .. }));
+    assert!(
+        has_if,
+        "clause 3 must gate the delete behind an If precondition; steps={:?}",
+        clause.process
+    );
+
+    // The delete-permanent + select must use a dp_lte filter sourced from a
+    // formula (source_dp), reachable inside the If's then-branch.
+    fn collect_steps<'a>(steps: &'a [CompiledStep], out: &mut Vec<&'a CompiledStep>) {
+        for s in steps {
+            out.push(s);
+            if let CompiledStep::If {
+                then, else_branch, ..
+            } = s
+            {
+                collect_steps(then, out);
+                collect_steps(else_branch, out);
+            }
+        }
+    }
+    let mut all_steps = Vec::new();
+    collect_steps(&clause.process, &mut all_steps);
+
+    let has_delete = all_steps
+        .iter()
+        .any(|s| matches!(s, CompiledStep::DeletePermanent { .. }));
+    assert!(
+        has_delete,
+        "clause 3 must contain a delete_permanent step; steps={:?}",
+        all_steps
     );
 }
 
-// ─── Section 7 — Gap-blocked behavioral tests ────────────────────────────────
+// ─── Section 7 — Clause 3 behavioral tests ───────────────────────────────────
 
-/// BLOCKED: G-OPT-TRIGGERED — the engine does not enforce once_per_turn on
-/// triggered effects yet. When this gap closes, clause 3 should fire at most
-/// once per turn even if opponent's security is removed multiple times.
-#[test]
-#[ignore = "G-OPT-TRIGGERED: triggered OPT not enforced at runtime"]
-fn bt20_020_clause3_fires_at_most_once_per_turn() {
-    // Once G-OPT-TRIGGERED closes:
-    //   Set up a game state where opponent's security is removed twice in one turn.
-    //   Verify that the delete selection is only offered once.
-    todo!("G-OPT-TRIGGERED: implement when triggered OPT enforcement lands")
+use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::EffectTiming;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
+
+fn opp_digimon(id: &str, dp: i32) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.dp = Some(dp);
+    c
 }
 
-/// BLOCKED: G-FORMULA-SOURCE-DP — clause 3's delete target must have DP ≤ this
-/// Digimon's current effective DP. Without a `source_dp` formula, the DP filter
-/// cannot be enforced without incorrectly snapshotting BT20-020's printed/base
-/// DP. When the gap closes:
-///   - An opponent Digimon with DP ≤ BT20-020's effective DP should be offered.
-///   - An opponent Digimon with DP > BT20-020's effective DP should NOT be offered.
-///   - A DP buff/debuff on BT20-020 must move that threshold dynamically.
+/// Fire the `on_opponent_security_removed` observer for BT20-020's permanent
+/// directly, simulating an opponent security card being removed.
+fn fire_opp_security_removed(runner: &mut DebugRunner, ifm: digimon_engine::permanent::PermanentHandle) {
+    runner.game.enqueue_triggered(
+        EffectTiming::OnOpponentSecurityRemoved,
+        TriggerSource::Permanent(ifm),
+    );
+    runner.game.drain_effect_queue();
+}
+
+/// G-OPT-TRIGGERED resolved (Phase 2 Track C): the triggered [Once Per Turn]
+/// gate is enforced at runtime. Clause 3 must fire at most once per turn even
+/// when opponent's security is removed multiple times.
 #[test]
-#[ignore = "G-FORMULA-SOURCE-DP: source_dp formula primitive missing; dp_lte filter cannot gate on source permanent DP"]
+fn bt20_020_clause3_fires_at_most_once_per_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-020")
+        .expect("BT20-020 YAML loads")
+        .add_card(opp_digimon("OPP-A", 5000))
+        .add_card(opp_digimon("OPP-B", 5000))
+        .memory(10)
+        .start();
+
+    let ifm = runner.place_on_field(0, "BT20-020", Some(0));
+    runner.place_on_field(1, "OPP-A", Some(0));
+    runner.place_on_field(1, "OPP-B", Some(0));
+    assert_eq!(runner.battle_area_size(1), 2, "pre: opponent has 2 Digimon");
+
+    // First security removal → clause 3 fires, delete prompt installs.
+    fire_opp_security_removed(&mut runner, ifm);
+    let first = runner
+        .pending_selection_view()
+        .expect("first security removal must install the delete selection");
+    assert_eq!(first.kind, SelectionKind::OppField);
+    runner
+        .execute_action(first.selecting_player, first.valid_action_ids[0])
+        .expect("delete one opponent Digimon");
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "first activation must delete exactly one opponent Digimon"
+    );
+
+    // Second security removal in the SAME turn → [Once Per Turn] blocks it.
+    fire_opp_security_removed(&mut runner, ifm);
+    assert!(
+        runner.pending_selection().is_none(),
+        "clause 3 [Once Per Turn] must suppress a second activation in the same turn"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "no second delete — once-per-turn gate holds"
+    );
+}
+
+/// G-FORMULA-SOURCE-DP resolved: clause 3's delete target must have DP ≤ this
+/// Digimon's current effective DP. The `source_dp` formula reads BT20-020's
+/// effective DP, so a Digimon above that threshold is NOT a legal target.
+#[test]
 fn bt20_020_clause3_only_targets_digimon_with_lte_dp() {
-    // Once G-FORMULA-SOURCE-DP closes:
-    //   1. Place BT20-020 on field and apply a visible DP modifier to prove
-    //      the comparator reads effective DP, not the printed/base value.
-    //   2. Place two opponent Digimon around BT20-020's current effective DP:
-    //      one eligible at or below the threshold, one ineligible above it.
-    //   3. Trigger clause 3 (remove opponent security card).
-    //   4. Verify only the at-or-below-threshold Digimon is offered as a delete target.
-    todo!("G-FORMULA-SOURCE-DP: add dp_lte: {{ formula: {{ source_dp: {{}} }} }} filter when primitive lands")
+    // BT20-020 printed DP is 13000. Place one opponent Digimon at 13000
+    // (eligible: DP ≤ 13000) and one at 14000 (ineligible: DP > 13000).
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT20-020")
+        .expect("BT20-020 YAML loads")
+        .add_card(opp_digimon("OPP-EQ", 13000))
+        .add_card(opp_digimon("OPP-HI", 14000))
+        .memory(10)
+        .start();
+
+    let ifm = runner.place_on_field(0, "BT20-020", Some(0));
+    let opp_eq = runner.place_on_field(1, "OPP-EQ", Some(0));
+    let opp_hi = runner.place_on_field(1, "OPP-HI", Some(0));
+
+    fire_opp_security_removed(&mut runner, ifm);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("clause 3 must install the delete selection (eligible target exists)");
+    assert_eq!(view.kind, SelectionKind::OppField);
+    // Only the 13000-DP Digimon is a legal target — the 14000-DP one is gated out.
+    assert_eq!(
+        view.valid_action_ids.len(),
+        1,
+        "only the DP-≤-13000 Digimon must be a legal delete target; got {} targets",
+        view.valid_action_ids.len()
+    );
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("delete the eligible Digimon");
+    let _ = runner.auto_resolve();
+
+    // The eligible (13000) Digimon is gone; the ineligible (14000) one remains.
+    let ids: Vec<String> = runner.game.players[1]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(
+        !ids.contains(&"OPP-EQ".to_string()),
+        "the DP-≤-13000 Digimon must be deleted; remaining={ids:?}"
+    );
+    assert!(
+        ids.contains(&"OPP-HI".to_string()),
+        "the DP-14000 Digimon must NOT be deletable (DP > source DP); remaining={ids:?}"
+    );
+    let _ = (opp_eq, opp_hi);
 }

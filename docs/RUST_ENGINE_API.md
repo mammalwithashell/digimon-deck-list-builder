@@ -213,7 +213,25 @@ ctx.trash_card_source(perm, card)            // trash one source by handle
 ctx.trash_all_sources(target) -> bool         // strip every digivolution source
 ctx.trash_top_source(target) -> bool          // strip only the topmost source under the visible top
 ctx.armor_purge_top(perm)                     // <ArmorPurge> trash of the top printed card
+
+ctx.return_card_source_to_hand(perm, card) -> bool            // return one source by handle to its OWNER's hand
+ctx.return_selected_sources_to_hand(selected: Vec<SourceSelectionRef>) -> bool
 ```
+
+`return_card_source_to_hand` (`effect_context/mod.rs:3565`) is the
+return-to-hand twin of `trash_card_source`: it removes a single
+digivolution source from `perm`'s stack (anywhere in the stack, not just the
+top) and pushes it to `removed.owner`'s hand — so a source owned by the
+opponent via a control-transfer play returns to its true owner. Because this
+is a return rather than a trash, it fires **no** `OnDigivolutionCardTrashed`
+observer. Returns `false` if the permanent slot is gone or the card is not in
+its stack. `return_selected_sources_to_hand` (`mod.rs:3599`) is the
+`Vec`-taking convenience wrapper — the mirror of
+`play_selected_sources_without_cost` / `trash_selected_sources` — that returns
+each `select_own_sources`-bound `SourceSelectionRef` to its owner's hand,
+returning `true` only when every ref moved. Drives BT12-031 Imperialdramon:
+Fighter Mode's "By returning 1 [Imperialdramon: Dragon Mode] from this
+Digimon's digivolution cards to its owner's hand" alt-cost.
 
 `delete_permanent` removes the permanent and moves all cards in its stack to trash. It also clears modifiers attached to that handle. **Does not fire OnDeletion** — use `Game::delete_permanent_with_effects` for that when you're calling from combat paths. From a card script, `ctx.delete_permanent` is usually what you want (OnDeletion is handled by combat, not effect).
 
@@ -290,6 +308,45 @@ in dev builds.
 primitive: the **opponent** is the selecting player (the affected side
 picks which cards to trash, per the no-approximations rule). Used by
 BT19-075 MoonMillenniummon.
+
+### Player-scoped digivolve cost reducer
+
+```rust
+ctx.arm_player_digivolve_cost_reducer(
+    amount: i32,
+    single_fire: bool,
+    target_color: Option<CardColor>,
+    suspend_cost: bool,
+)
+```
+
+`arm_player_digivolve_cost_reducer` (`effect_context/mod.rs:2373`) installs a
+**player-scoped**, turn-scoped future-digivolve cost reducer. It builds a
+`PlayerDigivolveCostReducer` (`player_cost_reducer.rs`) and pushes it onto
+`Game::player_digivolve_cost_reducers`. Unlike a field-hosted `BeforePayCost`
+scan — which returns an `i32` synchronously and cannot prompt — a
+`PlayerDigivolveCostReducer` has no field permanent to host it and can install
+an interactive accept/decline `PendingSelection` plus a nested suspend-cost
+selection. This is the substrate for `[Main]` cost-reduction Options that
+resolve and leave the field immediately (BT3-103 Hidden Potential Discovered!:
+"For the turn, when one of your green Digimon would next digivolve, by
+suspending 1 of your Digimon, reduce the digivolution cost by 5").
+
+A `PlayerDigivolveCostReducer` carries: `player` (only this player's
+digivolutions trigger it), `source_card` (provenance for the prompt
+`PendingSelection`s), `kind` (`PlayerCostReducerKind::Digivolve`), `expiry`
+(`PlayerCostReducerExpiry::EndOfTurn` — dropped in `rotate_turn_player`),
+`amount` (the reduction), `single_fire` (consume on first *successful*
+application — a declined prompt leaves it armed), `target_color` (when `Some`,
+the digivolving permanent's top card must include that color), and
+`suspend_cost`. Lifecycle: the digivolve-from-hand cost path consults the
+store BEFORE the synchronous field-hosted `BeforePayCost` scan; on a
+qualifying digivolution it installs the accept/decline prompt, and on accept a
+`suspend_cost` reducer prompts the player to suspend one of their own
+unsuspended Digimon — both choices surfaced through `pending_selection` per
+Working Rule §17 (no auto-suspend, no auto-application). Scope: the hook fires
+on the normal `digivolve_from_hand` path only; breeding-area / DNA / Blast
+digivolutions are out of scope for this primitive.
 
 ### Effect-driven play / digivolve
 
@@ -377,6 +434,7 @@ working rule 17 — never auto-select.
 | `select_trash(of_player, prompt, is_optional, filter, callback)` | `Trash` | `selections.rs:233` | Pick from `of_player`'s trash. |
 | `select_material(carrier, prompt, is_optional, filter, callback)` | `Material` | `selections.rs:308` | Pick a digivolution-source under a permanent (excludes top card). |
 | `select_own_sources(min, max, prompt, filter, callback)` | `SourceMulti { min, max, picked }` | `selections.rs:383` | Pick `min..=max` source cards across own battle-area stacks (used by Digi-Burst, Partition costs). |
+| `select_opponent_sources(prompt, min, max, filter, callback)` | `SourceMulti { min, max, picked }` | `selections.rs:437` | Opponent-side mirror of `select_own_sources` — the candidate set is drawn from the **opponent's** battle-area digivolution-source stacks (every card below each opponent permanent's top card). Identical exact-N / up-to-N counts, PASS-after-min, `&Game`-shaped filter and stable cross-permanent `SourceSelectionRef`s; only the scanned player differs. Used by BT16-085's DNA branch ("trash any 3 digivolution cards under your opponent's Digimon"). |
 | `select_partition_sources(prompt, filter, callback)` | `SourceMulti { min: 2, max: 2 }` | `selections.rs:432` | Sugar for the Partition selection (two sources, optionally color-grouped). |
 | `select_opponent_permanents_by_dp_budget(budget, prompt, filter, callback)` | `DpBudget { remaining_dp, picked }` | `selections.rs:487` | Pick zero-or-more opponent permanents whose total effective DP stays under `budget`. Used by BT19-075-style "delete opponent's Digimon with N DP or less in total." |
 | `select_own_breeding_permanent(prompt, filter, callback)` | `BreedingPermanent` | `selections.rs:536` | Pick the source-controller's breeding-area permanent. |
@@ -3421,14 +3479,77 @@ and counts currently suspended permanents.
 During a DSL effect resolution, runtime bindings also carry an append-only
 result log for mutations performed by earlier steps in that same effect. The
 predicate surface can branch on that log with leaves such as
-`effect_suspended_any_own_digimon`, `effect_returned_any_card`, and the
-parallel delete/play/digivolve/add-to-hand leaves. The log is dropped with the
-effect bindings, so result-bound predicates never see mutations from a
-different effect resolution.
+`effect_suspended_any_own_digimon`, `effect_suspended_any_opponent_digimon`
+(opponent-side sibling — true when a prior step suspended one of the
+controller's *opponent's* Digimon; drives BT16-025 Paildramon),
+`effect_returned_any_card` (bare bool, alias `any_returned_card`), and the
+parallel delete/play/digivolve/add-to-hand leaves. `returned_card_matching`
+is the filtered variant of `effect_returned_any_card`: it takes a nested
+card-shape predicate and is true when at least one card returned by a
+preceding return / zone-move step in the same effect satisfies that filter
+(evaluated as a `Card` subject against the per-effect `returned_to_deck`
+log) — e.g. `returned_card_matching: { color_is: white, level_eq: 7 }` for
+BT17-077's "if this effect returned a white level 7 card." The log is dropped
+with the effect bindings, so result-bound predicates never see mutations from
+a different effect resolution.
 
 ### DSL Binding Presence Predicates
 
 Use `binding_present: <name>` or `binding_absent: <name>` in an `if` condition to branch on whether a prior optional selection produced a binding. Aliases `binding_is_present` and `binding_is_none` parse to the same compiled predicates. The check is per effect resolution because the runtime `Bindings` map is threaded through the current DSL effect only.
+
+### DSL Tamer Face-Down Stash Substrate
+
+The BEATBREAK / DATA SQUAD archetypes (ST-23, ST-24) place and retrieve cards
+as **face-down digivolution sources** beneath Tamers. The DSL surface for this
+substrate:
+
+**`face_down` flag on `place_as_bottom_source`.** The `place_as_bottom_source`
+step takes an optional `face_down: bool` flag (default `false`). When set, the
+inserted digivolution source is marked face-down.
+
+```yaml
+- place_as_bottom_source:
+    source: { deck_top: you }
+    target: tamer_pick
+    face_down: true
+```
+
+**`{ deck_top: <player> }` source binding.** `StructuredBindingRef.deck_top`
+resolves to the top card of the named player's deck. It is usable as the
+`source:` of `place_as_bottom_source` and other card-source steps. This is the
+canonical shape for "place the top card of your deck face down under this
+Tamer" text (ST23-06, ST23-13/14, ST24-03, ST24-09, ST24-13/14).
+
+**`trash_bottom_face_down_source_under_tamer` verb.** A cost-form verb for
+text such as "by trashing the bottom face-down card from under any of your
+Tamers, …":
+
+```yaml
+- trash_bottom_face_down_source_under_tamer: { of: you }
+```
+
+It installs a `select_own_permanent { kind: tamer, has_face_down_source: true }`
+Tamer-pick, then trashes the chosen Tamer's bottom face-down source (firing
+`OnDigivolutionCardTrashed`). When the player controls no eligible Tamer the
+cost is unpayable: the clause's remaining steps are skipped. Used by the
+cost-form trash family (ST23-01/03/04/08/11/12, ST24-01/06/10/11/12).
+
+### DSL Source / Permanent Face-Down Predicate Leaves
+
+Four `PredicateSpec` leaves filter on face-down digivolution-source state.
+The first three are SOURCE-subject leaves (filter `select_own_sources`
+candidates); the last is a PERMANENT-subject leaf.
+
+| Leaf | Subject | Matches |
+|------|---------|---------|
+| `is_face_down: Option<bool>` | source | `CardSource.face_down` of the candidate source. |
+| `is_bottom_source: Option<bool>` | source | Whether the source is at `card_sources` index 0 (the bottom of the digivolution stack). |
+| `host_kind_is: Option<CardKind>` | source | The `CardKind` of the source's host permanent's top card. Uses the field-subject matcher, so `Dual` coalesces to `Digimon`. |
+| `has_face_down_source: Option<bool>` | permanent | Whether the permanent's digivolution stack contains at least one face-down source. |
+
+The predicate evaluator carries source-stack metadata into source-subject leaves
+through a new `PredicateSubject::Source` variant (`permanent`, `field_index`,
+`source_index`, `card`), alongside the existing field/card/player subjects.
 
 ---
 
@@ -3483,6 +3604,9 @@ Effect::on_play(card).process(|ctx| {
 | `bounce_self()` → `Option<CardHandle>` | Sugar over `return_to_hand(self.source_permanent.unwrap())`. Returns `None` if there is no source permanent (Option-card OptionMain effects, rule-source effects) or if the bounce is gated by `CannotBeReturnedToHand` / `CannotBeAffected`. Owner-routed via `Permanent::owner()`. |
 | `return_to_deck(PermanentHandle, StackPosition)` → `bool` | Bounce to deck at Top/Bottom/Random. |
 | `return_to_deck_from_reveal(player, CardHandle, StackPosition)` → `bool` | Reveal pool → deck. |
+| `move_trash_card_to_deck_top(player, CardHandle)` → `bool` | Move one selected trash card to the **top** of its owner's deck (`player` only identifies whose trash holds it; the card returns to `removed.owner`'s deck). Single-card, deck-TOP analog of `return_all_trash_to_deck_bottom`. A handle not in `player`'s trash is a silent no-op (`false`). Drives LM-030's Delay clause. |
+| `return_card_source_to_hand(PermanentHandle, CardHandle)` → `bool` | Return-to-hand twin of `trash_card_source` — remove one digivolution source by handle (anywhere in the stack) and push it to `removed.owner`'s hand. Fires **no** `OnDigivolutionCardTrashed` (it is a return, not a trash). `false` if the slot is gone or the card is not in the stack. |
+| `return_selected_sources_to_hand(Vec<SourceSelectionRef>)` → `bool` | `Vec`-taking wrapper over `return_card_source_to_hand` — the mirror of `trash_selected_sources` — returning each `select_own_sources`-bound source ref to its owner's hand. `true` only when every ref moved. Drives BT12-031's Dragon-Mode-return alt-cost. |
 | `shuffle_deck(player)` | Pair with `add_to_hand_from_deck` for "search and shuffle" effects. |
 
 ### Reveal pool
@@ -3499,7 +3623,9 @@ but from the player's Digi-Egg deck. DSL `reveal_top_deck` honors
 
 | Method | Purpose |
 |--------|---------|
-| `place_as_bottom_source(CardSourceRef, target: PermanentHandle)` → `bool` | Insert a card at the bottom of target's digivolution stack. |
+| `place_as_bottom_source(source: CardSourceRef, target: PermanentHandle, face_down: bool)` → `bool` | Insert a card at the bottom of target's digivolution stack. `face_down: true` marks the placed digivolution source face-down (default is face-up). **`face_down` is NOT honored for `CardSourceRef::Security` sources — security cards are always placed face-up (DCGO parity).** |
+| `place_card_under_permanent_bottom(card: CardHandle, target: PermanentHandle, face_down: bool)` | Lift a specific card (by stable `CardHandle`) and insert it at the bottom of `target`'s digivolution stack. `face_down: true` marks the placed source face-down. Used by `<Save>` to intercept a deleted top card under a chosen Tamer, and by the BEATBREAK / DATA SQUAD face-down hand-stash family (ST23-10, ST24-02). |
+| `place_deck_top_under_permanent(target: PermanentHandle, face_down: bool)` → `Option<CardHandle>` | Place the top card of `target.player`'s deck as the bottom-most digivolution source of `target`. Returns the moved `CardHandle`, or `None` on an empty deck. `face_down: true` marks the placed source face-down. Used by the BEATBREAK / DATA SQUAD "place the top card of your deck face down under this Tamer" family (ST23-06, ST23-13/14, ST24-03, ST24-09, ST24-13/14). |
 | `place_permanent_as_bottom_sources(source: PermanentHandle, target: PermanentHandle)` → `bool` | (Track A) Remove a battle-area permanent and insert its whole stack under the target, preserving the source stack order. DSL `place_as_bottom_source` uses this when `source: { permanent: <binding> }`. |
 | `place_on_security(player, CardSourceRef, StackPosition, face_up: bool)` → `bool` | Move to security stack at Top/Bottom/Random; optionally face-up; fires `OnPlaceSecurity` with `EventCause::SecurityPlacement` after a successful commit. |
 | `place_permanent_on_security(player, target, position, face_up)` → `bool` | (Track A) Move a battle-area permanent into a player's security stack through the normal leave-field replacement window. For effects that initiate a new move-to-security, distinct from in-flight leave-replacement bodies. |
@@ -3511,6 +3637,7 @@ but from the player's Digi-Egg deck. DSL `reveal_top_deck` honors
 | `security_place_top_stacked_card(carrier, target_player, position, face_up)` → `bool` | (Track E) Convenience: extracts `card_sources[len-2]` (the topmost digivolution source below the visible top) and routes to security. Used by Puppets G027 "move top stacked card to top security card." Returns `false` when the stack has fewer than 2 cards. |
 | `return_all_trash_to_deck_bottom(player)` → `Vec<CardHandle>` | (Track E) Drain `player`'s trash → each card to its **owner's** deck bottom. Returns moved handles in original trash order. Used by BT17-077 "return all cards in your trash to the bottom of the deck." |
 | `trash_top_n_digivolution_cards_of_each(target_player, n)` → `usize` | (Track E) Trim up to `n` digivolution sources (`card_sources[len-2]` topmost first) from every battle-area permanent of `target_player`. Routes through `trash_card_source` per source; fires per-source `OnDigivolutionCardTrashed`. Skips single-source permanents (no source below the visible top). Used by BT12-028 et al. |
+| `trash_bottom_face_down_source(target: PermanentHandle)` → `bool` | Trash the bottom-most face-down digivolution source of `target` (i.e. `card_sources[0]`) to its owner's trash, firing `OnDigivolutionCardTrashed`. Returns `false` with **no mutation** when `card_sources[0]` is not face-down. Does NOT honor `ImmuneFromStackTrashing` — this is a voluntary cost ("by trashing the bottom face-down card from under any of your Tamers, …"), not involuntary stack-peeling. Used by the BEATBREAK / DATA SQUAD cost-form trash family (ST23-01/03/04/08/11/12, ST24-01/06/10/11/12). |
 | `trash_opponent_hand_to_count(opponent, target_count)` → `bool` | (Track E) Forced-reduction primitive: opponent picks which cards to trash from their hand until size ≤ `target_count`. Selecting player is the **opponent** (no-approximations rule — the affected side chooses). Sugar over `as_selecting_player(opponent).select_count_capped_multi(...)`. Used by BT19-075 MoonMillenniummon. |
 | `search_own_security_stack(prompt, is_optional, filter, callback)` | (Track E) Single-pick selection on the controller's own security stack with a `&CardSource` filter. Sugar over `select_security(self.player, …)` for the common "look at your security stack and choose one matching X" shape. Used by TS Olympos cards. |
 | `schedule_delayed(when, body, captured_bindings)` | Pre-existing scheduled-effect substrate ([scheduled_effects.rs](../code/digimon-engine/src/scheduled_effects.rs)). Track E confirms this is the substrate for `scheduled_delayed_return` — the DSL verb `scheduled_delayed_return` lowers to `schedule_delayed(when, [return_to_hand_target/return_to_deck_target], bindings)`. No new engine surface required; only DSL plumbing pending. |
@@ -4202,6 +4329,7 @@ lives in `code/digimon-engine/tests/dsl/zone_movement_verbs.rs`.
 | `security_place_top_stacked_card` | `carrier`, `of`, `position`, `face` | `EffectContext::security_place_top_stacked_card(...)` |
 | `return_all_trash_to_deck_bottom` | `of` | `EffectContext::return_all_trash_to_deck_bottom(player)` |
 | `trash_top_n_digivolution_cards_of_each` | `of`, `n` formula | `EffectContext::trash_top_n_digivolution_cards_of_each(target_player, n)` |
+| `trash_bottom_face_down_source_under_tamer` | `of` | Installs `select_own_permanent { kind: tamer, has_face_down_source: true }`, then `EffectContext::trash_bottom_face_down_source(pick)`. Skips remaining clause steps (unpayable cost) when no eligible Tamer exists. See "DSL Tamer Face-Down Stash Substrate". |
 | `trash_opponent_hand_to_count` | `opponent`, `target_count` formula | `EffectContext::trash_opponent_hand_to_count(opponent, target_count)` |
 | `search_own_security_stack` | `filter`, `prompt`, optional `bind_as`, `optional`, `on_select`, optional `on_no_match` | `EffectContext::search_own_security_stack(...)`; `bind_as` exposes the selected security card handle to `on_select` |
 

@@ -16,6 +16,15 @@
 //!   digivolve a field [Sistermon Ciel] into this exact trash card for free.
 //! - End-of-all-turns movement of the top stacked card into security via the
 //!   Track E `security_place_top_stacked_card` DSL verb.
+//!
+//! # DCGO C# reference
+//! DCGO/Assets/Scripts/CardEffect/BT20/White/BT20_084.cs
+//!
+//! # Patterns this test covers
+//! - A5 stack shift / digivolve from trash (trash-resident on_ally_played observer)
+//! - E2 optional decline (printed "may" on the trash digivolve)
+//! - F7 cannot suspend (shared On Play / When Digivolving lock)
+//! - Track E stacked-card-to-security movement (PUPPETS-G026 / PUPPETS-G027 closure)
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
@@ -144,7 +153,7 @@ fn bt20_084_has_printed_stats_alt_path_and_supported_shared_lock_clause() {
             if *carrier == digimon_dsl::compiled::CompiledBindingRef::Source
                 && *of == digimon_dsl::compiled::CompiledPlayerRef::You
                 && *position == digimon_dsl::compiled::CompiledStackPosition::Top
-                && *face_up
+                && !*face_up
     ));
 }
 
@@ -259,6 +268,115 @@ fn bt20_084_trash_observer_may_digivolve_sistermon_ciel_for_free_when_your_digim
 }
 
 #[test]
+fn bt20_084_trash_observer_decline_leaves_card_in_trash_and_sistermon_ciel_untouched() {
+    // OPT/optional lockout: the printed "may" must allow declining; on decline
+    // BT20-084 stays in trash and the field Sistermon Ciel is not digivolved.
+    let mut runner = bt20_084_runner()
+        .hand(0, &["ALLY-DIGIMON"])
+        .memory(10)
+        .start();
+    let base = runner.place_on_field(0, "SISTERMON-CIEL-BASE", Some(0));
+    let bt20_084 = push_to_trash(&mut runner, 0, "BT20-084");
+
+    runner.play(0, 0).expect("play allied Digimon");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("trash observer optional digivolve target");
+    assert!(view.is_optional, "printed 'may' must be declinable");
+    runner
+        .decline_optional_trigger()
+        .expect("decline the optional trash digivolve");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "declining the optional trigger clears the prompt"
+    );
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|card| card.handle() == bt20_084),
+        "declined trash digivolve must leave BT20-084 in trash"
+    );
+    let stack = &runner.game.players[0].battle_area[base.index as usize];
+    assert_eq!(
+        stack.card_sources.len(),
+        1,
+        "declined trigger must not stack BT20-084 onto the Sistermon Ciel"
+    );
+    assert_eq!(
+        stack.top_card().card_id(&runner.game.card_data),
+        "SISTERMON-CIEL-BASE",
+        "Sistermon Ciel remains the untouched top card"
+    );
+}
+
+#[test]
+fn bt20_084_trash_observer_no_prompt_when_card_is_not_in_trash() {
+    // Condition gating (negative): the [Trash] precondition fails when no
+    // BT20-084 copy resides in trash, so playing an ally raises no prompt.
+    let mut runner = bt20_084_runner()
+        .hand(0, &["ALLY-DIGIMON"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "SISTERMON-CIEL-BASE", Some(0));
+
+    runner.play(0, 0).expect("play allied Digimon");
+    runner
+        .auto_resolve()
+        .expect("no trash-resident observer to fire");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no BT20-084 in trash means the [Trash] observer does not fire"
+    );
+}
+
+#[test]
+fn bt20_084_trash_observer_no_prompt_when_no_sistermon_ciel_on_field() {
+    // Condition gating (negative): with BT20-084 in trash but no field
+    // [Sistermon Ciel], there is no legal free-digivolve target, so no prompt.
+    let mut runner = bt20_084_runner()
+        .hand(0, &["ALLY-DIGIMON"])
+        .memory(10)
+        .start();
+    push_to_trash(&mut runner, 0, "BT20-084");
+
+    runner.play(0, 0).expect("play allied Digimon");
+    runner
+        .auto_resolve()
+        .expect("no Sistermon Ciel target available");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no field Sistermon Ciel means the trash observer has no legal target"
+    );
+}
+
+#[test]
+fn bt20_084_trash_observer_no_prompt_when_played_card_is_not_a_digimon() {
+    // Condition gating (negative): `event_target_kind: digimon` gates the
+    // observer — playing a Tamer must not fire the trash digivolve.
+    let mut runner = bt20_084_runner()
+        .hand(0, &["OPP-TAMER"])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "SISTERMON-CIEL-BASE", Some(0));
+    push_to_trash(&mut runner, 0, "BT20-084");
+
+    runner.play(0, 0).expect("play a Tamer (not a Digimon)");
+    runner
+        .auto_resolve()
+        .expect("playing a non-Digimon does not fire the observer");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "the trash observer only fires when one of your Digimon is played"
+    );
+}
+
+#[test]
 fn bt20_084_end_of_all_turns_places_top_stacked_card_as_top_security() {
     let mut runner = bt20_084_runner().start();
     let carrier = runner.place_stack(0, &["SISTERMON-CIEL-BASE", "BT20-084"]);
@@ -281,10 +399,11 @@ fn bt20_084_end_of_all_turns_places_top_stacked_card_as_top_security() {
         "top stacked card below BT20-084 should become top security"
     );
     assert!(
-        runner.game.players[0]
+        !runner.game.players[0]
             .face_up_security
             .contains(&moved_card.0),
-        "BT20-084 places the stacked card face-up"
+        "BT20-084 places the stacked card face-down (printed text gives no \
+         'face up' instruction; CR 3-7-4 + DCGO AddSecurityCard faceUp:false)"
     );
     let remaining_stack = &runner.game.players[0].battle_area[carrier.index as usize].card_sources;
     assert_eq!(
@@ -295,6 +414,65 @@ fn bt20_084_end_of_all_turns_places_top_stacked_card_as_top_security() {
     assert_eq!(
         remaining_stack[0].card_id(&runner.game.card_data),
         "BT20-084"
+    );
+}
+
+#[test]
+fn bt20_084_end_of_all_turns_fires_on_the_opponents_turn_too() {
+    // [End of All Turns] integrated coverage of the second timing: the
+    // top-stacked-card-to-security movement also fires at the opponent's turn end.
+    let mut runner = bt20_084_runner().start();
+    let carrier = runner.place_stack(0, &["SISTERMON-CIEL-BASE", "BT20-084"]);
+    let moved_card =
+        runner.game.players[0].battle_area[carrier.index as usize].card_sources[0].handle();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfOpponentsTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.game.players[0]
+            .security
+            .last()
+            .expect("security top")
+            .handle(),
+        moved_card,
+        "top stacked card should move to top security at the opponent's turn end too"
+    );
+}
+
+#[test]
+fn bt20_084_end_of_all_turns_no_op_when_no_digivolution_cards() {
+    // Condition gating (negative): the C# CanActivate requires
+    // DigivolutionCards.Count > 0. A lone BT20-084 with no card stacked beneath
+    // it has no top stacked card to move, so security is left untouched.
+    let mut runner = bt20_084_runner().start();
+    let carrier = runner.place_on_field(0, "BT20-084", Some(0));
+    let security_before = runner.game.players[0].security.len();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.game.players[0].security.len(),
+        security_before,
+        "no stacked card under BT20-084 means nothing moves to security"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[carrier.index as usize]
+            .card_sources
+            .len(),
+        1,
+        "the lone BT20-084 carrier is left intact"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "the gated end-of-turn clause resolves without surfacing a prompt"
     );
 }
 

@@ -2,6 +2,7 @@
 //! functions. See `digimon-engine/Cargo.toml` for the `[[test]]` entry.
 
 mod activation_cost;
+mod also_treated_as;
 mod cross_check;
 mod delay;
 mod digixros_aliases;
@@ -104,6 +105,9 @@ mod phase4_raw_rust_formula;
 mod phase4_raw_rust_registry;
 mod phase4_raw_rust_step;
 mod phase4_retirement_guard;
+mod place_as_bottom_source_deck_top;
+mod place_as_bottom_source_face_down;
+mod predicate_face_down_stack_position;
 mod pretty;
 mod raw_rust_registry;
 mod real_cards_json;
@@ -123,5 +127,7 @@ mod track_e_reveal_ordering;
 mod union_zone_origin_play;
 mod source_stack_aggregates;
 mod standalone_declaratives_exit;
+mod tamer_stash_substrate_integration;
+mod trash_bottom_face_down_source_under_tamer;
 mod validator;
 mod zone_movement_verbs;

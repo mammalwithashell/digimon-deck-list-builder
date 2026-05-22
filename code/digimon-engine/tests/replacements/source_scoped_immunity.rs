@@ -16,7 +16,7 @@ fn active_security_resolution(defender: u8) -> SecurityResolutionState {
         card_kind: CardKind::Option,
         was_face_up: false,
         phase: SecurityPhase::SecuritySkillDrain,
-        security_skill_drained: false,
+        phase_enqueue_done: false,
         checks_remaining: 0,
         outcome_so_far: digimon_engine::combat::AttackResult::SecurityCheckSurvived,
     }

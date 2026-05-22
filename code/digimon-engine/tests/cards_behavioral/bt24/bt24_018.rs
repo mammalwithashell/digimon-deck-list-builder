@@ -655,6 +655,86 @@ fn bt24_018_clause_g_opt_lockout() {
     assert!(!permanent_exists(&runner, 0, "ALLY-REPTILE"));
 }
 
+/// Clause (g)'s cost — "delete 1 of your opponent's lowest DP Digimon" — must
+/// offer ONLY the lowest-DP opponent Digimon, not every opponent Digimon.
+/// Regression for the obsolete `dp_lte` aggregate predicate (G-PRED-DP-LTE),
+/// which silently passed every candidate; the fix uses `selector: lowest_dp`.
+#[test]
+fn bt24_018_clause_g_cost_offers_only_lowest_dp_opponent_digimon() {
+    let mut runner = bt24_018_clause_g_runner();
+    runner.place_on_field(0, "BT24-018", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-DRAGONKIN", Some(0));
+    runner.place_on_field(1, "LOW-DP", Some(0));
+    runner.place_on_field(1, "HIGH-DP", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    accept_replacement(&mut runner);
+    let cost = runner
+        .pending_selection_view()
+        .expect("lowest-DP cost prompt");
+    assert_eq!(cost.kind, SelectionKind::OppField);
+    assert_eq!(
+        cost.valid_action_ids.len(),
+        1,
+        "only the lowest-DP opponent Digimon (LOW-DP, 3000) may be offered, \
+         not HIGH-DP (9000)"
+    );
+    runner
+        .execute_action(0, cost.valid_action_ids[0])
+        .expect("delete opponent lowest DP");
+    runner.auto_resolve().expect("finish replacement");
+
+    assert!(permanent_exists(&runner, 0, "ALLY-DRAGONKIN"));
+    assert!(!permanent_exists(&runner, 1, "LOW-DP"));
+    assert!(
+        permanent_exists(&runner, 1, "HIGH-DP"),
+        "the higher-DP opponent Digimon must be untouched"
+    );
+}
+
+/// When several opponent Digimon are tied for lowest DP, clause (g) must offer
+/// ALL of them — the controller chooses, no auto-pick — while still excluding
+/// strictly-higher-DP Digimon.
+#[test]
+fn bt24_018_clause_g_cost_offers_all_tied_lowest_dp_no_auto_pick() {
+    let mut runner = bt24_018_clause_g_runner();
+    runner.place_on_field(0, "BT24-018", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-DRAGONKIN", Some(0));
+    runner.place_on_field(1, "LOW-DP", Some(0));
+    runner.place_on_field(1, "LOW-DP-2", Some(0));
+    runner.place_on_field(1, "HIGH-DP", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    accept_replacement(&mut runner);
+    let cost = runner
+        .pending_selection_view()
+        .expect("lowest-DP cost prompt");
+    assert_eq!(
+        cost.valid_action_ids.len(),
+        2,
+        "both DP-3000 Digimon are tied for lowest and must both be offered; \
+         HIGH-DP (9000) must be excluded; no auto-pick"
+    );
+    runner
+        .execute_action(0, cost.valid_action_ids[0])
+        .expect("delete one tied-lowest opponent Digimon");
+    runner.auto_resolve().expect("finish replacement");
+
+    assert!(permanent_exists(&runner, 0, "ALLY-DRAGONKIN"));
+    assert_eq!(
+        runner.battle_area_size(1),
+        2,
+        "exactly one tied-lowest Digimon deleted; the other low + HIGH-DP remain"
+    );
+    assert!(permanent_exists(&runner, 1, "HIGH-DP"));
+}
+
 // ─── runner builders ─────────────────────────────────────────────────────────
 
 fn bt24_018_clause_e_runner() -> DebugRunner {
@@ -688,6 +768,7 @@ fn bt24_018_clause_g_runner() -> DebugRunner {
         .add_card(make_digimon("ALLY-DRAGONKIN", 6000, &["Dragonkin"]))
         .add_card(make_digimon("ALLY-REPTILE", 6000, &["Reptile"]))
         .add_card(make_digimon("LOW-DP", 3000, &[]))
+        .add_card(make_digimon("LOW-DP-2", 3000, &[]))
         .add_card(make_digimon("HIGH-DP", 9000, &[]))
         .start()
 }

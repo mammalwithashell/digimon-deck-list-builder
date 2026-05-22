@@ -15,10 +15,15 @@ alt_paths:
 # "When this Digimon would digivolve into a Digimon card with the [Puppet] trait,
 # reduce the digivolution cost by 1."
 #
-# BLOCKED: same reusable gap as BT23-005. The DSL/engine currently lacks a
-# `when_this_digivolves_into` + target-trait hook for source-scoped digivolution
-# cost reduction. Do not encode this as `cost_reduction` for playing this card or
-# as an unconditional alt_path cost change; those would change legality/costs.
+# IMPLEMENTED — G-BEFORE-PAY-COST-DIGIVOLVE-TARGET RESOLVED 2026-05-17
+# (Phase 2 Track H; proof-of-substrate P-117). The `cost_target: { ... }`
+# predicate evaluates against the card being digivolved into; combined with
+# `source_is_cost_target_permanent: true` it faithfully encodes "When THIS
+# Digimon would digivolve into a [Puppet] Digimon card". DCGO's cardCondition
+# is `cardSource.IsDigimon && cardSource.ContainsTraits("Puppet")`, matched by
+# `cost_target: { kind: digimon, trait_has: Puppet }`. The printed text has no
+# [Once Per Turn] qualifier (and DCGO's ChangeDigivolutionCostStaticEffect has
+# no max-count), so this is NOT once_per_turn.
 #
 # Inherited [Your Turn] opponent security DP aura:
 # "All of your opponent's Security Digimon get -3000 DP."
@@ -27,6 +32,16 @@ alt_paths:
 # `EffectBuilder::applies_to_opponent_security_dp()` so the -3000 DP rides
 # under the attacker's stack during the security battle.
 effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { kind: digimon, trait_has: Puppet }
+    amount: 1
+    summary: "[Your Turn] When digivolving into a [Puppet] Digimon, reduce the digivolution cost by 1"
+
   - kind: aura
     scope: inherited
     active_when: { your_turn: true }

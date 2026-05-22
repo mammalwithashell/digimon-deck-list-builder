@@ -14,6 +14,29 @@ alt_paths:
         - color_is: yellow
     cost: 4
 
+  # Conditional alt-digivolve: "[Digivolve] While you have [Arisa Kinosaki],
+  # [Chaperomon]: Cost 6." Digivolve from a [Chaperomon] for 6 memory, legal
+  # ONLY while the controller has an [Arisa Kinosaki].
+  #
+  # G-ALT-PATH-CONDITION (RESOLVED 2026-05-15 — see qa/resolved-gaps.md):
+  # `AltPathSpec.condition` is consumed by the Digivolve route in
+  # dna_digivolve.rs::find_matching_alt_path, evaluated after the `from:`
+  # source-filter check. The Arisa gate is authored here as a `count_gte`
+  # over the controller's battle area.
+  - kind: digivolve
+    from:
+      name_contains: "Chaperomon"
+    cost: 6
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [battle_area]
+          all_of:
+            - kind: tamer
+            - name_contains: "Arisa Kinosaki"
+        n: 1
+
 effects:
   - kind: grant_keyword
     keyword: Overclock
@@ -89,7 +112,3 @@ effects:
           source: source
           timing: when_digivolving
           optional: true
-
-  # Omitted until the DSL can gate an alternate digivolve route with
-  # "while you have [Arisa Kinosaki]" instead of exposing a permanently legal
-  # Chaperomon route.

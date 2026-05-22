@@ -1,21 +1,38 @@
-//! ST19-08 ShoeShoemon.
-//! Printed text:
-//! - [Security] You may play 1 [LIBERATOR] card with play cost 4 or less
-//!   from hand or trash free.
-//! - <Overclock ([Puppet] Trait)>.
-//! - Inherited [Your Turn] all opponent security Digimon get -3000 DP.
+//! ST19-08 ShoeShoemon — Digimon, Lv.4, Yellow, Puppet/LIBERATOR.
 //!
-//! The [Security] hand-or-trash union play uses the G014 substrate
-//! (select_union_zone + play_union_bound_free) landed in the Task-8 sweep.
-//! The inherited opponent security Digimon DP aura remains blocked by
-//! G-OPPONENT-SECURITY-DP-AURA / PUPPETS-G008.
+//! # Card text (cards.json)
+//!
+//! [Security] You may play 1 card with the [LIBERATOR] trait and a play cost
+//! of 4 or less from your hand or trash without paying the cost.
+//!
+//! <Overclock ([Puppet] Trait)> (At the end of your turn, by deleting 1 of
+//! your Tokens or other [Puppet] trait Digimon, this Digimon attacks a player
+//! without suspending.)
+//!
+//! Inherited Effect [Your Turn] All of your opponent's security Digimon get
+//! -3000 DP.
+//!
+//! # DCGO C# reference
+//! DCGO/Assets/Scripts/CardEffect/ST19/Yellow/ST19_08.cs
+//!
+//! # Patterns this test covers
+//! - H11 Overclock (Puppet/token sacrifice cost filter)
+//! - C5-adjacent: [Security] hand-or-trash union-zone free play (G014 substrate:
+//!   select_union_zone + play_union_bound_free)
+//! - D4 declarative aura — inherited opponent-security-Digimon DP debuff
+//!   (PUPPETS-G008 / G-OPPONENT-SECURITY-DP-AURA, RESOLVED Track I 2026-05-17;
+//!   `applies_to_opponent_security_dp: true`)
 
 use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledDeclarativeClause};
+use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::{
+    encode_attack, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_OVERCLOCK, FIELD_EFFECT_START, PASS,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, Keyword};
+use digimon_engine::enums::{CardColor, CardKind, GamePhase, Keyword};
 use digimon_engine::selection::SelectionKind;
 
 #[test]
@@ -73,6 +90,80 @@ fn st19_08_grants_overclock_with_puppet_cost_filter() {
                 .any(|leaf| leaf.trait_has.as_deref() == Some("Puppet"))
         }),
         "Overclock cost allows other Puppet trait Digimon"
+    );
+}
+
+/// `field_index`/`effect_slot` → action ID for a field-effect activation.
+fn encode_field_effect(field_index: u16, effect_slot: u16) -> u16 {
+    FIELD_EFFECT_START + field_index * EFFECTS_PER_PERMANENT + effect_slot
+}
+
+/// A `Token` card usable as an Overclock sacrifice cost.
+fn make_token(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Token;
+    card.level = None;
+    card
+}
+
+/// A Lv.4 Digimon with explicit traits — used as legal / illegal Overclock costs.
+fn make_digimon_with_traits(id: &str, traits: &[&str]) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(4000);
+    card.colors = vec![CardColor::Yellow];
+    card.traits = traits.iter().map(|t| t.to_string()).collect();
+    card
+}
+
+/// Integrated Overclock: at end-of-turn ShoeShoemon's <Overclock> is a legal
+/// field-effect action; activating it surfaces a cost selection that masks
+/// in a Token and another Puppet Digimon but excludes a non-Puppet Digimon,
+/// and PASS remains legal (the keyword cost is optional).
+#[test]
+fn st19_08_overclock_end_of_turn_masks_only_token_or_other_puppet_costs() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST19-08")
+        .expect("ST19-08 YAML loads")
+        .add_card(make_token("COST-TOKEN"))
+        .add_card(make_digimon_with_traits("NON-PUPPET", &["Beast"]))
+        .add_card(make_digimon_with_traits("PUPPET-ALLY", &["Puppet"]))
+        .start();
+
+    let shoe = runner.place_on_field(0, "ST19-08", Some(0));
+    runner.place_on_field(0, "COST-TOKEN", Some(0));
+    runner.place_on_field(0, "NON-PUPPET", Some(0));
+    runner.place_on_field(0, "PUPPET-ALLY", Some(0));
+    runner.game.current_phase = GamePhase::EndOfTurnAction;
+
+    // ShoeShoemon (field index 0) exposes Overclock as a legal end-turn action.
+    let overclock_action = encode_field_effect(shoe.index as u16, FIELD_EFFECT_SLOT_FOR_OVERCLOCK);
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[overclock_action as usize], 1.0,
+        "ShoeShoemon's <Overclock> is a legal end-of-turn field effect"
+    );
+
+    runner.game.decode_action(overclock_action, 0);
+
+    // The Overclock cost prompt: delete 1 Token or other Puppet Digimon.
+    let cost_mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        cost_mask[encode_attack(0, 1) as usize], 1.0,
+        "a Token is a legal Overclock sacrifice cost"
+    );
+    assert_eq!(
+        cost_mask[encode_attack(0, 2) as usize], 0.0,
+        "a non-Puppet non-token Digimon is not a legal Overclock cost"
+    );
+    assert_eq!(
+        cost_mask[encode_attack(0, 3) as usize], 1.0,
+        "another Puppet Digimon is a legal Overclock cost"
+    );
+    assert_eq!(
+        cost_mask[PASS as usize], 1.0,
+        "Overclock is optional — PASS must stay legal (no auto-pick)"
     );
 }
 
@@ -173,9 +264,14 @@ fn in_battle_area(runner: &DebugRunner, player: u8, card_id: &str) -> bool {
     })
 }
 
+/// Structural: the inherited clause must lower to an `Aura` carrying
+/// `applies_to_opponent_security_dp == true`, `scope == Inherited`, and a
+/// `-3000` `dp_modifier`. A plain string match on the Debug output would be a
+/// false-positive trap — the `applies_to_opponent_security_dp` field name is
+/// printed for *every* `Aura` variant (including the unrelated GrantKeyword
+/// aura ST19-08 also declares), so this test inspects the field value.
 #[test]
-#[ignore = "pending: G-OPPONENT-SECURITY-DP-AURA / PUPPETS-G008 - DSL cannot express inherited applies_to_opponent_security_dp"]
-fn st19_08_inherited_reduces_opponent_security_digimon_dp_during_your_turn() {
+fn st19_08_inherited_security_dp_aura_lowers_with_opponent_security_flag() {
     let runner = DebugRunner::builder()
         .dsl_card("ST19-08")
         .expect("ST19-08 YAML loads")
@@ -184,12 +280,132 @@ fn st19_08_inherited_reduces_opponent_security_digimon_dp_during_your_turn() {
         .compiled_card("ST19-08")
         .expect("ST19-08 must be compiled");
 
-    assert!(
-        compiled.effects.iter().any(|clause| match clause {
-            CompiledClause::Declarative(aura) => format!("{aura:?}").contains("opponent_security"),
-            _ => false,
-        }),
-        "Inherited aura should lower to opponent-security-Digimon DP adjustment"
+    let aura = compiled
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
+                applies_to_opponent_security_dp,
+                dp_modifier,
+                scope,
+                ..
+            }) if *applies_to_opponent_security_dp => Some((dp_modifier, scope)),
+            _ => None,
+        })
+        .expect("ST19-08 must declare an opponent-security-DP aura");
+
+    let (dp_modifier, scope) = aura;
+    assert_eq!(
+        *dp_modifier,
+        Some(-3000),
+        "the inherited aura must lower opponent security Digimon DP by 3000"
+    );
+    assert_eq!(
+        *scope,
+        digimon_dsl::compiled::CompiledScope::Inherited,
+        "the security-DP aura is an inherited effect — it rides under the stack"
+    );
+}
+
+// ─── Inherited opponent-security-DP aura: behavioral coverage ─────────────────
+//
+// PUPPETS-G008 / G-OPPONENT-SECURITY-DP-AURA. The aura rides under the
+// attacker's stack and is consulted at security-battle time. These tests follow
+// the ST19-03 pattern: insert ST19-08 as an inherited (under-the-top) card in
+// the attacker's stack, then assert the security battle outcome flips.
+
+/// A Lv.4 attacker with the given DP.
+fn attacker_lv4(id: &str, dp: i32) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(dp);
+    card.play_cost = 5;
+    card.colors = vec![CardColor::Red];
+    card
+}
+
+/// A Digimon used as a security card with the given DP.
+fn digimon_security_card(id: &str, dp: i32) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(dp);
+    card
+}
+
+/// Insert a registered `card_id` as an inherited card (index 0, under the top)
+/// of the permanent at `handle`.
+fn insert_inherited(runner: &mut DebugRunner, handle: digimon_engine::permanent::PermanentHandle, card_id: &str) {
+    let game = runner.game_mut();
+    let data_idx = game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("insert_inherited: {card_id} not registered"));
+    let next = game.next_card_index();
+    let perm = &mut game.players[handle.player as usize].battle_area[handle.index as usize];
+    let mut src = CardSource::new(data_idx, handle.player, next);
+    src.card_index = next;
+    perm.card_sources.insert(0, src);
+}
+
+/// Positive: ST19-08 inherited under the attacker's stack drops the opponent's
+/// 9 000-DP security Digimon to 6 000, letting an 8 000-DP attacker survive the
+/// security battle.
+#[test]
+fn st19_08_inherited_reduces_opponent_security_digimon_dp_during_your_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST19-08")
+        .expect("ST19-08 YAML loads")
+        .add_card(attacker_lv4("ATK", 8000))
+        .add_card(digimon_security_card("SEC", 9000))
+        .security(1, &["SEC"])
+        .start();
+
+    let atk = runner.place_on_field(0, "ATK", Some(0));
+    insert_inherited(&mut runner, atk, "ST19-08");
+
+    let result = runner.attack_player(atk, 1, false);
+    assert_eq!(
+        result,
+        AttackResult::SecurityCheckSurvived,
+        "ST19-08's -3000 inherited aura drops the 9000 security Digimon to 6000; \
+         the 8000 attacker survives"
+    );
+    assert_eq!(
+        runner.battle_area_size(0),
+        1,
+        "the attacker is not deleted by the (now weakened) security Digimon"
+    );
+}
+
+/// Negative — carrier absent: with no ST19-08 in the attacker's stack the aura
+/// is not consulted, so the 9 000-DP security Digimon deletes the 8 000-DP
+/// attacker. Same board as the positive test minus the inherited carrier.
+#[test]
+fn st19_08_no_security_dp_debuff_when_carrier_absent_from_attacker_stack() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST19-08")
+        .expect("ST19-08 YAML loads")
+        .add_card(attacker_lv4("ATK", 8000))
+        .add_card(digimon_security_card("SEC", 9000))
+        .security(1, &["SEC"])
+        .start();
+
+    let atk = runner.place_on_field(0, "ATK", Some(0));
+
+    let result = runner.attack_player(atk, 1, false);
+    assert_eq!(
+        result,
+        AttackResult::AttackerDeletedBySecurity,
+        "without ST19-08 in the stack the aura never fires; \
+         the 8000 attacker loses to the 9000 security Digimon"
+    );
+    assert_eq!(
+        runner.battle_area_size(0),
+        0,
+        "the attacker is deleted by the full-strength security Digimon"
     );
 }
 
@@ -237,8 +453,6 @@ fn st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone() {
     push_to_trash(&mut runner, 1, "LIB_TRASH");
     push_to_trash(&mut runner, 1, "LIB_COST5_TRASH");
 
-    let trash_before = runner.game.players[1].trash.len(); // 2
-    let hand_before = runner.game.players[1].hand.len();   // 2
     let memory_before = runner.memory();
 
     // ── Trigger the security check ──────────────────────────────────────────
@@ -282,38 +496,35 @@ fn st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone() {
         .expect("security pipeline must complete after selection");
 
     // ── Post-resolution assertions ──────────────────────────────────────────
-    // Exactly ONE [LIBERATOR] card must have entered the battle area for free —
-    // "you may play 1 card", never two, even though both zones held a legal
-    // candidate. Regression guard for G-SECURITY-SKILL-RESUME-REFIRE: the old
-    // `SecuritySkillDrain` re-enqueue re-fired the `[Security]` effect on
-    // resume, and with a candidate still left in the other zone it double-played
-    // a second card. The fix records `security_skill_drained` so the effect
-    // fires exactly once.
-    let played_count = [
-        in_battle_area(&runner, 1, "LIB_HAND"),
-        in_battle_area(&runner, 1, "LIB_TRASH"),
-    ]
-    .iter()
-    .filter(|&&played| played)
-    .count();
-    assert_eq!(
-        played_count, 1,
-        "exactly one [LIBERATOR] card is played free — 'you may play 1 card', never two"
+    // The printed text plays exactly ONE [LIBERATOR] card. The [Security]
+    // clause resolves once, so exactly one of the two legal candidates
+    // reaches the battle area and the other stays in its origin zone.
+    let lib_hand_played = in_battle_area(&runner, 1, "LIB_HAND");
+    let lib_trash_played = in_battle_area(&runner, 1, "LIB_TRASH");
+    assert!(
+        lib_hand_played ^ lib_trash_played,
+        "exactly 1 [LIBERATOR] card must be played to the battle area for free \
+         (LIB_HAND played={lib_hand_played}, LIB_TRASH played={lib_trash_played})"
     );
 
-    // Exactly 1 card left hand ∪ trash to be played. The revealed security card
-    // ST19-08 is itself disposed into player 1's trash after the check, so the
-    // raw (hand+trash) total nets flat (−1 played card, +1 disposed ST19-08);
-    // the `+1` below corrects for that disposal. Mirrors the identity-based
-    // accounting in the sibling trash-origin test and p_189's free-from-trash
-    // test.
-    let trash_after = runner.game.players[1].trash.len();
-    let hand_after = runner.game.players[1].hand.len();
-    assert_eq!(
-        (trash_before + hand_before + 1) - (trash_after + hand_after),
-        1,
-        "exactly 1 card leaves hand ∪ trash (the +1 accounts for ST19-08 disposing into trash)"
-    );
+    // The unplayed candidate stays untouched in its origin zone.
+    if lib_hand_played {
+        assert!(
+            runner.game.players[1]
+                .trash
+                .iter()
+                .any(|c| c.card_id(&runner.game.card_data) == "LIB_TRASH"),
+            "the unplayed LIB_TRASH must remain in trash"
+        );
+    } else {
+        assert!(
+            runner.game.players[1]
+                .hand
+                .iter()
+                .any(|c| c.card_id(&runner.game.card_data) == "LIB_HAND"),
+            "the unplayed LIB_HAND must remain in hand"
+        );
+    }
 
     // Memory must not have changed — play_union_bound_free charges nothing.
     assert_eq!(

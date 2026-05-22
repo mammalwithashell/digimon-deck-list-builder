@@ -676,15 +676,15 @@ pub struct SecurityResolutionState {
     /// `OnSecurityCheck` observers via `SecurityRevealSnapshot`.
     pub was_face_up: bool,
     pub phase: SecurityPhase,
-    /// True once the `SecuritySkill` timing has been enqueued for
-    /// `revealed_card`. The `SecuritySkillDrain` arm checks this on every
-    /// entry: on a resume after an optional `[Security]` effect parked on a
-    /// selection, it MUST NOT re-enqueue `SecuritySkill` — the revealed card
-    /// is still in `Game::pending_security`, so a re-enqueue re-collects the
-    /// same effect, an infinite loop when the player declines. Mirrors the
-    /// `Dispose` → `DisposeFinalize` no-re-enqueue guard.
-    /// See G-SECURITY-SKILL-RESUME-REFIRE.
-    pub security_skill_drained: bool,
+    /// Whether the *current* `phase`'s effect-collection step has already
+    /// run. The `*Drain` phases (`SecuritySkillDrain`, `OnSecurityCheckDrain`,
+    /// `OnLoseSecurityDrain`) enqueue their triggered effects exactly once;
+    /// if a drained effect parks on a `pending_selection` the phase stays put
+    /// and is re-entered on resume. Without this guard the re-entry would
+    /// re-enqueue (and re-fire) the same effects — an infinite loop when the
+    /// player declines an optional clause. `set_security_phase` clears it on
+    /// every phase transition so each phase gets a fresh enqueue budget.
+    pub phase_enqueue_done: bool,
     /// Remaining security-check iterations for the owning `Player` attack.
     /// Absorbed from the outer loop counter so a pause inside phase 1
     /// doesn't drop the remaining checks.

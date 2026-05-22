@@ -9,6 +9,80 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
 
+## BG Imperial substrate closeout — 2026-05-20
+
+The `bg-imperial-substrate-closeout` change (OpenSpec) re-audited the 24-card BG
+Imperial pool and closed the genuinely-remaining DSL substrate gaps. ~12 gap IDs
+that the BG trackers still listed as open were verified stale (closed by Phase 2
+Tracks A–J, DNA Omnimon completion, Puppets sweep) — see
+`openspec/changes/bg-imperial-substrate-closeout/phase-0-audit.md`. The 5 genuine
+substrate gaps below landed. Engine/DSL only — no card YAML re-authored (the BG
+card re-authoring sweep runs separately); no `ACTION_SPACE_SIZE` / tensor changes.
+
+**Audit correction:** the Phase 0 audit initially flagged 9 gaps, but a second
+review found 4 of them already covered by pre-existing engine capability — they
+were NOT genuine gaps and no new predicate was added for them:
+
+- **G-PRED-STACK-SIZE-LTE-SOURCE / G-DSL-STACK-SIZE-LTE-SOURCE** — already
+  expressible as `materials_count_lte: { formula: { source_material_count: {} } }`
+  (the `source_material_count` formula resolves the source permanent's
+  digivolution-card count). BT16-027 / AD1-025 use this path.
+- **G-DSL-CARRIER-HAS-KEYWORD** — already covered: `has_keyword` resolves against
+  the carrier permanent for inherited clauses (`enqueue_from_permanent` sets
+  `source_permanent` to the carrier handle).
+- **G-DSL-AURA-TARGET-SOURCE-PERMANENT** — already covered: a `kind: aura` with
+  `scope: inherited` + `target: {}` is a carrier-only self-aura.
+- **G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT** — EX1-014's `[Free]`-trait arm is
+  covered by the existing `source_permanent_trait_has` predicate.
+
+### Tier 1 — DSL predicate leaves (genuinely new)
+
+- **G-DSL-EFFECT-SUSPENDED-RESULT** — `effect_suspended_any_opponent_digimon` result
+  predicate; opponent-side read-time filter on the existing owner-agnostic suspend
+  result log. Driver BT16-025 clause 2.
+- **G-EVENT-CARD-COLOR-IS** — `event_card_color_has` predicate: event card has ≥1 of
+  the listed colors (intersection; sibling of subset-semantics `event_card_color_only`).
+  Driver BT16-085.
+
+Test: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group7_predicate_batch`
+
+### Tier 2 — engine-touching DSL verbs
+
+- **G-SELECT-OPPONENT-SOURCES** — `select_opponent_sources` step + `EffectContext::select_opponent_sources`;
+  opponent-side mirror of `select_own_sources` (exact-N / up-to-N, PASS-after-min,
+  `filter:`, `target:`, stable refs). Driver BT16-085.
+  Test: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl phase2g_select_sources`
+- **G-ZONE-SELECTED-TRASH-TO-DECK-TOP** — `move_trash_card_to_deck_top` verb: a single
+  `select_trash`-bound card → owner's deck top. Driver LM-030 clause B.
+- **G-ANY-RETURNED-CARD-PREDICATE** — `returned_card_matching` filtered result predicate
+  (distinct from the bare-bool `any_returned_card` alias); result log records returned
+  card handles. BT17-077 clause-1b player-choice-of-trash verified already composable
+  via `select_effect_choice` + `if`. Driver BT17-077.
+  Test: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl zone_movement_verbs`
+
+### Follow-up engine gaps closed (2026-05-21)
+
+The two engine gaps that left BG Imperial at 22/24 were scoped and then closed,
+bringing the archetype to **24/24 IMPLEMENTED**.
+
+- **G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME** — `EffectContext::return_card_source_to_hand(perm, card)`
+  (sibling of `trash_card_source`, routes the extracted source `Card` to its
+  owner's hand; does NOT fire `OnDigivolutionCardTrashed`) + the `Vec`-taking
+  `return_selected_sources_to_hand` wrapper + the `return_selected_sources_to_hand`
+  DSL verb (mirrors `trash_selected_sources`). Closes BT12-031 Step C → BT12-031
+  IMPLEMENTED. Test: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt12_031`.
+- **G-COST-REDUCE-ALLY-DIGIVOLVE** (umbrella over `G-COST-REDUCE-NEXT-SINGLE-FIRE`
+  + `G-PAY-COST-SELECT-ARBITRARY-SUSPEND`) — new `player_cost_reducer.rs` module
+  (`PlayerDigivolveCostReducer` data struct), `Game` fields, `EffectContext::arm_player_digivolve_cost_reducer`,
+  and a pre-cost accept/decline + suspend-cost `PendingSelection` chain wired into
+  a split `digivolve_from_hand` / `digivolve_from_hand_inner`. The synchronous
+  `scan_before_pay_cost_reduction_with_target` hot path was deliberately NOT
+  touched (the prompt runs before it) — normal/DNA/Blast digivolve confirmed
+  unregressed. DSL surface: `arm_digivolve_cost_reducer` step. End-of-turn expiry
+  wired in `rotate_turn_player`. Closes BT3-103 Clause 0 → BT3-103 IMPLEMENTED.
+  Tests: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cost_hooks player_digivolve_reducer`;
+  `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt3_103`.
+
 ## Phase 2 / DNA Omnimon completion closure — 2026-05-20
 
 The `complete-dna-omnimon-archetype` change drove the DNA Omnimon archetype (64 cards)
@@ -2100,6 +2174,22 @@ The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE
 - **Residual:** `BT22-098` has a distinct residual filed as `PUPPETS-G033` — the Option-card pipeline's integrated resolution (pending optional play + post-resolution battle-area placement as a Delayed Option) is not yet proven. That is a different, narrower shape from the standard `<Delay>` main-phase activation that this entry closes.
 - **Related:** `PUPPETS-G009` in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`; `PUPPETS-G033` (BT22-098 Option pipeline residual).
 
+## Hybrid Gap: `on_ally_played` event-gated Delay Options (PUPPETS-G004) — RESOLVED 2026-05-21
+
+- **Severity:** 🔴 BLOCKING
+- **Discovered in:** Puppets (2026-04-28 archetype assessment)
+- **Card(s):** `P-229` Unique Emblem: Narrative Ronde. (`BT22-098`'s sibling `on_suspend` slice closed earlier, 2026-05-02.)
+- **Effect text:** "[Your Turn] When any of your [Mirai Kinosaki]s are played, `<Delay>` (By trashing this card after the placing turn, activate the effect below.) 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3."
+- **What was missing (two halves):**
+  - **DSL:** `code/digimon-engine/src/dsl_cards/lower_delay.rs` mapped only `on_suspend` / `on_unsuspend` to `DelayTrigger::OnEvent`. `trigger: on_ally_played` fell through to `DelayTrigger::EndOfYourNextTurn`, which auto-expires the Option on the wrong schedule.
+  - **Engine:** `enqueue_event_gated_delayed_options` (the scan that fires placed Delay Options matching an observed event) was only invoked from the `EventObserved` / `AttackTargetChanged` dispatch in `effect_queue.rs` `enqueue_triggered`. The `OnAllyPlayed` play broadcast uses `TriggerSource::EnteredField`, which never reached it — a placed Delay Option keyed to `on_ally_played` never fired.
+- **Resolution:**
+  - `lower_delay.rs` now maps `CompiledTiming::OnAllyPlayed` → `DelayTrigger::OnEvent(EffectTiming::OnAllyPlayed)` alongside the existing event arm.
+  - `effect_queue.rs` `enqueue_triggered` now fans `TriggerSource::EnteredField` dispatches out to `enqueue_event_gated_delayed_options`. The candidate scan only matches Options whose `OnEvent(event_timing)` equals the dispatch `timing`, so dispatching for both the `OnEnterFieldAnyone` and `OnAllyPlayed` play broadcasts is harmless.
+  - `OnEvent(_)` Delay Options park indefinitely (`compute_delay_trash_turn` = `u16::MAX`), so the Option's "place this card in the battle area" tail is faithful with no turn-keyed auto-trash approximation.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_229` — 13 tests pass, 0 ignored, incl. placing-turn gate, non-Mirai event-predicate gate, and decline-still-pays-the-trash-cost. Full engine suite green (`bt22_098` `on_suspend` sibling unaffected).
+- **Related:** `PUPPETS-G004` in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`, `qa/dsl-vocab-gaps.md`; `G-DELAY-EVENT-GATED` in `qa/archetype-qa/engine-gaps.md`.
+
 ## Engine Gap: Effect-spawned permanent with end-of-turn deletion rider — RESOLVED 2026-05-20 (Puppets substrate sweep)
 
 - **Severity:** 🔴 BLOCKING (closed for provenance-bound cleanup substrate)
@@ -2147,14 +2237,16 @@ design.md.
 
 ### Gaps CLOSED
 
-- **G-SECURITY-SKILL-RESUME-REFIRE** (engine) — the `SecuritySkillDrain` arm of
-  `combat.rs::drive_security_resolution` re-enqueued `EffectTiming::SecuritySkill`
+- **G-SECURITY-SKILL-RESUME-REFIRE** (engine) — a drain arm of
+  `combat.rs::drive_security_resolution` re-enqueued its `EffectTiming`
   on every resume, so declining an optional `[Security]` "you may" effect
   infinite-looped (and, with 2+ candidates, double-played). Fixed by a
-  `security_skill_drained: bool` on `SecurityResolutionState`: the timing is
-  enqueued exactly once; resume just flushes any continuation and advances.
-  Mirrors the `Dispose` → `DisposeFinalize` guard. Unblocks **P-189**; also fixes
-  P-206 / ST19-08 and a latent double-play (`st19_08` count assertion corrected).
+  `phase_enqueue_done: bool` on `SecurityResolutionState`: each drain phase
+  enqueues its timing exactly once; resume just flushes any continuation and
+  advances. The flag covers all three drain phases (superseding an earlier
+  single-phase `security_skill_drained` variant). Mirrors the `Dispose` →
+  `DisposeFinalize` guard. Unblocks **P-189**; also fixes P-206 / ST19-08 and a
+  latent double-play (`st19_08` count assertion corrected).
 - **G-ZONE-SELECTED-TRASH-TO-DECK-TOP** (engine + DSL) — no method moved a
   selected trash card to the deck TOP. Added `EffectContext::return_trash_cards_to_deck_top`
   (reverse-push so the first selected card lands on top) and a
@@ -2237,3 +2329,13 @@ execution route is still genuinely missing for the 3 out-of-scope cards
 - **Closed by:** `unblock-medusamon-tier3-cards` OpenSpec change, 2026-05-22.
   Full engine suite green (`cards_behavioral` 2722 passed / 129 ignored / 0 failed;
   `option_flow` 93; `mask_and_tensor` 157).
+
+## DSL Gap: Card-level "also treated as [Name]" identity alias — RESOLVED 2026-05-21
+
+- **Severity:** 🟡 PARTIAL (DSL-vocabulary gap + engine name-matching substrate)
+- **Discovered in:** Puppets / Royal Knights (BT23-077 Sistermon Ciel)
+- **Card(s):** `BT23-077` Sistermon Ciel ("Also Treated As [Sistermon Noir]")
+- **Effect text:** Printed identity line "Also Treated As [Sistermon Noir]" (DCGO `ChangeCardNamesClass`). Not part of `cards.json` `effect_description_eng`; carried by the legacy Python script as `card.also_treated_as_names = ['Sistermon Noir']`.
+- **Resolution:** Added card-level DSL field `also_treated_as: [Name, ...]` to `CardSpec`, lowered to `CompiledCard.also_treated_as` and threaded into a new static `CardData.also_treated_as` by the DSL→engine bridges (`dsl_bridge::enrich_card_data_with_dsl_alt_paths`, `debug_runner::card_data_from_compiled`, `tests/support/dsl_card_data.rs`). Generic name-matching honors the alias set: `eval_card_fields` `name_is` / `name_contains` / `name_in`, and `CardSource::card_names` / `contains_card_name`. Unlike `digixros_aliases` (DigiXros-recipe-scoped, deliberately overlay-blind to generic name predicates — see the DigiXros name-alias entry above), `also_treated_as` is an always-on identity alias visible to generic name predicates in every zone. `BT23-077.yaml` authored with `also_treated_as: [Sistermon Noir]`. Supersedes the legacy Python `CardSource.also_treated_as_names` resolution (2026-03-14) for the Rust engine.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- also_treated_as`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt23_077`.
+- **Closed by:** branch `claude/laughing-lehmann-5771d9`, 2026-05-21.

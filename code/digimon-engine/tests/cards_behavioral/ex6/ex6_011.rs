@@ -1,17 +1,36 @@
-//! EX6-011 RagnaLoardmon.
+//! EX6-011 RagnaLoardmon — Digimon, Lv.7, Red/Black, ACE.
 //!
-//! Printed evidence from data/cards.json:
-//! - Digimon, red/black, Lv.7, play cost 9, DP 15000.
-//! - Traits: Unique / Legend-Arms; attribute Virus.
-//! - Digivolve: red Lv.6 cost 5.
-//! - DNA Digivolve: red Lv.6 + black Lv.6 cost 0.
-//! - [Hand][Counter] Blast DNA Digivolve ([Durandamon] + [BryweLudramon]).
-//! - <Raid>, <Reboot>.
-//! - [On Play][When Digivolving] trash opponent top security; this Digimon is
-//!   unaffected by opponent effects until end of their turn. Then, if DNA
-//!   digivolving, De-Digivolve 1 all opponent Digimon and delete 1 of their
-//!   Digimon.
-//! - Inherited: Ace Overflow <-5>.
+//! # Card text (cards.json)
+//! Digimon, red/black, Lv.7, play cost 9, DP 15000, attribute Virus.
+//! Traits: Unique / Legend-Arms. ACE (Ace Overflow <-5>).
+//! Digivolve: from Black Lv.6 for 5 memory.
+//! DNA Digivolve: Red Lv.6 + Black Lv.6, cost 0.
+//!
+//! "[Hand] [Counter] <Blast DNA Digivolve ([Durandamon] + [BryweLudramon])>
+//!  (1 of your specified Digimon and 1 specified card in hand may DNA
+//!  digivolve into this card.)"
+//! "<Raid>", "<Reboot>"
+//! "[On Play] [When Digivolving] Trash the top card of your opponent's
+//!  security stack and this Digimon isn't affected by your opponent's effects
+//!  until the end of their turn. Then, if DNA digivolving, <De-Digivolve 1>
+//!  all of your opponent's Digimon and delete 1 of their Digimon."
+//! Inherited: "Ace Overflow <-5>".
+//!
+//! # DCGO C# reference
+//! DCGO/Assets/Scripts/CardEffect/EX6/Red/EX6_011.cs
+//!
+//! # Patterns this test covers
+//! - Alt-path metadata: standard Black Lv.6 digivolve, Red+Black Lv.6 DNA,
+//!   and [Hand][Counter] Blast DNA digivolve with named materials.
+//! - Counter-window Blast DNA activation (G-COUNTER-BLAST-DNA-ACTIVATION,
+//!   resolved 2026-05-15 Track D / PUPPETS-G032 closed): defender attack into
+//!   a field material, CounterTiming exposes the Blast DNA action, field then
+//!   hand material pending selections, resulting stack ordering.
+//! - E1 [On Play]/[When Digivolving] dual-timing triggered clause.
+//! - D-style turn-scoped CannotBeAffected immunity grant (per source kind).
+//! - DNA-origin conditional tail: for-each De-Digivolve all + mandatory
+//!   single delete pending selection.
+//! - G runtime keyword grants (Raid, Reboot) and BlastDigivolve marker.
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,

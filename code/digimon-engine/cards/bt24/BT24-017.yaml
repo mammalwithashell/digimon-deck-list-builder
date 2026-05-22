@@ -99,7 +99,7 @@ effects:
   - kind: grant_keyword
     keyword: Piercing
 
-  # ─── [When Digivolving] ──────────────────────────────────────────────────
+  # ─── [When Digivolving] ──────────────────────────────────────────────────────
   #
   # Mandatory (not optional) triggered clause. Sequence:
   #   1. Delete 1 of opponent's lowest-DP Digimon.
@@ -110,14 +110,16 @@ effects:
   - when: when_digivolving
     summary: "[When Digivolving] Delete lowest-DP opp Digimon; return 2 trash for 2 Tokens; +2000 DP per opp Digimon"
     process:
-      # Step 1 — delete opponent's lowest-DP Digimon.
-      # `selector: lowest_dp` offers only the lowest-effective-DP candidate(s).
-      # If no opponent Digimon exist the step installs no selection (no-op).
+      # Step 1 — delete opponent's lowest-DP Digimon. The `selector: lowest_dp`
+      # field restricts candidates to the opponent's lowest-effective-DP
+      # Digimon; it is recomputed across process steps and respects
+      # target-legality. If no opponent Digimon exist the step installs no
+      # selection (no-op).
       - select_opponent_permanent:
           bind_as: victim
           filter: { kind: digimon }
           selector: lowest_dp
-          prompt: "Delete 1 of your opponent's lowest DP Digimon"
+          prompt: "Delete opponent's lowest-DP Digimon"
       - delete_permanent: { target: victim }
 
       # Step 2 — opponent returns 2 trash cards to the bottom of their deck.

@@ -25,6 +25,7 @@ fn digixros_material_matching_sees_scoped_alias_but_name_predicates_do_not() {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: vec!["Shoutmon".to_string()],
+        also_treated_as: Vec::new(),
     };
 
     assert!(
