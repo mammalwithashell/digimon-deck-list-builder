@@ -28,41 +28,16 @@
 //! - **[Main] mandatory `select_opponent_permanent` + `de_digivolve` (amount 4,
 //!   stop_at_level 3) + `place_self_as_delay_option`** — combines the EX9-013
 //!   `de_digivolve` shape with the BT17-095 `place_self_as_delay_option` tail.
-//!   The explicit place-step is required here because Clause 2 is BLOCKED and
-//!   not authored as `kind: delay`, so `classify_option_subtype` would treat
-//!   this card as Standard (not Delay) and would NOT auto-seat it.
+//!   The explicit place-step matches the printed "Then, place this card in the
+//!   battle area" after the [Main] body resolves.
+//!
+//! - **[Your Turn] CS-attack `<Delay>`** — `kind: delay`, `trigger:
+//!   on_ally_attack`, and `attacker_trait_has: CS`. This covers the
+//!   event-gated Delay lowering, attack-event fan-out, and attacker context.
 //!
 //! - **Inherited [Security] same-shape body + `place_self_as_delay_option`** —
 //!   `scope: inherited` + `when: on_security` mirrors BT22-099 Clause 3 with
 //!   the BT17-095 placement tail.
-//!
-//! # Known gap (BLOCKED clause) — code-verified 2026-05-20
-//!
-//! The [Your Turn] CS-attack `<Delay>` clause is BLOCKED on
-//! **G-DSL-DELAY-ON-ATTACK-EVENT**. The two halves previously cited
-//! (G-DSL-ON-ALLY-ATTACK-TIMING, G-ATK-TRAIT-FILTER) are STALE:
-//! `digimon_dsl::clause::Timing` HAS `OnAllyAttack`/`OnAttack`/
-//! `OnOpponentAttack` (clause.rs:86-91), they map through `timing_map.rs`
-//! and `lower_triggered.rs` to `Effect::on_ally_attack`, and an
-//! `attacker_trait_has` predicate exists (predicate.rs:927). What is
-//! genuinely missing is the `<Delay>`-on-attack path:
-//!
-//!   1. `lower_delay.rs:55-65` maps only `EndOfYourTurn`/`StartOfYourTurn`/
-//!      `EndOfYourNextTurn`/`OnSuspend`/`OnUnsuspend` to a specific
-//!      `DelayTrigger`; every other timing silently degrades to
-//!      `EndOfYourNextTurn`.
-//!   2. `effect_queue.rs:459-464` only fans out to
-//!      `enqueue_event_gated_delayed_options` for `TriggerSource::EventObserved`
-//!      / `AttackTargetChanged`, but `combat.rs:2953` dispatches `OnAllyAttack`
-//!      via `TriggerSource::PlayerBattleArea` — so attack events never reach
-//!      the event-gated-delay drainer.
-//!   3. `attacker_trait_has` resolves the attacker only via
-//!      `rctx.attack_target_change()` (unset for a plain attack); an
-//!      event-gated delay condition cannot read the attacker's traits.
-//!
-//! A faithful fix is a 3-system change (delay lowering + combat dispatch +
-//! a delay-context attacker predicate). The clause is omitted from the YAML
-//! until that substrate lands; the behavioral test is `#[ignore]`'d.
 //!
 //! # Faithfulness audit (per clause)
 //!
@@ -81,7 +56,9 @@
 //!    `place_self_as_delay_option: {}` matches DCGO
 //!    `CardEffectCommons.PlaceDelayOptionCards(card, activateClass)`.
 //!
-//! 2. **[Your Turn] CS-attack <Delay>** — BLOCKED (see header).
+//! 2. **[Your Turn] CS-attack <Delay>** — event-gated Delay lowers to
+//!    `DelayTrigger::OnEvent(OnAllyAttack)`, rejects non-CS attackers, and
+//!    trashes BT23-096 before the de-digivolve body resolves.
 //!
 //! 3. **[Security] (inherited) same body** — `scope: inherited` + `when:
 //!    on_security` + same select/de-digi/place body. Mandatory (no canNoSelect
@@ -95,7 +72,9 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
+use digimon_engine::permanent::OptionState;
+use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 const CARD_ID: &str = "BT23-096";
@@ -109,7 +88,7 @@ fn filler(id: &str) -> CardData {
 }
 
 /// A Digimon-kind card with the CS trait — for color-bypass gate (Clause 0)
-/// and as an attacker filter target (Clause 2 — BLOCKED test).
+/// and as an attacker filter target (Clause 2).
 fn make_cs_digimon(card_id: &str, name: &str) -> CardData {
     let mut c = make_test_card(card_id, name);
     c.card_kind = CardKind::Digimon;
@@ -139,6 +118,16 @@ fn make_opp_digimon(card_id: &str, name: &str) -> CardData {
     c.level = Some(5);
     c.dp = Some(7000);
     c.play_cost = 7;
+    c.colors = vec![CardColor::Red];
+    c
+}
+
+fn make_level_digimon(card_id: &str, name: &str, level: u8, dp: i32) -> CardData {
+    let mut c = make_test_card(card_id, name);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(level);
+    c.dp = Some(dp);
+    c.play_cost = level as u16;
     c.colors = vec![CardColor::Red];
     c
 }
@@ -184,12 +173,13 @@ fn bt23_096_is_option_cost_5_with_cs_trait() {
     );
 }
 
-/// Three clauses total (Clause 2 is BLOCKED and OMITTED):
+/// Four clauses total:
 ///   [0] flood_gate (declarative, IgnoreColorRequirement)
 ///   [1] main_from_hand (triggered)
-///   [2] inherited on_security (triggered, scope: Inherited)
+///   [2] event-gated Delay on CS ally attack
+///   [3] inherited on_security (triggered, scope: Inherited)
 #[test]
-fn bt23_096_has_three_clauses_in_expected_order() {
+fn bt23_096_has_four_clauses_in_expected_order() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -203,9 +193,8 @@ fn bt23_096_has_three_clauses_in_expected_order() {
     let card = runner.compiled_card(CARD_ID).expect("BT23-096 compiled");
     assert_eq!(
         card.effects.len(),
-        3,
-        "expected 3 clauses (flood_gate, main_from_hand, inherited on_security); \
-         [Your Turn] Delay clause is BLOCKED and omitted; got {}",
+        4,
+        "expected 4 clauses (flood_gate, main_from_hand, Delay on ally attack, inherited on_security); got {}",
         card.effects.len()
     );
 }
@@ -351,11 +340,9 @@ fn bt23_096_clause_1_process_ends_with_place_self_as_delay_option() {
     }
 }
 
-/// Clause 2 (inherited on_security): inherited scope, OnSecurity timing,
-/// process contains the same de_digivolve + place_self body. Mandatory
-/// (DCGO has no canNoSelect on PlaceDelayOptionCards security path).
+/// Clause 2: event-gated Delay on allied CS attack.
 #[test]
-fn bt23_096_clause_2_inherited_security_dedigivolve_and_place_self() {
+fn bt23_096_clause_2_is_on_ally_attack_delay() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -369,15 +356,65 @@ fn bt23_096_clause_2_inherited_security_dedigivolve_and_place_self() {
     let card = runner.compiled_card(CARD_ID).expect("BT23-096 compiled");
 
     match &card.effects[2] {
+        CompiledClause::Declarative(CompiledDeclarativeClause::Delay {
+            trigger,
+            active_when,
+            process,
+            ..
+        }) => {
+            assert_eq!(
+                *trigger,
+                CompiledTiming::OnAllyAttack,
+                "Clause 2 must be a Delay keyed to on_ally_attack"
+            );
+            let active_when = active_when
+                .as_ref()
+                .expect("Delay clause must gate on [Your Turn] and CS attacker");
+            let active_dbg = format!("{:?}", active_when);
+            assert!(
+                active_dbg.contains("your_turn: Some(true)")
+                    && active_dbg.contains("attacker_trait_has: Some(\"CS\")"),
+                "Delay active_when must require your_turn and attacker_trait_has: CS; got {active_dbg}"
+            );
+            let process_dbg = format!("{:?}", process);
+            assert!(
+                process_dbg.contains("DeDigivolve")
+                    && (process_dbg.contains("amount: Some(4)")
+                        || process_dbg.contains("amount: 4")),
+                "Delay process must perform <De-Digivolve 4>; got {process_dbg}"
+            );
+        }
+        other => panic!("clause 2 must be Declarative(Delay); got {:?}", other),
+    }
+}
+
+/// Clause 3 (inherited on_security): inherited scope, OnSecurity timing,
+/// process contains the same de_digivolve + place_self body. Mandatory
+/// (DCGO has no canNoSelect on PlaceDelayOptionCards security path).
+#[test]
+fn bt23_096_clause_3_inherited_security_dedigivolve_and_place_self() {
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(0)
+        .start();
+
+    let card = runner.compiled_card(CARD_ID).expect("BT23-096 compiled");
+
+    match &card.effects[3] {
         CompiledClause::Triggered(t) => {
             assert_eq!(
                 t.scope,
                 CompiledScope::Inherited,
-                "clause 2 must have Inherited scope"
+                "clause 3 must have Inherited scope"
             );
             assert!(
                 t.when.contains(&CompiledTiming::OnSecurity),
-                "clause 2 must fire at OnSecurity; got {:?}",
+                "clause 3 must fire at OnSecurity; got {:?}",
                 t.when
             );
             assert!(
@@ -390,7 +427,7 @@ fn bt23_096_clause_2_inherited_security_dedigivolve_and_place_self() {
             assert!(
                 dbg_proc.contains("DeDigivolve")
                     && (dbg_proc.contains("amount: Some(4)") || dbg_proc.contains("amount: 4")),
-                "clause 2 process must contain a DeDigivolve(amount=4) step; got {:?}",
+                "clause 3 process must contain a DeDigivolve(amount=4) step; got {:?}",
                 t.process
             );
             let has_place_step = t
@@ -399,12 +436,12 @@ fn bt23_096_clause_2_inherited_security_dedigivolve_and_place_self() {
                 .any(|s| matches!(s, CompiledStep::PlaceSelfAsDelayOption));
             assert!(
                 has_place_step,
-                "clause 2 process must contain PlaceSelfAsDelayOption; got {:?}",
+                "clause 3 process must contain PlaceSelfAsDelayOption; got {:?}",
                 t.process
             );
         }
         other => panic!(
-            "clause 2 must be Triggered(inherited on_security); got {:?}",
+            "clause 3 must be Triggered(inherited on_security); got {:?}",
             other
         ),
     }
@@ -507,9 +544,9 @@ fn bt23_096_security_clause_shares_body_shape_with_main() {
         _ => panic!("clause 1 must be Triggered"),
     };
 
-    let sec_proc_dbg = match &card.effects[2] {
+    let sec_proc_dbg = match &card.effects[3] {
         CompiledClause::Triggered(t) => format!("{:?}", t.process),
-        _ => panic!("clause 2 must be Triggered"),
+        _ => panic!("clause 3 must be Triggered"),
     };
 
     // Both bodies must mention the same key step shapes (select-opp + de-digi-4
@@ -528,46 +565,130 @@ fn bt23_096_security_clause_shares_body_shape_with_main() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 4 — BLOCKED: Clause 2 [Your Turn] CS-attack <Delay>
+// Section 4 — Clause 2 [Your Turn] CS-attack <Delay>
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// BLOCKED: this clause requires three gap closures (G-DSL-ON-ALLY-ATTACK-
-/// TIMING + G-ATK-TRAIT-FILTER + G-DSL-DELAY-ON-ATTACK-EVENT). See the YAML
-/// header for the full analysis. When the gaps close, this test should:
-///   1. Place a CS-trait Digimon on player 0's field.
-///   2. Activate BT23-096 from hand (Main clause) — picks any opp digimon to
-///      de-digivolve, then BT23-096 lands as a Delay-Option permanent.
-///   3. Advance one turn (Delay activation gate: "after the placing turn").
-///   4. Have the CS Digimon attack — observe that the Delay activates,
-///      prompting to trash BT23-096 + de_digivolve another opp Digimon.
-///   5. Verify (a) BT23-096 is trashed, (b) the new target's stack lost up
-///      to 4 cards (capped at level 3).
-///   6. Negative: have a NON-CS ally attack — verify the Delay does NOT
-///      activate (gap-half: G-ATK-TRAIT-FILTER must reject non-CS attackers).
 #[test]
-#[ignore = "BLOCKED: G-DSL-DELAY-ON-ATTACK-EVENT — code-verified 2026-05-20. The previously \
-            cited halves are STALE: digimon_dsl::clause::Timing DOES have OnAllyAttack / \
-            OnAttack / OnOpponentAttack (clause.rs:86-91), they map through \
-            timing_map.rs:16-17 and lower_triggered.rs (Effect::on_ally_attack), so \
-            OnAllyAttack works for TRIGGERED clauses; and an `attacker_trait_has` predicate \
-            EXISTS (predicate.rs:927). The genuine, still-open blocker is the <Delay> path: \
-            (1) lower_delay.rs:55-65 maps only EndOfYourTurn/StartOfYourTurn/\
-            EndOfYourNextTurn/OnSuspend/OnUnsuspend to a specific DelayTrigger — every \
-            other timing (incl. OnAllyAttack) silently degrades to EndOfYourNextTurn; \
-            (2) even if lower_delay mapped it, effect_queue.rs:459-464 only calls \
-            enqueue_event_gated_delayed_options for TriggerSource::EventObserved / \
-            AttackTargetChanged, but combat.rs:2953 dispatches OnAllyAttack via \
-            TriggerSource::PlayerBattleArea — so attack events never reach the \
-            event-gated-delay drainer; (3) `attacker_trait_has` resolves the attacker \
-            only via rctx.attack_target_change() (predicate.rs:928), which is unset for a \
-            plain attack — an event-gated delay condition has no way to read the \
-            attacker's traits. A faithful fix is a 3-system change (delay lowering + \
-            combat dispatch fan-out to event-gated delays + a delay-context attacker \
-            predicate), not a focused card fix. The [Your Turn] CS-attack <Delay> clause \
-            is omitted from BT23-096.yaml until that substrate lands."]
-fn bt23_096_your_turn_cs_attack_delay_dedigi4_BLOCKED() {
-    // See the #[ignore] reason above for the precise, code-verified gap analysis.
-    // When the substrate lands, implement per the scaffold in the doc-comment.
+fn bt23_096_your_turn_cs_attack_delay_dedigi4() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_cs_digimon("CS-ATK", "CS Attacker"))
+        .add_card(make_level_digimon("MAIN-L3", "Main Lv3", 3, 3000))
+        .add_card(make_level_digimon("MAIN-L4", "Main Lv4", 4, 4000))
+        .add_card(make_level_digimon("MAIN-L5", "Main Lv5", 5, 7000))
+        .add_card(make_level_digimon("DELAY-L3", "Delay Lv3", 3, 3000))
+        .add_card(make_level_digimon("DELAY-L4", "Delay Lv4", 4, 4000))
+        .add_card(make_level_digimon("DELAY-L5", "Delay Lv5", 5, 7000))
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.game.turn_count = 1;
+
+    let main_target = runner.place_stack(1, &["MAIN-L3", "MAIN-L4", "MAIN-L5"]);
+    assert!(runner.game.activate_hand_main(0, 0));
+    runner.auto_resolve().expect("resolve [Main] placement");
+    runner
+        .game
+        .delete_permanent_with_cause(main_target, ReplacementCause::OpponentEffect);
+    runner.auto_resolve().expect("clear main target deletion");
+
+    let comet = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
+        .expect("BT23-096 should be placed in battle area as Delay");
+    assert!(matches!(
+        runner.game.players[0].battle_area[comet].option_state,
+        OptionState::Delayed {
+            trigger: DelayTrigger::OnEvent(EffectTiming::OnAllyAttack),
+            ..
+        }
+    ));
+
+    runner.game.turn_count += 2;
+    let attacker = runner.place_on_field(0, "CS-ATK", Some(0));
+    let delay_target = runner.place_stack(1, &["DELAY-L3", "DELAY-L4", "DELAY-L5"]);
+
+    runner.attack_digimon(attacker, delay_target, false);
+    runner
+        .auto_resolve()
+        .expect("resolve Comet Hammer Delay target selection");
+
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
+        "BT23-096 should trash itself as the Delay cost"
+    );
+    let target = &runner.game.players[1].battle_area[delay_target.index as usize];
+    assert_eq!(
+        target.stack_size(),
+        1,
+        "Delay target should be de-digivolved down to its level-3 base"
+    );
+}
+
+#[test]
+fn bt23_096_your_turn_delay_does_not_fire_for_non_cs_attacker() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_level_digimon("NON-CS", "Plain Attacker", 4, 4000))
+        .add_card(make_level_digimon("MAIN-L3", "Main Lv3", 3, 3000))
+        .add_card(make_level_digimon("MAIN-L4", "Main Lv4", 4, 4000))
+        .add_card(make_level_digimon("MAIN-L5", "Main Lv5", 5, 7000))
+        .add_card(make_level_digimon("DELAY-L3", "Delay Lv3", 3, 3000))
+        .add_card(make_level_digimon("DELAY-L4", "Delay Lv4", 4, 4000))
+        .add_card(make_level_digimon("DELAY-L5", "Delay Lv5", 5, 7000))
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.game.turn_count = 1;
+
+    let main_target = runner.place_stack(1, &["MAIN-L3", "MAIN-L4", "MAIN-L5"]);
+    assert!(runner.game.activate_hand_main(0, 0));
+    runner.auto_resolve().expect("resolve [Main] placement");
+    runner
+        .game
+        .delete_permanent_with_cause(main_target, ReplacementCause::OpponentEffect);
+    runner.auto_resolve().expect("clear main target deletion");
+    runner.game.turn_count += 2;
+
+    let attacker = runner.place_on_field(0, "NON-CS", Some(0));
+    let delay_target = runner.place_stack(1, &["DELAY-L3", "DELAY-L4", "DELAY-L5"]);
+
+    runner.attack_digimon(attacker, delay_target, false);
+    runner.auto_resolve().expect("resolve attack flow");
+
+    assert!(
+        !runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
+        "BT23-096 must not trash itself when the attacker lacks the CS trait"
+    );
+    assert!(
+        runner.game.players[0].battle_area.iter().any(|p| p
+            .top_card()
+            .card_id(&runner.game.card_data)
+            == CARD_ID
+            && matches!(
+                p.option_state,
+                OptionState::Delayed {
+                    trigger: DelayTrigger::OnEvent(EffectTiming::OnAllyAttack),
+                    ..
+                }
+            )),
+        "BT23-096 must not trash itself when the attacker lacks the CS trait"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -292,12 +292,7 @@ pub fn eval_predicate_with_bindings(
         let Some(target) = rctx.cost_target_card else {
             return false;
         };
-        if !eval_predicate_with_bindings(
-            inner,
-            rctx,
-            PredicateSubject::Card(target),
-            bindings,
-        ) {
+        if !eval_predicate_with_bindings(inner, rctx, PredicateSubject::Card(target), bindings) {
             return false;
         }
     }
@@ -373,7 +368,11 @@ pub fn eval_predicate_with_bindings(
         let Some(data) = rctx.game.card_data_for_handle(perm.top_card().handle()) else {
             return false;
         };
-        if !data.traits.iter().any(|x| x.eq_ignore_ascii_case(trait_name)) {
+        if !data
+            .traits
+            .iter()
+            .any(|x| x.eq_ignore_ascii_case(trait_name))
+        {
             return false;
         }
     }
@@ -638,17 +637,14 @@ fn eval_result_bound_fields(
     // returned `CardHandle` is resolved to its identity via
     // `card_data_for_handle` (zone-agnostic) and evaluated as a `Card` subject.
     if let Some(inner) = &pred.returned_card_matching {
-        let any_match = log
-            .returned_to_deck
-            .iter()
-            .any(|&handle| {
-                eval_predicate_with_bindings(
-                    inner,
-                    rctx,
-                    PredicateSubject::Card(handle),
-                    Some(bindings),
-                )
-            });
+        let any_match = log.returned_to_deck.iter().any(|&handle| {
+            eval_predicate_with_bindings(
+                inner,
+                rctx,
+                PredicateSubject::Card(handle),
+                Some(bindings),
+            )
+        });
         if !any_match {
             return false;
         }
@@ -1076,14 +1072,24 @@ fn eval_event_fields(
         }
     }
     if let Some(ref trait_name) = pred.attacker_trait_has {
-        let Some(change) = rctx.attack_target_change() else {
+        let attacker = rctx
+            .attack_target_change()
+            .map(|change| change.attacker)
+            .or_else(|| {
+                rctx.game
+                    .current_trigger_context
+                    .as_ref()
+                    .and_then(|trigger| trigger.event_permanent)
+            })
+            .or_else(|| rctx.attack_attacker());
+        let Some(attacker) = attacker else {
             return false;
         };
         let Some(card) = rctx
             .game
-            .player(change.attacker.player)
+            .player(attacker.player)
             .battle_area
-            .get(change.attacker.index as usize)
+            .get(attacker.index as usize)
             .map(|perm| perm.top_card().handle())
         else {
             return false;
@@ -1690,18 +1696,24 @@ fn eval_card_fields(
     // identity aliases — see `any_effective_name_matches`.
     if let Some(ref n) = pred.name_is {
         let overlay_name = overlay.and_then(|o| o.name.as_deref());
-        if !any_effective_name_matches(&data.card_name, overlay_name, &data.also_treated_as, |name| {
-            name == n.as_str()
-        }) {
+        if !any_effective_name_matches(
+            &data.card_name,
+            overlay_name,
+            &data.also_treated_as,
+            |name| name == n.as_str(),
+        ) {
             return false;
         }
     }
     if let Some(ref n) = pred.name_contains {
         let needle = n.to_lowercase();
         let overlay_name = overlay.and_then(|o| o.name.as_deref());
-        if !any_effective_name_matches(&data.card_name, overlay_name, &data.also_treated_as, |name| {
-            name.to_lowercase().contains(&needle)
-        }) {
+        if !any_effective_name_matches(
+            &data.card_name,
+            overlay_name,
+            &data.also_treated_as,
+            |name| name.to_lowercase().contains(&needle),
+        ) {
             return false;
         }
     }
@@ -1719,9 +1731,12 @@ fn eval_card_fields(
     }
     if let Some(ref names) = pred.name_in {
         let overlay_name = overlay.and_then(|o| o.name.as_deref());
-        if !any_effective_name_matches(&data.card_name, overlay_name, &data.also_treated_as, |name| {
-            names.iter().any(|n| n.as_str() == name)
-        }) {
+        if !any_effective_name_matches(
+            &data.card_name,
+            overlay_name,
+            &data.also_treated_as,
+            |name| names.iter().any(|n| n.as_str() == name),
+        ) {
             return false;
         }
     }
@@ -1768,12 +1783,13 @@ fn eval_card_fields(
         let Some(dp) = data.dp else {
             return false;
         };
-        let perm_target = formula_target.or(rctx.source_permanent).unwrap_or(
-            crate::permanent::PermanentHandle {
-                player: rctx.player,
-                index: 0,
-            },
-        );
+        let perm_target =
+            formula_target
+                .or(rctx.source_permanent)
+                .unwrap_or(crate::permanent::PermanentHandle {
+                    player: rctx.player,
+                    index: 0,
+                });
         if let Some(want) = &pred.dp_eq {
             if dp != eval_dp_constraint(want, rctx, perm_target, bindings) {
                 return false;
@@ -1832,10 +1848,7 @@ fn card_has_alt_path(rctx: &EffectReadContext<'_>, card_id: &str, kind_name: &st
         .any(|p| alt_path_kind_matches(&p.kind, kind_name))
 }
 
-fn alt_path_kind_matches(
-    kind: &digimon_dsl::compiled::CompiledAltPathKind,
-    name: &str,
-) -> bool {
+fn alt_path_kind_matches(kind: &digimon_dsl::compiled::CompiledAltPathKind, name: &str) -> bool {
     use digimon_dsl::compiled::CompiledAltPathKind as K;
     let normalized = name.to_ascii_lowercase().replace('-', "_");
     let kind_str = match kind {
@@ -1956,12 +1969,15 @@ fn field_digimon_has_name(
                 player,
                 index: index as u8,
             };
-            let identity =
-                permanent.synth_identity(rctx.card_data(), &rctx.game.modifiers, handle);
+            let identity = permanent.synth_identity(rctx.card_data(), &rctx.game.modifiers, handle);
             if !kind_matches_field(CompiledCardKind::Digimon, identity.kind) {
                 continue;
             }
-            if identity.card_name == candidate_name {
+            if identity
+                .card_names
+                .iter()
+                .any(|name| name == candidate_name)
+            {
                 return true;
             }
         }
@@ -2047,17 +2063,18 @@ fn eval_permanent_fields(
     let name_is_overlay_match = pred
         .name_is
         .as_ref()
-        .is_some_and(|n| synth_identity.card_name == *n);
+        .is_some_and(|n| synth_identity.card_names.iter().any(|name| name == n));
     let name_contains_overlay_match = pred.name_contains.as_ref().is_some_and(|n| {
         synth_identity
-            .card_name
-            .to_lowercase()
-            .contains(&n.to_lowercase())
+            .card_names
+            .iter()
+            .any(|name| name.to_lowercase().contains(&n.to_lowercase()))
     });
-    let name_in_overlay_match = pred
-        .name_in
-        .as_ref()
-        .is_some_and(|names| names.iter().any(|n| synth_identity.card_name == *n));
+    let name_in_overlay_match = pred.name_in.as_ref().is_some_and(|names| {
+        names
+            .iter()
+            .any(|n| synth_identity.card_names.iter().any(|name| name == n))
+    });
     let color_is_overlay_match = pred.color_is.is_some_and(|want| {
         synth_identity
             .colors

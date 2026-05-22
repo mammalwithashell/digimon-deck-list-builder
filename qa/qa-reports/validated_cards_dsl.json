@@ -1240,10 +1240,10 @@
     },
     "BT17-102": {
       "card_name": "Greymon",
-      "validated_date": "2026-05-20",
-      "report": "complete-dna-omnimon-archetype",
-      "status": "PARTIAL",
-      "gap_kind": "G-DYNAMIC-NAME-ALIAS-FROM-STACK",
+      "validated_date": "2026-05-22",
+      "report": "close-dna-omnimon-partial-gaps",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt17/BT17-102.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_102.rs",
@@ -1252,7 +1252,7 @@
         "D4",
         "B3"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: core card faithfully implemented; one clause omitted on a verified-open engine gap (G-DYNAMIC-NAME-ALIAS-FROM-STACK). Test left #[ignore]'d with an accurate reason."
+      "notes": "DNA Omnimon closure 2026-05-22: G-DYNAMIC-NAME-ALIAS-FROM-STACK resolved via identity.source_name_aliases; dynamic source-name alias test enabled and passing; no raw_rust."
     },
     "BT17-081": {
       "card_name": "Tai Kamiya & Matt Ishida",
@@ -1610,19 +1610,19 @@
     },
     "BT23-096": {
       "card_name": "Comet Hammer",
-      "validated_date": "2026-05-20",
-      "report": "complete-dna-omnimon-archetype",
-      "status": "PARTIAL",
-      "gap_kind": "G-DSL-DELAY-ON-ATTACK-EVENT",
+      "validated_date": "2026-05-22",
+      "report": "close-dna-omnimon-partial-gaps",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "DNA Omnimon",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-096.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_096.rs",
-      "test_count": 12,
+      "test_count": 14,
       "patterns": [
         "D6",
         "E2"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: core card faithfully implemented; one clause omitted on a verified-open engine gap (G-DSL-DELAY-ON-ATTACK-EVENT). Test left #[ignore]'d with an accurate reason."
+      "notes": "DNA Omnimon closure 2026-05-22: G-DSL-DELAY-ON-ATTACK-EVENT resolved via event-backed on_ally_attack Delay dispatch; CS attack and non-CS negative tests enabled and passing; no raw_rust."
     },
     "EX1-068": {
       "card_name": "Ice Wall!",

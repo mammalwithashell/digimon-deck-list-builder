@@ -88,6 +88,7 @@ pub struct CompiledDualOption {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledIdentity {
     pub name_aliases: Vec<CompiledNameAlias>,
+    pub source_name_aliases: Vec<CompiledSourceNameAlias>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -96,6 +97,11 @@ pub struct CompiledNameAlias {
     pub zone: Vec<CompiledZone>,
     pub has_inherited_card_number: Option<String>,
     pub has_inherited_name: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledSourceNameAlias {
+    pub level_lte: Option<u8>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]

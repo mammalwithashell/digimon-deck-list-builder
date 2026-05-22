@@ -27,6 +27,7 @@
 //! # Patterns covered
 //! - Standard + alt digivolve paths (Lv.3 Red and Lv.3 w/Agumon name)
 //! - [When Digivolving] conditional DP buff via `self_digivolution_contains_name`
+//! - [All Turns] dynamic source-derived effective names
 //! - [On Deletion] modal branch (play OR hatch) with optional decline
 //! - Inherited [On Deletion] mirror clause via `scope: inherited`
 //!
@@ -36,9 +37,9 @@
 //! |---------------------------------------------------------|------------------------------------------------------------------------------|-----------------------|
 //! | Standard digivolve Lv.3 Red / cost 3                    | `alt_paths[0]` `level_eq: 3, color_is: red, cost: 3`                         | OK                    |
 //! | Alt digivolve Lv.3 w/Agumon-name / cost 2               | `alt_paths[1]` `level_eq: 3, name_contains: Agumon, cost: 2, ignore_reqs`    | OK                    |
-//! | [When Digivolving] +3000 DP if name is [Koromon]        | `condition: { self_digivolution_contains_name: Koromon }` + `add_dp_modifier`| PARTIAL — see G-DSL-SELF-NAME-IS  |
+//! | [When Digivolving] +3000 DP if name is [Koromon]        | `condition: { self_digivolution_contains_name: Koromon }` + `add_dp_modifier`| OK                    |
 //! | [When Digivolving] then delete opp Digimon ≤ self DP    | `select_opponent_permanent` + `dp_lte: { formula: { source_dp: {} } }`       | OK (G-FORMULA-SOURCE-DP resolved) |
-//! | [All Turns] dynamic name aliasing from material stack   | OMITTED (BLOCKED — G-DYNAMIC-NAME-ALIAS-FROM-STACK)                          | BLOCKED               |
+//! | [All Turns] dynamic name aliasing from material stack   | `identity.source_name_aliases: [{ level_lte: 3 }]`                            | OK                    |
 //! | [On Deletion] may play Tai/Kari Tamer free OR hatch     | `when: on_deletion`, `optional: true`, `select_effect_choice` + 2 branches    | OK                    |
 //! | Inherited [On Deletion] same body                       | `scope: inherited` mirror of above                                            | OK                    |
 //!
@@ -65,18 +66,10 @@
 //!   `ctx.source_permanent.and_then(|h| ctx.game.effective_dp(h)).unwrap_or(0)`.
 //!   File under `qa/dsl-vocab-gaps.md` as a sibling of G-BINDING-DP-FORMULA.
 //!
-//! - **G-DYNAMIC-NAME-ALIAS-FROM-STACK** — DSL identity layer
-//!   (`code/digimon-dsl/src/identity.rs`) has only static `name_aliases`
-//!   gated by zone / inherited filter. There is no runtime closure that
-//!   derives the carrier permanent's name set from its current material
-//!   stack. DCGO uses `ChangeCardNamesClass` with a per-evaluation closure
-//!   (`changeCardNames`) scanning `card.PermanentOfThisCard().DigivolutionCards`
-//!   filtered by `Level <= 3`. Closure requires a new declarative clause kind
-//!   (e.g. `kind: dynamic_name_alias`) plus engine-side propagation through
-//!   every name-predicate evaluator (`name_is`, `name_contains`, `name_in`,
-//!   `Permanent::contains_card_name`-equivalent paths). Affects this card
-//!   AND every card that name-checks BT17-102 ("if you have a Koromon-named
-//!   Digimon", etc.). File under `qa/dsl-vocab-gaps.md`.
+//! - **G-DYNAMIC-NAME-ALIAS-FROM-STACK** — resolved for this card through
+//!   `identity.source_name_aliases`, which derives effective names from
+//!   current level-3-or-lower source cards and routes name predicates through
+//!   the synthesized permanent identity.
 //!
 //! - **G-DSL-SELF-NAME-IS** (= G-DSL-SELF-NAME-CONTAINS, see AD1-014:170) —
 //!   no DSL BoolPredicate evaluates "the carrier permanent's TOP CARD name
@@ -343,11 +336,7 @@ fn bt17_102_has_inherited_on_deletion_optional_clause() {
 }
 
 #[test]
-fn bt17_102_does_not_declare_dynamic_name_alias_clause() {
-    // [All Turns] dynamic name alias is BLOCKED (G-DYNAMIC-NAME-ALIAS-FROM-STACK).
-    // Absence is asserted to lock in the current omission; if the gap closes
-    // and the clause is added, this test must be updated to assert the new
-    // declarative clause kind instead.
+fn bt17_102_dynamic_name_alias_is_not_a_static_alias() {
     let runner = DebugRunner::builder()
         .dsl_card("BT17-102")
         .expect("BT17-102 in embedded DSL pack")
@@ -355,14 +344,11 @@ fn bt17_102_does_not_declare_dynamic_name_alias_clause() {
         .start();
     let compiled = runner.compiled_card("BT17-102").expect("compiled");
 
-    // Static name aliases must remain empty — over-claiming names without the
-    // dynamic stack-derived semantics would violate no-approximations.
     if let Some(identity) = &compiled.identity {
         assert!(
             identity.name_aliases.is_empty(),
-            "must NOT publish static name aliases for BT17-102 — \
-             dynamic stack-derived aliasing is BLOCKED, and a static alias \
-             would over-claim names when materials aren't present"
+            "BT17-102 must not publish static name aliases — its extra names \
+             are derived from the live digivolution stack"
         );
     }
 }
@@ -426,7 +412,7 @@ fn bt17_102_when_digivolving_without_koromon_does_not_buff() {
     );
 }
 
-// ─── Section 3 — [When Digivolving] DP-comparator delete (BLOCKED) ──────────
+// ─── Section 3 — [When Digivolving] DP-comparator delete ────────────────────
 
 /// G-FORMULA-SOURCE-DP (RESOLVED 2026-05-19): the "then, delete 1 opp
 /// Digimon with as much or less DP as this Digimon" sub-clause is authored
@@ -475,61 +461,54 @@ fn bt17_102_when_digivolving_delete_filters_to_dp_lte_self() {
     );
 }
 
-// ─── Section 4 — [All Turns] Dynamic name aliasing (BLOCKED) ────────────────
+// ─── Section 4 — [All Turns] Dynamic name aliasing ──────────────────────────
 
-/// BLOCKED: G-DYNAMIC-NAME-ALIAS-FROM-STACK — "this Digimon has all the names
-/// of level 3 and lower cards in its digivolution cards" requires runtime-derived
-/// name aliases that consult the carrier's material stack. No DSL or engine
-/// surface exists for this; static `name_aliases` are zone-conditional only and
-/// do not depend on the live stack contents.
 #[test]
-#[ignore = "BLOCKED: G-DYNAMIC-NAME-ALIAS-FROM-STACK — code-verified 2026-05-20. The DSL \
-            identity layer (digimon-dsl/src/identity.rs: IdentitySpec.name_aliases) is \
-            STATIC (zone-conditional) AND has NO engine-side consumer at all — a grep of \
-            code/digimon-engine/src for name_alias / effective_name / treat_as / \
-            aliased_names returns zero hits, so even the static alias surface is currently \
-            inert. Engine name resolution (CardSource::card_name / card_names / \
-            contains_card_name in card_source.rs) reads only the printed CardData.card_name; \
-            there is no name-set query on a Permanent that consults dynamic aliases. DCGO \
-            uses ChangeCardNamesClass with a per-evaluation closure scanning \
-            DigivolutionCards filtered by Level <= 3. A faithful fix is a cross-cutting \
-            engine feature, NOT a focused card fix: it needs (1) a Permanent-level \
-            effective-name-set query, (2) every name-predicate evaluator (predicate.rs \
-            name_contains/name_is, event_target_name_contains, contains_card_name, and \
-            selection-filter name paths) reading the dynamic set, (3) a new declarative \
-            clause kind to derive the alias set from the live material stack, (4) \
-            recompute on every stack mutation. Affects this card and every card that \
-            name-checks it. Tracked in qa/dsl-vocab-gaps.md."]
 fn bt17_102_all_turns_aliases_low_level_material_names() {
-    // Stack [KORO (Lv.2), AGU (Lv.3), BT17-102 (Lv.4)] with BT17-102 on top.
-    // Per [All Turns] aliasing, BT17-102's effective name set should include
-    // BOTH "Koromon" and "Agumon" (both are Lv. ≤ 3 in the digivolution stack)
-    // in addition to "Greymon" (its printed top-card name).
+    const PROBE_YAML: &str = r#"
+card: TEST-ALIAS-PROBE
+name: Alias Probe
+kind: option
+color: [white]
+cost: 0
+effects:
+  - when: main_from_hand
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "Agumon"
+          prompt: "Choose an Agumon-named Digimon"
+"#;
+
     let mut runner = DebugRunner::builder()
         .dsl_card("BT17-102")
         .expect("BT17-102 in embedded DSL pack")
+        .from_dsl_yaml(PROBE_YAML)
+        .expect("probe card compiles")
         .add_card(make_koromon("KORO"))
         .add_card(make_agumon("AGU"))
-        .memory(0)
+        .hand(0, &["TEST-ALIAS-PROBE"])
+        .memory(10)
         .start();
-    let stack = runner.place_stack(0, &["KORO", "AGU", "BT17-102"]);
 
-    // Pseudo-API placeholder. Faithful closure of the gap requires a name-set
-    // query on the carrier permanent that consults dynamic aliases. Without
-    // it, this assertion cannot be expressed in current Rust API.
-    //
-    // Pseudo:
-    //   let names = runner.game.permanent_effective_names(stack);
-    //   assert!(names.contains("Koromon"));
-    //   assert!(names.contains("Agumon"));
-    //   assert!(names.contains("Greymon"));
-    //
-    // For now: assert the static fallback (printed top-card name only).
-    let perm = &runner.game.players[0].battle_area[stack.index as usize];
-    let top_name = perm.top_card().card_name(&runner.game.card_data);
+    let _stack = runner.place_stack(0, &["KORO", "AGU", "BT17-102"]);
+    runner.game.tick_declarative_effects();
+    assert!(
+        runner.game.activate_hand_main(0, 0),
+        "probe Option should activate from hand"
+    );
+
+    let view = runner
+        .pending_selection_view()
+        .expect("name_is: Agumon should see BT17-102's dynamic source-name alias");
+    assert_eq!(view.kind, SelectionKind::OwnField);
     assert_eq!(
-        top_name, "Greymon",
-        "static behavior: only printed top-card name is visible (no dynamic alias)"
+        view.valid_action_ids.len(),
+        1,
+        "BT17-102 must be selectable as an Agumon-named Digimon via its Lv.3 source alias"
     );
 }
 

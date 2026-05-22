@@ -17,24 +17,21 @@
 > `.claude/plans/pre-scaling-cleanup-batch.md` §2 for the closure-
 > index narrative.
 
-> **ARCHETYPE COMPLETE — 2026-05-20:** The `complete-dna-omnimon-archetype`
-> change drove DNA Omnimon (64 cards) to **62 IMPLEMENTED / 2 PARTIAL /
-> 0 BLOCKED** (Phase A baseline was 34 IMPLEMENTED / 25 PARTIAL /
-> 5 BLOCKED). The archetype verdict ledger is
+> **ARCHETYPE COMPLETE — 2026-05-20; partial gaps closed 2026-05-22:** The
+> `complete-dna-omnimon-archetype` change drove DNA Omnimon (64 cards) to
+> **62 IMPLEMENTED / 2 PARTIAL / 0 BLOCKED** from a Phase A baseline of
+> 34 IMPLEMENTED / 25 PARTIAL / 5 BLOCKED. The
+> `close-dna-omnimon-partial-gaps` follow-up closed the remaining BT17-102
+> and BT23-096 partial gaps, so the current verdict is
+> **64 IMPLEMENTED / 0 PARTIAL / 0 BLOCKED**. The archetype verdict ledger is
 > [qa/qa-reports/validated_cards_dsl.json](../../qa-reports/validated_cards_dsl.json);
 > the per-gap closure record is
 > [qa/resolved-gaps.md](../../resolved-gaps.md) § "Phase 2 / DNA Omnimon
 > completion closure — 2026-05-20". ~20+ engine/DSL substrate gaps were
-> closed and ~18 stale-tracker gaps were confirmed and used. DNA Omnimon
-> now has 0 live `raw_rust` escapes. The 2 remaining PARTIAL cards are
-> blocked on two still-open gaps: **G-DYNAMIC-NAME-ALIAS-FROM-STACK**
-> (BT17-102 Greymon `[All Turns]` material-name-alias — no engine
-> consumer for a dynamic alias derived from the live digivolution-source
-> stack) and **G-DSL-DELAY-ON-ATTACK-EVENT** (BT23-096 Comet Hammer
-> `<Delay>`-on-attack clause — 3-part delay/attack-event dispatch
-> blocker). Both are tracked open in
-> [docs/RUST_ENGINE_GAPS.md](../../../docs/RUST_ENGINE_GAPS.md) and
-> [qa/dsl-vocab-gaps.md](../../dsl-vocab-gaps.md). This source document
+> closed and ~18 stale-tracker gaps were confirmed and used. The 2026-05-22
+> follow-up resolved **G-DYNAMIC-NAME-ALIAS-FROM-STACK** and
+> **G-DSL-DELAY-ON-ATTACK-EVENT**. DNA Omnimon now has 0 live `raw_rust`
+> escapes and no remaining partial cards. This source document
 > is retained for historical gap-assessment context.
 
 
@@ -144,7 +141,8 @@ The local `DNA Omnimon` decklists most heavily use:
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` under Option card play flow; `qa/dsl-vocab-gaps.md` Delay-related entries
 - **Blocks:** `BT17-095`, `LM-034`, `BT22-099`, `ST20-15`, `BT23-096`, `ST2-13`, `EX1-068`
 - **Cross-archetype value:** Memory Boosts, Scrambles, Training cards, battlefield Options, security effects that add to hand or place in battle area.
-- **CLOSED 2026-05-20 (DNA Omnimon completion):** BT17-095 Miraculous Mega Knight (Ace Option / Delay / security "add this card to hand"), Tamer security play routing (`G-PLAY-SELECTED-SECURITY-CARD` — `play_security_card` step + `EffectContext::play_from_security_card`), and the remaining DNA Omnimon Option/security dispositions are implemented. The one residual is BT23-096 Comet Hammer's `<Delay>`-on-attack clause — see still-open `G-DSL-DELAY-ON-ATTACK-EVENT` in `qa/dsl-vocab-gaps.md` / `docs/RUST_ENGINE_GAPS.md`.
+- **CLOSED 2026-05-20 (DNA Omnimon completion):** BT17-095 Miraculous Mega Knight (Ace Option / Delay / security "add this card to hand"), Tamer security play routing (`G-PLAY-SELECTED-SECURITY-CARD` — `play_security_card` step + `EffectContext::play_from_security_card`), and the remaining DNA Omnimon Option/security dispositions are implemented.
+- **CLOSED 2026-05-22 (DNA Omnimon partial-gap follow-up):** BT23-096 Comet Hammer's `<Delay>`-on-attack clause is now implemented through event-backed `on_ally_attack` Delay dispatch and attacker-context predicates.
 - **Missing capability (historical):** Group 5 closed major Delay and scheduled end-of-turn pieces; DNA Omnimon needed coverage for Ace Option persistence, security "add this card to hand", security "place this card in battle area", Tamer security play routing, and multi-color Option color semantics — all now closed except the Delay-on-attack-event case noted above.
 - **First regression:** `BT17-095` Main effect plays a legal Agumon/Gabumon from hand or trash, then places itself in battle area as a Delay Option. Its Security effect plays a legal Tai/Matt card from hand or trash and adds the Option to hand.
 - **Implementation hint:** Verify existing Group 5 option flow before adding new primitives; keep disposition explicit rather than encoding it as card-local cleanup.
@@ -209,7 +207,8 @@ The local `DNA Omnimon` decklists most heavily use:
 - **Tracker:** `qa/dsl-vocab-gaps.md`; `docs/RUST_ENGINE_GAPS.md`; card YAML comments
 - **Blocks:** `BT17-078`, `BT22-015`, `EX9-021`, `BT17-095`, `BT22-013`, `BT22-026`, `BT22-017`, `BT22-008`
 - **Cross-archetype value:** Converts reusable primitives into real cards and catches remaining DSL omissions.
-- **CLOSED 2026-05-20 (DNA Omnimon completion):** all 64 DNA Omnimon cards are now production YAML (62 IMPLEMENTED / 2 PARTIAL / 0 BLOCKED). DNA Omnimon has 0 live `raw_rust` escapes — `BT20-102`'s board-wipe/return migrated to pure DSL, `AD1-025`'s body migrated, and the unused `bt20_102_boardwipe_and_return` fn was removed. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon completion closure — 2026-05-20".
+- **CLOSED 2026-05-20 (DNA Omnimon completion):** all 64 DNA Omnimon cards became production YAML (interim 62 IMPLEMENTED / 2 PARTIAL / 0 BLOCKED). DNA Omnimon had 0 live `raw_rust` escapes — `BT20-102`'s board-wipe/return migrated to pure DSL, `AD1-025`'s body migrated, and the unused `bt20_102_boardwipe_and_return` fn was removed. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon completion closure — 2026-05-20".
+- **CLOSED 2026-05-22:** the remaining BT17-102 and BT23-096 partial cards are now IMPLEMENTED, making the current DNA Omnimon ledger 64 IMPLEMENTED / 0 PARTIAL / 0 BLOCKED.
 - **Missing capability (historical):** several useful slices existed only as `_examples`, while major top-end DNA Omnimon cards were not production YAML; `BT20-102` previously used raw Rust for board wipe/return — all now retired.
 - **First regression:** Move one core DNA Omnimon card from assessment to production YAML only after its reusable primitive exists, with a behavioral test under `code/digimon-engine/tests/cards_behavioral/`.
 - **Implementation hint:** Author cards in small readiness slices. Do not mark full card readiness when omitted text still contains a player choice, timing hook, or replacement effect.

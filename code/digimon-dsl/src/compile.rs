@@ -363,6 +363,11 @@ fn compile_cost_delta(
 fn compile_identity(id: &crate::identity::IdentitySpec) -> CompiledIdentity {
     CompiledIdentity {
         name_aliases: id.name_aliases.iter().map(compile_name_alias).collect(),
+        source_name_aliases: id
+            .source_name_aliases
+            .iter()
+            .map(compile_source_name_alias)
+            .collect(),
     }
 }
 
@@ -380,6 +385,14 @@ fn compile_name_alias(a: &crate::identity::NameAliasSpec) -> CompiledNameAlias {
             .has_inherited
             .as_ref()
             .and_then(|i| i.name_is.clone()),
+    }
+}
+
+fn compile_source_name_alias(
+    a: &crate::identity::SourceNameAliasSpec,
+) -> CompiledSourceNameAlias {
+    CompiledSourceNameAlias {
+        level_lte: a.level_lte,
     }
 }
 

@@ -224,7 +224,8 @@ impl Game {
     pub fn enqueue_triggered(&mut self, timing: EffectTiming, source: TriggerSource) {
         match source {
             TriggerSource::Permanent(handle) => {
-                let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
+                let trigger_context =
+                    self.trigger_context_for_source(&source, Some(handle), timing);
                 self.enqueue_from_permanent(timing, handle, Some(trigger_context));
             }
             TriggerSource::PlayerBattleArea(player) => {
@@ -236,7 +237,8 @@ impl Game {
                         player,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
@@ -245,7 +247,8 @@ impl Game {
                     player,
                     index: BREEDING_TARGET as u8,
                 };
-                let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
+                let trigger_context =
+                    self.trigger_context_for_source(&source, Some(handle), timing);
                 self.enqueue_from_breeding_permanent(timing, handle, Some(trigger_context));
             }
             TriggerSource::SecurityRevealed { defender, card } => {
@@ -284,7 +287,8 @@ impl Game {
                         player: defender,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
@@ -295,7 +299,8 @@ impl Game {
                         player,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
             }
@@ -392,6 +397,18 @@ impl Game {
                     );
                 }
             }
+            TriggerSource::PlayerBattleAreaAttack { player, .. } => {
+                let count = self.player(player).battle_area.len();
+                for i in 0..count {
+                    let handle = PermanentHandle {
+                        player,
+                        index: i as u8,
+                    };
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(handle), timing);
+                    self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                }
+            }
             TriggerSource::EventObserved { .. } | TriggerSource::AttackTargetChanged { .. } => {
                 for player in 0..self.players.len() {
                     let player = player as PlayerId;
@@ -433,7 +450,8 @@ impl Game {
                         player: observer_player,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
                 let breeding_handle = PermanentHandle {
@@ -457,7 +475,8 @@ impl Game {
                         player: affected_player,
                         index: i as u8,
                     };
-                    let trigger_context = self.trigger_context_for_source(&source, Some(handle), timing);
+                    let trigger_context =
+                        self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
                 let breeding_handle = PermanentHandle {
@@ -496,6 +515,7 @@ impl Game {
         if matches!(
             source,
             TriggerSource::EventObserved { .. }
+                | TriggerSource::PlayerBattleAreaAttack { .. }
                 | TriggerSource::AttackTargetChanged { .. }
                 | TriggerSource::EnteredField { .. }
         ) {
@@ -727,10 +747,8 @@ impl Game {
                                         // that here so the pre-cost decision
                                         // is faithful. The RAII guard restores
                                         // the previous value even on panic.
-                                        let trigger_guard = TriggerContextGuard::install(
-                                            self,
-                                            trigger_context,
-                                        );
+                                        let trigger_guard =
+                                            TriggerContextGuard::install(self, trigger_context);
                                         let ctx = EffectContext::new_with_source_kind(
                                             &mut *trigger_guard.game,
                                             source_card,
@@ -784,9 +802,7 @@ impl Game {
                 // declinable PASS, the inner PASS is the decline path and the
                 // flag stays false). The outer prompt is skipped entirely
                 // when the effect's preconditions already fail.
-                if qe.is_optional
-                    && self.queued_effect_wants_outer_optional_prompt(&qe)
-                {
+                if qe.is_optional && self.queued_effect_wants_outer_optional_prompt(&qe) {
                     self.install_outer_optional_trigger_selection(qe);
                     return;
                 }
@@ -879,6 +895,18 @@ impl Game {
             TriggerSource::PlayerBattleArea(player) => TriggerContext {
                 target_permanent: source_permanent,
                 target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                source_player: Some(player),
+                ..TriggerContext::default()
+            },
+            TriggerSource::PlayerBattleAreaAttack {
+                player,
+                attacker,
+                card,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_permanent: Some(attacker),
+                event_card: Some(card),
                 source_player: Some(player),
                 ..TriggerContext::default()
             },
@@ -1946,11 +1974,9 @@ impl Game {
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
                 let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
-                let Some(activation_count) = self.source_permanent_activation_count(
-                    perm_handle,
-                    qe.source_card,
-                    opt_key,
-                ) else {
+                let Some(activation_count) =
+                    self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key)
+                else {
                     return;
                 };
                 if activation_count >= effect.max_per_turn {
@@ -2095,11 +2121,9 @@ impl Game {
         let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
-                let Some(activation_count) = self.source_permanent_activation_count(
-                    perm_handle,
-                    qe.source_card,
-                    opt_key,
-                ) else {
+                let Some(activation_count) =
+                    self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key)
+                else {
                     // Source removed by the cost — OPT bookkeeping not
                     // applicable, body still runs.
                     if let Some(process) = &effect.process {
@@ -2117,11 +2141,7 @@ impl Game {
                 if activation_count >= effect.max_per_turn {
                     return;
                 }
-                self.record_source_permanent_activation(
-                    perm_handle,
-                    qe.source_card,
-                    opt_key,
-                );
+                self.record_source_permanent_activation(perm_handle, qe.source_card, opt_key);
             }
         }
 
@@ -2152,21 +2172,15 @@ impl Game {
         let opt_key = Self::opt_slot_key(effect, qe.effect_slot);
         if effect.max_per_turn > 0 && !qe.bypass_once_per_turn {
             if let Some(perm_handle) = qe.source_permanent {
-                let Some(activation_count) = self.source_permanent_activation_count(
-                    perm_handle,
-                    qe.source_card,
-                    opt_key,
-                ) else {
+                let Some(activation_count) =
+                    self.source_permanent_activation_count(perm_handle, qe.source_card, opt_key)
+                else {
                     return;
                 };
                 if activation_count >= effect.max_per_turn {
                     return;
                 }
-                self.record_source_permanent_activation(
-                    perm_handle,
-                    qe.source_card,
-                    opt_key,
-                );
+                self.record_source_permanent_activation(perm_handle, qe.source_card, opt_key);
             }
         }
 

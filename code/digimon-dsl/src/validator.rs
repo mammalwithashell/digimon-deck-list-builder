@@ -1960,6 +1960,7 @@ pub const KNOWN_MODIFIER_KEYS: &[&str] = &[
     "ChangePermanentLevel",
     "ChangeTraits",
     "ChangeBaseCardName",
+    "SourceNameAliases",
     "ChangeBaseCardColor",
     "ChangeCardLevelForAssembly",
     "ChangeCardNamesForDigiXros",
