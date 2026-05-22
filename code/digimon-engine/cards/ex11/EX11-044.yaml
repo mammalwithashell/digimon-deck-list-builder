@@ -1,3 +1,65 @@
+# EX11-044 Pyramidimon — Digimon, Black, Level 6, Cost 11, DP 12000.
+# Traits: [Mineral, LIBERATOR]
+#
+# Printed card text (data/cards.json — verbatim):
+#
+#   ＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)
+#   ＜Fragment (3)＞ (When this Digimon would be deleted, by trashing any 3 of
+#   its digivolution cards, it isn't deleted.)
+#
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn]
+#   By trashing any 3 [Mineral] or [Rock] trait cards from your Digimon's
+#   digivolution cards, delete 1 of your opponent's highest play cost
+#   Digimon or Tamers.
+#
+#   [All Turns] [Once Per Turn]
+#   When effects trash any of this Digimon's digivolution cards, you may
+#   place 3 [Mineral] or [Rock] trait cards from your trash as this
+#   Digimon's bottom digivolution cards.
+#
+# ─── Clause A: [OP][WD][WA][OPT] source-trash → delete highest play cost ─────
+#
+# BLOCKED: G-HIGHEST-PLAY-COST-SELECTOR
+# `selector: highest_play_cost` does not exist in the DSL. The
+# CompiledFieldSelector enum has LowestPlayCost (added for G-PLAY-COST-AGGREGATE)
+# but NO HighestPlayCost variant. The delete-target selection cannot faithfully
+# restrict to the highest-play-cost permanents without this selector.
+#
+# Gap: add `HighestPlayCost` to:
+#   - code/digimon-dsl/src/step.rs  FieldSelector enum
+#   - code/digimon-dsl/src/compiled.rs  CompiledFieldSelector enum
+#   - code/digimon-dsl/src/compile.rs  compile_field_selector match arm
+#   - code/digimon-engine/src/dsl_cards/step/selections.rs
+#       field_value() + selected_field_extreme() match arms
+#   - code/digimon-engine/src/dsl_cards/lower_replacement.rs  (mirror)
+#
+# ─── Clause B: [All Turns][OPT] on_digivolution_card_trashed → trash-to-source
+#
+# BLOCKED: event_host_permanent_is_source predicate missing in DSL.
+# Without `event_host_permanent_is_source: true` in the condition, the clause
+# would fire on all own-Digimon source trashes (not just this card's own stack),
+# violating §17 no-approximations.
+#
+# Gap: already documented at docs/RUST_ENGINE_GAPS.md
+#   §"event_host_permanent_is_source DSL predicate for OnDigivolutionCardTrashed
+#   observers" (🔴 BLOCKING, 2026-05-17).
+# Fix: add `event_host_permanent_is_source: Option<bool>` to PredicateSpec
+# (DSL) and CompiledPredicate (lowered); evaluate by comparing
+# trigger.event_host_permanent == ctx.source_permanent.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                       | Status       |
+# |---------------------------------------------------------|--------------|
+# | <Reboot> keyword                                        | IMPLEMENTED  |
+# | <Fragment (3)> keyword                                  | IMPLEMENTED  |
+# | [OP][WD][WA][OPT] trash 3 Mineral/Rock sources (cost)  | BLOCKED      |
+# | [OP][WD][WA][OPT] delete 1 opp highest-play-cost perm  | BLOCKED      |
+# |   → gap: G-HIGHEST-PLAY-COST-SELECTOR                  |              |
+# | [All Turns][OPT] on_source_trashed trigger (this card)  | BLOCKED      |
+# | [All Turns][OPT] place 3 Mineral/Rock from trash        | BLOCKED      |
+# |   → gap: event_host_permanent_is_source predicate      |              |
+
 card: EX11-044
 name: Pyramidimon
 kind: digimon
@@ -12,13 +74,22 @@ alt_paths:
     from: { level_eq: 5, color_is: black }
     cost: 4
 
-# Printed source-trash highest-play-cost delete and trash-to-source refill
-# clauses are not authored in this pass.
-
 effects:
+  # ─── Printed keywords ─────────────────────────────────────────────────────
   - kind: grant_keyword
     keyword: Reboot
 
   - kind: grant_keyword
     keyword: Fragment
     value: 3
+
+  # ─── Clause A: [OP][WD][WA][OPT] source-trash → delete highest-play-cost ──
+  # BLOCKED on G-HIGHEST-PLAY-COST-SELECTOR: `selector: highest_play_cost` is
+  # not implemented in the DSL CompiledFieldSelector enum.
+  # Tests under #[ignore = "pending: G-HIGHEST-PLAY-COST-SELECTOR"] in ex11_044.rs.
+
+  # ─── Clause B: [All Turns][OPT] on_digivolution_card_trashed → trash-to-source
+  # BLOCKED on event_host_permanent_is_source predicate:
+  # Without `event_host_permanent_is_source: true` in the condition, the clause
+  # would fire on all own-Digimon source trashes, not just this card's own stack.
+  # Tests under #[ignore = "pending: event_host_permanent_is_source"] in ex11_044.rs.

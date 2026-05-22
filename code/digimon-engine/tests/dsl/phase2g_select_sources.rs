@@ -74,7 +74,13 @@ fn select_own_sources_binds_source_refs_for_trashing() {
 }
 
 #[test]
-fn empty_select_own_sources_runs_outer_tail_synchronously() {
+fn empty_select_own_sources_silently_skips_outer_tail_when_min_positive() {
+    // When SelectOwnSources has min > 0 and no source candidates exist, the
+    // mandatory cost cannot be paid. Per the no-approximations silent-skip
+    // contract the ENTIRE effect body — including subsequent outer-tail steps —
+    // is skipped. Memory stays at 0 (neither GainMemory(7) nor GainMemory(3)
+    // runs). This mirrors how the EX10-032 buff clause behaves when no
+    // Mineral/Rock source is available.
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("EFFECT", "Effect"))
         .hand(0, &["EFFECT"])
@@ -102,7 +108,8 @@ fn empty_select_own_sources_runs_outer_tail_synchronously() {
 
     assert_eq!(outcome, RunOutcome::Synchronous);
     assert!(runner.game.pending_selection.is_none());
-    assert_eq!(runner.game.memory, 3);
+    // Neither the `then` body nor the outer tail ran — mandatory cost unpayable.
+    assert_eq!(runner.game.memory, 0);
 }
 
 #[test]
@@ -390,8 +397,11 @@ fn select_opponent_sources_restricts_to_target_opponent_permanent() {
 }
 
 #[test]
-fn empty_select_opponent_sources_runs_outer_tail_synchronously() {
-    // No opponent stacks with sources → step is skipped, outer tail runs.
+fn empty_select_opponent_sources_silently_skips_outer_tail_when_min_positive() {
+    // No opponent stacks with sources → mandatory cost (min:1) cannot be paid.
+    // The entire effect body — including subsequent outer-tail steps — is
+    // silently skipped. Memory stays at 0. Mirrors the SelectOwnSources
+    // contract for the opponent-side variant.
     let mut runner = DebugRunner::builder()
         .add_card(make_test_card("EFFECT", "Effect"))
         .hand(0, &["EFFECT"])
@@ -418,7 +428,8 @@ fn empty_select_opponent_sources_runs_outer_tail_synchronously() {
     };
     assert_eq!(outcome, RunOutcome::Synchronous);
     assert!(runner.game.pending_selection.is_none());
-    assert_eq!(runner.game.memory, 3);
+    // Neither the `then` body nor the outer tail ran — mandatory cost unpayable.
+    assert_eq!(runner.game.memory, 0);
 }
 
 #[test]

@@ -32,13 +32,12 @@
 //! - H6-adjacent printed Save keyword auto-installed (no YAML clause needed)
 //! - D4 Inherited aura: scope:inherited, kind:aura, grant_keyword:Rush, your_turn
 //!
-//! # Known gaps
-//! - G-DSL-AURA-TARGET-SOURCE-PERMANENT: the carrier-trait condition
-//!   ("Xros Heart") on the inherited Rush aura cannot be expressed as a
-//!   target filter scoped to only the carrier permanent. The YAML uses
-//!   target:{} (self-aura) so all carriers get Rush unconditionally.
-//!   Test bt21_021_inherited_rush_only_if_carrier_has_xros_heart is
-//!   #[ignore = "pending: G-DSL-AURA-TARGET-SOURCE-PERMANENT from qa/dsl-vocab-gaps.md"].
+//! # Implementation notes
+//! - G-DSL-AURA-TARGET-SOURCE-PERMANENT is RESOLVED (qa/resolved-gaps.md,
+//!   bg-imperial-substrate-closeout 2026-05-21). The inherited Rush aura gates
+//!   on `source_permanent_trait_has: "Xros Heart"` in active_when, so only
+//!   carriers whose top card has [Xros Heart] receive Rush.
+//!   Test bt21_021_inherited_rush_only_if_carrier_has_xros_heart is now live.
 //! - G-INHERITED-DISPATCH: triggered inherited effects (scope:inherited + when:...)
 //!   are not dispatched in the Rust engine. The inherited Rush aura (kind:aura)
 //!   uses the declarative path and is unaffected.
@@ -793,20 +792,20 @@ fn bt21_021_save_decline_leaves_omni_in_trash() {
 // Section 5 — Inherited [Your Turn] Rush aura
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// The inherited Rush aura applies to the carrier Digimon during your turn.
-/// This test uses a simple stack: BT21-021 as source under a test Digimon.
+/// The inherited Rush aura applies to the carrier Digimon during your turn,
+/// provided the carrier has the [Xros Heart] trait.
 #[test]
-fn bt21_021_inherited_rush_applied_to_carrier_on_your_turn() {
+fn bt21_021_inherited_rush_applied_to_xros_heart_carrier_on_your_turn() {
     use digimon_engine::enums::Keyword;
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("BT21-021 YAML parses")
-        .add_card(make_test_card("HOST", "Host Digimon"))
+        .add_card(make_xros_heart_lv4("XH-HOST"))
         .memory(12)
         .start();
 
-    let host = runner.place_on_field(0, "HOST", Some(0));
+    let host = runner.place_on_field(0, "XH-HOST", Some(0));
     runner.push_source(host, "BT21-021");
 
     // Refresh declaratives (simulates start-of-turn tick).
@@ -818,7 +817,7 @@ fn bt21_021_inherited_rush_applied_to_carrier_on_your_turn() {
         .has_keyword(host, Keyword::Rush);
     assert!(
         has_rush,
-        "carrier must have Rush from inherited aura during your turn"
+        "carrier with [Xros Heart] must have Rush from inherited aura during your turn"
     );
 }
 
@@ -849,13 +848,11 @@ fn bt21_021_no_rush_without_omni_in_stack() {
     );
 }
 
-/// Carrier-trait condition check (Xros Heart).
+/// Negative: carrier WITHOUT [Xros Heart] must NOT gain Rush from the inherited aura.
 /// The printed text says "This Digimon WITH the [Xros Heart] trait gains Rush."
-/// Currently the YAML uses target:{} (self-aura) so ALL carriers get Rush
-/// regardless of Xros Heart — this is an over-firing approximation.
-/// This test is ignored pending G-DSL-AURA-TARGET-SOURCE-PERMANENT.
+/// Gap G-DSL-AURA-TARGET-SOURCE-PERMANENT is RESOLVED; the YAML now uses
+/// `source_permanent_trait_has: "Xros Heart"` in active_when to gate the aura.
 #[test]
-#[ignore = "pending: G-DSL-AURA-TARGET-SOURCE-PERMANENT from qa/dsl-vocab-gaps.md — carrier trait predicate not expressible in aura target filter"]
 fn bt21_021_inherited_rush_only_if_carrier_has_xros_heart() {
     use digimon_engine::enums::Keyword;
 

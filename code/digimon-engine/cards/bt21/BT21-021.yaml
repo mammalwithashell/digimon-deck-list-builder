@@ -49,10 +49,11 @@
 #
 # Inherited Rush aura:
 #   - Printed: "This Digimon WITH the [Xros Heart] trait gains Rush."
-#   - DSL gap G-DSL-AURA-TARGET-SOURCE-PERMANENT: carrier-trait predicate
-#     (Xros Heart on the carrier) is not expressible in the aura target filter.
-#   - Approximation: target: {} (self-aura) → grants Rush to ALL carriers.
-#   - This over-fires for non-Xros-Heart carriers; documented as a known gap.
+#   - Implementation: scope:inherited self-aura (target:{}) gated by
+#     `source_permanent_trait_has: "Xros Heart"` in active_when, so only
+#     carriers whose top card has the [Xros Heart] trait receive Rush.
+#   - G-DSL-AURA-TARGET-SOURCE-PERMANENT is RESOLVED (qa/resolved-gaps.md,
+#     bg-imperial-substrate-closeout 2026-05-21); no approximation needed.
 #
 # ─── Alt-paths (all kind: digivolve) ──────────────────────────────────────────
 #
@@ -197,12 +198,20 @@ effects:
   #
   # Printed: "[Your Turn] This Digimon with the [Xros Heart] trait gains ＜Rush＞."
   #
-  # DSL gap G-DSL-AURA-TARGET-SOURCE-PERMANENT: carrier-trait predicate not
-  # expressible; using target: {} (self-aura, grants Rush to ALL carriers).
-  # Known over-fire for carriers without [Xros Heart] trait.
+  # Implementation: `scope: inherited`, `target: {}` (self-aura — applies only
+  # to the carrier). `active_when` gates the tick-installation on the carrier's
+  # top card having the [Xros Heart] trait, using `source_permanent_trait_has`.
+  # For an inherited self-aura, the `active_when` predicate is evaluated with
+  # `PredicateSubject::None` so `source_permanent_trait_has` resolves against
+  # `rctx.source_permanent()` — the carrier permanent. This is the same pattern
+  # as BT12-022 (`source_permanent_trait_has: "Free"` in `active_when`).
+  # Gap G-DSL-AURA-TARGET-SOURCE-PERMANENT is RESOLVED (qa/resolved-gaps.md,
+  # bg-imperial-substrate-closeout 2026-05-21).
   - scope: inherited
     kind: aura
-    active_when: { your_turn: true }
+    active_when:
+      your_turn: true
+      source_permanent_trait_has: "Xros Heart"
     target: {}
     grant_keyword: { keyword: Rush }
-    summary: "[Your Turn] Carrier gains Rush (approximation: all carriers; ideal: only Xros Heart carriers)"
+    summary: "[Your Turn] This Digimon with the [Xros Heart] trait gains <Rush>"

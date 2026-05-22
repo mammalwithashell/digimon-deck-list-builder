@@ -221,47 +221,88 @@ effects:
   # hand or trash without paying the cost. Then, add this card to the hand."
   # DCGO: CanSelectCardCondition: IsDigimon && HasPlayCost && BasePlayCostFromEntity <= 3
   #       "From hand" / "From trash" EffectChoice when both zones have candidates.
-  #       AddThisCardToHand(card) afterwards.
+  #       AddThisCardToHand(card) afterwards — unconditionally at end of SecuritySkill.
   # play_cost_lte: 3 enforces the cost gate; add_this_option_to_hand adds self.
+  #
+  # DRIFT FIX (2026-05-22): Clause was previously `optional: true`, which with
+  # G-OUTER-OPTIONAL-NOT-INSTALLED now resolved would allow the player to decline
+  # the entire clause including the mandatory "Then, add this card to the hand"
+  # tail. The tail is unconditional — DCGO calls AddThisCardToHand after the
+  # optional play regardless of whether a Digimon was selected. Pattern follows
+  # P-156 "Future Potential!":
+  #   - outer clause is mandatory (optional: false)
+  #   - optional Digimon play is guarded by count_gte and an explicit
+  #     select_effect_choice ["Play Digimon", "Decline"] branch
+  #   - add_this_option_to_hand is a sibling tail step that always fires
   - scope: inherited
     when: on_security
-    optional: true
-    summary: "[Inherited][Security] You may play 1 Digimon cost <=3 from hand or trash free; add self to hand"
+    optional: false
+    summary: "[Inherited][Security] You may play 1 Digimon cost <=3 from hand or trash free; then add self to hand (mandatory)"
     process:
-      # DCGO: "From which area do you select?" EffectChoice when both zones have candidates.
-      - select_effect_choice:
-          labels: ["From hand", "From trash"]
-          bind_as: zone_choice
-          prompt: "From which area do you play a Digimon?"
+      # Guard: only install the play prompt when at least 1 eligible Digimon
+      # exists in hand or trash. Without this guard, the select_effect_choice
+      # would always show even when there is nothing to play.
       - if:
-          condition: { equals: [zone_choice, 0] }
+          condition:
+            any_of:
+              - count_gte:
+                  filter:
+                    of: you
+                    zone: [hand]
+                    kind: digimon
+                    play_cost_lte: 3
+                  n: 1
+              - count_gte:
+                  filter:
+                    of: you
+                    zone: [trash]
+                    kind: digimon
+                    play_cost_lte: 3
+                  n: 1
           then:
-            - select_hand:
-                of: you
-                bind_as: picked_hand
-                optional: false
-                filter:
-                  all_of:
-                    - kind: digimon
-                    - play_cost_lte: 3
-                prompt: "Select a Digimon card (cost <=3) to play from hand"
-            - play_from_hand_free:
-                of: you
-                hand_index: picked_hand
-      - if:
-          condition: { equals: [zone_choice, 1] }
-          then:
-            - select_trash:
-                of: you
-                bind_as: picked_trash
-                optional: false
-                filter:
-                  all_of:
-                    - kind: digimon
-                    - play_cost_lte: 3
-                prompt: "Select a Digimon card (cost <=3) to play from trash"
-            - play_from_trash_free:
-                of: you
-                hand_index: picked_trash
-      # "Then, add this card to the hand."
+            # "You may" — offer an explicit Play / Decline choice.
+            - select_effect_choice:
+                labels: ["Play Digimon", "Decline"]
+                bind_as: play_choice
+                prompt: "You may play 1 Digimon card (play cost 3 or less) without paying the cost"
+            - if:
+                condition: { equals: [play_choice, 0] }
+                then:
+                  # DCGO: "From which area?" EffectChoice when both zones have candidates.
+                  - select_effect_choice:
+                      labels: ["From hand", "From trash"]
+                      bind_as: zone_choice
+                      prompt: "From which area do you play a Digimon?"
+                  - if:
+                      condition: { equals: [zone_choice, 0] }
+                      then:
+                        - select_hand:
+                            of: you
+                            bind_as: picked_hand
+                            optional: false
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - play_cost_lte: 3
+                            prompt: "Select a Digimon card (cost <=3) to play from hand"
+                        - play_from_hand_free:
+                            of: you
+                            hand_index: picked_hand
+                  - if:
+                      condition: { equals: [zone_choice, 1] }
+                      then:
+                        - select_trash:
+                            of: you
+                            bind_as: picked_trash
+                            optional: false
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - play_cost_lte: 3
+                            prompt: "Select a Digimon card (cost <=3) to play from trash"
+                        - play_from_trash_free:
+                            of: you
+                            hand_index: picked_trash
+      # "Then, add this card to the hand." — unconditional mandatory tail.
+      # Fires whether the optional play was performed, declined, or skipped.
       - add_this_option_to_hand: {}

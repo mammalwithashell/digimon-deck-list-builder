@@ -5,17 +5,137 @@ color: [black]
 cost: 4
 traits: [LIBERATOR]
 
-# Printed [Your Turn] digivolve-into-Mineral/Rock trigger that suspends this
-# Tamer to place up to 2 Mineral/Rock cards from trash as sources is not
-# authored in this pass.
+# ─── Clause 0: [Start of Your Turn] ─────────────────────────────────────────
+#
+# "If you have 2 or less memory, set it to 3."
+# IMPLEMENTED. No change from prior pass.
+#
+# ─── Clause 1: [Your Turn] on_digivolve observer ─────────────────────────────
+#
+# Printed text (cards.json, authoritative):
+#   "[Your Turn] When any of your Digimon digivolve into a [Mineral] or [Rock]
+#   trait Digimon, by suspending this Tamer, place up to 2 cards with the
+#   [Mineral] or [Rock] trait from your trash as that Digimon's bottom
+#   digivolution cards."
+#
+# Modeling rationale:
+#   - Timing: `on_digivolve` — fires when a Digimon digivolves. The event
+#     permanent (event_target) is the post-digivolve RESOLVED Digimon, i.e.
+#     the substrate. `event_target_trait_has: Mineral` / `event_target_trait_has:
+#     Rock` checks the resolved permanent's traits (not the card being played),
+#     which matches "digivolve INTO a [Mineral] or [Rock] trait Digimon".
+#   - Scope: [Your Turn] only — `active_when: { your_turn: true }`.
+#   - Owner gate: `event_target_owner: you` — only OWN Digimon trigger this.
+#   - Cost availability: `any_permanent of: you / zone: battle_area /
+#     card_number_is: EX8-067 / is_unsuspended: true` — Close must be
+#     unsuspended to pay the suspend cost. Matches EX11-065 pattern.
+#   - Optionality: `optional: true` — printed "by suspending this Tamer"
+#     with no "you must" → activation is opt-in.
+#   - Gate pattern (decline-does-not-suspend): the FIRST step of the process
+#     body is a `select_own_permanent: optional: true` that installs an
+#     is_optional:true OwnField PendingSelection before the suspend runs.
+#     This lets the player PASS to decline without paying the cost.
+#     (Same fix as EX11-065; any synchronous step before the first
+#     PendingSelection runs unconditionally — the suspend must be guarded.)
+#   - Body: "place up to 2 cards with the [Mineral] or [Rock] trait from
+#     your trash" → `select_count_capped_multi` from trash zone, max: 2,
+#     filter: Mineral or Rock trait, optional_zero: true (player may pick 0
+#     through 2). Then `per_selected` + `place_as_bottom_source` with
+#     `target: event_target` (the just-digivolved Digimon). Pattern from
+#     BT22-015 (`select_count_capped_multi` + `per_selected` loop) and
+#     EX11-065 (`place_as_bottom_source` with `target: event_target`).
+#   - No hand option: unlike EX11-065, the printed text specifies only the
+#     trash zone. No zone-choice branch needed.
+#
+# ─── Clause 2: [Security] ─────────────────────────────────────────────────────
+#
+# "Security Effect [Security] Play this card without paying the cost."
+# Standard play_from_security pattern.
 
 effects:
+  # ─── Clause 0: [Start of Your Turn] memory setter ─────────────────────────
   - when: start_of_your_turn
     condition: { memory_lte: 2 }
     summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
     process:
       - set_memory: 3
 
+  # ─── Clause 1: [Your Turn] on_digivolve Mineral/Rock observer ─────────────
+  #
+  # Triggers when an own Digimon digivolves into a Mineral/Rock Digimon.
+  # Cost: suspend this Tamer (optional — player may decline).
+  # Body: select up to 2 Mineral/Rock cards from own trash, place each as bottom
+  #       digivolution card of the triggering (just-digivolved) Digimon.
+  #
+  # Optionality gate: the "you may" is modeled as an explicit
+  # `select_own_permanent: optional: true` step that is the FIRST step in
+  # the process body. This installs an is_optional:true PendingSelection
+  # (OwnField kind) before the suspend cost is paid, letting the player
+  # decline via PASS. When the player accepts (picks Close), the tail
+  # (suspend + trash multi-select + per-card placement) runs. When the
+  # player sends PASS, the tail is not called and no suspend occurs.
+  #
+  # Why not suspend-first: any synchronous step before the first
+  # PendingSelection runs unconditionally — including the suspend cost.
+  # Moving the gate-selection before suspend ensures the player can decline
+  # before the cost is paid (cf. EX11-065 header notes).
+  - when: on_digivolve
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When own Mineral/Rock Digimon digivolves, suspend self to place up to 2 Mineral/Rock from trash as bottom sources"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_trait_has: Mineral
+            - event_target_trait_has: Rock
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "EX8-067"
+            is_unsuspended: true
+    process:
+      # Accept/decline gate: select Close itself (optional) to confirm
+      # activation. Installs is_optional:true OwnField selection. Player can
+      # PASS to decline without paying the suspend cost. The binding is unused
+      # downstream; `target: source` for the subsequent suspend step resolves
+      # to ctx.source_permanent (this Tamer permanent) regardless.
+      - select_own_permanent:
+          filter:
+            all_of:
+              - card_number_is: "EX8-067"
+              - is_unsuspended: true
+          optional: true
+          bind_as: _close_confirm
+          prompt: "Activate: suspend Close to place up to 2 [Mineral]/[Rock] cards from trash as bottom digivolution cards?"
+      # Cost: suspend this Tamer. Only runs if player accepted above.
+      - suspend: { target: source }
+      # Body: select up to 2 Mineral/Rock cards from own trash.
+      # optional_zero: true allows picking 0 (player can choose not to place
+      # any cards even after paying the suspend cost — printed "up to 2"
+      # means 0 through 2 are all legal choices).
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          max: 2
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          bind_as: placed_cards
+          prompt: "Place up to 2 [Mineral] or [Rock] cards from your trash as bottom digivolution cards"
+          optional_zero: true
+      # Place each selected card as the bottom digivolution card of the
+      # just-digivolved Digimon (event_target = the resolved permanent).
+      - per_selected:
+          selection: placed_cards
+          bind_as: src
+          body:
+            - place_as_bottom_source:
+                source: src
+                target: event_target
+
+  # ─── Clause 2: [Security] Play this card without paying the cost ──────────
   - scope: inherited
     when: on_security
     summary: "[Security] Play this card without paying the cost"

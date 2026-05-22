@@ -74,6 +74,10 @@ Blocked after pass (Phase 2 Track E 2026-05-17 update — BT9-103 advanced to IM
 - `EX8-070`: source-cost selection, temporary protection, and lowest-play-cost security delete.
 - `P-130`: effect move-from-breeding and on-move suspend-memory trigger.
 
+2026-05-22 EX8-050 clause completion:
+
+- `EX8-050` Gogmamon: upgraded from Blocker-only (1 test) to full clause coverage (15 tests, 1 `#[ignore]`'d pending G-PLAY-FROM-REVEALED-FREE). Clauses now authored: `<Blocker>`, `[On Deletion]` reveal-top-3 + bucket-select + trash-all (PARTIAL: play step blocked), inherited `[Opponent's Turn][OPT]` redirect-attack-to-self. YAML restructured to use `select_reveal_buckets` (not `select_reveal`) so the trash tail always runs via the callback even when the player picks nothing.
+
 Phase 2 Track E (2026-05-17) PARTIAL → IMPLEMENTED advancements:
 
 - `P-167`: `[Start of Your Main Phase][When Digivolving]` reveal/source-trash/search/source-placement clause now authored using the new `choose_from_reveal` + `order_remainder` DSL verbs. Inherited source-trash De-Digivolve clause unchanged.
@@ -142,3 +146,50 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml
 
 ### New pattern worth documenting in RUST_DSL_TEST_API.md
 - **Single-trigger optional auto-fire vs declinable cost-gating.** When a clause is `optional: true` and the body has a synchronous step BEFORE any `PendingSelection`, that step (e.g. `suspend`) runs unconditionally — the optional flag does not gate it. To make a "by suspending this Tamer, you may …" body actually declinable, the FIRST step must install a selection with `optional: true`, and cost-paying steps must live in that selection's callback. EX11-065's Batch 10 fix adopted this pattern (`select_own_permanent: { optional: true }` first → suspend + place in the accept callback).
+
+---
+
+## Phase A completion pass (2026-05-22) — OpenSpec change `complete-rocks-archetype`
+
+Calibration spike found the verdict tracker badly stale: the 47-card pool ran
+`cargo test` at 239 passed / 0 failed / 9 ignored, while the tracker claimed
+2 BLOCKED + 30 PARTIAL. Phase A re-audited the 26 PARTIAL cards in 5 batches of
+~6 parallel agents and authored every omitted clause whose substrate had landed.
+
+Result: Rocks pool **15/30/2 → 37 IMPLEMENTED / 9 PARTIAL / 1 BLOCKED**.
+Full `cards_behavioral`: 3104 passed / 0 failed / 192 ignored. All 39 engine
+test binaries green.
+
+Newly IMPLEMENTED (23): BT21-021, BT21-055, EX10-025, EX10-028, EX10-032,
+EX10-033, EX10-036, EX10-063, EX10-069, EX7-049, EX8-048, EX8-055, EX8-067,
+LM-031, LM-032, P-039, P-107, P-169, P-186, P-215, ST22-11, BT4-072, P-206.
+Reclassified already-done (5): EX10-003, EX7-074, BT9-103, EX8-047, P-167.
+
+### Incident note — parallel-agent git corruption
+
+Phase A agents ran without worktree isolation in a shared tree; several invoked
+`git stash` to probe pre-existing failures and buried other agents' uncommitted
+work in 3 overlapping stashes. Test files for EX10-025/028/032/063 and P-186
+were lost and re-authored from the (recovered) YAML. Lesson: card-authoring
+agents must run worktree-isolated, or be explicitly forbidden from any `git`
+command. The 8 re-dispatch agents in the recovery wave were run with an explicit
+no-git rule — no further loss.
+
+### Remaining 10 cards — genuine substrate gaps (Phase B follow-up)
+
+| Card | Gap | Slice |
+|---|---|---|
+| P-130 | `G-MOVE-BREEDING-DSL` | B2 |
+| EX11-065 | `G-DSL-SELECT-OWN-SOURCES-FILTER` (hand∪source union) | B3 |
+| EX11-038 | same union gap | B3 |
+| BT20-055 | face-up security lifecycle (flip + checks-face-up observer) | B4 |
+| BT23-096 | `G-DSL-DELAY-ON-ATTACK-EVENT` | B5 |
+| BT8-094 | `G-EVENT-TARGET-LEVEL-LTE` (event_target_level predicate family) | NEW |
+| BT23-059 | `G-ON-OPTION-TRASHED-DSL` (DSL Timing enum) | NEW |
+| EX10-034 | `G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING` | NEW |
+| EX11-044 | `G-HIGHEST-PLAY-COST-SELECTOR` + `event_host_permanent_is_source` | NEW |
+| EX8-050 | play-from-reveal-free sub-step | NEW |
+
+Phase A surfaced 5 new small DSL gaps not in the original B1–B5 scope. B1
+(carrier-trait predicate) collapsed — `source_permanent_trait_has` already
+existed, so BT21-021 was completed as a pure authoring fix.

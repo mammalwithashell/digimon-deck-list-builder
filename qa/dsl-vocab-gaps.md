@@ -1111,6 +1111,30 @@ test was already passing through the `count_lte` aggregate over
 - Gap kind: hybrid (Rust engine modifier registry needs a typed grant slot; DSL needs the verb + lowering).
 - First reported: 2026-05-03 (EX1-068 Ice Wall!, batch-implement-cards-rust-dsl)
 
+## EX10-034 — grant_triggered_effect to a selected binding  [G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING]
+- Effect text: EX10-034 Blastmon — "[On Play] [When Digivolving] Until your opponent's turn ends, give 1 of their Digimon '[Start of Your Main Phase] This Digimon attacks.'"
+- Status: OPEN (filed 2026-05-22 during EX10-034 Blastmon authoring).
+- Missing DSL verb / step kind / predicate: `grant_triggered_effect` step (`code/digimon-dsl/src/step.rs` `GrantTriggeredEffectArgs`) has `target: PredicateSpec` — it walks the battle area for all permanents matching the predicate and installs the granted body on EVERY match. The card text requires "1 of their Digimon" — a single player-selected opponent Digimon. There is no DSL surface that combines a `select_opponent_permanent` binding step with a `grant_triggered_effect` step targeting the selected binding: `target` cannot be a `BindingRef`.
+- Lowers to engine API: needs a new `target` variant (or sibling step kind) on `GrantTriggeredEffectArgs` that accepts a `BindingRef` in addition to `PredicateSpec`, lowering via `dsl_cards/step/grant_triggered.rs` to a single-target grant on the resolved permanent handle rather than a broadcast foreach loop. The engine substrate for per-permanent granted-triggered-effect entries (Phase 4i queue-based dispatch) already exists; the gap is purely in the DSL target-resolution path.
+- Suggested DSL syntax (option A — binding ref target):
+  ```yaml
+  - select_opponent_permanent:
+      bind_as: forced_target
+      filter: { kind: digimon }
+      prompt: "Choose 1 of your opponent's Digimon"
+  - grant_triggered_effect:
+      target: forced_target          # NEW: accept BindingRef (resolves to a single handle)
+      timing: start_of_main_phase
+      process:
+        - force_attack: { attacker: self, targets: any }
+      expiry: end_of_opponents_turn
+  ```
+  (Option B — `grant_triggered_effect_to_binding` step variant that takes `target: BindingRef` directly and is identical in lowering to the single-target case.)
+- Approximation that would VIOLATE no-approximations: using `target: { of: opponent, kind: digimon }` would install the forced-attack grant on ALL opponent Digimon (over-fires on every opponent Digimon rather than the selected 1). Per no-approximations, EX10-034's [OP][WD] clause is OMITTED entirely until the gap closes.
+- Also blocks: any "[On Play|When Digivolving|etc.] give 1 [specific target] '<timing> body'" card text where the grant target is a player-selected single permanent. Distinct from the EX1-068 gap (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT) which blocks broadcast-to-all — this gap specifically blocks the select-1-then-grant pattern.
+- Gap kind: dsl. Engine substrate (Phase 4i granted-triggered-effect per-permanent slots + queue dispatch) already exists; only the DSL target-resolution path for binding refs is missing.
+- First reported: 2026-05-22 (EX10-034 Blastmon, batch-implement-cards-rust-dsl)
+
 ## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN] — RESOLVED 2026-05-17 (Phase 2 Track F)
 
 See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track F closure" entry for
@@ -2563,3 +2587,50 @@ state.
 Coverage:
 - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- aura_filter_includes_track_c_change_traits_overlay`
 - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- aura_filter_includes_track_c_change_base_card_name_overlay`
+
+---
+
+## BT8-094 / RB1-035 — event-target level predicates  [G-EVENT-TARGET-LEVEL-LTE]
+
+- **Effect text (BT8-094 Clause A):** "[All Turns] When one of your opponent's
+  level 5 or lower Digimon is deleted, you may suspend this Tamer to ＜Draw 1＞."
+- **Effect text (BT8-094 Clause B):** "[Opponent's Turn] When one of your
+  opponent's level 3 Digimon is moved from their breeding area to their battle
+  area, gain 2 memory."
+- **Effect text (RB1-035 Clause 2):** "[All Turns] When an opponent plays a
+  Digimon, by suspending this Tamer, gain 1 memory if that Digimon is level 4
+  or higher, and Draw 1 if it is level 3."
+- **Missing DSL predicate:** The `PredicateSpec` struct in
+  `code/digimon-dsl/src/predicate.rs` has no `event_target_level_lte`,
+  `event_target_level_eq`, or `event_target_level_gte` leaf. The sibling
+  `event_target_kind` / `event_target_trait_has` / `event_target_owner` /
+  `event_target_color_any_of` leaves all exist but none expose the integer
+  level of the event-target permanent's top card.
+- **Why it can't be approximated:** omitting the level filter would make the
+  deletion observer fire on Lv.6+ Digimon too, and the breeding-move observer
+  fire on Lv.4+ Digimon — both violate the no-approximations policy.
+- **Lowers to engine API:** `EffectReadContext::event_target_card()` already
+  returns a `Card` snapshot; `Card::level` is available on that struct. Adding
+  an `event_target_level_lte: Option<u8>` predicate leaf (and `_gte`, `_eq`
+  siblings) is a small addition alongside the existing `event_target_kind` arm
+  in `predicate.rs::eval_predicate_with_bindings` (`group6_event_target_*`
+  block, ~line 900).
+- **Suggested DSL syntax:**
+  ```yaml
+  condition:
+    all_of:
+      - event_target_owner: opponent
+      - event_target_kind: digimon
+      - event_target_level_lte: 5       # or event_target_level_eq / _gte
+  ```
+- **Gap kind:** DSL-only (engine event context already carries the level; the
+  only missing piece is the predicate leaf in `predicate.rs` + `compiled.rs` +
+  `compile.rs` + the evaluator arm).
+- **Blocked cards / tests:**
+  - `code/digimon-engine/cards/bt8/BT8-094.yaml` — Clauses A and B omitted;
+    YAML comments document the intended shapes.
+  - `code/digimon-engine/tests/cards_behavioral/bt8/bt8_094.rs` — 9 tests
+    `#[ignore = "pending: G-EVENT-TARGET-LEVEL-LTE ..."]`.
+  - `code/digimon-engine/cards/rb1/RB1-035.yaml` — [All Turns] clause noted
+    as needing "event-card level predicates" in comment.
+- **First reported:** 2026-05-22 (BT8-094 Pass 2 audit).

@@ -1425,6 +1425,19 @@ impl Game {
             if effect.timing != EffectTiming::OptionMain {
                 continue;
             }
+            // Skip link-metadata-only effects: those with a `link_cost` but
+            // NO `process` closure. These are `link_requirement` DSL clauses
+            // that carry the link cost and filter for cost computation /
+            // classify_option_subtype / dispose_option candidate filtering —
+            // they have no executable body and enqueuing them would produce a
+            // spurious TriggerOrder multi-bundle prompt.
+            //
+            // Effects that have BOTH a `link_cost` and a `process` closure
+            // (e.g. raw-Rust `LinkToAnyDigimon`-style effects) are real body
+            // effects and must NOT be skipped.
+            if effect.link_cost.is_some() && effect.process.is_none() {
+                continue;
+            }
             self.effect_queue.push_back(QueuedEffect {
                 source_card: card_handle,
                 source_permanent: None,

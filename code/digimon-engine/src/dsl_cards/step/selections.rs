@@ -592,8 +592,21 @@ pub fn try_install(
             prompt,
             then,
         } => {
-            if min > max || *max == 0 || !has_own_source_candidates(ctx) {
+            if min > max || *max == 0 {
                 return InstallResult::Continue;
+            }
+            // When no digivolution sources exist at all (unfiltered), and the
+            // clause requires at least one pick (min > 0), the cost cannot be
+            // paid: abort the outer continuation silently. For min == 0, no
+            // sources means the player implicitly picks 0 — the `then` body
+            // with an empty binding is a no-op anyway, so advancing to the
+            // outer tail (`Continue`) is correct for that case.
+            if !has_own_source_candidates(ctx) {
+                return if *min > 0 {
+                    InstallResult::TailAlreadyRan
+                } else {
+                    InstallResult::Continue
+                };
             }
             let mut inner_tail = then.clone();
             inner_tail.extend_from_slice(tail);
@@ -609,7 +622,19 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            selection_result(ctx)
+            // The outer tail was captured inside `inner_tail` and passed
+            // entirely into `install_select_own_sources`. The outer loop must
+            // NOT advance into those same steps again. If a selection was
+            // installed, `Parked` stops the loop. If no selection was
+            // installed (callback ran synchronously for min=0, or filtered
+            // candidates = 0 for min>0 so the callback was dropped), the
+            // outer tail already ran or was intentionally discarded —
+            // `TailAlreadyRan` stops the loop in both sub-cases.
+            if ctx.game.pending_selection.is_some() {
+                InstallResult::Parked
+            } else {
+                InstallResult::TailAlreadyRan
+            }
         }
         CompiledStep::SelectOpponentSources {
             target,
@@ -620,8 +645,17 @@ pub fn try_install(
             prompt,
             then,
         } => {
-            if min > max || *max == 0 || !has_opponent_source_candidates(ctx) {
+            if min > max || *max == 0 {
                 return InstallResult::Continue;
+            }
+            // Mirror of SelectOwnSources early-abort logic: when no opponent
+            // sources exist and min > 0, the cost cannot be paid — abort.
+            if !has_opponent_source_candidates(ctx) {
+                return if *min > 0 {
+                    InstallResult::TailAlreadyRan
+                } else {
+                    InstallResult::Continue
+                };
             }
             let mut inner_tail = then.clone();
             inner_tail.extend_from_slice(tail);
@@ -637,7 +671,14 @@ pub fn try_install(
                 bindings,
                 runtime.clone(),
             );
-            selection_result(ctx)
+            // Same tail-capture semantics as SelectOwnSources: the outer tail
+            // is embedded in inner_tail, so the outer loop must not advance
+            // into those steps regardless of how the install resolved.
+            if ctx.game.pending_selection.is_some() {
+                InstallResult::Parked
+            } else {
+                InstallResult::TailAlreadyRan
+            }
         }
         CompiledStep::SelectOpponentDpBudget {
             dp_budget,

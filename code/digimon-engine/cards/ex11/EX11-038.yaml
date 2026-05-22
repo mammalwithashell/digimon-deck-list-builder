@@ -12,10 +12,32 @@ alt_paths:
     from: { level_eq: 2, color_is: black }
     cost: 0
 
-# Printed [When Moving]/[On Play] clause not authored in this pass:
-# by trashing 1 [Mineral]/[Rock] card from hand or digivolution cards, Draw 1.
-# That needs a faithful hand-or-source cost choice without adding unavailable
-# choices when only one zone has candidates.
+# ─── Clause 0: [When Moving] [On Play] — OMITTED (BLOCKED) ──────────────────
+#
+# Printed card text (cards.json / authoritative):
+#   "[When Moving] [On Play] By trashing 1 [Mineral] or [Rock] trait card from
+#    your hand or your Digimon's digivolution cards, <Draw 1>."
+#
+# The cost is a union of two zones: (a) own hand filtered by Mineral/Rock
+# trait, and (b) any of own Digimon's digivolution card stacks filtered by
+# Mineral/Rock trait. No DSL verb exists that presents both zones as a single
+# player-visible selection pool from which exactly one card is trashed:
+#
+#   - `select_union_zone` supports {hand, trash} only — digivolution-card
+#     sources are not a valid `zones:` entry.
+#   - `select_own_sources` (filter: now supported) selects from own sources
+#     only — cannot include hand cards in the same selection.
+#   - Two separate `select_*` steps with an `if/else` zone choice would force
+#     the player to declare the zone before seeing candidates, which is
+#     unfaithful: the printed text presents the choice as a single "from hand
+#     or digivolution cards" menu, not a two-step zone-then-card flow.
+#
+# This is the same gap as EX11-065 Clause 0 and the Rocks pool pass rollup
+# entry (qa/dsl-vocab-gaps.md § "Rocks pool pass residual", "hand-or-source
+# costs beyond own-source filtering"). Gap tag used in ignored tests:
+# G-DSL-SELECT-OWN-SOURCES-FILTER (consistent with EX11-065's ignore tags).
+# A hand-only or source-only proxy would be unfaithful; the clause is omitted
+# until the union-cost verb lands.
 
 effects:
   - scope: inherited

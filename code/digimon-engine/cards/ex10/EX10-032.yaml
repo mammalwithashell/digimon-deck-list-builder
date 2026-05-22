@@ -1,3 +1,76 @@
+# EX10-032 Proganomon — Digimon, Black, Level 5, Cost 7, 7000 DP
+# Traits: [Mineral, LIBERATOR]
+#
+# Printed card text (cards.json / authoritative):
+#
+#   [Hand] [Main] If you have [Close], by placing 1 [Landramon] from your
+#     trash as any of your [Sunarizamon]'s bottom digivolution card, it
+#     digivolves into this card for a digivolution cost of 3, ignoring
+#     digivolution requirements.
+#
+#   [On Play] [When Digivolving] [When Attacking] By trashing any 1 [Mineral]
+#     or [Rock] trait card from your Digimon's digivolution cards, 1 of your
+#     such Digimon gains ＜Collision＞, ＜Piercing＞ and +3000 DP until your
+#     opponent's turn ends.
+#
+#   Inherited: When effects trash this card from a [Mineral] or [Rock] trait
+#     Digimon's digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's
+#     Digimon.
+#
+# ─── Clause 1: [Hand][Main] alt-digivolve via placing Landramon from trash ──
+#
+# Condition:
+#   - You control a Close (EX11-065) Tamer in your battle area.
+#   - You control a Sunarizamon Digimon in your battle area.
+#   - You have at least 1 Landramon in your trash (cost must be payable).
+#
+# Cost / body:
+#   1. Select 1 Landramon from your trash.
+#   2. Select 1 of your Sunarizamon Digimon.
+#   3. Place the Landramon as Sunarizamon's bottom digivolution card.
+#   4. Effect-initiated digivolve: Sunarizamon → EX10-032 from hand at cost 3,
+#      ignoring requirements.
+#
+# `from_hand: self` resolves to ctx.source_card (this EX10-032 card in hand)
+# via the hand-card path in resolve_card_source_ref. Pattern matches BT22-036
+# Chaperomon's [Hand][Main] clause exactly.
+#
+# ─── Clause 2: [On Play][When Digivolving][When Attacking] source-trash buff ─
+#
+# "By trashing any 1 [Mineral] or [Rock] trait card from your Digimon's
+# digivolution cards, 1 of your such Digimon gains <Collision> + <Piercing>
+# + +3000 DP until your opponent's turn ends."
+#
+# Step layout:
+#   1. select_own_sources — no `from:` restriction; filter: source card must
+#      have Mineral or Rock trait. Scans ALL own Digimon's source stacks.
+#   2. trash_selected_sources — trash the chosen source card.
+#   3. select_own_permanent — choose 1 of your Mineral/Rock Digimon for buffs.
+#   4. grant_keyword Collision (expiry: end_of_opponents_turn).
+#   5. grant_keyword Piercing (expiry: end_of_opponents_turn).
+#   6. add_dp_modifier +3000 (expiry: end_of_opponents_turn).
+#
+# Note: EX10-032 does NOT grant Reboot or return-immunity (unlike EX8-070).
+# "1 of your such Digimon" = one of your Digimon with Mineral or Rock trait.
+# If no Mineral/Rock source exists, select_own_sources returns early. If no
+# Mineral/Rock Digimon exists after trashing, select_own_permanent returns
+# early. Both are per the no-approximations silent-skip contract.
+#
+# ─── Clause 3: Inherited source-trash De-Digivolve ──────────────────────────
+#
+# Already implemented (prior pass).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                     | Status       |
+# |-------------------------------------------------------|--------------|
+# | [Hand][Main] Close gate + Landramon place + digivolve | IMPLEMENTED  |
+# | [OP][WD][WA] trash Mineral/Rock source                | IMPLEMENTED  |
+# | [OP][WD][WA] grant Collision until EoOT               | IMPLEMENTED  |
+# | [OP][WD][WA] grant Piercing until EoOT                | IMPLEMENTED  |
+# | [OP][WD][WA] +3000 DP until EoOT                     | IMPLEMENTED  |
+# | Inherited De-Digivolve 1                              | IMPLEMENTED  |
+
 card: EX10-032
 name: Proganomon
 kind: digimon
@@ -12,10 +85,105 @@ alt_paths:
     from: { level_eq: 4, color_is: black }
     cost: 3
 
-# Printed hand-main and face-up source-trash buff clauses are not authored in
-# this pass. The inherited source-trash De-Digivolve clause is covered below.
-
 effects:
+  # ─── Clause 1: [Hand][Main] ──────────────────────────────────────────────
+  #
+  # Activate from hand: place 1 Landramon from trash as Sunarizamon's bottom
+  # digivolution card, then effect-digivolve Sunarizamon into EX10-032 at
+  # cost 3 ignoring requirements. Requires a Close Tamer on the field.
+  - when: main_from_hand
+    summary: "[Hand][Main] If you have Close, place Landramon from trash under Sunarizamon, digivolve into this card for 3 ignoring requirements"
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            name_is: "Close"
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            name_is: "Sunarizamon"
+        - count_gte:
+            filter:
+              owner: you
+              zone: [trash]
+              name_is: "Landramon"
+            n: 1
+    process:
+      - select_trash:
+          of: you
+          bind_as: landramon
+          filter: { name_is: "Landramon" }
+          prompt: "Choose 1 Landramon from your trash"
+      - select_own_permanent:
+          bind_as: sunarizamon
+          filter: { kind: digimon, name_is: "Sunarizamon" }
+          prompt: "Choose 1 of your Sunarizamon to place Landramon under and digivolve"
+      - place_as_bottom_source: { source: landramon, target: sunarizamon }
+      - effect_initiated_digivolve:
+          target: sunarizamon
+          from_hand: self
+          cost: 3
+          ignore_requirements: true
+
+  # ─── Clause 2: [On Play][When Digivolving][When Attacking] buff ──────────
+  #
+  # Cost: trash 1 Mineral/Rock trait source from any of your Digimon's
+  # digivolution cards. Effect: 1 of your Mineral/Rock Digimon gains
+  # Collision + Piercing + +3000 DP until end of opponent's turn.
+  - when: [on_play, when_digivolving, when_attacking]
+    summary: "[OP][WD][WA] Trash 1 Mineral/Rock source → 1 of your Mineral/Rock Digimon gains Collision + Piercing + +3000 DP until EoOT"
+    process:
+      # Step 1: Select 1 Mineral/Rock trait source card from any of your
+      # Digimon's digivolution cards to trash (the cost).
+      - select_own_sources:
+          filter:
+            any_of:
+              - trait_has: Mineral
+              - trait_has: Rock
+          min: 1
+          max: 1
+          bind_as: chosen_source
+          prompt: "Choose 1 [Mineral] or [Rock] trait card from your Digimon's digivolution cards to trash"
+
+      # Step 2: Trash the chosen source card.
+      - trash_selected_sources: { source_refs: chosen_source }
+
+      # Step 3: Select 1 of your Mineral/Rock Digimon to receive the buffs.
+      - select_own_permanent:
+          bind_as: target_digi
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Mineral
+                  - trait_has: Rock
+          prompt: "Choose 1 of your [Mineral] or [Rock] trait Digimon to gain Collision + Piercing + +3000 DP"
+
+      # Step 4: Grant Collision until end of opponent's turn.
+      - grant_keyword:
+          target: target_digi
+          keyword: Collision
+          expiry: end_of_opponents_turn
+
+      # Step 5: Grant Piercing until end of opponent's turn.
+      - grant_keyword:
+          target: target_digi
+          keyword: Piercing
+          expiry: end_of_opponents_turn
+
+      # Step 6: +3000 DP until end of opponent's turn.
+      - add_dp_modifier:
+          target: target_digi
+          value: 3000
+          expiry: end_of_opponents_turn
+
+  # ─── Clause 3: Inherited source-trash De-Digivolve ───────────────────────
+  #
+  # When effects trash this card from a Mineral/Rock Digimon's digivolution
+  # cards, De-Digivolve 1 one of your opponent's Digimon.
   - scope: inherited
     when: on_digivolution_card_trashed
     condition:
