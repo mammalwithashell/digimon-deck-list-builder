@@ -526,34 +526,13 @@ fn lm_021_delete_dp_sum(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
     );
 }
 
-/// LM-027 Red Scramble — Delay placeholder no-op (G-DELAY-START-OF-TURN).
-///
-/// The Delay clause in LM-027 fires at the START of the controller's turn
-/// (DCGO `EffectTiming.OnStartTurn`). The engine's `DelayTrigger` enum only
-/// supports `EndOfThisTurn` and `EndOfYourNextTurn` — there is no
-/// `StartOfYourNextTurn` variant. The DSL `kind: delay` lowerer maps all
-/// non-EndOfYourTurn timings to `EndOfYourNextTurn`, which fires at the WRONG
-/// time (end-of-turn, not start-of-turn).
-///
-/// This function is a declarative no-op placeholder preserving the clause-index
-/// slot until G-DELAY-START-OF-TURN is resolved. When the gap closes:
-///   1. Add `DelayTrigger::StartOfYourNextTurn` to `enums::DelayTrigger`.
-///   2. Wire a mapping in `lower_delay.rs`.
-///   3. Replace the raw_rust clause in LM-027.yaml with a native `kind: delay`
-///      clause using the new trigger, and implement the full body:
-///      a. select_trash (mandatory, filter: digimon + color_is: red)
-///      b. move_trash_to_deck_top (or raw_rust lm_027_return_trash_to_deck_top
-///         until G-ZONE-TRASH-TO-DECK is resolved)
-///      c. if no Digimon on controller's field: select_trash (optional,
-///         dp_lte: 2000, play_from_trash_free)
-///      d. condition: opponent has at least 1 Digimon on field.
-///   4. Remove this function and its registration.
-///
-/// Tracked in qa/archetype-qa/engine-gaps.md under G-DELAY-START-OF-TURN.
-fn lm_027_delay_start_of_turn_noop(_handle: crate::card_source::CardHandle) -> Vec<Effect> {
-    // No-op: full implementation blocked by G-DELAY-START-OF-TURN.
-    vec![]
-}
+// bt20_016_dna_on_deletion was removed 2026-05-21 (main #503) — BT20-016's
+// [All Turns] cross-permanent DNA-on-deletion observer no longer needs a
+// raw_rust placeholder.
+//
+// lm_027_delay_start_of_turn_noop was removed 2026-05-21 — LM-027's
+// [Start of Your Turn] <Delay> clause is now a native `kind: delay` clause
+// (G-DELAY-START-OF-TURN and G-ZONE-SELECTED-TRASH-TO-DECK-TOP both resolved).
 
 /// LM-027 Red Scramble — legacy shim for "add this card to hand".
 ///
@@ -782,10 +761,9 @@ pub fn build_registry() -> EngineRawRustRegistry {
     // bt20_102_boardwipe_and_return was removed 2026-05-20 — BT20-102's
     // [On Play][When Digivolving] board-wipe + return clause is now pure DSL
     // (for_each + binding_absent/not_in_binding exclusion; G-FOR-EACH-EXCLUDE-BINDING).
-    r.register_declarative(
-        "lm_027_delay_start_of_turn_noop",
-        lm_027_delay_start_of_turn_noop,
-    );
+    // bt20_016_dna_on_deletion was removed 2026-05-21 (main #503).
+    // lm_027_delay_start_of_turn_noop was removed 2026-05-21 — LM-027's Delay
+    // clause is now native DSL (G-ZONE-SELECTED-TRASH-TO-DECK-TOP resolved).
     r.register_step("lm_027_add_self_to_hand", lm_027_add_self_to_hand);
     // p_206_add_self_to_hand was removed 2026-05-17 (Phase 2 Track E) —
     // P-206 now uses native DSL `add_this_option_to_hand`.

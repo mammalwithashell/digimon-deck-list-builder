@@ -541,6 +541,18 @@ pub struct PendingEffectSecurityRemoval {
     pub discard_security_fired: bool,
 }
 
+/// The resolved play mode of an in-flight Option card. Drives how
+/// `dispose_option` finishes the play and is fixed at the moment the
+/// Option leaves its source zone (so a dual-mode Plug-In does not get
+/// re-classified mid-resolution).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OptionSubtype {
+    Standard,
+    Delay(crate::enums::DelayTrigger),
+    Link,
+    Training,
+}
+
 /// Transient state for an Option card mid-resolution. Mirrors
 /// PendingSecurity / PendingAttack. Carries the card between pay-cost
 /// and dispose so effect scripts can reference it via ctx.source_card.
@@ -550,6 +562,11 @@ pub struct PendingOption {
     pub card: CardSource,
     pub source_kind: OptionUseSource,
     pub resolution_phase: OptionResolutionPhase,
+    /// The resolved play mode chosen at play time. `dispose_option`
+    /// branches on this rather than re-classifying the card's effects —
+    /// a dual-mode Plug-In Option (Standard `[Main]` + Link) would
+    /// otherwise be ambiguous.
+    pub subtype: OptionSubtype,
 }
 
 /// Source zone for an in-flight Option use.

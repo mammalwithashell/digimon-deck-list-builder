@@ -14,12 +14,12 @@ traits: [LIBERATOR]
 #   CanUseCondition: IsExistOnHand(card) && Enemy.SecurityCards.Count <= 3
 #   ChangeCost: Cost -= 4
 #
-# DSL modelling:
+# DSL modelling (pure DSL — G-OPP-SECURITY-COUNT-LTE RESOLVED 2026-05-17):
 #   - kind: cost_reduction (BeforePayCost hook)
-#   - when_playing_this: true  (fires when this specific card is being played)
-#   - condition counts cards in the opponent's security stack via aggregate
-#     count_lte over zone/owner filters.
-#   - amount: 4
+#   - when_playing_this: true  (fires only when THIS card is being played)
+#   - condition: opponent_security_count_lte: 3 — native predicate leaf,
+#     evaluated against rctx.security_count(rctx.opponent_id()).
+#   - amount: 4 (fixed reduction)
 
 # ─── Clause 1: [Main] Delete 1 of opponent's highest DP Digimon ───────────────
 #
@@ -29,25 +29,31 @@ traits: [LIBERATOR]
 # DCGO (EffectTiming.OptionSkill):
 #   SelectPermanentCondition: IsPermanentExistsOnOpponentBattleAreaDigimon &&
 #                             IsMaxDP(permanent, card.Owner.Enemy, null)
-#   selectPermanentEffect.SetUp(..., canNoSelect: false) → mandatory if any eligible target.
+#   selectPermanentEffect.SetUp(..., canNoSelect: false) → mandatory if any
+#   eligible target exists.
 #   Then: CardEffectCommons.PlaceDelayOptionCards(card, activateClass)
 #
-# DSL modelling:
+# DSL modelling (pure DSL — G-PRED-DP-LTE highest-DP selector RESOLVED):
 #   - when: main_from_hand   (OptionSkill timing → main_from_hand in DSL)
-#   - raw_rust step for highest-DP deletion (G-PRED-DP-LTE: dp_gte aggregate
-#     not evaluated in eval_permanent_fields)
-#   - "place this card in the battle area" is IMPLICIT: the presence of
-#     `kind: delay` (clause 2 below) causes dispose_option to classify this
-#     as a Delay option and place it in the battle area automatically.
-#
-# GAP G-PRED-DP-LTE (tracked in qa/archetype-qa/engine-gaps.md):
-#   dp_gte: { aggregate: highest_dp } would be the DSL expression but
-#   aggregate predicates are not evaluated in eval_permanent_fields.
-#   Using raw_rust step bt21_093_delete_highest_dp_opponent instead.
+#   - select_opponent_permanent with `selector: highest_dp` — the engine
+#     pre-filters candidates to the highest-effective-DP opponent Digimon
+#     (install_select_opponent_permanent → select_field_extreme). When several
+#     Digimon tie for highest DP, ALL tied permanents are exposed as valid
+#     action IDs so the choice surfaces to the RL action space.
+#   - mandatory selection (optional defaults to false) — matches
+#     DCGO canNoSelect: false. If no opponent Digimon exist, the selection
+#     short-circuits without a panic (no-op).
+#   - delete_permanent consumes the bound target.
+#   - "Then, place this card in the battle area" — IMPLICIT: the presence of
+#     the `kind: delay` clause (clause 2) causes dispose_option →
+#     classify_option_subtype → OptionSubtype::Delay to place this Option in
+#     the battle area as OptionState::Delayed after the Main effect drains.
+#     No explicit `place_self_as_delay_option` step is needed here
+#     (G-PLACE-SELF-AS-OPTION-PERMANENT entry, case 1: Main-clause placement
+#     is engine-auto via dispose_option).
 
 effects:
   # ─── Clause 0: BeforePayCost — reduce cost by 4 when opp has ≤3 security ────
-  # (moved inside effects: to fix YAML structure — was orphaned before effects: key)
   - kind: cost_reduction
     reduction_timing: before_pay_cost
     when_playing_this: true
@@ -55,39 +61,44 @@ effects:
       opponent_security_count_lte: 3
     amount: 4
     summary: "Cost -4 when opponent has ≤3 security"
+
+  # ─── Clause 1: [Main] Delete 1 opponent highest-DP Digimon; place self ─────
   - when: main_from_hand
     summary: "[Main] Delete 1 opponent highest-DP Digimon; place self in battle area"
     process:
-      # DCGO: canNoSelect: false — if eligible targets exist, selection is mandatory.
-      # raw_rust finds the highest DP among opponent Digimon, requests a selection,
-      # and deletes the chosen one. If no opponent Digimon exist, no-op.
-      - raw_rust: { fn: bt21_093_delete_highest_dp_opponent }
-      # "Then, place this card in the battle area" — implicit via kind: delay below.
+      # DCGO: canNoSelect: false — mandatory if eligible targets exist.
+      # `selector: highest_dp` restricts the prompt to the highest-DP
+      # opponent Digimon; ties expose every tied permanent.
+      - select_opponent_permanent:
+          bind_as: victim
+          selector: highest_dp
+          filter:
+            kind: digimon
+          prompt: "Delete 1 of your opponent's highest DP Digimon"
+      - delete_permanent: { target: victim }
+      # "Then, place this card in the battle area" — implicit via clause 2.
 
   # ─── Clause 2: kind: delay — marks this card as a Delay option ───────────────
   #
-  # The presence of this Delay clause causes dispose_option → classify_option_subtype
-  # → OptionSubtype::Delay → place the card in the battle area as OptionState::Delayed.
+  # The presence of this Delay clause causes dispose_option →
+  # classify_option_subtype → OptionSubtype::Delay → place the card in the
+  # owner's battle area as OptionState::Delayed.
   #
-  # The ACTUAL delay trigger (when opponent's security is removed from) is NOT a
-  # standard end-of-turn trigger. lower_delay.rs maps all non-EndOfYourTurn triggers
-  # to DelayTrigger::EndOfYourNextTurn. This Delay clause is therefore a structural
-  # marker only — the behavioral activation is handled by clause 3 (on_opponent_security_removed).
+  # The ACTUAL Delay trigger ("when your opponent's security stack is removed
+  # from") is NOT a native DelayTrigger variant — lower_delay.rs maps every
+  # non-event timing to DelayTrigger::EndOfYourNextTurn and only OnSuspend /
+  # OnUnsuspend map to DelayTrigger::OnEvent. There is no
+  # DelayTrigger::OnEvent(OnOpponentSecurityRemoved) mapping, and
+  # enqueue_event_gated_delayed_options is NOT called on SecurityRemoved
+  # trigger sources. So this `kind: delay` clause is a STRUCTURAL MARKER only:
+  # it exists to make classify_option_subtype place the card in the battle
+  # area. Its trigger is end_of_your_next_turn with an empty process — the
+  # engine will attempt to fire the empty body at end-of-your-next-turn, which
+  # is a harmless no-op (no self-trash in the body, so the card persists).
   #
-  # GAP: No `DelayTrigger::OnOpponentSecurityRemoved` variant exists. The standard
-  # end-of-your-next-turn delay would fire incorrectly (the card is NOT supposed to
-  # be trashed at end of turn — only when opponent's security is removed). The process
-  # steps here are empty; the real Delay body is clause 3.
-  #
-  # Note: Because this `kind: delay` has `trigger: end_of_your_next_turn`, the engine
-  # WILL attempt to fire its empty process at end-of-your-next-turn, but that is a no-op.
-  # The card stays in the battle area because the empty process doesn't trash it.
-  # (Only the Delay activation flow — via scan_delayed_options_at_end_of_turn — would
-  # trash it, and it uses `delete_permanent_with_cause(Cost)` which runs the full
-  # deletion flow. With empty process and no self-trash in the process, the card
-  # is effectively immortal until clause 3 fires and trashes it explicitly.)
-  #
-  # Structural tests assert this Delay clause exists.
+  # The real Delay activation is clause 3 (on_opponent_security_removed),
+  # which fires from this same battle-area Option permanent via
+  # enqueue_from_permanent and trashes the card explicitly.
   - kind: delay
     trigger: end_of_your_next_turn
     summary: "[Delay marker] Raging Serpentine enters battle area as Delay option"
@@ -95,60 +106,81 @@ effects:
 
   # ─── Clause 3: [All Turns] on_opponent_security_removed → Delay activation ───
   #
-  # Printed text: "[All Turns] When your opponent's security stack is removed from,
-  # ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)
+  # Printed text: "[All Turns] When your opponent's security stack is removed
+  # from, ＜Delay＞ (By trashing this card after the placing turn, activate the
+  # effect below.)
   # ・1 of your [Reptile] or [Dragonkin] trait Digimon may digivolve into a
-  # [Reptile] or [Dragonkin] trait Digimon card in the hand without paying the cost."
+  # [Reptile] or [Dragonkin] trait Digimon card in the hand without paying the
+  # cost."
   #
   # DCGO (EffectTiming.OnLoseSecurity):
   #   CanUseCondition:
   #     CanTriggerWhenLoseSecurity(player => player == card.Owner.Enemy) &&
-  #     CanDeclareOptionDelayEffect(card) [= card is on field as a Delay option]
+  #     CanDeclareOptionDelayEffect(card) [card is on field as a Delay option]
   #   CanActivateCondition:
-  #     IsExistOnBattleArea(card) && HasMatchConditionOwnersPermanent(CanSelectPermanent)
+  #     IsExistOnBattleArea(card) && HasMatchConditionOwnersPermanent(...)
   #   ActivateCoroutine:
-  #     1. DeletePermanentAndProcessAccordingToResult → trash this card (Delay cost)
-  #     2. If successful:
-  #       a. SelectPermanentEffect: own Digimon with Reptile or Dragonkin (canNoSelect: true)
-  #       b. If selected: DigivolveIntoHandOrTrashCard(payCost: false, isHand: true)
+  #     1. DeletePermanentAndProcessAccordingToResult → trash this card
+  #        (Delay activation cost).
+  #     2. If successful (delaySuccessful):
+  #       a. SelectPermanentEffect: own [Reptile]/[Dragonkin] Digimon
+  #          (canNoSelect: true → declinable).
+  #       b. if (selectedDigimon != null):
+  #          DigivolveIntoHandOrTrashCard(payCost: false, isHand: true).
   #
-  # DSL modelling:
-  #   - when: on_opponent_security_removed  [All Turns trigger]
-  #   - active_when: { all_turns: true }    [fires on both players' turns]
-  #   - condition: on_field (card must be in battle area as Delay option; this
-  #     clause ONLY fires from enqueue_from_permanent when the card is already on field,
-  #     so this condition is implicit — but explicit for clarity.)
-  #   - optional: true ("may digivolve" — the digivolve sub-step is optional;
-  #     the self-trash still fires even if declined per DCGO.)
+  # DSL modelling (pure DSL):
+  #   - when: on_opponent_security_removed  ([All Turns] trigger)
+  #   - active_when: { all_turns: true }    — clause fires on BOTH players'
+  #     turns (G-ALL-TURNS-FILTER verified working — see BT24-016 clause 4).
+  #   - condition: gates on (a) on_field — this Option is a battle-area Delay
+  #     permanent — AND (b) any_field_permanent: a Reptile/Dragonkin Digimon
+  #     the controller owns exists. (b) mirrors DCGO's `CanActivateCondition`
+  #     → `HasMatchConditionOwnersPermanent(CanSelectPermanent)`: if there is
+  #     no Reptile/Dragonkin Digimon to digivolve, the Delay does NOT activate
+  #     and the card is NOT trashed. (DCGO additionally checks that the
+  #     Digimon has a valid hand evolution partner; gating on the field
+  #     Digimon alone is a faithful approximation — the residual hand-partner
+  #     sub-check is the only piece of CanActivateCondition not expressed.)
+  #   - optional: true at clause level — the <Delay> is declinable (Comprehensive
+  #     Rules 16-16-2: processing a <Delay> is optional, the controller may
+  #     decline). With a leading `activation_cost` step plus `optional: true`,
+  #     the queue installs an accept/decline prompt: accept pays the trash-self
+  #     cost and runs the body; decline skips the whole clause and the card is
+  #     NOT trashed. Matches DCGO's OnLoseSecurity activate class isOptional: true.
   #   - process:
-  #       1. delete_permanent: { target: self }  — trash this card (Delay cost)
-  #       2. select_own_permanent: filter Reptile/Dragonkin Digimon (optional: true)
-  #       3. select_hand: filter Reptile/Dragonkin Digimon cards (optional: true)
-  #       4. effect_initiated_digivolve: cost 0 (free)
-  #
-  # GAP G-ALL-TURNS-FILTER: active_when: { all_turns: true } parses but
-  # it is uncertain whether the predicate evaluator allows firing on opponent's turn.
-  # Tests for opp-turn trigger are #[ignore]'d pending verification.
-  #
-  # NOTE: The "optional" semantics:
-  #   - DCGO: canNoSelect: true for the Digimon selection (can decline choosing a Digimon).
-  #   - DCGO: no "cancel" for the self-trash (always fires if CanActivateCondition passes).
-  #   - DSL: optional: true at clause level means the whole clause can be declined.
-  #     To model DCGO faithfully: self-trash is mandatory, digivolve is optional.
-  #     We model this as: clause fires (not optional), trash fires, digivolve sub-step
-  #     is optional via optional: true on select_own_permanent.
-  #   - optional: false at clause level (mandatory clause fire); optional: true on
-  #     the select_own_permanent step (can pass on the digivolve).
+  #       1. activation_cost { trash_self: true } — the declinable "by trashing
+  #          this card" <Delay> activation cost (G-ACTIVATION-COST-TRASH-SELF).
+  #          Must be the first body step; lifted onto Effect::activation_cost
+  #          and run only after the player accepts the optional <Delay> prompt.
+  #       2. select_own_permanent (optional: true) — choose 1 Reptile/Dragonkin
+  #          Digimon (DCGO canNoSelect: true — the player may decline).
+  #       3. Gated by `binding_present: evo_target` (mirrors DCGO
+  #          `if (selectedDigimon != null)`): only when a Digimon was chosen
+  #          do we prompt for the hand evolution card and digivolve.
+  #          - select_hand: Reptile/Dragonkin Digimon card in hand.
+  #          - effect_initiated_digivolve: cost 0 (DCGO payCost: false),
+  #            ignore_requirements: true.
   - when: on_opponent_security_removed
     active_when: { all_turns: true }
-    summary: "[All Turns] Delay activation: trash self, Reptile/Dragonkin may free-digivolve"
-    condition: { on_field: true }
-    optional: false
+    summary: "[All Turns]<Delay> By trashing this card, Reptile/Dragonkin may free-digivolve"
+    condition:
+      all_of:
+        - on_field: true
+        - any_field_permanent:
+            of: you
+            kind: digimon
+            any_of:
+              - trait_has: Reptile
+              - trait_has: Dragonkin
+    optional: true
     process:
-      # Step 1: Trash this card from the battle area (Delay activation cost).
-      # DCGO: DeletePermanentAndProcessAccordingToResult on card.PermanentOfThisCard()
-      - delete_permanent: { target: self }
-      # Step 2: Select 1 Reptile/Dragonkin Digimon (optional — canNoSelect: true in DCGO).
+      # Step 1: the declinable "by trashing this card" <Delay> activation cost
+      # (G-ACTIVATION-COST-TRASH-SELF). `activation_cost` must be the first body
+      # step; it is lifted onto Effect::activation_cost and runs only after the
+      # player accepts the optional <Delay> prompt. Declining the prompt skips
+      # the whole clause — the card is NOT trashed.
+      - activation_cost: { trash_self: true }
+      # Step 2: Select 1 Reptile/Dragonkin Digimon (optional — canNoSelect: true).
       - select_own_permanent:
           bind_as: evo_target
           optional: true
@@ -160,44 +192,54 @@ effects:
                   - trait_has: Reptile
                   - trait_has: Dragonkin
           prompt: "Choose a Reptile or Dragonkin Digimon to digivolve"
-      # Step 3: Select a Reptile/Dragonkin card from hand to digivolve into.
-      - select_hand:
-          of: you
-          bind_as: evo_card
-          optional: true
-          filter:
-            all_of:
-              - kind: digimon
-              - any_of:
-                  - trait_has: Reptile
-                  - trait_has: Dragonkin
-          prompt: "Choose a Reptile or Dragonkin card to digivolve into"
-      # Step 4: Free digivolve (payCost: false in DCGO).
-      - effect_initiated_digivolve:
-          target: evo_target
-          from_hand: evo_card
-          cost: 0
-          ignore_requirements: true
+      # Step 3: Only when a Digimon was chosen — DCGO `if (selectedDigimon != null)`.
+      - if:
+          condition: { binding_present: evo_target }
+          then:
+            # Select a Reptile/Dragonkin card from hand to digivolve into.
+            - select_hand:
+                of: you
+                bind_as: evo_card
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: Reptile
+                        - trait_has: Dragonkin
+                prompt: "Choose a Reptile or Dragonkin card to digivolve into"
+            # Free digivolve (DCGO payCost: false).
+            - effect_initiated_digivolve:
+                target: evo_target
+                from_hand: evo_card
+                cost: 0
+                ignore_requirements: true
 
-  # ─── Clause 4: Inherited [Security] ─────────────────────────────────────────
+  # ─── Clause 4: [Security] ───────────────────────────────────────────────────
   #
   # Printed text: "Security Effect [Security] Delete 1 of your opponent's
   # Digimon with the highest DP."
   #
-  # DCGO (EffectTiming.SecuritySkill):
+  # DCGO (EffectTiming.SecuritySkill, SetIsSecurityEffect(true)):
   #   Same SharedActivateCoroutine as the [Main] clause:
   #   SelectPermanentCondition: IsPermanentExistsOnOpponentBattleAreaDigimon &&
   #                             IsMaxDP(permanent, card.Owner.Enemy, null)
   #   canNoSelect: false → mandatory if any eligible target.
   #
-  # DSL modelling:
-  #   - scope: inherited
-  #   - when: on_security
-  #   - raw_rust step reuses bt21_093_delete_highest_dp_opponent
-  #
-  # GAP G-PRED-DP-LTE: same as clause 1; raw_rust handles highest-DP selection.
-  - scope: inherited
-    when: on_security
-    summary: "[Security][Inherited] Delete 1 opponent highest-DP Digimon"
+  # DSL modelling (pure DSL — same highest-DP selector as clause 1):
+  #   - when: on_security — an Option's [Security] effect. FaceUp scope (the
+  #     DSL default), NOT `scope: inherited`: an Option has no digivolution
+  #     stack, so its `[Security]` text is dispatched as the Option's own
+  #     SecuritySkill effect (the `Effect::security` builder sets the security
+  #     flag), exactly like BT24-089's `[Security]` clause. `scope: inherited`
+  #     would make enqueue_from_permanent skip the clause on a top-card Option.
+  #   - select_opponent_permanent with `selector: highest_dp` + delete_permanent.
+  - when: on_security
+    summary: "[Security] Delete 1 opponent highest-DP Digimon"
     process:
-      - raw_rust: { fn: bt21_093_delete_highest_dp_opponent }
+      - select_opponent_permanent:
+          bind_as: victim
+          selector: highest_dp
+          filter:
+            kind: digimon
+          prompt: "Delete 1 of your opponent's highest DP Digimon"
+      - delete_permanent: { target: victim }

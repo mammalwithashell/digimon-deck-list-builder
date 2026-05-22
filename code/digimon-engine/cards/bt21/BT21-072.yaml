@@ -6,10 +6,26 @@ color: [red, purple]
 cost: 9
 dp: 10000
 traits: [Dragon, Hero]
+# Digivolution paths:
+#   - Standard: from a Lv.4 Digimon, cost 4 (the printed `evo_costs`).
+#   - xros_req: "[Digivolve] Lv.4 w/＜Save＞ in text or w/[Hero] trait: Cost 3" —
+#     the printed alternate digivolution requirement. "w/＜Save＞ in text" is a
+#     literal text-presence check (the requirement's own wording is "in text"),
+#     modelled with the existing `effect_text_contains` predicate against the
+#     source card's printed text; "w/[Hero] trait" uses `trait_has`.
+#     `ignore_requirements: true` mirrors the AD1-012 xros_req pattern.
+#     G-ALT-PATH-SAVE-IN-TEXT.
 alt_paths:
   - kind: digivolve
     from: { level_eq: 4 }
     cost: 4
+  - kind: digivolve
+    from:
+      any_of:
+        - { level_eq: 4, effect_text_contains: "＜Save＞" }
+        - { level_eq: 4, trait_has: Hero }
+    cost: 3
+    ignore_requirements: true
 
 # Clause 1: <Raid>
 # DCGO: RaidSelfEffect(isInheritedEffect: false, card: card, condition: null)
@@ -29,13 +45,15 @@ alt_paths:
 # DCGO: CardEffectFactory.ChangeSelfDPStaticEffect(changeValue: 1000 * count(), ...) at
 #   EffectTiming.None — a continuous declarative effect whose value recomputes each tick
 #   as count() = PermanentOfThisCard().DigivolutionCards.Count().
-# BLOCKED (G-AURA-DP-FORMULA): The DSL `kind: aura` declarative with self-target
-#   only accepts `dp_modifier: <i32>` (static literal). It has no formula variant
-#   (`dp_modifier_fn` or `dp_modifier_formula`). The formula `base: 0, per: material_count,
-#   delta: 1000` is expressible via `add_dp_modifier` in a triggered clause but that only
-#   applies a snapshot at event time — not a continuous dynamically-recomputed aura that
-#   updates when de_digivolve trashes digivolution cards. The no-approximations policy
-#   requires faithful continuous DP. Tracked in qa/dsl-vocab-gaps.md.
+# RESOLVED (G-AURA-DP-FORMULA, Group 6): `kind: aura` now accepts `dp_modifier_fn`, a
+#   runtime formula closure that `Game::effective_dp` / `Game::source_dp_contribution`
+#   re-evaluate at query time. The formula `base: 0, per: material_count, delta: 1000`
+#   recomputes continuously — including after de_digivolve pops digivolution cards.
+#   `material_count` (CompiledPerSelector::MaterialCount) = stack_size - 1 =
+#   PermanentOfThisCard().DigivolutionCards.Count() exactly. Self-aura (`target: {}`)
+#   so the formula reads the source permanent's own stack. The DCGO `count() >= 1`
+#   condition is functionally redundant — at material_count 0 the formula yields 0 DP.
+#   [All Turns] = no turn gate → active_when: { all_turns: true } (BT12-031 pattern).
 #
 # Clause 5 (Inherited): [Your Turn] This Digimon gets +2000 DP.
 # DCGO: CardEffectFactory.ChangeSelfDPStaticEffect(changeValue: 2000, isInheritedEffect: true, ...)
@@ -70,9 +88,17 @@ effects:
           optional: true
 
   # ─── Clause 4: [All Turns] +1000 DP per digivolution card ─────────────────
-  # BLOCKED: G-AURA-DP-FORMULA — AuraBody.dp_modifier accepts only a static i32;
-  # no formula variant exists for continuous per-stack-size DP. Omit until the
-  # DSL adds dp_modifier_fn / dp_modifier_formula to AuraBody.
+  # Self-aura with a runtime formula closure (G-AURA-DP-FORMULA resolved).
+  # dp = base 0 + material_count * 1000, recomputed continuously by the DP
+  # query path so it tracks the stack after de_digivolve / digivolve.
+  - kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier_fn:
+      base: 0
+      per: material_count
+      delta: 1000
+    summary: "[All Turns] +1000 DP per digivolution card (material_count formula)"
 
   # ─── Clause 5 (Inherited): [Your Turn] +2000 DP ───────────────────────────
   - scope: inherited

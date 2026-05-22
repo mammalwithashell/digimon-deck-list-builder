@@ -2226,6 +2226,110 @@ The following Rust engine gap entries were relocated here from `docs/RUST_ENGINE
 - **Resolution:** `suppress_on_play: true` flag added to effect-play helpers and threaded through the play event context. On Play enqueue skips the just-played permanent's On Play clauses when the flag is set. DSL step: `play_from_trash_free: { filter: ..., suppress_on_play: true }`.
 - **Closed by:** Puppets substrate sweep, branch `claude/stoic-moser-0ef79e`, 2026-05-20.
 
+## Medusamon PARTIAL-card unblock (Tier 1+2) — 2026-05-21
+
+The `unblock-medusamon-partial-cards` OpenSpec change closed 5 of the 7 substrate
+gaps blocking PARTIAL Medusamon cards. The remaining 2 (G-ACTIVATED-DIGIVOLVE-EXECUTION,
+G-LINK-OPTION-DUAL-PLAY-MODE) are scoped into the follow-up change
+`unblock-medusamon-tier3-cards` — both close by reusing existing action IDs (no
+`ACTION_SPACE_SIZE` change), per the action-space spike recorded in that change's
+design.md.
+
+### Gaps CLOSED
+
+- **G-SECURITY-SKILL-RESUME-REFIRE** (engine) — a drain arm of
+  `combat.rs::drive_security_resolution` re-enqueued its `EffectTiming`
+  on every resume, so declining an optional `[Security]` "you may" effect
+  infinite-looped (and, with 2+ candidates, double-played). Fixed by a
+  `phase_enqueue_done: bool` on `SecurityResolutionState`: each drain phase
+  enqueues its timing exactly once; resume just flushes any continuation and
+  advances. The flag covers all three drain phases (superseding an earlier
+  single-phase `security_skill_drained` variant). Mirrors the `Dispose` →
+  `DisposeFinalize` guard. Unblocks **P-189**; also fixes P-206 / ST19-08 and a
+  latent double-play (`st19_08` count assertion corrected).
+- **G-ZONE-SELECTED-TRASH-TO-DECK-TOP** (engine + DSL) — no method moved a
+  selected trash card to the deck TOP. Added `EffectContext::return_trash_cards_to_deck_top`
+  (reverse-push so the first selected card lands on top) and a
+  `destination: top | bottom` field (`DeckDestination`, default `bottom`) on the
+  `return_trash_list_to_deck_bottom` DSL step; the lowering also resolves a
+  `select_trash` `TrashIndex` binding. Unblocks **LM-027** (clause B now a real
+  `kind: delay` clause; the `lm_027_delay_start_of_turn_noop` raw_rust placeholder
+  removed); LM-029/030/031 use the same primitive.
+- **G-TRASH-SELECTED-SECURITY** (engine + DSL) — no verb trashed a chosen non-top
+  security card. Added `EffectContext::trash_security_card(player, handle)`
+  (handle-based — no index-staleness) and a `trash_selected_security` DSL verb
+  that consumes a `select_security` binding. Unblocks **BT24-018**.
+- **G-ACTIVATION-COST-TRASH-SELF** (DSL) — `activation_cost:` accepted only
+  `suspend_self` / `return_self_to_deck_bottom`. Added a declinable
+  `trash_self: true` variant (`CompiledActivationCostKind::TrashSelf` +
+  `EffectContext::trash_self_as_cost`) so a `<Delay>` "by trashing this card"
+  cost is genuinely declinable per Comprehensive Rules 16-16-2. Unblocks **BT21-093**.
+- **G-ALT-PATH-SAVE-IN-TEXT** (DSL) — alt-path `from:` filters could not gate on
+  "<Keyword> in text". **No new predicate needed:** the existing
+  `effect_text_contains` predicate already does a printed-text substring scan and
+  `eval_predicate` already runs it against an alt-path `from:` candidate. BT21-072's
+  `xros_req` cost-3 path now uses `from: { any_of: [{level_eq:4, effect_text_contains:"<Save>"}, {level_eq:4, trait_has:Hero}] }`.
+  Unblocks **BT21-072**.
+
+- **Closed by:** `unblock-medusamon-partial-cards` OpenSpec change, 2026-05-21.
+  Full engine suite green (`cards_behavioral` 2714 passed / 0 failed).
+
+## Medusamon PARTIAL-card unblock (Tier 3) — 2026-05-22
+
+The `unblock-medusamon-tier3-cards` OpenSpec change closed the two Tier-3 gaps that
+the spike (design.md) had feared would need a new action ID. **The spike found
+neither needs the action space to grow** — `ACTION_SPACE_SIZE` (2192) and
+`TENSOR_SIZE` are unchanged; no RL retraining.
+
+### G-LINK-OPTION-DUAL-PLAY-MODE — RESOLVED (engine)
+
+A Plug-In Option that is both a Standard `[Main]` Option and a Link Option could
+not be expressed: `classify_option_subtype` was first-match-wins, so any effect
+with `link_cost.is_some()` reclassified the whole card as `OptionSubtype::Link`.
+
+**Resolution (no new action ID):**
+- `classify_option_subtype` → `classify_option_modes` — returns a
+  `Vec<OptionPlayMode>` of the available play modes; `[Standard, Link]` for a
+  dual-mode Plug-In, a 1-element list for every other Option (single-mode cards
+  behaviorally identical).
+- `OptionSubtype` moved to `selection.rs` (pub) and is stored on
+  `PendingOption.subtype` at play time, so `dispose_option` routes on the
+  resolved mode instead of re-classifying.
+- `play_option_core` gained a `chosen_mode` parameter. When `option_legal_play_modes`
+  (affordability filter) yields >1 mode it installs an `EffectChoice` mode-select
+  (`install_option_mode_select`, "Play as a [Main] Option" vs "Plug in via Link
+  Requirements"); the selection callback re-enters `play_option_core` with the
+  chosen mode. Cost forks (Standard use cost vs flat Link cost — BeforePayCost
+  reductions apply to Standard only); `OptionMain` firing is skipped for a Link
+  play; disposal routes Standard→trash vs Link→host-attach.
+- The mode-select reuses the existing `EffectChoice` / `HAND_EFFECT_START` action
+  range and surfaces as a normal `pending_selection`, so every legal play mode is
+  exposed to the action space (no-approximations policy).
+- `action/mask.rs` lights `PLAY_HAND` for an Option when any mode is affordable.
+  Unblocks **ST22-08** (gained a `kind: link_requirement` clause, cost 2,
+  `filter: { level_gte: 3 }`; 34 behavioral tests, 0 ignored).
+
+### G-ACTIVATED-DIGIVOLVE-EXECUTION — BT24-016 unblocked via re-model (no engine code)
+
+The `kind: activated_digivolve` alt-path kind has no engine execution route, and
+the task-1.1 investigation found `extra_cost` is unimplemented engine-wide (3
+sites, all exclusions). Rather than build a from-scratch parking `extra_cost`
+runner, **BT24-016 clause 1 was re-modelled** (design.md D1-REVISED) from a
+`kind: activated_digivolve` alt-path to a `when: main_from_hand` triggered clause
+(select Elizamon → select Dimetromon from trash → `place_as_bottom_source` →
+`effect_initiated_digivolve` cost 3, `ignore_requirements`). This is faithful to
+the printed `[Hand][Main]` text, uses only working machinery, and adds **zero
+engine code**. BT24-016 is `IMPLEMENTED` (24/24 tests).
+
+This entry is **not fully closed**: the `CompiledAltPathKind::ActivatedDigivolve`
+execution route is still genuinely missing for the 3 out-of-scope cards
+(BT22-013/026, BT16-027) — see the residual entry in
+[qa/archetype-qa/engine-gaps.md](archetype-qa/engine-gaps.md).
+
+- **Closed by:** `unblock-medusamon-tier3-cards` OpenSpec change, 2026-05-22.
+  Full engine suite green (`cards_behavioral` 2722 passed / 129 ignored / 0 failed;
+  `option_flow` 93; `mask_and_tensor` 157).
+
 ## DSL Gap: Card-level "also treated as [Name]" identity alias — RESOLVED 2026-05-21
 
 - **Severity:** 🟡 PARTIAL (DSL-vocabulary gap + engine name-matching substrate)

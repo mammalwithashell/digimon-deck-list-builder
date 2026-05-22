@@ -344,6 +344,20 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        // ── Trash a specific bound card from the security stack ───────────
+        CompiledStep::TrashSelectedSecurity { of, card } => {
+            // G-TRASH-SELECTED-SECURITY: `card` is a CardHandle binding
+            // (typically from a prior `select_security`). Trash exactly that
+            // security card. No-op when the binding is unset — i.e. the
+            // player declined an optional `select_security`.
+            let owner = resolve_player(ctx, *of);
+            if let Some(ResolvedBinding::Card(handle)) =
+                resolve_binding_ref(card, ctx, bindings)
+            {
+                let _ = ctx.trash_security_card(owner, handle);
+            }
+            true
+        }
         CompiledStep::PlayFromMaterials {
             target,
             source_index,

@@ -1,6 +1,8 @@
 use digimon_engine::enums::{DelayTrigger, EffectTiming};
 use digimon_engine::permanent::{OptionState, PermanentHandle};
-use digimon_engine::selection::{OptionResolutionPhase, OptionUseSource, PendingOption};
+use digimon_engine::selection::{
+    OptionResolutionPhase, OptionSubtype, OptionUseSource, PendingOption,
+};
 
 #[test]
 fn option_timings_exist() {
@@ -62,6 +64,7 @@ fn pending_option_struct_exists() {
         card: cs,
         source_kind: OptionUseSource::Hand,
         resolution_phase: OptionResolutionPhase::MainEffectDrain,
+        subtype: OptionSubtype::Standard,
     };
     assert_eq!(po.owner, 0);
     assert_eq!(po.resolution_phase, OptionResolutionPhase::MainEffectDrain);

@@ -91,6 +91,11 @@ pub enum StepSpec {
     /// BT13-012 ("you may play 1 red or yellow Tamer card among it without
     /// paying its cost").
     PlaySecurityCard(HandleMoveArgs),
+    /// Trash a specific bound card FROM a player's security stack. The `card`
+    /// binding is a `CardHandle` (typically produced by a prior
+    /// `select_security` step). G-TRASH-SELECTED-SECURITY. Used by BT24-018
+    /// ("You may trash any 1 of your opponent's security cards").
+    TrashSelectedSecurity(HandleMoveArgs),
     AddTopSecurityToHand(PlayerArg),
     MayAddTopSecurityToHand(PlayerArg),
     AddToHandFromReveal(HandleMoveArgs),
@@ -304,6 +309,7 @@ impl Serialize for StepSpec {
             StepSpec::AddToHandFromTrash(v) => kv!(s, "add_to_hand_from_trash", v),
             StepSpec::AddToHandFromSecurity(v) => kv!(s, "add_to_hand_from_security", v),
             StepSpec::PlaySecurityCard(v) => kv!(s, "play_security_card", v),
+            StepSpec::TrashSelectedSecurity(v) => kv!(s, "trash_selected_security", v),
             StepSpec::AddTopSecurityToHand(v) => kv!(s, "add_top_security_to_hand", v),
             StepSpec::MayAddTopSecurityToHand(v) => kv!(s, "may_add_top_security_to_hand", v),
             StepSpec::AddToHandFromReveal(v) => kv!(s, "add_to_hand_from_reveal", v),
@@ -517,6 +523,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "add_to_hand_from_trash" => StepSpec::AddToHandFromTrash(map.next_value()?),
             "add_to_hand_from_security" => StepSpec::AddToHandFromSecurity(map.next_value()?),
             "play_security_card" => StepSpec::PlaySecurityCard(map.next_value()?),
+            "trash_selected_security" => {
+                StepSpec::TrashSelectedSecurity(map.next_value()?)
+            }
             "add_top_security_to_hand" => StepSpec::AddTopSecurityToHand(map.next_value()?),
             "may_add_top_security_to_hand" => StepSpec::MayAddTopSecurityToHand(map.next_value()?),
             "add_to_hand_from_reveal" => StepSpec::AddToHandFromReveal(map.next_value()?),
@@ -705,6 +714,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_to_hand_from_trash",
                         "add_to_hand_from_security",
                         "play_security_card",
+                        "trash_selected_security",
                         "add_top_security_to_hand",
                         "may_add_top_security_to_hand",
                         "add_to_hand_from_reveal",
@@ -844,15 +854,43 @@ pub struct DeleteBoundPermanentsArgs {
     pub binding: String,
 }
 
-/// Move a selected list of trash cards to the bottom of the deck. `cards` is
-/// the name of a card-list binding (e.g. produced by `select_count_capped_multi`).
-/// Unlike `return_all_trash_to_deck_bottom` this moves only the bound cards.
-/// G-ZONE-TRASH-TO-DECK.
+/// Move a selected list of trash cards to the deck. `cards` is the name of a
+/// card-list binding (e.g. produced by `select_count_capped_multi`). Unlike
+/// `return_all_trash_to_deck_bottom` this moves only the bound cards. The
+/// `destination` field selects the deck top or bottom; omitting it defaults
+/// to bottom — the historical behavior of this verb.
+/// G-ZONE-TRASH-TO-DECK / G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct ReturnTrashListToDeckBottomArgs {
     pub of: PlayerRef,
     pub cards: BindingRef,
+    /// Deck end the cards are returned to. Omitted → `Bottom` (legacy
+    /// behavior, so trash-return steps authored before `destination` existed
+    /// keep compiling identically).
+    #[serde(default, skip_serializing_if = "DeckDestination::is_bottom")]
+    pub destination: DeckDestination,
+}
+
+/// Destination end of a deck for a trash-return step: the **top** (the next
+/// card drawn) or the **bottom**.
+/// G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
+#[serde(rename_all = "snake_case")]
+pub enum DeckDestination {
+    Top,
+    #[default]
+    Bottom,
+}
+
+impl DeckDestination {
+    /// True for the default (`Bottom`). Used by `skip_serializing_if` so a
+    /// trash-return step that omits `destination` round-trips unchanged.
+    pub fn is_bottom(&self) -> bool {
+        matches!(self, Self::Bottom)
+    }
 }
 
 /// Move a single selected trash card to the TOP of the deck. `card` names a
@@ -951,6 +989,11 @@ pub struct ActivationCostArgs {
     pub suspend_self: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub return_self_to_deck_bottom: bool,
+    /// "by trashing this card ..." — pays the cost by trashing the source
+    /// permanent (the `<Delay>` Option). Declinable, per Comprehensive Rules
+    /// 16-16-2. G-ACTIVATION-COST-TRASH-SELF.
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub trash_self: bool,
 }
 
 fn is_false(b: &bool) -> bool {

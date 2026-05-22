@@ -823,6 +823,12 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
     },
+    /// Trash a bound card from a player's security stack.
+    /// G-TRASH-SELECTED-SECURITY.
+    TrashSelectedSecurity {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+    },
     AddTopSecurityToHand {
         of: CompiledPlayerRef,
     },
@@ -1078,11 +1084,13 @@ pub enum CompiledStep {
     ReturnAllTrashToDeckBottom {
         of: CompiledPlayerRef,
     },
-    /// Move a bound card list out of trash to the bottom of the deck.
-    /// G-ZONE-TRASH-TO-DECK.
+    /// Move a bound card list out of trash to the deck. `to_top` selects the
+    /// deck top (the next card drawn) over the bottom.
+    /// G-ZONE-TRASH-TO-DECK / G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
     ReturnTrashListToDeckBottom {
         of: CompiledPlayerRef,
         cards: CompiledBindingRef,
+        to_top: bool,
     },
     /// Move a single selected trash card to the TOP of its owner's deck.
     /// `of` identifies whose trash the card is in; the card returns to its
@@ -1470,6 +1478,10 @@ pub enum CompiledActivationCostKind {
     /// owner's deck bottom (digivolution sources trashed per standard
     /// rules). Fails if the source has already left the field.
     ReturnSelfToDeckBottom,
+    /// "by trashing this card ..." — pays the cost by trashing the source
+    /// permanent (a `<Delay>` Option). Fails if the source has already left
+    /// the field. G-ACTIVATION-COST-TRASH-SELF.
+    TrashSelf,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

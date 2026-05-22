@@ -4,35 +4,35 @@
   "cards": {
     "BT21-093": {
       "card_name": "Raging Serpentine",
-      "validated_date": "2026-04-28",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-093.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_093.rs",
-      "test_count": 9,
+      "test_count": 17,
       "patterns": [
         "D2",
         "F-DELETE-HIGHEST-DP"
       ],
-      "notes": "Batch 13 worker stalled mid-test; orchestrator-salvaged. Comprehensive YAML (4 clauses + inherited Security) shipped. Two raw_rust stubs registered (bt21_093_cost_reduction_amount formula, bt21_093_delete_highest_dp_opponent step). 4 structural active, 5 ignored for known gaps (G-OPP-SECURITY-COUNT-LTE, G-PRED-DP-LTE, G-PLACE-SELF-AS-OPTION-PERMANENT, G-ALL-TURNS-FILTER)."
+      "notes": "G-ACTIVATION-COST-TRASH-SELF resolved 2026-05-21 — <Delay> clause 3 re-authored with declinable activation_cost:{trash_self:true}; decline-path test added. 17/17 tests pass, 0 ignored."
     },
     "BT24-089": {
       "card_name": "Unique Emblem: Blazing Conductor",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-089.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_089.rs",
-      "test_count": 18,
+      "test_count": 23,
       "patterns": [
         "DELAY",
         "OPTION-AS-PERMANENT"
       ],
-      "notes": "Main play-Elizamon-or-Owen-from-hand-or-trash zone-choice ships; place-self + Delay-on-Owen-suspend blocked (NEW gaps G-PLACE-SELF-AS-OPTION-PERMANENT, G-DELAY-SUSPEND-CONDITION). 14 active, 4 ignored."
+      "notes": "Re-attempt 2026-05-21: Main place-self + event-gated Delay-on-Owen-suspend completed (G-PLACE-SELF-AS-OPTION-PERMANENT resolved; Delay modeled on BT22-098 G-DELAY-EVENT-GATED slice). Security clause mirrors Main. 23/23 tests pass, 0 ignored. Reviewer APPROVED."
     },
     "EX7-074": {
       "card_name": "Vortex Resonance",
@@ -43,15 +43,15 @@
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/ex7/EX7-074.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_074.rs",
-      "test_count": 28,
-      "tests_passing": 8,
-      "tests_ignored": 14,
+      "test_count": 27,
+      "tests_passing": 27,
+      "tests_ignored": 0,
       "patterns": [
         "A1",
         "D-COLOR-IGNORE",
         "F-PLAY-FROM-HAND-FREE"
       ],
-      "notes": "Completion run: all 14 prior #[ignore] tests un-ignored (they were test-harness-coverage stale, not gap-blocked; DebugRunner now drives option/security flow). Fixed faithfulness defect: card color was green/blue, corrected to green/yellow per cards.json. [Main] reveal-3 + LIBERATOR-add + optional digivolve cost-4, [Security] hand-or-trash LIBERATOR play all covered. 28 tests, 0 ignored."
+      "notes": "Re-attempt 2026-05-21: fully completed. Color-bypass flood_gate + [Main] reveal-3/add-LIBERATOR/digivolve-cost-4 + [Security] play-LIBERATOR-cost-<=4-free-from-hand-or-trash (select_union_zone) + add-self. All 14 prior harness-coverage ignores converted to real driven tests. 27/27 tests pass, 0 ignored. Reviewer APPROVED. Merge 2026-05-22: card uses the select_union_zone Security design (HEAD); color green/yellow."
     },
     "EX4-006": {
       "card_name": "Guilmon",
@@ -103,37 +103,37 @@
     },
     "P-035": {
       "card_name": "Red Memory Boost!",
-      "validated_date": "2026-04-28",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "DSL",
-      "archetype": "Medusamon Batch 12",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/p/P-035.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_035.rs",
-      "test_count": 17,
+      "test_count": 20,
       "patterns": [
         "A1",
         "A2",
         "Option-as-permanent Delay (standard EndOfYourNextTurn)"
       ],
-      "notes": "11 active tests pass; 6 ignored. Clause 0 ([Main] reveal 4 + select + add to hand + place rest bottom) fully DSL-implemented: reveal_top_deck(4) + select_reveal(optional, filter:kind:digimon+color_is:red) + add_to_hand_from_reveal + place_remainder_on_deck(bottom). Clause 1 ([Delay] gain 2 memory) fully DSL-implemented: kind:delay trigger:end_of_your_next_turn + gain_memory:2. Clause 2 ([Inherited][Security] place self in battle area) empty-process triggered clause (scope:inherited, when:on_security, process:[]) \u2014 G-PLACE-SELF-AS-OPTION-PERMANENT. 4 filter-enforcement tests ignored pending Phase 2b (install_select_reveal accept-all filter). 2 Delay/security behavioral tests ignored pending G-PLACE-SELF-AS-OPTION-PERMANENT."
+      "notes": "Re-attempt 2026-05-21: fully completed. [Main] reveal-4/add-red-Digimon + place-self (G-PLACE-SELF-AS-OPTION-PERMANENT closed); [Main]<Delay> gain 2 memory (trigger:delayed/MainPhaseActivated - faithful player-initiated model); [Security] place self. select_reveal filter + optionality corrected. 20/20 tests pass, 0 ignored. Reviewer APPROVED."
     },
     "LM-027": {
       "card_name": "Red Scramble",
-      "validated_date": "2026-04-28",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "HYBRID",
-      "archetype": "Medusamon Batch 12",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/lm/LM-027.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_027.rs",
-      "test_count": 19,
+      "test_count": 22,
       "patterns": [
         "A3",
         "E1",
         "G1-adjacent"
       ],
-      "notes": "13 active tests pass; 6 ignored pending gaps. Clause A ([Main] effect_initiated_digivolve cost -3 from option card) fully DSL-implemented \u2014 optional select_own_permanent + select_hand + effect_initiated_digivolve. Clause B ([Start of Your Turn] Delay) registered as raw_rust declarative lm_027_delay_start_of_turn_noop (no-op) pending G-DELAY-START-OF-TURN (engine has no DelayTrigger::StartOfYourNextTurn). Clause C ([Security] play small red Digimon from trash) DSL-implemented with select_trash + play_from_trash_free; add-self-to-hand step is raw_rust no-op pending G-ADD-OPTION-SELF-TO-HAND. dp_lte: 2000 filter compiled but unenforced pending G-PRED-DP-LTE."
+      "notes": "G-ZONE-SELECTED-TRASH-TO-DECK-TOP resolved 2026-05-21 — clause B re-authored as a real kind:delay clause using return_trash_list_to_deck_bottom destination:top; raw_rust no-op removed; 4 delay tests implemented. 22/22 tests pass, 0 ignored."
     },
     "LM-055": {
       "card_name": "Sprint Dash Training",
@@ -169,7 +169,7 @@
         "G2-adjacent",
         "H11"
       ],
-      "notes": "Re-authored: clause 2 raw_rust -> kind: replacement (replacement_subject_is_mine, non-cancelling). G-DECLARATIVE-KEYWORD confirmed stale (inherited Security A.+1 works)."
+      "notes": "Re-authored: clause 2 raw_rust -> kind: replacement (replacement_subject_is_mine, non-cancelling). G-DECLARATIVE-KEYWORD confirmed stale (inherited Security A.+1 works). Merge 2026-05-22: bt20_016_dna_on_deletion raw_rust placeholder removed."
     },
     "BT20-102": {
       "card_name": "Omnimon (X Antibody)",
@@ -240,19 +240,19 @@
     },
     "BT23-005": {
       "card_name": "Elizamon",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-005.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt23/bt23_005.rs",
-      "test_count": 9,
+      "test_count": 13,
       "patterns": [
         "D2",
         "D4"
       ],
-      "notes": "Inherited [Your Turn] +2000 DP aura implemented and tested (5 active tests). Cost-reduction-on-self-digivolve-into-trait clause blocked by DSL-vocab gap (CostReductionBody lacks when_this_digivolves_into + target_trait_has). 4 ignored."
+      "notes": "Re-attempt 2026-05-21: cost-reduction clause completed in pure DSL (cost_reduction, reduction_timing:before_pay_cost, gated your_turn + source-is-cost-target). 13/13 tests pass, 0 ignored. Reviewer APPROVED."
     },
     "BT24-008": {
       "card_name": "Elizamon",
@@ -268,7 +268,7 @@
         "A4",
         "F9-adjacent"
       ],
-      "notes": "OnPlay optional cost-as-trash \u00e2\u2020\u2019 draw 2 implemented + tested. Inherited OPT clause shipped. 11 active, 2 ignored for sub-gaps (select_hand filter eval + trash-from-hand event)."
+      "notes": "OnPlay optional cost-as-trash â†’ draw 2 implemented + tested. Inherited OPT clause shipped. 11 active, 2 ignored for sub-gaps (select_hand filter eval + trash-from-hand event)."
     },
     "EX11-008": {
       "card_name": "Elizamon",
@@ -299,23 +299,23 @@
       "patterns": [
         "H_PROGRESS"
       ],
-      "notes": "Lamiamon \u2014 alt-digivolve into Owen Dreadnought + inherited [All Turns] OnOpponentSecurityRemoved free-play. All 11 active tests pass; 2 ignored are card-local body deferrals against Track C + Track D substrate that is already closed."
+      "notes": "Lamiamon — alt-digivolve into Owen Dreadnought + inherited [All Turns] OnOpponentSecurityRemoved free-play. All 11 active tests pass; 2 ignored are card-local body deferrals against Track C + Track D substrate that is already closed."
     },
     "BT24-016": {
       "card_name": "Lamiamon",
-      "validated_date": "2026-04-27",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "validated_date": "2026-05-22",
+      "report": "unblock-medusamon-tier3-cards",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-016.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_016.rs",
-      "test_count": 14,
+      "test_count": 24,
       "patterns": [
         "G2",
         "C-ALT-DIGI"
       ],
-      "notes": "Standard alt-digivolve + activated alt-digivolve from Elizamon with Dimetromon extra-cost shipped (Owen Dreadnought gate not enforceable: G-ALT-PATH-CONDITION). When-Digivolving/When-Attacking OPT clause shipped structurally; behavior blocked by G-OPT-TRIGGERED. Inherited All-Turns OPT clause shipped structurally; behavior blocked by G-INHERITED-DISPATCH. 8 structural, 6 ignored."
+      "notes": "IMPLEMENTED 2026-05-22 (unblock-medusamon-tier3-cards, D1-REVISED): clause 1 [Hand][Main] activated digivolve re-modelled from a kind: activated_digivolve alt-path to a when: main_from_hand triggered clause (select Elizamon -> select Dimetromon from trash -> place_as_bottom_source -> effect_initiated_digivolve cost 3 ignore_requirements). Uses only existing machinery, zero engine code. G-ACTIVATED-DIGIVOLVE-EXECUTION closed for this archetype. 24/24 tests pass, 0 ignored."
     },
     "BT21-015": {
       "card_name": "Cyclonemon",
@@ -334,7 +334,7 @@
         "D-DELETE-DP-LTE",
         "D4"
       ],
-      "notes": "All 3 clauses ship: [Security] play-self-after-battle (engine fix landed in src/dsl_cards/step/play_digivolve.rs), [On Play]+[When Digivolving] delete \u00e2\u2030\u00a44000 DP, inherited [Your Turn] +2000 DP aura. 14 active, 2 ignored pending G-DP-LTE-PREDICATE."
+      "notes": "All 3 clauses ship: [Security] play-self-after-battle (engine fix landed in src/dsl_cards/step/play_digivolve.rs), [On Play]+[When Digivolving] delete â‰¤4000 DP, inherited [Your Turn] +2000 DP aura. 14 active, 2 ignored pending G-DP-LTE-PREDICATE."
     },
     "BT24-011": {
       "card_name": "Cyclonemon",
@@ -369,24 +369,24 @@
         "H4-SECA-PLUS-1",
         "H_PROGRESS"
       ],
-      "notes": "Medusamon \u2014 6 effect clauses including Petrification Token spawn on opp Digimon deletion and inherited Security arm. 15/19 active tests pass; 4 ignored are card-local body deferrals against now-closed substrate (G-OPT-TRIGGERED via Track C, G-DECLARATIVE-KEYWORD via Group 6, G-PREDICATE-DP-FILTER via Group 7)."
+      "notes": "Medusamon — 6 effect clauses including Petrification Token spawn on opp Digimon deletion and inherited Security arm. 15/19 active tests pass; 4 ignored are card-local body deferrals against now-closed substrate (G-OPT-TRIGGERED via Track C, G-DECLARATIVE-KEYWORD via Group 6, G-PREDICATE-DP-FILTER via Group 7)."
     },
     "BT24-017": {
       "card_name": "Medusamon",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-017.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_017.rs",
-      "test_count": 12,
+      "test_count": 16,
       "patterns": [
         "H9-RAID",
         "H_PROGRESS",
         "H3-PIERCING"
       ],
-      "notes": "Raid + Progress + Piercing keywords + delete-lowest-DP step ship. Trash-to-deck-bottom step and lowest-DP filter blocked by G-ZONE-TRASH-TO-DECK + G-PRED-DP-LTE. 9 active, 3 ignored."
+      "notes": "Re-attempt 2026-05-21: fully completed. [When Digivolving] delete-lowest-DP + return-2-opponent-trash-to-deck-bottom (DSL verb return_trash_list_to_deck_bottom; G-ZONE-TRASH-TO-DECK actually resolved) + opponent plays 2 Petrification Tokens + per-opponent-count DP buff until opp turn end. Raid/Progress/Piercing keywords. 16/16 tests pass, 0 ignored. Reviewer APPROVED."
     },
     "EX11-012": {
       "card_name": "Medusamon",
@@ -403,18 +403,18 @@
         "H1-RUSH",
         "H_PROGRESS"
       ],
-      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave \u00e2\u2020\u2019 delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
+      "notes": "Rush + Progress + WhenDigivolving/EndOfAttack delete + token spawn + replacement (would-leave â†’ delete-Token cost) all ship. Heavy engine work landed: predicate filtering (selections.rs), replacement subject-guard (lower_replacement.rs), CompiledCardKind::Token match (predicate.rs), CardData.keywords from declarative grants (debug_runner.rs)."
     },
     "BT24-018": {
       "card_name": "Styracomon",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-018.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_018.rs",
-      "test_count": 17,
+      "test_count": 19,
       "patterns": [
         "F3",
         "H_PROGRESS",
@@ -422,7 +422,7 @@
         "H5-BLOCKER",
         "ARMOR-PURGE"
       ],
-      "notes": "All 4 printed keywords ship (Progress, Piercing, Blocker, Armor Purge). When-Digivolving trash-security blocked by G-TRASH-SELECTED-SECURITY. Two All-Turns OPT clauses structurally OK; behavior blocked by G-OPT-TRIGGERED + G-EVENT-TARGET-OWNER. 5 structural pass, 12 ignored."
+      "notes": "G-TRASH-SELECTED-SECURITY resolved 2026-05-21 — [When Digivolving] trash-opponent-security sub-clause added (trash_selected_security verb consuming a select_security binding); trash test un-ignored. 19/19 tests pass, 0 ignored."
     },
     "BT24-082": {
       "card_name": "Owen Dreadnought",
@@ -439,7 +439,7 @@
         "B2",
         "F9"
       ],
-      "notes": "Owen Dreadnought (BT24) \u2014 when ally digivolves into Reptile/Dragonkin, may-attack-now wired via Track D inherited-dispatch + G-MAY-ATTACK-NOW closure (2026-05-03). All 13 active tests pass; 1 OPT-lockout placeholder retired in Phase 2 Track G."
+      "notes": "Owen Dreadnought (BT24) — when ally digivolves into Reptile/Dragonkin, may-attack-now wired via Track D inherited-dispatch + G-MAY-ATTACK-NOW closure (2026-05-03). All 13 active tests pass; 1 OPT-lockout placeholder retired in Phase 2 Track G."
     },
     "BT18-087": {
       "card_name": "Owen Dreadnought",
@@ -456,7 +456,7 @@
         "B3",
         "F9"
       ],
-      "notes": "All 3 clauses ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3, [All Turns] on_opponent_security_removed suspend-cost + delete \u00e2\u2030\u00a44000 DP, [Security] play_from_security. 14 active tests pass. 1 ignored (G-PRED-DP-LTE: dp_lte filter not evaluated at runtime). Key fix: `target: source` (not `source_permanent`) required for suspend step to resolve CompiledBindingRef::Source \u00e2\u2020\u2019 ctx.source_permanent; `source_permanent` is not a recognized DSL keyword (falls through to named-binding lookup, returning None silently)."
+      "notes": "All 3 clauses ship: [Start of Your Turn] memory_lte:2 gate + set_memory:3, [All Turns] on_opponent_security_removed suspend-cost + delete â‰¤4000 DP, [Security] play_from_security. 14 active tests pass. 1 ignored (G-PRED-DP-LTE: dp_lte filter not evaluated at runtime). Key fix: `target: source` (not `source_permanent`) required for suspend step to resolve CompiledBindingRef::Source â†’ ctx.source_permanent; `source_permanent` is not a recognized DSL keyword (falls through to named-binding lookup, returning None silently)."
     },
     "EX11-054": {
       "card_name": "Owen Dreadnought",
@@ -510,37 +510,37 @@
     },
     "P-189": {
       "card_name": "Dimetromon",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/p/P-189.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_189.rs",
-      "test_count": 16,
+      "test_count": 23,
       "patterns": [
         "F-SECURITY-PLAY-FROM-ZONE",
         "H_PROGRESS",
         "G-INHERITED-OPT"
       ],
-      "notes": "Clause 1 [Security] optional play-LIBERATOR-free-from-hand-or-trash ships via select_effect_choice + two separate if: blocks + select_hand/select_trash + play_from_hand_free/play_from_trash_free. Cost-\u22644 filter (G-PLAY-COST-LTE) cannot be enforced \u2014 play_cost_lte predicate absent from PredicateSpec; select_hand/select_trash accept-all (Phase 2b). Clause 2 Progress declarative ships structurally; modifier not installed at runtime (G-DECLARATIVE-KEYWORD). Clause 3 [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory now ships live: G-INHERITED-DISPATCH closed in Phase 2 Track D 2026-05-17; G-OPT-TRIGGERED closed in Phase 2 Track C. 12 active tests pass (inherited fire + your-turn gate + OPT-lockout + OPT-reset), 4 ignored on unrelated DSL gaps (G-PLAY-COST-LTE, G-DECLARATIVE-KEYWORD, security-attack harness, Progress declarative)."
+      "notes": "G-SECURITY-SKILL-RESUME-REFIRE resolved 2026-05-21 (unblock-medusamon-partial-cards) — SecuritySkillDrain re-entry guard (security_skill_drained); decline-path test un-ignored. 23/23 tests pass, 0 ignored."
     },
     "BT24-012": {
       "card_name": "Dimetromon",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-012.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_012.rs",
-      "test_count": 18,
+      "test_count": 22,
       "patterns": [
         "H5-BLOCKER",
         "REPLACE-OTHER-PERM",
         "G-INHERITED-OPT"
       ],
-      "notes": "Clause (a) Blocker keyword ships and is verified by 2 active tests (keyword present + active on field, doesn't leak to allies). Clause (b) 'protect other Reptile/Dragonkin by returning self' is the most complex cross-permanent replacement in the Medusamon pool: standard kind:replacement is blocked by subject_matches guard in lower_replacement.rs; uses kind:raw_rust fn bt24_012_would_leave_replacement (registered in src/cards/raw_rust/mod.rs as declarative no-op placeholder). Full clause (b) implementation blocked by G-EVENT-TARGET-OWNER (no removal-cause attribution for 'opponent effects only' gate, no cross-permanent subject filter in replacement context). Clause (c) [Inherited][Your Turn][OPT] on_opponent_security_removed gain-1-memory now ships live: G-INHERITED-DISPATCH closed in Phase 2 Track D 2026-05-17; G-OPT-TRIGGERED closed in Phase 2 Track C. 11 active tests pass (inherited fire + your-turn gate + OPT-lockout + OPT-reset + not-in-stack documentation test), 7 ignored on G-EVENT-TARGET-OWNER (clause (b) raw_rust filters)."
+      "notes": "Re-attempt 2026-05-21: clause (b) [All Turns] cross-permanent would-leave replacement completed in pure DSL (kind:replacement, replacement_cause:opponent_effect, other:true, return-self cost). G-EVENT-TARGET-OWNER resolved. raw_rust placeholder bt24_012_would_leave_replacement now orphaned in raw_rust/mod.rs (cleanup pending). 22/22 tests pass, 0 ignored. Reviewer APPROVED."
     },
     "BT21-001": {
       "card_name": "Gigimon",
@@ -592,38 +592,38 @@
     },
     "BT21-013": {
       "card_name": "Agunimon",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "engine",
-      "archetype": "Medusamon Batch 8",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-013.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_013.rs",
-      "test_count": 15,
+      "test_count": 19,
       "patterns": [
         "A6-PLACE-AS-SOURCE",
         "C-DIGIVOLVE",
         "D4",
         "E1-HAND-OR-TRASH"
       ],
-      "notes": "3 clauses: [When Digivolving] optional place Hybrid/Hero from hand or trash as bottom source under self or red Tamer + [When Attacking] optional effect-initiated digivolve cost -1 + [Inherited][Your Turn] +2000 DP aura. 9 active tests pass (3 structural + 2 when_attacking behavioral + 3 inherited DP aura). 6 ignored: 4 G-WHEN-DIGIVOLVING-DISPATCH (WhenDigivolving triggered effects not dispatched), 2 pending filter evaluation gaps (select_hand trait_has filter not enforced). Full when_digivolving YAML with has_inherited: {} + select_effect_choice + if/then + place_as_bottom_source compiles clean. Inherited +2000 DP aura active on controller's turn, suppressed opponent's turn and for top-card slot."
+      "notes": "Re-attempt 2026-05-21: fully completed. [When Digivolving] place Hybrid/Hero from hand/trash as bottom source (self or red Tamer) + [When Attacking] digivolve into red Hybrid/Hero cost-1 + inherited +2000 DP. G-WHEN-DIGIVOLVING-DISPATCH closed; select-step trait filters enforced. Added missing xros_req [Digivolve][BurningGreymon] Cost 0 alt-path. 19/19 tests pass, 0 ignored. Reviewer APPROVED."
     },
     "BT21-024": {
       "card_name": "Cyberdramon",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
-      "archetype": "Medusamon Batch 8",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-024.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_024.rs",
-      "test_count": 16,
+      "test_count": 17,
       "patterns": [
         "A3-OPP-PLACE-HAND",
         "E5-TRASH-TOP-SECURITY",
         "D4-INHERITED-DP-AURA"
       ],
-      "notes": "Clause 1 [OnPlay/WhenDigivolving]: opponent places hand card as bottom security + trash top security. YAML fix: place_on_security moved inside as_selecting_player body so binding 'pick' is in scope for the callback (outer-tail binding propagation gap). select_hand optional:true so trash_top_security in outer tail fires even when opponent has hand cards. G-SELECT-EMPTY-OUTER-TAIL: when empty hand skips install_select_hand (no valid_action_ids), outer tail is lost (1 test #[ignore]). Opponent-security-count gate (<=5) dropped \u00e2\u20ac\u201d DSL has no opponent_security_count_lte predicate (G-OPP-SECURITY-COUNT-LTE, 1 test #[ignore]). WhenDigivolving dispatch blocked by G-OPT-TRIGGERED (1 test #[ignore]). Clause 2 Inherited [Your Turn] +4000 DP aura ships (2 tests #[ignore] G-INHERITED-DISPATCH). 11 active pass, 5 ignored."
+      "notes": "Re-attempt 2026-05-21: fully completed. [On Play][When Digivolving] opponent-<=5-security gate (opponent_security_count_lte) + opponent places hand card as bottom security + trash top security (fires even on empty opponent hand) + inherited +4000 DP. All 4 prior blockers closed. 17/17 tests pass, 0 ignored. Reviewer APPROVED."
     },
     "ST1-07": {
       "card_name": "Greymon",
@@ -642,19 +642,19 @@
     },
     "BT5-008": {
       "card_name": "Gaossmon",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "hybrid",
-      "archetype": "Medusamon Batch 7",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt5/BT5-008.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_008.rs",
-      "test_count": 7,
+      "test_count": 9,
       "patterns": [
         "D4",
         "D6"
       ],
-      "notes": "2/7 tests pass (structural: clause count + aura shape). 5/7 ignored. Clause 1 [Your Turn] filtered aura blocked by G-DECLARATIVE-KEYWORD (EffectTiming::Declarative never fired by engine; 3 tests ignored) + G-OTHER-PREDICATE-UNEVALUATED (other:true not checked in eval_permanent_fields; 1 test ignored, secondary gap). Clause 2 [Opponent's Turn] cost-reduction gate blocked by G-PLAYER-FLOOD-GATE-DSL (no DSL add_player_modifier verb; flood_gate is permanent-level only; no CannotReduceDigivolveCost variant; 1 test ignored). raw_rust no-op bt5_008_opp_cannot_reduce_digivolve_cost registered for clause 2."
+      "notes": "Re-attempt 2026-05-21: fully completed in pure DSL. [Your Turn] filtered aura (other [Gaossmon] +3000 DP — kind:aura, name_contains, other:true) + [Opponent's Turn] flood_gate (opponent CannotReduceDigivolveCost). G-DECLARATIVE-KEYWORD, G-OTHER-PREDICATE-UNEVALUATED, G-PLAYER-FLOOD-GATE-DSL all closed; raw_rust no-op removed. 9/9 tests pass, 0 ignored. Reviewer APPROVED."
     },
     "P-137": {
       "card_name": "Flamedramon",
@@ -691,7 +691,7 @@
         "D1-adjacent",
         "E2-adjacent"
       ],
-      "notes": "Lv6 Red/White Blast Digivolve ACE \u2014 all 21 tests pass (was 19/20 pre-Phase-2). G-MAY-ATTACK-NOW resolved 2026-05-03 already integrated; no remaining ignored tests."
+      "notes": "Lv6 Red/White Blast Digivolve ACE — all 21 tests pass (was 19/20 pre-Phase-2). G-MAY-ATTACK-NOW resolved 2026-05-03 already integrated; no remaining ignored tests."
     },
     "EX10-010": {
       "card_name": "BlackWarGreymon",
@@ -720,7 +720,7 @@
     "BT21-026": {
       "status": "IMPLEMENTED",
       "date": "2026-04-28",
-      "notes": "WarGreymon \u2014 cost reduction by 2 x opp Digimon count, three keyword grants (Rush/Raid/Blocker), and now-wired [All Turns][OPT] deletion arm using event_target_owner: opponent predicate (Phase 2 Track G YAML migration). 11/16 tests pass; 5 are card-local body deferrals against substrate that is already closed.",
+      "notes": "WarGreymon — cost reduction by 2 x opp Digimon count, three keyword grants (Rush/Raid/Blocker), and now-wired [All Turns][OPT] deletion arm using event_target_owner: opponent predicate (Phase 2 Track G YAML migration). 11/16 tests pass; 5 are card-local body deferrals against substrate that is already closed.",
       "validated_date": "2026-05-17",
       "report": "phase-2-track-g-medusamon-pilot-completion",
       "gap_kind": null
@@ -742,7 +742,7 @@
         "C1",
         "raw_rust"
       ],
-      "notes": "Lv7 Black/Purple Cost 20. Three clauses: (A) BeforePayCost cost_reduction -3 per opp battle-area permanent; (B) [On Play][When Digivolving] for_each de_digivolve(1, stop_at_level:3) then for_each delete \u2264Lv4 (snapshot semantics); (C) [End of Opponent's Turn][OPT] delete lowest-play-cost opp Digimon via raw_rust bt9_112_delete_lowest_cost_digimon. 12/13 tests runnable; 1 ignored (G-OPT-TRIGGERED \u2014 triggered OPT lockout not wired). Gaps: G-PLAY-COST-LTE (no play_cost_lte aggregate predicate in DSL, worked around with raw_rust), G-OPT-TRIGGERED (once_per_turn on triggered clause not enforced at runtime)."
+      "notes": "Lv7 Black/Purple Cost 20. Three clauses: (A) BeforePayCost cost_reduction -3 per opp battle-area permanent; (B) [On Play][When Digivolving] for_each de_digivolve(1, stop_at_level:3) then for_each delete ≤Lv4 (snapshot semantics); (C) [End of Opponent's Turn][OPT] delete lowest-play-cost opp Digimon via raw_rust bt9_112_delete_lowest_cost_digimon. 12/13 tests runnable; 1 ignored (G-OPT-TRIGGERED — triggered OPT lockout not wired). Gaps: G-PLAY-COST-LTE (no play_cost_lte aggregate predicate in DSL, worked around with raw_rust), G-OPT-TRIGGERED (once_per_turn on triggered clause not enforced at runtime)."
     },
     "BT23-014": {
       "card_name": "Gallantmon",
@@ -780,7 +780,7 @@
         "E5-TRASH-TOP-SECURITY",
         "raw_rust"
       ],
-      "notes": "Lv7 Red Blast Digivolve ACE \u2014 multi-select opp-DP-budget (LM-021 Bond of Bravery) ships via SelectionKind::DpBudget + select_opponent_dp_budget. All 15 tests pass."
+      "notes": "Lv7 Red Blast Digivolve ACE — multi-select opp-DP-budget (LM-021 Bond of Bravery) ships via SelectionKind::DpBudget + select_opponent_dp_budget. All 15 tests pass."
     },
     "BT17-018": {
       "card_name": "Gallantmon: Crimson Mode",
@@ -802,31 +802,31 @@
         "raw_rust",
         "once_per_turn"
       ],
-      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP \u2264 15000 \u2014 raw_rust:bt17_018_delete_opp_digimon_dp_budget single-pick fallback, blocked on G-DP-BUDGET-MULTI-SELECT (now tracked also as G-MULTI-SELECT-OPP-DP-SUM); (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security \u2014 raw_rust:bt17_018_trash_security_per_ten_trash (floor division loop), DSL gap G-LOSE-COUNT-BOUND. 11/16 tests pass; 3 ignored for G-DP-BUDGET-MULTI-SELECT multi-pick; 2 ignored for G-OPT-TRIGGERED (triggered OPT lockout not enforced). TDD fix required: summoning sickness blocked attack tests (turn_count=0 \u2192 is_fresh=true \u2192 can_attack()=false); fix: r.game.turn_count = 1 in runner setup."
+      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP ≤ 15000 — raw_rust:bt17_018_delete_opp_digimon_dp_budget single-pick fallback, blocked on G-DP-BUDGET-MULTI-SELECT (now tracked also as G-MULTI-SELECT-OPP-DP-SUM); (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security — raw_rust:bt17_018_trash_security_per_ten_trash (floor division loop), DSL gap G-LOSE-COUNT-BOUND. 11/16 tests pass; 3 ignored for G-DP-BUDGET-MULTI-SELECT multi-pick; 2 ignored for G-OPT-TRIGGERED (triggered OPT lockout not enforced). TDD fix required: summoning sickness blocked attack tests (turn_count=0 → is_fresh=true → can_attack()=false); fix: r.game.turn_count = 1 in runner setup."
     },
     "ST22-08": {
       "card_name": "Offensive Plug-In V",
-      "validated_date": "2026-04-27",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "hybrid",
-      "archetype": "Medusamon Batch 11",
+      "validated_date": "2026-05-22",
+      "report": "unblock-medusamon-tier3-cards",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/st22/ST22-08.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st22/st22_08.rs",
-      "test_count": 19,
+      "test_count": 34,
       "patterns": [],
-      "notes": "Link/Plug-In mechanic entirely unavailable in DSL: no link verb, no linked scope, no binding-DP formula. Also: G-PRED-DP-LTE (dp_lte not evaluated), G-IGNORE-COLOR-MASK (IgnoreColorRequirement not enforced in action mask), G-ADD-OPTION-SELF-TO-HAND."
+      "notes": "IMPLEMENTED 2026-05-22 (unblock-medusamon-tier3-cards): G-LINK-OPTION-DUAL-PLAY-MODE closed. classify_option_modes returns the set of available play modes; play_option_core installs an EffectChoice mode-select for a dual-mode Plug-In and forks cost (Standard use cost 4 vs flat Link cost 2) + disposal (Standard trash vs Link attach) on the chosen mode. ST22-08.yaml gained a kind: link_requirement clause (cost 2, level_gte 3). All 4 clauses behavioral; 34/34 tests pass, 0 ignored."
     },
     "BT21-072": {
       "card_name": "Arresterdramon: Superior Mode",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
-      "archetype": "Medusamon Batch 11",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-072.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_072.rs",
-      "test_count": 10,
+      "test_count": 18,
       "patterns": [
         "H3",
         "H9",
@@ -834,24 +834,24 @@
         "G-MAY-ATTACK-NOW",
         "G-AURA-DP-FORMULA"
       ],
-      "notes": "Clauses 1 (<Raid>) and 2 (<Piercing>) implemented as declarative grant_keyword. Clause 5 (Inherited [Your Turn] +2000 DP) implemented as declarative scope:inherited aura. 8 active tests pass (structural x4, keyword behavioral x2, inherited aura behavioral x2). Clauses 3 ([When Digivolving] may attack without suspending) and 4 ([All Turns] +1000 DP per digivolution card) BLOCKED: G-MAY-ATTACK-NOW (hybrid gap, no mid-effect optional unsuspended attack verb) and G-AURA-DP-FORMULA (dsl gap, AuraBody.dp_modifier is static i32 only, no formula variant). 2 tests ignored."
+      "notes": "G-ALT-PATH-SAVE-IN-TEXT resolved 2026-05-21 — xros_req cost-3 alt-path added using the existing effect_text_contains predicate (no new DSL vocab). 18/18 tests pass, 0 ignored."
     },
     "P-103": {
       "card_name": "Offense Training",
-      "validated_date": "2026-04-27",
+      "validated_date": "2026-05-21",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
-      "archetype": "Medusamon Batch 12",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Medusamon",
       "yaml_path": "code/digimon-engine/cards/p/P-103.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_103.rs",
-      "test_count": 16,
+      "test_count": 23,
       "patterns": [
         "A2",
         "E2",
         "E1"
       ],
-      "notes": "Clause 0 ([Main] reveal top 2, add red card): fully expressed in DSL (reveal_top_deck + select_reveal + add_to_hand_from_reveal + place_remainder_on_deck); sub-clause place-self-in-battle-area blocked by G-PLACE-SELF-AS-OPTION-PERMANENT. Clause 1 (standard Delay body: select_own_permanent optional + select_hand red Digimon + effect_initiated_digivolve cost reduce:2): fully expressed using kind:delay. Clause 2 (inherited security: place-self) structurally present as scope:inherited on_security with empty process; placement blocked by G-PLACE-SELF-AS-OPTION-PERMANENT. DSL infra tests (312) pass. cards_behavioral binary blocked from full compile by pre-existing lm_027.rs errors (out-of-scope unrelated in-progress work)."
+      "notes": "Re-attempt 2026-05-21: fully completed. [Main] reveal-2/add-red + place-self; [Main]<Delay> digivolve into red Digimon cost-2; [Security] place self. <Delay> trigger corrected on_play->delayed (player-initiated, matches P-035/P-037) per review fix. 23/23 tests pass, 0 ignored. Reviewer APPROVED after fix."
     },
     "BT8-097": {
       "card_name": "Crimson Blaze",
@@ -885,7 +885,7 @@
         "A2-remainder-bottom",
         "E2-optional-free-play"
       ],
-      "notes": "Purple Option Cost 3 [LIBERATOR] \u2014 use_requirement color bypass is active; all 18 tests pass."
+      "notes": "Purple Option Cost 3 [LIBERATOR] — use_requirement color bypass is active; all 18 tests pass."
     },
     "P-206": {
       "card_name": "Digital Gate Open",
@@ -1985,7 +1985,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt16/BT16-040.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_040.rs",
-      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved as phantom \u2014 chain already worked. End-state test now active."
+      "notes": "Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET resolved as phantom — chain already worked. End-state test now active."
     },
     "BT12-047": {
       "card_name": "Wormmon",
@@ -1996,7 +1996,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt12/BT12-047.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_047.rs",
-      "notes": "Sister to BT12-021 \u2014 Wormmon line reveal-add"
+      "notes": "Sister to BT12-021 — Wormmon line reveal-add"
     },
     "BT12-050": {
       "card_name": "Stingmon",
@@ -2007,7 +2007,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/bt12/BT12-050.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt12/bt12_050.rs",
-      "notes": "Phase 2 Track H \u2014 sister of BT12-022 with green\u2192blue swap. Same substrate (before_pay_cost_observe, cost_target, source_is_cost_target_permanent, dna_origin)."
+      "notes": "Phase 2 Track H — sister of BT12-022 with green→blue swap. Same substrate (before_pay_cost_observe, cost_target, source_is_cost_target_permanent, dna_origin)."
     },
     "ST9-09": {
       "card_name": "Stingmon",
@@ -2187,7 +2187,7 @@
       "archetype": "BG Imperial",
       "yaml_path": "code/digimon-engine/cards/lm/LM-030.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/lm/lm_030.rs",
-      "notes": "Re-authored: Delay clause B via move_trash_card_to_deck_top + dp_lte trash filter.",
+      "notes": "Phase 2 Track H closed G-OPTIONAL-SELECTION-CONTINUE-TAIL — declining the optional security trash play still adds the option to hand. Re-authored: Delay clause B via move_trash_card_to_deck_top + dp_lte trash filter (G-ZONE-SELECTED-TRASH-TO-DECK-TOP closed).",
       "test_count": 21
     },
     "BT14-009": {
@@ -4000,7 +4000,7 @@
         "ON-PLAY-DRAW",
         "ON-DELETION-PLACE-UNDER-KING-DRASIL"
       ],
-      "notes": "Both clauses authored under Phase 2 Track J. On Play Draw 1 plus On Deletion: pick a [Royal Knight]-traited Digimon from hand and place it under [King Drasil_7D6] in breeding as the bottom digivolution source. Uses RK-G001 filter (Phase 2 Track J PR 1) plus the BreedingPermanentRef \u2192 PermanentHandle{BREEDING_TARGET} resolver. Short-circuits gracefully when no King Drasil is in breeding or no Royal Knight is in hand."
+      "notes": "Both clauses authored under Phase 2 Track J. On Play Draw 1 plus On Deletion: pick a [Royal Knight]-traited Digimon from hand and place it under [King Drasil_7D6] in breeding as the bottom digivolution source. Uses RK-G001 filter (Phase 2 Track J PR 1) plus the BreedingPermanentRef → PermanentHandle{BREEDING_TARGET} resolver. Short-circuits gracefully when no King Drasil is in breeding or no Royal Knight is in hand."
     },
     "BT20-083": {
       "card_name": "Omekamon",
