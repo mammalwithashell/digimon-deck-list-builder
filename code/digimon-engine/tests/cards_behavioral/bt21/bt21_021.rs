@@ -82,6 +82,7 @@ fn make_xros_heart_lv4(id: &str) -> digimon_engine::card_data::CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -109,6 +110,7 @@ fn make_blue_flare(id: &str) -> digimon_engine::card_data::CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -135,6 +137,7 @@ fn make_hero(id: &str) -> digimon_engine::card_data::CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -168,6 +171,7 @@ fn make_tamer(id: &str) -> digimon_engine::card_data::CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
