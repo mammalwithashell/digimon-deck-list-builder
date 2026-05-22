@@ -449,6 +449,13 @@ pub enum TriggerSource {
         permanent: PermanentHandle,
         card: CardHandle,
     },
+    /// Observer timing scoped to one player's battle area while carrying the
+    /// attacking permanent as event context.
+    PlayerBattleAreaAttack {
+        player: PlayerId,
+        attacker: PermanentHandle,
+        card: CardHandle,
+    },
     /// Observer timing fired after an attack's effective target changes.
     /// Scans battle areas while carrying the attacker plus old/new target
     /// payload for `OnAttackTargetChange` predicates and effect bodies.

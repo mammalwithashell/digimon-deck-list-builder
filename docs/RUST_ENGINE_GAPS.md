@@ -177,18 +177,16 @@ Capability gaps in the Rust engine's scripting surface (`code/digimon-engine/`),
 > effect-initiated DNA mid-attack-interrupt, `source_dp` /
 > `source_material_count` formula inputs, `play_security_card` +
 > `EffectContext::play_from_security_card`, and
-> `Modifiers::granted_security_attack_keyword_bonus`. Two gaps remain
-> genuinely OPEN — both are engine-level and account for the 2 PARTIAL
-> cards:
+> `Modifiers::granted_security_attack_keyword_bonus`.
 >
-> - **G-DYNAMIC-NAME-ALIAS-FROM-STACK** — BT17-102 Greymon's `[All Turns]`
->   material-name-alias clause. Engine-level: declarative identity /
->   effective-name. Tracked below as "Digivolution-stack name overlay
->   ("has all names of materials")".
-> - **G-DSL-DELAY-ON-ATTACK-EVENT** — BT23-096 Comet Hammer's
->   `<Delay>`-on-attack clause. Engine-level: delay/attack-event
->   dispatch. Tracked below as "Delay-on-attack-event dispatch
->   (`<Delay>` body gated on an attack event)".
+> **DNA Omnimon partial-gap closure — 2026-05-22:** The follow-up
+> `close-dna-omnimon-partial-gaps` change resolved the two remaining
+> DNA Omnimon partial gaps: `G-DYNAMIC-NAME-ALIAS-FROM-STACK`
+> (BT17-102 source-derived effective names) and
+> `G-DSL-DELAY-ON-ATTACK-EVENT` (BT23-096 event-backed
+> ally-attack Delay dispatch). The archetype ledger is now
+> **64 IMPLEMENTED / 0 PARTIAL / 0 BLOCKED** with zero live
+> `raw_rust` escapes.
 
 There are two related assessment workflows:
 
@@ -214,7 +212,7 @@ Each entry lists the cards that surfaced it, but the entry itself describes a re
 | Archetype | Audited | Cards | 🟢 Supported | 🟡 Partial | 🔴 Blocked |
 |---|---|---|---|---|---|
 | Medusamon | 2026-04-17 | — | — | — | — |
-| DNA Omnimon | 2026-04-17; completed 2026-05-20 | 64 | 62 | 2 | 0 |
+| DNA Omnimon | 2026-04-17; completed 2026-05-20; partial gaps closed 2026-05-22 | 64 | 64 | 0 | 0 |
 | TS Olympos | 2026-04-18 | 105 | 1 | 4 | 100 |
 | Rocks | 2026-04-18; refreshed 2026-04-28 | 47 | 0 | 0 | 47 |
 | Dark Masters | 2026-04-18 | 58 | 0 | 0 | 58 |
@@ -254,8 +252,8 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 | [Option card play flow residual: place-Option-in-battle-area + [Hand][Main] Plug-In flow](#option-card-play-flow-residual-place-option-in-battle-area--handmain-plug-in-flow) | 🟡 | 11 | `game.rs`, `effect.rs`, `effect_context.rs`, `action/` |
 | [Standard Delay main-phase activation action](#standard-delay-main-phase-activation-action) | 🟡 | 3+ | `game_actions.rs`, `action/mask.rs`, `effect_context.rs` |
 | [Trait-filter helpers on `CardSource` / `Permanent`](#trait-filter-helpers-on-cardsource--permanent) | 🟡 | pervasive | `card_source.rs`, `permanent.rs` |
-| [Digivolution-stack name overlay ("has all names of materials") (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`)](#digivolution-stack-name-overlay-has-all-names-of-materials) | 🔴 | 1 | `effect.rs`, `card_source.rs`, `permanent.rs` |
-| [Delay-on-attack-event dispatch (`<Delay>` body gated on an attack event) (`G-DSL-DELAY-ON-ATTACK-EVENT`)](#delay-on-attack-event-dispatch-delay-body-gated-on-an-attack-event) | 🔴 | 1 | `lower_delay.rs`, `combat.rs`, `effect_queue.rs` |
+| ~~[Digivolution-stack name overlay ("has all names of materials") (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`)](#digivolution-stack-name-overlay-has-all-names-of-materials)~~ — RESOLVED 2026-05-22 | ✅ | — | — |
+| ~~[Delay-on-attack-event dispatch (`<Delay>` body gated on an attack event) (`G-DSL-DELAY-ON-ATTACK-EVENT`)](#delay-on-attack-event-dispatch-delay-body-gated-on-an-attack-event)~~ — RESOLVED 2026-05-22 | ✅ | — | — |
 | [Decode residual: EX10-061 Apocalymon batch + different-name source play DSL sugar](#decode-residual-ex10-061-apocalymon-batch--different-name-source-play-dsl-sugar) | 🟡 | 1 | `effect.rs` |
 | [Ergonomics partials](#ergonomics-partials) | 🟡 | pervasive | `effect.rs`, `effect_context.rs` |
 | [Grant Security A. ±N modifier — targeted typed sugar](#grant-security-a-n-modifier-to-a-targeted-permanent-parametric-securityattackchange) | 🟡 | 3+ | `effect_context.rs` |
@@ -562,31 +560,23 @@ Rows link to the detailed entry below. `#cards` is the Medusamon-archetype count
 
 ### Digivolution-stack name overlay ("has all names of materials")
 - **Gap ID:** `G-DYNAMIC-NAME-ALIAS-FROM-STACK`
-- **Severity:** 🔴 BLOCKING
-- **Status:** OPEN — re-verified open against code by the `complete-dna-omnimon-archetype` change (2026-05-20). BT17-102 is otherwise IMPLEMENTED; this one `[All Turns]` clause is omitted and test `bt17_102_all_turns_aliases_low_level_material_names` is left `#[ignore]`'d. Accounts for one of the 2 PARTIAL cards in the completed DNA Omnimon ledger.
+- **Severity:** ✅ RESOLVED
+- **Status:** RESOLVED 2026-05-22 by `close-dna-omnimon-partial-gaps`. BT17-102 now authors the `[All Turns]` clause with `identity.source_name_aliases: [{ level_lte: 3 }]`, name predicates consult synthesized permanent identity names, and `bt17_102_all_turns_aliases_low_level_material_names` is enabled and passing.
 - **Discovered in:** DNA Omnimon (2026-04-17)
 - **Card(s):** BT17-102 Greymon ("[All Turns] This Digimon has all the names of level 3 and lower cards in its digivolution cards.")
 - **Effect text:** As above.
-- **What's missing:** `Permanent::contains_card_name` already walks the stack for self-checks, but external name lookups on this permanent from other cards see only the top card's printed name. The DSL identity layer carries only static `name_aliases` — there is NO engine consumer for a *dynamic* alias derived from the live digivolution-source stack. No "virtual name overlay" mechanism that synthesizes additional names for external queries (e.g., another Tamer's aura that checks "[Koromon]" should see the overlay names).
-- **Suggested API shape:** A `Permanent`-level effective-name-set query (union of printed name + dynamic overlay names) consulted by every name predicate, e.g. `Effect::declarative(card).name_overlay_from_sources(|src, data| src.level(data).map_or(false, |l| l <= 3))`; update all name-lookup surfaces (aura filters, inherited-effect name checks, trait-from-name derivations) to union overlays into the lookup set.
-- **Workaround:** None — BLOCKED for external observers that query names on this permanent; the clause is OMITTED per no-approximations.
-- **Related:** "Named-target declarative aura"; DSL/identity-layer face tracked in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md) (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`).
+- **What closed:** A reusable source-name alias identity payload and modifier path now derives additional effective names from matching source cards and routes name predicates through the synthesized name set.
+- **Related:** "Named-target declarative aura"; DSL/identity-layer face resolved in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md) (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`).
 
 ### Delay-on-attack-event dispatch (`<Delay>` body gated on an attack event)
 - **Gap ID:** `G-DSL-DELAY-ON-ATTACK-EVENT`
-- **Severity:** 🔴 BLOCKING
-- **Status:** OPEN — filed by the `complete-dna-omnimon-archetype` change (2026-05-20). BT23-096 is otherwise IMPLEMENTED; the `<Delay>`-on-attack clause is omitted and its test is left `#[ignore]`'d. Accounts for one of the 2 PARTIAL cards in the completed DNA Omnimon ledger.
+- **Severity:** ✅ RESOLVED
+- **Status:** RESOLVED 2026-05-22 by `close-dna-omnimon-partial-gaps`. BT23-096 now authors the `[Your Turn]` CS ally-attack Delay clause, and `bt23_096_your_turn_cs_attack_delay_dedigi4` plus the non-CS negative are enabled and passing.
 - **Discovered in:** DNA Omnimon (2026-05-20)
 - **Card(s):** BT23-096 Comet Hammer (`<Delay>` body gated on an ally-attack event).
 - **Effect text:** `<Delay>` body that activates off an attack event.
-- **What's missing:** A 3-part engine blocker prevents an attack event from triggering a `<Delay>` body —
-  1. `lower_delay.rs` does not map attack timings to `DelayTrigger::OnEvent`;
-  2. `combat.rs` dispatches `OnAllyAttack` via `TriggerSource::PlayerBattleArea`, which `effect_queue.rs` never fans out to event-gated delays;
-  3. `attacker_trait_has` resolves the attacker only via `attack_target_change()`, which is unset for a plain attack.
-- **Already-present substrate (NOT the blocker):** `G-DSL-ON-ALLY-ATTACK-TIMING` (on-ally-attack timing token) and `G-ATK-TRAIT-FILTER` (attacker-trait predicate) both exist; the gap is delay/attack-event dispatch wiring.
-- **Suggested API shape:** Map attack timings to `DelayTrigger::OnEvent` in `lower_delay.rs`; fan `OnAllyAttack` dispatch out to event-gated delays in `effect_queue.rs`; resolve the attacker for a plain attack (not only via `attack_target_change()`).
-- **Workaround:** None faithful — the clause is OMITTED per no-approximations.
-- **Related:** "Standard Delay main-phase activation action" (RESOLVED Track I); DSL face tracked in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md) (`G-DSL-DELAY-ON-ATTACK-EVENT`).
+- **What closed:** Delay lowering maps attack timings to `DelayTrigger::OnEvent`, combat dispatch carries attacker context into event-gated delayed options, and `attacker_trait_has` evaluates ordinary attack context as well as attack-target-change context.
+- **Related:** "Standard Delay main-phase activation action" (RESOLVED Track I); DSL face resolved in [`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md) (`G-DSL-DELAY-ON-ATTACK-EVENT`).
 
 ### Decode keyword (play from own digivolution stack without paying cost on non-battle leave)
 - **Severity:** 🟡 PARTIAL (audit 2026-05-15: narrowed; BT22-015 Red/Black Decode, EX4-060 BlitzGreymon/CresGarurumon ladder, and EX9-021 End-of-Attack source-play all close. **Updated 2026-05-19 (Track J substrate S1.2):** the batch / different-name source-play DSL sugar is now CLOSED — see "What's closed" below. Residual is the native `Keyword::Decode` parsing sugar only.)

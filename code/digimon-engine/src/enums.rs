@@ -736,6 +736,9 @@ pub enum ModifierType {
     /// Treats this permanent as if its top card had a different printed
     /// name — used by "this Digimon is also named X" effects.
     ChangeBaseCardName,
+    /// Adds effective names to this permanent by deriving them from cards in
+    /// its current digivolution sources.
+    SourceNameAliases,
     /// Treats this permanent as if its top card had a different printed
     /// color — distinct from `AddColor` which appends rather than replaces.
     ChangeBaseCardColor,

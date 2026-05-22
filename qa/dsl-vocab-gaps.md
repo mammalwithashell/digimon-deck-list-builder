@@ -1986,28 +1986,25 @@ on the auto-resolved post-state. 5 tests now active.
 - Workaround: None needed for current script-facing retarget effects.
 - First reported: 2026-05-05 (Royal Knights Batch 3: BT19-072).
 
-## BT17-102 — dynamic name alias from digivolution-source stack  [G-DYNAMIC-NAME-ALIAS-FROM-STACK] — OPEN
+## ~~BT17-102 — dynamic name alias from digivolution-source stack  [G-DYNAMIC-NAME-ALIAS-FROM-STACK]~~ — RESOLVED 2026-05-22
 
 - Effect text: BT17-102 Greymon "[All Turns] This Digimon has all the names of level 3 and lower cards in its digivolution cards."
-- Status: OPEN. Verified open against code by the `complete-dna-omnimon-archetype` change. BT17-102 is otherwise IMPLEMENTED; this single `[All Turns]` clause is omitted and the test `bt17_102_all_turns_aliases_low_level_material_names` is left `#[ignore]`'d.
-- Missing capability: the DSL identity layer carries only static `name_aliases`. There is NO engine consumer for a *dynamic* alias derived from the live digivolution-source stack — a name predicate run by any other card against this permanent sees only the printed top-card name. A faithful fix is a cross-cutting engine feature: a `Permanent`-level effective-name-set query (union of printed name + dynamic overlay names) consulted by every name predicate, aura filter, and inherited-effect name check.
-- Companion engine gap: this is the DSL/identity-layer face of the engine-level "Digivolution-stack name overlay" gap in [docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md) (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`).
-- Gap kind: hybrid (engine needs the effective-name-set overlay + universal consult-site rewrite; DSL needs a declarative `name_overlay_from_sources`-style verb).
-- Workaround: none faithful — the clause is OMITTED per no-approximations.
+- Status: RESOLVED 2026-05-22 by `close-dna-omnimon-partial-gaps`. `identity.source_name_aliases` compiles a source-derived effective-name overlay, the engine synthesized identity includes those names, and name predicates consult the synthesized set.
+- Evidence: `cargo test -p digimon-engine --test cards_behavioral bt17_102 -- --nocapture` passes with `bt17_102_all_turns_aliases_low_level_material_names` enabled.
+- Companion engine gap: resolved in [docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md) (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`).
+- Gap kind: hybrid, closed.
+- Workaround: none needed.
 - First reported: 2026-05-20 (`complete-dna-omnimon-archetype` closure — BT17-102 Greymon).
 
-## BT23-096 — `<Delay>`-on-attack-event clause  [G-DSL-DELAY-ON-ATTACK-EVENT] — OPEN
+## ~~BT23-096 — `<Delay>`-on-attack-event clause  [G-DSL-DELAY-ON-ATTACK-EVENT]~~ — RESOLVED 2026-05-22
 
 - Effect text: BT23-096 Comet Hammer — `<Delay>` body gated on an ally-attack event.
-- Status: OPEN. Verified open against code by the `complete-dna-omnimon-archetype` change. BT23-096 is otherwise IMPLEMENTED; the `<Delay>`-on-attack clause is omitted and its test is left `#[ignore]`'d.
-- Missing capability: a 3-part engine blocker prevents an attack event from triggering a `<Delay>` body —
-  1. `lower_delay.rs` does not map attack timings to `DelayTrigger::OnEvent`;
-  2. `combat.rs` dispatches `OnAllyAttack` via `TriggerSource::PlayerBattleArea`, which `effect_queue.rs` never fans out to event-gated delays;
-  3. `attacker_trait_has` resolves the attacker only via `attack_target_change()`, which is unset for a plain attack.
-- Already-present substrate (NOT the blocker): `G-DSL-ON-ALLY-ATTACK-TIMING` and `G-ATK-TRAIT-FILTER` — the on-ally-attack timing token and the attacker-trait predicate both exist; the gap is delay/attack-event dispatch wiring.
-- Companion engine gap: tracked engine-side in [docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md) (`G-DSL-DELAY-ON-ATTACK-EVENT`).
-- Gap kind: hybrid (engine needs delay/attack-event dispatch + plain-attack attacker resolution; DSL needs the attack-timing → `DelayTrigger::OnEvent` lowering).
-- Workaround: none faithful — the clause is OMITTED per no-approximations.
+- Status: RESOLVED 2026-05-22 by `close-dna-omnimon-partial-gaps`. `lower_delay.rs` maps attack timings to `DelayTrigger::OnEvent`, attack dispatch fans into event-gated delayed options with attacker context, and `attacker_trait_has` can evaluate ordinary attack context.
+- Evidence: `cargo test -p digimon-engine --test cards_behavioral bt23_096 -- --nocapture` passes with the CS attack Delay and non-CS negative tests enabled.
+- Already-present substrate: `G-DSL-ON-ALLY-ATTACK-TIMING` and `G-ATK-TRAIT-FILTER` remain noted as pre-existing halves; this change closed the missing delay/attack-event dispatch wiring.
+- Companion engine gap: resolved in [docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md) (`G-DSL-DELAY-ON-ATTACK-EVENT`).
+- Gap kind: hybrid, closed.
+- Workaround: none needed.
 - First reported: 2026-05-20 (`complete-dna-omnimon-archetype` closure — BT23-096 Comet Hammer).
 
 ## Zephagamon — prompted attack target retarget to another Digimon or player  [ZEPH-G005]

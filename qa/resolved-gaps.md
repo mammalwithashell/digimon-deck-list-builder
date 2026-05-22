@@ -94,11 +94,12 @@ bringing the archetype to **24/24 IMPLEMENTED**.
 ## Phase 2 / DNA Omnimon completion closure — 2026-05-20
 
 The `complete-dna-omnimon-archetype` change drove the DNA Omnimon archetype (64 cards)
-from a Phase A baseline of 34 IMPLEMENTED / 25 PARTIAL / 5 BLOCKED to a final ledger of
-**62 IMPLEMENTED / 2 PARTIAL / 0 BLOCKED**. Archetype verdict ledger:
-[qa/qa-reports/validated_cards_dsl.json](qa-reports/validated_cards_dsl.json). The two
-remaining PARTIAL cards (BT17-102, BT23-096) are blocked on the two still-open gaps
-recorded at the end of this section.
+from a Phase A baseline of 34 IMPLEMENTED / 25 PARTIAL / 5 BLOCKED to an interim ledger
+of **62 IMPLEMENTED / 2 PARTIAL / 0 BLOCKED**. The 2026-05-22
+`close-dna-omnimon-partial-gaps` follow-up resolved the two remaining partial gaps
+(BT17-102, BT23-096), so the current archetype verdict ledger is
+**64 IMPLEMENTED / 0 PARTIAL / 0 BLOCKED**:
+[qa/qa-reports/validated_cards_dsl.json](qa-reports/validated_cards_dsl.json).
 
 DNA Omnimon now has 0 live `raw_rust` escapes — BT20-102's board-wipe/return migrated to
 pure DSL, AD1-025's body migrated, and the unused `bt20_102_boardwipe_and_return` fn was
@@ -176,28 +177,17 @@ behavioral tests, which now pass:
 `G-ADD-OPTION-SELF-TO-HAND`, `G-EVENT-CARD-TAMER-PLAY`, `G-COLOR-MATCH-AGAINST-BOARD`,
 `G-DSL-SELF-NAME-CONTAINS`, `G-EVENT-TARGET-NOT-SOURCE`.
 
-### Gaps STILL OPEN (verified open against code; filed, not closed by this change)
-
-These two gaps remain genuinely open and are tracked in
-[qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md) and
-[docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md). They account for the 2 PARTIAL
-cards in the final ledger:
+### Follow-up gaps CLOSED 2026-05-22
 
 - **G-DYNAMIC-NAME-ALIAS-FROM-STACK** — BT17-102 Greymon `[All Turns]` material-name-alias
-  clause. The DSL identity layer has only static `name_aliases`; there is NO engine
-  consumer for a dynamic alias derived from the live digivolution-source stack. A faithful
-  fix is a cross-cutting engine feature (a Permanent-level effective-name-set query
-  consulted by every name predicate). BT17-102 is otherwise IMPLEMENTED; this one clause
-  is omitted and test `bt17_102_all_turns_aliases_low_level_material_names` is left
-  `#[ignore]`'d.
+  clause. Closed by `identity.source_name_aliases`, synthesized permanent effective names,
+  and name-predicate routing through that synthesized name set. BT17-102 is now fully
+  IMPLEMENTED; `bt17_102_all_turns_aliases_low_level_material_names` is enabled and passing.
 - **G-DSL-DELAY-ON-ATTACK-EVENT** — BT23-096 Comet Hammer `<Delay>`-on-attack clause.
-  3-part engine blocker: `lower_delay.rs` does not map attack timings to
-  `DelayTrigger::OnEvent`; `combat.rs` dispatches `OnAllyAttack` via
-  `TriggerSource::PlayerBattleArea` which `effect_queue.rs` never fans out to event-gated
-  delays; `attacker_trait_has` resolves the attacker only via `attack_target_change()`
-  (unset for a plain attack). `G-DSL-ON-ALLY-ATTACK-TIMING` and `G-ATK-TRAIT-FILTER` are
-  noted as already-present substrate. BT23-096 is otherwise IMPLEMENTED; the clause is
-  omitted and the test is left `#[ignore]`'d.
+  Closed by lowering attack timings to `DelayTrigger::OnEvent`, feeding attack events into
+  event-gated delayed options, and carrying attacker context for `attacker_trait_has`.
+  BT23-096 is now fully IMPLEMENTED; the CS attack Delay and non-CS negative tests are
+  enabled and passing.
 
 ## Phase 2 Track C closure — 2026-05-17
 

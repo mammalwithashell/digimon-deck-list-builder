@@ -1,12 +1,5 @@
-# dna-omnimon-archetype-coverage Specification
+## MODIFIED Requirements
 
-## Purpose
-
-Define the end-state coverage guarantees for the DNA Omnimon archetype in the
-Rust DSL engine: every card in the pool has a faithful DSL implementation and
-behavioral test coverage, the verdict ledger and gap trackers reflect the
-verified state, and no test is ignored for an already-closed substrate gap.
-## Requirements
 ### Requirement: Every DNA Omnimon card has faithful DSL implementation
 
 Every unique card in the DNA Omnimon decklist pool (as resolved from `data/deck_library.json`) SHALL have a production DSL YAML file under `code/digimon-engine/cards/<set>/` whose effects faithfully implement the full printed card text from `data/cards.json` — every clause, timing, and player choice. No clause may be omitted, stubbed, hidden behind `raw_rust`, auto-resolved, or represented by a coarser proxy.
@@ -53,22 +46,6 @@ Every DNA Omnimon card SHALL have a behavioral test file under `code/digimon-eng
 - **AND** BT23-096's Delay-on-ally-attack test is not ignored
 - **AND** both tests pass against production DSL YAML
 
-### Requirement: No behavioral test is ignored for an already-closed gap
-
-No DNA Omnimon behavioral test SHALL carry an `#[ignore]` marker that cites a substrate gap which is already closed in the current engine/DSL. Each `#[ignore]` marker that remains SHALL cite a substrate gap that is verifiably still open, confirmed by inspecting the current engine code — not by trusting a tracker document.
-
-#### Scenario: Stale ignore markers are re-enabled
-
-- **WHEN** a DNA Omnimon behavioral test is ignored citing `pending: G-XYZ`
-- **AND** the engine/DSL primitive `G-XYZ` is confirmed present in `code/digimon-engine/src/` or `code/digimon-dsl/src/`
-- **THEN** the test is re-enabled, its card clause is authored, and the test passes
-
-#### Scenario: Genuinely-blocked tests carry accurate references
-
-- **WHEN** a DNA Omnimon behavioral test remains ignored after the reconciliation sweep
-- **THEN** its `#[ignore]` reason cites a substrate gap verified as still open against current code
-- **AND** that gap has a corresponding open entry in `qa/dsl-vocab-gaps.md` or `docs/RUST_ENGINE_GAPS.md`
-
 ### Requirement: An accurate per-card verdict ledger exists
 
 A `validated_cards_dsl.json` verdict ledger SHALL contain an entry for every DNA Omnimon card, and every entry SHALL have a verdict of `IMPLEMENTED` after the change completes. No DNA Omnimon entry may remain `PARTIAL` or `BLOCKED` after BT17-102 and BT23-096 pass their behavioral tests.
@@ -100,18 +77,3 @@ DNA Omnimon card YAML SHALL contain zero live `raw_rust` escapes. Historical com
 - **WHEN** the DNA Omnimon card pool YAML files are scanned
 - **THEN** no non-comment YAML entry contains `kind: raw_rust`
 - **AND** no DNA Omnimon card behavior depends on a raw Rust card-function registry entry
-
-### Requirement: DNA Omnimon trackers reflect verified state
-
-After the change, `qa/dsl-vocab-gaps.md`, `qa/resolved-gaps.md`, and `qa/archetype-qa/dsl/2026-05-03-dna-omnimon-dsl-engine-gaps.md` SHALL reflect the verified end state: closed gaps moved to `resolved-gaps.md`, still-open gaps left open with accurate card attributions.
-
-#### Scenario: Closed gaps relocated
-
-- **WHEN** a DNA Omnimon gap is verified closed during the change
-- **THEN** its entry is moved to `qa/resolved-gaps.md` with a closure note
-- **AND** the per-archetype gap doc annotates the closed item
-
-#### Scenario: No closed gap left marked open
-
-- **WHEN** the change completes
-- **THEN** no DNA Omnimon gap that is verified closed remains listed as open in `qa/dsl-vocab-gaps.md`
