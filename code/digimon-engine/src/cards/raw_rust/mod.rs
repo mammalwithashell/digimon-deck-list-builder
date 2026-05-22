@@ -363,6 +363,71 @@ fn bt9_112_delete_lowest_cost_digimon(ctx: &mut EffectContext<'_>, _bindings: &m
     }
 }
 
+/// EX8-070 Zofr Kabus — [Security] Delete 1 of opponent's Digimon with the
+/// lowest play cost.
+///
+/// Printed text: "[Security] Delete 1 of your opponent's Digimon with the
+/// lowest play cost."
+///
+/// GAP G-PLAY-COST-AGGREGATE: No DSL predicate for selecting permanents by
+/// aggregate (minimum) play cost. This step computes the minimum play cost
+/// among opponent Digimon and deletes the first one at that cost. When
+/// multiple Digimon share the lowest cost, the printed "1 of" implies a
+/// player choice (tie-breaking selection), but that requires a two-pass
+/// raw_rust pending G-PLAY-COST-AGGREGATE closure. For now the lowest-index
+/// tied target is auto-deleted as a simplification.
+///
+/// When G-PLAY-COST-AGGREGATE closes, replace with a native DSL expression
+/// that uses `select_opponent_permanent` filtered by `play_cost_lte: { agg: min }`.
+///
+/// Tracked in qa/dsl-vocab-gaps.md under G-PLAY-COST-AGGREGATE.
+fn ex8_070_delete_lowest_cost_digimon(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
+    use crate::enums::CardKind;
+    use crate::permanent::PermanentHandle;
+
+    let opponent = ctx.opponent_id();
+
+    // Collect (handle, play_cost) for every opponent Digimon.
+    let digimon_costs: Vec<(PermanentHandle, u16)> = ctx
+        .game
+        .player(opponent)
+        .battle_area
+        .iter()
+        .enumerate()
+        .filter_map(|(idx, perm)| {
+            let top = perm.top_card();
+            let data = &ctx.game.card_data[top.data_index];
+            if data.card_kind == CardKind::Digimon {
+                let handle = PermanentHandle {
+                    player: opponent,
+                    index: idx as u8,
+                };
+                Some((handle, data.play_cost))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    // Nothing to do if opponent has no Digimon.
+    if digimon_costs.is_empty() {
+        return;
+    }
+
+    // Find the minimum play cost.
+    let min_cost = digimon_costs
+        .iter()
+        .map(|(_, cost)| *cost)
+        .min()
+        .unwrap_or(0);
+
+    // Delete the first Digimon at the minimum cost (lowest battle-area index).
+    // Tie-breaking selection pending G-PLAY-COST-AGGREGATE.
+    if let Some((handle, _)) = digimon_costs.into_iter().find(|(_, cost)| *cost == min_cost) {
+        ctx.delete_permanent(handle);
+    }
+}
+
 /// BT17-018 Gallantmon: Crimson Mode — [On Play][When Digivolving] DP-budget multi-delete.
 ///
 /// Printed effect: "Choose any number of your opponent's Digimon whose total DP
@@ -1074,6 +1139,10 @@ pub fn build_registry() -> EngineRawRustRegistry {
     r.register_step(
         "bt9_112_delete_lowest_cost_digimon",
         bt9_112_delete_lowest_cost_digimon,
+    );
+    r.register_step(
+        "ex8_070_delete_lowest_cost_digimon",
+        ex8_070_delete_lowest_cost_digimon,
     );
     r.register_step(
         "bt17_018_delete_opp_digimon_dp_budget",

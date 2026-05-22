@@ -86,3 +86,46 @@ cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behaviora
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex10_063 ex7_049 lm_031 lm_032 --nocapture
 cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt23_096 bt8_094 ex10_069 st22_11 --nocapture
 ```
+
+---
+
+## Batch 10 (2026-05-11) — formerly-blocked IMPLEMENT pass
+
+Date: 2026-05-11
+Pipeline: `/batch-implement-cards-rust-dsl Rocks`
+Scope: 4 cards previously listed as "Blocked after pass" — re-attempted given engine progress since 2026-05-04.
+
+| Card ID  | Name | Verdict | Tests | Notes |
+|---|---|---|---|---|
+| BT21-021 | OmniShoutmon | IMPLEMENTED | 24 (1 ign) | digixros_aliases ["Shoutmon"] + 3 alt-paths + [End of Attack] cost-5 play & self-delete + [On Deletion] hand/trash place under Tamer + auto-Save keyword + inherited [Your Turn] Rush aura. Ignored test: `G-DSL-AURA-TARGET-SOURCE-PERMANENT` for carrier-trait condition on inherited aura. |
+| EX11-065 | Close | PARTIAL (dsl) | 20 (4 ign) | Clause 0 [Start of Your Main Phase] omitted (BLOCKED on `G-DSL-SELECT-OWN-SOURCES-FILTER` — hand-OR-digivolution-source trash cost). All Turns observer (event-target-trait filter + suspend-as-cost + place_as_bottom_source from hand/trash) and Security IMPLEMENTED. |
+| EX8-070  | Zofr Kabus | IMPLEMENTED | 22 | Main: select Mineral/Rock Digimon + select source to trash + grant Collision/Piercing/Reboot/CannotBeReturnedToHand/CannotBeReturnedToDeck/+3000DP all with `expiry: end_of_opponents_turn`. Security: lowest-cost opponent delete via `raw_rust` workaround for `G-PLAY-COST-AGGREGATE` (same pattern as BT9-112). |
+| P-130    | Lui Ohwada | PARTIAL (dsl) | 14 (3 ign) | [Your Turn] on_move trigger + Security IMPLEMENTED. [On Play] move-from-breeding BLOCKED on `G-MOVE-BREEDING-DSL` (no DSL step lowers to `ctx.move_from_breeding_by_effect`) and `G-SELECT-BREEDING-FILTER` (no `filter:` on `select_own_breeding_permanent` → level-3+ filter inexpressible). |
+
+Verification:
+```bash
+cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt21_021 ex11_065 ex8_070 p_130
+# 70 passed; 0 failed; 8 ignored
+```
+
+Full-suite regression (no per-binary failures):
+```bash
+cargo test --manifest-path code/digimon-engine/Cargo.toml
+# All binaries pass; cards_behavioral: 2251 passed, 499 ignored.
+```
+
+### Blocked / partial residual after Batch 10
+- `BT9-103` — play-cost-filtered player attack restriction + opponent security-add lock (carried over).
+- `EX10-003` — attack cancellation by trashing three Mineral/Rock sources (carried over).
+- `EX11-065` Clause 0 — `G-DSL-SELECT-OWN-SOURCES-FILTER` (new pattern observed).
+- `P-130` [On Play] — `G-MOVE-BREEDING-DSL` + `G-SELECT-BREEDING-FILTER` (new gap entry filed).
+- `BT20-055` — face-up security lifecycle and security end-of-opponent-turn play timing (carried over).
+- All other Rocks AUDIT-mode cards re-verified green under cargo (36 of 36 build + tests pass, prior PARTIAL/BLOCKED verdicts unchanged — no engine-gap closures since 2026-05-04 that lift these).
+
+### New DSL-vocab gaps filed
+- `G-DSL-AURA-TARGET-SOURCE-PERMANENT` — carrier-trait condition on inherited aura target filter (BT21-021 [Your Turn] Rush).
+- `G-MOVE-BREEDING-DSL` — no DSL step for `move_from_breeding_by_effect` (P-130 [On Play]).
+- `G-DSL-SELECT-OWN-SOURCES-FILTER` — `select_own_sources` lacks `filter:` field (EX11-065 Clause 0; also affects any "hand OR digivolution-source" union cost shape).
+
+### New pattern worth documenting in RUST_DSL_TEST_API.md
+- **Single-trigger optional auto-fire vs declinable cost-gating.** When a clause is `optional: true` and the body has a synchronous step BEFORE any `PendingSelection`, that step (e.g. `suspend`) runs unconditionally — the optional flag does not gate it. To make a "by suspending this Tamer, you may …" body actually declinable, the FIRST step must install a selection with `optional: true`, and cost-paying steps must live in that selection's callback. EX11-065's Batch 10 fix adopted this pattern (`select_own_permanent: { optional: true }` first → suspend + place in the accept callback).

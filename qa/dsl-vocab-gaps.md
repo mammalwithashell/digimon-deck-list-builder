@@ -537,6 +537,36 @@ Format per entry:
 
 ---
 
+## P-130 — effect move-from-breeding DSL verb  [G-MOVE-BREEDING-DSL]
+
+- Effect text: P-130 Lui Ohwada: "[On Play] You may move 1 of your level 3 or higher Digimon from the breeding area to the battle area."
+- Missing DSL verb / step kind / predicate: No `CompiledStep` variant or YAML keyword lowers to `EffectContext::move_from_breeding_by_effect(player)`. The engine method exists at `code/digimon-engine/src/effect_context/mod.rs:2798` and works correctly, but has no DSL surface.
+- Secondary gap: `select_own_breeding_permanent` (`step.rs:1391`, `SelectOwnBreedingPermanentArgs`) has no `filter` field, so the level-3+ constraint ("level 3 or higher Digimon") is inexpressible even if the move verb were added. Tracked as `G-SELECT-BREEDING-FILTER` alongside `RK-G001` and `G-BREEDING-PERMANENT-SELECTION`.
+- No-approximations note: using `select_own_breeding_permanent` without a level filter (and promoting any breeding Digimon) violates the printed clause. The `raw_rust` bridge would also lack the level filter. Neither workaround is acceptable.
+- Lowers to engine API: `EffectContext::move_from_breeding_by_effect(player)` — single call moves the player's breeding-area permanent to the battle area with full OnMove event dispatch.
+- Suggested DSL syntax:
+  ```yaml
+  - select_own_breeding_permanent:
+      bind_as: target
+      filter: { level_gte: 3 }
+      optional: true
+      prompt: "Move 1 Lv.3+ Digimon from breeding to battle area"
+      then:
+        - move_from_breeding: { of: you }
+  ```
+  Or as a single atomic step (no player-visible selection needed since there is at most one breeding permanent):
+  ```yaml
+  - move_from_breeding:
+      of: you
+      optional: true
+      filter: { level_gte: 3 }
+  ```
+- Gap kind: dsl (engine primitive exists; no YAML verb; filter support also missing).
+- Cards blocked: P-130 Lui Ohwada [On Play] clause. Behavioral tests in `p_130.rs` tagged `#[ignore = "pending: G-MOVE-BREEDING-DSL"]`.
+- First reported: 2026-05-11 (P-130 Lui Ohwada TDD implementation pass).
+
+---
+
 ## BT8-097 / Royal Knights — formula filters for counted battle-area cards  [G-FORMULA-KIND-FILTER]
 
 - Status: RESOLVED for reusable formula-zone count filters on 2026-05-02. `card_count_in_zone` payloads now accept `filter: { ... }`; the compiler carries the predicate into filtered count IR, and runtime evaluation counts only representable subjects that satisfy the predicate instead of falling back to an unfiltered count.
