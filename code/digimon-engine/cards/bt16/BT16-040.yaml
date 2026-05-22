@@ -10,6 +10,9 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 2 }
     cost: 1
+  - kind: digivolve
+    from: { name_is: "Minomon" }
+    cost: 0
 
 # ─── Clause 0: [Start of Your Main Phase] [On Play] digivolve from trash ────
 #
@@ -47,13 +50,12 @@ alt_paths:
 #          card check is enforced implicitly by `select_trash` having no valid
 #          targets when trash is empty of eligible cards.
 #       2. select_trash (filter: digimon + level_eq:4 + (Insectoid OR Free))
-#       3. effect_initiated_digivolve: { target: perm, from_hand: evo,
+#       3. effect_initiated_digivolve: { target: perm, source: evo,
 #          cost: { reduce: 1 } }
-#          NOTE: `from_hand` receives a TrashIndex binding from select_trash;
+#          NOTE: `source` receives a TrashIndex binding from select_trash;
 #          resolve_card_source_ref maps TrashIndex → CardSourceRef::Trash, so
 #          the engine call uses effect_initiated_digivolve_from_source with a
-#          Trash source. The field name `from_hand` is a DSL naming artifact;
-#          the lowering correctly handles trash-origin bindings.
+#          Trash source.
 #
 # Known gaps:
 #   - G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET: the chain
@@ -98,7 +100,7 @@ effects:
           prompt: "Choose a Lv.4 [Insectoid] or [Free] Digimon from your trash"
       - effect_initiated_digivolve:
           target: target
-          from_hand: evo
+          source: evo
           cost: { reduce: 1 }
           ignore_requirements: false
 

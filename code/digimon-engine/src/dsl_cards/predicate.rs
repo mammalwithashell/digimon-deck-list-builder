@@ -9,6 +9,7 @@ use digimon_dsl::compiled::{
 use crate::card_source::{CardHandle, CardSource};
 use crate::dsl_cards::bindings::{BindingValue, Bindings};
 use crate::dsl_cards::formula_eval;
+use crate::dsl_cards::modifier_map::lookup_keyword;
 use crate::effect_context::EffectReadContext;
 use crate::enums::{CardColor, CardKind, PlayerId};
 use crate::permanent::PermanentHandle;
@@ -22,6 +23,11 @@ pub enum PredicateSubject {
     BreedingPermanent(PlayerId),
     Card(CardHandle),
     RevealedCard(CardHandle),
+    /// A digivolution-stack source carrying source-stack metadata (face-down
+    /// flag, host permanent, stack position). Source-subject leaves
+    /// (e.g. `is_face_down`) are evaluated against this, after which the
+    /// subject degrades to `Card` so card-identity leaves keep working.
+    Source(crate::selection::SourceSelectionRef),
     None,
 }
 
@@ -49,6 +55,73 @@ pub fn eval_predicate_with_bindings(
     subject: PredicateSubject,
     bindings: Option<&Bindings>,
 ) -> bool {
+    // Source subjects: evaluate source-stack-metadata leaves here, then
+    // degrade the subject to Card so every existing card-identity leaf
+    // (trait_has / kind / name / etc.) continues to work unchanged.
+    // `is_face_down` / `is_bottom_source` are only satisfiable for a Source
+    // subject — on any non-Source subject a present source-subject leaf is an
+    // unconditional non-match.
+    //
+    // The degrade is *node-local*: `subject` below is the degraded value
+    // used by THIS node's leaf checks, but `original_subject` is preserved
+    // un-degraded so the combinator arms (`all_of`/`any_of`/`none_of`/`not`)
+    // recurse with it. Each recursive call then re-runs this same degrade
+    // block for its own node — so a `Source` subject's source-stack leaves
+    // (e.g. `is_face_down` / `is_bottom_source`) stay evaluable at any
+    // combinator nesting depth.
+    let original_subject = subject;
+    let subject = if let PredicateSubject::Source(sref) = subject {
+        if let Some(want) = pred.is_face_down {
+            let actual = rctx
+                .game
+                .player(sref.permanent.player)
+                .battle_area
+                .get(sref.permanent.index as usize)
+                .and_then(|perm| perm.card_sources.get(sref.source_index as usize))
+                .map(|cs| cs.face_down);
+            match actual {
+                Some(face_down) if face_down == want => {}
+                _ => return false,
+            }
+        }
+        if let Some(want) = pred.is_bottom_source {
+            let actual = sref.source_index == 0;
+            if actual != want {
+                return false;
+            }
+        }
+        if let Some(want) = pred.host_kind_is {
+            // The host permanent's top card is the visible Digimon/Tamer the
+            // source sits beneath. If the host permanent cannot be resolved,
+            // the predicate does not match. An in-battle_area permanent always
+            // has a top card, so no empty-stack case is reachable (consistent
+            // with the A3.1 `is_face_down` leaf). The top `CardSource`'s
+            // `data_index` indexes `rctx.game.card_data` directly.
+            let actual_kind = rctx
+                .game
+                .player(sref.permanent.player)
+                .battle_area
+                .get(sref.permanent.index as usize)
+                .map(|perm| rctx.game.card_data[perm.top_card().data_index].card_kind);
+            match actual_kind {
+                // `host_kind_is` reads a field permanent's top card, so it uses
+                // the field-subject matcher (`Dual` coalesces to `Digimon`),
+                // consistent with this file's other field-subject kind checks.
+                Some(kind) if kind_matches_field(want, kind) => {}
+                _ => return false,
+            }
+        }
+        PredicateSubject::Card(sref.card)
+    } else {
+        if pred.is_face_down.is_some()
+            || pred.is_bottom_source.is_some()
+            || pred.host_kind_is.is_some()
+        {
+            return false;
+        }
+        subject
+    };
+
     // Game-state fields — independent of subject.
     if let Some(want) = pred.your_turn {
         let is_my = rctx.game.turn_player() == rctx.player;
@@ -59,6 +132,21 @@ pub fn eval_predicate_with_bindings(
     if let Some(want) = pred.opponents_turn {
         let is_opp = rctx.game.turn_player() != rctx.player;
         if is_opp != want {
+            return false;
+        }
+    }
+    // `all_turns: true` is an explicit "passes during any turn" marker
+    // used in `active_when` scopes (the printed [All Turns] tag). It is
+    // a no-op filter — the predicate passes regardless of whose turn
+    // it is. `all_turns: false` is nonsensical (no turn would satisfy)
+    // and is treated as a non-match.
+    if let Some(want) = pred.all_turns {
+        if !want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.source_is_tamer {
+        if rctx.source_is_tamer() != want {
             return false;
         }
     }
@@ -86,6 +174,47 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(cap) = &pred.opponent_security_count_lte {
+        if (rctx.security_count(rctx.opponent_id()) as i32)
+            > eval_int_constraint_read(cap, rctx, None, bindings)
+        {
+            return false;
+        }
+    }
+    if let Some(floor) = &pred.opponent_security_count_gte {
+        if (rctx.security_count(rctx.opponent_id()) as i32)
+            < eval_int_constraint_read(floor, rctx, None, bindings)
+        {
+            return false;
+        }
+    }
+    if let Some(spec) = &pred.no_face_up_security_named {
+        // G-PRED-NO-FACE-UP-SECURITY-NAMED — fails if the named player has
+        // ANY face-up security card matching the identity filter. Face-up
+        // state lives in `Player.face_up_security` (a `card_index` set);
+        // a card is counted only when both its identity matches and its
+        // `card_index` is in that set.
+        let players = resolve_predicate_players(spec.of, rctx);
+        let card_data = rctx.card_data();
+        let has_face_up_match = players.iter().any(|&player_id| {
+            let player = rctx.game.player(player_id);
+            player.security.iter().any(|card| {
+                if !player.face_up_security.contains(&card.card_index) {
+                    return false;
+                }
+                if let Some(card_number) = &spec.card_number_is {
+                    card.card_id(card_data).eq_ignore_ascii_case(card_number)
+                } else if let Some(name) = &spec.name_is {
+                    card.card_name(card_data).eq_ignore_ascii_case(name)
+                } else {
+                    false
+                }
+            })
+        });
+        if has_face_up_match {
+            return false;
+        }
+    }
     if let Some(name) = &pred.binding_exists {
         if bindings.and_then(|b| b.get_ref(name)).is_none() {
             return false;
@@ -98,6 +227,21 @@ pub fn eval_predicate_with_bindings(
     }
     if let Some(name) = &pred.binding_absent {
         if bindings.and_then(|b| b.get_ref(name)).is_some() {
+            return false;
+        }
+    }
+    if let Some((name, want)) = &pred.binding_count_eq {
+        let count = bindings
+            .and_then(|b| b.get_ref(name))
+            .map(|value| match value {
+                crate::dsl_cards::bindings::BindingValue::PermanentList(v) => v.len(),
+                crate::dsl_cards::bindings::BindingValue::CardList(v) => v.len(),
+                crate::dsl_cards::bindings::BindingValue::SourceRefs(v) => v.len(),
+                // A scalar / single-target binding counts as one entry.
+                _ => 1,
+            })
+            .unwrap_or(0);
+        if count != usize::from(*want) {
             return false;
         }
     }
@@ -120,17 +264,137 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(floor) = pred.distinct_tamer_colors_gte {
+        // G-DSL-DISTINCT-TAMER-COLORS: count the distinct colors across
+        // the observer's battle-area Tamer permanents. ST20-10's warp
+        // alt-path condition ("your Tamers have 3 or more total colors").
+        let mut colors: Vec<CardColor> = Vec::new();
+        for perm in &rctx.game.player(rctx.player).battle_area {
+            let top = perm.top_card();
+            if top.card_kind(rctx.card_data()) != CardKind::Tamer {
+                continue;
+            }
+            for c in top.colors(rctx.card_data()) {
+                if !colors.contains(c) {
+                    colors.push(*c);
+                }
+            }
+        }
+        if colors.len() < usize::from(floor) {
+            return false;
+        }
+    }
+    // G-BEFORE-PAY-COST-DIGIVOLVE-TARGET: when a `cost_target` sub-
+    // predicate is present, evaluate it as a Card predicate against the
+    // card whose cost is currently being inspected. Fails outside any
+    // BeforePayCost cost-calc dispatch (`cost_target_card == None`).
+    if let Some(inner) = &pred.cost_target {
+        let Some(target) = rctx.cost_target_card else {
+            return false;
+        };
+        if !eval_predicate_with_bindings(
+            inner,
+            rctx,
+            PredicateSubject::Card(target),
+            bindings,
+        ) {
+            return false;
+        }
+    }
+    // G-BEFORE-PAY-COST-DIGIVOLVE-TARGET: gate to "THIS permanent is
+    // the digivolve target" — fires when the effect's source_permanent
+    // is one of the digivolve target permanents (single entry for
+    // normal digivolve, both materials for DNA).
+    if let Some(want) = pred.source_is_cost_target_permanent {
+        if rctx.source_is_cost_target_permanent() != want {
+            return false;
+        }
+    }
     if !eval_event_fields(pred, rctx, subject) {
         return false;
     }
     if !eval_replacement_fields(pred, rctx) {
         return false;
     }
+    if let Some(want) = pred.source_is_unsuspended {
+        let Some(source) = rctx.source_permanent else {
+            return false;
+        };
+        let Some(perm) = permanent_for_handle(rctx, source) else {
+            return false;
+        };
+        if (!perm.is_suspended) != want {
+            return false;
+        }
+    }
     if let Some(ref needle) = pred.self_digivolution_contains_name {
         let Some(perm) = subject_or_source_permanent(subject, rctx) else {
             return false;
         };
         if !perm.contains_card_name(needle, rctx.card_data()) {
+            return false;
+        }
+    }
+    if let Some(ref needle) = pred.self_digivolution_sources_contain_name {
+        // G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY: scan only the
+        // digivolution source cards beneath the carrier, excluding the
+        // carrier's own top card. `card_sources` stores the top card at
+        // `last()`, so the sources are `[0 .. len-1]` — mirrors the
+        // `.take(len-1)` idiom in `permanent_material_count`.
+        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+            return false;
+        };
+        let source_match = perm
+            .card_sources
+            .iter()
+            .take(perm.card_sources.len().saturating_sub(1))
+            .any(|card| card.contains_card_name(needle, rctx.card_data()));
+        if !source_match {
+            return false;
+        }
+    }
+    if let Some(ref needle) = pred.source_name_contains {
+        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+            return false;
+        };
+        if !perm
+            .top_card()
+            .card_name(rctx.card_data())
+            .to_lowercase()
+            .contains(&needle.to_lowercase())
+        {
+            return false;
+        }
+    }
+    if let Some(ref trait_name) = pred.source_permanent_trait_has {
+        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(perm.top_card().handle()) else {
+            return false;
+        };
+        if !data.traits.iter().any(|x| x.eq_ignore_ascii_case(trait_name)) {
+            return false;
+        }
+    }
+    // PUPPETS-G025: case-insensitive substring match against the carrier
+    // permanent's printed rules text (effect_text + inherited_text +
+    // security_text of the top card). Used by BT16-055 to gate its
+    // inherited +1000 DP aura on "while this Digimon has [Pulsemon] in
+    // its text." In an inherited while_condition context the subject is
+    // the carrier permanent.
+    if let Some(ref needle) = pred.rules_text_contains {
+        let Some(perm) = subject_or_source_permanent(subject, rctx) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(perm.top_card().handle()) else {
+            return false;
+        };
+        let needle_lc = needle.to_lowercase();
+        let found = data.effect_text.to_lowercase().contains(&needle_lc)
+            || data.inherited_text.to_lowercase().contains(&needle_lc)
+            || data.security_text.to_lowercase().contains(&needle_lc);
+        if !found {
             return false;
         }
     }
@@ -161,9 +425,11 @@ pub fn eval_predicate_with_bindings(
         }
     }
 
-    // Combinators — short-circuit on first failure.
+    // Combinators — short-circuit on first failure. Recurse with the
+    // un-degraded `original_subject` so a `Source` subject keeps its
+    // source-stack metadata; each child re-runs the degrade block above.
     for child in &pred.all_of {
-        if !eval_predicate_with_bindings(child, rctx, subject, bindings) {
+        if !eval_predicate_with_bindings(child, rctx, original_subject, bindings) {
             return false;
         }
     }
@@ -171,18 +437,18 @@ pub fn eval_predicate_with_bindings(
         let any_match = pred
             .any_of
             .iter()
-            .any(|c| eval_predicate_with_bindings(c, rctx, subject, bindings));
+            .any(|c| eval_predicate_with_bindings(c, rctx, original_subject, bindings));
         if !any_match {
             return false;
         }
     }
     for child in &pred.none_of {
-        if eval_predicate_with_bindings(child, rctx, subject, bindings) {
+        if eval_predicate_with_bindings(child, rctx, original_subject, bindings) {
             return false;
         }
     }
     if let Some(inner) = &pred.not {
-        if eval_predicate_with_bindings(inner, rctx, subject, bindings) {
+        if eval_predicate_with_bindings(inner, rctx, original_subject, bindings) {
             return false;
         }
     }
@@ -199,6 +465,21 @@ pub fn eval_predicate_with_bindings(
     }
     if let Some(binding_name) = &pred.not_in_binding {
         if !subject_not_in_binding(subject, binding_name, bindings) {
+            return false;
+        }
+    }
+    // `of_permanent: <name>` constrains the subject to the named
+    // permanent binding. The subject must be a `Permanent` and equal
+    // to whatever `<name>` is bound to. Used by source-stack selection
+    // step bodies (e.g. "select an inherited card on `carrier`").
+    if let Some(binding_name) = &pred.of_permanent {
+        let PredicateSubject::Permanent(handle) = subject else {
+            return false;
+        };
+        let Some(target) = bindings.and_then(|b| b.get_permanent(binding_name)) else {
+            return false;
+        };
+        if target != handle {
             return false;
         }
     }
@@ -248,6 +529,20 @@ pub fn eval_predicate_with_bindings(
         }
     }
 
+    // `has_face_down_source` is a permanent-subject-only leaf: it reads a
+    // permanent's `card_sources` stack. Only `Permanent` / `BreedingPermanent`
+    // can satisfy it — on any other subject (`Card`, `RevealedCard`, `None`,
+    // and a `Source` subject already degraded to `Card` above) a present
+    // `has_face_down_source` leaf is an unconditional non-match.
+    if pred.has_face_down_source.is_some()
+        && !matches!(
+            subject,
+            PredicateSubject::Permanent(_) | PredicateSubject::BreedingPermanent(_)
+        )
+    {
+        return false;
+    }
+
     match subject {
         PredicateSubject::Card(card) => eval_card_fields(pred, rctx, card, false, None, bindings),
         PredicateSubject::RevealedCard(card) => {
@@ -256,6 +551,13 @@ pub fn eval_predicate_with_bindings(
         PredicateSubject::Permanent(h) => eval_permanent_fields(pred, rctx, h, bindings),
         PredicateSubject::BreedingPermanent(player) => {
             eval_breeding_permanent_fields(pred, rctx, player, bindings)
+        }
+        // A `Source` subject is always degraded to `Card` by the
+        // degrade-to-Card block at the top of this function, so this arm
+        // is unreachable in practice; route it through the card path for
+        // exhaustiveness and forward-compat safety.
+        PredicateSubject::Source(sref) => {
+            eval_card_fields(pred, rctx, sref.card, false, None, bindings)
         }
         PredicateSubject::None => eval_no_subject_fields(pred),
     }
@@ -298,7 +600,9 @@ fn eval_result_bound_fields(
 ) -> bool {
     let Some(bindings) = bindings else {
         return pred.effect_suspended_any_own_digimon != Some(true)
+            && pred.effect_suspended_any_opponent_digimon != Some(true)
             && pred.effect_returned_any_card != Some(true)
+            && pred.returned_card_matching.is_none()
             && pred.effect_deleted_any_own_digimon != Some(true)
             && pred.effect_deleted_any_opponent_digimon != Some(true)
             && pred.effect_played_any_digimon != Some(true)
@@ -312,9 +616,40 @@ fn eval_result_bound_fields(
             return false;
         }
     }
+    // G-DSL-EFFECT-SUSPENDED-RESULT — opponent-side sibling. The result
+    // log records every suspend regardless of owner (`record_suspended`
+    // is owner-agnostic); the own/opponent split happens here at read
+    // time, mirroring `effect_deleted_any_opponent_digimon`.
+    if let Some(want) = pred.effect_suspended_any_opponent_digimon {
+        let actual = log.suspended.iter().any(|h| h.player != rctx.player);
+        if actual != want {
+            return false;
+        }
+    }
     if let Some(want) = pred.effect_returned_any_card {
         let actual = !log.returned_to_deck.is_empty();
         if actual != want {
+            return false;
+        }
+    }
+    // G-ANY-RETURNED-CARD-PREDICATE — filtered result-set predicate. True when
+    // at least one card identity recorded by a preceding return / zone-move
+    // step in this effect satisfies the inner card-shape predicate. Each
+    // returned `CardHandle` is resolved to its identity via
+    // `card_data_for_handle` (zone-agnostic) and evaluated as a `Card` subject.
+    if let Some(inner) = &pred.returned_card_matching {
+        let any_match = log
+            .returned_to_deck
+            .iter()
+            .any(|&handle| {
+                eval_predicate_with_bindings(
+                    inner,
+                    rctx,
+                    PredicateSubject::Card(handle),
+                    Some(bindings),
+                )
+            });
+        if !any_match {
             return false;
         }
     }
@@ -656,9 +991,13 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.attribute_is.is_none()
         && pred.name_is.is_none()
         && pred.name_contains.is_none()
+        && pred.effect_text_contains.is_none()
         && pred.name_in.is_none()
+        && pred.name_not_shared_by_field_digimon.is_none()
         && pred.card_number_is.is_none()
         && pred.play_cost_lte.is_none()
+        && pred.play_cost_gte.is_none()
+        && pred.self_color_count_gte.is_none()
         && pred.dp_eq.is_none()
         && pred.dp_lte.is_none()
         && pred.dp_gte.is_none()
@@ -720,6 +1059,7 @@ fn eval_event_fields(
             }),
             PredicateSubject::Card(_)
             | PredicateSubject::RevealedCard(_)
+            | PredicateSubject::Source(_)
             | PredicateSubject::None => rctx
                 .game
                 .current_trigger_context
@@ -811,11 +1151,73 @@ fn eval_event_fields(
             }
         }
     }
+    if let Some(ref needle) = pred.event_target_name_contains {
+        // G-EVENT-TARGET-NAME-CONTAINS: case-insensitive substring scan
+        // against the event-target permanent's card name (the digivolving /
+        // played / deleted permanent on the triggered-effect context).
+        let want = needle.to_lowercase();
+        if let Some(snapshot) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+        {
+            // Deleted object is gone from the field — match its snapshot name.
+            let name_match = rctx
+                .game
+                .card_data_for_handle(snapshot.top_card)
+                .map(|data| data.card_name.to_lowercase().contains(&want))
+                .unwrap_or(false);
+            if !name_match {
+                return false;
+            }
+        } else {
+            let Some(card) = event_target_card(rctx) else {
+                return false;
+            };
+            let Some(data) = rctx.game.card_data_for_handle(card) else {
+                return false;
+            };
+            if !data.card_name.to_lowercase().contains(&want) {
+                return false;
+            }
+        }
+    }
     if let Some(want) = pred.event_target_owner {
         let Some(owner) = event_target_owner(rctx) else {
             return false;
         };
         if !player_ref_matches(want, owner, rctx) {
+            return false;
+        }
+    }
+    if let Some(ref wanted_colors) = pred.event_target_color_any_of {
+        // G-EVENT-TARGET-COLOR: the event-target permanent's printed color
+        // set must intersect the requested list. Mirrors the snapshot /
+        // live-card split used by `event_target_kind` — for a deletion
+        // event the live slot is gone, so read colors from the deleted
+        // top card's `CardData` (still present in `card_data`).
+        let card = if let Some(snapshot) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+        {
+            snapshot.top_card
+        } else {
+            let Some(card) = event_target_card(rctx) else {
+                return false;
+            };
+            card
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        let any_match = data
+            .colors
+            .iter()
+            .any(|c| wanted_colors.iter().any(|w| color_matches(*w, *c)));
+        if !any_match {
             return false;
         }
     }
@@ -875,6 +1277,67 @@ fn eval_event_fields(
     }
     if let Some(ref needle) = pred.event_card_name_contains {
         if !rctx.event_card_name_contains(needle) {
+            return false;
+        }
+    }
+    if let Some(ref allowed) = pred.event_card_color_only {
+        // Every color of the triggering event card must appear in `allowed`.
+        let Some(card) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.event_card)
+        else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if data
+            .colors
+            .iter()
+            .any(|c| !allowed.iter().any(|a| color_matches(*a, *c)))
+        {
+            return false;
+        }
+    }
+    if let Some(ref allowed) = pred.event_card_color_has {
+        // G-EVENT-CARD-COLOR-IS — at least one color of the triggering
+        // event card must appear in `allowed` (intersection / "has"
+        // semantics). Distinct from `event_card_color_only`'s subset test.
+        let Some(card) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.event_card)
+        else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if !data
+            .colors
+            .iter()
+            .any(|c| allowed.iter().any(|a| color_matches(*a, *c)))
+        {
+            return false;
+        }
+    }
+    if let Some(want_count) = pred.event_card_color_count {
+        // The triggering event card must have exactly `want_count` distinct colors.
+        let Some(card) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.event_card)
+        else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if distinct_color_count(&data.colors) as u8 != want_count {
             return false;
         }
     }
@@ -988,9 +1451,10 @@ fn subject_or_source_permanent<'a>(
         PredicateSubject::BreedingPermanent(player) => {
             rctx.game.player(player).breeding_area.as_ref()
         }
-        PredicateSubject::Card(_) | PredicateSubject::RevealedCard(_) | PredicateSubject::None => {
-            rctx.source_permanent()
-        }
+        PredicateSubject::Card(_)
+        | PredicateSubject::RevealedCard(_)
+        | PredicateSubject::Source(_)
+        | PredicateSubject::None => rctx.source_permanent(),
     }
 }
 
@@ -1107,6 +1571,22 @@ fn live_event_permanent_card(
     }
 }
 
+/// True when any of a candidate card's effective names satisfies `matches`.
+/// The effective names are the printed `card_name`, an optional
+/// reveal-overlay name, and every static "also treated as" identity alias.
+/// Shared by the `name_is` / `name_contains` / `name_in` leaves so a new
+/// name source only has to be wired in one place.
+fn any_effective_name_matches(
+    printed: &str,
+    overlay_name: Option<&str>,
+    aliases: &[String],
+    matches: impl Fn(&str) -> bool,
+) -> bool {
+    matches(printed)
+        || overlay_name.is_some_and(&matches)
+        || aliases.iter().any(|alias| matches(alias))
+}
+
 fn eval_card_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
@@ -1191,6 +1671,11 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(floor) = pred.self_color_count_gte {
+        if distinct_color_count(&data.colors) < usize::from(floor) {
+            return false;
+        }
+    }
     if pred.form_is.is_some() {
         // CardData has no `form` field yet; engine doesn't track form.
         // Phase 1c: treat as always-false when set (mirrors "no card matches").
@@ -1200,28 +1685,63 @@ fn eval_card_fields(
         // Same as form — attribute not yet tracked on CardData.
         return false;
     }
+    // `name_is` / `name_contains` / `name_in` all match against the printed
+    // name, an optional reveal-overlay name, and static "also treated as"
+    // identity aliases — see `any_effective_name_matches`.
     if let Some(ref n) = pred.name_is {
-        let overlay_match = overlay
-            .and_then(|o| o.name.as_ref())
-            .is_some_and(|name| name == n);
-        if data.card_name != *n && !overlay_match {
+        let overlay_name = overlay.and_then(|o| o.name.as_deref());
+        if !any_effective_name_matches(&data.card_name, overlay_name, &data.also_treated_as, |name| {
+            name == n.as_str()
+        }) {
             return false;
         }
     }
     if let Some(ref n) = pred.name_contains {
         let needle = n.to_lowercase();
-        let overlay_match = overlay
-            .and_then(|o| o.name.as_ref())
-            .is_some_and(|name| name.to_lowercase().contains(&needle));
-        if !data.card_name.to_lowercase().contains(&needle) && !overlay_match {
+        let overlay_name = overlay.and_then(|o| o.name.as_deref());
+        if !any_effective_name_matches(&data.card_name, overlay_name, &data.also_treated_as, |name| {
+            name.to_lowercase().contains(&needle)
+        }) {
+            return false;
+        }
+    }
+    if let Some(ref n) = pred.effect_text_contains {
+        // G-DSL-PREDICATE-TEXT-CONTAINS: case-insensitive substring scan
+        // against the candidate card's printed text — `effect_text`,
+        // `inherited_text`, and `security_text`. DCGO `source.HasText(s)`.
+        let needle = n.to_lowercase();
+        let text_match = data.effect_text.to_lowercase().contains(&needle)
+            || data.inherited_text.to_lowercase().contains(&needle)
+            || data.security_text.to_lowercase().contains(&needle);
+        if !text_match {
             return false;
         }
     }
     if let Some(ref names) = pred.name_in {
-        let overlay_match = overlay
-            .and_then(|o| o.name.as_ref())
-            .is_some_and(|name| names.iter().any(|n| n == name));
-        if !names.iter().any(|n| n == &data.card_name) && !overlay_match {
+        let overlay_name = overlay.and_then(|o| o.name.as_deref());
+        if !any_effective_name_matches(&data.card_name, overlay_name, &data.also_treated_as, |name| {
+            names.iter().any(|n| n.as_str() == name)
+        }) {
+            return false;
+        }
+    }
+    if let Some(of) = pred.name_not_shared_by_field_digimon {
+        // The candidate card's effective name. NOTE: this is a deliberate
+        // divergence from the sibling `name_is` / `name_contains` / `name_in`
+        // leaves above. Those treat an overlay name as an *alternative* match
+        // (`printed_match || overlay_match`) — a card can satisfy them via
+        // either its printed name or its overlaid name. This leaf instead uses
+        // the overlay name as a *replacement* for the printed name
+        // (`overlay.name.unwrap_or(data.card_name)`). Replacement is correct
+        // for exclusion semantics: a name-changed card's *effective / current*
+        // name is the overlay name, and that single effective name is what
+        // must be compared against field Digimon to decide exclusion. ORing in
+        // the printed name would wrongly exclude on a name the card no longer
+        // has.
+        let candidate_name = overlay
+            .and_then(|o| o.name.as_deref())
+            .unwrap_or(data.card_name.as_str());
+        if field_digimon_has_name(rctx, of, candidate_name) {
             return false;
         }
     }
@@ -1235,17 +1755,100 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(floor) = &pred.play_cost_gte {
+        if i32::from(data.play_cost) < eval_int_constraint(floor, rctx, formula_target, bindings) {
+            return false;
+        }
+    }
+    // Card-subject DP filter. Cards in trash/hand/security carry their printed
+    // DP via `CardData.dp`; permanents on the field route through
+    // `eval_dp_constraints` against `effective_dp`. Options and other
+    // non-Digimon cards have `dp = None` and cannot satisfy a DP constraint.
+    if pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some() {
+        let Some(dp) = data.dp else {
+            return false;
+        };
+        let perm_target = formula_target.or(rctx.source_permanent).unwrap_or(
+            crate::permanent::PermanentHandle {
+                player: rctx.player,
+                index: 0,
+            },
+        );
+        if let Some(want) = &pred.dp_eq {
+            if dp != eval_dp_constraint(want, rctx, perm_target, bindings) {
+                return false;
+            }
+        }
+        if let Some(cap) = &pred.dp_lte {
+            if dp > eval_dp_constraint(cap, rctx, perm_target, bindings) {
+                return false;
+            }
+        }
+        if let Some(floor) = &pred.dp_gte {
+            if dp < eval_dp_constraint(floor, rctx, perm_target, bindings) {
+                return false;
+            }
+        }
+    }
     if let Some(want) = pred.can_digivolve_from_source {
         if can_card_digivolve_from_source(rctx, card) != want {
             return false;
         }
     }
-    if let Some(want) = pred.can_digivolve_from_source {
-        if can_card_digivolve_from_source(rctx, card) != want {
+    if let Some(ref alt_kind) = pred.has_alt_path {
+        if !card_has_alt_path(rctx, &data.card_id, alt_kind) {
+            return false;
+        }
+    }
+    if let Some(ref inner) = pred.has_inherited {
+        // For card subjects (in deck/hand/trash), `has_inherited` checks
+        // whether the card's printed `inherited_text` is non-empty when
+        // the inner predicate is empty/default. With a non-default
+        // inner predicate, a card subject has no inherited card sources
+        // to recurse into, so the predicate fails — only permanents on
+        // the field have a digivolution stack to scan.
+        if inner.as_ref() == &CompiledPredicate::default() {
+            if data.inherited_text.is_empty() {
+                return false;
+            }
+        } else {
+            // Non-trivial inner predicate cannot match a card subject.
             return false;
         }
     }
     true
+}
+
+/// Returns true if the card with `card_id` has at least one DSL-registered
+/// alt-path whose `kind` snake-cases to `kind_name`. Mirrors the YAML
+/// vocabulary for `has_alt_path: <name>` (e.g. `digixros`, `digivolve`).
+fn card_has_alt_path(rctx: &EffectReadContext<'_>, card_id: &str, kind_name: &str) -> bool {
+    let registry = &rctx.game.alt_path_registry;
+    let Some(paths) = registry.get(card_id) else {
+        return false;
+    };
+    paths
+        .iter()
+        .any(|p| alt_path_kind_matches(&p.kind, kind_name))
+}
+
+fn alt_path_kind_matches(
+    kind: &digimon_dsl::compiled::CompiledAltPathKind,
+    name: &str,
+) -> bool {
+    use digimon_dsl::compiled::CompiledAltPathKind as K;
+    let normalized = name.to_ascii_lowercase().replace('-', "_");
+    let kind_str = match kind {
+        K::Digivolve => "digivolve",
+        K::DnaDigivolve => "dna_digivolve",
+        K::BlastDnaDigivolve => "blast_dna_digivolve",
+        K::DigiXros => "digixros",
+        K::BurstDigivolve => "burst_digivolve",
+        K::AppFusion => "app_fusion",
+        K::Assembly => "assembly",
+        K::ActivatedDigivolve => "activated_digivolve",
+    };
+    kind_str == normalized
 }
 
 fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle) -> bool {
@@ -1259,6 +1862,49 @@ fn can_card_digivolve_from_source(rctx: &EffectReadContext<'_>, card: CardHandle
         return false;
     };
     rctx.game.can_digivolve(candidate, source_permanent)
+}
+
+/// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true if `perm`'s top
+/// card or any digivolution source carries any `OnDeletion`-timed effect.
+/// Consulted by `has_on_deletion_effect: <bool>` predicate.
+///
+/// Walks both the registry-bound hand-written `CardEffect` impl and the
+/// compiled DSL clauses (returned together by `Game::effects_for_card`)
+/// and returns true on the first OnDeletion hit. Per printed text the
+/// gate is on the existence of the printed timing, not on whether the
+/// effect is currently runtime-active — `effects_for_card` already
+/// expands keyword-derived auto-effects (Save, MaterialSave, Decoy,
+/// etc.) so cards whose On Deletion text is keyword-shaped (e.g.
+/// `<Save>`) also surface here.
+fn permanent_has_on_deletion_effect(
+    perm: &crate::permanent::Permanent,
+    rctx: &EffectReadContext<'_>,
+) -> bool {
+    use crate::enums::EffectTiming;
+    let data = rctx.card_data();
+    for source in &perm.card_sources {
+        let card_id = source.card_id(data);
+        let Some(effects) = rctx.game.effects_for_card(card_id, source.handle()) else {
+            continue;
+        };
+        if effects
+            .iter()
+            .any(|e| matches!(e.timing, EffectTiming::OnDeletion) || e.on_deletion)
+        {
+            return true;
+        }
+    }
+    false
+}
+
+fn distinct_color_count(colors: &[CardColor]) -> usize {
+    let mut seen = Vec::new();
+    for color in colors {
+        if !seen.contains(color) {
+            seen.push(*color);
+        }
+    }
+    seen.len()
 }
 
 fn card_shares_color_with_any_field_digimon(
@@ -1285,6 +1931,37 @@ fn card_shares_color_with_any_field_digimon(
                 .iter()
                 .any(|field_color| colors.iter().any(|card_color| card_color == field_color))
             {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+/// True when at least one battle-area Digimon belonging to the scoped
+/// player has the effective name `candidate_name`. Field names are read
+/// through `synth_identity`, so a `ChangeBaseCardName` overlay on a field
+/// Digimon is respected — consistent with how the `name_is` permanent
+/// predicate resolves names. Name comparison is exact (case-sensitive),
+/// matching `name_is` / `name_in`. Tamers and Options are skipped.
+/// G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2).
+fn field_digimon_has_name(
+    rctx: &EffectReadContext<'_>,
+    of: CompiledPlayerRef,
+    candidate_name: &str,
+) -> bool {
+    for player in existential_players(of, rctx) {
+        for (index, permanent) in rctx.game.player(player).battle_area.iter().enumerate() {
+            let handle = crate::permanent::PermanentHandle {
+                player,
+                index: index as u8,
+            };
+            let identity =
+                permanent.synth_identity(rctx.card_data(), &rctx.game.modifiers, handle);
+            if !kind_matches_field(CompiledCardKind::Digimon, identity.kind) {
+                continue;
+            }
+            if identity.card_name == candidate_name {
                 return true;
             }
         }
@@ -1457,6 +2134,31 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    if let Some(want) = pred.has_face_down_source {
+        let has_face_down = perm.card_sources.iter().any(|cs| cs.face_down);
+        if has_face_down != want {
+            return false;
+        }
+    }
+    if let Some(ref keyword) = pred.has_keyword {
+        let Some(kw) = lookup_keyword(keyword, None) else {
+            return false;
+        };
+        if !rctx.game.has_keyword(handle, kw) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.has_on_deletion_effect {
+        let observed = permanent_has_on_deletion_effect(perm, rctx);
+        if observed != want {
+            return false;
+        }
+    }
+    if let Some(floor) = pred.self_color_count_gte {
+        if distinct_color_count(&synth_identity.colors) < usize::from(floor) {
+            return false;
+        }
+    }
     if let Some(cap) = &pred.stack_size_lte {
         if perm.card_sources.len() as i32 > eval_int_constraint(cap, rctx, Some(handle), bindings) {
             return false;
@@ -1567,7 +2269,9 @@ fn aggregate_level(
     match selector {
         CompiledAggregateSelector::LowestLevel => levels.min(),
         CompiledAggregateSelector::HighestLevel => levels.max(),
-        CompiledAggregateSelector::LowestDp | CompiledAggregateSelector::HighestDp => None,
+        CompiledAggregateSelector::LowestDp
+        | CompiledAggregateSelector::HighestDp
+        | CompiledAggregateSelector::LowestPlayCost => None,
     }
 }
 
@@ -1680,6 +2384,12 @@ fn eval_breeding_permanent_fields(
             CompiledPlayerRef::Any => true,
         };
         if !matches {
+            return false;
+        }
+    }
+    if let Some(want) = pred.has_face_down_source {
+        let has_face_down = perm.card_sources.iter().any(|cs| cs.face_down);
+        if has_face_down != want {
             return false;
         }
     }

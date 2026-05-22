@@ -139,6 +139,14 @@ fn bt19_072_opponents_turn_switches_attack_target_to_royal_knight() {
         cost_upgrade: None,
     });
 
+    // The [Opponent's Turn] clause is optional ("you may switch the attack
+    // target") and its body's first step is a mandatory select_own_permanent,
+    // so an outer accept/decline prompt installs first
+    // (G-OUTER-OPTIONAL-NOT-INSTALLED). Accept it.
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
+
     let pending = runner
         .game
         .pending_selection

@@ -5,8 +5,12 @@
 //! - [Security] Place this card in the battle area.
 //!
 //! Gap-routed:
-//! - Hand-card placement under [King Drasil_7D6] in breeding.
-//! - Delay play from breeding sources with On Play suppression and Rush.
+//! - Hand-card placement under [King Drasil_7D6] in breeding — RK-G001
+//!   filter shipped (Phase 2 Track J PR 1), but the printed "you may"
+//!   optionality needs `optional: bool` on `select_own_breeding_permanent`
+//!   (`G-OPTIONAL-BREEDING-SELECTION`).
+//! - Delay play from breeding sources with On Play suppression and Rush
+//!   needs source-stack selection/play (G-BREEDING-SOURCE-PLAY family).
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledStep, CompiledTiming,
@@ -75,13 +79,13 @@ fn bt13_110_security_places_self() {
 }
 
 #[test]
-#[ignore = "pending: RK-G001 — place selected hand Digimon under King Drasil_7D6 in breeding"]
+#[ignore = "pending: G-OPTIONAL-BREEDING-SELECTION — RK-G001 filter shipped (Phase 2 Track J PR 1) but `select_own_breeding_permanent` is hardcoded `is_optional: false`, so the printed 'you may' clause can't surface a decline path"]
 fn bt13_110_main_may_place_hand_digimon_under_king_drasil() {
-    panic!("requires filtered breeding target and hand-card source placement");
+    panic!("requires optional select_own_breeding_permanent before the printed 'you may' clause can be authored faithfully");
 }
 
 #[test]
-#[ignore = "pending: RK-G001 — play Royal Knight from breeding sources with On Play suppression and Rush"]
+#[ignore = "pending: G-BREEDING-SOURCE-PLAY — play 1 [Royal Knight] from breeding digivolution sources with On Play suppression and Rush grant (out of Track J scope)"]
 fn bt13_110_delay_plays_royal_knight_from_breeding_sources_with_rush() {
-    panic!("requires breeding source selection/play plumbing");
+    panic!("requires breeding-source selection/play substrate (out of Track J scope)");
 }

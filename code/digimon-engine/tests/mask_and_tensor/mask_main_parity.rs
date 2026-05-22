@@ -38,6 +38,7 @@ fn make_option(id: &str, color: CardColor) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -67,6 +68,7 @@ fn make_digimon_dp(id: &str, color: CardColor, dp: i32) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -92,6 +94,7 @@ fn make_tamer(id: &str, color: CardColor) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -405,6 +408,7 @@ fn make_digimon_level(id: &str, color: CardColor, level: u8) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -431,6 +435,7 @@ fn make_dna_digimon(id: &str, color: CardColor, dna_costs: Vec<DnaCost>) -> Card
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 

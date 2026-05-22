@@ -24,23 +24,13 @@
 //! # Source priority
 //! Per CLAUDE.md: printed text > docs/RULES_CONTEXT.md > fandom > DCGO.
 //!
-//! # Known gaps that block coverage of Clause 1
-//!
-//! - **G-ASL-07** (qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md):
-//!   Mass source cleanup and bottom-deck returns from trash. Three sub-clauses
-//!   of Clause 1 still need card-local wiring around the landed Track E verbs:
-//!     1a. "Trash all digivolution cards of all opponent Digimon" — needs
-//!         an all-sources variant rather than bounded top-N.
-//!     1b. "Return all cards from chosen trash to deck bottom" — the
-//!         `return_all_trash_to_deck_bottom` verb exists, but the player-choice
-//!         binding over whose trash remains open.
-//!     1c. "If returned white Lv7 card, gain 3 memory" — needs
-//!         `any_returned_card` predicate on moved-card result.
-//!
 //! # Patterns exercised
 //! - H12 Blast Digivolve (single-card hand-counter, `burst_digivolve` alt-path)
 //! - H13 ACE Overflow -5 (`ace_overflow: -5` top-level field)
 //! - G4  Named ancestor digivolve bonus (Lv.6 Imperialdramon / cost 5)
+//! - [On Play][When Digivolving] for_each/trash_all_sources over all opponent Digimon
+//! - [On Play][When Digivolving] player chooses which trash to return to deck bottom
+//! - [On Play][When Digivolving] returned_card_matching result rider for white Lv.7
 //! - [When Attacking] by-cost-return opp Digimon (no digi cards) → unsuspend self
 //! - Condition gate: at least 1 opp Digimon with no digi cards required
 
@@ -52,8 +42,9 @@ use digimon_dsl::compiled::{
     CompiledTriggeredClause,
 };
 use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming, PlayerId};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
@@ -88,6 +79,29 @@ fn make_digimon(id: &str, name: &str, level: u8, dp: i32) -> CardData {
     c.dp = Some(dp);
     c.card_kind = CardKind::Digimon;
     c
+}
+
+fn make_colored_digimon(
+    id: &str,
+    name: &str,
+    level: u8,
+    dp: i32,
+    colors: Vec<CardColor>,
+) -> CardData {
+    let mut c = make_digimon(id, name, level, dp);
+    c.colors = colors;
+    c
+}
+
+fn add_to_trash(runner: &mut DebugRunner, player: PlayerId, owner: PlayerId, card_id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|card| card.card_id == card_id)
+        .expect("card data exists");
+    let card = CardSource::new(data_idx, owner, runner.game.next_card_index());
+    runner.game.players[player as usize].trash.push(card);
 }
 
 /// Recursively walk a CompiledPredicate tree looking for `f`.
@@ -138,6 +152,15 @@ fn pred_any<F: Fn(&CompiledPredicate) -> bool + Copy>(p: &CompiledPredicate, f: 
 fn fire_when_attacking(runner: &mut DebugRunner, handle: PermanentHandle) {
     runner.game.enqueue_triggered(
         EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(handle),
+    );
+    runner.game.drain_effect_queue();
+}
+
+/// Fire WhenDigivolving for the given permanent handle by enqueueing and draining.
+fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
         TriggerSource::Permanent(handle),
     );
     runner.game.drain_effect_queue();
@@ -325,13 +348,7 @@ fn bt17_077_when_attacking_clause_condition_gates_on_opp_digimon_no_digi_cards()
     );
 }
 
-/// BLOCKED structural assertion — [On Play][When Digivolving] Clause 1.
-/// When G-ASL-07 closes, the YAML will gain a triggered clause covering
-/// OnPlay + WhenDigivolving. Shape asserted here so unblocking is mechanical.
 #[test]
-#[ignore = "pending: G-ASL-07 (qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md) \
-            -- Clause 1 (mass trash sources + return trash to deck + conditional memory) \
-            is a commented stub in BT17-077.yaml until the remaining choice/result gaps close."]
 fn bt17_077_has_on_play_when_digivolving_clause() {
     let c = compiled_bt17_077();
     let has_clause = c
@@ -387,6 +404,13 @@ fn bt17_077_when_attacking_returns_opp_digimon_and_unsuspends_self() {
 
     // Fire the WhenAttacking trigger.
     fire_when_attacking(&mut runner, paladin);
+
+    // The clause is optional ("By returning ... unsuspend") and its body's
+    // first step is a mandatory selection, so an outer accept/decline prompt
+    // installs first (G-OUTER-OPTIONAL-NOT-INSTALLED). Accept it.
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
 
     // A pending selection must be installed offering the opp Digimon as a target.
     let view = runner
@@ -473,13 +497,10 @@ fn bt17_077_when_attacking_skips_when_no_opp_digimon() {
 
 // ─── SECTION 3 — Behavioral: [On Play][When Digivolving] Clause 1 ────────────
 //
-// All tests for Clause 1 are #[ignore]'d because the YAML clause body is a
-// commented stub pending G-ASL-07.
-
-/// BLOCKED: On Play — trashes all opp digi sources (Clause 1a).
+/// On Play — trash all digivolution cards of all opponent Digimon, then prompt
+/// the Paladin Mode controller to choose whose trash to return.
 #[test]
-#[ignore = "pending: G-ASL-07 -- Clause 1a still needs an all-sources variant; bounded Track E trash_top_n_digivolution_cards_of_each is landed"]
-fn bt17_077_on_play_trashes_all_opp_digimon_sources() {
+fn bt17_077_on_play_trashes_all_opp_digimon_sources_then_prompts_trash_choice() {
     let mut runner = paladin_runner();
 
     // Opponent has 2 Digimon, each with digivolution sources.
@@ -510,6 +531,24 @@ fn bt17_077_on_play_trashes_all_opp_digimon_sources() {
     let paladin = runner.place_on_field(0, "BT17-077", None);
     runner.fire_on_play(0, paladin.index as usize);
 
+    let pending = runner
+        .pending_selection_view()
+        .expect("Clause 1b must install a player choice selection");
+    assert_eq!(
+        pending.kind,
+        SelectionKind::EffectChoice,
+        "Clause 1b selection must be an EffectChoice (your trash vs opponent's trash)"
+    );
+    assert_eq!(
+        pending.selecting_player, 0,
+        "Paladin Mode's controller chooses which trash is returned"
+    );
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        2,
+        "Choice prompt must expose exactly your trash and opponent's trash"
+    );
+
     // All sources should be in trash now (2 sources moved).
     assert_eq!(
         runner.trash_size(1),
@@ -524,44 +563,254 @@ fn bt17_077_on_play_trashes_all_opp_digimon_sources() {
     );
 }
 
-/// BLOCKED: On Play — player chooses whose trash to return (Clause 1b).
 #[test]
-#[ignore = "pending: G-ASL-07 -- Clause 1b has return_all_trash_to_deck_bottom, but still needs player choice prompt between your/opponent's trash"]
-fn bt17_077_on_play_prompts_player_to_choose_whose_trash_to_return() {
+fn bt17_077_on_play_return_choice_choosing_your_trash_drains_your_trash_only() {
     let mut runner = paladin_runner();
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OWN-TRASH", "OwnTrash", 4, 4000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OPP-TRASH", "OppTrash", 4, 4000));
+    add_to_trash(&mut runner, 0, 0, "OWN-TRASH");
+    add_to_trash(&mut runner, 1, 1, "OPP-TRASH");
+
+    let own_deck_before = runner.deck_size(0);
+    let opp_deck_before = runner.deck_size(1);
 
     let paladin = runner.place_on_field(0, "BT17-077", None);
     runner.fire_on_play(0, paladin.index as usize);
 
-    // After Clause 1a, Clause 1b installs a choice prompt.
-    let pending = runner
-        .pending_selection()
-        .expect("Clause 1b must install a player choice selection");
+    let choice = runner
+        .pending_selection_view()
+        .expect("trash owner choice prompt");
     assert_eq!(
-        pending.kind,
+        choice.kind,
         SelectionKind::EffectChoice,
-        "Clause 1b selection must be an EffectChoice (your trash vs opponent's trash)"
+        "trash owner choice must use EffectChoice"
+    );
+    runner
+        .execute_action(choice.selecting_player, choice.valid_action_ids[0])
+        .expect("choose your trash");
+
+    assert_eq!(runner.trash_size(0), 0, "chosen own trash must be drained");
+    assert_eq!(
+        runner.deck_size(0),
+        own_deck_before + 1,
+        "own deck gains the returned own trash card"
+    );
+    assert_eq!(
+        runner.trash_size(1),
+        1,
+        "unchosen opponent trash must remain untouched"
+    );
+    assert_eq!(
+        runner.deck_size(1),
+        opp_deck_before,
+        "opponent deck must not gain cards when opponent trash was not chosen"
     );
 }
 
-/// BLOCKED: On Play — returning white Lv7 card triggers +3 memory (Clause 1c).
 #[test]
-#[ignore = "pending: G-ASL-07 -- Clause 1c requires `any_returned_card` predicate; \
-            no DSL support for conditional based on moved-card properties"]
-fn bt17_077_on_play_gains_3_memory_when_returned_white_lv7_card() {
+fn bt17_077_on_play_return_choice_choosing_opponent_trash_drains_opponent_trash_only() {
     let mut runner = paladin_runner();
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OWN-TRASH", "OwnTrash", 4, 4000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OPP-TRASH", "OppTrash", 4, 4000));
+    add_to_trash(&mut runner, 0, 0, "OWN-TRASH");
+    add_to_trash(&mut runner, 1, 1, "OPP-TRASH");
+
+    let own_deck_before = runner.deck_size(0);
+    let opp_deck_before = runner.deck_size(1);
+
+    let paladin = runner.place_on_field(0, "BT17-077", None);
+    runner.fire_on_play(0, paladin.index as usize);
+
+    let choice = runner
+        .pending_selection_view()
+        .expect("trash owner choice prompt");
+    assert_eq!(
+        choice.kind,
+        SelectionKind::EffectChoice,
+        "trash owner choice must use EffectChoice"
+    );
+    runner
+        .execute_action(choice.selecting_player, choice.valid_action_ids[1])
+        .expect("choose opponent trash");
+
+    assert_eq!(
+        runner.trash_size(0),
+        1,
+        "unchosen own trash must remain untouched"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        own_deck_before,
+        "own deck must not gain cards when own trash was not chosen"
+    );
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "chosen opponent trash must be drained"
+    );
+    assert_eq!(
+        runner.deck_size(1),
+        opp_deck_before + 1,
+        "opponent deck gains the returned opponent trash card"
+    );
+}
+
+#[test]
+fn bt17_077_on_play_gains_3_memory_when_chosen_trash_contains_white_lv7() {
+    let mut runner = paladin_runner();
+    runner.game.card_data.push(make_colored_digimon(
+        "WHITE-LV7",
+        "WhiteLv7",
+        7,
+        12000,
+        vec![CardColor::White],
+    ));
+    add_to_trash(&mut runner, 1, 1, "WHITE-LV7");
 
     let memory_before = runner.game.memory;
     let paladin = runner.place_on_field(0, "BT17-077", None);
     runner.fire_on_play(0, paladin.index as usize);
-    // Clause 1b: auto-resolve choice (e.g. pick opponent's trash containing a white Lv7).
-    runner.auto_resolve().ok();
+
+    let choice = runner
+        .pending_selection_view()
+        .expect("trash owner choice prompt");
+    runner
+        .execute_action(choice.selecting_player, choice.valid_action_ids[1])
+        .expect("choose opponent trash containing white Lv.7");
 
     assert_eq!(
         runner.game.memory,
         memory_before + 3,
         "Clause 1c: returning a white Lv.7 card must gain 3 memory"
     );
+}
+
+#[test]
+fn bt17_077_on_play_does_not_gain_memory_for_white_lv7_in_unchosen_trash() {
+    let mut runner = paladin_runner();
+    runner.game.card_data.push(make_colored_digimon(
+        "WHITE-LV7",
+        "WhiteLv7",
+        7,
+        12000,
+        vec![CardColor::White],
+    ));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OWN-TRASH", "OwnTrash", 4, 4000));
+    add_to_trash(&mut runner, 0, 0, "OWN-TRASH");
+    add_to_trash(&mut runner, 1, 1, "WHITE-LV7");
+
+    let memory_before = runner.game.memory;
+    let paladin = runner.place_on_field(0, "BT17-077", None);
+    runner.fire_on_play(0, paladin.index as usize);
+
+    let choice = runner
+        .pending_selection_view()
+        .expect("trash owner choice prompt");
+    runner
+        .execute_action(choice.selecting_player, choice.valid_action_ids[0])
+        .expect("choose own trash, leaving opponent white Lv.7 unreturned");
+
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "white Lv.7 in the unchosen trash must not satisfy the returned-card rider"
+    );
+    assert_eq!(
+        runner.trash_size(1),
+        1,
+        "unchosen white Lv.7 must remain in opponent trash"
+    );
+}
+
+/// Clause 1c negative: the chosen trash is returned but contains no white Lv.7
+/// card — `returned_card_matching` must not fire, so no memory is gained.
+#[test]
+fn bt17_077_on_play_does_not_gain_memory_when_returned_cards_are_not_white_lv7() {
+    let mut runner = paladin_runner();
+    // A blue Lv.7 (wrong color) and a white Lv.6 (wrong level) — neither
+    // satisfies `returned_card_matching: { color_is: white, level_eq: 7 }`.
+    runner.game.card_data.push(make_colored_digimon(
+        "BLUE-LV7",
+        "BlueLv7",
+        7,
+        12000,
+        vec![CardColor::Blue],
+    ));
+    runner.game.card_data.push(make_colored_digimon(
+        "WHITE-LV6",
+        "WhiteLv6",
+        6,
+        9000,
+        vec![CardColor::White],
+    ));
+    add_to_trash(&mut runner, 1, 1, "BLUE-LV7");
+    add_to_trash(&mut runner, 1, 1, "WHITE-LV6");
+
+    let memory_before = runner.game.memory;
+    let paladin = runner.place_on_field(0, "BT17-077", None);
+    runner.fire_on_play(0, paladin.index as usize);
+
+    let choice = runner
+        .pending_selection_view()
+        .expect("trash owner choice prompt");
+    runner
+        .execute_action(choice.selecting_player, choice.valid_action_ids[1])
+        .expect("choose opponent trash");
+
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "no white Lv.7 among the returned cards — the memory rider must not fire"
+    );
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "the chosen opponent trash must still be fully returned"
+    );
+}
+
+#[test]
+fn bt17_077_when_digivolving_uses_same_source_trash_and_trash_choice_flow() {
+    let mut runner = paladin_runner();
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OPP-A", "OppA", 5, 5000));
+    runner
+        .game
+        .card_data
+        .push(make_digimon("OPP-A-SRC", "OppASrc", 4, 3000));
+
+    let opp_a = runner.place_on_field(1, "OPP-A", None);
+    runner.push_source(opp_a, "OPP-A-SRC");
+    let paladin = runner.place_on_field(0, "BT17-077", None);
+
+    fire_when_digivolving(&mut runner, paladin);
+
+    assert_eq!(
+        runner.trash_size(1),
+        1,
+        "WhenDigivolving must trash all sources from opponent Digimon"
+    );
+    let pending = runner
+        .pending_selection_view()
+        .expect("WhenDigivolving must install the trash owner choice");
+    assert_eq!(pending.kind, SelectionKind::EffectChoice);
+    assert_eq!(pending.selecting_player, 0);
+    assert_eq!(pending.valid_action_ids.len(), 2);
 }
 
 // ─── SECTION 4 — OPT enforcement ─────────────────────────────────────────────

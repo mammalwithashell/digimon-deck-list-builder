@@ -51,12 +51,12 @@
 //! ## DSL gap blocking clause 0 full execution  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET]
 //!
 //! The chain `select_own_permanent { bind_as: target } → select_trash { bind_as: evo }
-//! → effect_initiated_digivolve { target: target, from_hand: evo }` terminates
+//! → effect_initiated_digivolve { target: target, source: evo }` terminates
 //! after the permanent pick. The trash-pick prompt never installs and the
 //! digivolve verb never executes. This is the same gap that blocked BT17-015
 //! branch 1 and BT17-027 branch 1 (see those files' gap analysis).
 //!
-//! Note: `effect_initiated_digivolve` with `from_hand: <trash_binding>` is
+//! Note: `effect_initiated_digivolve` with `source: <trash_binding>` is
 //! sound — `resolve_card_source_ref` in `play_digivolve.rs` maps `TrashIndex`
 //! to `CardSourceRef::Trash` and calls `effect_initiated_digivolve_from_source`.
 //! The blocker is specifically the selection chain not continuing past the
@@ -70,7 +70,9 @@
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
-use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledScope, CompiledTiming,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -102,6 +104,21 @@ fn make_own_digimon(id: &str) -> CardData {
     card
 }
 
+/// Phase 2 Track F: a Lv.3 own Digimon usable as the source for BT16-040's
+/// effect-initiated digivolve into a Lv.4 trash card. The standard rules
+/// require source = destination - 1; the helper exists so the
+/// `bt16_040_on_play_chains_*` test can assert the actual digivolve happens
+/// rather than getting silently rejected on a Lv.4 → Lv.4 mismatch.
+fn make_own_lv3_digimon_with_red_evo(id: &str) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(3);
+    card.dp = Some(3000);
+    // Empty colors so the engine doesn't enforce a specific evo-color filter
+    // beyond the printed (lack of) requirement on the alt-path.
+    card
+}
+
 fn make_opp_digimon(id: &str) -> CardData {
     let mut card = make_test_card(id, id);
     card.card_kind = CardKind::Digimon;
@@ -116,6 +133,15 @@ fn make_trash_lv4_insectoid(id: &str) -> CardData {
     card.level = Some(4);
     card.dp = Some(4000);
     card.traits = vec!["Insectoid".to_string()];
+    // Phase 2 Track F: include a Lv.3 colorless evo_cost so the
+    // BT16-040 effect-initiated digivolve from a Lv.3 source can match the
+    // rules digivolve route (the cost is reduced by the alt-path's
+    // `cost: { reduce: 1 }` and ultimately paid from memory).
+    card.evo_costs = vec![digimon_engine::card_data::EvoCost {
+        card_color: 0,
+        level: 3,
+        memory_cost: 2,
+    }];
     card
 }
 
@@ -232,34 +258,76 @@ fn bt16_040_clause1_inherited_when_attacking_once_per_turn() {
     );
 }
 
+/// Printed special evolution path: `[Digivolve] [Minomon]: Cost 0`.
+#[test]
+fn bt16_040_has_minomon_cost0_digivolve_alt_path() {
+    let runner = wormmon_base().start();
+    let compiled = runner
+        .compiled_card("BT16-040")
+        .expect("BT16-040 compiled card present");
+
+    let minomon_path = compiled.alt_paths.iter().find(|path| {
+        path.kind == CompiledAltPathKind::Digivolve
+            && path
+                .from
+                .as_ref()
+                .and_then(|predicate| predicate.name_is.as_deref())
+                == Some("Minomon")
+    });
+
+    let minomon_path = minomon_path.expect("BT16-040 must include [Digivolve] [Minomon]: Cost 0");
+    assert_eq!(
+        minomon_path.cost,
+        Some(CompiledCost::Literal(0)),
+        "BT16-040 Minomon special digivolve path must cost 0"
+    );
+}
+
+/// Clause 0 picks an evolution card from trash, so the YAML should use the
+/// neutral `source: evo` field rather than the legacy hand-specific alias.
+#[test]
+fn bt16_040_effect_initiated_trash_digivolve_uses_source_field() {
+    let yaml = include_str!("../../../cards/bt16/BT16-040.yaml");
+    assert!(
+        yaml.contains("source: evo"),
+        "trash-source effect_initiated_digivolve must be authored with `source: evo`"
+    );
+    assert!(
+        !yaml.contains("from_hand:"),
+        "BT16-040 YAML must not use legacy `from_hand:` for a trash-source digivolve"
+    );
+}
+
 // ─── Section 2 — Clause 0: SOMP+OnPlay digivolve from trash (PARTIAL/BLOCKED) ─
 
-/// On play, the SOMP+OnPlay clause may install a selection when there is an
-/// eligible Digimon target to digivolve into.
-/// BLOCKED by G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET:
-/// chain terminates after the permanent pick; the trash-pick prompt never
-/// installs and the digivolve verb never executes.
+/// On play, the SOMP+OnPlay clause installs the OwnField selection and chains
+/// through select_trash + effect_initiated_digivolve.
+///
+/// Phase 2 Track F (2026-05-17): the chain was originally filed as
+/// G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET on the
+/// assumption that the dispatcher dropped the tail after the first pick.
+/// Investigation revealed the chain has been working since
+/// `run_tail_preserving_trigger_context` was wired through every select
+/// install — both selections install and the digivolve verb runs. The
+/// gap is RESOLVED; the test asserts the full chain executes by checking
+/// the post-state (ally's stack now carries the Lv.4 Insectoid card on
+/// top, Wormmon evolved from trash).
 #[test]
-#[ignore = "BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — \
-            select_own_permanent + select_trash + effect_initiated_digivolve(target: <binding>) \
-            chain terminates after the permanent pick; the trash-pick prompt never installs \
-            and the digivolve verb never executes. \
-            Compare BT17-015 branch 1 and BT17-027 branch 1 (same gap)."]
-fn bt16_040_on_play_with_eligible_trash_installs_own_field_then_trash_selection() {
+fn bt16_040_on_play_chains_through_permanent_pick_trash_pick_and_effect_digivolve() {
     let mut runner = wormmon_base()
-        .add_card(make_own_digimon("ALLY"))
+        .add_card(make_own_lv3_digimon_with_red_evo("LV3-ALLY"))
         .add_card(make_trash_lv4_insectoid("TRASH-INSECTOID"))
         .hand(0, &["BT16-040"])
         .start();
 
-    let ally = runner.place_on_field(0, "ALLY", Some(0));
+    let ally = runner.place_on_field(0, "LV3-ALLY", Some(0));
 
     // Manually place eligible Lv4 Insectoid in trash.
     push_to_trash(&mut runner, 0, "TRASH-INSECTOID");
 
     runner.play(0, 0).expect("play Wormmon");
 
-    // First selection: pick your Digimon.
+    // First selection: pick your Digimon to digivolve.
     let kind = runner
         .pending_kind()
         .expect("OwnField selection must install after OnPlay");
@@ -268,14 +336,35 @@ fn bt16_040_on_play_with_eligible_trash_installs_own_field_then_trash_selection(
         SelectionKind::OwnField,
         "first selection must be OwnField"
     );
-    runner.auto_resolve().expect("pick Digimon");
 
-    // Second selection (gap-blocked): trash pick should install but won't under the gap.
-    let kind2 = runner.pending_kind();
+    runner.auto_resolve().expect("auto-resolve full chain");
+
+    // Chain completed: no pending selection remains after auto_resolve.
+    assert!(
+        runner.pending_kind().is_none(),
+        "all chained selections must auto-resolve"
+    );
+
+    // End-state: ally's stack now has the Lv.4 Insectoid card on top
+    // (digivolved from trash via the chain). The original ally is still
+    // present as a digivolution source beneath it.
+    let perm = &runner.game.players[0].battle_area[ally.index as usize];
+    assert!(
+        perm.card_sources.len() >= 2,
+        "ally permanent must have gained a digivolution stack member"
+    );
     assert_eq!(
-        kind2,
-        Some(SelectionKind::Trash),
-        "second selection must be Trash (pick Lv4 Insectoid/Free card)"
+        perm.top_card().card_id(&runner.game.card_data),
+        "TRASH-INSECTOID",
+        "top card is now the Lv.4 Insectoid played from trash via effect-initiated digivolve"
+    );
+    // Trash drained: the TRASH-INSECTOID card moved out.
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .all(|c| c.card_id(&runner.game.card_data) != "TRASH-INSECTOID"),
+        "trash card consumed by effect-initiated digivolve"
     );
 }
 
@@ -409,25 +498,29 @@ fn bt16_040_inherited_when_attacking_opt_blocks_second_attack_same_turn() {
     );
 }
 
-/// OPT resets after a turn cycle.
-/// NOTE: Affected by G-OPT-RESET-VIA-ATTACK-CYCLE — inherited [When Attacking]
-/// OPT may not re-fire after a full P0→P1→P0 turn cycle (observed on BT17-015).
+/// OPT resets after a turn cycle. Phase 2 Track C closure: OPT slot
+/// enforcement and reset already work in the engine substrate; this test
+/// was previously masked by missing deck/security setup (`begin_turn` for
+/// the next player tripped a deck-out and ended the game before
+/// `new_turn` could clear the carrier's `effect_activations` HashMap).
 #[test]
-#[ignore = "BLOCKED: G-OPT-RESET-VIA-ATTACK-CYCLE — inherited [When Attacking][OPT] may \
-            not re-fire on a fresh attack after a full P0→P1→P0 turn cycle (same structural \
-            gap observed on BT17-015). Verify and remove ignore once the gap closes."]
 fn bt16_040_inherited_when_attacking_opt_resets_after_turn_cycle() {
     let mut runner = wormmon_base()
         .add_card(make_own_digimon("CARRIER"))
         .add_card(make_opp_digimon("OPP1"))
         .add_card(make_opp_digimon("OPP2"))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(0, &["FILLER"; 10])
+        .deck(1, &["FILLER"; 10])
+        .security(0, &["FILLER"; 5])
+        .security(1, &["FILLER"; 5])
         .memory(20)
         .start();
     runner.game.turn_count = 1;
 
     let carrier = runner.place_stack(0, &["BT16-040", "CARRIER"]);
     let opp1 = runner.place_on_field(1, "OPP1", Some(0));
-    let opp2 = runner.place_on_field(1, "OPP2", Some(0));
+    let _opp2 = runner.place_on_field(1, "OPP2", Some(0));
 
     // First attack this turn.
     runner.attack_digimon(carrier, opp1, false);
@@ -440,8 +533,19 @@ fn bt16_040_inherited_when_attacking_opt_resets_after_turn_cycle() {
     // Unsuspend carrier.
     runner.game.players[0].battle_area[carrier.index as usize].is_suspended = false;
 
+    // Re-resolve opp2 handle in case battle_area shifted after combat
+    // deleted opp1.
+    let opp2_after = {
+        let battle = &runner.game.players[1].battle_area;
+        assert!(
+            !battle.is_empty(),
+            "opp2 must survive into the next-turn assertion"
+        );
+        runner.perm_handle(1, battle.len() - 1)
+    };
+
     // Second attack (fresh turn): OPT should have reset.
-    runner.attack_digimon(carrier, opp2, false);
+    runner.attack_digimon(carrier, opp2_after, false);
     assert!(
         runner.pending_selection().is_some(),
         "OPT must reset after a full turn cycle"

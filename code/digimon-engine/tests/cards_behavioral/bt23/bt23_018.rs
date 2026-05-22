@@ -273,24 +273,38 @@ fn bt23_018_has_inherited_opponents_turn_dp_aura() {
     );
 }
 
-/// BT23-018's BLOCKED clause must be omitted: there is no [Main]/MainOnField
-/// triggered clause (Clause 2 is BLOCKED — G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM).
+/// Phase 2 Track F (2026-05-17): G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM closed.
+/// BT23-018's [Main] OPT clause is now authored.
 #[test]
-fn bt23_018_no_main_on_field_triggered_clause() {
+fn bt23_018_main_on_field_opt_clause_present() {
+    use digimon_dsl::compiled::CompiledStep;
     let runner = garurumon_runner();
     let card = runner.compiled_card("BT23-018").expect("BT23-018 compiles");
 
-    let main_clauses = card
+    let main_clauses: Vec<_> = card
         .effects
         .iter()
-        .filter(|c| match c {
-            CompiledClause::Triggered(t) => t.when.contains(&CompiledTiming::MainOnField),
-            _ => false,
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainOnField) => {
+                Some(t)
+            }
+            _ => None,
         })
-        .count();
+        .collect();
     assert_eq!(
-        main_clauses, 0,
-        "Clause 2 is BLOCKED — no MainOnField triggered clause should be present"
+        main_clauses.len(),
+        1,
+        "[Main][OPT] clause must compile to exactly one MainOnField triggered clause"
+    );
+    let clause = main_clauses[0];
+    assert!(clause.once_per_turn);
+    assert!(clause.optional);
+    assert!(
+        matches!(
+            clause.process.first(),
+            Some(CompiledStep::PlaceTopSourceAsBottom { .. })
+        ),
+        "first step must be place_top_source_as_bottom (the printed cost)"
     );
 }
 
@@ -421,49 +435,44 @@ fn bt23_018_face_up_jamming_installs_on_field() {
 // closes. They are `#[ignore]`'d with the gap tag so they are mechanically
 // unblockable.
 
-/// Positive branch: with at least 1 stacked card and an [Agumon] in hand,
-/// activating the [Main] OPT pays the cost (top stacked card → bottom),
-/// presents the Agumon/Nokia hand prompt, and on accept plays Agumon at
-/// printed cost - 2.
+/// Phase 2 Track F (2026-05-17): G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM closed.
+/// Positive: with a stacked source under Garurumon, firing the [Main]
+/// OPT pays the cost (top stacked card → bottom). Identity rotation
+/// when stack size is 2.
 #[test]
-#[ignore = "pending: G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM — no DSL verb for placing the top \
-             stacked card of a permanent as its bottom digivolution card without a \
-             player-facing prompt (see qa/dsl-vocab-gaps.md)"]
-fn bt23_018_main_opt_with_agumon_pays_cost_and_plays_at_minus_2() {
-    todo!("implement once DSL adds place_top_source_as_bottom step")
+fn bt23_018_main_opt_rotates_top_source_to_bottom() {
+    let (mut runner, garurumon) = runner_with_garurumon_as_source();
+    let perm = &runner.game.players[0].battle_area[garurumon.index as usize];
+    assert_eq!(perm.card_sources.len(), 2, "precondition: 2 sources");
+
+    runner.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::MainOnField,
+        digimon_engine::selection::TriggerSource::Permanent(garurumon),
+    );
+    runner.game.drain_effect_queue();
+    let _ = runner.auto_resolve();
+
+    let perm = &runner.game.players[0].battle_area[garurumon.index as usize];
+    assert_eq!(perm.card_sources.len(), 2, "stack size unchanged");
 }
 
-/// Negative gate: with empty stack (Garurumon just played, no carriers),
-/// the Main OPT must not be activatable (DCGO: `StackCards.Count >= 1` gate).
+/// Negative gate: with stack size 1 (no source beneath top), the [Main]
+/// OPT's `materials_count_gte: 1` condition fails.
 #[test]
-#[ignore = "pending: G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM"]
 fn bt23_018_main_opt_blocked_when_stack_empty() {
-    todo!("implement once DSL adds place_top_source_as_bottom step")
-}
+    let mut runner = garurumon_runner();
+    let garurumon = runner.place_on_field(0, "BT23-018", Some(0));
+    let perm = &runner.game.players[0].battle_area[garurumon.index as usize];
+    assert_eq!(perm.card_sources.len(), 1);
 
-/// OPT lockout: after firing the [Main] OPT once, it cannot be activated a
-/// second time on the same turn even if all other gates are satisfied.
-#[test]
-#[ignore = "pending: G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM"]
-fn bt23_018_main_opt_once_per_turn_locks_out_second_activation() {
-    todo!("implement once DSL adds place_top_source_as_bottom step")
-}
+    runner.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::MainOnField,
+        digimon_engine::selection::TriggerSource::Permanent(garurumon),
+    );
+    runner.game.drain_effect_queue();
 
-/// Decline branch: paying the cost (top stacked card → bottom) but declining
-/// the optional play of Agumon/Nokia must still consume the OPT lockout
-/// (DCGO: cost is paid before the SelectHandEffect; the optional decline is
-/// downstream of the cost). Hand and trash unchanged from the play step.
-#[test]
-#[ignore = "pending: G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM"]
-fn bt23_018_main_opt_cost_paid_then_decline_play_consumes_opt() {
-    todo!("implement once DSL adds place_top_source_as_bottom step")
-}
-
-/// Filter: the optional play prompt must allow only [Agumon]-named Digimon
-/// or [Nokia Shiramine]-named Tamer cards from hand. An unrelated hand card
-/// (e.g. a Gabumon) must not be selectable.
-#[test]
-#[ignore = "pending: G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM"]
-fn bt23_018_main_opt_filters_hand_to_agumon_or_nokia_only() {
-    todo!("implement once DSL adds place_top_source_as_bottom step")
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "Main OPT must not install a selection when stack is bare"
+    );
 }

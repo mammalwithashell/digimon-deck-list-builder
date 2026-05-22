@@ -49,6 +49,7 @@ fn make_card(id: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -169,8 +170,15 @@ fn permutation_then_opponent_union_zone_tech_flow() {
     }
 
     // We capture whether the union-zone was eventually resolved by recording
-    // the handle the union-zone callback fires with.
-    let union_zone_cb_fired: Arc<Mutex<Option<CardHandle>>> = Arc::new(Mutex::new(None));
+    // the picked card's handle and origin zone the callback fires with.
+    let union_zone_cb_fired: Arc<
+        Mutex<
+            Option<(
+                digimon_engine::card_source::CardHandle,
+                digimon_engine::selection::UnionZoneOrigin,
+            )>,
+        >,
+    > = Arc::new(Mutex::new(None));
     let union_zone_slot = Arc::clone(&union_zone_cb_fired);
 
     // ─── 4. Walk through permutation steps ───────────────────────────────────
@@ -267,7 +275,9 @@ fn permutation_then_opponent_union_zone_tech_flow() {
             "Opponent: choose a card from your opponent's hand or trash",
             false,
             |_, _| true,
-            move |resolve_ctx, chosen_handle| {
+            move |resolve_ctx, chosen_handle, origin| {
+                // The callback receives the picked card's handle plus the
+                // zone it came from (UnionZoneOrigin).
                 let player_ref = resolve_ctx.game.player(p0);
                 if let Some(idx) = player_ref
                     .hand
@@ -276,7 +286,7 @@ fn permutation_then_opponent_union_zone_tech_flow() {
                 {
                     resolve_ctx.game.trash_from_hand_by_index(p0, idx);
                 }
-                *union_zone_slot.lock().unwrap() = Some(chosen_handle);
+                *union_zone_slot.lock().unwrap() = Some((chosen_handle, origin));
             },
         );
     }
@@ -428,8 +438,9 @@ fn permutation_then_opponent_union_zone_tech_flow() {
         "HAND-0 must no longer be in p0's hand after being chosen and trashed"
     );
 
-    // Union-zone callback must have fired with HAND-0's handle.
-    let fired_handle = union_zone_cb_fired
+    // Union-zone callback must have fired with HAND-0's handle and a Hand
+    // origin tag.
+    let (fired_handle, fired_origin) = union_zone_cb_fired
         .lock()
         .unwrap()
         .take()
@@ -437,5 +448,10 @@ fn permutation_then_opponent_union_zone_tech_flow() {
     assert_eq!(
         fired_handle, hand0_handle,
         "union-zone callback must have received HAND-0's handle"
+    );
+    assert_eq!(
+        fired_origin,
+        digimon_engine::selection::UnionZoneOrigin::Hand,
+        "union-zone callback must have received a Hand origin tag"
     );
 }

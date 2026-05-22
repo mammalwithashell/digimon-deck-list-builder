@@ -14,16 +14,17 @@
 //! once the Jamming condition passes), but the condition gate makes the whole
 //! effect conditional on the carrier having Jamming.
 //!
-//! # DSL vocab gap: G-DSL-CARRIER-HAS-KEYWORD
-//! The `condition: { carrier_has_keyword: Jamming }` predicate is not implemented
-//! in the DSL. The YAML omits the condition, so the clause over-fires on ANY
-//! carrier — not just those with Jamming. The negative-condition test is
-//! `#[ignore]`'d pending the gap closure.
+//! # DSL predicate audit (verified)
+//! The YAML authors `condition: { has_keyword: Jamming }`. `has_keyword`
+//! resolves against the CARRIER permanent for inherited clauses
+//! (`enqueue_from_permanent` sets `source_permanent` to the carrier handle), so
+//! the negative test below proves the draw is correctly suppressed when the
+//! carrier lacks <Jamming>, and the positive test proves it fires when present.
 //!
 //! # Patterns this test covers (RUST_DSL_TEST_API.md §4.3)
 //! - G4: Inherited When Attacking on DigiEgg (OPT, no cost, no branch selection)
 //! - E2: OPT + optional (per printed text: the draw is gated, not unconditional)
-//! - H2: Jamming keyword check as condition gate on carrier (blocked by gap)
+//! - H2: Jamming keyword check as condition gate on carrier
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::card_data::CardData;
@@ -159,9 +160,7 @@ fn bt3_002_has_exactly_one_inherited_when_attacking_opt_optional_clause() {
 // Section 2 — Condition gating (carrier has Jamming)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// POSITIVE: Carrier with Jamming — effect fires. With the condition omitted
-/// from YAML (G-DSL-CARRIER-HAS-KEYWORD gap), the clause fires unconditionally,
-/// so this test passes regardless.
+/// POSITIVE: Carrier with Jamming — effect fires.
 #[test]
 fn bt3_002_fires_when_carrier_has_jamming() {
     let mut runner = demiveemon_runner();
@@ -180,12 +179,11 @@ fn bt3_002_fires_when_carrier_has_jamming() {
     );
 }
 
-/// NEGATIVE (condition gate): Carrier WITHOUT Jamming → no draw should fire.
-/// IGNORED: The Jamming condition is omitted from the YAML (gap
-/// G-DSL-CARRIER-HAS-KEYWORD). Without the condition, the clause over-fires
-/// even when the carrier has no Jamming.
+/// NEGATIVE (condition gate): Carrier WITHOUT Jamming -> no draw fires.
+/// Guards the inherited-carrier `condition: { has_keyword: Jamming }` path —
+/// `has_keyword` resolves against the carrier permanent, so the draw is
+/// correctly suppressed when the carrier lacks <Jamming>.
 #[test]
-#[ignore = "pending: G-DSL-CARRIER-HAS-KEYWORD from qa/dsl-vocab-gaps.md — carrier_has_keyword predicate not implemented; YAML omits the Jamming condition so the clause fires unconditionally (over-fires without Jamming)"]
 fn bt3_002_does_not_fire_without_jamming() {
     let mut runner = demiveemon_runner();
     let carrier = place_carrier_with_demiveemon(&mut runner);

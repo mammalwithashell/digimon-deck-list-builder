@@ -263,3 +263,72 @@ effects:
         "Progress-excluded low-DP target should not define the DP extreme"
     );
 }
+
+/// G-PLAY-COST-AGGREGATE: the `lowest_play_cost` field selector on a
+/// `select_*_permanent` step restricts the candidate set to the
+/// permanent(s) with the lowest printed play cost — mirroring `lowest_dp`
+/// but keyed on play cost rather than effective DP. Consumed by EX4-073
+/// clause C ("delete 1 opponent Digimon/Tamer with the lowest play cost").
+#[test]
+fn selector_lowest_play_cost_only_offers_cheapest_candidates() {
+    fn cost_digimon(id: &str, play_cost: u16) -> digimon_engine::CardData {
+        let mut card = make_test_card(id, id);
+        card.dp = Some(5000);
+        card.play_cost = play_cost;
+        card
+    }
+
+    let yaml = r#"
+card: TST-LOWCOST
+name: Lowest Cost Test
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+effects:
+  - when: when_digivolving
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          selector: lowest_play_cost
+          prompt: "Delete lowest play cost"
+      - delete_permanent: { target: tgt }
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("inline DSL compiles")
+        .add_card(cost_digimon("CHEAP", 2))
+        .add_card(cost_digimon("PRICEY", 9))
+        .start();
+    let source = runner.place_on_field(0, "TST-LOWCOST", Some(0));
+    runner.place_on_field(1, "CHEAP", Some(0));
+    runner.place_on_field(1, "PRICEY", Some(0));
+
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(source),
+    );
+    runner.game.drain_effect_queue();
+    let (selecting_player, action_id) = {
+        let pending = runner.game.pending_selection.as_ref().expect("selection");
+        assert_eq!(
+            pending.valid_action_ids.len(),
+            1,
+            "only CHEAP (play cost 2) should be offered, not PRICEY (9)"
+        );
+        (pending.selecting_player, pending.valid_action_ids[0])
+    };
+    runner
+        .execute_action(selecting_player, action_id)
+        .expect("selection resolves");
+    assert_eq!(runner.battle_area_size(1), 1);
+    assert_eq!(
+        runner.game.players[1].battle_area[0]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "PRICEY",
+        "the cheapest opponent Digimon (CHEAP) must have been the deleted target"
+    );
+}

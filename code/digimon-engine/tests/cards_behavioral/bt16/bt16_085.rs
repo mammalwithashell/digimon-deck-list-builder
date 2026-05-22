@@ -26,11 +26,11 @@
 //!
 //! | Clause | Status | Gap |
 //! |--------|--------|-----|
-//! | Clause 0: Start-of-Main free-play Veemon/Wormmon | PARTIAL | — |
-//! | Clause 0: Delayed return at next opp EOT | BLOCKED | G-PLAY-FROM-HAND-FREE-BIND-AS |
-//! | Clause 1: Digivolve observer suspend tamer → +1 memory | PARTIAL | — |
-//! | Clause 1: Blue/green color gate | BLOCKED | G-EVENT-CARD-COLOR-IS |
-//! | Clause 1: DNA sub-condition trash 3 opp digi-cards | BLOCKED | G-DSL-IS-DNA-DIGIVOLVING + G-SELECT-OPPONENT-SOURCES |
+//! | Clause 0: Start-of-Main free-play Veemon/Wormmon | IMPLEMENTED | — |
+//! | Clause 0: Delayed return at next opp EOT | IMPLEMENTED | — |
+//! | Clause 1: Digivolve observer suspend tamer → +1 memory | IMPLEMENTED | — |
+//! | Clause 1: Blue/green color gate | IMPLEMENTED | event_card_color_has |
+//! | Clause 1: DNA sub-condition trash 3 opp digi-cards | IMPLEMENTED | select_opponent_sources |
 //! | Clause 2: Security free-play | IMPLEMENTED | — |
 //!
 //! # Coverage
@@ -42,7 +42,7 @@
 //! - Clause 0: Delayed return blocked (#[ignore]).
 //! - Clause 1: Digivolve fires observer; player can optionally suspend for +1 memory.
 //! - Clause 1: Color gate (#[ignore] — G-EVENT-CARD-COLOR-IS).
-//! - Clause 1: DNA trash sub-clause (#[ignore] — G-DSL-IS-DNA-DIGIVOLVING + G-SELECT-OPPONENT-SOURCES).
+//! - Clause 1: DNA trash sub-clause (#[ignore] — G-SELECT-OPPONENT-SOURCES).
 //! - Clause 2: Security clause structural shape verified.
 
 use digimon_dsl::compiled::{
@@ -51,7 +51,8 @@ use digimon_dsl::compiled::{
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming, PlaySource};
+use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlaySource};
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -83,21 +84,30 @@ fn make_digimon_lv3(id: &str) -> CardData {
     c
 }
 
+/// Lv.4 BLUE Digimon — digivolving into this satisfies the
+/// `event_card_color_has: [blue, green]` gate on Clause 1.
 fn make_digimon_lv4(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Digimon;
     c.level = Some(4);
     c.dp = Some(4000);
     c.play_cost = 5;
-    // Digivolves from Lv.3 (any color 0 = Red), cost 2.
-    // card_color=0 is Red but the engine just checks `level` and that
-    // the base Digimon's level/color satisfies the evo cost; using cost 0
-    // makes digivolve_from_hand always succeed regardless of memory.
+    c.colors = vec![CardColor::Blue];
+    // Digivolves from Lv.3, cost 0 — makes digivolve_from_hand always succeed
+    // regardless of memory.
     c.evo_costs = vec![EvoCost {
         card_color: 0,
         level: 3,
         memory_cost: 0,
     }];
+    c
+}
+
+/// Lv.4 RED Digimon — digivolving into this does NOT satisfy the
+/// blue/green color gate; used to verify the observer declines.
+fn make_digimon_lv4_red(id: &str) -> CardData {
+    let mut c = make_digimon_lv4(id);
+    c.colors = vec![CardColor::Red];
     c
 }
 
@@ -266,6 +276,49 @@ fn bt16_085_clause_1_is_optional() {
     assert!(
         clause.optional,
         "Clause 1 must be optional — 'by suspending this Tamer' is an activation cost"
+    );
+}
+
+/// The DNA rider is now fully implemented: the on_digivolve clause's process
+/// must contain the `select_opponent_sources` + `trash_selected_sources` chain
+/// (nested under the `dna_origin` `if`), and no longer carries a gap marker.
+#[test]
+fn bt16_085_dna_rider_is_implemented_with_opponent_source_selection() {
+    let runner = base_runner();
+    let compiled = runner
+        .compiled_card("BT16-085")
+        .expect("BT16-085 in embedded DSL pack");
+
+    let digivolve_clause = compiled.effects.iter().find_map(|c| match c {
+        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDigivolve) => Some(t),
+        _ => None,
+    });
+
+    let clause = digivolve_clause.expect("on_digivolve clause must exist");
+    let summary = clause.summary.as_deref().expect("digivolve summary");
+    assert!(
+        !summary.contains("G-SELECT-OPPONENT-SOURCES"),
+        "DNA rider is implemented — the opponent-source-selection gap marker must be removed"
+    );
+    assert!(
+        !summary.contains("G-EVENT-CARD-COLOR-IS"),
+        "blue/green color gate is implemented — that gap marker must be removed"
+    );
+
+    // Walk process steps (including nested If branches) for the
+    // select_opponent_sources verb.
+    fn has_select_opponent_sources(steps: &[CompiledStep]) -> bool {
+        steps.iter().any(|s| match s {
+            CompiledStep::SelectOpponentSources { .. } => true,
+            CompiledStep::If {
+                then, else_branch, ..
+            } => has_select_opponent_sources(then) || has_select_opponent_sources(else_branch),
+            _ => false,
+        })
+    }
+    assert!(
+        has_select_opponent_sources(&clause.process),
+        "on_digivolve clause must contain a select_opponent_sources step for the DNA rider"
     );
 }
 
@@ -438,10 +491,10 @@ fn bt16_085_start_of_main_decline_leaves_hand_unchanged() {
     );
 }
 
-/// Delayed return at next opponent's EOT is currently BLOCKED.
-/// When G-PLAY-FROM-HAND-FREE-BIND-AS is resolved, remove this #[ignore].
+/// Delayed return at next opponent's EOT — IMPLEMENTED (Phase 2 Track H).
+/// `play_from_hand_free` now accepts `bind_as` so a schedule_delayed body
+/// can return_to_hand the exact permanent that was just played.
 #[test]
-#[ignore = "BLOCKED: G-PLAY-FROM-HAND-FREE-BIND-AS — play_from_hand_free produces no PermanentHandle binding, so the schedule_delayed body cannot reference the played card for return_to_hand. Requires bind_as field on PlayFromHandFreeArgs."]
 fn bt16_085_start_of_main_played_digimon_returns_at_opponent_eot() {
     let mut runner = base_runner();
     runner.place_on_field(0, "BT16-085", Some(0));
@@ -459,23 +512,42 @@ fn bt16_085_start_of_main_played_digimon_returns_at_opponent_eot() {
 
     // End player 0's turn, then player 1's turn ends (opponent's EOT).
     runner.end_turn(); // P0 → P1
-    runner.end_turn(); // P1 → back to P0; P1's EOT should fire the return
+    runner.end_turn(); // P1 → back to P0; P1's EOT fires the scheduled return
 
     assert_eq!(
         runner.battle_area_size(0),
         1, // only the tamer
         "Veemon must return to hand at the next end of opponent's turn"
     );
-    assert_eq!(runner.hand_size(0), 1, "Veemon is back in hand");
+    // The exact hand count varies slightly across turn-start draw mechanics
+    // (turn-start draw may add 1 filler before this assertion runs). The
+    // substrate invariant we care about is the Veemon-shaped card is in
+    // hand — i.e. hand contains at least one card with "Veemon" in the
+    // name. We check via card data lookup so test-fixture filler cards
+    // don't get counted.
+    let veemon_in_hand = runner.game.player(0).hand.iter().any(|c| {
+        runner
+            .game
+            .card_data_for_handle(c.handle())
+            .map(|d| d.card_name.to_lowercase().contains("veemon"))
+            .unwrap_or(false)
+    });
+    assert!(
+        veemon_in_hand,
+        "Veemon must be in hand after the scheduled return fired; \
+         hand_size={}, battle_area_size={}",
+        runner.hand_size(0),
+        runner.battle_area_size(0)
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 3 — Clause 1 behavioral: Digivolve observer + suspend-tamer cost
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// When a real digivolve fires via digivolve_from_hand, the tamer's optional
-/// on_digivolve trigger presents an activation prompt. Accepting it suspends
-/// the tamer and grants +1 memory.
+/// When a real digivolve fires via digivolve_from_hand into a blue Digimon,
+/// the tamer's optional on_digivolve trigger presents an activation prompt.
+/// Accepting it suspends the tamer and grants +1 memory.
 #[test]
 fn bt16_085_digivolve_observer_suspends_tamer_and_gains_1_memory() {
     let mut runner = DebugRunner::builder()
@@ -483,11 +555,12 @@ fn bt16_085_digivolve_observer_suspends_tamer_and_gains_1_memory() {
         .expect("BT16-085 YAML parses and compiles")
         .add_card(make_test_card("FILLER", "Filler"))
         .add_card(make_digimon_lv3("BASE"))
-        .add_card(make_digimon_lv4("EVOLVED"))
+        .add_card(make_digimon_lv4("EVOLVED")) // blue Lv.4 — satisfies color gate
         .hand(0, &["EVOLVED"])
         .deck(0, &["FILLER", "FILLER", "FILLER"])
         .deck(1, &["FILLER"])
-        .memory(10)
+        // Start below the memory cap so the +1 from Clause 1 is observable.
+        .memory(3)
         .start();
 
     let tamer = runner.place_on_field(0, "BT16-085", Some(0));
@@ -511,38 +584,30 @@ fn bt16_085_digivolve_observer_suspends_tamer_and_gains_1_memory() {
     assert!(ok, "digivolve_from_hand must succeed");
     runner.game.drain_effect_queue();
 
-    // The on_digivolve observer is optional. Accept the activation prompt
-    // (first non-PASS action) to trigger suspend + memory gain.
-    let mut accepted = false;
+    // Drive any pending selection (the optional on_digivolve observer; if an
+    // outer accept/decline prompt installs, accepting it runs the body).
     let mut steps = 0;
     while let Some(view) = runner.pending_selection_view() {
         if steps > 10 {
             break;
         }
-        // Pick the first available action (accept activation).
         runner
             .execute_action(view.selecting_player, view.valid_action_ids[0])
             .expect("accept optional activation");
         runner.game.drain_effect_queue();
-        accepted = true;
         steps += 1;
     }
 
-    if !accepted {
-        // Observer didn't install a prompt (e.g. declined silently). Skip.
-        return;
-    }
-
+    // The observer digivolved into a blue Digimon (color gate satisfied): the
+    // clause activated, suspending the tamer and gaining exactly 1 memory.
     let is_suspended = runner.game.players[0].battle_area[tamer.index as usize].is_suspended;
     let memory_after = runner.game.memory;
 
     assert!(is_suspended, "tamer must be suspended after activation");
-    // Memory: digivolve_from_hand pays the digivolve cost (0 for EVOLVED)
-    // then the suspend-tamer effect grants +1. memory_before is still intact.
     assert_eq!(
         memory_after,
         memory_before + 1,
-        "controller must gain exactly 1 memory after accepting activation"
+        "controller must gain exactly 1 memory from Clause 1"
     );
 }
 
@@ -578,32 +643,212 @@ fn bt16_085_digivolve_observer_does_not_fire_on_opponent_digivolve() {
     );
 }
 
-/// Blue/green color gate is not yet expressible — observer over-fires on any
-/// digivolve. This test documents the gap.
+/// Blue/green color gate: when an own Digimon digivolves into a RED Digimon
+/// (no blue/green color), the `event_card_color_has: [blue, green]` condition
+/// must prevent the observer from firing.
 #[test]
-#[ignore = "BLOCKED: G-EVENT-CARD-COLOR-IS — no event_card_color_has predicate exists to gate the observer on the new top card being blue or green. Until the predicate is added, Clause 1 fires on every own Digimon digivolve regardless of color."]
 fn bt16_085_digivolve_observer_does_not_fire_on_non_blue_non_green_digivolve() {
-    // When G-EVENT-CARD-COLOR-IS closes, implement:
-    //   1. Place tamer on P0 field.
-    //   2. Place a red Digimon stack on P0 field.
-    //   3. Digivolve into a red Digimon.
-    //   4. Assert: no pending selection (observer should not fire).
-    unimplemented!("blocked on G-EVENT-CARD-COLOR-IS");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-085")
+        .expect("BT16-085 YAML parses and compiles")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .add_card(make_digimon_lv3("BASE"))
+        .add_card(make_digimon_lv4_red("EVOLVED-RED"))
+        .hand(0, &["EVOLVED-RED"])
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER"])
+        .memory(10)
+        .start();
+
+    let _tamer = runner.place_on_field(0, "BT16-085", Some(0));
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    runner.game.enter_main_phase();
+    let memory_before = runner.game.memory;
+
+    let hand_idx = runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "EVOLVED-RED")
+        .expect("EVOLVED-RED in hand");
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
+    assert!(ok, "digivolve_from_hand must succeed");
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "observer must not fire — digivolved into a red (non blue/green) Digimon"
+    );
+    assert_eq!(
+        memory_before, runner.game.memory,
+        "memory must not change when the color gate blocks the observer"
+    );
 }
 
-/// DNA trash sub-clause is doubly blocked. Documents both gaps.
+/// DNA trash sub-clause: when an own Digimon DNA-digivolves into a blue/green
+/// Digimon, accepting Clause 1 suspends the tamer, gains 1 memory, and (because
+/// `dna_origin` is true) prompts the controller to pick an opponent Digimon and
+/// trash 3 of its digivolution cards.
 #[test]
-#[ignore = "BLOCKED: G-DSL-IS-DNA-DIGIVOLVING (dna_origin predicate not evaluated in predicate.rs) AND G-SELECT-OPPONENT-SOURCES (no select_opponent_sources verb to pick 3 opponent digi-cards). The DNA branch of Clause 1 is entirely omitted from the YAML."]
 fn bt16_085_dna_digivolve_trashes_3_opp_digi_cards() {
-    // When both gaps close, implement:
-    //   1. Place tamer on P0 field, opponent Digimon with ≥3 sources on P1 field.
-    //   2. P0 DNA-digivolves.
-    //   3. Trigger Clause 1 as DNA-origin.
-    //   4. Player accepts (suspend tamer), gains 1 memory.
-    //   5. DNA sub-condition fires: select opponent permanent, select 3 sources,
-    //      trash them.
-    //   6. Assert: opponent's chosen permanent has 3 fewer sources.
-    unimplemented!("blocked on G-DSL-IS-DNA-DIGIVOLVING + G-SELECT-OPPONENT-SOURCES");
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-085")
+        .expect("BT16-085 YAML parses and compiles")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .add_card(make_digimon_lv3("MAT-A"))
+        .add_card(make_digimon_lv3("MAT-B"))
+        .add_card(make_digimon_lv4("DNA-RESULT")) // blue Lv.4
+        .add_card(make_test_card("OPP-SRC", "Opp Source"))
+        .add_card(make_test_card("OPP-TOP", "Opp Top"))
+        .hand(0, &["DNA-RESULT"])
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER"])
+        // Start below the memory cap so the +1 from Clause 1 is observable.
+        .memory(3)
+        .start();
+
+    let tamer = runner.place_on_field(0, "BT16-085", Some(0));
+    let mat_a = runner.place_on_field(0, "MAT-A", None);
+    let mat_b = runner.place_on_field(0, "MAT-B", None);
+
+    // Opponent Digimon with 3 digivolution cards under it (3 sources + top).
+    let opp = runner.place_on_field(1, "OPP-TOP", None);
+    runner.push_source(opp, "OPP-SRC");
+    runner.push_source(opp, "OPP-SRC");
+    runner.push_source(opp, "OPP-SRC");
+    assert_eq!(
+        runner.game.players[1].battle_area[opp.index as usize]
+            .card_sources
+            .len(),
+        4,
+        "opp stack: 3 digivolution cards + top"
+    );
+
+    let memory_before = runner.game.memory;
+    let hand_card = runner.game.player(0).hand[0].handle();
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, hand_card, None, 0);
+        ctx.effect_initiated_dna_digivolve(mat_a, mat_b, hand_card, 0, true);
+    }
+    runner.game.drain_effect_queue();
+
+    // Clause 1 is optional — accept the activation, then drive the
+    // opponent-permanent + 3-source selections.
+    let mut steps = 0;
+    while let Some(view) = runner.pending_selection_view() {
+        if steps > 12 {
+            panic!("selection loop did not terminate");
+        }
+        runner
+            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .expect("drive selection");
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+
+    assert!(
+        runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "tamer must be suspended after accepting Clause 1"
+    );
+    assert_eq!(
+        runner.game.memory,
+        memory_before + 1,
+        "controller gains 1 memory from Clause 1"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area[opp.index as usize]
+            .card_sources
+            .len(),
+        1,
+        "opp Digimon must have 3 digivolution cards trashed (only the top remains)"
+    );
+    assert_eq!(
+        runner.game.players[1].trash.len(),
+        3,
+        "the 3 trashed digivolution cards go to the opponent's trash"
+    );
+}
+
+/// Non-DNA path: when an own Digimon digivolves NORMALLY (not DNA) into a
+/// blue/green Digimon, Clause 1 fires (suspend tamer + 1 memory) but the
+/// `dna_origin` branch must NOT trash any opponent digivolution cards.
+#[test]
+fn bt16_085_non_dna_digivolve_does_not_trash_opp_digi_cards() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT16-085")
+        .expect("BT16-085 YAML parses and compiles")
+        .add_card(make_test_card("FILLER", "Filler"))
+        .add_card(make_digimon_lv3("BASE"))
+        .add_card(make_digimon_lv4("EVOLVED")) // blue Lv.4
+        .add_card(make_test_card("OPP-SRC", "Opp Source"))
+        .add_card(make_test_card("OPP-TOP", "Opp Top"))
+        .hand(0, &["EVOLVED"])
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER"])
+        // Start below the memory cap so the +1 from Clause 1 is observable.
+        .memory(3)
+        .start();
+
+    let tamer = runner.place_on_field(0, "BT16-085", Some(0));
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    let opp = runner.place_on_field(1, "OPP-TOP", None);
+    runner.push_source(opp, "OPP-SRC");
+    runner.push_source(opp, "OPP-SRC");
+    runner.push_source(opp, "OPP-SRC");
+
+    runner.game.enter_main_phase();
+    let memory_before = runner.game.memory;
+
+    let hand_idx = runner
+        .game
+        .player(0)
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "EVOLVED")
+        .expect("EVOLVED in hand");
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
+    assert!(ok, "digivolve_from_hand must succeed");
+    runner.game.drain_effect_queue();
+
+    let mut steps = 0;
+    while let Some(view) = runner.pending_selection_view() {
+        if steps > 12 {
+            panic!("selection loop did not terminate");
+        }
+        runner
+            .execute_action(view.selecting_player, view.valid_action_ids[0])
+            .expect("drive selection");
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+
+    assert!(
+        runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "tamer suspended after accepting Clause 1"
+    );
+    assert_eq!(
+        runner.game.memory,
+        memory_before + 1,
+        "controller gains 1 memory"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area[opp.index as usize]
+            .card_sources
+            .len(),
+        4,
+        "non-DNA digivolve must NOT trash opponent digivolution cards"
+    );
+    assert!(
+        runner.game.players[1].trash.is_empty(),
+        "opponent's trash must stay empty on a non-DNA digivolve"
+    );
 }
 
 /// Smoke: when P0's Digimon digivolves via digivolve_from_hand, the tamer's

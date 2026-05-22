@@ -55,12 +55,31 @@ pub struct PredicateSpec {
     pub name_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_contains: Option<String>,
+    /// Case-insensitive substring scan against the candidate card's
+    /// printed text — `effect_text`, `inherited_text`, and
+    /// `security_text` concatenated. Distinct from `name_contains`,
+    /// which only scans `card_name`. Used by BT22-017's bucket 1
+    /// ("1 card with [Omnimon] in its text"). DCGO `source.HasText(s)`.
+    /// G-DSL-PREDICATE-TEXT-CONTAINS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect_text_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_in: Option<Vec<String>>,
+    /// Card-subject leaf: true when NO battle-area Digimon belonging to the
+    /// scoped player shares the candidate card's name. Models the printed
+    /// "This effect can't play cards with the same names as any of your
+    /// Digimon" exclusion on the Jesmon family (BT23-013) — applied as a
+    /// filter on a `select_union_zone` (hand+trash) play candidate set so
+    /// the in-play names are masked out, never auto-picked.
+    /// G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub name_not_shared_by_field_digimon: Option<PlayerRefSelector>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub card_number_is: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub play_cost_lte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub play_cost_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_digivolve_from_source: Option<bool>,
 
@@ -87,6 +106,28 @@ pub struct PredicateSpec {
     pub is_unsuspended: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_keyword: Option<String>,
+    /// Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — true when the
+    /// permanent's top card (or any card in its digivolution stack) has a
+    /// triggered effect with `EffectTiming::OnDeletion` either via a
+    /// compiled DSL clause or a hand-written `CardEffect` impl. Used by
+    /// EX1-021 MetalGarurumon's "[When Attacking] return 1 opponent
+    /// Digimon **that has an [On Deletion] effect** to the bottom of
+    /// deck." DCGO `permanent.HasOnDeletionEffect`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_on_deletion_effect: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub self_color_count_gte: Option<u8>,
+    /// Permanent-subject predicate. Matches whether the permanent's
+    /// digivolution stack contains at least one face-down source.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub has_face_down_source: Option<bool>,
+    /// True when the observer's Tamers (battle-area Tamer permanents)
+    /// collectively have at least N distinct colors. A no-subject
+    /// global predicate — does not inspect the candidate. Used by
+    /// ST20-10's warp-into-WarGreymon alt-path condition ("your Tamers
+    /// have 3 or more total colors"). G-DSL-DISTINCT-TAMER-COLORS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub distinct_tamer_colors_gte: Option<u8>,
 
     // Leaf — zone / owner
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -106,11 +147,49 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_is_tamer: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_is_unsuspended: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub source_name_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_permanent_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_digivolution_contains_name: Option<String>,
+    /// Source-subject predicate (Tamer face-down stash). Matches `CardSource.face_down`.
+    /// Only meaningful when the predicate subject is a digivolution-stack source
+    /// (e.g. inside a `select_own_sources` filter).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_face_down: Option<bool>,
+    /// Source-subject predicate. Matches whether the source sits at
+    /// `card_sources` index 0 (the bottom of the digivolution stack).
+    /// Only meaningful when the predicate subject is a digivolution-stack source
+    /// (e.g. inside a `select_own_sources` filter).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_bottom_source: Option<bool>,
+    /// Source-subject predicate. Matches the `CardKind` of the host
+    /// permanent's top card (e.g. `tamer` for a source stashed under a Tamer).
+    /// Only meaningful when the predicate subject is a digivolution-stack source
+    /// (e.g. inside a `select_own_sources` filter).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub host_kind_is: Option<CardKind>,
+    /// Like `self_digivolution_contains_name` but scans ONLY the
+    /// digivolution *source* cards beneath the carrier — the carrier's
+    /// own top card is excluded. `self_digivolution_contains_name` calls
+    /// `Permanent::contains_card_name`, which scans the top card too, so
+    /// a card named "Omnimon (X Antibody)" always self-matches "Omnimon"
+    /// and the negative case ("no Omnimon among the digivolution cards")
+    /// is inexpressible. BT20-102 needs the sources-only scan.
+    /// G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub self_digivolution_sources_contain_name: Option<String>,
+    /// True when the carrier Digimon's printed rules text (effect_text +
+    /// inherited_text + security_text of the top card) contains the given
+    /// substring (case-insensitive). Evaluated against the subject permanent
+    /// in an inherited-aura `while_condition` context.
+    ///
+    /// Card driver: BT16-055 Namakemon — "[All Turns] While this Digimon has
+    /// [Pulsemon] in its text, it gets +1000 DP." PUPPETS-G025.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rules_text_contains: Option<String>,
 
     // Leaf — global / observer
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -121,6 +200,20 @@ pub struct PredicateSpec {
     pub security_count_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub security_count_gte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opponent_security_count_lte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub opponent_security_count_gte: Option<DpConstraint>,
+    /// True when the named player has NO face-up security card matching the
+    /// given identity filter. Face-up state lives in
+    /// `Player.face_up_security` (a `card_index` index set), which is
+    /// unreachable from any other predicate leaf — security cards are raw
+    /// `Card`s, not `Permanent`s, so `any_permanent { zone: [security] }`
+    /// cannot see them and has no face-up discriminator. Models card text
+    /// of the form "While you have no face-up [Name] security cards, ...".
+    /// G-PRED-NO-FACE-UP-SECURITY-NAMED.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub no_face_up_security_named: Option<FaceUpSecurityNamedPredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub your_turn: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -139,8 +232,25 @@ pub struct PredicateSpec {
     pub event_target_kind: Option<CardKind>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_trait_has: Option<String>,
+    /// Case-insensitive substring scan against the *event target*
+    /// permanent's card name — i.e. the digivolving / played / deleted
+    /// permanent carried on the triggered-effect read context. Used by
+    /// EX4-061's clause 2 ("if that Digimon has [Greymon] in its name").
+    /// Sibling of `event_target_trait_has` / `event_target_kind`.
+    /// G-EVENT-TARGET-NAME-CONTAINS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_name_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_owner: Option<PlayerRef>,
+    /// Match when the *event target* permanent's printed color set
+    /// intersects this list — i.e. the digivolving / played / deleted /
+    /// suspended permanent on the triggered-effect read context has at
+    /// least one of the listed colors. Sibling of `event_target_kind` /
+    /// `event_target_trait_has`, using the same `event_target_card`
+    /// resolver. Used by BT13-012's inherited clause ("when one of your
+    /// red or yellow Tamers becomes suspended"). G-EVENT-TARGET-COLOR.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_color_any_of: Option<Vec<ColorSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_permanent_is_source: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -157,6 +267,25 @@ pub struct PredicateSpec {
     pub event_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_name_contains: Option<String>,
+    /// True when every color of the triggering event card is within the given
+    /// set. Used to gate observers on "the just-played card is black/yellow
+    /// only" without listing individual card names. Mirrors `color_only` but
+    /// operates on the event payload rather than the predicate subject.
+    /// PUPPETS-G023.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_color_only: Option<Vec<ColorSpec>>,
+    /// True when the triggering event card has AT LEAST ONE of the listed
+    /// colors (intersection / "has" semantics). Sibling of
+    /// `event_card_color_only` (subset semantics — not a faithful
+    /// substitute). Used by BT16-085's "when a blue or green Digimon
+    /// digivolves" trigger gate. G-EVENT-CARD-COLOR-IS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_color_has: Option<Vec<ColorSpec>>,
+    /// True when the triggering event card has exactly N distinct colors.
+    /// Pair with `event_card_color_only` to express "exactly 2-color
+    /// black/yellow". PUPPETS-G023.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_color_count: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_cause: Option<EventCauseSpec>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -185,10 +314,35 @@ pub struct PredicateSpec {
     pub binding_present: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "binding_is_none")]
     pub binding_absent: Option<String>,
+    /// True when the named list-typed binding (a `source_refs`,
+    /// permanent-list or card-list binding produced by a multi-select /
+    /// `select_own_sources` step) holds exactly `n` entries. Used by
+    /// EX4-073 clause C's "if you trashed 3 cards" tail. A scalar / single
+    /// binding counts as 1; a missing binding counts as 0.
+    /// G-DSL-BINDING-COUNT-EQ.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding_count_eq: Option<BindingCountPredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_suspended_any_own_digimon: Option<bool>,
+    /// Opponent-side sibling of `effect_suspended_any_own_digimon`. True
+    /// when the current effect's result log records a suspend of any of
+    /// the controller's OPPONENT's Digimon. Used by BT16-025 Paildramon
+    /// clause 2 ("If this effect didn't suspend, unsuspend this Digimon").
+    /// G-DSL-EFFECT-SUSPENDED-RESULT.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect_suspended_any_opponent_digimon: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none", alias = "any_returned_card")]
     pub effect_returned_any_card: Option<bool>,
+    /// Filtered variant of `effect_returned_any_card`. True when at least one
+    /// card moved by a preceding return / zone-move step in the SAME effect
+    /// satisfies the inner card-shape predicate. The inner predicate is
+    /// evaluated as a `Card` subject against each returned card identity in
+    /// the per-effect result log (`returned_to_deck`). Distinct field name
+    /// from the bare-bool `any_returned_card` alias so the two never collide.
+    /// Example: `returned_card_matching: { color_is: white, level_eq: 7 }`.
+    /// G-ANY-RETURNED-CARD-PREDICATE — driver BT17-077 clause 1c.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub returned_card_matching: Option<Box<PredicateSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_deleted_any_own_digimon: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -229,6 +383,39 @@ pub struct PredicateSpec {
     // Misc contextual predicates
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_alt_path: Option<String>,
+
+    /// BeforePayCost target card predicate. When present, the inner
+    /// predicate is evaluated against the card whose cost is currently
+    /// being computed (`cost_target_card` on the effect read context),
+    /// treated as a `Card` subject. Fails when no cost target is active
+    /// (i.e., outside `BeforePayCost` cost-calc dispatch). Use the full
+    /// card-shape vocabulary inside: `trait_has`, `color_is`,
+    /// `name_contains`, `level_eq`/`_lte`/`_gte`, `kind`, etc.
+    ///
+    /// Example: a cost-reduction clause that fires only when the card
+    /// being digivolved into has the [Free] trait:
+    ///
+    /// ```yaml
+    /// active_when:
+    ///   your_turn: true
+    ///   cost_target: { trait_has: Free }
+    /// ```
+    ///
+    /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cost_target: Option<Box<PredicateSpec>>,
+
+    /// True when the effect's `source_permanent` is the (or one of the)
+    /// permanent(s) being digivolved by the action whose cost is being
+    /// computed. Use to gate "When THIS Digimon would digivolve into …"
+    /// printed semantics so the observer / cost reducer only fires when
+    /// its carrier permanent is actually the digivolution target. Single
+    /// entry for normal digivolve; both DNA materials for DNA digivolve.
+    /// Always false outside cost-calc dispatch and for effects whose
+    /// `source_permanent` is `None`.
+    /// G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (Phase 2 Track H closure).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_is_cost_target_permanent: Option<bool>,
 
     /// Captures unrecognized fields for controlled extension. Validator
     /// (Task 12) checks this for typos in inline predicate positions.
@@ -328,6 +515,35 @@ pub struct LevelAggregatePredicate {
     pub selector: AggregateSelector,
     #[serde(default = "default_level_aggregate_of")]
     pub of: PlayerRef,
+}
+
+/// Identity filter for the `no_face_up_security_named` predicate leaf.
+/// Exactly one of `card_number_is` / `name_is` is required — the leaf
+/// counts face-up security cards of `of`'s player matching that filter.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct FaceUpSecurityNamedPredicate {
+    #[serde(default = "default_face_up_security_of")]
+    pub of: PlayerRef,
+    /// Match a face-up security card by exact card id (e.g. "ST20-15").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_number_is: Option<String>,
+    /// Match a face-up security card by exact (case-insensitive) name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name_is: Option<String>,
+}
+
+fn default_face_up_security_of() -> PlayerRef {
+    PlayerRef::You
+}
+
+/// Payload for the `binding_count_eq` predicate leaf — checks that a named
+/// list-typed binding holds exactly `n` entries. G-DSL-BINDING-COUNT-EQ.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BindingCountPredicate {
+    pub binding: String,
+    pub n: u8,
 }
 
 fn default_level_aggregate_of() -> PlayerRef {

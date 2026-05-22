@@ -10,7 +10,7 @@ use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::predicate::{eval_predicate_with_bindings, PredicateSubject};
 use digimon_engine::dsl_cards::step::run_steps;
 use digimon_engine::effect_context::{EffectContext, EffectReadContext};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, ModifierType};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Expiry, Keyword, ModifierType};
 use digimon_engine::permanent::{Permanent, PermanentHandle};
 use digimon_engine::selection::TriggerSource;
 
@@ -142,6 +142,57 @@ effects:
             == Some(digimon_dsl::compiled::CompiledPlayerRef::You)));
 }
 
+/// G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2): the
+/// `name_not_shared_by_field_digimon` predicate leaf compiles, and a
+/// `select_union_zone` step's `filter` survives compilation (the lowering
+/// previously dropped it before applying it at install time).
+#[test]
+fn name_not_shared_by_field_digimon_compiles_in_select_union_zone_filter() {
+    let yaml = r#"
+card: T-G7-UNION-NAME-EXCL
+name: Union Name Exclusion Predicate
+kind: digimon
+level: 6
+color: [white]
+cost: 6
+dp: 6000
+effects:
+  - when: on_play
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          prompt: Play 1 Sistermon from hand or trash
+          filter:
+            all_of:
+              - name_contains: Sistermon
+              - name_not_shared_by_field_digimon: { of: you }
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let digimon_dsl::compiled::CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let digimon_dsl::compiled::CompiledStep::SelectUnionZone { filter, .. } = &triggered.process[0]
+    else {
+        panic!("expected select_union_zone");
+    };
+    // The whole filter survives compilation — both leaves are present.
+    assert!(
+        filter
+            .all_of
+            .iter()
+            .any(|p| p.name_contains.as_deref() == Some("Sistermon")),
+        "name_contains leaf must survive into the compiled union-zone filter"
+    );
+    assert!(
+        filter.all_of.iter().any(|p| p.name_not_shared_by_field_digimon
+            == Some(digimon_dsl::compiled::CompiledPlayerRef::You)),
+        "name_not_shared_by_field_digimon leaf must compile into the union-zone filter"
+    );
+}
+
 #[test]
 fn self_digivolution_contains_name_compiles_in_when_digivolving_condition() {
     let yaml = r#"
@@ -224,6 +275,144 @@ effects:
     runner.game.drain_effect_queue();
 
     assert_eq!(runner.memory(), 1);
+}
+
+#[test]
+fn has_on_deletion_effect_predicate_matches_save_keyword_carriers() {
+    // Phase 2 Track F (G-DSL-HAS-ON-DELETION-EFFECT) — EX1-021's
+    // [When Attacking] target filter selects "Digimon that has an
+    // [On Deletion] effect". The Save keyword auto-installs an
+    // OnDeletion-timed effect, so a Save-carrying card must match;
+    // a plain card must not.
+    let mut save_card = make_test_card("SAVE-PERM", "Save Permanent");
+    save_card.keywords.push(Keyword::Save);
+    save_card.card_kind = CardKind::Digimon;
+    save_card.dp = Some(5000);
+    let mut plain_card = make_test_card("PLAIN-PERM", "Plain Permanent");
+    plain_card.card_kind = CardKind::Digimon;
+    plain_card.dp = Some(5000);
+    let src_card_data = make_test_card("PRED-SRC", "Pred Src");
+
+    let mut runner = DebugRunner::builder()
+        .add_card(src_card_data)
+        .add_card(save_card)
+        .add_card(plain_card)
+        .hand(0, &["PRED-SRC"])
+        .build();
+    let save_perm = runner.place_on_field(0, "SAVE-PERM", None);
+    let plain_perm = runner.place_on_field(0, "PLAIN-PERM", None);
+    let src = runner.game.players[0].hand[0].handle();
+    let rctx = EffectReadContext::new(&runner.game, src, None, 0);
+
+    let pred_true = CompiledPredicate {
+        has_on_deletion_effect: Some(true),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(
+            &pred_true,
+            &rctx,
+            PredicateSubject::Permanent(save_perm),
+            None
+        ),
+        "Save keyword carrier matches has_on_deletion_effect: true"
+    );
+    assert!(
+        !eval_predicate_with_bindings(
+            &pred_true,
+            &rctx,
+            PredicateSubject::Permanent(plain_perm),
+            None
+        ),
+        "plain Digimon does not match has_on_deletion_effect: true"
+    );
+
+    let pred_false = CompiledPredicate {
+        has_on_deletion_effect: Some(false),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(
+            &pred_false,
+            &rctx,
+            PredicateSubject::Permanent(plain_perm),
+            None
+        ),
+        "plain Digimon matches has_on_deletion_effect: false"
+    );
+    assert!(
+        !eval_predicate_with_bindings(
+            &pred_false,
+            &rctx,
+            PredicateSubject::Permanent(save_perm),
+            None
+        ),
+        "Save keyword carrier does not match has_on_deletion_effect: false"
+    );
+}
+
+#[test]
+fn has_keyword_predicate_matches_permanent_keywords() {
+    let mut runner = runner_with_dp_cards();
+    let low = runner.place_on_field(0, "LOW-DP", None);
+    let high = runner.place_on_field(0, "HIGH-DP", None);
+    runner
+        .game
+        .modifiers
+        .grant_keyword(high, Keyword::Jamming, Expiry::Permanent, 0);
+    let rctx = EffectReadContext::new(&runner.game, src_card(&runner), None, 0);
+
+    let pred = CompiledPredicate {
+        has_keyword: Some("Jamming".to_string()),
+        ..Default::default()
+    };
+
+    assert!(eval_predicate_with_bindings(
+        &pred,
+        &rctx,
+        PredicateSubject::Permanent(high),
+        None
+    ));
+    assert!(!eval_predicate_with_bindings(
+        &pred,
+        &rctx,
+        PredicateSubject::Permanent(low),
+        None
+    ));
+}
+
+#[test]
+fn source_permanent_trait_predicate_reads_carrier_top_card_traits() {
+    let mut runner = runner_with_dp_cards();
+    let mut free = make_test_card("FREE-TOP", "Free Top");
+    free.traits.push("Free".to_string());
+    let plain = make_test_card("PLAIN-TOP", "Plain Top");
+    runner.game.card_data.push(free);
+    runner.game.card_data.push(plain);
+    let matching = runner.place_on_field(0, "FREE-TOP", None);
+    let non_matching = runner.place_on_field(0, "PLAIN-TOP", None);
+
+    let pred = CompiledPredicate {
+        source_permanent_trait_has: Some("Free".to_string()),
+        ..Default::default()
+    };
+
+    let src = src_card(&runner);
+    let matching_ctx = EffectReadContext::new(&runner.game, src, Some(matching), 0);
+    let non_matching_ctx = EffectReadContext::new(&runner.game, src, Some(non_matching), 0);
+
+    assert!(eval_predicate_with_bindings(
+        &pred,
+        &matching_ctx,
+        PredicateSubject::None,
+        None
+    ));
+    assert!(!eval_predicate_with_bindings(
+        &pred,
+        &non_matching_ctx,
+        PredicateSubject::None,
+        None
+    ));
 }
 
 #[test]
@@ -518,6 +707,66 @@ effects:
     ));
     assert!(filter.materials_count_lte.is_some());
     assert!(filter.stack_size_gte.is_some());
+}
+
+#[test]
+fn opponent_security_count_lte_evaluates_opponent_stack() {
+    // Phase 2 Track G — G-OPP-SECURITY-COUNT-LTE eval arm.
+    //
+    // Build a runner where the active player (controller = 0) has 5
+    // security cards and the opponent (player 1) has 2. The new
+    // `opponent_security_count_lte` predicate should consult the
+    // opponent's stack, not the controller's.
+    let src = make_test_card("PRED-SRC", "Pred Src");
+    let s = make_test_card("SECCARD", "Sec");
+    let runner = DebugRunner::builder()
+        .add_card(src)
+        .add_card(s)
+        .hand(0, &["PRED-SRC"])
+        .security(0, &["SECCARD", "SECCARD", "SECCARD", "SECCARD", "SECCARD"])
+        .security(1, &["SECCARD", "SECCARD"])
+        .build();
+    let source_card = runner.game.players[0].hand[0].handle();
+    let rctx = EffectReadContext::new(&runner.game, source_card, None, 0);
+
+    let pred_lte_3 = CompiledPredicate {
+        opponent_security_count_lte: Some(CompiledDpConstraint::Literal(3)),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(&pred_lte_3, &rctx, PredicateSubject::None, None),
+        "opponent has 2 ≤ 3 → predicate matches"
+    );
+
+    let pred_lte_1 = CompiledPredicate {
+        opponent_security_count_lte: Some(CompiledDpConstraint::Literal(1)),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&pred_lte_1, &rctx, PredicateSubject::None, None),
+        "opponent has 2 > 1 → predicate fails"
+    );
+
+    let pred_gte_3 = CompiledPredicate {
+        opponent_security_count_gte: Some(CompiledDpConstraint::Literal(3)),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&pred_gte_3, &rctx, PredicateSubject::None, None),
+        "opponent has 2 < 3 → predicate fails"
+    );
+
+    // Sanity: controller-side `security_count_lte` reads the controller's
+    // stack (5 cards), not the opponent's — confirms the new predicate is
+    // a distinct field, not a re-routing of the existing one.
+    let pred_self_lte_3 = CompiledPredicate {
+        security_count_lte: Some(CompiledDpConstraint::Literal(3)),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&pred_self_lte_3, &rctx, PredicateSubject::None, None),
+        "controller has 5 > 3 → existing security_count_lte still reads controller"
+    );
 }
 
 #[test]
@@ -896,4 +1145,180 @@ fn select_trash_uses_play_cost_lte_for_valid_actions() {
         .as_ref()
         .expect("select_trash should install a pending selection");
     assert_eq!(pending.valid_action_ids, vec![TRASH_EFFECT_START]);
+}
+
+// ─── BG Imperial Tier 1 substrate (S1–S6) ────────────────────────────────────
+//
+// `bg-imperial-substrate-closeout` Tier 1 — six new DSL predicate leaves.
+// Each predicate gets a compile-from-YAML test plus a positive/negative
+// runtime-eval test.
+
+// ─── S2 `effect_suspended_any_opponent_digimon` (G-DSL-EFFECT-SUSPENDED-RESULT) ─
+
+#[test]
+fn effect_suspended_any_opponent_digimon_compiles_from_yaml() {
+    let yaml = r#"
+card: T-S2-SUSPEND-OPP
+name: Suspended Opponent Result
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 9000
+effects:
+  - when: on_play
+    process:
+      - if:
+          condition: { effect_suspended_any_opponent_digimon: false }
+          then:
+            - gain_memory: 1
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let CompiledStep::If { condition, .. } = &triggered.process[0] else {
+        panic!("expected if step");
+    };
+    assert_eq!(condition.effect_suspended_any_opponent_digimon, Some(false));
+}
+
+#[test]
+fn effect_suspended_any_opponent_digimon_reads_opponent_suspends_from_result_log() {
+    // Positive: suspending an opponent Digimon sets the result-log flag.
+    let mut runner = runner_with_dp_cards();
+    let opp = runner.place_on_field(1, "LOW-DP", None);
+    let source = src_card(&runner);
+    let steps = vec![
+        CompiledStep::Suspend {
+            target: digimon_dsl::compiled::CompiledBindingRef::Binding("target".to_string()),
+        },
+        CompiledStep::If {
+            condition: CompiledPredicate {
+                effect_suspended_any_opponent_digimon: Some(true),
+                ..Default::default()
+            },
+            then: vec![CompiledStep::GainMemory(1)],
+            else_branch: vec![],
+        },
+    ];
+    let before = runner.game.memory;
+    let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("target", opp);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    assert_eq!(
+        runner.game.memory,
+        before + 1,
+        "opponent-suspend result predicate should fire after suspending an opponent Digimon"
+    );
+}
+
+#[test]
+fn effect_suspended_any_opponent_digimon_ignores_own_suspends() {
+    // Negative: suspending an OWN Digimon must not set the opponent flag.
+    let mut runner = runner_with_dp_cards();
+    let own = runner.place_on_field(0, "LOW-DP", None);
+    let source = src_card(&runner);
+    let steps = vec![
+        CompiledStep::Suspend {
+            target: digimon_dsl::compiled::CompiledBindingRef::Binding("target".to_string()),
+        },
+        CompiledStep::If {
+            condition: CompiledPredicate {
+                effect_suspended_any_opponent_digimon: Some(true),
+                ..Default::default()
+            },
+            then: vec![CompiledStep::GainMemory(1)],
+            else_branch: vec![],
+        },
+    ];
+    let before = runner.game.memory;
+    let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_permanent("target", own);
+    run_steps(&steps, &mut ctx, &mut bindings);
+
+    assert_eq!(
+        runner.game.memory, before,
+        "opponent-suspend result predicate must not fire for own suspends"
+    );
+}
+
+// ─── S3 `event_card_color_has` (G-EVENT-CARD-COLOR-IS) ───────────────────────
+
+#[test]
+fn event_card_color_has_compiles_from_yaml() {
+    let yaml = r#"
+card: T-S3-COLOR-HAS
+name: Event Card Color Has
+kind: digimon
+level: 4
+color: [blue]
+cost: 4
+dp: 5000
+effects:
+  - when: on_digivolve
+    condition: { event_card_color_has: [blue, green] }
+    process:
+      - gain_memory: 1
+"#;
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("compile yaml");
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let condition = triggered.condition.as_ref().expect("condition");
+    assert_eq!(
+        condition.event_card_color_has,
+        Some(vec![
+            digimon_dsl::compiled::CompiledColor::Blue,
+            digimon_dsl::compiled::CompiledColor::Green,
+        ])
+    );
+}
+
+#[test]
+fn event_card_color_has_matches_when_any_listed_color_present() {
+    // Event card is Green-only. `event_card_color_has: [blue, green]`
+    // matches via the green intersection; `[blue]` does not.
+    let src = make_test_card("PRED-SRC", "Pred Src");
+    let mut green = make_test_card("GREEN-EVT", "Green Event");
+    green.colors = vec![CardColor::Green];
+    let mut runner = DebugRunner::builder()
+        .add_card(src)
+        .add_card(green)
+        .hand(0, &["PRED-SRC", "GREEN-EVT"])
+        .build();
+    let source_card = runner.game.players[0].hand[0].handle();
+    let event_card = runner.game.players[0].hand[1].handle();
+    runner.game.current_trigger_context =
+        Some(digimon_engine::trigger_context::TriggerContext {
+            event_card: Some(event_card),
+            ..Default::default()
+        });
+    let rctx = EffectReadContext::new(&runner.game, source_card, None, 0);
+
+    let has_blue_green = CompiledPredicate {
+        event_card_color_has: Some(vec![
+            digimon_dsl::compiled::CompiledColor::Blue,
+            digimon_dsl::compiled::CompiledColor::Green,
+        ]),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(&has_blue_green, &rctx, PredicateSubject::None, None),
+        "green event card matches `has: [blue, green]`"
+    );
+
+    let has_blue_only = CompiledPredicate {
+        event_card_color_has: Some(vec![digimon_dsl::compiled::CompiledColor::Blue]),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&has_blue_only, &rctx, PredicateSubject::None, None),
+        "green event card does not match `has: [blue]`"
+    );
 }

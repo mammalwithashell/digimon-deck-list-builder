@@ -81,7 +81,7 @@
 # surface the outer Yes/No to the agent — pursued broadly across the
 # return-to-deck-cost-then-effect family rather than per-card.
 #
-# ─── DSL-GAP — `play_cost_gte` predicate missing  [G-PLAY-COST-GTE] ──────────
+# ─── G-PLAY-COST-GTE (CLOSED) — `play_cost_gte` predicate ────────────────────
 #
 # Clause 1's hand filter says "play cost 4 or HIGHER [Mirei Mikagura] or
 # play cost 4 or HIGHER Tamer card with the [CS] trait." This is the upper-
@@ -89,43 +89,19 @@
 # 2026-05-01).
 #
 # `PredicateSpec` in `code/digimon-dsl/src/predicate.rs` exposes
-# `play_cost_lte: Option<i32>` (line 59) but no `play_cost_gte`. The
-# `eval_card_fields` function in `code/digimon-engine/src/dsl_cards/
-# predicate.rs` has a `play_cost_lte` branch but no `play_cost_gte` branch.
-# Wiring is otherwise symmetric: `play_cost_lte` was already plumbed
-# through `select_hand` valid-action filtering (companion to the closure
-# of G-PLAY-COST-LTE). Adding `play_cost_gte` is the trivial mirror:
-#   (1) add `play_cost_gte: Option<i32>` to `PredicateSpec` (and
-#       `CompiledPredicate`);
-#   (2) add a branch in `eval_card_fields` to check
-#       `card_data.play_cost >= n`;
-#   (3) the `select_hand` Phase-2b filter wiring already evaluates
-#       arbitrary `CompiledPredicate` leaves, so no separate hookup is
-#       needed.
-# Tracked in qa/dsl-vocab-gaps.md (entry to be filed by orchestrator).
+# `play_cost_gte` and `eval_card_fields` in `code/digimon-engine/src/
+# dsl_cards/predicate.rs` checks `card_data.play_cost >= n`. The
+# `select_hand` Phase-2b valid-action filter consults arbitrary
+# `CompiledPredicate` leaves, so the cost gate is enforced without any
+# extra hookup.
 #
-# Workaround under current DSL:
-#   The hand filter is expressed as
-#     any_of:
-#       - name_contains: "Mirei Mikagura"
-#       - all_of: [ kind: tamer, trait_has: CS ]
-#   This faithfully captures the disjunction structure (Mirei OR (Tamer ∧
-#   CS)) but the "play cost ≥ 4" gate is NOT enforced — the predicate is
-#   silently dropped from the YAML. At runtime, ANY hand card whose name
-#   contains "Mirei Mikagura" OR which is a Tamer with the CS trait will
-#   appear in the `select_hand` valid-action list, regardless of its
-#   printed play cost.
-#
-# Tests for the cost-bound filter are #[ignore = "pending: G-PLAY-COST-GTE"].
-# Positive-case tests using a candidate Tamer that printed cost 5 (i.e.
-# satisfies the gate trivially) DO pass; the over-permissive over-fire is
-# only observable when seeding a cost-3 CS Tamer in hand.
-#
-# When G-PLAY-COST-GTE closes, append a third clause to each `any_of`
-# branch:
-#   - any_of:
-#       - all_of: [ name_contains: "Mirei Mikagura", play_cost_gte: 4 ]
-#       - all_of: [ kind: tamer, trait_has: CS, play_cost_gte: 4 ]
+# The hand filter is expressed as
+#   any_of:
+#     - all_of: [ name_contains: "Mirei Mikagura", play_cost_gte: 4 ]
+#     - all_of: [ kind: tamer, trait_has: CS, play_cost_gte: 4 ]
+# A hand card whose printed play cost is below 4 is excluded from the
+# `select_hand` valid-action list even if it matches the name or
+# Tamer+CS arms.
 #
 # ─── Cost-as-return-to-deck-bottom invariant (Clause 1) ──────────────────────
 #
@@ -178,19 +154,25 @@ effects:
       # Effect: optional play of 1 Mirei Mikagura OR CS-trait Tamer (printed
       # cost ≥ 4) from hand without paying the cost.
       #
-      # G-PLAY-COST-GTE: the `play_cost_gte: 4` leaf cannot be expressed in
-      # PredicateSpec today. The disjunction structure is preserved; the
-      # cost gate is dropped (over-permissive on this axis). See header.
+      # G-PLAY-COST-GTE (CLOSED): `play_cost_gte: 4` is the upper-bound mirror
+      # of `play_cost_lte`; both arms of the disjunction carry the printed
+      # "play cost 4 or higher" gate. `eval_card_fields` evaluates
+      # `card_data.play_cost >= n`, and `select_hand`'s Phase-2b valid-action
+      # filter consults arbitrary CompiledPredicate leaves, so a too-cheap CS
+      # Tamer (cost ≤ 3) is excluded from the valid-action list.
       - select_hand:
           of: you
           bind_as: pick
           optional: true
           filter:
             any_of:
-              - name_contains: "Mirei Mikagura"
+              - all_of:
+                  - name_contains: "Mirei Mikagura"
+                  - play_cost_gte: 4
               - all_of:
                   - kind: tamer
                   - trait_has: CS
+                  - play_cost_gte: 4
           prompt: "Play 1 [Mirei Mikagura] or CS-trait Tamer (cost ≥ 4) from hand free"
       - play_from_hand_free: { of: you, hand_index: pick }
 

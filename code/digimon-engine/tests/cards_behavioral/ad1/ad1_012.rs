@@ -453,7 +453,6 @@ fn ad1_012_opt_blocks_second_on_play_in_same_turn() {
 /// Pending: G-OPT-TRIGGERED — DSL `once_per_turn` lowering may not yet enforce
 /// shared OPT across distinct timings within the same multi-timing clause.
 #[test]
-#[ignore = "pending: G-OPT-TRIGGERED — cross-timing OPT lockout for shared multi-timing clauses"]
 fn ad1_012_opt_blocks_when_attacking_after_on_play_same_turn() {
     let mut runner = cresgarurumon_runner();
 
@@ -475,26 +474,144 @@ fn ad1_012_opt_blocks_when_attacking_after_on_play_same_turn() {
 
 // ─── SECTION 6 — BLOCKED clauses (DSL + engine gaps) ────────────────────────
 
-/// [Opponent's Turn] [Once Per Turn] — When opp Digimon attacks, may DNA
-/// digivolve into [Omnimon Alter-S] in hand. Then, may change attack target.
-///
-/// BLOCKED:
-///   - Remaining faithful route: effect-initiated DNA digivolve into a selected
-///     [Omnimon Alter-S] in hand from the defender-side attack observer, then
-///     resume the same attack-interrupt clause before optional redirect.
+/// Drive every installed selection by picking its first non-PASS valid action.
+/// Returns the number of selections resolved.
+fn drive_selections(runner: &mut DebugRunner, limit: usize) -> usize {
+    let mut steps = 0;
+    while runner.game.pending_selection.is_some() && steps < limit {
+        let (player, action) = {
+            let sel = runner.game.pending_selection.as_ref().unwrap();
+            let action = sel
+                .valid_action_ids
+                .iter()
+                .copied()
+                .find(|&a| a != PASS)
+                .unwrap_or(sel.valid_action_ids[0]);
+            (sel.selecting_player, action)
+        };
+        let _ = runner.game.resolve_selection(player, action);
+        runner.game.drain_effect_queue();
+        steps += 1;
+    }
+    steps
+}
+
+/// AD1-012 Clause 4 — [Opponent's Turn][OPT]: when an opponent's Digimon
+/// attacks, CresGarurumon's controller may DNA digivolve 2 of their Digimon
+/// into [Omnimon Alter-S] in hand, then may redirect the attack to 1 of their
+/// Digimon. Exercises a defender-side effect-initiated DNA digivolve mid
+/// attack-interrupt (during the `OnOpponentAttack` fan-out inside the attack
+/// state machine) followed by a target redirect, with the attack resuming.
 #[test]
-#[ignore = "pending: defender-side effect-initiated DNA into Omnimon Alter-S during attack interrupt"]
 fn ad1_012_opponents_turn_dna_into_omnimon_alters_then_redirects() {
-    // Scaffolding (pending effect DNA route):
-    //
-    // 1. Place CresGarurumon + a Greymon-name + a Garurumon-name ally on P0's field.
-    // 2. Place an Omnimon Alter-S in P0's hand (with dna_costs that match the pair).
-    // 3. Place an opponent Digimon on P1's field; place a redirect-target ally on P0.
-    // 4. Switch turn to P1; declare opp attack on P0's player.
-    // 5. on_opponent_attack should install an optional DNA prompt (cost paid).
-    // 6. Accept → effect_initiated_dna_digivolve into Omnimon Alter-S using Greymon+Garurumon.
-    // 7. Then redirect_attack_target prompt → pick redirect ally → attack target switches.
-    todo!("pending DSL vocab gaps: on_opponent_attack timing + redirect_attack_target step")
+    let mut omni = make_test_card("AD1-012-OMNI-ALTERS", "Omnimon Alter-S");
+    omni.level = Some(7);
+    omni.dp = Some(13000);
+    omni.card_kind = digimon_engine::enums::CardKind::Digimon;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("AD1-012")
+        .expect("AD1-012 found in embedded DSL pack")
+        .add_card(digimon("AD1-012-DNA-A", 6000))
+        .add_card(digimon("AD1-012-DNA-B", 6000))
+        // High DP so a redirect onto it survives the attacker (5000 DP).
+        .add_card(digimon("AD1-012-REDIRECT", 20000))
+        .add_card(digimon("AD1-012-OPP-ATK", 5000))
+        .add_card(omni)
+        .add_card(make_test_card("AD1-012-SEC", "SecCard"))
+        .hand(0, &["AD1-012-OMNI-ALTERS"])
+        .security(0, &["AD1-012-SEC", "AD1-012-SEC"])
+        .memory(12)
+        .start();
+
+    // P0's field: CresGarurumon + two DNA materials + a redirect ally.
+    let _cres = runner.place_on_field(0, "AD1-012", None);
+    let dna_a = runner.place_on_field(0, "AD1-012-DNA-A", Some(0));
+    let dna_b = runner.place_on_field(0, "AD1-012-DNA-B", Some(0));
+    let redirect_ally = runner.place_on_field(0, "AD1-012-REDIRECT", Some(0));
+    let dna_a_card = runner.top_card(dna_a);
+    let dna_b_card = runner.top_card(dna_b);
+    let omni_card = runner.game.players[0].hand[0].handle();
+
+    // P1's field: the attacker.
+    let opp_attacker = runner.place_on_field(1, "AD1-012-OPP-ATK", Some(0));
+
+    // Switch to P1's turn so `active_when: opponents_turn` (relative to P0)
+    // holds and AD1-012's Clause 4 can fire.
+    runner.end_turn();
+    assert_eq!(runner.turn_player(), 1, "must be P1's turn");
+
+    let p0_battle_before = runner.battle_area_size(0);
+    let p0_security_before = runner.security_count(0);
+
+    // P1's Digimon attacks P0's player. The OnOpponentAttack fan-out fires
+    // AD1-012's Clause 4 from the defender side, parking the attack flow.
+    let _ = runner.attack_player(opp_attacker, 0, false);
+
+    // Drive the whole interrupt: optional accept → select Omnimon Alter-S →
+    // select DNA pair → (DNA executes) → optional redirect accept → select
+    // redirect target. Then let the attack flow resolve to completion.
+    drive_selections(&mut runner, 30);
+    runner.game.drain_effect_queue();
+
+    // The DNA digivolve must have merged 2 of P0's Digimon into a single
+    // Omnimon Alter-S permanent on P0's field — the defender-side
+    // effect-initiated DNA executed mid attack-interrupt.
+    let merged = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "AD1-012-OMNI-ALTERS")
+        .expect("a merged Omnimon Alter-S permanent must exist after the DNA digivolve");
+    assert!(
+        merged.card_sources.iter().any(|s| s.handle() == omni_card),
+        "the Omnimon Alter-S card from hand must top the merged stack"
+    );
+    // DNA merges two field permanents: the merged stack holds at least the two
+    // material top cards plus the Omnimon Alter-S result (>= 3 sources).
+    assert!(
+        merged.card_sources.len() >= 3,
+        "merged Omnimon Alter-S stack must hold 2 DNA materials + the result; got {}",
+        merged.card_sources.len()
+    );
+
+    // Two materials merged into one ⇒ P0's battle-area count drops by 1.
+    assert_eq!(
+        runner.battle_area_size(0),
+        p0_battle_before - 1,
+        "DNA digivolve merges 2 permanents into 1"
+    );
+
+    // The Omnimon Alter-S card left P0's hand.
+    assert!(
+        !runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.handle() == omni_card),
+        "the Omnimon Alter-S card must have left the hand"
+    );
+
+    // The "Then, you may change the attack target to 1 of your Digimon" leg:
+    // the attack was declared at P0's player (security), but the redirect
+    // diverted it onto a P0 Digimon — so P0's security stack is untouched.
+    assert_eq!(
+        runner.security_count(0),
+        p0_security_before,
+        "the attack was redirected onto a Digimon — P0's security must be intact"
+    );
+
+    // The key assertion for this gap: the engine drove a defender-side
+    // effect-initiated DNA digivolve plus an attack-target redirect during the
+    // attack interrupt without panicking or deadlocking, and the attack flow
+    // resolved cleanly (no selection left dangling, no in-flight attack stuck).
+    let _ = (dna_a_card, dna_b_card, redirect_ally);
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no selection should remain pending after the interrupt fully resolves"
+    );
+    assert!(
+        runner.game.pending_attack.is_none(),
+        "the in-flight attack must resolve to completion after the interrupt"
+    );
 }
 
 /// Inherited [Your Turn] — "This Digimon's attack target can't change."

@@ -41,9 +41,11 @@
 //!   tamer, -3 cost) vs the activated_digivolve from Agumon at cost 6.
 //! - BT24-016 Lamiamon — first/canonical user of `activated_digivolve` from
 //!   field with `extra_cost`. Header for that card established
-//!   G-ALT-PATH-CONDITION as a DSL vocab gap (no `condition:` field on
-//!   AltPathSpec). BT22-013's [Hand][Main] alt-path requires Nokia Shiramine
-//!   as a precondition; we hit the same gap.
+//!   G-ALT-PATH-CONDITION as a DSL vocab gap; the gap was RESOLVED at the
+//!   substrate level on 2026-05-15 (`AltPathSpec.condition` field +
+//!   consumer wiring in `dna_digivolve.rs`). BT22-013's YAML does not yet
+//!   populate `condition:` to gate on Nokia Shiramine; card-local
+//!   authoring follow-up.
 //! - BT24-017 Medusamon — first/canonical user of `dp_lte: { aggregate:
 //!   { selector: lowest_dp, scope: opponent } }`. Header for that card
 //!   established G-PRED-DP-LTE as an engine gap (predicate parses + compiles
@@ -63,10 +65,12 @@
 //!
 //! # Known gaps that affect this card
 //!
-//! - **G-ALT-PATH-CONDITION** — `AltPathSpec` has no `condition:` field; the
-//!   Nokia Shiramine precondition on the [Hand][Main] activated_digivolve cannot
-//!   be expressed in DSL. The Agumon-on-field filter IS enforced via `from:`.
-//!   First flagged on BT24-016 (Lamiamon) for its Owen Dreadnought precondition.
+//! - **G-ALT-PATH-CONDITION** — RESOLVED 2026-05-15 at the substrate
+//!   level (`AltPathSpec.condition` field exists, consumed by the
+//!   Digivolve route in `dna_digivolve.rs`). BT22-013's YAML does not
+//!   yet populate `condition:` to gate on Nokia Shiramine; the
+//!   Agumon-on-field filter IS enforced via `from:` but Nokia presence
+//!   is not checked. Card-local authoring follow-up.
 //! - **G-PRED-DP-LTE** — `dp_lte` predicate parses + compiles but the engine
 //!   predicate evaluator does not yet evaluate it for permanents. The
 //!   "lowest DP" filter on branch 1's delete will offer ALL opp Digimon, not
@@ -377,10 +381,6 @@ fn bt22_013_when_digivolving_branch_1_deletes_opp_digimon() {
 /// does not yet honor `dp_lte` on permanents, so the prompt offers ALL opp
 /// Digimon. Same gap as BT24-017's `bt24_017_delete_targets_only_lowest_dp_digimon`.
 #[test]
-#[ignore = "BLOCKED: G-PRED-DP-LTE — dp_lte predicate (with aggregate lowest_dp) is parsed and \
-            compiled but not evaluated for permanents in code/digimon-engine/src/dsl_cards/predicate.rs; \
-            the lowest-DP filter degenerates to 'any opp Digimon'. Same gap blocks the analogous \
-            BT24-017 test (`bt24_017_delete_targets_only_lowest_dp_digimon`)."]
 fn bt22_013_when_digivolving_branch_1_only_lowest_dp_is_a_legal_target() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -412,11 +412,8 @@ fn bt22_013_when_digivolving_branch_1_only_lowest_dp_is_a_legal_target() {
 /// effect_initiated_digivolve. **BLOCKED**: G-EFFECT-INITIATED-DIGIVOLVE-
 /// FROM-HAND-WITH-PERMANENT-TARGET. Same gap as BT17-015 branch 1.
 #[test]
-#[ignore = "BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — \
-            select_own_permanent + select_hand + effect_initiated_digivolve(target: <binding>) \
-            chain terminates after the permanent pick; the hand-pick prompt never installs. \
-            Same gap blocks BT17-015 branch 1 (sister WarGreymon \
-            `bt17_015_on_play_branch_1_digivolves_gabumon_into_metalgarurumon_free`)."]
+// Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
+// WITH-PERMANENT-TARGET resolved as phantom (see BT17-015 sister test).
 fn bt22_013_when_digivolving_branch_0_digivolves_gabumon_into_metalgarurumon_free() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -506,15 +503,11 @@ fn bt22_013_inherited_when_attacking_omnimon_top_trashes_security() {
 }
 
 /// Negative condition: stack has only WarGreymon (BT22-013) at top — name
-/// gate must block the trash. **BLOCKED**: G-DSL-SOURCE-NAME-CONTAINS — the
-/// predicate is parsed but never evaluated; the clause fires anyway. Same
-/// gap as BT17-015's analogous negative test.
+/// gate must block the trash. `source_name_contains` is evaluated by the
+/// engine predicate path (`predicate.rs:284`, via `subject_or_source_permanent`
+/// falling back to `rctx.source_permanent()`), so the inherited [When
+/// Attacking] gate correctly blocks when the top card is not Omnimon-named.
 #[test]
-#[ignore = "BLOCKED: G-DSL-SOURCE-NAME-CONTAINS — source_name_contains predicate is parsed and \
-            compiled but never evaluated in code/digimon-engine/src/dsl_cards/predicate.rs; \
-            the inherited [When Attacking] gate degenerates to true and incorrectly trashes \
-            opp security even when top card is not Omnimon-named. Same gap blocks BT17-015's \
-            `bt17_015_inherited_when_attacking_wargreymon_top_does_not_trash_security`."]
 fn bt22_013_inherited_when_attacking_wargreymon_top_does_not_trash_security() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -603,15 +596,11 @@ fn bt22_013_inherited_when_attacking_opt_blocks_second_activation() {
 // and verifiable.
 
 /// Negative: with Agumon on field but NO Nokia Shiramine tamer, the
-/// activated_digivolve alt-path should NOT be available. **BLOCKED** by
-/// G-ALT-PATH-CONDITION. Same gap as BT24-016 (Lamiamon) for its Owen
-/// Dreadnought precondition.
+/// activated_digivolve alt-path should NOT be available. **PENDING**
+/// card-local authoring of `condition:` on the BT22-013.yaml
+/// activated_digivolve path. Substrate is ready (G-ALT-PATH-CONDITION
+/// RESOLVED 2026-05-15); same authoring gap as BT22-026 / BT24-016.
 #[test]
-#[ignore = "BLOCKED: G-ALT-PATH-CONDITION — AltPathSpec has no `condition:` field; the \
-            'If you have [Nokia Shiramine]' precondition cannot be expressed today. The \
-            activated_digivolve alt-path is offered whenever an Agumon is on field, regardless \
-            of Nokia presence (over-permissive). Same gap blocks BT24-016 (Lamiamon) for its \
-            Owen Dreadnought precondition."]
 fn bt22_013_activated_digivolve_blocked_without_nokia_tamer() {
     // Setup: Agumon on field, BT22-013 in hand, NO Nokia Shiramine tamer.
     // The activated_digivolve alt-path MUST NOT be offered as a play option.
@@ -658,8 +647,6 @@ fn bt22_013_activated_digivolve_blocked_without_nokia_tamer() {
 /// gate test. Once the gap closes, this becomes the positive sister of the
 /// negative test above.
 #[test]
-#[ignore = "Pending G-ALT-PATH-CONDITION — see negative-case sibling above. Once the gap closes, \
-            promote this to active and add the corresponding action-introspection assertion."]
 fn bt22_013_activated_digivolve_available_with_nokia_and_agumon() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)

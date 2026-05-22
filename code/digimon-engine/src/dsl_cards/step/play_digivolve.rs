@@ -30,6 +30,7 @@ use crate::dsl_cards::step::resolve_player;
 use crate::effect_context::EffectContext;
 use crate::enums::CardSourceRef;
 use crate::enums::CostDelta;
+use crate::selection::UnionZoneOrigin;
 
 /// Translate the IR's `CompiledCostDelta` to the engine's `CostDelta`.
 ///
@@ -38,13 +39,35 @@ use crate::enums::CostDelta;
 ///   `Some(Free)`        → `CostDelta::Free`
 ///   `Some(Literal(n))`  → `CostDelta::Fixed(n as i16)`
 ///   `Some(Reduce(n))`   → `CostDelta::Reduce(n as i16)`
-fn lower_cost_delta(d: Option<&digimon_dsl::compiled::CompiledCostDelta>) -> CostDelta {
+///   `Some(ReduceFn(f))` → `CostDelta::Reduce(N)` where `N` is the formula
+///                         result computed against `ctx`/`bindings` at
+///                         resolution time (G-FORMULA-COST-DELTA). A negative
+///                         result is clamped to 0 — a "reduction" can only
+///                         lower, never raise, the printed cost.
+fn lower_cost_delta(
+    d: Option<&digimon_dsl::compiled::CompiledCostDelta>,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+) -> CostDelta {
     use digimon_dsl::compiled::CompiledCostDelta;
     match d {
         None | Some(CompiledCostDelta::Printed) => CostDelta::Reduce(0),
         Some(CompiledCostDelta::Free) => CostDelta::Free,
         Some(CompiledCostDelta::Literal(n)) => CostDelta::Fixed(*n as i16),
         Some(CompiledCostDelta::Reduce(n)) => CostDelta::Reduce(*n as i16),
+        Some(CompiledCostDelta::ReduceFn(formula)) => {
+            let target = ctx.source_permanent.unwrap_or(crate::permanent::PermanentHandle {
+                player: ctx.player,
+                index: 0,
+            });
+            let raw = crate::dsl_cards::formula_eval::evaluate_with_bindings(
+                formula,
+                ctx,
+                target,
+                Some(bindings),
+            );
+            CostDelta::Reduce(raw.max(0).min(i16::MAX as i32) as i16)
+        }
     }
 }
 
@@ -57,12 +80,16 @@ fn resolve_card_source_ref(
     ctx: &EffectContext<'_>,
     bindings: &Bindings,
 ) -> Option<CardSourceRef> {
+    // `DeckTop` is a card-source-only binding (no `ResolvedBinding` form):
+    // resolve the owning player and address the top of their deck directly.
+    if let digimon_dsl::compiled::CompiledBindingRef::DeckTop(of) = source {
+        return Some(CardSourceRef::DeckTop(resolve_player(ctx, *of)));
+    }
     match resolve_binding_ref(source, ctx, bindings)? {
         ResolvedBinding::HandIndex(owner, i) => Some(CardSourceRef::Hand(owner, i as usize)),
         ResolvedBinding::TrashIndex(owner, i) => Some(CardSourceRef::Trash(owner, i as usize)),
         ResolvedBinding::Card(h) => resolve_card_handle_source_ref(ctx, h),
-        // DeckTop and other kinds: no IR binding produces them today.
-        // Future: widen as IR evolves.
+        // Other kinds (permanent / list): not addressable as a card source.
         _ => None,
     }
 }
@@ -98,6 +125,27 @@ fn resolve_card_handle_source_ref(ctx: &EffectContext<'_>, h: CardHandle) -> Opt
     None
 }
 
+/// Resolve a `CardHandle` to its current index within `carrier`'s
+/// digivolution-source stack, or `None` if the handle is not (or no
+/// longer) a source of that permanent. Used by `PlayFromMaterials` to
+/// re-resolve each batched pick immediately before its play — the index
+/// must be looked up fresh because each play shifts later indices down.
+fn source_index_of(
+    ctx: &EffectContext<'_>,
+    carrier: crate::permanent::PermanentHandle,
+    card: CardHandle,
+) -> Option<usize> {
+    ctx.game
+        .player(carrier.player)
+        .battle_area
+        .get(carrier.index as usize)
+        .and_then(|perm| {
+            perm.card_sources
+                .iter()
+                .position(|source| source.handle() == card)
+        })
+}
+
 /// Try to handle `step` as a play / digivolve / placement variant.
 /// Returns `true` if the variant was matched (regardless of whether the
 /// underlying engine call succeeded).
@@ -112,19 +160,28 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
-                let delta = lower_cost_delta(cost_delta.as_ref());
+                let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
                 if let Some(played) = ctx.play_from_hand_with_cost(owner, i as usize, delta) {
                     bindings.record_played(played);
                 }
             }
             true
         }
-        CompiledStep::PlayFromHandFree { of: _, hand_index } => {
+        CompiledStep::PlayFromHandFree {
+            of: _,
+            hand_index,
+            bind_as,
+        } => {
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
             {
                 if let Some(played) = ctx.play_from_hand_free(owner, i as usize) {
                     bindings.record_played(played);
+                    // G-PLAY-FROM-HAND-FREE-BIND-AS: expose the played
+                    // permanent's handle to subsequent steps in the same body.
+                    if let Some(name) = bind_as {
+                        bindings.insert_permanent(name, played);
+                    }
                 }
             }
             true
@@ -139,14 +196,18 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             if let Some(ResolvedBinding::TrashIndex(owner, i)) =
                 resolve_binding_ref(trash_index, ctx, bindings)
             {
-                let delta = lower_cost_delta(cost_delta.as_ref());
+                let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
                 if let Some(played) = ctx.play_from_trash_with_cost(owner, i as usize, delta) {
                     bindings.record_played(played);
                 }
             }
             true
         }
-        CompiledStep::PlayFromTrashFree { of: _, trash_index } => {
+        CompiledStep::PlayFromTrashFree {
+            of: _,
+            trash_index,
+            suppress_on_play,
+        } => {
             // `play_from_trash_free_unsuspended` takes a `CardHandle`; the
             // IR addresses by trash index so we must look up the handle.
             if let Some(ResolvedBinding::TrashIndex(owner, i)) =
@@ -159,9 +220,90 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     .get(i as usize)
                     .map(|cs| cs.handle());
                 if let Some(h) = handle {
-                    if let Some(played) = ctx.play_from_trash_free_unsuspended(h) {
+                    // PUPPETS-G030 — when `suppress_on_play` is set, the
+                    // played Digimon's own `[On Play]` effects do not fire
+                    // for this play event (BT5-106 [Security]).
+                    let played = if *suppress_on_play {
+                        ctx.play_from_trash_free_unsuspended_suppress_on_play(h)
+                    } else {
+                        ctx.play_from_trash_free_unsuspended(h)
+                    };
+                    if let Some(played) = played {
                         bindings.record_played(played);
                     }
+                }
+            }
+            true
+        }
+
+        // ── Origin-preserving union-zone play (PUPPETS-G014) ──────────────
+        CompiledStep::PlayUnionBoundFree { binding, bind_as } => {
+            // Resolve the union-zone binding: the picked card, the zone it
+            // came from (hand vs trash), and the owner of that zone. The
+            // binding is read directly (not via `resolve_binding_ref`) so the
+            // origin tag is preserved — `ResolvedBinding` has no zone-tagged
+            // card variant. Missing / wrong-kind binding: silent no-op, per
+            // the module strictness convention.
+            if let Some((card, origin, owner)) = bindings.get_union_card(binding) {
+                let played = match origin {
+                    UnionZoneOrigin::Hand => {
+                        // Locate the card in the owner's hand by handle —
+                        // the index may have shifted since selection.
+                        ctx.game
+                            .player(owner)
+                            .hand
+                            .iter()
+                            .position(|c| c.handle() == card)
+                            .and_then(|idx| ctx.play_from_hand_free(owner, idx))
+                    }
+                    UnionZoneOrigin::Trash => {
+                        // Locate the card in the owner's trash by handle and
+                        // play it for free (CostDelta::Free → no cost paid).
+                        ctx.game
+                            .player(owner)
+                            .trash
+                            .iter()
+                            .position(|c| c.handle() == card)
+                            .and_then(|idx| {
+                                ctx.play_from_trash_with_cost(owner, idx, CostDelta::Free)
+                            })
+                    }
+                };
+                if let Some(played) = played {
+                    bindings.record_played(played);
+                    // Expose the played permanent's handle for later steps
+                    // (e.g. a Task 11 cleanup), mirroring PlayFromHandFree.
+                    if let Some(name) = bind_as {
+                        bindings.insert_permanent(name, played);
+                    }
+                }
+            }
+            true
+        }
+
+        // ── Provenance-bound turn-end self-delete (PUPPETS-G003 / G016) ──
+        CompiledStep::ScheduleDeletePlayedAtTurnEnd {
+            binding,
+            at_opponents_turn,
+        } => {
+            // Resolve the permanent binding produced by a preceding free-play
+            // step (`play_union_bound_free` / `play_from_hand_free` /
+            // `play_token` bind_as). Captures the permanent's stable
+            // `ProvenanceToken` now, so the turn-end deletion hits the right
+            // permanent even after battle-area indices shift. Missing /
+            // wrong-kind binding: silent no-op (e.g. the optional play was
+            // declined).
+            if let Some(ResolvedBinding::Permanent(handle)) =
+                resolve_binding_ref(
+                    &digimon_dsl::compiled::CompiledBindingRef::Named(binding.clone()),
+                    ctx,
+                    bindings,
+                )
+            {
+                if *at_opponents_turn {
+                    ctx.schedule_delete_at_end_of_opponents_turn(handle);
+                } else {
+                    ctx.schedule_delete_at_end_of_turn(handle);
                 }
             }
             true
@@ -187,6 +329,21 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        // ── Play a specific bound card from the security stack ────────────
+        CompiledStep::PlaySecurityCard { of, card } => {
+            // G-PLAY-SELECTED-SECURITY-CARD: `card` is a CardHandle binding
+            // (typically from a prior `select_security`). Resolve the owner
+            // and play exactly that security card free.
+            let owner = resolve_player(ctx, *of);
+            if let Some(ResolvedBinding::Card(handle)) =
+                resolve_binding_ref(card, ctx, bindings)
+            {
+                if let Some(played) = ctx.play_from_security_card(owner, handle) {
+                    bindings.record_played(played);
+                }
+            }
+            true
+        }
         CompiledStep::PlayFromMaterials {
             target,
             source_index,
@@ -197,30 +354,65 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 Some(ResolvedBinding::Permanent(h)) => h,
                 _ => return true,
             };
-            let src_idx = match resolve_binding_ref(source_index, ctx, bindings) {
-                Some(ResolvedBinding::Literal(v)) if v >= 0 => v as usize,
-                Some(ResolvedBinding::Card(card)) => ctx
-                    .game
-                    .player(target_handle.player)
-                    .battle_area
-                    .get(target_handle.index as usize)
-                    .and_then(|perm| {
-                        perm.card_sources
-                            .iter()
-                            .position(|source| source.handle() == card)
-                    })
-                    .unwrap_or(usize::MAX),
-                _ => return true,
-            };
-            if src_idx == usize::MAX {
-                return true;
-            }
-            let delta = lower_cost_delta(cost_delta.as_ref());
-            if let Some(played) = ctx.play_from_materials(target_handle, src_idx, delta) {
-                bindings.record_played(played);
-                if let Some(name) = bind_as {
-                    bindings.insert_permanent(name, played);
+            let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
+
+            // `source_index` addresses the carrier's digivolution source(s)
+            // to play. Three binding shapes are accepted:
+            //   - `Literal(n)`  — a single fixed `card_sources` index.
+            //   - `Card(h)`     — a single source identified by its handle.
+            //   - `CardList(v)` — a BATCH of sources (e.g. the picks from a
+            //     `select_materials` multi-pick); every one is played.
+            // For the batch path each handle is re-resolved to its CURRENT
+            // index immediately before its play, because `play_from_materials`
+            // removes the consumed source and shifts later indices down.
+            match resolve_binding_ref(source_index, ctx, bindings) {
+                Some(ResolvedBinding::Literal(v)) if v >= 0 => {
+                    if let Some(played) =
+                        ctx.play_from_materials(target_handle, v as usize, delta)
+                    {
+                        bindings.record_played(played);
+                        if let Some(name) = bind_as {
+                            bindings.insert_permanent(name, played);
+                        }
+                    }
                 }
+                Some(ResolvedBinding::Card(card)) => {
+                    if let Some(idx) = source_index_of(ctx, target_handle, card) {
+                        if let Some(played) =
+                            ctx.play_from_materials(target_handle, idx, delta)
+                        {
+                            bindings.record_played(played);
+                            if let Some(name) = bind_as {
+                                bindings.insert_permanent(name, played);
+                            }
+                        }
+                    }
+                }
+                Some(ResolvedBinding::CardList(cards)) => {
+                    // Batch source play: each picked source becomes a fresh
+                    // battle-area permanent. The last successful play is
+                    // recorded under `bind_as` (matches the single-card path's
+                    // single-handle binding contract).
+                    let mut last_played = None;
+                    for card in cards {
+                        let Some(idx) = source_index_of(ctx, target_handle, card) else {
+                            // Handle no longer in the carrier's stack (already
+                            // consumed earlier in this batch, or removed) —
+                            // skip it; the remaining picks still play.
+                            continue;
+                        };
+                        if let Some(played) =
+                            ctx.play_from_materials(target_handle, idx, delta)
+                        {
+                            bindings.record_played(played);
+                            last_played = Some(played);
+                        }
+                    }
+                    if let (Some(name), Some(played)) = (bind_as, last_played) {
+                        bindings.insert_permanent(name, played);
+                    }
+                }
+                _ => {}
             }
             true
         }
@@ -239,7 +431,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let Some(source_ref) = resolve_card_source_ref(from_hand, ctx, bindings) else {
                 return true;
             };
-            let delta = lower_cost_delta(Some(cost));
+            let delta = lower_cost_delta(Some(cost), ctx, bindings);
             // The effect runs on the target's controller (the digivolve is
             // applied to `target`; the result card can now come from any
             // supported source zone.
@@ -290,7 +482,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 }
                 _ => return true,
             };
-            let cost = match lower_cost_delta(Some(cost)) {
+            let cost = match lower_cost_delta(Some(cost), ctx, bindings) {
                 CostDelta::Free => 0,
                 CostDelta::Fixed(n) => n,
                 CostDelta::Reduce(n) => {
@@ -315,15 +507,72 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::EffectInitiatedDnaDigivolveHandPartner {
+            target,
+            hand_partner,
+            from_hand,
+            cost,
+            ignore_requirements,
+        } => {
+            let target_handle = match resolve_binding_ref(target, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(h)) => h,
+                _ => return true,
+            };
+            let partner_card = match resolve_binding_ref(hand_partner, ctx, bindings) {
+                Some(ResolvedBinding::Card(h)) => h,
+                Some(ResolvedBinding::HandIndex(owner, i)) => {
+                    match ctx.game.player(owner).hand.get(i as usize) {
+                        Some(cs) => cs.handle(),
+                        None => return true,
+                    }
+                }
+                _ => return true,
+            };
+            let result_card = match resolve_binding_ref(from_hand, ctx, bindings) {
+                Some(ResolvedBinding::Card(h)) => h,
+                Some(ResolvedBinding::HandIndex(owner, i)) => {
+                    match ctx.game.player(owner).hand.get(i as usize) {
+                        Some(cs) => cs.handle(),
+                        None => return true,
+                    }
+                }
+                _ => return true,
+            };
+            let cost = match lower_cost_delta(Some(cost), ctx, bindings) {
+                CostDelta::Free => 0,
+                CostDelta::Fixed(n) => n,
+                CostDelta::Reduce(n) => {
+                    debug_assert!(n >= 0, "negative DNA cost reduction is not meaningful");
+                    0
+                }
+            };
+            let success = ctx.effect_initiated_dna_digivolve_with_hand_partner(
+                target_handle,
+                partner_card,
+                result_card,
+                cost as i32,
+                *ignore_requirements,
+            );
+            if let Some(played) = success {
+                bindings.record_digivolved(played);
+            }
+            true
+        }
 
         // ── Token / placement ─────────────────────────────────────────────
         CompiledStep::PlayToken {
             controller,
             token_name,
+            bind_as,
         } => {
             let p = resolve_player(ctx, *controller);
             if let Some(played) = ctx.play_token(p, token_name) {
                 bindings.record_played(played);
+                // G016 binding half: expose the created token's handle to
+                // subsequent steps in the same body (mirrors PlayFromHandFree).
+                if let Some(name) = bind_as {
+                    bindings.insert_permanent(name, played);
+                }
             }
             true
         }
@@ -345,7 +594,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             );
             true
         }
-        CompiledStep::PlaceAsBottomSource { source, target } => {
+        CompiledStep::PlaceAsBottomSource {
+            source,
+            target,
+            face_down,
+        } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
                 _ => return true,
@@ -359,7 +612,16 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
                 return true;
             };
-            let _ = ctx.place_as_bottom_source(source_ref, target_handle);
+            let _ = ctx.place_as_bottom_source(source_ref, target_handle, *face_down);
+            true
+        }
+        CompiledStep::PlaceTopSourceAsBottom { target } => {
+            let Some(ResolvedBinding::Permanent(target_handle)) =
+                resolve_binding_ref(target, ctx, bindings)
+            else {
+                return true;
+            };
+            let _ = ctx.place_top_source_as_bottom(target_handle);
             true
         }
         CompiledStep::TrashTopSource { target } => {

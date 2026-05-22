@@ -17,13 +17,12 @@
 #     absent, `optional: true` is preserved so the RL agent can decline the
 #     whole clause, keeping the action space surfaced.
 #
-# DSL gap: G-DSL-CARRIER-HAS-KEYWORD
-#   `condition: { carrier_has_keyword: Jamming }` is not implemented. The
-#   predicate subject for inherited clauses is the source permanent (egg slot),
-#   not the carrier. Without a `carrier_has_keyword` predicate the condition is
-#   omitted — the clause over-fires on any carrier. Negative test is
-#   `#[ignore]`'d in bt3_002.rs. See qa/dsl-vocab-gaps.md entry
-#   G-DSL-CARRIER-HAS-KEYWORD for details.
+# DSL audit (verified):
+#   `condition: { has_keyword: Jamming }` correctly gates this inherited trigger
+#   at runtime. `has_keyword` resolves against the CARRIER permanent for
+#   inherited clauses (`enqueue_from_permanent` sets `source_permanent` to the
+#   carrier handle), so the draw fires only when the carrier has <Jamming> and is
+#   suppressed otherwise. Positive + negative behavioral coverage in bt3_002.rs.
 #
 # Closest exemplar: code/digimon-engine/cards/bt15/BT15-020.yaml
 #   (inherited When Attacking + OPT + Draw 1, no condition).
@@ -38,14 +37,14 @@ traits: [Baby Dragon]
 
 effects:
   # ─── Inherited [When Attacking] [Once Per Turn] <Draw 1> ──────────────────
-  # Printed text gates on carrier having <Jamming>; that condition is omitted
-  # due to G-DSL-CARRIER-HAS-KEYWORD. The clause over-fires without the gate.
-  # Trade-off documented: omission preferred over shipping the clause with no
-  # gating (sensible baseline — Draw 1 is harmless for structural coverage).
+  # Printed text gates on the inherited carrier having <Jamming>. `has_keyword`
+  # resolves against the carrier permanent for inherited clauses, so this
+  # condition correctly suppresses the draw when the carrier lacks <Jamming>.
   - scope: inherited
     when: when_attacking
     once_per_turn: true
     optional: true
-    summary: "[When Attacking][OPT] If carrier has Jamming, Draw 1 (condition omitted: G-DSL-CARRIER-HAS-KEYWORD)"
+    condition: { has_keyword: Jamming }
+    summary: "[When Attacking][OPT] If carrier has Jamming, Draw 1"
     process:
       - draw: { of: you, count: 1 }

@@ -8,7 +8,7 @@ use digimon_dsl::compiled::{
 use std::sync::Arc;
 
 use crate::action::space::{HAND_EFFECT_START, HAND_MAIN_LIMIT};
-use crate::card_source::CardHandle;
+use crate::card_source::{CardHandle, CardSource};
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::predicate::{eval_predicate, eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
@@ -184,6 +184,46 @@ pub fn lower_with_raw(
         return Some(builder.build());
     }
 
+    if let Some(dna_flow) = DelayHandDnaDigivolveFlow::from_process(&process) {
+        builder = builder.replacement_process(move |rctx| {
+            if !source_is_delayed_option(rctx.effect) {
+                return;
+            }
+
+            let player = resolve_player(rctx.effect, dna_flow.of);
+            let Some(source) = rctx.effect.source_permanent else {
+                return;
+            };
+            let Some(source_card) = rctx.effect.permanent_top_card_handle(source) else {
+                return;
+            };
+            let subject_card = stable_replacement_subject_card(rctx.effect, rctx.subject);
+
+            let continuation = DelayDnaCostContinuation {
+                source_player: source.player,
+                source_card,
+                subject: rctx.subject,
+                subject_card,
+                player,
+                result_prompt: dna_flow.result_prompt.clone(),
+                result_filter: dna_flow.result_filter.clone(),
+                partner_prompt: dna_flow.partner_prompt.clone(),
+                partner_filter: dna_flow.partner_filter.clone(),
+            };
+
+            match rctx.effect.trash_delay_source_status() {
+                DelayCostStatus::Paid => {
+                    install_delay_dna_after_paid(rctx.effect, &continuation);
+                }
+                DelayCostStatus::Pending => {
+                    arm_pending_delay_dna_continuation(rctx.effect.game, continuation);
+                }
+                DelayCostStatus::Unpaid => {}
+            };
+        });
+        return Some(builder.build());
+    }
+
     builder = builder.replacement_process(move |rctx| {
         let mut bindings = Bindings::new();
         if let Some(subject) = rctx.subject.permanent() {
@@ -290,6 +330,7 @@ fn step_places_permanent_in_security(step: &CompiledStep) -> bool {
         }
         CompiledStep::SelectOwnSources { then, .. }
         | CompiledStep::SelectOpponentDpBudget { then, .. }
+        | CompiledStep::SelectOpponentPlayCostBudget { then, .. }
         | CompiledStep::SelectOwnBreedingPermanent { then, .. } => {
             process_places_permanent_in_security(then)
         }
@@ -343,24 +384,48 @@ fn required_selection_step_has_candidate(
             of,
             zone,
             max,
+            min,
+            filter,
             optional_zero,
             ..
         } => {
-            *optional_zero
-                || !matches!(max, digimon_dsl::compiled::CompiledCountBound::Literal(0))
-                    && match zone {
-                        CompiledZone::Hand => !ctx
-                            .game
-                            .player(resolve_player_ref(ctx, *of))
-                            .hand
-                            .is_empty(),
-                        CompiledZone::Trash => !ctx
-                            .game
-                            .player(resolve_player_ref(ctx, *of))
-                            .trash
-                            .is_empty(),
-                        _ => true,
-                    }
+            // A zero-pick-acceptable step is always payable.
+            if *optional_zero && *min == 0 {
+                return true;
+            }
+            if matches!(max, digimon_dsl::compiled::CompiledCountBound::Literal(0)) {
+                return *min == 0;
+            }
+            // When `min > 0` the required cost is payable only if at least
+            // `min` cards in the zone match the filter. G-SELECT-MULTI-MIN.
+            if *min > 0 {
+                let player = resolve_player_ref(ctx, *of);
+                let count = match zone {
+                    CompiledZone::Hand => count_matching_zone_cards(
+                        ctx,
+                        &ctx.game.player(player).hand,
+                        filter,
+                        bindings,
+                    ),
+                    CompiledZone::Trash => count_matching_zone_cards(
+                        ctx,
+                        &ctx.game.player(player).trash,
+                        filter,
+                        bindings,
+                    ),
+                    _ => *min as usize,
+                };
+                return count >= *min as usize;
+            }
+            match zone {
+                CompiledZone::Hand => {
+                    !ctx.game.player(resolve_player_ref(ctx, *of)).hand.is_empty()
+                }
+                CompiledZone::Trash => {
+                    !ctx.game.player(resolve_player_ref(ctx, *of)).trash.is_empty()
+                }
+                _ => true,
+            }
         }
         CompiledStep::SelectMaterial {
             of_permanent,
@@ -376,8 +441,22 @@ fn required_selection_step_has_candidate(
             min_picks,
             ..
         } => *min_picks == 0 || has_opponent_dp_budget_candidate(ctx, *dp_budget),
-        CompiledStep::SelectOwnBreedingPermanent { .. } => {
-            ctx.game.player(ctx.player).breeding_area.is_some()
+        CompiledStep::SelectOpponentPlayCostBudget {
+            play_cost_budget,
+            min_picks,
+            ..
+        } => *min_picks == 0 || has_opponent_play_cost_budget_candidate(ctx, *play_cost_budget),
+        CompiledStep::SelectOwnBreedingPermanent { filter, .. } => {
+            if ctx.game.player(ctx.player).breeding_area.is_none() {
+                false
+            } else {
+                eval_predicate_with_bindings(
+                    filter,
+                    ctx,
+                    PredicateSubject::BreedingPermanent(ctx.player),
+                    Some(bindings),
+                )
+            }
         }
         CompiledStep::SelectUnionZone { of, zones, .. } => zones.iter().any(|zone| match zone {
             CompiledZone::Hand => !ctx
@@ -451,53 +530,77 @@ fn has_matching_permanent(
         }
     }
 
-    let selected_dp = selected_dp_extreme(ctx, &handles, selector);
+    let selected = selected_field_extreme(ctx, &handles, selector);
     handles
         .into_iter()
-        .any(|handle| matches_selected_dp(ctx, handle, selected_dp))
+        .any(|handle| matches_selected_field(ctx, handle, selector, selected))
 }
 
+/// Result of resolving a `CompiledFieldSelector` over a candidate set.
 #[derive(Clone, Copy)]
-enum SelectedDp {
+enum SelectedField {
+    /// No selector — every candidate matches.
     Any,
+    /// The selector's extreme value, in the selector's own unit
+    /// (effective DP for DP selectors, printed play cost for the
+    /// play-cost selector).
     Exact(i32),
+    /// Selector present but the candidate set was empty.
     None,
 }
 
-fn selected_dp_extreme(
+/// Read a permanent's value in the unit of the given field selector:
+/// effective DP for DP selectors, printed play cost for `LowestPlayCost`.
+fn field_value(
     ctx: &EffectReadContext<'_>,
-    handles: &[PermanentHandle],
-    selector: Option<CompiledFieldSelector>,
-) -> SelectedDp {
+    handle: PermanentHandle,
+    selector: CompiledFieldSelector,
+) -> Option<i32> {
     match selector {
-        None => SelectedDp::Any,
-        Some(CompiledFieldSelector::LowestDp) => handles
-            .iter()
-            .filter_map(|handle| ctx.game.effective_dp(*handle))
-            .min()
-            .map(SelectedDp::Exact)
-            .unwrap_or(SelectedDp::None),
-        Some(CompiledFieldSelector::HighestDp) => handles
-            .iter()
-            .filter_map(|handle| ctx.game.effective_dp(*handle))
-            .max()
-            .map(SelectedDp::Exact)
-            .unwrap_or(SelectedDp::None),
+        CompiledFieldSelector::LowestDp | CompiledFieldSelector::HighestDp => {
+            ctx.game.effective_dp(handle)
+        }
+        CompiledFieldSelector::LowestPlayCost => ctx
+            .game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|perm| i32::from(perm.top_card().play_cost(ctx.card_data()))),
     }
 }
 
-fn matches_selected_dp(
+fn selected_field_extreme(
+    ctx: &EffectReadContext<'_>,
+    handles: &[PermanentHandle],
+    selector: Option<CompiledFieldSelector>,
+) -> SelectedField {
+    let Some(selector) = selector else {
+        return SelectedField::Any;
+    };
+    let values = handles
+        .iter()
+        .filter_map(|handle| field_value(ctx, *handle, selector));
+    let extreme = match selector {
+        CompiledFieldSelector::LowestDp | CompiledFieldSelector::LowestPlayCost => values.min(),
+        CompiledFieldSelector::HighestDp => values.max(),
+    };
+    extreme
+        .map(SelectedField::Exact)
+        .unwrap_or(SelectedField::None)
+}
+
+fn matches_selected_field(
     ctx: &EffectReadContext<'_>,
     handle: PermanentHandle,
-    selected_dp: SelectedDp,
+    selector: Option<CompiledFieldSelector>,
+    selected: SelectedField,
 ) -> bool {
-    match selected_dp {
-        SelectedDp::Any => true,
-        SelectedDp::Exact(dp) => ctx
-            .game
-            .effective_dp(handle)
-            .is_some_and(|candidate_dp| candidate_dp == dp),
-        SelectedDp::None => false,
+    match selected {
+        SelectedField::Any => true,
+        SelectedField::Exact(want) => selector
+            .and_then(|selector| field_value(ctx, handle, selector))
+            .is_some_and(|candidate| candidate == want),
+        SelectedField::None => false,
     }
 }
 
@@ -522,6 +625,28 @@ fn has_matching_card_in_zone(
             Some(bindings),
         )
     })
+}
+
+/// Count the cards in `cards` that satisfy `filter`. Used by the replacement
+/// preflight to verify a `select_count_capped_multi { min: N }` required cost
+/// is payable. G-SELECT-MULTI-MIN.
+fn count_matching_zone_cards(
+    ctx: &EffectReadContext<'_>,
+    cards: &[CardSource],
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+) -> usize {
+    cards
+        .iter()
+        .filter(|card| {
+            eval_predicate_with_bindings(
+                filter,
+                ctx,
+                PredicateSubject::Card(card.handle()),
+                Some(bindings),
+            )
+        })
+        .count()
 }
 
 fn resolve_permanent_binding(
@@ -595,6 +720,18 @@ fn has_opponent_dp_budget_candidate(ctx: &EffectReadContext<'_>, dp_budget: i32)
             };
             ctx.game.effective_dp(handle).unwrap_or(0) <= dp_budget
         })
+}
+
+fn has_opponent_play_cost_budget_candidate(
+    ctx: &EffectReadContext<'_>,
+    play_cost_budget: i32,
+) -> bool {
+    let opponent = ctx.game.next_clockwise(ctx.player);
+    ctx.game
+        .player(opponent)
+        .battle_area
+        .iter()
+        .any(|perm| i32::from(perm.top_card().play_cost(ctx.card_data())) <= play_cost_budget)
 }
 
 fn replacement_subject_is_source(ctx: &EffectReadContext<'_>, subject: ReplacementSubject) -> bool {
@@ -711,6 +848,104 @@ impl DelayHandDigivolveFlow {
             of: *of,
             filter: filter.clone(),
             prompt: prompt.clone(),
+        })
+    }
+}
+
+/// Recognised process shape for BT17-095 Clause B — the Delay-cost DNA
+/// digivolve where one DNA material is the leaving subject (on field) and the
+/// other is a card in hand, merging into an Omnimon-name card also in hand.
+///
+/// Recognised process:
+/// ```text
+/// [ delete_permanent { target: source },
+///   select_hand { bind_as: <result>, optional: true },   // Omnimon result
+///   select_hand { bind_as: <partner>, optional: true },  // L6 DNA partner
+///   effect_initiated_dna_digivolve_hand_partner {
+///       target: replacement_subject,
+///       hand_partner: <partner>,
+///       from_hand: <result>,
+///   },
+///   cancel_replacement ]
+/// ```
+struct DelayHandDnaDigivolveFlow {
+    of: CompiledPlayerRef,
+    result_filter: CompiledPredicate,
+    result_prompt: String,
+    partner_filter: CompiledPredicate,
+    partner_prompt: String,
+}
+
+#[derive(Clone)]
+struct DelayDnaCostContinuation {
+    source_player: PlayerId,
+    source_card: CardHandle,
+    subject: ReplacementSubject,
+    subject_card: Option<(PlayerId, CardHandle)>,
+    player: PlayerId,
+    result_prompt: String,
+    result_filter: CompiledPredicate,
+    partner_prompt: String,
+    partner_filter: CompiledPredicate,
+}
+
+impl DelayHandDnaDigivolveFlow {
+    fn from_process(process: &[CompiledStep]) -> Option<Self> {
+        let [CompiledStep::DeletePermanent { target }, CompiledStep::SelectHand {
+            of: result_of,
+            filter: result_filter,
+            bind_as: result_bind,
+            prompt: result_prompt,
+            optional: result_optional,
+            ..
+        }, CompiledStep::SelectHand {
+            of: partner_of,
+            filter: partner_filter,
+            bind_as: partner_bind,
+            prompt: partner_prompt,
+            optional: partner_optional,
+            ..
+        }, CompiledStep::EffectInitiatedDnaDigivolveHandPartner {
+            target: dna_target,
+            hand_partner,
+            from_hand,
+            cost,
+            ignore_requirements,
+        }, CompiledStep::CancelReplacement] = process
+        else {
+            return None;
+        };
+
+        let result_bind = result_bind.as_deref()?;
+        let partner_bind = partner_bind.as_deref()?;
+        if !matches!(target, CompiledBindingRef::Source) {
+            return None;
+        }
+        if result_of != partner_of {
+            return None;
+        }
+        if !is_binding_ref_named(dna_target, "replacement_subject") {
+            return None;
+        }
+        if !is_binding_ref_named(hand_partner, partner_bind) {
+            return None;
+        }
+        if !is_binding_ref_named(from_hand, result_bind) {
+            return None;
+        }
+        if !matches!(cost, CompiledCostDelta::Free | CompiledCostDelta::Literal(0)) {
+            return None;
+        }
+        if !*ignore_requirements || !*result_optional || !*partner_optional {
+            return None;
+        }
+
+        Some(Self {
+            of: *result_of,
+            result_filter: result_filter.clone(),
+            result_prompt: result_prompt.clone(),
+            partner_filter: partner_filter.clone(),
+            partner_prompt: partner_prompt.clone(),
         })
     }
 }
@@ -957,4 +1192,229 @@ fn install_delay_hand_digivolve_after_paid(
         continuation.prompt.clone(),
         candidates,
     );
+}
+
+// ─── BT17-095 Clause B — Delay-cost DNA-with-hand-partner flow ─────────────────
+
+fn arm_pending_delay_dna_continuation(game: &mut Game, continuation: DelayDnaCostContinuation) {
+    let Some(mut selection) = game.pending_selection.take() else {
+        continue_delay_dna_after_selection(game, continuation);
+        return;
+    };
+
+    let original_callback = selection.callback;
+    let callback_continuation = continuation.clone();
+    selection.callback = Box::new(move |game, action_id| {
+        original_callback(game, action_id);
+        continue_delay_dna_after_selection(game, callback_continuation);
+    });
+
+    let original_decline = selection.on_decline.take();
+    selection.on_decline = Some(Box::new(move |game| {
+        if let Some(original_decline) = original_decline {
+            original_decline(game);
+        }
+        continue_delay_dna_after_selection(game, continuation);
+    }));
+
+    game.pending_selection = Some(selection);
+}
+
+fn continue_delay_dna_after_selection(game: &mut Game, continuation: DelayDnaCostContinuation) {
+    if game.pending_selection.is_some() {
+        arm_pending_delay_dna_continuation(game, continuation);
+        return;
+    }
+
+    let mut ctx = EffectContext::new(game, continuation.source_card, None, continuation.player);
+    install_delay_dna_after_paid(&mut ctx, &continuation);
+}
+
+/// Stage 1: the Delay cost is paid. Install the selection for the Omnimon-name
+/// result card (drawn from hand). Its callback chains into the partner-card
+/// selection. If no result card qualifies the leaving subject simply proceeds
+/// (the printed "may" — declining the DNA reward is legal).
+fn install_delay_dna_after_paid(
+    ctx: &mut EffectContext<'_>,
+    continuation: &DelayDnaCostContinuation,
+) {
+    if !ctx.delay_source_card_in_trash(continuation.source_player, continuation.source_card) {
+        return;
+    }
+
+    // Stage early-out: re-resolve the leaving subject and the candidate pools.
+    if resolve_stable_replacement_subject(ctx, continuation.subject, continuation.subject_card)
+        .is_none()
+    {
+        return;
+    }
+    let result_candidates = matching_hand_candidates(
+        ctx,
+        continuation.player,
+        &continuation.result_filter,
+        HAND_MAIN_LIMIT,
+    );
+    if result_candidates.is_empty() {
+        return;
+    }
+    // The partner candidates exclude whichever card is later chosen as the
+    // result; only require that at least one partner exists up front.
+    let partner_candidates = matching_hand_candidates(
+        ctx,
+        continuation.player,
+        &continuation.partner_filter,
+        HAND_MAIN_LIMIT,
+    );
+    if partner_candidates.is_empty() {
+        return;
+    }
+
+    install_delay_dna_card_selection(
+        ctx,
+        continuation.player,
+        continuation.result_prompt.clone(),
+        result_candidates,
+        DnaSelectionStage::Result(continuation.clone()),
+    );
+}
+
+/// Which selection stage a `DnaSelectionStage` callback represents.
+enum DnaSelectionStage {
+    /// Stage 1 — the chosen card is the Omnimon result. Chain into Stage 2.
+    Result(DelayDnaCostContinuation),
+    /// Stage 2 — the chosen card is the hand partner; `result` is the
+    /// already-chosen Omnimon card. Execute the DNA merge.
+    Partner {
+        continuation: DelayDnaCostContinuation,
+        result: CardHandle,
+    },
+}
+
+/// Install a hand-card `EffectChoice` selection for one DNA stage. The chosen
+/// card drives the next stage (Result → Partner) or the merge (Partner).
+fn install_delay_dna_card_selection(
+    ctx: &mut EffectContext<'_>,
+    player: PlayerId,
+    prompt: String,
+    candidates: Vec<CardHandle>,
+    stage: DnaSelectionStage,
+) {
+    let previous_phase = ctx.game.current_phase;
+    let valid_action_ids: Vec<u16> = candidates
+        .iter()
+        .enumerate()
+        .map(|(idx, _)| HAND_EFFECT_START + idx as u16)
+        .collect();
+    let effect_choices: Vec<EffectChoiceEntry> = candidates
+        .iter()
+        .enumerate()
+        .map(|(idx, card)| EffectChoiceEntry {
+            label: ctx
+                .game
+                .card_data_for_handle(*card)
+                .map(|data| data.card_name.clone())
+                .unwrap_or_else(|| format!("Card {}", idx + 1)),
+            action_id: HAND_EFFECT_START + idx as u16,
+            source_card: Some(*card),
+            source_kind: None,
+            timing: None,
+            is_optional: false,
+            observation_metadata: Default::default(),
+        })
+        .collect();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind();
+
+    ctx.game.current_phase = GamePhase::EffectChoice;
+    ctx.game.pending_selection = Some(PendingSelection {
+        kind: SelectionKind::EffectChoice,
+        selecting_player: player,
+        previous_phase,
+        valid_action_ids,
+        is_optional: true,
+        prompt,
+        effect_choices: Some(effect_choices),
+        source_card,
+        source_permanent,
+        source_kind,
+        callback: Box::new(move |game, action_id| {
+            let Some(idx) = action_id.checked_sub(HAND_EFFECT_START).map(|i| i as usize) else {
+                return;
+            };
+            let Some(chosen) = candidates.get(idx).copied() else {
+                return;
+            };
+            match &stage {
+                DnaSelectionStage::Result(continuation) => {
+                    // Stage 1 done — install the partner selection, excluding
+                    // the card just chosen as the result.
+                    let mut ctx = EffectContext::new_with_source_kind(
+                        game,
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        player,
+                    );
+                    let partner_candidates: Vec<CardHandle> = matching_hand_candidates(
+                        &ctx,
+                        continuation.player,
+                        &continuation.partner_filter,
+                        HAND_MAIN_LIMIT,
+                    )
+                    .into_iter()
+                    .filter(|c| *c != chosen)
+                    .collect();
+                    if partner_candidates.is_empty() {
+                        return;
+                    }
+                    install_delay_dna_card_selection(
+                        &mut ctx,
+                        continuation.player,
+                        continuation.partner_prompt.clone(),
+                        partner_candidates,
+                        DnaSelectionStage::Partner {
+                            continuation: continuation.clone(),
+                            result: chosen,
+                        },
+                    );
+                }
+                DnaSelectionStage::Partner {
+                    continuation,
+                    result,
+                } => {
+                    // Stage 2 done — re-resolve the leaving subject and run
+                    // the DNA merge. On success the subject is consumed into
+                    // the merged permanent, so cancel the leave.
+                    let mut ctx = EffectContext::new_with_source_kind(
+                        game,
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        player,
+                    );
+                    let Some(subject) = resolve_stable_replacement_subject(
+                        &ctx,
+                        continuation.subject,
+                        continuation.subject_card,
+                    ) else {
+                        return;
+                    };
+                    let Some(target) = subject.permanent() else {
+                        return;
+                    };
+                    let merged = ctx.effect_initiated_dna_digivolve_with_hand_partner(
+                        target, chosen, *result, 0, true,
+                    );
+                    if merged.is_some() {
+                        ctx.cancel_current_replacement();
+                        if let Some(parked) = game.parked_replacement.as_mut() {
+                            parked.outcome = crate::replacement::ReplacementOutcome::Cancelled;
+                        }
+                    }
+                }
+            }
+        }),
+        on_decline: None,
+    });
 }

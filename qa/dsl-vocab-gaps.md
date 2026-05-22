@@ -16,6 +16,182 @@ This file accumulates `BLOCKED` verdicts whose `gap_kind` is `dsl` (the engine h
 > driving DSL substrate. Pre-scaling cleanup batch §2 narrative in
 > `.claude/plans/pre-scaling-cleanup-batch.md`.
 
+> **Tracker hygiene sweep — 2026-05-15:** Post-rebaseline audit cleanup
+> per [`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md).
+> The canonical engine-side tracker `docs/RUST_ENGINE_GAPS.md` was
+> compacted: ~54 closed entries moved to `qa/resolved-gaps.md`, ~10
+> entries had headline severity reframed from 🔴 to 🟡 PARTIAL with
+> narrowed residual titles (e.g. "Decode residual: EX10-061 Apocalymon
+> batch + different-name source play DSL sugar", "Conditional
+> security-in-stack trigger residual: start-of-turn variants"), and
+> the at-a-glance table was rewritten. No new DSL-vocab gap entries
+> surfaced; existing entries in this file remain accurate.
+>
+> **Tracker hygiene sweep — 2026-05-14:** Cross-referenced against PRs
+> #459–#473. The Track E zone-movement DSL verb table remains current
+> (no new entries). Track C modifier-payload structured YAML parser is
+> still the principal open DSL item — engine substrate from PR #455
+> is unchanged, parser work has not landed yet. New since 2026-05-10:
+>
+> - **Track H aura DSL (PR #467):** `grant_triggered_effect` step
+>   (target / timing / expiry / body), `kind: aura` materialization
+>   for battle-area and security-zone scopes, plus the typed
+>   `AuraScope` / `AuraGrant` builder all lower through existing DSL
+>   schema. Card authoring for EX1-068 Ice Wall! and BT21-095 Wind
+>   Guardians is now pure DSL; no new vocabulary gap surfaced.
+> - **Alter-S Ladder DSL (PR #468):** EX9-021 Omnimon Alter-S and DNA
+>   Omnimon ladder cards land using existing zone-movement /
+>   replacement / source-selection verbs. No new DSL verb required.
+> - **Formula-threshold DSL (PR #470):** `play_cost_lte` /
+>   `binding_play_cost` / `distinct_colors_count` formula leaves
+>   activated for BT15-096 and BT21-102. The shape is shared with
+>   level/DP/material/memory/security aggregate predicate leaves —
+>   see the "Track J formula/result substrate slice (2026-05-10)"
+>   paragraph in `docs/RUST_ENGINE_GAPS.md`.
+> - **Puppet observer DSL (PR #472):** predicate leaves
+>   `event_target_kind`, `event_target_trait_has`,
+>   `event_permanent_is_source`, and `source_is_unsuspended` are
+>   wired through existing lowering paths. PUPPETS-G011 closed.
+>
+> The `OnSuspend` / name-filtered DelayTrigger shape (BT24-089) and
+> bilateral player-scoped passive modifier shape (Rocks) remain open
+> from the 2026-05-10 sweep.
+
+> **Tracker hygiene sweep — 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480):**
+> The Phase 2 pilot-archetype unblock work landed as 10 tracks in PR #480
+> (`claude/musing-ishizaka-c4b355` against `main`). All sub-entries below
+> have been swept; the per-track sweep paragraphs that follow cover Tracks
+> F and G in detail. Closure pointers for the other tracks:
+>
+> - **Track A** — DSL eval-arm sweep (commit `b91816b5`). Closes
+>   `G-PRED-DP-LTE` (card-zone subjects via `eval_card_fields`),
+>   `G-COUNT-GTE-NOT-EVALUATED`, `G-FORMULA-SOURCE-DP`,
+>   `G-DSL-DISTINCT-TAMER-COLORS` + `G-DSL-DISTINCT-TAMER-COLORS-FORMULA`
+>   (paired BoolPredicate + formula), and `G-ALT-PATH-CONDITION` stale
+>   placeholder-test sweep. 13+ tests un-ignored. Full entry in
+>   `qa/resolved-gaps.md` § "Phase 2 Track A closure".
+> - **Track B** — `activation_cost(...)` builder (commit `2c2c4632`).
+>   Engine substrate: `EffectBuilder::activation_cost`,
+>   `ctx.suspend_self_as_cost()`,
+>   `ctx.return_self_to_deck_bottom_as_cost()`. DSL:
+>   `CompiledStep::ActivationCost { kind: SuspendSelf |
+>   ReturnSelfToDeckBottom }`. Cost-failure consumes OPT slot per Working
+>   Rule §17. Downstream consumers: BT4-097, BT8-090, ST6-14, BT8-094,
+>   EX9-068, BT13-102, RB1-035, P-136, BT22-094, BT17-093, EX11-071.
+>   Full entry in `qa/resolved-gaps.md` § "Phase 2 Track B closure".
+> - **Track C** — G-OPT-TRIGGERED (commit `dd9b8a46`). Substrate was
+>   already correct; the gap proved phantom. 23 stale `#[ignore]`
+>   annotations removed; slot-key semantics documented (per-carrier
+>   HashMap keyed by `(source_card_handle, effect_slot)`, fully cleared
+>   on `Permanent::new_turn`). G-OPT-RESET-VIA-ATTACK-CYCLE was a
+>   test-setup misdiagnosis (deck-out before second turn cycle); fixed
+>   in test files only.
+> - **Track D** — G-INHERITED-DISPATCH (commit `bc852640`).
+>   `enqueue_from_permanent` now walks `permanent.card_sources` so
+>   inherited triggered effects fire from below-the-top cards. Stable
+>   slot keying via the existing `(source_card_handle, effect_slot)`
+>   shape — no OPT collision. `G-WHEN-DIGIVOLVING-DISPATCH` absorbed.
+>   Regression test in `tests/timing_dispatch.rs`. 18 tests un-ignored.
+> - **Track E** — Rocks pilot reveal-ordering (commit `bac197ea`).
+>   Detailed in "Phase 2 Track E (2026-05-17)" §149 below.
+> - **Track H** — BG Imperial substrate (commit `2b083c5a`). Closes
+>   `G-BEFORE-PAY-COST-DIGIVOLVE-TARGET` (cost-target predicate +
+>   `source_is_cost_target_permanent`), `G-BEFORE-PAY-COST-GAIN-MEMORY`
+>   (`Effect::before_pay_cost_observe` sibling builder),
+>   `G-OPTIONAL-SELECTION-CONTINUE-TAIL` (select_trash slice only —
+>   other `select_*` installers remain follow-up), `G-PLAY-FROM-HAND-FREE-BIND-AS`.
+>   **DEFERRED:** `G-COST-REDUCE-ALLY-DIGIVOLVE` (per Track H's discovery
+>   rider; entangled with armed-observer + suspend-cost sub-gaps).
+> - **Track I** — Puppets pilot (commit `26e27ccc`). Closes
+>   `PUPPETS-G008` / `G-OPPONENT-SECURITY-DP-AURA` (inherited aura with
+>   `applies_to_opponent_security_dp`), `PUPPETS-G009` (Delay [Main]
+>   action), `PUPPETS-G003` (ProvenanceToken cleanup), end-of-attack
+>   mandatory self-delete chain. EX4-074 ShineGreymon: Ruin Mode
+>   IMPLEMENTED.
+> - **Track J** — Royal Knights substrate + cards (commits `48fbfd76` +
+>   `3a6aaee1`). Closes `RK-G001` (filtered breeding permanent target),
+>   `RK-G002` (source-bound return-self cost into reduced-cost hand
+>   play — leverages Track B's `activation_cost`), `RK-G003` (Delay/
+>   keyword leave-prevention replacements). Plus token registry entries
+>   for Atho / Rene / Por.
+>
+> **Net cumulative test deltas (vs. pre-wave-1 baseline post-PR #475):**
+> `cards_behavioral` 2355 pass / 0 fail / 355 ignored — was ~2300 / 1
+> pre-existing flake / 596 ignored. **Phase 2 killed the long-standing
+> `ex11_054` Medusamon flake** as part of Track G's `[All Turns]`
+> entering-permanent observer migration.
+>
+> See `qa/resolved-gaps.md` for full per-track closure details. The
+> entries below that match these closure tags have been annotated
+> inline with "RESOLVED 2026-05-17 (Phase 2 Track X)" pointers; legacy
+> entry bodies are preserved for reference but the heading line carries
+> the closure stamp.
+
+> **Tracker hygiene sweep — 2026-05-20 (Puppets substrate sweep):** 15
+> reusable substrate gaps closed on branch `claude/stoic-moser-0ef79e`.
+> DSL-vocab entries closed in this file: `PUPPETS-G023` (BT13-101/P-136
+> event-card color predicates), `PUPPETS-G024` (BT16-055 narrow
+> opponent-effect protection), `PUPPETS-G025` (BT16-055 rules_text_contains
+> predicate), `PUPPETS-G028` (BT22-088 return-self-to-deck-bottom cost +
+> branch), `PUPPETS-G030` (BT5-106 suppress_on_play flag). All four entry
+> headings below carry inline RESOLVED stamps; legacy bodies preserved for
+> reference. See `docs/RUST_ENGINE_GAPS.md` and `qa/resolved-gaps.md` for
+> engine-side closures.
+
+> **Tracker hygiene sweep — 2026-05-17 (Phase 2 Track F):** Five DNA
+> Omnimon DSL/substrate gaps closed; full closure summaries in
+> [resolved-gaps.md](resolved-gaps.md) under "Phase 2 Track F closure":
+>
+> - `G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM` — new deterministic verb;
+>   BT23-008 / BT23-018 production YAML authored.
+> - `G-DSL-GAIN-MEMORY-FN` — formula-valued memory mutation step.
+> - `G-DSL-HAS-ON-DELETION-EFFECT` — new permanent predicate
+>   consulting `effects_for_card` for `OnDeletion` timing. EX1-021
+>   both clauses authored.
+> - `G-ALT-PATH-DIRECTION-INTO` — `AltPathSpec.direction: into` schema
+>   extension + route-resolution threading. Substrate only; ST20-10
+>   warp YAML pending its companion `G-DSL-DISTINCT-TAMER-COLORS`
+>   predicate leaf.
+> - `G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET` —
+>   resolved as **phantom**; the chain dispatcher already worked.
+>   5 tests (BT16-040 / BT17-015 / BT17-027 / BT22-013 / BT22-026)
+>   un-ignored.
+>
+> Plus `G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA` verified as
+> already-shipped upstream; regression coverage added + P-182
+> [All Turns] aura authored.
+>
+> Still open from Track F's plan: `G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH`
+> (deferred — entangled with `G-SELECT-MULTI-MIN` and
+> `G-ZONE-TRASH-TO-DECK` sub-gaps). EX5-015 Clause C remains BLOCKED.
+
+> **Tracker hygiene sweep — 2026-05-17 (Phase 2 Track G):** Medusamon
+> pilot completion. One new DSL predicate substrate ships
+> (`G-OPP-SECURITY-COUNT-LTE`), closure summary in
+> [resolved-gaps.md](resolved-gaps.md) under "Phase 2 Track G closure".
+> Five Track G plan-named DSL gaps (G-EVENT-TARGET-OWNER,
+> G-PLACE-SELF-AS-OPTION-PERMANENT, G-ADD-OPTION-SELF-TO-HAND,
+> G-DSL-LINK-VERB, G-DSL-LINKED-SCOPE, G-MAY-ATTACK-NOW) were already
+> resolved by earlier upstream substrate work; Track G's role for those
+> was the test-tree sweep — stale `#[ignore]` annotations retagged from
+> "BLOCKED: G-XYZ" to "card-local body not authored; substrate closed"
+> across BT21-024 / BT21-025 / BT21-026 / BT21-029 / BT24-016 /
+> BT24-082 / LM-055 / EX11-054. The BT21-026 deletion arm migrated to
+> live YAML using `event_target_owner: opponent`; the BT21-093
+> cost-reduction clause migrated from a `count_lte` aggregate over
+> opponent security to the new native `opponent_security_count_lte`
+> predicate (raw_rust formula `bt21_093_cost_reduction_amount`
+> removed); EX11-054 [All Turns] clause migrated to Track B's
+> `activation_cost: { suspend_self: true }` so the suspend-as-cost
+> semantics gate the body correctly per the engine's single-trigger
+> drainer model. **12 Medusamon cards advanced PARTIAL → IMPLEMENTED.**
+>
+> Still open from Track G's plan: G-AURA-DP-FORMULA (BT21-072 formula
+> AuraBody DP), G-DELAY-SUSPEND-CONDITION (BT24-089 OnSuspend Delay),
+> G-ZONE-TRASH-TO-DECK (BT24-017 trash-to-deck verb), G-AS-SELECTING-PLAYER
+> (BT24-016 cross-permanent select-on-behalf), G-PRED-DP-LTE-AGGREGATE
+> (BT21-093 highest-DP delete).
+
 ## Track C modifier payload YAML shape (2026-05-09) — rich payload parser pending
 
 The Rust engine now has typed `ModifierPayload` storage and consult sites for
@@ -51,6 +227,39 @@ modifiers, e.g.:
 Until that parser lands, cards needing string/list/profile payloads should use
 `raw_rust` install hooks rather than hidden scalar encodings.
 
+## Phase 2 Track E (2026-05-17) — reveal-ordering DSL verbs landed
+
+The author-facing residual from `G-ROCKS-REVEAL-ORDERING` has landed: two
+new DSL verbs lower onto the already-shipped `select_reveal` /
+`select_effect_choice` / `select_ordered_permutation` / `place_remainder_on_deck`
+engine helpers. Together with the existing `reveal_top_deck` they express
+the canonical "reveal N, choose 1 to hand or as source, place rest top or
+bottom in any order" pattern that recurs across Rocks search effects and
+every general-purpose Training / Memory Boost / search clause.
+
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl track_e_reveal_ordering`
+- `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_167 ex8_047 bt9_103`
+
+| DSL verb | Engine target | Card drivers |
+|---|---|---|
+| `choose_from_reveal: { of, filter, destination, bind_as?, optional?, prompt }` | `EffectContext::select_reveal` + routing to `add_to_hand_from_reveal` / `return_to_deck_from_reveal` / `place_as_bottom_source` | P-167 (hand and `bottom_source_of`), EX8-047 (two sequential hand picks) |
+| `order_remainder: { of, destinations: [deck_top, deck_bottom?] }` | `EffectContext::select_effect_choice` (when two destinations) + `select_ordered_permutation` + the `place_remainder_on_deck` placement loop | P-167 (player choice), EX8-047 (single `[deck_bottom]`) |
+
+The `destination` enum for `choose_from_reveal` accepts the bare scalars
+`hand`, `deck_top`, `deck_bottom`, or the mapping
+`bottom_source_of: { target: <binding> }` — matching the four routing
+shapes Rocks printed text actually requires. Other Rocks-flavoured
+"choose-to-play-free" destinations were not seen on any pool card and are
+deferred until they appear.
+
+Closure scope: `G-ROCKS-REVEAL-ORDERING` from
+`qa/archetype-qa/dsl/rocks-gap-inputs-2026-05-03.md` §50 is closed.
+`G-ROCKS-OPTION-SELF-DISPOSITION` §123 has its single remaining raw_rust
+target removed (P-206 → native `add_this_option_to_hand`; the other five
+target YAML files were already DSL-clean by 2026-05-10). The
+`G-ADD-OPTION-SELF-TO-HAND` DSL entry called out in P-206 test comments is
+also closed.
+
 ## Track E (2026-05-08) — engine helpers shipped, DSL verbs landed
 
 Track E shipped 8 zone-movement helpers + the owner-routing fix at the engine layer. The ten deferred DSL verbs now parse, validate, compile, and lower into the corresponding helpers. Evidence:
@@ -85,22 +294,33 @@ Format per entry:
 ```
 
 ## Royal Knights — filtered breeding permanent target  [RK-G001]
+- Status 2026-05-17: **CLOSED for substrate** by Phase 2 Track J PR 1.
+  `SelectOwnBreedingPermanentArgs::filter: PredicateSpec` is now wired
+  through compile → lowering → install: the predicate is evaluated against
+  `PredicateSubject::BreedingPermanent` before `select_own_breeding_permanent`
+  opens, so a non-matching breeding permanent short-circuits the step
+  instead of opening a misleading prompt. The companion `BreedingPermanentRef`
+  binding now resolves to a sentinel `PermanentHandle { index: BREEDING_TARGET }`,
+  which `place_as_bottom_source_observed` already recognizes — so the
+  printed shape "place a hand card under a [King Drasil_7D6] in breeding"
+  is expressible end-to-end. Proof: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2g_breeding_selection::select_own_breeding_permanent_filter`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- phase2f1_placement_steps::place_as_bottom_source_accepts_breeding_permanent_target_from_hand_source`.
+  Card authoring for BT13-093 / BT20-083 / BT13-110 / EX11-053 lands in
+  Phase 2 Track J PR 2.
 - Effect text: BT13-093: "[On Deletion] Place 1 Digimon card with the [Royal Knight] trait from your hand under a [King Drasil_7D6] in the breeding area as its bottom digivolution card." BT20-083: "[On Deletion] You may place this card as the bottom digivolution card of your [King Drasil_7D6] in the breeding area."
-- Missing DSL verb / step kind / predicate: `select_own_breeding_permanent` has no `filter` field, so YAML cannot require that the selected breeding permanent is actually `[King Drasil_7D6]`.
-- Lowers to engine API: existing breeding pending-selection and `place_as_bottom_source` flow once the selected breeding permanent can be filtered by top-card name/card id.
-- Suggested DSL syntax:
+- DSL surface (production form):
   ```yaml
   - select_own_breeding_permanent:
       bind_as: kd
       filter: { name_is: "King Drasil_7D6" }
       prompt: "Choose your [King Drasil_7D6]"
       then:
-        - place_as_bottom_source: { source: ..., target: kd }
+        - place_as_bottom_source: { source: <hand-binding>, target: kd }
   ```
 - First reported: 2026-05-05 Royal Knights batch 1 implementation pass.
 
 ## Royal Knights — source-bound return-self cost into reduced-cost hand play  [RK-G002]
 - Effect text: EX11-071: "[Main] By returning this Tamer to the bottom of the deck, you may play 1 play cost 4 or higher [Royal Knight] or [LIBERATOR] trait card from your hand with the play cost reduced by 2."
+- Status 2026-05-17: the **return-self-cost half** of this gap closed under Phase 2 Track B (Engine Gap: Generic `.activation_cost(...)` builder hook for triggered abilities, see `qa/resolved-gaps.md`). DSL `activation_cost: { return_self_to_deck_bottom: true }` lifts onto `EffectBuilder::activation_cost(ctx.return_self_to_deck_bottom_as_cost)`; the chained body fires after the source Tamer has left the field. The remaining **reduced-cost hand play half** is card-author DSL: stitch the existing hand selection + `play_from_hand: { cost: { reduce: 2 } }` after the activation-cost step.
 - Missing DSL verb / step kind / predicate: a Main-phase activation that pays a source-bound `return_to_deck { target: source, position: bottom }` cost and then opens a player-visible hand play selection whose actual payment is reduced by 2.
 - Lowers to engine API: existing source permanent binding, hand selection, and pay-cost flow need a reusable action/pending-selection wrapper so the return cost and reduced play payment stay one legal choice.
 - Suggested DSL syntax:
@@ -128,7 +348,7 @@ Format per entry:
 ## Royal Knights full pool pass — residual reusable DSL/engine gaps  [RK-G005]
 - Status: PARTIAL pool pass completed on 2026-05-05. The Royal Knights resolver pool has 72 unique cards and now has 72 Rust DSL YAML entries. Fully unsupported clauses were left as explicit YAML comments plus ignored Rust tests instead of hidden approximations.
 - Newly routed or reaffirmed blocked cards/clauses: `BT13-019`, `BT13-030`, `BT13-075`, `BT13-087`, `BT13-102`, `BT13-111`, `BT13-112`, `BT15-092`, `BT17-077`, `BT19-093`, `BT20-017`, `BT20-021`, `BT20-045`, `BT20-056`, `BT22-025`, `BT22-041`, `BT22-052`, `BT23-013`, `BT23-035`, `BT23-047`, `BT23-057`, `BT23-072`, `EX8-073`, `EX10-068`, and `EX11-053`.
-- Missing DSL/engine areas: broader union selection across hand/trash/breeding/source stacks with uniqueness/name-exclusion filters; play from King Drasil or other source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; card-specific post-Blast-DNA effect bodies after the covered field+hand-material Counter path (`BT17-078`, `BT20-045`, `BT20-060`, `BT20-076`, `BT20-081`, `EX6-011`, `EX6-029`); residual native `<Blast Digivolve>` helper APIs; Option battle-area carrier lifecycle for non-Delay options; security-trash self-dispatch; security search/play card-local follow-up bodies; security-removed card-local follow-up shapes beyond the now-wired battle/effect `OnOpponentSecurityRemoved` / `OnOwnSecurityRemoved` timing payloads; generalized source-list Partition lowering beyond authored card clauses; and unusual replacement/security-trash costs tied atomically to prevention. `when: on_place_security`, alias `when: on_added_to_security`, `when: on_discard_security`, and the printed-text alias `when: on_any_digimon_played` are now wired as of 2026-05-08 with event-card/effect-cause payloads where applicable. Immediate may-attack / force-attack / cancel-attack / open-counter-window prompts are now covered by the Track D DSL verbs listed below. **Track E (2026-05-09)** shipped DSL verbs for self-to-security, Option-self-to-security, stacked-card-to-security, bulk trash/deck movement, forced hand reduction, self-bounce, permanent-to-security observed movement, and security-stack search; remaining card-side work is called out under the narrower per-card gaps below.
+- Missing DSL/engine areas: broader union selection across hand/trash/breeding/source stacks with uniqueness/name-exclusion filters; hand-main source placement; opponent hidden-hand choices; result-dependent fallback branches; combined trash/security/color/source-count formulas; token registration for Atho/Rene/Por and Hinukamuy; card-specific post-Blast-DNA effect bodies after the covered field+hand-material Counter path (`BT17-078`, `BT20-045`, `BT20-060`, `BT20-076`, `BT20-081`, `EX6-011`, `EX6-029`); residual native `<Blast Digivolve>` helper APIs; Option battle-area carrier lifecycle for non-Delay options; security-trash self-dispatch; security search/play card-local follow-up bodies; security-removed card-local follow-up shapes beyond the now-wired battle/effect `OnOpponentSecurityRemoved` / `OnOwnSecurityRemoved` timing payloads; generalized source-list Partition lowering beyond authored card clauses; and unusual replacement/security-trash costs tied atomically to prevention. **Updated 2026-05-20 (Track J S1.2 + S1.3):** count-capped / name-unique multi-pick play from a carrier's digivolution sources is now FULLY CLOSED via the `select_materials` DSL step + batch `play_from_materials` (see `G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES`); S1.3 closed the final breeding-carrier residual (King Drasil's resident stack) by appending the `BREEDING_SOURCE_SELECT` action sub-range (`ACTION_SPACE_SIZE` 2168→2192). `when: on_place_security`, alias `when: on_added_to_security`, `when: on_discard_security`, and the printed-text alias `when: on_any_digimon_played` are now wired as of 2026-05-08 with event-card/effect-cause payloads where applicable. Immediate may-attack / force-attack / cancel-attack / open-counter-window prompts are now covered by the Track D DSL verbs listed below. **Track E (2026-05-09)** shipped DSL verbs for self-to-security, Option-self-to-security, stacked-card-to-security, bulk trash/deck movement, forced hand reduction, self-bounce, permanent-to-security observed movement, and security-stack search; remaining card-side work is called out under the narrower per-card gaps below. **Updated 2026-05-20 (Track J S2.1):** the ally-played may-attack observer shape (`G-ALLY-PLAYED-MAY-ATTACK`, BT20-017 / BT23-013) was filed and closed as already-composable — `may_attack_now` accepts `attacker: this | event_target | <named binding>`, so the printed "this Digimon may attack" / "1 of your Digimon may attack" clauses lower from landed primitives; see that entry above. **Updated 2026-05-20 (Track J S2.2):** the Jesmon-family hand/trash name-excluded play (`G-UNION-HAND-TRASH-NAME-EXCLUSION`, BT23-013) is now RESOLVED — the DSL `select_union_zone` lowering now applies its `filter` (it previously dropped it), and a new `name_not_shared_by_field_digimon` predicate leaf models "can't play cards with the same names as any of your Digimon"; see that entry below. Step 0 against printed text corrected the plan premise: BT20-017 has no union play, BT13-019 plays from trash-or-breeding-sources (separate gap), and BT20-021 *places* a source as a cost (separate gap). **Updated 2026-05-20 (Track J S2.3):** the last Royal Knights token, Hinukamuy (BT23-057 Gankoomon), is now registered in `code/digimon-engine/src/token_registry.rs` with its printed stats — Digimon/White/6000 DP/`<Alliance> <Reboot> <Blocker>` — mirroring the Atho/René/Por registration. Token registration for Atho/René/Por and Hinukamuy is now FULLY CLOSED; the remaining BT23-057 work (multi-card trash-to-deck cost reduction, dynamic play-cost delete) is unchanged and the production card body is unauthored (Track J PR 3).
 - Workaround policy: no approximations were used for these blockers. If a printed clause required one of the missing primitives, the YAML either implemented an independent faithful slice such as a keyword/security play/simple trigger, or used a load-only gap stub.
 - Verification: targeted `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- <card_filter> --nocapture` passed for the final 25 filters, with one active load test and one ignored gap test per card.
 - First reported: 2026-05-05 Royal Knights full pool implementation pass.
@@ -150,34 +370,45 @@ Format per entry:
 - Gap kind: hybrid. Some engine primitives exist (`battle:`, static keyword grants, `ModifierType::VortexCanAttackPlayer`), but the remaining Zephagamon clauses need DSL result bindings, formulas, conditional aura lowering, and card-specific faithful branch wiring.
 - First reported: 2026-05-03 (Zephagamon Battle Engine Prep Task 4)
 
-## BT22-098 / P-229 — event-gated Delay activation windows
+## BT22-098 / P-229 — event-gated Delay activation windows — RESOLVED 2026-05-21
 - Effect text: BT22-098: "[Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> ... 1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3." P-229: "[Your Turn] When any of your [Mirai Kinosaki]s are played, <Delay> ... 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3."
-- Status: partially resolved 2026-05-02 for the BT22-098 "when Arisa suspends" slice. `kind: delay` now accepts body-level `active_when`, preserves `event_card_name_contains`, and lowers `trigger: on_suspend` to `DelayTrigger::OnEvent(EffectTiming::OnSuspend)` with the condition evaluated when the event fires.
-- Remaining missing DSL verb / step kind / predicate: `on_ally_played` for P-229 is still virtual/skipped by the timing map, and the process body still depends on faithful `effect_initiated_digivolve` support for hand-zone targets, Puppet/LIBERATOR trait filters, and cost reduction.
-- Lowers to engine API: `DelayTrigger::OnEvent(EffectTiming::OnSuspend)` plus an event predicate on the delayed Option's `DelayEffect`, preserving the rule that Delay effects cannot activate the turn the option was placed.
-- Suggested DSL syntax:
+- Status: **closed** 2026-05-21 (gap id `PUPPETS-G004`). The BT22-098 `on_suspend`
+  slice closed 2026-05-02; the P-229 `on_ally_played` slice closed 2026-05-21.
+- Closed via (two halves):
+  - DSL: `code/digimon-engine/src/dsl_cards/lower_delay.rs` now maps
+    `CompiledTiming::OnAllyPlayed` → `DelayTrigger::OnEvent(EffectTiming::OnAllyPlayed)`
+    alongside the existing `on_suspend` / `on_unsuspend` arm.
+  - Engine: `code/digimon-engine/src/effect_queue.rs` `enqueue_triggered` now fans
+    `TriggerSource::EnteredField` dispatches out to
+    `enqueue_event_gated_delayed_options` (previously only `EventObserved` /
+    `AttackTargetChanged` reached it).
+- Working DSL syntax (P-229 production YAML, `cards/p/P-229.yaml`):
   ```yaml
   - kind: delay
-    trigger: on_suspend
-    active_when:
-      event_card_name_contains: "Arisa Kinosaki"
-    process:
-      - effect_initiated_digivolve:
-          target: { trait: Puppet }
-          into: { trait_all: [Puppet, LIBERATOR], zone: hand }
-          cost_delta: -3
-
-  - kind: delay
     trigger: on_ally_played
-    condition: { event_card_name_is: "Mirai Kinosaki" }
+    active_when:
+      your_turn: true
+      event_target_owner: you
+      event_card_name_contains: "Mirai Kinosaki"
     process:
-      - effect_digivolve:
-          from: hand
-          target_filter: { trait_has: LIBERATOR, level_lte: 6 }
-          cost_reduction: 3
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter: { all_of: [ { kind: digimon }, { zone: [battle_area] } ] }
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: false
+          filter:
+            all_of: [ { kind: digimon }, { trait_has: LIBERATOR }, { level_lte: 6 } ]
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 3 }
+          ignore_requirements: false
   ```
-- Gap kind: hybrid (BT22-098 event trigger/predicate lowering is covered; remaining process vocabulary/lowering and P-229 timing support stay open).
-- First reported: 2026-04-28 (Puppets archetype assessment)
+- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_229` — 13 tests pass, 0 ignored.
+- First reported: 2026-04-28 (Puppets archetype assessment); resolved 2026-05-21.
 
 ## EX9-032 / EX7-027 / BT22-036 — replacement cause predicate and `active_when` lowering
 - Effect text: "[All Turns] [Once Per Turn] When this Digimon would leave the battle area other than by your effects, by deleting 1 of your Tokens or other [Puppet] trait Digimon, prevent it from leaving."
@@ -298,6 +529,64 @@ Format per entry:
 - Supported DSL syntax for the resolved immediate prompt: `may_attack_now: { attacker: source, targets: any, optional: true }`. Persistent attack-permission grants remain a separate modifier/aura problem.
 - First reported: 2026-04-28
 
+## Royal Knights — ally-played may-attack observer  [G-ALLY-PLAYED-MAY-ATTACK]
+- Status: **RESOLVED / already-composable on 2026-05-20** (Phase 2 Track J Task S2.1). Filed and closed in the same pass — this gap previously had no canonical entry, only a name in the Royal Knights `RK-G005` rollup. No engine or DSL code change was needed. Full resolution detail in [qa/resolved-gaps.md](resolved-gaps.md#engine--dsl-gap-g-ally-played-may-attack--already-composable-2026-05-20-phase-2-track-j-task-s21).
+- Card consumers: `BT20-017` Jesmon, `BT23-013` Jesmon.
+- Effect text: BT20-017 — "[Your Turn] [Once Per Turn] When any of your other Digimon are played, delete 1 of your opponent's Digimon with 8000 DP or less. Then, 1 of your Digimon may attack." BT23-013 — "[Your Turn] [Once Per Turn] When any of your other Digimon are played, this Digimon may attack."
+- Step 0 finding: `may_attack_now` is NOT hard-bound to `self`. Its `attacker:` is a `BindingRef`; the lowering (`combat.rs::resolve_permanent_ref` → `binding_ref.rs::resolve_binding_ref`) already resolves `event_target` to the event-played permanent (`CompiledBindingRef::EventTarget` ← `TriggerSource::EnteredField.event_permanent`), as well as `this` (`Source`) and any named `bind_as` binding (`Binding`). The printed text moreover differs from the original substrate-plan premise: BT23-013 grants the attack to "**this** Digimon" (the observer source, `attacker: this`) and BT20-017 to "**1 of your** Digimon" (a player choice — `select_own_permanent` `bind_as` then `attacker: <binding>`); neither uses the event-played Digimon as the attacker. All three attacker shapes were already composable from primitives landed on/before BASE.
+- Supported DSL syntax: `may_attack_now: { attacker: event_target, targets: any, optional: true }` (event-played Digimon), `attacker: this` (observer source), or `attacker: <named binding>` from a prior `select_*` step. PASS surfaces through `build_action_mask` for the optional `may` (§17).
+- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- effect_granted_attack` (15 pass — incl. `may_attack_now_event_target_yaml_lowers_to_event_target_binding`, `may_attack_now_event_target_grants_attack_to_event_played_digimon`, `may_attack_now_event_target_decline_branch_starts_no_attack`, `may_attack_now_this_vs_event_target_select_different_attackers`, `may_attack_now_event_target_respects_summoning_sickness`).
+- Card-authoring residual (NOT substrate): production `BT20-017.yaml` / `BT23-013.yaml` are later Track J card-authoring work (PR 2 / PR 3), needing the Atho/René/Por token (registered, Track J PR 1). The Union hand+trash play primitive (`G-UNION-HAND-TRASH-NAME-EXCLUSION`, Task S2.2) is now RESOLVED — see that entry below.
+- First reported: 2026-05-05 (Royal Knights full pool implementation pass, as part of `RK-G005`).
+
+## Royal Knights — Jesmon-family hand/trash name-excluded play  [G-UNION-HAND-TRASH-NAME-EXCLUSION]
+- Status: **RESOLVED on 2026-05-20** (Phase 2 Track J Task S2.2). Two genuine substrate pieces were missing and are now closed. Filed and closed in the same pass — this gap previously had no canonical entry, only a name in the Royal Knights `RK-G005` rollup and in the BT23-013 test ignore string. Full resolution detail in [qa/resolved-gaps.md](resolved-gaps.md#engine--dsl-gap-g-union-hand-trash-name-exclusion--resolved-2026-05-20-phase-2-track-j-task-s22).
+- Card consumers: `BT23-013` Jesmon is the **only** genuine consumer of this exact "hand OR trash, name-restricted, exclude names already in play" shape. The substrate-plan premise also named BT20-017 / BT13-019 / BT20-021, but Step 0 against printed text found those are different mechanics — see "Plan-premise correction" below.
+- Effect text (BT23-013, the genuine consumer): "[When Digivolving] [When Attacking] You may play 1 [Atho, René & Por] Token (…) or, **from your hand or trash, 1 Digimon card with [Sistermon] in its name without paying the cost. This effect can't play cards with the same names as any of your Digimon.**"
+- Step 0 finding — what was actually missing:
+  - (a) The DSL `select_union_zone` step (hand+trash in one prompt) carried a `filter: PredicateSpec`, but the engine lowering `install_select_union_zone` in `code/digimon-engine/src/dsl_cards/step/selections.rs` passed a hardcoded `|_game, _card| true` accept-all closure and **dropped the compiled filter entirely**. The engine helper `EffectContext::select_union_zone` itself already applies whatever filter it is given (proven by `tests/selection/union_zone.rs::filter_restricts_valid_action_ids`) — so this was a DSL-lowering bug, not an engine-helper gap. Name-restriction (`name_contains: Sistermon`) was silently inoperative for every union-zone card.
+  - (b) No predicate leaf could express "this candidate card's name is NOT shared by any of my battle-area Digimon". The existing `no_permanent` existential matches against fixed predicate fields and cannot reference the candidate card's own name; `color_matches_any_field_digimon` was the closest analog but for colors.
+- What was added:
+  - `name_not_shared_by_field_digimon: { of: <player> }` — a card-subject predicate leaf. True when no battle-area Digimon of the scoped player has the candidate card's effective name (field names read via `synth_identity`, so a `ChangeBaseCardName` overlay on a field Digimon is respected; the candidate's own name respects a reveal overlay). Exact, case-sensitive comparison, consistent with `name_is` / `name_in`.
+  - The `select_union_zone` lowering now builds an `EffectReadContext` per candidate and evaluates the compiled `filter` against each hand/trash `CardSource`, exactly as `install_select_hand` / `install_select_trash` already did.
+- Supported DSL syntax:
+  ```yaml
+  - select_union_zone:
+      of: you
+      zones: [hand, trash]
+      optional: true            # printed "You may …" — PASS stays legal (§17)
+      prompt: Play 1 Sistermon from hand or trash
+      filter:
+        all_of:
+          - name_contains: Sistermon
+          - name_not_shared_by_field_digimon: { of: you }
+  ```
+  The name-exclusion shapes the legal action mask — every surviving candidate from hand AND trash surfaces through `pending_selection`; it never auto-picks.
+- Plan-premise correction: the substrate plan named four cards. Printed text (Step 0) shows only BT23-013 matches the "hand+trash + own-name-exclusion" shape. **BT20-017** has no union play at all (only an Atho/René/Por token play). **BT13-019** Gankoomon plays from *trash OR a breeding-area Digimon's digivolution sources* with a *fixed* name-exclusion (`Gankoomon` / `Omnimon`) — a genuinely distinct gap, now filed canonically as `G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY` (see entry below), untouched here. **BT20-021** Jesmon GX *places* a Royal Knight card from hand/trash as a digivolution source — a **cost**, not a play, with no name-exclusion — also a distinct gap, now filed canonically as `G-UNION-HAND-TRASH-SOURCE-COST` (see entry below). Both spin-off IDs were discovered during this task's Step 0 and, per the Discovery rider, are filed as their own canonical tracker entries rather than left as narrative-only descriptions here. "Union" is informal shorthand: no printed `<Union>` keyword exists (verified absent from `docs/RULES_CONTEXT.md`).
+- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- s2_2_union` (2 behavioral tests: `union_zone_filter_excludes_in_play_name_across_hand_and_trash`, `union_zone_filter_keeps_all_sistermon_when_field_empty`); `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- name_not_shared_by_field_digimon` (lowering test) and `-- parse_leaf_predicates` (parse test).
+- First failing test (TDD red): `union_zone_filter_excludes_in_play_name_across_hand_and_trash` — before the fix it offered 3 candidates (filter dropped, `name_not_shared_by_field_digimon` silently swallowed into `PredicateSpec::extra`) instead of the 2 legal Sistermon names.
+- Card-authoring residual (NOT substrate): production `BT23-013.yaml` is later Track J card-authoring work (PR 3) — it additionally needs the Atho/René/Por token (registered, Track J PR 1), `<Rush>` / `<Alliance>` keyword slices, and an effect-choice between the token play and the Sistermon union play.
+- First reported: 2026-05-05 (Royal Knights full pool implementation pass, as part of `RK-G005`).
+
+## Royal Knights — Gankoomon trash-OR-breeding-source play with fixed name-exclusion  [G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY]
+- Status: **BLOCKED**.
+- Card consumer: `BT13-019` Gankoomon is the genuine consumer of this dual-zone "trash OR a breeding-area Digimon's digivolution sources" play shape with a *fixed* name-exclusion.
+- Effect text (BT13-019, verified against `data/cards.json`): "＜Blocker＞ (This Digimon can block in the blocker timing.) [On Play] [When Digivolving] You may play 1 Digimon card with [Sistermon] in its name from your trash or 1 Digimon card with the [Royal Knight] trait from the digivolution cards of your Digimon in the breeding area without paying its cost. You can't play [Gankoomon] or [Omnimon] with this effect."
+- What DSL/engine surface is missing:
+  - A single optional play prompt that draws candidates from *two heterogeneous sources at once* — the player's trash AND the digivolution cards (sources) of Digimon in the player's breeding area — each half carrying its own filter (`name_contains: Sistermon` for the trash half; `trait_has: "Royal Knight"` for the breeding-source half).
+  - A *fixed*-name exclusion applied across both halves (`name_in`-style: can't play `[Gankoomon]` or `[Omnimon]`). This is distinct from `name_not_shared_by_field_digimon` (Task S2.2), which is a dynamic exclusion against the names of your field Digimon; here the excluded names are printed literals.
+- The breeding-area-source half is **already covered** by the resolved gap `G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES` (`select_materials` / `select_material` against breeding-area carriers, closed 2026-05-20 Track J S1.3 — see that entry below). The residual unique to this gap is therefore: (1) the *dual-zone* selection that unions a trash filter with a breeding-area-source filter in one player-visible prompt, and (2) the *fixed* `name_in`-style exclusion gating that combined candidate set.
+- Plan-premise note: this card was named in the original substrate plan for `G-UNION-HAND-TRASH-NAME-EXCLUSION` but Step 0 against printed text showed it is a different mechanic; it is filed here as its own canonical entry per the Discovery rider.
+- First reported: 2026-05-20 via S2.2 Step 0.
+
+## Royal Knights — Jesmon GX hand/trash digivolution-source placement cost  [G-UNION-HAND-TRASH-SOURCE-COST]
+- Status: **BLOCKED**.
+- Card consumer: `BT20-021` Jesmon GX is the genuine consumer of this "place a card from hand or trash as a digivolution source" *cost* shape.
+- Effect text (BT20-021, verified against `data/cards.json`): "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.) [On Play] [When Digivolving] [When Attacking] [Once Per Turn] By placing 1 [Royal Knight] trait card from your hand or trash as this Digimon's bottom digivolution card, delete 1 of your opponent's Digimon with as much or less DP as this Digimon. [When Attacking] [Once Per Turn] This Digimon unsuspends. Then, for every 2 [Royal Knight] trait cards in this Digimon's digivolution cards, trash your opponent's top security card." (The clause relevant to this gap is the second one: "By placing 1 [Royal Knight] trait card from your hand or trash as this Digimon's bottom digivolution card, delete …".)
+- What DSL/engine surface is missing: a *cost* (not a play) that requires the player to select 1 card matching a filter (`trait_has: "Royal Knight"`) from a union of two zones — hand OR trash — and place it as the **bottom** digivolution card of the source Digimon, as the price of activating the rest of the effect. There is **no name-exclusion** on this clause. Distinct from `G-UNION-HAND-TRASH-NAME-EXCLUSION` (a *play* with a dynamic own-name exclusion) and from `G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY` (a *play* with a fixed name-exclusion, trash-OR-breeding zones): this is a hand-OR-trash *cost* that places the selected card as a bottom digivolution source rather than playing it.
+- Plan-premise note: this card was named in the original substrate plan for `G-UNION-HAND-TRASH-NAME-EXCLUSION` but Step 0 against printed text showed it is a different mechanic (a cost, not a play); it is filed here as its own canonical entry per the Discovery rider.
+- First reported: 2026-05-20 via S2.2 Step 0.
+
 ## BT22-015 — count same-level pairs in own stack
 - Status: RESOLVED on 2026-05-07. `CompiledPerSelector::SameLevelPairsInSources` counts source cards below the top card by level and sums `count / 2` per level bucket; `select_count_capped_multi.max` now accepts `{ formula: ... }`; and the DSL wrapper supports `zone: battle_area` to bind a `PermanentList` for `per_selected`. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- source_stack_aggregate_formula_reads_source_levels phase2d_select_count_capped_multi` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_015_when_digivolving_bottom_decks_n_opp_digimon_per_same_level_pair`.
 - Effect text: "[When Digivolving] For every 2 cards with the same level in this Digimon's digivolution cards, return 1 of your opponent's Digimon to the bottom of the deck."
@@ -315,41 +604,43 @@ Format per entry:
 - First reported: 2026-04-28
 ---
 
-## BT23-005 — [Your Turn] cost reduction when digivolving into Reptile/Dragonkin
-- Effect text: "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Reptile] or [Dragonkin] trait, reduce the digivolution cost by 1."
-- Missing DSL verb / step kind / predicate: `CostReductionBody` in `digimon-dsl/src/clause.rs` has no `when_this_digivolves_into` + `target_trait_has` trigger form. Existing variants are `when_playing_this: bool` and `when_any_ally_played: Option<PredicateSpec>`. Neither captures "THIS permanent is the digivolution source AND the target Digimon card has trait X".
-- Companion engine gap: `scan_before_pay_cost_reduction` in `game_actions.rs` constructs `EffectReadContext` from the source permanent only — no reference to the digivolution-target hand card is threaded to the condition closure, so a predicate cannot inspect the target's traits.
-- Lowers to engine API: `BeforePayCost` timing exists; fixed-amount cost reduction exists. Missing: trigger-predicate variant + target-card threading in `scan_before_pay_cost_reduction`.
-- Suggested DSL syntax:
+## BT23-005 — [Your Turn] cost reduction when digivolving into Reptile/Dragonkin  [G-BEFORE-PAY-COST-DIGIVOLVE-TARGET]
+- **Status: RESOLVED 2026-05-17** (Phase 2 Track H). See `qa/resolved-gaps.md` § "Phase 2 Track H closure — 2026-05-17" for the substrate landed (`cost_target` + `source_is_cost_target_permanent` predicates, digivolve-cost-calc target threading).
+- Authoring pattern:
   ```yaml
-  - scope: own
-    kind: cost_reduction
+  - kind: cost_reduction
     reduction_timing: before_pay_cost
-    when_this_digivolves_into:
-      target_trait_has: [Reptile, Dragonkin]
-    active_when: { your_turn: true }
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { trait_has: [Reptile, Dragonkin] }
     amount: 1
   ```
+- Card-authoring note: BT23-005 YAML still needs to be updated to use the new pattern; P-117 has been migrated as the proof-of-substrate (`code/digimon-engine/cards/p/P-117.yaml`).
 - First reported: 2026-04-27 (BT23-005 batch-implement-cards-rust-dsl)
-- Also blocks: P-117 clause 0 — "[Your Turn][OPT] When this Digimon would digivolve into a card with the [Free] trait, if you have a Tamer, reduce the digivolution cost by 1." Same structural gap: need `target_trait_has: Free` in a `when_this_digivolves_into` trigger form. Cross-listed 2026-05-04.
+- Also blocks (now resolvable): P-117 clause 0 — "[Your Turn][OPT] When this Digimon would digivolve into a card with the [Free] trait, if you have a Tamer, reduce the digivolution cost by 1." Migrated and validated 2026-05-17.
 
 ---
 
 ## P-117 — inherited When Attacking color-count predicate  [G-DSL-SELF-COLOR-COUNT-GTE]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — `self_color_count_gte` exists; P-117 IMPLEMENTED. The "Remaining sibling blocker" note below is now stale: BT12-031 clause 1b ships via `self_color_count_gte` in a `while_condition` (see the BT12-031 entry).
+
 - Effect text: "[When Attacking] If this Digimon has 2 or more colors, ＜Draw 1＞ (Draw 1 card from your deck.)"
-- Missing DSL verb / step kind / predicate: `self_color_count_gte: N` boolean predicate (or equivalent) evaluating whether the carrier permanent's top card has N or more distinct colors. No such predicate exists in the DSL's `PredicateSpec` / `CompiledPredicate` hierarchy.
+- Status 2026-05-11: resolved for top-card color counts. `self_color_count_gte: N` is now in `PredicateSpec` / `CompiledPredicate` and evaluates the predicate subject/source permanent's synthesized top-card colors.
 - DCGO reference: `P_117.cs` lines 203-211 — `card.PermanentOfThisCard().TopCard.CardColors.Count >= 2`. Note: DCGO checks ONLY the top card's colors, not the union of the full digivolution stack. The DSL predicate should align with DCGO behavior: count the top card's colors only.
 - Lowers to engine API: `Game::player(p).battle_area[i].top_card()` → `card_data[idx].colors.len()` comparison; no new engine primitive needed, only a DSL predicate leaf that invokes `ctx.source_permanent` top-card color count.
-- Suggested DSL syntax:
+- DSL syntax:
   ```yaml
   condition:
     self_color_count_gte: 2
   ```
   Evaluates as: `ctx.source_permanent.and_then(|h| perm.top_card().colors().len()).unwrap_or(0) >= 2`.
   Alternative: `source_top_card_color_count_gte: 2` if the naming convention favors explicit subject.
-- Workaround: omit condition (over-fires — Draw fires unconditionally on all carriers including mono-color). Negative-condition tests are `#[ignore = "pending: G-DSL-SELF-COLOR-COUNT-GTE from qa/dsl-vocab-gaps.md"]`.
 - Gap kind: DSL only (engine has the data; only the predicate leaf is missing).
-- Cards blocked: P-117 clause 1 (inherited When Attacking); BT12-031 clause 1b ([All Turns] SecurityAttackPlus+Blocker conditional on 2+ colors in digi-cards — same predicate needed, but evaluated against the FULL digivolution stack's union of colors, not just the top card).
+- Cards unblocked: P-117 clause 1 (inherited When Attacking).
+- Remaining sibling blocker: BT12-031 clause 1b still needs a distinct stack-union color-count predicate ("2+ colors in digi-cards"), not this top-card-only predicate.
 - First reported: 2026-05-04 (P-117 batch-implement-cards-rust-dsl)
 
 ---
@@ -370,23 +661,12 @@ Format per entry:
 
 ---
 
-## BT24-016 — `condition:` field on `AltPathSpec` (alt-digivolve activation gates)  [G-ALT-PATH-CONDITION]
-- Effect text: "[Hand] [Main] If you have [Owen Dreadnought], by placing 1 [Dimetromon] from your trash as any of your [Elizamon]'s bottom digivolution card, it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements."
-- Missing DSL verb / step kind / predicate: `AltPathSpec` (in `digimon-dsl`) has `#[serde(deny_unknown_fields)]` and no `condition:` field. The "If you have [Owen Dreadnought]" gate cannot be expressed; the activated alt-path becomes available whenever the source filter (Elizamon on field) plus the extra_cost (Dimetromon in trash) are satisfied, regardless of Owen presence.
-- Lowers to engine API: The activated-digivolve activation check already evaluates predicates via the standard `PredicateSpec` path; the gap is that `AltPathSpec` doesn't carry an extra activation predicate.
-- Suggested DSL syntax: add `condition: Option<PredicateSpec>` to `AltPathSpec` (evaluated on top of the existing source-filter / extra-cost gates).
-  ```yaml
-  alt_paths:
-    - kind: activated_digivolve
-      condition:
-        all_of:
-          - exists: { of: you, zone: [battle_area], kind: tamer, name_contains: "Owen Dreadnought" }
-      from: { name_contains: "Elizamon" }
-      cost: 3
-      ignore_requirements: true
-      extra_cost: ...
-  ```
-- First reported: 2026-04-27 (BT24-016 batch-implement-cards-rust-dsl)
+## ~~BT24-016 — `condition:` field on `AltPathSpec` (alt-digivolve activation gates)  [G-ALT-PATH-CONDITION]~~ — RESOLVED 2026-05-15
+
+- **Status:** Schema + consumer wired. `AltPathSpec.condition: Option<PredicateSpec>` is now accepted by the DSL parser, compiles to `CompiledAltPath.condition: Option<Box<CompiledPredicate>>`, and is evaluated in `code/digimon-engine/src/dna_digivolve.rs::find_matching_alt_path` after the source-filter check (Digivolve route).
+- **Card-side authoring follow-up:** BT24-016's YAML still leaves the Owen Dreadnought gate unenforced; populating `condition:` on the activated_digivolve path is card-local work, not substrate.
+- **Evidence:** `cargo test --manifest-path code/digimon-dsl/Cargo.toml`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl_eval_arm_coverage`.
+- **Full entry archived to:** `qa/resolved-gaps.md` under "DSL Gap: `AltPathSpec.condition` field for alt-digivolve activation gates".
 
 ---
 
@@ -412,7 +692,17 @@ Format per entry:
 
 ---
 
-## BT21-024 — Opponent security count condition  [G-OPP-SECURITY-COUNT-LTE]
+## ~~BT21-024 — Opponent security count condition  [G-OPP-SECURITY-COUNT-LTE]~~ — RESOLVED 2026-05-17 (Phase 2 Track G)
+
+See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track G closure" entry.
+`PredicateSpec.opponent_security_count_lte: Option<DpConstraint>` and the
+`_gte` sibling now compile through `CompiledPredicate` and evaluate
+against `rctx.security_count(rctx.opponent_id())`. BT21-093 cost-reduction
+clause migrated to use the new predicate; BT21-024's negative-condition
+test was already passing through the `count_lte` aggregate over
+`{ zone: [security], owner: opponent }`.
+
+[ORIGINAL ENTRY BELOW]
 
 - Effect text: "[On Play][When Digivolving] If your opponent has 5 or fewer security cards, they place 1 card from their hand as the bottom security card. Then, trash their top security card."
 - Missing DSL verb / step kind / predicate: `opponent_security_count_lte` — a `PredicateSpec` / `BoolPredicate` leaf that checks the OPPONENT's (not controller's) security stack count. The existing `security_count_lte: u8` field in `PredicateSpec` evaluates `rctx.security_count(rctx.player)` (controller's security). No `of:` field exists on the predicate to redirect the player lookup. A separate `opponent_security_count_lte: Option<u8>` field is needed.
@@ -433,7 +723,16 @@ Format per entry:
 
 ---
 
-## BT21-024 — Outer-tail continuation lost when `select_hand` has no candidates  [G-SELECT-EMPTY-OUTER-TAIL]
+## ~~BT21-024 — Outer-tail continuation lost when `select_hand` has no candidates  [G-SELECT-EMPTY-OUTER-TAIL]~~ — RESOLVED 2026-05-20 (DNA Omnimon completion)
+
+- **Status:** Closed. The `select_hand` empty-candidate path now drains the outer tail —
+  when `install_select_hand` finds no valid candidates it runs the parked outer-tail steps
+  (e.g. `trash_top_security`) instead of silently discarding them. Landed in the
+  `complete-dna-omnimon-archetype` change; the empty-hand behavioral test is re-enabled and
+  passing. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon completion closure —
+  2026-05-20". Original entry retained below for provenance.
+
+[ORIGINAL ENTRY BELOW]
 
 - Effect text: "[On Play][When Digivolving] ... Then, trash their top security card." — the `trash_top_security` step after `as_selecting_player` must fire even when the opponent has no hand cards.
 - Engine gap: `install_select_hand` in `code/digimon-engine/src/effect_context/selections.rs` (lines 177–179) returns early without installing a `PendingSelection` when `valid_action_ids.is_empty()` (opponent has no hand cards). When this early-return fires, no selection callback is ever installed, so `drain_dsl_outer_tail` (which is called from the selection callback in `selections.rs:47`) is never executed. Steps that `park_outer_tail` placed after the `as_selecting_player` block — specifically `trash_top_security` — are silently discarded.
@@ -685,10 +984,11 @@ Format per entry:
 - Gap kind: resolved DSL timing surface. Card-local YAML can now use the faithful timing token instead of the `when_attacking` workaround.
 - First reported: 2026-05-03 (BT21-102 Tai Kamiya, batch-implement-cards-rust-dsl)
 
-## BT21-102 / BT15-096 — `play_cost_lte` formula-valued / binding-relative variant
+## BT21-102 / BT15-096 — `play_cost_lte` formula-valued / binding-relative variant  [G-DSL-DISTINCT-TAMER-COLORS-FORMULA]
 - Effect text: BT21-102 Tai Kamiya — "[Main] [Once Per Turn] You may play 1 [ADVENTURE] or [Hero] trait card with a play cost of 2 or less from your hand without paying the cost. For each of your Tamers' colors, add 1 to this effect's play cost maximum."
 - Effect text: BT15-096 Supreme Connection! — "[Delay] 1 of your Digimon with the [Machine] or [Cyborg] trait may play 1 Digimon card with a play cost less than or equal to that Digimon's play cost from your hand with the play cost reduced by 3."
-- Status: RESOLVED on 2026-05-10. `PredicateSpec::play_cost_lte` now accepts either the legacy literal threshold or `{ formula: ... }`. Formula thresholds compile through `CompiledDpConstraint`, evaluate during selection-mask construction, and can read `binding_play_cost` from a previously selected card/permanent binding. BT21-102's color-scaled cap is also covered by `distinct_colors_count`.
+- **Status: RESOLVED 2026-05-17** (Phase 2 Track A finalization; formula primitive landed 2026-05-10). Phase 2 Track A swept stale references and confirmed coverage in `tests/dsl/group7_predicate_batch.rs` + `tests/dsl/group7_formula_batch.rs`. The companion BoolPredicate wrapping `G-DSL-DISTINCT-TAMER-COLORS` (ST20-10 disjunct) is closed by the same formula leaf — `play_cost_lte: { formula: { distinct_colors_count: ... } }` covers both shapes.
+- Status (legacy): RESOLVED on 2026-05-10. `PredicateSpec::play_cost_lte` now accepts either the legacy literal threshold or `{ formula: ... }`. Formula thresholds compile through `CompiledDpConstraint`, evaluate during selection-mask construction, and can read `binding_play_cost` from a previously selected card/permanent binding. BT21-102's color-scaled cap is also covered by `distinct_colors_count`.
 - Lowers to engine API: `card.play_cost <= rctx.eval_formula(formula)` — engine already has formula evaluation and per-card play_cost reads.
 - DSL syntax:
   ```yaml
@@ -736,9 +1036,10 @@ Format per entry:
 - Workaround used in EX9-066: drop the binding-result check entirely; present a binary `select_effect_choice [Return / Draw]` so the player explicitly picks the branch up front. The Return branch's inner `select_trash` is `optional: true` so it degrades gracefully when no eligible cards exist. Case C (no eligible card + player picked Return) becomes a no-op rather than a forced draw — diverges from DCGO but the action mask still surfaces the Decline → Draw alternative, so a faithful RL agent learns to pick Decline in case C. No auto-selection is performed on the agent's behalf; the no-approximations policy is preserved.
 - First reported: 2026-05-03 (EX9-066 Tai Kamiya & Matt Ishida, batch-implement-cards-rust-dsl)
 
-## BT24-008 / EX9-066 — General `count_gte` / `count_lte` predicate not evaluated  [G-COUNT-GTE-NOT-EVALUATED]
+## BT24-008 / EX9-066 — General `count_gte` / `count_lte` predicate not evaluated  [G-COUNT-GTE-NOT-EVALUATED] — RESOLVED 2026-05-17 (Phase 2 Track A)
+- **Status:** Closed. `eval_predicate_with_bindings` now consults `count_gte` / `count_lte` via a generalized `count_matching_in_zone` walker. See `qa/resolved-gaps.md` § "Phase 2 Track A closure" for full details. BT24-008 / EX9-066 / EX1-021 chained-`if` workarounds are now substrate-correct.
 - Effect text: BT24-008 Lv4 Reptile/Dragonkin/LIBERATOR — "[On Play] By trashing 1 card with the [Reptile], [Dragonkin] or [LIBERATOR] trait from your hand, <Draw 2>." (condition gates on `count_gte` over hand). EX9-066 — needs gating on `count_gte` over trash zone for the trash-or-draw branch.
-- Status: OPEN (filed 2026-05-03 during EX9-066 batch-implement-cards-rust-dsl). Previously documented inline in BT24-008.yaml header but not as a standalone gap entry.
+- Status (legacy): OPEN (filed 2026-05-03 during EX9-066 batch-implement-cards-rust-dsl). Previously documented inline in BT24-008.yaml header but not as a standalone gap entry.
 - Missing engine evaluation: `PredicateSpec::count_gte: Option<CountAggregate>` and `count_lte: Option<CountAggregate>` parse correctly into `CompiledPredicate.count_gte` / `count_lte` (`compiled.rs` lines 223-224), but `dsl_cards/predicate.rs::eval_predicate_with_bindings` does NOT consult these fields — only the specialized `security_count_gte` / `security_count_lte` (predicate.rs lines 73-82) and `materials_count_gte` / `materials_count_lte` (predicate.rs lines 834-842) are wired. So `condition: { count_gte: { filter: ..., n: 1 } }` is a no-op that always evaluates as TRUE, which means `if count_gte ≥ 1 then [...] else [...]` always takes the `then` branch regardless of the actual card count.
 - Lowers to engine API: needs a generic `count_matching_in_zone` walker that takes a `CompiledPredicate` filter (with `zone:` constraints) and counts matches across the named player's hand / trash / battle_area / security / deck. The existing `existential_any` walker (predicate.rs:279) only iterates `battle_area` and stops at first match — needs to be generalized to iterate the requested zones and count instead of short-circuit.
 - Suggested DSL syntax (already accepted by the parser — only evaluation is missing):
@@ -760,7 +1061,18 @@ Format per entry:
 - Workaround used in EX9-066: drop the count_gte pre-gate entirely; always present the binary [Return / Draw] choice and rely on the inner `select_trash` being `optional: true`. Acceptable because the action mask still surfaces both branches faithfully. BT24-008 has the same pending workaround documented in its YAML header.
 - First reported: 2026-05-03 (EX9-066 Tai Kamiya & Matt Ishida, batch-implement-cards-rust-dsl)
 
-## BT22-017 — `text_contains` (effect-text scan) predicate  [G-DSL-PREDICATE-TEXT-CONTAINS]
+## ~~BT22-017 — `text_contains` (effect-text scan) predicate  [G-DSL-PREDICATE-TEXT-CONTAINS]~~ — RESOLVED 2026-05-20 (DNA Omnimon completion)
+
+- **Status:** Closed. The `effect_text_contains` predicate leaf landed in the
+  `complete-dna-omnimon-archetype` change; it scans a candidate's printed
+  effect/inherited/security text by case-insensitive substring, lowering through
+  `CompiledPredicate`. BT22-017's bucket-1 filter now uses `effect_text_contains: "Omnimon"`
+  and the `bt22_017_on_play_bucket1_admits_card_with_omnimon_only_in_text` test is
+  re-enabled and passing. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon completion
+  closure — 2026-05-20". Original entry retained below for provenance.
+
+[ORIGINAL ENTRY BELOW]
+
 - Effect text: BT22-017 [On Play] "Reveal the top 3 cards of your deck. Add 1 card with [Omnimon] in its TEXT and 1 card with the [CS] trait among them to the hand."
 - Missing DSL verb / step kind / predicate: `text_contains: Option<String>` leaf on `predicate::PredicateSpec`. The DSL exposes `name_contains` / `name_is` / `name_in` for card-name scans, but has no leaf that scans a candidate's printed `effect_text` / `inherited_text` / `security_text`. DCGO uses `source.HasText("Omnimon")` (BT22_017.cs line 63) which scans the card's effect text for the literal substring.
 - Engine data IS present: `code/digimon-engine/src/card_data.rs` carries `effect_text`, `inherited_text`, and `security_text` fields on `CardData` (lines 87, 99, 124). Only the DSL predicate verb is missing.
@@ -799,7 +1111,15 @@ Format per entry:
 - Gap kind: hybrid (Rust engine modifier registry needs a typed grant slot; DSL needs the verb + lowering).
 - First reported: 2026-05-03 (EX1-068 Ice Wall!, batch-implement-cards-rust-dsl)
 
-## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN]
+## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN] — RESOLVED 2026-05-17 (Phase 2 Track F)
+
+See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track F closure" entry for
+the closure summary. `gain_memory_fn: { formula: ... }` + `lose_memory_fn`
+ship; EX1-021 production YAML authored.
+
+[ORIGINAL ENTRY BELOW]
+
+## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN] (legacy)
 - Effect text: EX1-021 MetalGarurumon — "[When Digivolving] Gain 1 memory for every 4 cards in your hand." DCGO: `count() = card.Owner.HandCards.Count / 4; AddMemory(count())`.
 - Status: OPEN (filed 2026-05-03 during EX1-021 batch-implement-cards-rust-dsl).
 - Missing DSL verb / step kind / predicate: `StepSpec::GainMemory(i32)` (`code/digimon-dsl/src/step.rs` line 67) is literal-only. There is no `gain_memory_fn:` variant that consumes a `FormulaSpec`. The same shape already exists for cost-reduction declarative bodies (`amount_fn:` on `kind: cost_reduction`, see BT8-097 / BT21-026 / BT24-017) — this gap is about extending the pattern to imperative `process:` steps.
@@ -818,7 +1138,14 @@ Format per entry:
 - Gap kind: dsl. Engine has `add_memory` and formula evaluation; only the DSL surface is missing.
 - First reported: 2026-05-03 (EX1-021 MetalGarurumon, batch-implement-cards-rust-dsl)
 
-## EX1-021 — `has_on_deletion_effect` permanent predicate  [G-DSL-HAS-ON-DELETION-EFFECT]
+## EX1-021 — `has_on_deletion_effect` permanent predicate  [G-DSL-HAS-ON-DELETION-EFFECT] — RESOLVED 2026-05-17 (Phase 2 Track F)
+
+See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track F closure" entry.
+EX1-021 production YAML authored.
+
+[ORIGINAL ENTRY BELOW]
+
+## EX1-021 — `has_on_deletion_effect` permanent predicate  [G-DSL-HAS-ON-DELETION-EFFECT] (legacy)
 - Effect text: EX1-021 MetalGarurumon — "[When Attacking] If you have 8 or more cards in your hand and a Tamer in play, return 1 of your opponent's Digimon **that has an [On Deletion] effect** to the bottom of its owners deck." DCGO: `permanent.HasOnDeletionEffect`.
 - Status: OPEN (filed 2026-05-03 during EX1-021 batch-implement-cards-rust-dsl).
 - Missing DSL verb / step kind / predicate: `PredicateSpec` has no leaf that asks "does this permanent's top card (or any card in its digivolution stack) carry a triggered effect with `EffectTiming::OnDeletion`?" The closest existing leaf is `has_keyword` (which inspects `Keyword` modifiers on the permanent, not effect timings on the underlying card data).
@@ -842,24 +1169,26 @@ Format per entry:
 
 ## EX4-060 / BT22-015 — Play card from own digivolution sources  [G-PLAY-FROM-OWN-DIGIVOLUTION-SOURCES]
 - Effect text: EX4-060 Omnimon Alter-S — "[All Turns] When this Digimon would leave the battle area other than by one of your effects, play 1 [BlitzGreymon] and 1 [CresGarurumon] from this Digimon's digivolution cards without paying the costs." BT22-015 Omnimon — "<Decode (Red/Black Lv.3)> / <Decode (Blue/Yellow Lv.3)> (When this Digimon would leave the battle area other than in battle, you may play 1 [color] [level] Digimon card from its digivolution cards without paying the cost.)"
-- Status: PARTIAL (filed 2026-05-03 during EX4-060 batch-implement-cards-rust-dsl; narrowed 2026-05-07; narrowed again 2026-05-08). BT22-015's Decode entry is closed through a color/level-gated `select_material` plus `play_from_materials` binding, with the original leave event proceeding. EX4-060 is closed by sequential `select_material` / `play_from_materials` steps plus `place_permanent_on_security_and_handle_replacement`. EX9-021's End of Attack source plays are closed through the same source-selection path plus `play_from_materials.bind_as`, `binding_exists`, and `place_permanent_on_security`; verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex4_060`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_021`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- play_from_materials`.
-- Remaining missing DSL verb / step kind: single-card and sequential named source plays can use `select_material` with an inline `filter:` and `play_from_materials` with the selected source binding. Remaining gaps are multi-source conveniences for "1 of each different name" / count-capped batches.
-- Engine substrate likely needed: `EffectContext::play_from_own_digivolution_cards(source_perm: PermanentHandle, candidate_filter: ..., pay_cost: bool)` that (a) walks the carrier's source stack to find candidates, (b) installs a `SelectionKind` variant surfacing the source picks, (c) on resolution removes the picked source from the stack and uses the existing play-as-new-permanent path with payCost overridden. DCGO models this via `SelectCardEffect.SetUp(customRootCardList: card.PermanentOfThisCard().DigivolutionCards, root: SelectCardEffect.Root.Custom, ...)` followed by `PlayPermanentCards(..., root: SelectCardEffect.Root.DigivolutionCards, payCost: false, activateETB: true)`.
-- Suggested DSL syntax (option A — split bind + play):
+- Status: FULLY CLOSED for the reusable source-play substrate on 2026-05-20 (Track J S1.3). Filed 2026-05-03 during EX4-060 batch-implement-cards-rust-dsl; narrowed 2026-05-07, 2026-05-08; the residual multi-source / different-name DSL sugar landed 2026-05-19 (S1.2); the final breeding-carrier residual closed 2026-05-20 (S1.3). BT22-015's Decode entry is closed through a color/level-gated `select_material` plus `play_from_materials` binding, with the original leave event proceeding. EX4-060 is closed by sequential `select_material` / `play_from_materials` steps plus `place_permanent_on_security_and_handle_replacement`. EX9-021's End of Attack source plays are closed through the same source-selection path. The batch / "1 of each different name" form is closed by the `select_materials` count-capped multi-pick step. Breeding-carrier source picks (King Drasil's resident stack) are now closed by the `BREEDING_SOURCE_SELECT` action sub-range (S1.3, `ACTION_SPACE_SIZE` 2168→2192). Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex4_060`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex9_021`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- play_from_materials`, and `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- select_materials`.
+- Landed DSL verb / step kind: `select_materials` — the batch sibling of `select_material`. Picks up to N digivolution sources of a carrier permanent in ONE count-capped multi-pick; `uniqueness: name` enforces "1 of each different name". `play_from_materials` consumes the bound `CardList` as a batch (each picked source becomes a fresh permanent), composing with `suppress_on_play`.
+- Engine substrate: `EffectContext::select_count_capped_multi` with `CountCappedZone::Material(PermanentHandle)` + `DistinctByMode::Name`. `select_materials` lowers straight onto it. For battle-area carriers it reuses the existing `SOURCE_SELECT` action range; for breeding-area carriers it uses the appended `BREEDING_SOURCE_SELECT` sub-range (S1.3). No new `SelectionKind` variant or `play_from_own_digivolution_cards` helper was needed.
+- DSL syntax (landed):
   ```yaml
-  - select_self_digivolution_source:
-      bind_as: blitz
-      filter:
-        all_of:
-          - kind: digimon
-          - name_contains: "BlitzGreymon"
-      prompt: "Select 1 [BlitzGreymon] from this Digimon's digivolution cards to play"
-  - play_from_own_digivolution_free: { source: blitz }
+  - select_materials:
+      of_permanent: <carrier-binding>  # battle-area permanent (matches select_material)
+      max: 4
+      uniqueness: name              # "1 of each different name"
+      filter: { trait_has: "Royal Knight" }
+      bind_as: picked
+  - play_from_materials:
+      source_index: picked          # batch — all picked sources played
+      target: <carrier-binding>
+      cost_delta: free
+      suppress_on_play: true        # composes with the S1.1 flag
   ```
-  (Option B — combined: `play_from_own_digivolution_cards: { filter: ..., free: true, optional: false }` that fuses the two; loses the explicit selection-stage binding but matches the printed text more compactly.)
-- Workaround that would VIOLATE no-approximations: auto-pick the first matching source card and play it without surfacing the choice. Even when only 1 candidate exists this still leaks an action-selection that the RL action space should observe.
-- Also blocks: EX9-021's end-of-attack source plays, EX10-061 Apocalymon's multi-source play, and any future "stack reanimator" effects needing batch picks or distinct follow-up disposition. BT22-015 and EX4-060 no longer block here.
-- Gap kind: dsl + engine. Single selected-source substrate is present; multi-source authoring/evaluation remains open.
+- Note: batch `play_from_materials` `bind_as` binds only the *last-played* permanent. A future card needing "do X to each played source" will require a `PermanentList` binding.
+- Breeding-area carriers (CLOSED 2026-05-20, Track J S1.3): `select_materials` / `select_material` against a `BREEDING_TARGET`-sentinel carrier binding now install a real `pending_selection`. Task S1.3 appended a 24-slot `BREEDING_SOURCE_SELECT` action sub-range (`2168..2192`, keyed by carrier owner), raising `ACTION_SPACE_SIZE` 2168→2192. `material_zone_geometry` is the single branch point — battle-area carriers read `battle_area[index]`, breeding-area carriers read `breeding_area`. Verification: `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- select_materials::select_materials_breeding_carrier`.
+- Gap kind: dsl + engine. FULLY CLOSED for battle-area AND breeding-area source plays (single, sequential, batch / different-name).
 - First reported: 2026-05-03 (EX4-060 Omnimon Alter-S, batch-implement-cards-rust-dsl). Sibling clause documented earlier under BT22-015 Decode.
 
 ## EX4-060 — Place self at bottom of own security stack face down  [G-PLACE-SELF-AT-SECURITY-BOTTOM]
@@ -893,7 +1222,19 @@ Format per entry:
 - Gap kind: dsl + engine, closed for the EX4-060 replacement-body form.
 - First reported: 2026-05-03 (EX4-060 Omnimon Alter-S, batch-implement-cards-rust-dsl)
 
-## EX4-039 / EX4-038 — Event-target-not-source predicate for OnDigivolve  [G-EVENT-TARGET-NOT-SOURCE]
+## ~~EX4-039 / EX4-038 — Event-target-not-source predicate for OnDigivolve  [G-EVENT-TARGET-NOT-SOURCE]~~ — RESOLVED 2026-05-20 (DNA Omnimon completion)
+
+- **Status:** Closed. This gap was STALE — the engine already carried both data points
+  (`event_permanent` on `TriggerContext` for `Digivolved`, `source_permanent` on
+  `EffectReadContext`) and the DSL predicate evaluator branch was present. The
+  `complete-dna-omnimon-archetype` change authored the DNA Omnimon card clauses against
+  the existing substrate and re-enabled the
+  `ex4_039_inherited_does_not_fire_when_carrier_itself_digivolves` behavioral test, which
+  now passes. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon completion closure —
+  2026-05-20" (STALE gaps list). Original entry retained below for provenance.
+
+[ORIGINAL ENTRY BELOW]
+
 - Effect text (both): "[Your Turn] [Once Per Turn] When one of your **other** Digimon digivolves, gain 1 memory."
 - Status: OPEN as of 2026-05-03. EX4-039 surfaces it; EX4-038 has the same printed-text family.
 - Missing DSL verb / step kind / predicate: a `CompiledPredicate` leaf such as `event_target_not_source: true` (or equivalently `event_permanent_not_source: true`) that returns false when the OnDigivolve trigger's `event_permanent` equals the inherited clause's `source_permanent` (the carrier permanent EX4-039 sits under). DCGO encodes this as `permanent != card.PermanentOfThisCard()` inside `CanTriggerWhenPermanentDigivolving`'s `PermanentCondition`.
@@ -961,7 +1302,17 @@ Format per entry:
 - Gap kind: closed for the Track E verb.
 - First reported: 2026-05-03 (EX9-021 Omnimon Alter-S, batch-implement-cards-rust-dsl). Sibling clause tracked at `G-PLACE-SELF-AT-SECURITY-BOTTOM` (EX4-060).
 
-## ST20-10 — Inverse alt-path direction: "this card may digivolve INTO X"  [G-ALT-PATH-DIRECTION-INTO]
+## ST20-10 — Inverse alt-path direction: "this card may digivolve INTO X"  [G-ALT-PATH-DIRECTION-INTO] — RESOLVED 2026-05-17 (Phase 2 Track F)
+
+See [resolved-gaps.md](resolved-gaps.md) "Phase 2 Track F closure" entry.
+Schema + lowering + route resolution all ship. ST20-10's warp clause
+remains BLOCKED on the companion `G-DSL-DISTINCT-TAMER-COLORS` predicate
+leaf (the Tamer-colour disjunct of its condition); the opp-DP disjunct
+is satisfiable today.
+
+[ORIGINAL ENTRY BELOW]
+
+## ST20-10 — Inverse alt-path direction (legacy)
 - Effect text: ST20-10 Agumon — "[Your Turn] While your opponent has a Digimon with 10000 DP or more, or your Tamers have 3 or more total colors, this Digimon can digivolve into [WarGreymon] in the hand for a digivolution cost of 4, ignoring digivolution requirements." Other warp-style printed effects with the "this Digimon can digivolve into [Card] in the hand" shape are likely siblings (DCGO grep for `cardCondition: ... CardSource.EqualsCardName(...)` paired with `permanentCondition: ... == card.PermanentOfThisCard()` inside `AddSelfDigivolutionRequirementStaticEffect`).
 - Status: OPEN (filed 2026-05-03 during ST20-10 batch-implement-cards-rust-dsl).
 - Missing DSL verb / step kind / predicate: `AltPathSpec` (in `digimon-dsl/src/alt_path.rs`) is implicitly source-directed — `from:` filters the SOURCE permanent / hand card that may digivolve INTO the carrier. There is no inverse form for "this card grants ITSELF the ability to digivolve into card X in hand." Authoring the alt-path on the destination card (WarGreymon's YAML) would over-broadcast: every Lv3 Agumon-named card on the field would be presented the path, and the destination YAML would have to enumerate every "warp into me" effect across the card pool. Authoring on the source (ST20-10) is the natural printed-text home but the DSL has no syntax for it.
@@ -979,14 +1330,15 @@ Format per entry:
       ignore_requirements: true
   ```
   (Option B — dedicated kind): `kind: warp_into_hand` with required `into:` field (no `from:`); same lowering on the engine side.
-- Workaround that would VIOLATE no-approximations: silently move the alt-path to WarGreymon's YAML (over-broadcasts to every Lv3 controller) or omit the gating predicate (path always available regardless of opp DP / Tamer colours). Per no-approximations the warp clause is OMITTED until this gap closes. Five behavioral tests in `code/digimon-engine/tests/cards_behavioral/st20/st20_10.rs` are `#[ignore]`'d under this gap tag (paired with `G-ALT-PATH-CONDITION` and either `G-PRED-DP-LTE` or `G-DSL-DISTINCT-TAMER-COLORS`).
+- Workaround that would VIOLATE no-approximations: silently move the alt-path to WarGreymon's YAML (over-broadcasts to every Lv3 controller) or omit the gating predicate (path always available regardless of opp DP / Tamer colours). Per no-approximations the warp clause is OMITTED until this gap closes. Five behavioral tests in `code/digimon-engine/tests/cards_behavioral/st20/st20_10.rs` are `#[ignore]`'d under this gap tag (paired with `G-PRED-DP-LTE` or `G-DSL-DISTINCT-TAMER-COLORS`; the previously-companion `G-ALT-PATH-CONDITION` was RESOLVED 2026-05-15).
 - Also blocks: any future "this Digimon can digivolve into [Card] in the hand for cost N" warp effect printed on the source card with a self-controller-state gate.
 - Gap kind: dsl. Engine substrate already exists (DCGO uses the same `AddSelfDigivolutionRequirementStaticEffect` factory regardless of direction).
-- First reported: 2026-05-03 (ST20-10 Agumon, batch-implement-cards-rust-dsl). Companion gap to `G-ALT-PATH-CONDITION` (BT24-016) — the gating predicate hole and the inverse-direction hole both block ST20-10 independently.
+- First reported: 2026-05-03 (ST20-10 Agumon, batch-implement-cards-rust-dsl). Originally paired with `G-ALT-PATH-CONDITION` (BT24-016); that companion gap was RESOLVED 2026-05-15, so the inverse-direction hole is now the sole substrate blocker on this clause.
 
-## ST20-10 — Distinct-Tamer-colours-on-field BoolPredicate  [G-DSL-DISTINCT-TAMER-COLORS]
+## ST20-10 — Distinct-Tamer-colours-on-field BoolPredicate  [G-DSL-DISTINCT-TAMER-COLORS] — RESOLVED 2026-05-17 (Phase 2 Track A)
+- **Status:** Closed. The BoolPredicate wrapping is now covered by the formula leaf `play_cost_lte: { formula: { distinct_colors_count: { of: you, zone: battle_area, filter: { kind: tamer } } } }` shape. Phase 2 Track A swept stale references; the ST20-10 warp clause remains BLOCKED on its other companion gap `G-ALT-PATH-DIRECTION-INTO`'s ST20-specific YAML authoring (which has substrate but no card YAML yet) — but the Tamer-color disjunct itself is no longer the blocker.
 - Effect text: ST20-10 Agumon — "...or your Tamers have 3 or more total colors..." (gating disjunct of the [Your Turn] warp clause). Sibling form of BT21-102 Tai Kamiya's "For each of your Tamers' colors, add 1 to this effect's play cost maximum" — both reference the same per-colour-count computation, but BT21-102 needs the value as a `FormulaSpec::per` aggregate (tracked under `G-DSL-DISTINCT-TAMER-COLORS-FORMULA`) while ST20-10 needs it as a BoolPredicate threshold ("3 or more").
-- Status: OPEN (filed 2026-05-03 during ST20-10 batch-implement-cards-rust-dsl).
+- Status (legacy): OPEN (filed 2026-05-03 during ST20-10 batch-implement-cards-rust-dsl).
 - Missing DSL verb / step kind / predicate: no `distinct_tamer_colors_gte: <N>` (or generalised `distinct_colors_count_gte: <N>` over a controller / kind / zone selector) BoolPredicate leaf on `PredicateSpec`. The existing `distinct_colors_count` (added under `G-DSL-DISTINCT-TAMER-COLORS-FORMULA`) is only available inside `FormulaSpec::per` — it cannot appear as a standalone boolean condition. `color_only` / `color_is` filter individual permanents by colour but do not aggregate colour counts across a permanent set.
 - Lowers to engine API: DCGO's `Combinations.GetDifferenetColorCardCount(tamerCards) >= 3` returns the count of distinct colours present across the supplied permanent set, then thresholds. The engine's `eval_aggregate` (already used by `FormulaSpec::per: distinct_colors_count`) covers the count primitive — only the BoolPredicate wrapping is missing.
 - Suggested DSL syntax (option A — dedicated leaf):
@@ -1003,18 +1355,20 @@ Format per entry:
       filter: { kind: tamer }
       gte: 3
   ```
-- Workaround that would VIOLATE no-approximations: drop the disjunct entirely (gate fires only on opp ≥10000 DP, never on Tamer colours), or replace with a coarser proxy like "you have 3+ Tamers" (over-fires on three same-colour Tamers, under-fires on 3 distinct-colour Tamers some of which are deleted). Per no-approximations the entire warp clause is OMITTED until this gap (paired with `G-ALT-PATH-DIRECTION-INTO` and `G-ALT-PATH-CONDITION`) closes.
+- Workaround that would VIOLATE no-approximations: drop the disjunct entirely (gate fires only on opp ≥10000 DP, never on Tamer colours), or replace with a coarser proxy like "you have 3+ Tamers" (over-fires on three same-colour Tamers, under-fires on 3 distinct-colour Tamers some of which are deleted). Per no-approximations the entire warp clause is OMITTED until this gap (paired with `G-ALT-PATH-DIRECTION-INTO`) closes. The earlier-paired `G-ALT-PATH-CONDITION` was RESOLVED 2026-05-15.
 - Also blocks: any future "while your Tamers have N or more total colours" or "if you have N or more distinct-colour Tamers" gate. Sibling to `G-DSL-DISTINCT-TAMER-COLORS-FORMULA` (BT21-102) — the formula-aggregate form lands the underlying primitive; this gap closes the BoolPredicate wrapping. Both should land together once the formula primitive is generalised to also expose its result as a comparable scalar.
 - Gap kind: dsl. Engine has the count primitive via `eval_aggregate`.
 - First reported: 2026-05-03 (ST20-10 Agumon, batch-implement-cards-rust-dsl). Sibling of `G-DSL-DISTINCT-TAMER-COLORS-FORMULA` (BT21-102).
 
 ## Puppets Resolver Residual DSL/Hybrid Gaps (2026-05-04)
 
-## BT13-101 / P-136 — event predicates with suspend-this-Tamer cost  [PUPPETS-G023]
+## BT13-101 / P-136 — event predicates with suspend-this-Tamer cost  [PUPPETS-G023] — RESOLVED 2026-05-20 (Puppets substrate sweep)
 
 - Effect text: `BT13-101`: "[All Turns] When you play a 2-color black/yellow Digimon, by suspending this Tamer, <Draw 1> and gain 1 memory." `P-136`: "[Your Turn] [Once Per Turn] When one of your Digimon digivolves into a Digimon with the [Puppet] trait, by suspending this Tamer, gain 1 memory."
+- Status 2026-05-20: **FULLY CLOSED** by the Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`). Event-card color predicates (`event_card_color_only`, `event_card_color_count`) landed, completing the second half of this gap. `BT13-101`'s All Turns observer and `P-136`'s digivolve observer are now expressible in YAML. The `bt13_101_all_turns_*` tests are un-ignored. See `qa/resolved-gaps.md` for the engine-side substrate closure.
+- Status 2026-05-17: the **activation-cost half** of this gap closed under Phase 2 Track B. DSL `activation_cost: { suspend_self: true }` lifts onto `EffectBuilder::activation_cost(ctx.suspend_self_as_cost)`; cost failure (already-suspended source) consumes the OPT slot and skips the body silently (no decline-vs-fail elision). The **event-card colour predicates half** was still open at that point. See `qa/resolved-gaps.md` § Engine Gap: Generic `.activation_cost(...)` builder hook for triggered abilities for the substrate closure.
 - Missing DSL verb / step kind / predicate: event-card predicates for exact color sets and color count, event-target owner/trait predicates for digivolve observers where needed, plus declarative source-bound triggered activation costs.
-- Companion engine state: the generic triggered activation-cost hook is tracked in `docs/RUST_ENGINE_GAPS.md`; DSL must be able to bind it to "suspend this Tamer" and preflight availability before exposing a prompt.
+- Companion engine state: the generic triggered activation-cost hook is now resolved (`qa/resolved-gaps.md`); DSL `activation_cost: { suspend_self: true }` is wired and preflight comes for free via `EffectContext::suspend_self_as_cost` returning `false` on already-suspended sources.
 - Suggested DSL syntax:
   ```yaml
   condition:
@@ -1034,9 +1388,10 @@ Format per entry:
 
 ---
 
-## BT16-055 — narrow protection and inherited rules-text predicate  [PUPPETS-G024/PUPPETS-G025]
+## BT16-055 — narrow protection and inherited rules-text predicate  [PUPPETS-G024/PUPPETS-G025] — RESOLVED 2026-05-20 (Puppets substrate sweep)
 
 - Effect text: "While you have 3 or more security cards, this Digimon isn't affected by your opponent's DP reduction effects and can't be de-digivolved by their effects." / "[Your Turn] While this Digimon has [Pulsemon] in its text, it gets +1000 DP."
+- Status 2026-05-20: **FULLY CLOSED** by the Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`). `grant_narrow_opponent_effect_protection` (PUPPETS-G024) and `rules_text_contains` predicate (PUPPETS-G025) both landed. `BT16-055` is now fully expressible in YAML. See `qa/resolved-gaps.md` for engine-side details.
 - Missing DSL verb / step kind / predicate: category-scoped protection modifiers for opponent DP reduction and opponent De-Digivolve; inherited predicate over the carrier stack's printed rules text.
 - Companion engine state: broad `CannotBeAffected` is too strong for the protection branch, and current inherited predicates do not inspect rules text on the carrier.
 - Suggested DSL syntax:
@@ -1100,11 +1455,13 @@ Format per entry:
 
 ---
 
-## BT22-088 — return-this-Tamer cost before branch free-play  [PUPPETS-G028]
+## BT22-088 — return-this-Tamer cost before branch free-play  [PUPPETS-G028] — RESOLVED 2026-05-20 (Puppets substrate sweep)
 
 - Effect text: "[Start of Your Main Phase] By returning this Tamer to the bottom of the deck, you may play 1 [Arisa Kinosaki] with a different card number in your hand without paying the cost, or play 1 [Shoemon] from your hand or trash without paying the cost."
+- Status 2026-05-20: **FULLY CLOSED** by the Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`). The `choose_one` branch selector with origin-preserving hand/trash play consumers (PUPPETS-G028) landed. `BT22-088`'s Start-of-Main tests are un-ignored. See `qa/resolved-gaps.md` for engine-side details.
+- Status 2026-05-17: the **return-self-cost half** of this gap closed under Phase 2 Track B. DSL `activation_cost: { return_self_to_deck_bottom: true }` lifts onto `EffectBuilder::activation_cost(ctx.return_self_to_deck_bottom_as_cost)`; the engine queue's source-liveness check after the cost is now bypassed so the chained free-play branch can fire even though the source Tamer has left the field. The **branch selector half** was still open at that point.
 - Missing DSL verb / step kind / predicate: optional triggered activation cost that moves the source permanent to the bottom of deck, then an in-effect branch selector with origin-preserving hand/trash play consumers.
-- Companion engine state: the generic triggered activation-cost hook is tracked in `docs/RUST_ENGINE_GAPS.md`; this card also needs a source-zone move as the cost and a follow-on branch selector.
+- Companion engine state: the generic triggered activation-cost hook is now resolved (`qa/resolved-gaps.md`); the source-zone move helper lives on `EffectContext::return_self_to_deck_bottom_as_cost`. The chained branch selector with hand/trash consumers is still card-author DSL surface.
 - Suggested DSL syntax:
   ```yaml
   activation_cost:
@@ -1121,6 +1478,7 @@ Format per entry:
 - Gap kind: hybrid. The cost/preflight is engine-facing; branch and origin-preserving selection need DSL vocabulary.
 - Workaround: None faithful. Auto-returning the Tamer or auto-selecting Shoemon/Arisa would hide printed player-visible choices.
 - First reported: 2026-05-04 (Puppets resolver Batch 8, BT22-088)
+- Status 2026-05-11: Still open for the Start of Your Main Phase return-this-Tamer cost and chained Arisa/Shoemon free-play branches. The separate All Turns Token/Puppet played observer is now implemented in `BT22-088.yaml` using `source_is_unsuspended`, visible suspend/decline selection, and event-target Token/Puppet filters.
 
 ---
 
@@ -1146,22 +1504,28 @@ Format per entry:
 
 ---
 
-## BT5-106 — effect-play On Play suppression provenance  [PUPPETS-G030]
+## BT5-106 — effect-play On Play suppression provenance  [PUPPETS-G030] — RESOLVED 2026-05-20 (Puppets substrate sweep)
 
 - Effect text: "[Security] You may play 1 level 3 purple Digimon card from your trash without paying its memory cost. Any [On Play] effects on Digimon played with this effect don't activate."
+- Status 2026-05-20: **FULLY CLOSED** by the Puppets substrate sweep (branch `claude/stoic-moser-0ef79e`). `suppress_on_play` flag on effect-play helpers (PUPPETS-G030) landed. `BT5-106`'s Security slice is now expressible in YAML. See `qa/resolved-gaps.md` for engine-side details. (Phase 2 Track J Task S1.1 closed the same gap independently — see [`qa/resolved-gaps.md`](resolved-gaps.md); the merged engine keeps the Puppets-sweep design.)
 - Missing DSL verb / step kind / predicate: a play-from-trash/free-play consumer that carries `suppress_on_play: true` provenance for the played Digimon only.
 - Companion engine state: ordinary effect play from trash can enter the Digimon and normally fire On Play; this card needs the same player-visible trash selection but must skip the played permanent's On Play enqueue for that play event.
-- Suggested DSL syntax:
+- DSL syntax (shipped): `suppress_on_play: true` is honored ONLY by `play_from_trash_free`; the compiler rejects it on `play_from_hand` / `play_from_trash`.
   ```yaml
   - play_from_trash_free:
-      target: chosen
+      of: you
+      hand_index: revived
       suppress_on_play: true
   ```
-- Gap kind: hybrid. Engine play provenance needs an On Play suppression flag, and DSL needs vocabulary to request it.
-- Workaround: None faithful. Omitting the play hides a legal security choice; ordinary play-from-trash would illegally fire the played Digimon's On Play effects.
+- Gap kind: hybrid. Engine play provenance needed an On Play suppression flag, and DSL needed vocabulary to request it — both shipped.
+- Deferred follow-up: `suppress_on_play` on `play_from_materials` (Royal Knights source-play payoffs) is NOT wired — the merged engine threads suppression only through `play_from_trash_free`. Re-wiring the `play_from_materials` path is follow-up work for when the RK source-play cards are authored.
+- Workaround: no longer needed.
 - First reported: 2026-05-04 (Puppets resolver Batch 9, BT5-106)
+- Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt5_106` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- suppress_on_play`.
 
 ## BT3-002 — `carrier_has_keyword` predicate for inherited clause conditions  [G-DSL-CARRIER-HAS-KEYWORD]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — redundant; `has_keyword` already resolves against the carrier permanent for inherited clauses (`enqueue_from_permanent` sets `source_permanent` to the carrier handle). No predicate added.
 
 - Effect text: "Inherited Effect [When Attacking] [Once Per Turn] If this Digimon has <Jamming>, <Draw 1> (Draw 1 card from your deck.)"
 - Card first discovered in: BT3-002 DemiVeemon (Digi-Egg, Lv.2, Blue)
@@ -1183,7 +1547,45 @@ Format per entry:
 
 ---
 
+<!-- ───────────────────────────────────────────────────────────────────────
+  BG IMPERIAL PHASE 0 RE-AUDIT — 2026-05-20 (`bg-imperial-substrate-closeout`)
+
+  The BG Imperial entries below were re-verified against current source.
+  STALE (primitive shipped — entry should be closed at change closeout):
+    G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED (lower_grant_keyword.rs:18-36
+      now consumes active_when), G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME (already
+      marked resolved), G-IS-EFFECT-INITIATED (event_is_effect_initiated exists),
+      G-BEFORE-PAY-COST-GAIN-MEMORY (resolved Track H), G-EFFECT-INITIATED-
+      DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET (resolved Track F),
+      G-DSL-TRASH-TOP-N-DIGI-CARDS (closed), G-DSL-UNION-PLAY-FREE
+      (play_union_bound_free / PUPPETS-G014 shipped), G-DSL-SELF-COLOR-COUNT-GTE
+      (self_color_count_gte shipped), G-EVENT-CARD-COLOR-IS partial
+      (event_card_color_only/_count shipped — only a `_has`-semantics leaf
+      remains), G-FORMULA-SOURCE-DP (source_dp formula shipped).
+  GENUINE — now CLOSED by `bg-imperial-substrate-closeout` (2026-05-20), see
+    qa/resolved-gaps.md § "BG Imperial substrate closeout": G-DSL-EFFECT-
+    SUSPENDED-RESULT (`effect_suspended_any_opponent_digimon`),
+    G-EVENT-CARD-COLOR-IS (`event_card_color_has`), G-SELECT-OPPONENT-SOURCES
+    (`select_opponent_sources`), G-ZONE-SELECTED-TRASH-TO-DECK-TOP
+    (`move_trash_card_to_deck_top`), G-ANY-RETURNED-CARD-PREDICATE
+    (`returned_card_matching`).
+  REDUNDANT — audit correction: these 4 were NOT genuine gaps; pre-existing
+    capability already covers them, no predicate was added —
+    G-PRED-STACK-SIZE-LTE-SOURCE / G-DSL-STACK-SIZE-LTE-SOURCE
+    (`materials_count_lte` + `source_material_count` formula),
+    G-DSL-CARRIER-HAS-KEYWORD (`has_keyword` resolves to carrier for inherited
+    clauses), G-DSL-AURA-TARGET-SOURCE-PERMANENT (`scope: inherited` +
+    `target: {}` self-aura), G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT
+    (`source_permanent_trait_has`). See qa/resolved-gaps.md § "BG Imperial
+    substrate closeout" → "Audit correction". Card YAML re-authoring to consume
+    the new + pre-existing vocabulary runs separately.
+  Verified per-card classification:
+    openspec/changes/bg-imperial-substrate-closeout/phase-0-audit.md
+─────────────────────────────────────────────────────────────────────── -->
+
 ## BT12-022 — `active_when` on `kind: grant_keyword` declarative clauses is not consumed  [G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — stale; `lower_grant_keyword.rs` already consumes `active_when` on `kind: grant_keyword` declarative clauses.
 
 - Effect text: "[Your Turn] While this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains ＜Jamming＞" (BT12-022 ExVeemon, inherited)
 - Missing DSL verb / step kind / predicate: `DeclarativeClause.active_when` is compiled into `CompiledDeclarativeClause::GrantKeyword { active_when, .. }` but is silently discarded by `lower_grant_keyword::lower` in `code/digimon-engine/src/dsl_cards/mod.rs` (line 82-98 uses `..` to destructure, ignoring `active_when`). The `lower_grant_keyword::lower` function signature has no `active_when` parameter.
@@ -1203,28 +1605,27 @@ Format per entry:
 
 ## BT12-022 — BeforePayCost triggered gain_memory for "would DNA digivolve into" target  [G-BEFORE-PAY-COST-GAIN-MEMORY]
 
-- Effect text: "[Your Turn] When this Digimon would DNA digivolve into a green Digimon card, gain 1 memory." (BT12-022 ExVeemon)
-- Missing DSL verb / step kind / predicate: The DSL `kind: cost_reduction` with `reduction_timing: before_pay_cost` models only cost reductions (integer decrements to `memory_cost`). There is no triggered declarative form for `gain_memory` at `BeforePayCost` timing. DCGO uses `EffectTiming.BeforePayCost` with `CanTriggerWhenPermanentWouldDigivolveOfCard + IsJogress` + `card.Owner.AddMemory(1)` — the memory gain is an arbitrary effect (not a cost reduction) triggered at pre-pay-cost time.
-- Companion gap: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET (already in qa/dsl-vocab-gaps.md) — the target-card threading (checking the would-digivolve-into card's color) is also missing. Both gaps must close before BT12-022 clause 0 can be implemented.
-- Companion note on `on_dna_digivolve` alternative: `on_dna_digivolve` timing fires AFTER DNA digivolve completes, so it could not faithfully model the "would" semantics. Also, no `event_card_color_is` predicate exists in `PredicateSpec` for filtering by the result card's color.
-- Lowers to engine API: `BeforePayCost` timing dispatch exists in `scan_before_pay_cost_reduction`; the gap is that it only updates `cost_delta`, not an arbitrary `gain_memory` side effect. A new DSL form (e.g., `kind: before_pay_cost_trigger`) with a `process:` body (not a `CostReductionBody`) would be needed.
-- Suggested DSL syntax (once G-BEFORE-PAY-COST-DIGIVOLVE-TARGET also closes):
+- **Status: RESOLVED 2026-05-17** (Phase 2 Track H). See `qa/resolved-gaps.md` § "Phase 2 Track H closure — 2026-05-17" for the substrate landed (sibling `Effect::before_pay_cost_observe` builder + `EffectTiming::BeforePayCostObserve` + `scan_before_pay_cost_observers` dispatch).
+- Authoring pattern:
   ```yaml
-  - scope: own
-    kind: before_pay_cost_trigger       # NEW form — triggered effect at BeforePayCost
-    when_this_digivolves_into:
-      target_color_is: green            # NEW predicate (needs G-BEFORE-PAY-COST-DIGIVOLVE-TARGET)
-      dna_only: true
-    active_when: { your_turn: true }
+  - when: before_pay_cost_observe
+    active_when:
+      all_of:
+        - your_turn: true
+        - dna_origin: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { color_is: green, kind: digimon }
     process:
       - gain_memory: 1
   ```
-- Gap kind: hybrid (engine-side: BeforePayCost dispatch handles only cost_delta; DSL-side: no `before_pay_cost_trigger` kind with process body).
-- Cards blocked: BT12-022 clause 0 (BLOCKED, omitted from YAML).
+- Cards implemented and validated: BT12-022 ExVeemon (clause 0), BT12-050 Stingmon (clause 0).
+- Companion gap (also resolved): G-BEFORE-PAY-COST-DIGIVOLVE-TARGET — see entry above.
 - First reported: 2026-05-04 (BT12-022 batch-implement-cards-rust-dsl)
 - First reported: 2026-05-04 (BT3-002 DemiVeemon DSL implementation)
 
 ## EX1-014 — `aura` declarative target scoping  [G-DSL-AURA-TARGET-SOURCE-PERMANENT]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — redundant; a `kind: aura` with `scope: inherited` + `target: {}` is a carrier-only self-aura. No leaf added.
 
 - Effect text: "[Your Turn] While this Digimon has [Imperialdramon] in its name or the [Free] trait, it gains ＜Jamming＞" — should grant Jamming ONLY to the carrier permanent (the Digimon containing this card in its digivolution stack), not all controller-side Digimon.
 - Card first discovered in: EX1-014 ExVeemon (Digimon, Lv.4, Blue), also in BT12-022 (sister card).
@@ -1245,6 +1646,8 @@ Format per entry:
 
 ## EX1-014 — `self_digivolution_contains_trait` predicate  [G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT]
 
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — redundant; the existing `source_permanent_trait_has` predicate covers EX1-014's `[Free]`-trait arm. No predicate added.
+
 - Effect text: "...has [Imperialdramon] in its name or the [Free] trait..." — needs a predicate that evaluates whether the carrier permanent's digivolution stack contains a card with a given trait.
 - Card first discovered in: EX1-014 ExVeemon (Digimon, Lv.4, Blue).
 - Missing DSL verb / step kind / predicate: `self_digivolution_contains_trait: <trait>` — boolean predicate over carrier permanent's digivolution stack. `source_permanent_trait_has` exists in `CompiledPredicate` spec but is not evaluated at runtime in `predicate.rs`.
@@ -1259,7 +1662,17 @@ Format per entry:
 
 ---
 
-## BT16-040 — effect-initiated digivolve from hand with permanent-target chain  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET]
+## BT16-040 — chained selection → effect_initiated_digivolve  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET] — RESOLVED 2026-05-17 (Phase 2 Track F)
+
+Resolved as **phantom** — see [resolved-gaps.md](resolved-gaps.md)
+"Phase 2 Track F closure". The chain dispatcher
+(`run_tail_preserving_trigger_context`) was already driving the chain
+to completion; the prior tests asserted mid-chain state and panicked
+on the auto-resolved post-state. 5 tests now active.
+
+[ORIGINAL ENTRY BELOW]
+
+## BT16-040 — effect-initiated digivolve chain (legacy)
 
 - Effect text: "[Start of Your Main Phase] [On Play] If it's your turn, 1 of your Digimon may digivolve into a level 4 Digimon card with the [Insectoid] or [Free] trait in your trash with the digivolution cost reduced by 1." — process chain: select_own_permanent → select_trash_card → effect_initiated_digivolve.
 - Card first discovered in: BT16-040 Wormmon (Digimon, Lv.3, Green/White). Same gap blocks BT17-015, BT17-027 clause 0.
@@ -1272,6 +1685,8 @@ Format per entry:
 
 ## BT12-028 / BT16-025 / BT16-027 — `stack_size_lte_source` predicate  [G-PRED-STACK-SIZE-LTE-SOURCE]
 
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — redundant; `materials_count_lte: { formula: { source_material_count: {} } }` already expresses "as many or fewer digivolution cards as this Digimon". No predicate added.
+
 - Effect text variants: "Return 1 of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck." (BT16-027) / "Suspend all of your opponent's Digimon with as many or fewer digivolution cards as this Digimon" (BT16-025).
 - Card first discovered in: BT16-027 Imperialdramon: Fighter Mode. Cross-listed in BT16-025 Paildramon (same gap).
 - Missing DSL verb / step kind / predicate: `stack_size_lte_source: bool` BoolPredicate leaf evaluating `candidate.card_sources.len() <= source_permanent.card_sources.len()` at runtime. The existing `stack_size_lte: <u8>` takes a literal, not a dynamic source-stack reference.
@@ -1283,7 +1698,15 @@ Format per entry:
 
 ---
 
-## BT12-028 / BT16-027 — `self_digivolution_contains_name` predicate  [G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME]
+## ~~BT12-028 / BT16-027 — `self_digivolution_contains_name` predicate  [G-DSL-SELF-DIGIVOLUTION-CONTAINS-NAME]~~ — RESOLVED 2026-05-20 (DNA Omnimon completion)
+
+- **Status:** Closed. The sources-only `self_digivolution_sources_contain_name` predicate
+  leaf landed in the `complete-dna-omnimon-archetype` change, evaluating whether the source
+  permanent's own `card_sources` stack contains a card matching the given name via
+  `Permanent::contains_card_name`. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon
+  completion closure — 2026-05-20". Original entry retained below for provenance.
+
+[ORIGINAL ENTRY BELOW]
 
 - Effect text: "if [Imperialdramon: Dragon Mode] is in this Digimon's digivolution cards" (BT16-027). Sister of `G-DSL-SELF-DIGIVOLUTION-CONTAINS-TRAIT` (EX1-014).
 - Card first discovered in: BT16-027 Imperialdramon: Fighter Mode. Cross-listed in BT12-028 (`source_name_contains` family).
@@ -1311,6 +1734,8 @@ Format per entry:
 
 ## BT16-025 — `binding_is_none` / "if-no-target" predicate  [G-DSL-IF-NO-TARGET]
 
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — the `binding_present` / `binding_absent` predicates (alias `binding_is_none`) exist and cover the "if this effect didn't suspend" branch.
+
 - Effect text: "Suspend 1 of your opponent's unsuspended Digimon. If this effect didn't suspend, unsuspend this Digimon." (BT16-025 clause 2).
 - Card first discovered in: BT16-025 Paildramon.
 - Missing DSL verb / step kind / predicate: `select_opponent_permanent` with `optional: true` skips silently when no targets exist, but does not bind a "skipped" flag. Need `binding_is_none: <name>` BoolPredicate for subsequent `if` conditions to test whether the previous selection was taken or skipped.
@@ -1329,6 +1754,8 @@ Format per entry:
 ---
 
 ## BT16-028 — `event_is_effect_initiated` predicate  [G-IS-EFFECT-INITIATED]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — the `event_is_effect_initiated` predicate exists and BT16-028 consumes it for the effect-play/digivolve observer gate.
 
 - Effect text: "[All Turns] When an effect plays or digivolves an opponent's Digimon, if you have a Tamer, this Digimon may digivolve into [Imperialdramon: Fighter Mode] in the hand without paying the cost."
 - Card first discovered in: BT16-028 Imperialdramon: Dragon Mode (2026-05-04).
@@ -1372,6 +1799,28 @@ Format per entry:
 ---
 
 ## BT12-031 — Alt-cost: return named source card from own digi-stack to hand  [G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — `EffectContext::return_card_source_to_hand` + the `return_selected_sources_to_hand` DSL verb landed; BT12-031 Step C now ships → BT12-031 IMPLEMENTED. Full record in `qa/resolved-gaps.md` § "Follow-up engine gaps closed (2026-05-21)" and `docs/RUST_ENGINE_GAPS.md`.
+
+- **Canonical record relocated 2026-05-21 (`bg-imperial-substrate-closeout`): this is an ENGINE gap, not DSL-only.**
+  The full scoping entry now lives in
+  [`docs/RUST_ENGINE_GAPS.md`](../docs/RUST_ENGINE_GAPS.md#return-a-selected-digivolution-stack-source-card-to-its-owners-hand)
+  ("Return a selected digivolution-stack source card to its owner's hand",
+  🟡 PARTIAL) — consult that entry for the suggested `EffectContext` /
+  DSL-verb / YAML shape, likely files, complexity estimate, first test,
+  and known interactions. This `qa/dsl-vocab-gaps.md` entry is retained
+  only as a redirect; do not treat the notes below as the live spec.
+  Summary: the two sub-gaps below (select-own-sources filter; `binding_present`)
+  are both resolved, but BT12-031 Step C is still BLOCKED on a genuine missing
+  engine primitive — there is **no DSL verb / `EffectContext` method that
+  returns a single selected digivolution-stack source card to its owner's
+  hand**. The only source-ref consumers are `trash_selected_sources` and
+  `play_selected_sources_free`; `return_to_hand` moves a whole permanent, not
+  one source card. BT12-031 Step C stays omitted, 2 tests `#[ignore]`'d, card
+  verdict PARTIAL. Suggested fix: an `EffectContext` method + DSL verb (e.g.
+  `return_selected_sources_to_hand`) routing each chosen source `Card` to its
+  owner's hand. BT12-031 clause 1b (Security A.+1 + Blocker via
+  `self_color_count_gte` `while_condition`) IS implemented.
 - Effect text (BT12-031 Clause 0, Step C): "By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's digivolution cards to its owner's hand, return all of your opponent's suspended Digimon to the bottom of their owners' decks instead."
 - Missing DSL verb / step kind / predicate: Two sub-gaps combine to block this step:
   1. **G-DSL-SELECT-OWN-SOURCES-FILTER** — resolved 2026-05-08. `select_own_sources` now accepts `filter:` and evaluates it against each source card, with optional `from:` host restriction.
@@ -1426,6 +1875,8 @@ Format per entry:
 
 ## BT17-077 — `return_all_trash_to_deck_bottom` step + player-choice target  [G-RETURN-ALL-TRASH-TO-DECK-BOTTOM]
 
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — the player-choice-of-trash branch is composable via `select_effect_choice` + `if` branching `return_all_trash_to_deck_bottom: { of: you|opponent }`; BT17-077 Clause 1b now ships.
+
 - Effect text: "Then, return all cards from your or your opponent's trash to the bottom of the deck." (BT17-077 Clause 1b).
 - Card first discovered in: BT17-077 Imperialdramon: Paladin Mode.
 - Status: PARTIALLY CLOSED on 2026-05-09 for the reusable bulk-zone DSL verb. YAML can now call `return_all_trash_to_deck_bottom: { of: you|opponent }`, and owner-routing is covered by `zone_movement_verbs::bulk_trash_and_hand_reduction_verbs_call_helpers`. The remaining printed-card gap is the player-choice branch for "your or your opponent's trash" and the returned-card result predicate for the memory rider.
@@ -1453,6 +1904,8 @@ Format per entry:
 ---
 
 ## BT17-077 — `any_returned_card` result predicate  [G-ANY-RETURNED-CARD-PREDICATE]
+
+**Status: RESOLVED 2026-05-21 (`bg-imperial-substrate-closeout`)** — the `returned_card_matching` filtered result predicate landed (`bg-imperial-substrate-closeout` Tier 2); BT17-077 Clause 1c now ships.
 
 - Effect text: "If this effect returned a white level 7 card, gain 3 memory." (BT17-077 Clause 1c).
 - Card first discovered in: BT17-077 Imperialdramon: Paladin Mode. Clause 1c fires after the `return_all_trash_to_deck_bottom` step (Clause 1b) completes; the memory gain is conditional on at least one of the moved cards satisfying `color: white AND level: 7`.
@@ -1554,6 +2007,30 @@ Format per entry:
 - Gap kind: engine and DSL, closed for current script-facing retarget effects.
 - Workaround: None needed for current script-facing retarget effects.
 - First reported: 2026-05-05 (Royal Knights Batch 3: BT19-072).
+
+## BT17-102 — dynamic name alias from digivolution-source stack  [G-DYNAMIC-NAME-ALIAS-FROM-STACK] — OPEN
+
+- Effect text: BT17-102 Greymon "[All Turns] This Digimon has all the names of level 3 and lower cards in its digivolution cards."
+- Status: OPEN. Verified open against code by the `complete-dna-omnimon-archetype` change. BT17-102 is otherwise IMPLEMENTED; this single `[All Turns]` clause is omitted and the test `bt17_102_all_turns_aliases_low_level_material_names` is left `#[ignore]`'d.
+- Missing capability: the DSL identity layer carries only static `name_aliases`. There is NO engine consumer for a *dynamic* alias derived from the live digivolution-source stack — a name predicate run by any other card against this permanent sees only the printed top-card name. A faithful fix is a cross-cutting engine feature: a `Permanent`-level effective-name-set query (union of printed name + dynamic overlay names) consulted by every name predicate, aura filter, and inherited-effect name check.
+- Companion engine gap: this is the DSL/identity-layer face of the engine-level "Digivolution-stack name overlay" gap in [docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md) (`G-DYNAMIC-NAME-ALIAS-FROM-STACK`).
+- Gap kind: hybrid (engine needs the effective-name-set overlay + universal consult-site rewrite; DSL needs a declarative `name_overlay_from_sources`-style verb).
+- Workaround: none faithful — the clause is OMITTED per no-approximations.
+- First reported: 2026-05-20 (`complete-dna-omnimon-archetype` closure — BT17-102 Greymon).
+
+## BT23-096 — `<Delay>`-on-attack-event clause  [G-DSL-DELAY-ON-ATTACK-EVENT] — OPEN
+
+- Effect text: BT23-096 Comet Hammer — `<Delay>` body gated on an ally-attack event.
+- Status: OPEN. Verified open against code by the `complete-dna-omnimon-archetype` change. BT23-096 is otherwise IMPLEMENTED; the `<Delay>`-on-attack clause is omitted and its test is left `#[ignore]`'d.
+- Missing capability: a 3-part engine blocker prevents an attack event from triggering a `<Delay>` body —
+  1. `lower_delay.rs` does not map attack timings to `DelayTrigger::OnEvent`;
+  2. `combat.rs` dispatches `OnAllyAttack` via `TriggerSource::PlayerBattleArea`, which `effect_queue.rs` never fans out to event-gated delays;
+  3. `attacker_trait_has` resolves the attacker only via `attack_target_change()`, which is unset for a plain attack.
+- Already-present substrate (NOT the blocker): `G-DSL-ON-ALLY-ATTACK-TIMING` and `G-ATK-TRAIT-FILTER` — the on-ally-attack timing token and the attacker-trait predicate both exist; the gap is delay/attack-event dispatch wiring.
+- Companion engine gap: tracked engine-side in [docs/RUST_ENGINE_GAPS.md](../docs/RUST_ENGINE_GAPS.md) (`G-DSL-DELAY-ON-ATTACK-EVENT`).
+- Gap kind: hybrid (engine needs delay/attack-event dispatch + plain-attack attacker resolution; DSL needs the attack-timing → `DelayTrigger::OnEvent` lowering).
+- Workaround: none faithful — the clause is OMITTED per no-approximations.
+- First reported: 2026-05-20 (`complete-dna-omnimon-archetype` closure — BT23-096 Comet Hammer).
 
 ## Zephagamon — prompted attack target retarget to another Digimon or player  [ZEPH-G005]
 
@@ -2048,6 +2525,23 @@ for all install timings.
 Coverage:
 - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- end_of_opponents_next_turn_with_pending_skips`
 - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- end_of_opponents_next_turn_without_pending_skips`
+
+### G-DSL-MODIFIER-PENDING-SKIPS — DSL `add_modifier` step cannot set `pending_skips` — RESOLVED 2026-05-21
+
+- **Discovered in:** Puppets `/batch-implement-cards-rust-dsl` completion run, EX4-074 ShineGreymon: Ruin Mode (2026-05-21).
+- **Card(s):** EX4-074 — `[When Digivolving][On Deletion] Until the end of your opponent's next turn, all of your opponent's Digimon get -5000 DP.`
+- **Was missing:** the DSL `add_modifier` / `add_dp_modifier` step had no way to set `ModifierEntry.pending_skips`; its lowering routed through `ModifierEntry::simple` (hard-coded `pending_skips: 0`), so a DSL-installed `expiry: end_of_opponents_next_turn` modifier aliased to `EndOfOpponentsTurn` semantics and expired one turn early when installed mid-opponent-turn.
+- **Resolution:** rather than a DSL field (the correct `pending_skips` is runtime turn-state, not authoring-time data), the engine now auto-computes it. `modifiers::pending_skips_for_install(expiry, source_player, turn_player)` returns `1` exactly for the `*NextTurn` install that would otherwise expire one turn early; `EffectContext::add_modifier` calls it and threads the result through `ModifierEntry::with_pending_skips`. Every `add_modifier` / `add_dp_modifier` caller (DSL and hand-written) now gets faithful "until end of next turn" semantics for free — no new DSL vocab needed.
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --lib modifiers::tests::pending_skips`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ex4_074` (6 passed, 0 ignored — the 3 formerly-deferred −5000 DP tests now run).
+
+### G-ZONE-SELECTED-TRASH-TO-DECK-TOP — selected trash card → deck top — RESOLVED 2026-05-21
+
+- **Discovered in:** Puppets `/batch-implement-cards-rust-dsl` completion run, LM-029 Yellow Scramble (shared by the LM-027 / LM-030 Scramble Delay clauses).
+- **Card(s):** LM-029 — `[Start of Your Turn] <Delay> ... Return 1 yellow Digimon card from your trash to the top of the deck.`
+- **Was missing:** no DSL verb moved a *selected* trash card to the *top* of the deck. The only trash→deck verbs (`return_all_trash_to_deck_bottom`, `return_trash_list_to_deck_bottom`) are bottom-only.
+- **Resolution:** added the `return_trash_list_to_deck_top` DSL verb (exact mirror of `return_trash_list_to_deck_bottom` — `StepSpec::ReturnTrashListToDeckTop` / `CompiledStep::ReturnTrashListToDeckTop`, fields `of` + `cards`) lowering to the new `EffectContext::return_trash_cards_to_deck_top` engine method (mirror of `return_trash_cards_to_deck_bottom` but `deck.push` to the `Vec` end = deck top = drawn first).
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- lm_029` (16 passed, 0 ignored — LM-029's `[Start of Your Turn]` Delay clause fully implemented).
+- **Note:** LM-027 / LM-030 Scramble Delay clauses share this gap and are now unblockable (not implemented here — out of Puppets scope).
 
 ### Phase 4l — Track C overlay propagation (full set)
 

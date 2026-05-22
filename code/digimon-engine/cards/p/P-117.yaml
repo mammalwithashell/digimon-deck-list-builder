@@ -17,50 +17,27 @@
 #
 # | Card-text element                                          | Implementation status |
 # |------------------------------------------------------------|-----------------------|
-# | [Your Turn][OPT] When digivolving into [Free], if Tamer → cost -1 | BLOCKED — G-BEFORE-PAY-COST-DIGIVOLVE-TARGET |
-# | Inherited [When Attacking] If 2+ colors, <Draw 1>         | PARTIAL — Draw ships unconditionally; condition G-DSL-SELF-COLOR-COUNT-GTE omitted |
+# | [Your Turn][OPT] When digivolving into [Free], if Tamer → cost -1 | IMPLEMENTED — Phase 2 Track H (cost_target + source_is_cost_target_permanent) |
+# | Inherited [When Attacking] If 2+ colors, <Draw 1>         | IMPLEMENTED — `self_color_count_gte: 2` |
 #
-# ─── DSL-GAP — Clause 0 BLOCKED [G-BEFORE-PAY-COST-DIGIVOLVE-TARGET] ────────
+# ─── Clause 0 — IMPLEMENTED [Phase 2 Track H] ───────────────────────────────
 #
-# The "[Your Turn][OPT] When this Digimon would digivolve into a card with the
-# [Free] trait, if you have a Tamer, reduce the digivolution cost by 1" clause
-# needs a `when_this_digivolves_into:` trigger predicate referencing the
-# target card's trait. The DSL `CostReductionBody` has no `when_this_digivolves_into`
-# + `target_trait_has` trigger form. `scan_before_pay_cost_reduction` in
-# `game_actions.rs` does not thread the digivolution-target card into the
-# condition closure.
+# Closed by Phase 2 Track H. The DSL now exposes `cost_target: { ... }` as a
+# nested predicate that evaluates against the digivolve-target card during
+# BeforePayCost cost-calc dispatch, and `source_is_cost_target_permanent: true`
+# to gate on "this is the permanent being digivolved into". Combined with a
+# Tamer existential, this faithfully encodes the printed text.
 #
-# Same gap as BT23-005 (see `qa/dsl-vocab-gaps.md` entry for BT23-005).
-# Cross-listed: P-117 clause 0 also blocks on G-BEFORE-PAY-COST-DIGIVOLVE-TARGET.
-#
-# Suggested DSL syntax (same as BT23-005):
-#   - scope: own
-#     kind: cost_reduction
-#     reduction_timing: before_pay_cost
-#     when_this_digivolves_into:
-#       target_trait_has: Free
-#     active_when: { your_turn: true }
-#     once_per_turn: true
-#     amount: 1
-#
-# ─── DSL-GAP — Clause 1 condition PARTIAL [G-DSL-SELF-COLOR-COUNT-GTE] ───────
+# ─── Clause 1 condition — IMPLEMENTED [self_color_count_gte] ─────────────────
 #
 # The "[When Attacking] If this Digimon has 2 or more colors, <Draw 1>" clause
-# needs a `self_color_count_gte: 2` predicate evaluating the distinct color count
-# of the carrier permanent's full color list (top card color + all colors from
-# digivolution sources). No such predicate exists in the DSL.
+# uses `self_color_count_gte: 2`, evaluated against the source permanent's
+# synthesized top-card colors.
 #
 # DCGO P_117.cs lines 203-211:
 #   if (card.PermanentOfThisCard().TopCard.CardColors.Count >= 2) { return true; }
 # This checks ONLY the top card's colors. Carrier's digivolution source colors
 # are NOT included — this is a simpler check than the full stack union.
-#
-# Trade-off documented: Clause 1 ships WITHOUT the color-count condition.
-# The Draw fires unconditionally on [When Attacking] — it over-fires on
-# mono-color carriers. The negative branch (carrier 1 color → no draw) is
-# `#[ignore]`'d in the test suite pending G-DSL-SELF-COLOR-COUNT-GTE closure.
-#
-# Filed as NEW gap: G-DSL-SELF-COLOR-COUNT-GTE in qa/dsl-vocab-gaps.md.
 #
 # max-count from DCGO: -1 (unlimited fires per turn). So no once_per_turn here.
 
@@ -80,10 +57,19 @@ alt_paths:
 
 effects:
   # ─── Clause 0 — [Your Turn][OPT] When digivolving into [Free], cost -1 ──────
-  # BLOCKED: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET — omitted entirely.
-  # See header docs for gap details and suggested syntax.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target: { trait_has: Free }
+        - any_field_permanent: { of: you, kind: tamer }
+    once_per_turn: true
+    amount: 1
+    summary: "[Your Turn][OPT] When digivolving into [Free], if Tamer, reduce digivolution cost by 1"
 
-  # ─── Clause 1 — Inherited [When Attacking] <Draw 1> (PARTIAL) ───────────────
+  # ─── Clause 1 — Inherited [When Attacking] <Draw 1> ────────────────────────
   # Printed text:
   #   "[When Attacking] If this Digimon has 2 or more colors, <Draw 1>"
   #
@@ -92,10 +78,9 @@ effects:
   # CanActivateCondition gates on:
   #   card.PermanentOfThisCard().TopCard.CardColors.Count >= 2
   #
-  # PARTIAL: condition omitted pending G-DSL-SELF-COLOR-COUNT-GTE.
-  # Draw fires unconditionally (over-fires on mono-color carriers).
   - scope: inherited
     when: when_attacking
-    summary: "[When Attacking] <Draw 1> (partial: color-count condition omitted, G-DSL-SELF-COLOR-COUNT-GTE)"
+    condition: { self_color_count_gte: 2 }
+    summary: "[When Attacking] If this Digimon has 2 or more colors, <Draw 1>"
     process:
       - draw: { of: you, count: 1 }

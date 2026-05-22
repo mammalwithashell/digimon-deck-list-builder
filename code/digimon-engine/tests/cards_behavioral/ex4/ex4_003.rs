@@ -41,7 +41,7 @@
 #![allow(dead_code)]
 
 use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledScope, CompiledTiming};
-use digimon_engine::card_data::CardData;
+use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::permanent::PermanentHandle;
 
@@ -66,17 +66,21 @@ fn make_lv3_digimon(id: &str) -> CardData {
     c
 }
 
-/// A Lv.4 Digimon used as the "digivolve into" hand card. Cheap evo cost so
-/// the digivolve in tests is unconstrained. Tests that exercise hand
-/// digivolves use this.
+/// A Lv.4 Digimon used as the "digivolve into" hand card. Carries a printed
+/// `Lv.3 Red, cost 0` evo_cost so `normal_digivolve_route_for_hand_card`
+/// accepts the digivolve onto a `make_lv3_digimon` host (which is Lv.3 and
+/// Red by `make_test_card` default). Without a non-empty `evo_costs`,
+/// `rules_digivolve_memory_cost` returns None and the digivolve action is
+/// rejected for a route mismatch — see the fire-test docstrings below.
 fn make_lv4_digimon(id: &str) -> CardData {
     let mut c = make_test_card(id, id);
     c.level = Some(4);
     c.dp = Some(5000);
-    // Allow digivolution from any Lv.3 host with a cost-0 path. The default
-    // make_test_card has empty `evo_costs` so any-color any-host evolves
-    // with default behavior. Tests that need custom evo paths configure
-    // explicitly.
+    c.evo_costs = vec![EvoCost {
+        card_color: 0, // Red — matches make_lv3_digimon's default Red color
+        level: 3,
+        memory_cost: 0,
+    }];
     c
 }
 
@@ -322,19 +326,21 @@ fn ex4_003_is_cost_zero_lv2_black_in_training() {
 
 // ─── Section 2: Behavioral firing (POSITIVE — gated by G-INHERITED-DISPATCH) ─
 
-/// POSITIVE (BLOCKED — G-INHERITED-DISPATCH for OnDigivolve fan-out from
-/// inherited sources): Tsunomon as inherited source under a P0 carrier; P0
-/// digivolves a SEPARATE carrier on their own turn. Clause fires → P0 draws 1.
+/// POSITIVE: Tsunomon as inherited source under a P0 carrier; P0
+/// digivolves a SEPARATE carrier on their own turn. Clause should fire → P0 draws 1.
 ///
 /// Hand delta: -1 (digivolve consumes the LV4 from hand) + 1 (Tsunomon's
 /// <Draw 1>) = 0. Deck delta: -1.
 ///
-/// Blocked until inherited-source OnDigivolve fan-out is wired through the
-/// engine's dispatch path (the general `enqueue_from_permanent` digivolve
-/// observer fan-out from below-top sources). Mirrors BT14-001 / BT21-001 /
-/// BT24-001 / BT22-005 sister DigiEgg ignores.
+/// G-INHERITED-DISPATCH closed 2026-05-17 (Phase 2 Track D); the inherited
+/// OnDigivolve fan-out from below-top sources now dispatches through
+/// `enqueue_from_permanent` (Track D regression test in `timing_dispatch.rs`
+/// exercises this surface). The test-fixture blocker is also closed:
+/// `make_lv4_digimon` now carries a `Lv.3 Red, cost 0` `evo_cost` so
+/// `normal_digivolve_route_for_hand_card` accepts the digivolve onto a
+/// `make_lv3_digimon` (Lv.3 Red) host, the OnDigivolve event fires, and
+/// Tsunomon's inherited clause reacts.
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-DISPATCH — inherited-source OnDigivolve fan-out not wired through engine digivolve-observer dispatch path"]
 fn ex4_003_inherited_fires_draws_one_on_other_digimon_digivolve() {
     let mut runner = tsunomon_runner();
     let _carrier = place_tsunomon_as_source(&mut runner);
@@ -426,8 +432,15 @@ fn ex4_003_inherited_does_not_fire_on_opponents_turn() {
     // Give P1 a Lv.3 carrier on their field to digivolve.
     let p1_handle = runner.place_on_field(1, "LV3", Some(0));
 
-    // Advance to P1's turn.
+    // Advance to P1's turn. `end_turn` flips the memory seesaw — the
+    // builder's `.memory(10)` was set from P0's perspective, so after the
+    // flip P1 holds -10. Re-set memory to a P1-favorable value so P1's
+    // cost-0 digivolve does NOT immediately end P1's turn via
+    // `check_turn_end` (which would rotate back to P0 and trigger P0's
+    // turn-start draw, polluting the hand/deck deltas this test measures).
     runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 1, "precondition: now P1's turn");
+    runner.game.set_memory(10);
 
     let hand0_before = runner.hand_size(0);
     let deck0_before = runner.deck_size(0);
@@ -464,18 +477,13 @@ fn ex4_003_inherited_does_not_fire_on_opponents_turn() {
     );
 }
 
-/// NEGATIVE (BLOCKED — G-DSL-EVENT-TARGET-IS-OTHER): if Tsunomon's OWN
-/// host carrier digivolves, DCGO's `permanent != card.PermanentOfThisCard()`
-/// suppresses the trigger ("one of your OTHER Digimon"). The DSL has no
-/// `event_target_is_other` leaf, so the clause as authored will OVER-FIRE
-/// here. This test documents the intended behaviour.
-///
-/// Today this test would FAIL (clause over-fires and draws 1) once
-/// G-INHERITED-DISPATCH closes for OnDigivolve. Until then it's
-/// vacuously true (clause doesn't fire at all). We `#[ignore]` it under
-/// the DSL gap so the gap closure unblocks it directly.
+/// NEGATIVE: if Tsunomon's OWN host carrier digivolves, the trigger must be
+/// suppressed ("one of your OTHER Digimon"). The clause's
+/// `event_permanent_is_source: false` predicate compares the digivolving
+/// permanent against Tsunomon's source carrier and rejects the fire when
+/// they are the same — faithfully implementing DCGO's
+/// `permanent != card.PermanentOfThisCard()`.
 #[test]
-#[ignore = "BLOCKED: G-DSL-EVENT-TARGET-IS-OTHER — DSL has no event_target_is_other leaf to filter the digivolving permanent against the source's own host carrier; sibling of G-DSL-EVENT-TARGET-IS-SELF (BT15-101)"]
 fn ex4_003_inherited_does_not_fire_on_own_carrier_digivolve() {
     let mut runner = tsunomon_runner();
     let carrier = place_tsunomon_as_source(&mut runner);
@@ -533,12 +541,11 @@ fn ex4_003_inherited_does_not_fire_on_own_carrier_digivolve() {
 /// OPT: a SECOND qualifying digivolve in the same turn must NOT trigger
 /// the draw a second time.
 ///
-/// BLOCKED: prerequisite G-INHERITED-DISPATCH for OnDigivolve fan-out from
-/// inherited sources. Once that fires, G-OPT-TRIGGERED is closed for
-/// permanent-backed queued triggered effects (resolved 2026-04-29) so this
-/// test should go green together with the fire-test.
+/// G-INHERITED-DISPATCH closed 2026-05-17 (Phase 2 Track D); G-OPT-TRIGGERED
+/// closed in Phase 2 Track C. The LV3/LV4 test-fixture blocker is also
+/// closed — `make_lv4_digimon` now carries a `Lv.3 Red, cost 0` `evo_cost`
+/// so both digivolves complete.
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-DISPATCH prerequisite — OPT can't be tested until the clause fires from an inherited OnDigivolve source"]
 fn ex4_003_inherited_opt_blocks_second_trigger_same_turn() {
     let mut runner = tsunomon_runner();
     let _carrier = place_tsunomon_as_source(&mut runner);

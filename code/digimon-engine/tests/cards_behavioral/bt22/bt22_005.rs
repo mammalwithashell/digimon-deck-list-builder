@@ -23,19 +23,15 @@
 //!
 //! # Known engine and DSL gaps affecting these tests
 //!
-//! G-INHERITED-DISPATCH: `enqueue_from_permanent` only scans the top card
-//! (+ linked_cards + Training inserts) for triggered effects. Inherited
-//! clauses on cards in lower digivolution-stack slots (where Tsumemon lives
-//! at runtime) are not enqueued today. Behavioral tests that require the
-//! clause to actually fire are gated `#[ignore = "BLOCKED:
-//! G-INHERITED-DISPATCH ..."]`. Same caveat as BT14-001 / BT21-001 /
-//! BT24-001 sister DigiEgg DSL cards.
+//! G-INHERITED-DISPATCH: closed 2026-05-17 (Phase 2 Track D);
+//! `enqueue_from_permanent` walks the full digivolution stack and dispatches
+//! inherited triggered effects from below-top sources. Fire-tests for both
+//! the [Unidentified] and [CS] disjunct branches are live.
 //!
-//! G-OPT-TRIGGERED: `once_per_turn: true` compiles to
-//! `Effect::max_per_turn=1` but `run_queued_effect_inner` does not yet
-//! enforce per-turn lockout for triggered clauses. The OPT-lockout test
-//! is `#[ignore]`'d alongside G-INHERITED-DISPATCH (OPT can't be tested
-//! until the clause fires at all).
+//! G-OPT-TRIGGERED: closed 2026-05-16 (Phase 2 Track C);
+//! `run_queued_effect_inner` consults `Permanent::activation_count` so
+//! `once_per_turn: true` clauses lock after their first fire. OPT-lockout
+//! test is live.
 
 #![allow(dead_code)]
 
@@ -409,7 +405,6 @@ fn bt22_005_inherited_does_not_fire_on_opponents_turn() {
 /// dispatch (`enqueue_from_permanent` iterates `card_sources[0..n-1]`).
 /// Mirrors BT14-001 / BT21-001 / BT24-001 sister DigiEgg ignores.
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-DISPATCH — engine lacks digivolution-stack inherited triggered-effect dispatch (enqueue_from_permanent only scans top card + linked_cards + Training)"]
 fn bt22_005_inherited_fires_draws_one_on_unidentified_digimon_play() {
     let mut runner = tsumemon_runner();
     let _carrier = place_tsumemon_as_source(&mut runner);
@@ -455,7 +450,6 @@ fn bt22_005_inherited_fires_draws_one_on_unidentified_digimon_play() {
 /// disjunction branch — confirms the `any_of` over `event_target_trait_has`
 /// covers both traits.
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-DISPATCH — engine lacks digivolution-stack inherited triggered-effect dispatch"]
 fn bt22_005_inherited_fires_draws_one_on_cs_digimon_play() {
     let mut runner = tsumemon_runner();
     let _carrier = place_tsumemon_as_source(&mut runner);
@@ -605,7 +599,6 @@ fn bt22_005_inherited_does_not_fire_on_cs_tamer_play() {
 /// G-INHERITED-DISPATCH (the clause must fire at all before OPT can be
 /// tested).
 #[test]
-#[ignore = "BLOCKED: G-OPT-TRIGGERED (and G-INHERITED-DISPATCH prerequisite) — OPT not enforced for triggered effects in queue drain path"]
 fn bt22_005_inherited_opt_blocks_second_trigger_same_turn() {
     let mut runner = tsumemon_runner();
     let _carrier = place_tsumemon_as_source(&mut runner);

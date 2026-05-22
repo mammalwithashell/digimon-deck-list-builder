@@ -85,9 +85,14 @@ impl CardSource {
         &data[self.data_index].card_name
     }
 
-    /// Get all names this card is treated as.
+    /// Get all names this card is treated as — its printed name plus any
+    /// static "also treated as" identity aliases (`CardData.also_treated_as`)
+    /// and any effect-granted aliases (`CardSource.also_treated_as`).
     pub fn card_names<'a>(&'a self, data: &'a [CardData]) -> Vec<&'a str> {
         let mut names = vec![data[self.data_index].card_name.as_str()];
+        for name in &data[self.data_index].also_treated_as {
+            names.push(name.as_str());
+        }
         for name in &self.also_treated_as {
             names.push(name.as_str());
         }
@@ -170,12 +175,19 @@ impl CardSource {
         &data[self.data_index].traits
     }
 
-    /// Check if this card's name contains the given substring (case-insensitive).
+    /// Check if this card's name contains the given substring
+    /// (case-insensitive). Scans the printed name plus static and
+    /// effect-granted "also treated as" identity aliases.
     pub fn contains_card_name(&self, name: &str, data: &[CardData]) -> bool {
         let name_lower = name.to_lowercase();
         let card_name = &data[self.data_index].card_name;
         if card_name.to_lowercase().contains(&name_lower) {
             return true;
+        }
+        for also in &data[self.data_index].also_treated_as {
+            if also.to_lowercase().contains(&name_lower) {
+                return true;
+            }
         }
         for also in &self.also_treated_as {
             if also.to_lowercase().contains(&name_lower) {

@@ -2,7 +2,41 @@
 
 **Audience:** AI agents (and humans) implementing Digimon card effects in Rust against `digimon-engine`.
 
+**Last refreshed: 2026-05-15** (Tracks A–K substrate sweep; see §"Tracks A–K Substrate Quick Reference" below for the post-Phase-6 / Tracks A–K landings absorbed in this pass).
+
 This document is the canonical scripting reference. Before writing any card effect, read this in full. The engine intentionally exposes a curated API (`EffectContext`); do not reach around it into `Game` internals.
+
+The §"Phase 5/6/7/8/9/10" appendices below are historical and preserved as-is.
+Track-level substrate (Tracks A–K, 2026-04..2026-05) is captured in the
+"Tracks A–K Substrate Quick Reference" section directly below; per-method
+documentation is interleaved into §3 (`EffectContext`) and §5 (enums).
+
+---
+
+## Tracks A–K Substrate Quick Reference (2026-04 → 2026-05)
+
+The lettered tracks landed substrate on top of the phase-numbered scaffolding.
+Each row points at the canonical engine module so card-script authors can
+cross-reference quickly. See the per-track design specs under
+`docs/superpowers/specs/` for full design context.
+
+| Track | Focus | Key engine surface | Doc anchors |
+|---|---|---|---|
+| **Track A** | Event payload contract — `TriggerContext` fields, provenance tokens, `EventCause`/`EventSubject`/`MovedCardSet`/`DeletedObjectSnapshot`, deleted-object snapshots | `trigger_context.rs:1-154`, `effect_queue.rs` fan-out, `effect_context/mod.rs:295-416` (event accessors) | §"Event Payload Contract", §5 enums |
+| **Track B** | Would-replacement framework — `WhenWouldBe*` timings, `ReplacementContext`, passive-modifier migration, selection-bearing keyword pattern | `replacement.rs:1-1316`, `effect.rs:534-567` (when_would_* builders), `effect_context/mod.rs:1307-1620` (outcome-setters) | §3 "Replacement-process outcome-setters", §"Phase 7" |
+| **Track C** | Modifier taxonomy completion — full `ModifierType` variant list with consult-site checklist, source-scoped cause filters, `cannot_be_affected_by_opponents_source_kind` | `enums.rs:526-731`, `modifiers.rs`, `effect_context/mod.rs:3762-3808` | §5 "Modifier consult-site checklist" |
+| **Track D** | Combat machine — `AttackOpen` unification, `RaidOpen`/`PostBlock`/`PostBattle` states, `cancel_attack`/`open_counter_window`/`force_opponent_attack`, retarget validation | `combat.rs`, `effect_context/mod.rs:4232-4530` (attack helpers), `selection.rs:660-753` (`AttackState`) | §"Phase 9" |
+| **Track E** | Zone-movement DSL verbs + EffectContext helpers — `place_self_at_security`, `place_self_option_at_security`, `bounce_self`, `security_place_*`, `return_all_trash_to_deck_bottom`, `trash_top_n_digivolution_cards_of_each`, `trash_opponent_hand_to_count`, `search_own_security_stack` | `effect_context/mod.rs:1422-1620, 3329-4196` | §14 "Zone Manipulation", "Track E zone-movement DSL verbs" table |
+| **Track F** | Keyword Phase F substrate — `Execute`, `Iceclad`, `MindLink`, `Training`, `Retaliation`, `Scapegoat` auto-installs | `cards/keyword_effects.rs`, `enums.rs:440-477` (`Keyword` variants) | §5 `Keyword`, `tests/keyword_phase_f/` |
+| **Track G** | Keyword emitters routing — keywords go through `grant_keyword` / `add_player_modifier`, not direct `ModifierStore` mutation | `modifiers.rs`, `effect_context/mod.rs:3844-3879` (`grant_keyword*`) | §"Cross-track contracts" |
+| **Track H** | Aura system + granted-triggered abilities + `EndOfYour/OpponentsNextTurn` expiry | `aura.rs:1-387`, `effect_context/mod.rs:3725-3760` (`grant_triggered_effect`), `enums.rs:765-785` (`Expiry`) | §"Declarative aura DSL materialization", §13 |
+| **Track I** | Option lifecycle taxonomy — `OptionState`, `OptionFieldState`, `OptionTrashCause`, lifecycle entry points | `option_lifecycle.rs:1-360`, `permanent.rs` (`option_state`), `game.rs` (`install_field_option_*`, `trash_field_option`, `orphan_*`, `relink_plug_in`) | §"Option lifecycle entry points" |
+| **Track J** | Predicate evaluator + `Expiry::UntilCondition` runtime + DSL `until_condition` lowering | `modifiers.rs` (`ModifierEntry::until_condition`), `game.rs` (`mark_until_condition_dirty`, `until_condition_*_evaluations`) | §5 `Expiry`, "Expiry::UntilCondition contract" |
+| **Track K** | Puppet DSL observers + Track-cleanup hygiene + Alter-S targeting + DigiBurst keyword + formula extensions | `cards/keyword_effects.rs`, `enums.rs:398-401` (`DigiBurst(u8)`), `effect_context/mod.rs:289-296` (`source_stack_source_count`) | §"Cross-engine parity", §"Selection-bearing keyword authoring pattern" |
+
+For an at-a-glance status of which substrate items closed which gap entries,
+see `docs/RUST_ENGINE_GAPS.md` (live tracker — its at-a-glance table is the
+source of truth for "is this primitive landed yet?").
 
 ---
 
@@ -25,7 +59,7 @@ code/digimon-engine/
 │   ├── tensor.rs               # Compact compatibility tensor (standard_compact_v1, 1375 floats)
 │   ├── tensor_v2_lite.rs       # Default pilot observation writer (standard_lite_v2, 8320 floats)
 │   ├── tensor_profiles/        # Profile layout metadata and card/scalar positions
-│   ├── action/                 # Action space + mask (2168 actions, matches Python)
+│   ├── action/                 # Action space + mask (2192 actions, matches Python)
 │   ├── cards.rs                # CardEffectRegistry + registration glue
 │   ├── cards/test_cards.rs     # TEST-001..005 — hand-written examples
 │   └── debug_runner.rs         # Deterministic test harness
@@ -107,6 +141,8 @@ Key rules:
 - `.dp_modifier_fn(|ctx, target| Some(n))` — live DP formula/query contribution for declarative aura effects; `None` means the aura does not apply to that target.
 - `.security_attack_fn(|ctx, target| Some(n))` — live Security Attack check count formula for declarative aura effects; `None` preserves the normal base check when no formula applies.
 - `.cost_reduction(n)` — static cost reduction.
+- `.pay_cost_fn(|ctx| bool)` — custom cost-payment logic. For `BeforePayCost` timing this hooks into play/digivolve cost calculation; for other triggered timings it runs in `run_queued_effect_inner` between the condition gate and the body. Distinct from `.activation_cost` below — the failure semantics differ. See `effect.rs` docstring.
+- `.activation_cost(|ctx| bool)` — Phase 2 Track B. Declarative activation-cost hook for triggered abilities like "by suspending this Tamer" or "by returning this Tamer to the bottom of the deck". Runs AFTER condition + `.optional()` accept but BEFORE the body `process`. Returning `false` collapses the body silently AND consumes the OPT slot (no decline-vs-fail elision, Working Rule 17). Pair with `EffectContext::suspend_self_as_cost` / `return_self_to_deck_bottom_as_cost` for the two printed cost shapes.
 - `.build()` — finalize into `Effect`.
 
 ---
@@ -167,9 +203,256 @@ ctx.trash_from_top(player: PlayerId, count: u8) -> u8
 ctx.delete_permanent(target: PermanentHandle)
 ctx.suspend(target: PermanentHandle)
 ctx.unsuspend(target: PermanentHandle)
+
+ctx.de_digivolve(target, stop_at_level: Option<u8>, amount: Option<u8>) -> u8
+ctx.return_to_hand(target) -> Option<CardHandle>
+ctx.return_to_deck(target, position: StackPosition) -> bool
+ctx.bounce_self() -> Option<CardHandle>
+
+ctx.trash_card_source(perm, card)            // trash one source by handle
+ctx.trash_all_sources(target) -> bool         // strip every digivolution source
+ctx.trash_top_source(target) -> bool          // strip only the topmost source under the visible top
+ctx.armor_purge_top(perm)                     // <ArmorPurge> trash of the top printed card
+
+ctx.return_card_source_to_hand(perm, card) -> bool            // return one source by handle to its OWNER's hand
+ctx.return_selected_sources_to_hand(selected: Vec<SourceSelectionRef>) -> bool
 ```
 
+`return_card_source_to_hand` (`effect_context/mod.rs:3565`) is the
+return-to-hand twin of `trash_card_source`: it removes a single
+digivolution source from `perm`'s stack (anywhere in the stack, not just the
+top) and pushes it to `removed.owner`'s hand — so a source owned by the
+opponent via a control-transfer play returns to its true owner. Because this
+is a return rather than a trash, it fires **no** `OnDigivolutionCardTrashed`
+observer. Returns `false` if the permanent slot is gone or the card is not in
+its stack. `return_selected_sources_to_hand` (`mod.rs:3599`) is the
+`Vec`-taking convenience wrapper — the mirror of
+`play_selected_sources_without_cost` / `trash_selected_sources` — that returns
+each `select_own_sources`-bound `SourceSelectionRef` to its owner's hand,
+returning `true` only when every ref moved. Drives BT12-031 Imperialdramon:
+Fighter Mode's "By returning 1 [Imperialdramon: Dragon Mode] from this
+Digimon's digivolution cards to its owner's hand" alt-cost.
+
 `delete_permanent` removes the permanent and moves all cards in its stack to trash. It also clears modifiers attached to that handle. **Does not fire OnDeletion** — use `Game::delete_permanent_with_effects` for that when you're calling from combat paths. From a card script, `ctx.delete_permanent` is usually what you want (OnDeletion is handled by combat, not effect).
+
+`de_digivolve` (`effect_context/mod.rs:1966`) pops up to `amount` sources off
+`target`'s stack, trashing each into the target owner's trash. `stop_at_level`
+clamps the pop so the resulting top card's level is ≥ the floor; `None` for
+no floor (TS Olympos Ikkakumon-style pop-to-base). Returns the actual count
+popped. See §Phase 10 for printed examples.
+
+`return_to_hand` (`effect_context/mod.rs:3329`) bounces a permanent: top
+card → owner's hand, sources under → owner's trash. Routed through
+`Permanent::owner()` so transferred-control cards return to their original
+owner. `bounce_self` (`mod.rs:3349`) is sugar for `return_to_hand(self.source_permanent.unwrap())`.
+
+`return_to_deck` (`mod.rs:3355`) bounces a permanent to deck at Top/Bottom/Random.
+A companion `return_stack_to_deck` (`mod.rs:3368`) returns the full stack
+(including digivolution sources) to deck.
+
+Both `return_to_hand` and `return_to_deck` route through the corresponding
+`WhenWouldBe*` replacement windows (Phase 7) and honor the passive
+`CannotBeReturnedToHand` / `CannotBeReturnedToDeck` modifiers from Track C.
+
+### Self / source-stack helpers (Track E)
+
+These cover printed text where the resolving card or its own stack is the
+move subject. All live in `effect_context/mod.rs` and route through the
+appropriate replacement window.
+
+```rust
+ctx.place_self_at_security(position: StackPosition, face_up: bool) -> bool
+ctx.place_self_at_security_and_cancel_current_replacement(position, face_up) -> bool
+ctx.place_self_option_at_security(position, face_up) -> bool
+
+ctx.security_place_stacked_card(carrier, source_card, target_player, position, face_up) -> bool
+ctx.security_place_top_stacked_card(carrier, target_player, position, face_up) -> bool
+
+ctx.place_permanent_on_security(player, target, position, face_up) -> bool
+ctx.place_permanent_on_security_and_handle_current_replacement(player, target, position, face_up) -> bool
+ctx.trash_top_security_and_cancel_current_replacement(player) -> bool
+ctx.place_sourceless_permanent_bottom_security_and_cancel_current_replacement(...) -> bool
+
+ctx.trash_opponent_hand_to_count(opponent, target_count) -> bool   // forced-reduction; opponent picks
+ctx.trash_top_n_digivolution_cards_of_each(target_player, n) -> usize
+ctx.return_all_trash_to_deck_bottom(player) -> Vec<CardHandle>
+```
+
+### Activation-cost helpers (Phase 2 Track B)
+
+Used as the closure body for [`EffectBuilder::activation_cost`] on Tamer
+triggered abilities. Failure (return `false`) collapses the body silently
+and consumes the OPT slot for the same activation key. No prompts —
+player visibility belongs to `.optional()` which runs BEFORE the cost.
+
+```rust
+ctx.suspend_self_as_cost() -> bool                  // "by suspending this Tamer..."
+ctx.return_self_to_deck_bottom_as_cost() -> bool    // "by returning this Tamer to the bottom of the deck..."
+```
+
+- `suspend_self_as_cost` returns `false` if the source permanent is gone
+  or already suspended; otherwise suspends it (firing `OnSuspend`
+  observers) and returns `true`.
+- `return_self_to_deck_bottom_as_cost` returns `false` if the source has
+  already left the field; otherwise routes through `Game::return_to_deck`
+  (top card to owner's deck bottom, digivolution sources trashed per
+  standard return-to-deck rules, fires the leave-field observer chain).
+
+The `*_and_cancel_current_replacement` siblings are for replacement-body
+authors that need to commit a state change AND set the replacement outcome
+in one call. Use them inside a `WhenWouldLeaveBattleArea` or
+`WhenWouldBeDeleted` process body; outside a parked replacement they panic
+in dev builds.
+
+`trash_opponent_hand_to_count` (`mod.rs:4021`) is the forced-reduction
+primitive: the **opponent** is the selecting player (the affected side
+picks which cards to trash, per the no-approximations rule). Used by
+BT19-075 MoonMillenniummon.
+
+### Player-scoped digivolve cost reducer
+
+```rust
+ctx.arm_player_digivolve_cost_reducer(
+    amount: i32,
+    single_fire: bool,
+    target_color: Option<CardColor>,
+    suspend_cost: bool,
+)
+```
+
+`arm_player_digivolve_cost_reducer` (`effect_context/mod.rs:2373`) installs a
+**player-scoped**, turn-scoped future-digivolve cost reducer. It builds a
+`PlayerDigivolveCostReducer` (`player_cost_reducer.rs`) and pushes it onto
+`Game::player_digivolve_cost_reducers`. Unlike a field-hosted `BeforePayCost`
+scan — which returns an `i32` synchronously and cannot prompt — a
+`PlayerDigivolveCostReducer` has no field permanent to host it and can install
+an interactive accept/decline `PendingSelection` plus a nested suspend-cost
+selection. This is the substrate for `[Main]` cost-reduction Options that
+resolve and leave the field immediately (BT3-103 Hidden Potential Discovered!:
+"For the turn, when one of your green Digimon would next digivolve, by
+suspending 1 of your Digimon, reduce the digivolution cost by 5").
+
+A `PlayerDigivolveCostReducer` carries: `player` (only this player's
+digivolutions trigger it), `source_card` (provenance for the prompt
+`PendingSelection`s), `kind` (`PlayerCostReducerKind::Digivolve`), `expiry`
+(`PlayerCostReducerExpiry::EndOfTurn` — dropped in `rotate_turn_player`),
+`amount` (the reduction), `single_fire` (consume on first *successful*
+application — a declined prompt leaves it armed), `target_color` (when `Some`,
+the digivolving permanent's top card must include that color), and
+`suspend_cost`. Lifecycle: the digivolve-from-hand cost path consults the
+store BEFORE the synchronous field-hosted `BeforePayCost` scan; on a
+qualifying digivolution it installs the accept/decline prompt, and on accept a
+`suspend_cost` reducer prompts the player to suspend one of their own
+unsuspended Digimon — both choices surfaced through `pending_selection` per
+Working Rule §17 (no auto-suspend, no auto-application). Scope: the hook fires
+on the normal `digivolve_from_hand` path only; breeding-area / DNA / Blast
+digivolutions are out of scope for this primitive.
+
+### Effect-driven play / digivolve
+
+```rust
+ctx.play_from_hand_with_cost(player, hand_index, CostDelta) -> Option<PermanentHandle>
+ctx.play_from_hand_free(player, hand_index) -> Option<PermanentHandle>
+ctx.play_from_hand_free_with_provenance(player, hand_index) -> Option<(PermanentHandle, ProvenanceToken)>
+ctx.play_from_trash_with_cost(player, trash_index, CostDelta) -> Option<PermanentHandle>
+ctx.play_from_trash_free_unsuspended(card) -> Option<PermanentHandle>
+ctx.play_from_trash_free_unsuspended_suppress_on_play(card) -> Option<PermanentHandle>
+ctx.play_from_security(player) -> Option<PermanentHandle>
+ctx.play_from_materials(carrier, source_index, CostDelta, bind_target: Option<...>) -> Option<PermanentHandle>
+ctx.play_to_breeding_from_hand(player, hand_index) -> bool
+ctx.move_from_breeding_by_effect(player) -> bool
+ctx.hatch(player) -> bool
+
+ctx.effect_initiated_digivolve(player, hand_index, target, CostDelta, ignore_color) -> bool
+ctx.effect_initiated_digivolve_ignore_requirements(player, hand_index, target, CostDelta) -> bool
+ctx.effect_initiated_digivolve_with_provenance(...) -> Option<ProvenanceToken>
+ctx.effect_initiated_digivolve_from_source(carrier, source_index, target, CostDelta) -> bool
+ctx.effect_initiated_digivolve_from_source_ignore_requirements(...) -> bool
+ctx.effect_initiated_dna_digivolve(...) -> bool
+ctx.effect_initiated_dna_digivolve_with_provenance(...) -> Option<ProvenanceToken>
+
+ctx.recover_from_deck(player, count: u8) -> u8       // mod.rs:4197 — "recover N security"
+ctx.trash_top_security(player) -> bool                // mod.rs:1863
+ctx.trash_bottom_security(player) -> bool
+ctx.add_top_security_to_hand(player) -> bool          // mod.rs:2225
+ctx.add_pending_security_to_hand() -> bool            // mod.rs:2324
+```
+
+`play_from_*_with_cost` and `effect_initiated_digivolve_*` thread
+`PlaySource::ByEffect` / `ByDigivolve` so Phase 6 flood gates can
+discriminate effect-initiated plays from natural plays. The
+`*_with_provenance` variants (Track A) return a `ProvenanceToken` keyed to
+the new `CardSource` rather than the battle-area slot — use these when later
+cleanup or suppression must identify the same created object after zone
+movement.
+
+`play_from_trash_free_unsuspended_suppress_on_play` (PUPPETS-G030) is the
+On-Play-suppressing variant: the played Digimon's own `[On Play]` effects do
+**not** activate for that play event. The suppression is scoped strictly to
+the just-played permanent and that single play — `OnEnterFieldAnyone` /
+`OnAllyPlayed` broadcasts and every other permanent's triggers fire normally.
+It threads a `suppress_on_play` bool through `play_from_trash_with_cost_suppress`
+→ the cost-reduction chain → `PendingWouldPlayResume` → the final
+`commit_play_from_hand_card_no_replace`, which gates exactly the `fire_on_play`
+call for that permanent. Surfaced to the DSL as `suppress_on_play: true` on the
+`play_from_trash_free` step (BT5-106 Demonic Disaster's [Security] clause).
+
+### Granted triggered effects (Track H)
+
+```rust
+ctx.grant_triggered_effect(
+    carrier: PermanentHandle,
+    timing: EffectTiming,
+    expiry: Expiry,
+    body: impl Fn(&mut EffectContext) + Send + Sync + 'static,
+)
+```
+
+Defined at `effect_context/mod.rs:3725`. Installs a granted-triggered ability
+on `carrier` that fires on every matching `timing` event until `expiry`.
+Distinct from `refire_target_effect` (one-shot invocation of an existing
+effect) — granted-triggered effects persist and fire on future matching
+events. Used by "this Digimon gains [End of Your Turn]: <effect>" text.
+
+The granted body has no max-per-turn or pay-cost gates in v1 — it
+unconditionally runs when the timing fires, parking on `pending_selection`
+through the standard `select_*` helpers if a player choice is needed.
+
+### Selection helpers (full list)
+
+The `select_*` family lives in `code/digimon-engine/src/effect_context/selections.rs`.
+Every helper installs exactly one `PendingSelection` (see §5 `SelectionKind`)
+and registers a callback that resumes after the player answers. Singleton or
+trivially-small selections must still surface through `PendingSelection` per
+working rule 17 — never auto-select.
+
+| Helper | `SelectionKind` produced | File:line | Purpose |
+|---|---|---|---|
+| `select_own_permanent(prompt, is_optional, filter, callback)` | `OwnField` | `selections.rs:135` | Pick from the source-controller's battle area. |
+| `select_opponent_permanent(prompt, is_optional, filter, callback)` | `OppField` | `selections.rs:102` | Pick from the opponent's battle area. |
+| `select_hand(of_player, prompt, is_optional, filter, callback)` | `Hand` | `selections.rs:167` | Pick from `of_player`'s hand (index-based filter). |
+| `select_trash(of_player, prompt, is_optional, filter, callback)` | `Trash` | `selections.rs:233` | Pick from `of_player`'s trash. |
+| `select_material(carrier, prompt, is_optional, filter, callback)` | `Material` | `selections.rs:308` | Pick a digivolution-source under a permanent (excludes top card). |
+| `select_own_sources(min, max, prompt, filter, callback)` | `SourceMulti { min, max, picked }` | `selections.rs:383` | Pick `min..=max` source cards across own battle-area stacks (used by Digi-Burst, Partition costs). |
+| `select_opponent_sources(prompt, min, max, filter, callback)` | `SourceMulti { min, max, picked }` | `selections.rs:437` | Opponent-side mirror of `select_own_sources` — the candidate set is drawn from the **opponent's** battle-area digivolution-source stacks (every card below each opponent permanent's top card). Identical exact-N / up-to-N counts, PASS-after-min, `&Game`-shaped filter and stable cross-permanent `SourceSelectionRef`s; only the scanned player differs. Used by BT16-085's DNA branch ("trash any 3 digivolution cards under your opponent's Digimon"). |
+| `select_partition_sources(prompt, filter, callback)` | `SourceMulti { min: 2, max: 2 }` | `selections.rs:432` | Sugar for the Partition selection (two sources, optionally color-grouped). |
+| `select_opponent_permanents_by_dp_budget(budget, prompt, filter, callback)` | `DpBudget { remaining_dp, picked }` | `selections.rs:487` | Pick zero-or-more opponent permanents whose total effective DP stays under `budget`. Used by BT19-075-style "delete opponent's Digimon with N DP or less in total." |
+| `select_own_breeding_permanent(prompt, filter, callback)` | `BreedingPermanent` | `selections.rs:536` | Pick the source-controller's breeding-area permanent. |
+| `select_effect_choice(prompt, labels, callback)` | `EffectChoice` | `selections.rs:602` | N-label branch chooser. Each label becomes an `EffectChoiceEntry`; the callback receives the chosen index. |
+| `select_reveal(prompt, is_optional, filter, callback)` | `Reveal` | `selections.rs:674` | Pick from `Game::revealed_cards`. |
+| `select_reveal_buckets(buckets, callback)` | `RevealBucket { bucket_index, min, max, picked }` | `selections.rs:738` | Multi-bucket reveal flow — used by "reveal N from deck, sort into add-to-hand bucket vs. bottom-of-deck bucket" cards. Each bucket parks its own selection with min/max bounds. |
+| `select_security(of_player, prompt, is_optional, filter, callback)` | `Security` | `selections.rs:798` | Pick a card from a player's security stack. |
+| `select_union_zone(of_player, zones, prompt, is_optional, filter, callback)` | `UnionZone { zones }` | `selections.rs:886` | Cross-zone single pick (hand or trash or material). See §"Phase 4 — select_union_zone." |
+| `select_ordered_permutation(items, prompt, callback)` | `OrderedPermutation { remaining }` | `selections.rs:1006` | Place N items in player-chosen order. See §"Phase 4 — select_ordered_permutation." |
+| `select_count_capped_multi(of_player, zone, max, prompt, is_optional_zero, filter, callback)` | `CountCappedMultiSelect { max, picked }` | `selections.rs:1087` | Pick up-to-N from a single zone (hand, trash, or specific permanent's materials). See §"Phase 4 — select_count_capped_multi." |
+| `search_own_security_stack(prompt, is_optional, filter, on_select)` / `(... on_no_match)` overload | `Security` | `selections.rs:1241` | Sugar over `select_security(self.player, …)` for own-security single-pick. Used by TS Olympos archetype cards. |
+
+The opponent-as-selector scope (`ctx.as_selecting_player(opp).select_*`) is
+documented in §"as_selecting_player builder" below. It forwards
+`select_own_permanent`, `select_opponent_permanent`, `select_effect_choice`,
+`select_hand`, `select_trash`, `select_union_zone`,
+`select_count_capped_multi`, and `select_ordered_permutation`
+(`selections.rs:1455-1697`).
 
 ### Cross-card effect refiring
 
@@ -180,7 +463,19 @@ ctx.refire_target_effect(
     selecting_player: PlayerId,
     bypass_once_per_turn: bool,
 ) -> bool
+
+ctx.refire_effect_from_permanent(
+    target: PermanentHandle,
+    timing_filter: TimingFilter,
+    selecting_player: PlayerId,
+    bypass_once_per_turn: bool,
+) -> bool
 ```
+
+`refire_target_effect` and the lower-level `refire_effect_from_permanent`
+both live in `effect_context/mod.rs:653-720`. Use the `target_effect` variant
+for printed text like Homeros — it installs an `EffectChoice` if the target
+has ≥2 eligible effects.
 
 Use this for printed text such as BT24-102 Homeros: "activate 1 [On Play] or
 [When Digivolving] effect of 1 of your [Olympos XII] trait Digimon." This is
@@ -229,11 +524,94 @@ existing effect once immediately.
 
 ```rust
 ctx.add_dp_modifier(target: PermanentHandle, value: i32, expiry: Expiry)
+ctx.add_declarative_dp_modifier(target, value, expiry)              // marks as declarative materializer
 ctx.add_modifier(target, modifier: ModifierType, value: i32, expiry: Expiry)
+ctx.add_declarative_modifier(target, modifier, value, expiry)
+ctx.add_modifier_with_until_condition(target, modifier, value, predicate)
 ctx.grant_keyword(target, keyword: Keyword, expiry: Expiry)
+ctx.grant_declarative_keyword(target, keyword, expiry)
+ctx.grant_keyword_with_until_condition(target, keyword, predicate)
+ctx.add_declarative_player_modifier(target_player, modifier, value, expiry)
+ctx.add_effect_immunity_modifier(target, source_kind, controller_filter, expiry) -> bool
+ctx.grant_zone_return_immunity_to_opponent_effects(target, expiry)
+ctx.grant_narrow_opponent_effect_protection(target, expiry)
+ctx.ignore_option_color_requirement(target_player, expiry)
 ```
 
-See §5 for `ModifierType` and `Expiry` values.
+`grant_narrow_opponent_effect_protection` (`effect_context/mod.rs`) installs
+the narrow "can't have its DP reduced **by your opponent's effects** and
+isn't affected by ＜De-Digivolve＞ effects" protection bundle (PUPPETS-G024,
+BT16-055 Namakemon). Both protections are genuinely opponent-effect-scoped:
+`ImmuneFromDPMinus` is installed with an `EffectImmunityFilter { controller:
+OpponentOnly }` (consulted by `Game::effective_dp`, which suppresses only
+negative `ChangeDp` deltas whose `source_player` is an opponent), and
+`CannotBeDeDigivolved` is installed via the `ModifierEntry::passive_replacement`
+route so its `default_passive_cause_filter` (`ReplacementCause::OpponentEffect`)
+takes effect. The controller's own DP-reduction and own De-Digivolve still
+apply. Prefer this over a raw `add_modifier(ImmuneFromDPMinus / ...)` pair,
+which installs the broad unscoped variant.
+
+See §5 for `ModifierType` and `Expiry` values. The `add_declarative_*` /
+`grant_declarative_*` variants tag the modifier as **declarative
+materializer** so `tick_declarative_effects` re-applies it during
+continuous-controller cycles; use these from aura process bodies and avoid
+them from one-shot triggered processes.
+
+`add_modifier_with_until_condition` and `grant_keyword_with_until_condition`
+(`effect_context/mod.rs:3663-3722`) install a runtime predicate alongside the
+modifier; the controller marks the entry dirty on field/zone/orientation
+changes and re-evaluates after the current observer drain. See §5 `Expiry`
+for the full re-evaluation contract.
+
+### Scheduled effects
+
+```rust
+ctx.schedule_delayed(when: EffectTiming, body: Effect)
+ctx.schedule_delayed_with_runtime(when, body, captured_bindings)
+ctx.schedule_delete_at_end_of_turn(permanent: PermanentHandle)
+ctx.schedule_delete_at_end_of_opponents_turn(permanent: PermanentHandle)
+ctx.place_self_as_delay_option_permanent()
+```
+
+`schedule_delayed_*` (`effect_context/mod.rs:835-865`) parks a one-shot effect
+on `Game.scheduled_effects` keyed to a future timing
+(`EndOfYourTurn`, `EndOfOpponentsTurn`, `EndOfYourNextTurn`,
+`EndOfOpponentsNextTurn`, etc.). The runtime variant captures DSL bindings
+so result-bound predicates inside the body resolve against the original
+selections after the schedule drains. Use this for "at the end of your next
+turn, …" and Delay Option bodies.
+
+`schedule_delete_at_end_of_turn` (PUPPETS-G003) schedules a deletion of
+*exactly* `permanent` at the end of the **current** turn — for card text "At turn
+end, delete the Digimon this effect played" (EX11-022 Karakurumon, EX11-061
+Mirai Kinosaki). Pass the `PermanentHandle` returned by a free-play call
+(`play_from_hand_free`, `play_union_bound_free`, `play_token` bind_as, …)
+immediately, while the handle is still valid: the method captures the
+permanent's stable `ProvenanceToken` (its top card's identity) and pushes a
+`ScheduledProvenanceDeletion` onto `Game.scheduled_provenance_deletions`. The
+queue is drained by `scheduled_effects::fire_scheduled_provenance_deletions`
+from `fire_end_of_your_turn` (after the `EndOfYourTurn` observers). At drain
+time the token is resolved against the live battle areas: a still-present
+permanent is deleted as the controller's own effect (cause `OwnEffect`); if
+the played permanent already left, the entry is a silent no-op. Because the
+deletion is keyed to a provenance identity, not a battle-area index, it
+targets the right permanent even after other permanents enter or leave and
+shift indices. A handle that no longer points at a live permanent is ignored
+(nothing is scheduled).
+
+`schedule_delete_at_end_of_opponents_turn` (PUPPETS-G016) is the opponent-turn
+variant — for card text "At the end of your opponent's turn, delete that token"
+(P-165 ShoeShoemon). Pushes to `Game.scheduled_provenance_deletions_opp`; drained
+in `rotate_turn_player(ending_player)` only for entries whose `controller !=
+ending_player` (i.e., when the ending player is the controller's opponent). The
+provenance-identity guarantees are identical to the your-turn variant.
+
+In DSL YAML, use the `at:` field on `schedule_delete_played_at_turn_end`:
+```yaml
+- schedule_delete_played_at_turn_end:
+    binding: <name>
+    at: opponents_turn   # omit or write `at: your_turn` for the default
+```
 
 ### OnDeletion cause accessors
 
@@ -557,38 +935,260 @@ When a card effect needs to refer to the permanent it came from:
 
 ## 5. Key enums
 
+### `SelectionKind` (full taxonomy)
+
+Defined in `code/digimon-engine/src/selection.rs:85-149`. Every player choice
+parks a `PendingSelection` carrying one of these variants. Cite the engine
+file for the authoritative shape; the table below is for quick lookup.
+
+| Variant | Payload | Action range reused | Use |
+|---|---|---|---|
+| `Target` | — | target-select range | Pick a Digimon (side unspecified). |
+| `OwnField` | — | own-field range | Pick from controller's battle area. |
+| `OppField` | — | opp-field range | Pick from opponent's battle area. |
+| `Hand` | — | hand range | Pick a hand card. |
+| `Trash` | — | trash range | Pick a trash card. |
+| `Material` | — | material range | Pick a digivolution source under a permanent. |
+| `Reveal` | — | reveal range | Pick from `Game::revealed_cards`. |
+| `RevealBucket` | `{ bucket_index, min, max, picked }` | reveal range | Multi-bucket reveal flow with per-bucket min/max. |
+| `Security` | — | security range | Pick a security stack slot. |
+| `EffectChoice` | — | effect-choice range | Pick one of N labeled branches. |
+| `Source` | — | source range | Pick a specific source card in a stack. |
+| `TriggerOrder` | — | effect-choice range | Order/decline simultaneous trigger bundles. |
+| `UnionZone` | `{ zones: UnionZoneSet }` | hand + trash + material ranges | Cross-zone single pick (HAND | TRASH | MATERIAL). |
+| `OrderedPermutation` | `{ remaining: u8 }` | reveal range | Place N items in player-chosen order; re-installs per slot. |
+| `CountCappedMultiSelect` | `{ max, picked }` | zone range | Pick up-to-N from a zone, one-pick-at-a-time. |
+| `Replacement` | — | effect-choice ACCEPT + PASS | Optional replacement accept/decline. |
+| `SourceMulti` | `{ min, max, picked }` | source range | Pick min..=max source cards across own permanents. |
+| `DpBudget` | `{ remaining_dp, picked }` | opp-field range | Pick opponent permanents whose total DP stays under a budget. |
+| `BreedingPermanent` | — | own-field range, breeding sentinel | Pick the source-controller's breeding permanent. |
+
+`UnionZoneSet` is a u8 bitset (`selection.rs:23-61`) — `HAND` = 0b001,
+`TRASH` = 0b010, `MATERIAL` = 0b100; OR them with `|` to build a multi-zone
+filter.
+
+`PendingSelection` itself carries 11 fields including `selecting_player`,
+`previous_phase`, `valid_action_ids`, `is_optional`, `prompt`,
+`effect_choices`, `source_card`, `source_permanent`, `source_kind`,
+`callback`, and `on_decline` (`selection.rs:165-199`). The non-callback
+subset is mirrored as a `Clone`-able `PendingSelectionView` for FFI and UI
+consumers (`selection.rs:222-249`).
+
+### `TriggerSource` (full taxonomy)
+
+Defined in `selection.rs:335-479`. Every observer fire-site picks the
+variant that describes where the trigger is firing from; the queue drainer
+then enumerates the matching zone path. Card scripts never construct these
+directly — `enqueue_triggered` consumes them.
+
+| Variant | Fan-out path | Carries |
+|---|---|---|
+| `Permanent(handle)` | This permanent's effects only | — |
+| `PlayerBattleArea(player)` | Every permanent in `player`'s battle area | — |
+| `PlayerBreedingArea(player)` | The breeding sentinel permanent only | — |
+| `SecurityRevealed { defender, card }` | Revealed security card's own `SecuritySkill` effects | Defender, revealed card |
+| `SecurityStackCard { player, card }` | Specific card still in security stack (turn-boundary `[Security]` timing) | Player, card |
+| `OnSecurityCheck { attacker, defender, revealed_card, was_face_up }` | Defender's battle area | Attacker, defender, revealed card, face-up bit |
+| `MovedFromBreeding { player, permanent, card }` | Moving player's battle area | Moved perm/card |
+| `Digivolved { player, permanent, card, effect_initiated, dna_origin }` | All battle areas | Digivolved perm/card + origin flags |
+| `EnteredField { player, permanent, card, effect_initiated }` | All battle areas | Entering perm/card + origin flag |
+| `OptionPlaced { player, permanent, linked_host, card }` | All battle areas | Placed Option's perm or host |
+| `OptionTrashed { player, card, cause, last_state }` | All battle areas | Trashed Option's last lifecycle state |
+| `EventObserved { player, permanent, card }` | Generic per-permanent observer (suspend watchers, etc.) | Carrier perm/card |
+| `AttackTargetChanged { player, attacker, card, old_target, new_target, reason }` | All battle areas | Attacker + old/new target + retarget reason |
+| `SourceTrashedFromStack { player, host, host_card, card, cause }` | All battle areas | Host perm + trashed source + cause |
+| `SecurityRemoved { affected_player, observer_player, source_player, card, cause }` | `observer_player`'s battle area + breeding | Affected player + cause + removed card |
+| `SecurityPlaced { affected_player, source_player, card, cause }` | Affected player's battle area + breeding | Placed card + cause |
+| `SecurityDiscarded { affected_player, source_player, card, cause }` | Discarded security card's own observers | Discarded card + cause |
+
+### `TriggerContext` (event payload — Track A)
+
+Defined in `trigger_context.rs:114-139`. Fields publish what happened in the
+event, distinct from the observer carrying the triggered effect. Card scripts
+read these via the `event_*` and `attack_target_change` accessors on
+`EffectContext`/`EffectReadContext`.
+
+| Field | Type | Meaning |
+|---|---|---|
+| `subject` | `Option<EventSubject>` | Typed event subject (permanent / card-in-zone / player). |
+| `target_permanent` / `target_card` | `Option<PermanentHandle>` / `Option<CardHandle>` | Legacy target fields. |
+| `event_permanent` / `event_card` | Same | Primary perm/card involved in the event. |
+| `event_source_card` | `Option<CardHandle>` | For source-trash events: the trashed source card. |
+| `event_host_card` / `event_host_permanent` | `Option<CardHandle>` / `Option<PermanentHandle>` | Host card / permanent for source-trash events. |
+| `affected_player` | `Option<PlayerId>` | Player whose zone changed. |
+| `source_player` | `Option<PlayerId>` | Player whose effect caused the event. |
+| `cause` | `Option<EventCause>` | Coarse event-cause taxonomy. |
+| `source_effect` | `Option<EffectAttribution>` | Card/perm/controller that caused the event. |
+| `selected_results` | `Vec<ResultBinding>` | Named bindings from selections within this event. |
+| `moved_card_sets` | `Vec<MovedCardSet>` | Batches of cards moved together. |
+| `effect_initiated` | `bool` | Set when play/digivolve came from an effect. |
+| `dna_origin` | `bool` | Set when digivolve came from DNA/Jogress. |
+| `deleted_object` | `Option<DeletedObjectSnapshot>` | Pre-removal snapshot for OnDeletion observers. |
+| `attack_target_change` | `Option<AttackTargetChange>` | Old/new target + reason for `OnAttackTargetChange`. |
+| `old_attack_target` / `new_attack_target` | `Option<AttackTarget>` | Legacy mirror of the above. |
+| `provenance_token` | `Option<ProvenanceToken>` | Stable token for effect-created plays/digivolutions. |
+| `was_security_skill` | `bool` | Compatibility marker for security-originated effects. |
+| `option_last_field_state` | `Option<OptionFieldState>` | Last lifecycle state for `OnOptionTrashed`. |
+
+`EventSubject` (`trigger_context.rs:67-72`):
+
+```rust
+enum EventSubject {
+    Permanent(PermanentHandle),
+    Card { card: CardHandle, zone: Zone },
+    Player(PlayerId),
+}
+```
+
+`EventCause` (`trigger_context.rs:37-50`) — coarse cause taxonomy:
+
+```rust
+enum EventCause {
+    BattleDeletion,       // DP-loss in combat
+    EffectDeletion,       // generic effect-driven deletion (legacy/own/opp split below)
+    OwnEffect,            // controller's own effect caused the event
+    OpponentEffect,       // opponent's effect caused it
+    Overclock,            // <Overclock> sacrifice deletion
+    Return,               // return-to-hand/deck observer cause
+    DeckBottom,           // sent to deck bottom
+    SecurityPlacement,    // card placed into security
+    SecurityRemoval,      // card removed from security (effect or attack)
+    Cost,                 // cost-payment trash/suspend
+    Rule,                 // rule-driven event (turn rotation, hatch, etc.)
+}
+```
+
+`From<ReplacementCause>` is implemented at the fire-site
+(`trigger_context.rs:52-63`); card scripts read the result, never compute it.
+
+`EffectAttribution` (`trigger_context.rs:77-82`):
+
+```rust
+struct EffectAttribution {
+    controller: PlayerId,
+    source_card: Option<CardHandle>,
+    source_permanent: Option<PermanentHandle>,
+}
+```
+
+`ResultBinding` (`trigger_context.rs:85-90`) — one named binding from an
+earlier selection within the same event:
+
+```rust
+struct ResultBinding {
+    name: &'static str,
+    permanent: Option<PermanentHandle>,
+    card: Option<CardHandle>,
+}
+```
+
+`MovedCardSet` (`trigger_context.rs:94-99`):
+
+```rust
+struct MovedCardSet {
+    cards: Vec<CardHandle>,
+    from: Option<Zone>,
+    to: Option<Zone>,
+}
+```
+
+`DeletedObjectSnapshot` (`trigger_context.rs:103-112`) — captured before a
+permanent leaves the board for OnDeletion observers reading post-removal:
+
+```rust
+struct DeletedObjectSnapshot {
+    former_controller: PlayerId,
+    top_card: CardHandle,
+    card_kind: CardKind,
+    traits: Vec<String>,
+    level: Option<u8>,
+    dp: Option<i32>,
+    cause: EventCause,
+}
+```
+
+`ProvenanceToken` (`trigger_context.rs:27-34`) is a `u64` keyed to a specific
+`CardSource` instance, not the battle-area slot. Use
+`Game::resolve_provenance_token` (or the `EffectContext` wrapper) to find the
+current `EventSubject` after zone movement or battle-area compaction.
+
 ### `EffectTiming`
 
+Source of truth: `enums.rs:178-363`. Full enumeration follows; refer back to
+that file for any timing not described elsewhere in this doc.
+
 ```
+// Standard
 OnPlay, WhenDigivolving, OnAttack, OnDeletion, WhenAttacking, OnBlock,
-SecurityEffect, CounterEffect,
-StartOfYourTurn, StartOfOpponentsTurn, EndOfYourTurn, EndOfOpponentsTurn, EndOfAttack,
+SecuritySkill, OnSecurityCheck, OnLoseSecurity, OnDiscardSecurity, CounterEffect
+
+// Turn-based
+StartOfYourTurn, StartOfOpponentsTurn, StartOfYourMainPhase,
+EndOfYourTurn, EndOfOpponentsTurn, EndOfYourNextTurn, EndOfOpponentsNextTurn,
+UntilNextUnsuspend, EndOfAttack, EndOfBattle
+
+// Event-triggered
 OnAllyAttack, OnOpponentAttack, OnDrawCard, OnTrash, OnReturn, OnSuspend, OnUnsuspend,
-OnAddToHand, OnReveal, OnPlaceSecurity,
-OnEnterField, OnEnterFieldAnyone, OnLeaveField,
-BeforePayCost, WhenPlayedFromHand,
-OnDigivolve, OnDnaDigivolve, OnDigiXros,
-AlwaysActive, Declarative,
-OptionMain, OptionSecurity,
+OnAddToHand, OnReveal, OnPlaceSecurity, OnAttackTargetChange
+
+// Entry/exit
+OnEnterField, OnEnterFieldAnyone, OnAllyPlayed, OnLeaveField, OnHatch, OnMove
+
+// Cost/play
+BeforePayCost, WhenPlayedFromHand
+
+// Digivolve
+OnDigivolve, OnDnaDigivolve, OnDigiXros
+
+// Phase 7 "Would*" replacement timings
+WhenWouldBeDeleted, WhenWouldLeaveBattleArea, WhenWouldBeReturnedToHand,
+WhenWouldBeReturnedToDeck, WhenWouldBeTrashed, WhenWouldBeDeDigivolved,
+WhenWouldLoseSecurity, WhenWouldDraw, WhenWouldPlaceInSecurity,
+WhenPermanentWouldDigivolve, WhenPermanentWouldPlay, WhenWouldLink,
+WhenWouldAttack, WhenWouldBeAttackTarget   // reserved — Phase 9 wires dispatch
+
+// Deletion observer
+OnAnyDeletion
+
+// Continuous / passive
+AlwaysActive, Declarative
+
+// Option / Plug-In / Training (Phase 8 + Track I)
+OptionMain, OptionSecurity, OnUseOption, OnOptionPlaced, OnOptionTrashed,
+DelayEffect, OnLink, OnLinkedCardTrashed, OnUnlink, OnTrainingTrash
+
+// [Main] activated effects — zone-scoped
+MainFromHand, MainOnField, MainFromTrash
+
+// Archetype observers
+OnOpponentSecurityRemoved, OnOwnSecurityRemoved, OnDigivolutionCardTrashed
+
 None
 ```
 
 ### `Expiry`
 
+Source: `enums.rs:765-785`.
+
 ```
-Permanent             # never expires on its own
-EndOfTurn             # cleared at the end of any turn
-EndOfOpponentsTurn    # cleared at the end of the source-player's opponent's turn
-EndOfYourTurn         # cleared at the end of the source player's own turn (mirror of above)
-EndOfAttack           # cleared when the current attack resolves
-EndOfBattle           # cleared when the current battle resolution finishes
-UntilLeaveField       # cleared when the source permanent leaves the field
-UntilCondition        # active while a per-entry boolean predicate holds; re-evaluated
-                      # by the continuous controller after mutation-event drains
-OnceUsed(u32)         # the value is the limit; consume_use(...) advances a per-entry
-                      # counter and the entry expires once the counter reaches the limit.
-                      # Reserved variant — consumption tracking is a follow-up to the
-                      # taxonomy publication.
+Permanent                   # never expires on its own
+EndOfTurn                   # cleared at the end of any turn
+EndOfOpponentsTurn          # cleared at the end of the source player's opponent's turn
+EndOfYourTurn               # cleared at the end of the source player's own turn
+EndOfOpponentsNextTurn      # Track H — "until the end of their next turn" (EX1-068, AD1-014)
+                            # Persists through one end-of-source-turn AND one end-of-opp-turn,
+                            # then expires at the SECOND end-of-opp-turn after install.
+                            # Tracked via a `pending_skips` counter on `ModifierEntry`.
+EndOfYourNextTurn           # Track H — symmetric mirror, "until the end of your next turn"
+EndOfAttack                 # cleared when the current attack resolves
+EndOfBattle                 # cleared when the current battle resolution finishes
+UntilLeaveField             # cleared when the source permanent leaves the field
+UntilCondition              # active while a per-entry boolean predicate holds; re-evaluated
+                            # by the continuous controller after mutation-event drains
+OnceUsed(u32)               # the value is the limit; consume_use(...) advances a per-entry
+                            # counter and the entry expires once the counter reaches the limit.
+                            # Reserved variant — consumption tracking is a follow-up to the
+                            # taxonomy publication.
 ```
 
 `ModifierEntry` now carries both the legacy scalar `value: i32` and a typed
@@ -700,7 +1300,7 @@ storage entry, lifecycle, and DSL string published.
 | `CannotAddMemory` | permanent | `Game::adjust_memory_by_effect` |
 | `CannotAddSecurity` | permanent | `Game::add_security_by_effect` |
 | `ChangeEndTurnMinMemory` | permanent / player | `Game::rotate_turn_player` clamps the ending player's memory before sign flip |
-| `ImmuneFromDPMinus` | permanent | `Permanent::dp_modifier_apply` for negative DP modifiers |
+| `ImmuneFromDPMinus` | permanent | `Game::effective_dp` — suppresses negative `ChangeDp` deltas; `effect_immunity_filter.controller` scopes which deltas (`OpponentOnly` = opponent-source only, `Any`/unset = all). See `grant_narrow_opponent_effect_protection` |
 | `ImmuneFromStackTrashing` | permanent | source-trash mutation (the inherited stack-peel path) |
 | `CannotBeAffected` | permanent | already wired via `effect_immunity_filter`; honors source-kind + controller filter |
 | `DisableEffect` | permanent | `effect_queue::permanent_activation_blocked_for_timing` reads `entry.disable_effect_timing` and skips dispatch for that timing only |
@@ -758,12 +1358,44 @@ exercise this.
 
 ### `Keyword`
 
+Source: `enums.rs:376-482`. The full enum:
+
 ```
-Blocker, SecurityAttackPlus(i8), SecurityAttackMinus(i8),
-Rush, Jamming, Piercing, Reboot, DeDigivolve(u8), DrawX(u8),
-Blitz, Armor, Raid, Alliance, Blast, Save, Fortitude, Overclock,
-Barrier, Decoy, Material, Partition
+Blocker
+SecurityAttackPlus(i8), SecurityAttackMinus(i8)
+Rush, Jamming, Piercing, Reboot
+DeDigivolve(u8), DrawX(u8)
+Blitz, Raid, Alliance
+BlastDigivolve
+Save
+MaterialSave(u8)              # active skill — move up to N digivolution sources under another permanent
+DigiBurst(u8)                 # active-effect cost marker; body authored via DSL `digi_burst`
+Fortitude
+Overclock
+Barrier
+Decoy(u8)                     # u8 = printed CardColor bitmask (0 = no color filter)
+Partition
+Vortex
+Collision
+Evade
+Fragment(u8)                  # Phase D — auto-installs WhenWouldBeDeleted with N-source cost
+Decode
+ArmorPurge
+Progress                      # blocks defender's SecuritySkill while attacker has it
+Retaliation                   # mandatory OnDeletion-by-battle delete-the-winner (RULES_CONTEXT 16-12)
+Scapegoat                     # WhenWouldBeDeleted substitute — divert non-own-effect deletion
+Execute                       # EndOfYourTurn: may attack including unsuspended (Track F)
+Iceclad                       # compare digivolution-card count instead of DP in battle
+MindLink                      # Tamer active skill — place self under a Digimon (Track F)
+Training                      # active skill — suspend self + place top deck card under self face-down
+ArtsDigivolve                 # DUAL Option-use keyword — optional digivolve onto a target
 ```
+
+Parameterised keywords carry their printed parameter in the variant:
+`Decoy(u8)` encodes a color bitmask (bit `n` set ⇒ allies of `CardColor`
+value `n` are eligible; `0` = no color filter); `DigiBurst(N)` carries the
+printed N for the cost marker; `Fragment(N)` carries the number of sources
+required to cancel the deletion; `MaterialSave(N)` carries the source cap.
 
 ---
 
@@ -1567,7 +2199,7 @@ Options are *ephemeral*: they do not normally live on the field. The exceptions 
 | Subtype | Disposition | Timing(s) fired |
 |---------|-------------|-----------------|
 | **Standard** | Body drains, then self-trashes via `WhenWouldBeTrashed` (cause `Cost`). | `OnUseOption` (global) → `OptionMain` (this card) → cleanup. |
-| **Delay** | Body drains, card parks on field as `OptionState::Delayed`. At the scheduled turn end, a `DelayEffect` fires and the card trashes via `WhenWouldLeaveBattleArea` + `WhenWouldBeDeleted`. | `OnUseOption` → `OptionMain` (install delay) → later: `DelayEffect` → leave/deleted replacement windows → trash. |
+| **Delay** | Body drains, card parks on field as `OptionState::Delayed`. **Standard `<Delay>`** (`DelayTrigger::MainPhaseActivated`) is activated by a player-visible `[Main]`-phase `FIELD_EFFECT` action — `Game::activate_delayed_option_main` runs the `DelayEffect` body, then trashes the Option as the cost (PUPPETS-G009, RULES_CONTEXT 16-16). Engine-scheduled triggers (`EndOfThisTurn` / `EndOfYourNextTurn` / `StartOfYourNextTurn` / `OnEvent`) instead auto-fire at the matching turn-scan / event. The card trashes via `WhenWouldLeaveBattleArea` + `WhenWouldBeDeleted` in all cases. | `OnUseOption` → `OptionMain` (install delay) → later: `DelayEffect` (player `[Main]` action or scheduled scan) → leave/deleted replacement windows → trash. |
 | **Plug-In (Link)** | Body drains, player selects a legal host, card attaches sideways into `host.linked_cards`. `OnLink` fires globally after attach. Effects on the attached card flagged `.linked()` fire off the host's timings. | `OnUseOption` → `OptionMain` (runs `.link(cost, filter)` mask + prompt + attach) → `OnLink` (global). |
 | **Training** | Body drains, card parks on field as `OptionState::Training`. At the owner's next breeding-hatch, an `OnTrainingTrash` observer fires on the specific Training permanent being trashed, then `delete_permanent_with_cause(Cost)` routes it to the trash. | `OnUseOption` → `OptionMain` → later: `OnTrainingTrash` → deletion. |
 
@@ -1699,7 +2331,7 @@ digivolution card, performs the normal draw and rule check, then fires
 | `OnUseOption` | Global observer | Any Option card is played (both players' listeners hear it). |
 | `OnOptionTrashed` | Global observer | A persistent field Option is trashed through `Game::trash_field_option`; `EffectContext::option_last_field_state()` exposes the last lifecycle state. |
 | `OptionMain` | This Option | The played Option's own body — pre-existing variant, now dispatched. |
-| `DelayEffect` | This Option | Scheduled turn-end landing for a `Delayed` Option. |
+| `DelayEffect` | This Option | A `Delayed` Option's body. Standard `<Delay>` (`DelayTrigger::MainPhaseActivated`) fires via the controller's `[Main]`-phase activation action (`Game::activate_delayed_option_main`); scheduled triggers fire at the matching turn-scan / event. |
 | `OnLink` | Global observer | After a Plug-In attaches to its host. |
 | `OnLinkedCardTrashed` | Global observer | A linked card leaves its host via trash (host death, return-to-hand, return-to-deck). Mirrors DCGO `OnLinkCardDiscarded`. |
 | `OnUnlink` | Global observer | **Reserved** for clean unlink paths. Rust-engine-specific; DCGO folds unlinks into `OnLinkCardDiscarded` + zone checks. Not yet fired. |
@@ -1714,7 +2346,16 @@ Effect::new(card, EffectTiming::None)
     .process(|ctx| { ctx.gain_memory(2); })
     .build();
 
-// Delay Option body — trigger is EndOfThisTurn | EndOfYourNextTurn.
+// Standard <Delay> Option body — player-visible [Main]-phase activation.
+// `DelayTrigger::MainPhaseActivated` parks the Option; the controller takes a
+// FIELD_EFFECT action on a later main phase to trash it and run the body.
+Effect::new(card, EffectTiming::None)
+    .delay(DelayTrigger::MainPhaseActivated)
+    .process(|ctx| { ctx.gain_memory(2); })
+    .build();
+
+// Engine-scheduled Delay body — auto-fires at the turn-scan landing.
+// Trigger is EndOfThisTurn | EndOfYourNextTurn | StartOfYourNextTurn | OnEvent.
 Effect::new(card, EffectTiming::None)
     .delay(DelayTrigger::EndOfYourNextTurn)
     .process(|ctx| { ctx.draw(2); })
@@ -2254,22 +2895,28 @@ See `tests/combat/phase9_end_to_end.rs` for the canonical Counter + Raid + Colli
 
 ---
 
-## 9. Known gaps (as of Phase 6)
+## 9. Known gaps
 
-These are documented in `docs/RUST_ENGINE_GAPS.md`. DSL-only vocabulary and lowering gaps live in `qa/dsl-vocab-gaps.md`. Notable items:
+**Live tracker:** [`docs/RUST_ENGINE_GAPS.md`](RUST_ENGINE_GAPS.md). The
+at-a-glance status table there is the single source of truth for "is this
+engine primitive landed yet?" — consult it before assuming a primitive does
+or does not exist. DSL-only vocabulary and lowering gaps live separately in
+[`qa/dsl-vocab-gaps.md`](../qa/dsl-vocab-gaps.md).
 
-- **Block / Counter / Alliance interrupt phases** are wired through the state machine; trait-gated Alliance is incomplete.
-- **OnSecurityCheck** / **OnStartBattle** / **OnEndBattle** / **OnEndAttack** timings — OnSecurityCheck is wired in the attack path; OnStartBattle/OnEndBattle are not yet fired.
-- **Security effects** — basic SecuritySkill dispatch is wired; re-entrant selections mid-security-resolve are not (blocks most real security cards with selection effects).
-- **BeforePayCost cost reduction scanning** — landed in Phase 5. See §Phase 5 above.
-- **Option cards** — full play-flow landed in Phase 8. See §Phase 8 above.
-- **Flood-gate + restriction modifiers** (player-scoped) — landed in Phase 6. See §Phase 6 above. Several variants are DORMANT pending enforcement-site wiring.
-- **"Would" replacement timings** (Barrier, Evade, Partition, Armor Purge) — landed in Phase 7. See §Phase 7 above.
+When implementing a card that needs a missing primitive, log the gap in the
+appropriate tracker, mark the test `#[ignore = "pending: <gap-id>"]`, and
+pick a safe fallback. **Do not stub the primitive**; the no-approximations
+policy applies identically in Rust (working rule 17).
 
-When implementing a card that needs one of these, log the gap and pick a safe fallback.
+For a comprehensive Rust ↔ Python divergence catalog with severity and fix
+order, see [`RUST_PYTHON_PARITY.md`](RUST_PYTHON_PARITY.md).
 
-For a comprehensive Rust ↔ Python divergence catalog with severity and fix order,
-see [RUST_PYTHON_PARITY.md](RUST_PYTHON_PARITY.md).
+The historical "Phase 5 / 6 / 7 / 8 / 9 / 10" appendices below preserve the
+phase-by-phase landing context (cost-reduction hooks, flood gates,
+would-replacement framework, Option play flow, combat-interrupt completion,
+tokens + de-digivolve N). Tracks A–K substrate landed on top of those phases
+and is summarized in the "Tracks A–K Substrate Quick Reference" section near
+the top of this doc.
 
 ### Cross-boundary shape drift — detection pattern
 
@@ -2832,14 +3479,77 @@ and counts currently suspended permanents.
 During a DSL effect resolution, runtime bindings also carry an append-only
 result log for mutations performed by earlier steps in that same effect. The
 predicate surface can branch on that log with leaves such as
-`effect_suspended_any_own_digimon`, `effect_returned_any_card`, and the
-parallel delete/play/digivolve/add-to-hand leaves. The log is dropped with the
-effect bindings, so result-bound predicates never see mutations from a
-different effect resolution.
+`effect_suspended_any_own_digimon`, `effect_suspended_any_opponent_digimon`
+(opponent-side sibling — true when a prior step suspended one of the
+controller's *opponent's* Digimon; drives BT16-025 Paildramon),
+`effect_returned_any_card` (bare bool, alias `any_returned_card`), and the
+parallel delete/play/digivolve/add-to-hand leaves. `returned_card_matching`
+is the filtered variant of `effect_returned_any_card`: it takes a nested
+card-shape predicate and is true when at least one card returned by a
+preceding return / zone-move step in the same effect satisfies that filter
+(evaluated as a `Card` subject against the per-effect `returned_to_deck`
+log) — e.g. `returned_card_matching: { color_is: white, level_eq: 7 }` for
+BT17-077's "if this effect returned a white level 7 card." The log is dropped
+with the effect bindings, so result-bound predicates never see mutations from
+a different effect resolution.
 
 ### DSL Binding Presence Predicates
 
 Use `binding_present: <name>` or `binding_absent: <name>` in an `if` condition to branch on whether a prior optional selection produced a binding. Aliases `binding_is_present` and `binding_is_none` parse to the same compiled predicates. The check is per effect resolution because the runtime `Bindings` map is threaded through the current DSL effect only.
+
+### DSL Tamer Face-Down Stash Substrate
+
+The BEATBREAK / DATA SQUAD archetypes (ST-23, ST-24) place and retrieve cards
+as **face-down digivolution sources** beneath Tamers. The DSL surface for this
+substrate:
+
+**`face_down` flag on `place_as_bottom_source`.** The `place_as_bottom_source`
+step takes an optional `face_down: bool` flag (default `false`). When set, the
+inserted digivolution source is marked face-down.
+
+```yaml
+- place_as_bottom_source:
+    source: { deck_top: you }
+    target: tamer_pick
+    face_down: true
+```
+
+**`{ deck_top: <player> }` source binding.** `StructuredBindingRef.deck_top`
+resolves to the top card of the named player's deck. It is usable as the
+`source:` of `place_as_bottom_source` and other card-source steps. This is the
+canonical shape for "place the top card of your deck face down under this
+Tamer" text (ST23-06, ST23-13/14, ST24-03, ST24-09, ST24-13/14).
+
+**`trash_bottom_face_down_source_under_tamer` verb.** A cost-form verb for
+text such as "by trashing the bottom face-down card from under any of your
+Tamers, …":
+
+```yaml
+- trash_bottom_face_down_source_under_tamer: { of: you }
+```
+
+It installs a `select_own_permanent { kind: tamer, has_face_down_source: true }`
+Tamer-pick, then trashes the chosen Tamer's bottom face-down source (firing
+`OnDigivolutionCardTrashed`). When the player controls no eligible Tamer the
+cost is unpayable: the clause's remaining steps are skipped. Used by the
+cost-form trash family (ST23-01/03/04/08/11/12, ST24-01/06/10/11/12).
+
+### DSL Source / Permanent Face-Down Predicate Leaves
+
+Four `PredicateSpec` leaves filter on face-down digivolution-source state.
+The first three are SOURCE-subject leaves (filter `select_own_sources`
+candidates); the last is a PERMANENT-subject leaf.
+
+| Leaf | Subject | Matches |
+|------|---------|---------|
+| `is_face_down: Option<bool>` | source | `CardSource.face_down` of the candidate source. |
+| `is_bottom_source: Option<bool>` | source | Whether the source is at `card_sources` index 0 (the bottom of the digivolution stack). |
+| `host_kind_is: Option<CardKind>` | source | The `CardKind` of the source's host permanent's top card. Uses the field-subject matcher, so `Dual` coalesces to `Digimon`. |
+| `has_face_down_source: Option<bool>` | permanent | Whether the permanent's digivolution stack contains at least one face-down source. |
+
+The predicate evaluator carries source-stack metadata into source-subject leaves
+through a new `PredicateSubject::Source` variant (`permanent`, `field_index`,
+`source_index`, `card`), alongside the existing field/card/player subjects.
 
 ---
 
@@ -2894,6 +3604,9 @@ Effect::on_play(card).process(|ctx| {
 | `bounce_self()` → `Option<CardHandle>` | Sugar over `return_to_hand(self.source_permanent.unwrap())`. Returns `None` if there is no source permanent (Option-card OptionMain effects, rule-source effects) or if the bounce is gated by `CannotBeReturnedToHand` / `CannotBeAffected`. Owner-routed via `Permanent::owner()`. |
 | `return_to_deck(PermanentHandle, StackPosition)` → `bool` | Bounce to deck at Top/Bottom/Random. |
 | `return_to_deck_from_reveal(player, CardHandle, StackPosition)` → `bool` | Reveal pool → deck. |
+| `move_trash_card_to_deck_top(player, CardHandle)` → `bool` | Move one selected trash card to the **top** of its owner's deck (`player` only identifies whose trash holds it; the card returns to `removed.owner`'s deck). Single-card, deck-TOP analog of `return_all_trash_to_deck_bottom`. A handle not in `player`'s trash is a silent no-op (`false`). Drives LM-030's Delay clause. |
+| `return_card_source_to_hand(PermanentHandle, CardHandle)` → `bool` | Return-to-hand twin of `trash_card_source` — remove one digivolution source by handle (anywhere in the stack) and push it to `removed.owner`'s hand. Fires **no** `OnDigivolutionCardTrashed` (it is a return, not a trash). `false` if the slot is gone or the card is not in the stack. |
+| `return_selected_sources_to_hand(Vec<SourceSelectionRef>)` → `bool` | `Vec`-taking wrapper over `return_card_source_to_hand` — the mirror of `trash_selected_sources` — returning each `select_own_sources`-bound source ref to its owner's hand. `true` only when every ref moved. Drives BT12-031's Dragon-Mode-return alt-cost. |
 | `shuffle_deck(player)` | Pair with `add_to_hand_from_deck` for "search and shuffle" effects. |
 
 ### Reveal pool
@@ -2910,7 +3623,9 @@ but from the player's Digi-Egg deck. DSL `reveal_top_deck` honors
 
 | Method | Purpose |
 |--------|---------|
-| `place_as_bottom_source(CardSourceRef, target: PermanentHandle)` → `bool` | Insert a card at the bottom of target's digivolution stack. |
+| `place_as_bottom_source(source: CardSourceRef, target: PermanentHandle, face_down: bool)` → `bool` | Insert a card at the bottom of target's digivolution stack. `face_down: true` marks the placed digivolution source face-down (default is face-up). **`face_down` is NOT honored for `CardSourceRef::Security` sources — security cards are always placed face-up (DCGO parity).** |
+| `place_card_under_permanent_bottom(card: CardHandle, target: PermanentHandle, face_down: bool)` | Lift a specific card (by stable `CardHandle`) and insert it at the bottom of `target`'s digivolution stack. `face_down: true` marks the placed source face-down. Used by `<Save>` to intercept a deleted top card under a chosen Tamer, and by the BEATBREAK / DATA SQUAD face-down hand-stash family (ST23-10, ST24-02). |
+| `place_deck_top_under_permanent(target: PermanentHandle, face_down: bool)` → `Option<CardHandle>` | Place the top card of `target.player`'s deck as the bottom-most digivolution source of `target`. Returns the moved `CardHandle`, or `None` on an empty deck. `face_down: true` marks the placed source face-down. Used by the BEATBREAK / DATA SQUAD "place the top card of your deck face down under this Tamer" family (ST23-06, ST23-13/14, ST24-03, ST24-09, ST24-13/14). |
 | `place_permanent_as_bottom_sources(source: PermanentHandle, target: PermanentHandle)` → `bool` | (Track A) Remove a battle-area permanent and insert its whole stack under the target, preserving the source stack order. DSL `place_as_bottom_source` uses this when `source: { permanent: <binding> }`. |
 | `place_on_security(player, CardSourceRef, StackPosition, face_up: bool)` → `bool` | Move to security stack at Top/Bottom/Random; optionally face-up; fires `OnPlaceSecurity` with `EventCause::SecurityPlacement` after a successful commit. |
 | `place_permanent_on_security(player, target, position, face_up)` → `bool` | (Track A) Move a battle-area permanent into a player's security stack through the normal leave-field replacement window. For effects that initiate a new move-to-security, distinct from in-flight leave-replacement bodies. |
@@ -2922,6 +3637,7 @@ but from the player's Digi-Egg deck. DSL `reveal_top_deck` honors
 | `security_place_top_stacked_card(carrier, target_player, position, face_up)` → `bool` | (Track E) Convenience: extracts `card_sources[len-2]` (the topmost digivolution source below the visible top) and routes to security. Used by Puppets G027 "move top stacked card to top security card." Returns `false` when the stack has fewer than 2 cards. |
 | `return_all_trash_to_deck_bottom(player)` → `Vec<CardHandle>` | (Track E) Drain `player`'s trash → each card to its **owner's** deck bottom. Returns moved handles in original trash order. Used by BT17-077 "return all cards in your trash to the bottom of the deck." |
 | `trash_top_n_digivolution_cards_of_each(target_player, n)` → `usize` | (Track E) Trim up to `n` digivolution sources (`card_sources[len-2]` topmost first) from every battle-area permanent of `target_player`. Routes through `trash_card_source` per source; fires per-source `OnDigivolutionCardTrashed`. Skips single-source permanents (no source below the visible top). Used by BT12-028 et al. |
+| `trash_bottom_face_down_source(target: PermanentHandle)` → `bool` | Trash the bottom-most face-down digivolution source of `target` (i.e. `card_sources[0]`) to its owner's trash, firing `OnDigivolutionCardTrashed`. Returns `false` with **no mutation** when `card_sources[0]` is not face-down. Does NOT honor `ImmuneFromStackTrashing` — this is a voluntary cost ("by trashing the bottom face-down card from under any of your Tamers, …"), not involuntary stack-peeling. Used by the BEATBREAK / DATA SQUAD cost-form trash family (ST23-01/03/04/08/11/12, ST24-01/06/10/11/12). |
 | `trash_opponent_hand_to_count(opponent, target_count)` → `bool` | (Track E) Forced-reduction primitive: opponent picks which cards to trash from their hand until size ≤ `target_count`. Selecting player is the **opponent** (no-approximations rule — the affected side chooses). Sugar over `as_selecting_player(opponent).select_count_capped_multi(...)`. Used by BT19-075 MoonMillenniummon. |
 | `search_own_security_stack(prompt, is_optional, filter, callback)` | (Track E) Single-pick selection on the controller's own security stack with a `&CardSource` filter. Sugar over `select_security(self.player, …)` for the common "look at your security stack and choose one matching X" shape. Used by TS Olympos cards. |
 | `schedule_delayed(when, body, captured_bindings)` | Pre-existing scheduled-effect substrate ([scheduled_effects.rs](../code/digimon-engine/src/scheduled_effects.rs)). Track E confirms this is the substrate for `scheduled_delayed_return` — the DSL verb `scheduled_delayed_return` lowers to `schedule_delayed(when, [return_to_hand_target/return_to_deck_target], bindings)`. No new engine surface required; only DSL plumbing pending. |
@@ -3513,6 +4229,59 @@ Effect::on_play(card)
       # follow-up that only happens if the source was actually played
 ```
 
+### `select_materials` (count-capped / name-unique batch source pick)
+
+**DSL wrapper.** `select_materials` is the *batch sibling* of `select_material`:
+it picks **up to N** digivolution sources of a carrier permanent in ONE
+count-capped multi-pick (excluding the carrier's top card), optionally
+constrained by a per-pick `uniqueness` predicate. `uniqueness: name` enforces
+"1 of each different name" — after each pick, any remaining source sharing a
+picked card's name is removed from the next step's legal action mask. Every
+pick surfaces through `pending_selection`; the uniqueness constraint *shapes
+the mask*, it never auto-picks (CLAUDE.md §17).
+
+It lowers to `EffectContext::select_count_capped_multi` with
+`CountCappedZone::Material` + `DistinctByMode`, REUSING the existing
+count-capped action mask — no `ACTION_SPACE_SIZE` change. The picked sources
+are bound as a `CardList`.
+
+`play_from_materials.source_index` accepts that `CardList` binding and consumes
+the **whole batch**: each picked source is removed from the stack and played as
+a fresh permanent (each handle is re-resolved to its current stack index right
+before its play, since each play shifts later indices down). Each played source
+fires its own [On Play] normally — `play_from_materials` does NOT carry a
+`suppress_on_play` flag (suppression is wired only through `play_from_trash_free`;
+see PUPPETS-G030).
+
+```yaml
+- select_materials:
+    of_permanent: carrier        # battle-area carrier permanent
+    max: 4
+    uniqueness: name             # "1 of each different name"
+    filter: { trait_has: "Royal Knight" }
+    bind_as: picked
+- play_from_materials:
+    target: carrier
+    source_index: picked         # batch — all picked sources played
+    cost_delta: free
+```
+
+`select_materials` exposes its carrier-binding field as `of_permanent`, matching
+the single-pick sibling `select_material` for authoring-surface consistency.
+
+**Batch `play_from_materials` `bind_as` binds only the last-played permanent.**
+When `source_index` is a batch `CardList` (as produced by `select_materials`),
+`play_from_materials`'s `bind_as` records *only the last* permanent it played —
+not all of them. A future card needing "do X to each played source" will
+require a `PermanentList` binding; until then only the last-played source is
+addressable downstream.
+
+A `BREEDING_TARGET`-sentinel carrier binding is accepted but resolves to zero
+candidates today — the source-select action range covers only the 14
+battle-area field slots, so a breeding-resident carrier's sources have no
+action encoding. Engine lowering coverage:
+`code/digimon-engine/tests/dsl/select_materials.rs`.
+
 ### `place_permanent_on_security`
 
 **DSL wrapper.** Normal effect bodies can initiate a move from the battle area to security:
@@ -3560,6 +4329,7 @@ lives in `code/digimon-engine/tests/dsl/zone_movement_verbs.rs`.
 | `security_place_top_stacked_card` | `carrier`, `of`, `position`, `face` | `EffectContext::security_place_top_stacked_card(...)` |
 | `return_all_trash_to_deck_bottom` | `of` | `EffectContext::return_all_trash_to_deck_bottom(player)` |
 | `trash_top_n_digivolution_cards_of_each` | `of`, `n` formula | `EffectContext::trash_top_n_digivolution_cards_of_each(target_player, n)` |
+| `trash_bottom_face_down_source_under_tamer` | `of` | Installs `select_own_permanent { kind: tamer, has_face_down_source: true }`, then `EffectContext::trash_bottom_face_down_source(pick)`. Skips remaining clause steps (unpayable cost) when no eligible Tamer exists. See "DSL Tamer Face-Down Stash Substrate". |
 | `trash_opponent_hand_to_count` | `opponent`, `target_count` formula | `EffectContext::trash_opponent_hand_to_count(opponent, target_count)` |
 | `search_own_security_stack` | `filter`, `prompt`, optional `bind_as`, `optional`, `on_select`, optional `on_no_match` | `EffectContext::search_own_security_stack(...)`; `bind_as` exposes the selected security card handle to `on_select` |
 

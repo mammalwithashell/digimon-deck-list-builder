@@ -170,9 +170,15 @@ fn end_of_attack_optional_fires_deletes_target_returns_trash_and_plays_token() {
     // P1 has 0 security so the attack wins immediately; EndOfAttack still fires.
     r.attack_player(medusa, 1, false);
 
-    // The EndOfAttack clause auto-fires (single trigger — no TriggerOrder
-    // prompt for a lone optional effect). The first selection is the
-    // select_opponent_permanent step (pick the Digimon to delete).
+    // The EndOfAttack clause is optional ("You may delete ...") and its body's
+    // first step is a mandatory select_opponent_permanent, so an outer
+    // accept/decline prompt installs first (G-OUTER-OPTIONAL-NOT-INSTALLED).
+    // Accept it to reach the inner target-select prompt.
+    r.accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
+
+    // After accepting, the select_opponent_permanent step prompts to pick the
+    // Digimon to delete.
     assert!(
         r.pending_selection().is_some(),
         "end_of_attack: target select must be up"

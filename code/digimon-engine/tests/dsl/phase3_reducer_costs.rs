@@ -69,6 +69,7 @@ fn plain_digimon(card_id: &str, play_cost: u16) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -120,6 +121,7 @@ fn cost_reduction_amount_fn_uses_formula_value() {
         false,
         false,
         None,
+        None,
     );
 
     let runner = DebugRunner::builder().build();
@@ -146,6 +148,7 @@ fn cost_reduction_amount_fn_uses_raw_formula_registry() {
         Arc::new(raw),
         false,
         false,
+        None,
         None,
     );
 

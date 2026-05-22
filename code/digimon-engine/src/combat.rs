@@ -213,23 +213,55 @@ impl Game {
     /// `ModifierType::ImmuneFromDPMinus` entry, negative `ChangeDp`
     /// modifiers are filtered out before summing — the protection
     /// narrows to DP-minus only, leaving positive `ChangeDp` and the
-    /// dynamic aura bonus untouched. `effect_immunity_filter` on the
-    /// `ImmuneFromDPMinus` entry is reserved for a future refinement
-    /// (opponent-only / source-kind filtering of the protected delta);
-    /// the unfiltered path is what the published variant currently
-    /// promises.
+    /// dynamic aura bonus untouched.
+    ///
+    /// PUPPETS-G024 (2026-05-20): each `ImmuneFromDPMinus` entry's
+    /// `effect_immunity_filter.controller` now scopes which negative
+    /// `ChangeDp` deltas it suppresses:
+    ///   - `OpponentOnly` — suppress only deltas whose `source_player`
+    ///     is the protected permanent's opponent (printed text "can't
+    ///     have its DP reduced **by your opponent's effects**"). The
+    ///     controller's own DP-reduction still applies.
+    ///   - `Any` / no filter — suppress every negative delta (the broad
+    ///     variant; back-compat for entries installed without a filter).
+    /// A negative `ChangeDp` delta is suppressed if ANY `ImmuneFromDPMinus`
+    /// entry's scope covers it.
     pub fn effective_dp(&self, handle: PermanentHandle) -> Option<i32> {
+        use crate::modifiers::EffectControllerFilter;
         let perm = self
             .player(handle.player)
             .battle_area
             .get(handle.index as usize)?;
         let base = perm.base_dp_for_rules(&self.card_data, &self.modifiers, handle)?;
-        let immune_to_dp_minus = self.modifiers.has(handle, ModifierType::ImmuneFromDPMinus);
+        let immunity_scopes: Vec<EffectControllerFilter> = self
+            .modifiers
+            .get(handle, ModifierType::ImmuneFromDPMinus)
+            .iter()
+            .map(|entry| {
+                entry
+                    .effect_immunity_filter
+                    .map(|f| f.controller)
+                    .unwrap_or(EffectControllerFilter::Any)
+            })
+            .collect();
         let change_dp_sum: i32 = self
             .modifiers
             .get(handle, ModifierType::ChangeDp)
             .iter()
-            .filter(|entry| !(immune_to_dp_minus && entry.value < 0))
+            .filter(|entry| {
+                if entry.value >= 0 {
+                    return true;
+                }
+                // Negative delta — suppress if any ImmuneFromDPMinus
+                // entry's scope covers this delta's source.
+                let from_opponent = entry.source_player != handle.player;
+                let suppressed = immunity_scopes.iter().any(|scope| match scope {
+                    EffectControllerFilter::Any => true,
+                    EffectControllerFilter::OpponentOnly => from_opponent,
+                    EffectControllerFilter::OwnOnly => !from_opponent,
+                });
+                !suppressed
+            })
             .map(|entry| entry.value)
             .sum();
         let bonus = change_dp_sum + self.dynamic_dp_aura_bonus(handle);
@@ -2424,6 +2456,7 @@ impl Game {
             card_kind: kind,
             was_face_up,
             phase: SecurityPhase::SecuritySkillDrain,
+            phase_enqueue_done: false,
             checks_remaining,
             outcome_so_far: AttackResult::SecurityCheckSurvived,
         });
@@ -2465,6 +2498,7 @@ impl Game {
                 SecurityPhase::SecuritySkillDrain => {
                     let defender = state.defender;
                     let card_handle = state.revealed_card;
+                    let enqueue_done = state.phase_enqueue_done;
                     // NOTE: Progress / ImmunityToOpponentEffects is NOT
                     // gated here. Per the printed rules (and DCGO's
                     // `ProgressProcess`), Progress makes the attacking
@@ -2478,13 +2512,25 @@ impl Game {
                     // delete_permanent with opponent-source attribution,
                     // negative DP modifiers) — tracked in
                     // docs/DCGO_KEYWORD_PARITY.md under "Progress".
-                    self.enqueue_triggered(
-                        EffectTiming::SecuritySkill,
-                        TriggerSource::SecurityRevealed {
-                            defender,
-                            card: card_handle,
-                        },
-                    );
+                    //
+                    // Collect the revealed card's `[Security]` effects exactly
+                    // once. If one parks on a `pending_selection`, this phase
+                    // is re-entered on resume; `phase_enqueue_done` keeps the
+                    // re-entry from re-collecting (and re-firing) the same
+                    // `[Security]` clause — an infinite loop when the player
+                    // declines an optional "you may" clause.
+                    if !enqueue_done {
+                        if let Some(st) = self.security_resolution.as_mut() {
+                            st.phase_enqueue_done = true;
+                        }
+                        self.enqueue_triggered(
+                            EffectTiming::SecuritySkill,
+                            TriggerSource::SecurityRevealed {
+                                defender,
+                                card: card_handle,
+                            },
+                        );
+                    }
                     self.drain_effect_queue();
                     if self.pending_selection.is_some() {
                         return None;
@@ -2536,14 +2582,27 @@ impl Game {
                     let Some(state) = self.security_resolution.as_ref() else {
                         break;
                     };
-                    if let Some(attacker) = state.attacker {
-                        let trigger = TriggerSource::OnSecurityCheck {
-                            attacker,
-                            defender: state.defender,
-                            revealed_card: state.revealed_card,
-                            was_face_up: state.was_face_up,
-                        };
-                        self.enqueue_triggered(EffectTiming::OnSecurityCheck, trigger);
+                    let enqueue_done = state.phase_enqueue_done;
+                    let attacker_opt = state.attacker;
+                    let defender = state.defender;
+                    let revealed_card = state.revealed_card;
+                    let was_face_up = state.was_face_up;
+                    if let Some(attacker) = attacker_opt {
+                        // Collect observers once; a parked selection re-enters
+                        // this phase, and `phase_enqueue_done` stops the
+                        // re-entry from double-firing the observers.
+                        if !enqueue_done {
+                            if let Some(st) = self.security_resolution.as_mut() {
+                                st.phase_enqueue_done = true;
+                            }
+                            let trigger = TriggerSource::OnSecurityCheck {
+                                attacker,
+                                defender,
+                                revealed_card,
+                                was_face_up,
+                            };
+                            self.enqueue_triggered(EffectTiming::OnSecurityCheck, trigger);
+                        }
                         self.drain_effect_queue();
                         if self.pending_selection.is_some() {
                             return None;
@@ -2576,13 +2635,22 @@ impl Game {
                     };
                     let defender = state.defender;
                     let card_handle = state.revealed_card;
-                    self.enqueue_triggered(
-                        EffectTiming::OnLoseSecurity,
-                        TriggerSource::SecurityRevealed {
-                            defender,
-                            card: card_handle,
-                        },
-                    );
+                    let enqueue_done = state.phase_enqueue_done;
+                    // Collect `OnLoseSecurity` effects once; a parked selection
+                    // re-enters this phase, and `phase_enqueue_done` keeps the
+                    // re-entry from re-firing them.
+                    if !enqueue_done {
+                        if let Some(st) = self.security_resolution.as_mut() {
+                            st.phase_enqueue_done = true;
+                        }
+                        self.enqueue_triggered(
+                            EffectTiming::OnLoseSecurity,
+                            TriggerSource::SecurityRevealed {
+                                defender,
+                                card: card_handle,
+                            },
+                        );
+                    }
                     self.drain_effect_queue();
                     if self.pending_selection.is_some() {
                         return None;
@@ -2774,9 +2842,14 @@ impl Game {
 
     /// In-place phase mutation. Kept as a small helper so the state-machine
     /// arms don't re-borrow `security_resolution` mutably inline.
+    ///
+    /// Clears `phase_enqueue_done` so the phase being entered gets a fresh
+    /// enqueue budget — each `*Drain` phase collects its triggered effects
+    /// exactly once, then re-entries on resume skip the re-collection.
     fn set_security_phase(&mut self, phase: SecurityPhase) {
         if let Some(st) = self.security_resolution.as_mut() {
             st.phase = phase;
+            st.phase_enqueue_done = false;
         }
     }
 
@@ -3341,11 +3414,7 @@ impl Game {
                 level: data.level,
                 dp: live_deleted_top_card.and_then(|_| self.effective_dp(handle)),
                 cause: self
-                    .current_deletion_event_cause_override
-                    .or_else(|| {
-                        self.current_deletion_cause
-                            .map(crate::trigger_context::EventCause::from)
-                    })
+                    .observed_deletion_event_cause()
                     .unwrap_or(crate::trigger_context::EventCause::Rule),
             })
         });
@@ -3431,7 +3500,7 @@ impl Game {
                     card,
                 },
             );
-            if let Some(snapshot) = deleted_snapshot {
+            if let Some(ref snapshot) = deleted_snapshot {
                 for queued in self.effect_queue.iter_mut().skip(queue_start) {
                     if queued.timing != crate::enums::EffectTiming::OnAnyDeletion {
                         continue;
@@ -3453,6 +3522,39 @@ impl Game {
                 );
             }
         }
+
+        // OnLeaveField: global observer — fires when a permanent LEAVES the
+        // battle area by any route. Deletion is one such route; the timing is
+        // distinct from OnAnyDeletion so observer clauses can react to the
+        // broader "leaves the battle area" trigger (DCGO OnLeaveFieldAnyone).
+        // Carries the same deleted-object snapshot so `event_target_*`
+        // predicates resolve against the leaving permanent.
+        if let Some(card) = event_deleted_top_card {
+            let queue_start = self.effect_queue.len();
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnLeaveField,
+                crate::selection::TriggerSource::EventObserved {
+                    player: handle.player,
+                    permanent: handle,
+                    card,
+                },
+            );
+            if let Some(ref snapshot) = deleted_snapshot {
+                for queued in self.effect_queue.iter_mut().skip(queue_start) {
+                    if queued.timing != crate::enums::EffectTiming::OnLeaveField {
+                        continue;
+                    }
+                    if let Some(trigger) = queued.trigger_context.as_mut() {
+                        trigger.deleted_object = Some(snapshot.clone());
+                        trigger.cause = Some(snapshot.cause);
+                        trigger.affected_player = Some(snapshot.former_controller);
+                        trigger.subject =
+                            Some(crate::trigger_context::EventSubject::Permanent(handle));
+                    }
+                }
+            }
+        }
+
         self.drain_effect_queue();
         self.reevaluate_until_condition_modifiers_if_dirty();
     }

@@ -17,6 +17,26 @@
 > `.claude/plans/pre-scaling-cleanup-batch.md` §2 for the closure-
 > index narrative.
 
+> **ARCHETYPE COMPLETE — 2026-05-20:** The `complete-dna-omnimon-archetype`
+> change drove DNA Omnimon (64 cards) to **62 IMPLEMENTED / 2 PARTIAL /
+> 0 BLOCKED** (Phase A baseline was 34 IMPLEMENTED / 25 PARTIAL /
+> 5 BLOCKED). The archetype verdict ledger is
+> [qa/qa-reports/validated_cards_dsl.json](../../qa-reports/validated_cards_dsl.json);
+> the per-gap closure record is
+> [qa/resolved-gaps.md](../../resolved-gaps.md) § "Phase 2 / DNA Omnimon
+> completion closure — 2026-05-20". ~20+ engine/DSL substrate gaps were
+> closed and ~18 stale-tracker gaps were confirmed and used. DNA Omnimon
+> now has 0 live `raw_rust` escapes. The 2 remaining PARTIAL cards are
+> blocked on two still-open gaps: **G-DYNAMIC-NAME-ALIAS-FROM-STACK**
+> (BT17-102 Greymon `[All Turns]` material-name-alias — no engine
+> consumer for a dynamic alias derived from the live digivolution-source
+> stack) and **G-DSL-DELAY-ON-ATTACK-EVENT** (BT23-096 Comet Hammer
+> `<Delay>`-on-attack clause — 3-part delay/attack-event dispatch
+> blocker). Both are tracked open in
+> [docs/RUST_ENGINE_GAPS.md](../../../docs/RUST_ENGINE_GAPS.md) and
+> [qa/dsl-vocab-gaps.md](../../dsl-vocab-gaps.md). This source document
+> is retained for historical gap-assessment context.
+
 
 **Date:** 2026-05-03
 **Status:** Source document for compiling a cross-archetype Rust DSL/engine gap spec
@@ -81,7 +101,8 @@ The local `DNA Omnimon` decklists most heavily use:
 - **Blocks:** `BT17-078`, `BT17-095`, `AD1-009`, `AD1-012`
 - **Cross-archetype value:** Any future Blast DNA, effect DNA using a material from hand, defender-side reactive DNA, or named-material fusion route.
 - **Status update (2026-05-08):** The reusable Counter-window field+hand Blast DNA path is now implemented and covered by BT20-060, BT17-078, BT20-045, BT20-076, BT20-081, EX6-011, and EX6-029. The Counter mask exposes the result-card action, then pending selections choose the field material and hand material, stack both under the result, fire `WhenDigivolving` / `OnDnaDigivolve` / `OnDigivolve`, and preserve `dna_origin` through parked target-selection continuations. `kind: blast_dna_digivolve` lets card YAML carry exact printed material predicates; BT17-078 accepts WarGreymon + MetalGarurumon and rejects broad Greymon + Garurumon. The selected-level mass bottom-deck branch for BT17-078 is also implemented via `bind_permanent_property` + `level_eq_binding`. Proof: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078_counter_blast_dna`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt17_078_blast_dna_bottom_decks_same_level_then_prompts_delete`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_060_hand_counter_blast_dna_uses_alphamon_and_ouryumon bt20_060_dna_origin_trashes_security_and_recovers`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt20_045_counter_blast_dna bt20_076_counter_blast_dna bt20_081_counter_blast_dna ex6_029_counter_blast_dna`.
-- **Remaining capability:** two-field-material Counter Blast DNA variants, if printed, still need their own pending-selection route. AD1-012's defender-side effect DNA clause remains blocked by effect-initiated DNA during the attack interrupt, not by Counter Blast DNA.
+- **CLOSED 2026-05-20 (DNA Omnimon completion):** AD1-012's defender-side effect-initiated DNA clause mid-attack-interrupt is now implemented — authored on the existing interrupt substrate, no engine redesign required. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon completion closure — 2026-05-20".
+- **Remaining capability:** two-field-material Counter Blast DNA variants, if printed, still need their own pending-selection route.
 - **First regression:** For any future two-field-material Counter Blast DNA card, set up opponent attack into a Digimon target while the result card is in defender hand and both materials are on the defender field. The Counter mask must expose the Blast DNA action, then pending selections must choose both field materials, perform DNA, fire When Digivolving, and resume the attack state correctly.
 - **Implementation hint:** `code/digimon-engine/src/combat.rs`, `code/digimon-engine/src/game_actions.rs`, `code/digimon-engine/src/effect_context/`, `code/digimon-engine/src/action/`, plus DSL lowering for a mixed-material DNA verb.
 
@@ -123,7 +144,8 @@ The local `DNA Omnimon` decklists most heavily use:
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` under Option card play flow; `qa/dsl-vocab-gaps.md` Delay-related entries
 - **Blocks:** `BT17-095`, `LM-034`, `BT22-099`, `ST20-15`, `BT23-096`, `ST2-13`, `EX1-068`
 - **Cross-archetype value:** Memory Boosts, Scrambles, Training cards, battlefield Options, security effects that add to hand or place in battle area.
-- **Missing capability:** Group 5 closed major Delay and scheduled end-of-turn pieces, but DNA Omnimon still needs coverage for Ace Option persistence, security "add this card to hand", security "place this card in battle area", Tamer security play routing, and multi-color Option color semantics.
+- **CLOSED 2026-05-20 (DNA Omnimon completion):** BT17-095 Miraculous Mega Knight (Ace Option / Delay / security "add this card to hand"), Tamer security play routing (`G-PLAY-SELECTED-SECURITY-CARD` — `play_security_card` step + `EffectContext::play_from_security_card`), and the remaining DNA Omnimon Option/security dispositions are implemented. The one residual is BT23-096 Comet Hammer's `<Delay>`-on-attack clause — see still-open `G-DSL-DELAY-ON-ATTACK-EVENT` in `qa/dsl-vocab-gaps.md` / `docs/RUST_ENGINE_GAPS.md`.
+- **Missing capability (historical):** Group 5 closed major Delay and scheduled end-of-turn pieces; DNA Omnimon needed coverage for Ace Option persistence, security "add this card to hand", security "place this card in battle area", Tamer security play routing, and multi-color Option color semantics — all now closed except the Delay-on-attack-event case noted above.
 - **First regression:** `BT17-095` Main effect plays a legal Agumon/Gabumon from hand or trash, then places itself in battle area as a Delay Option. Its Security effect plays a legal Tai/Matt card from hand or trash and adds the Option to hand.
 - **Implementation hint:** Verify existing Group 5 option flow before adding new primitives; keep disposition explicit rather than encoding it as card-local cleanup.
 
@@ -166,6 +188,7 @@ The local `DNA Omnimon` decklists most heavily use:
 - **Cross-archetype value:** Any hand-resident "when your Digimon/Tamer is played or digivolves" effect, Tamer observer, or ally digivolve observer.
 - **Missing capability:** Trigger fan-out needs consistent event payloads for hand, field, inherited, Tamer, and breeding sources. The event must identify the entering or digivolving permanent/card so filters do not inspect the observer itself.
 - **Updated 2026-05-08:** DSL now accepts the printed timing token `when: on_any_digimon_played` as an alias of `OnEnterFieldAnyone`, sharing the existing `EnteredField` payload and one fan-out path. Evidence: `cargo test --manifest-path code/digimon-engine/Cargo.toml --test timing_dispatch -- new_effect_timings_are_constructible` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_any_digimon_played_alias_uses_enter_field_payload`. Hand-resident fan-out and ally-digivolve authoring remain in this gap.
+- **CLOSED 2026-05-20 (DNA Omnimon completion):** the event-payload predicate leaves the DNA Omnimon observers needed are landed — `G-EVENT-TARGET-NAME-CONTAINS` (`event_target_name_contains`), `G-EVENT-TARGET-COLOR` (`event_target_color_any_of`), and `G-EVENT-CARD-TAMER-PLAY` / `G-EVENT-TARGET-NOT-SOURCE` (confirmed already-present substrate, re-enabled). DNA Omnimon's hand-resident and ally play/digivolve observer cards are authored. Broader cross-archetype hand-resident fan-out residuals stay tracked here. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon completion closure — 2026-05-20".
 - **First regression:** `AD1-001` in hand observes an ally Garurumon/Tai being played or digivolving, then offers the printed free digivolve from hand into a Greymon-named card.
 - **Implementation hint:** Extend event dispatch and `TriggerContext` payloads before adding card-specific YAML.
 
@@ -175,7 +198,8 @@ The local `DNA Omnimon` decklists most heavily use:
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` ordered permutation and reveal sections; `qa/dsl-vocab-gaps.md`
 - **Blocks:** `BT22-017`, `EX4-039`, `EX4-038`, `BT12-059`, `BT22-099`, `LM-034`, `BT22-094`
 - **Cross-archetype value:** Search cards that add one card per category, return rest in any order, or allow multiple picks from one revealed set.
-- **Missing capability:** The DSL needs reusable multi-pick from revealed cards where each pick can have a separate predicate and the remaining cards can be bottom-decked or top/bottom ordered according to printed text.
+- **CLOSED 2026-05-20 (DNA Omnimon completion):** the per-category reveal filter `BT22-017` needs is landed — `G-DSL-PREDICATE-TEXT-CONTAINS` (`effect_text_contains`) scans a candidate's printed text so the bucket-1 "[Omnimon] in its text" filter is faithful. BT22-017 / BT22-008 search cards are authored. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon completion closure — 2026-05-20".
+- **Missing capability (historical):** reusable multi-pick from revealed cards where each pick can have a separate predicate and the remaining cards can be bottom-decked or top/bottom ordered — closed for the DNA Omnimon reveal cards.
 - **First regression:** `BT22-017` reveals, adds one qualifying Omnimon-text card and one qualifying CS trait card when both are present, then returns the rest in the required order/disposition.
 - **Implementation hint:** Reuse existing ordered permutation and reveal selection infrastructure; add per-slot category constraints and stable reveal references.
 
@@ -185,7 +209,8 @@ The local `DNA Omnimon` decklists most heavily use:
 - **Tracker:** `qa/dsl-vocab-gaps.md`; `docs/RUST_ENGINE_GAPS.md`; card YAML comments
 - **Blocks:** `BT17-078`, `BT22-015`, `EX9-021`, `BT17-095`, `BT22-013`, `BT22-026`, `BT22-017`, `BT22-008`
 - **Cross-archetype value:** Converts reusable primitives into real cards and catches remaining DSL omissions.
-- **Missing capability:** Several useful slices exist only as `_examples`, while major top-end DNA Omnimon cards are not production YAML. `BT20-102` still uses raw Rust for board wipe/return despite several predicate gaps being closed since that YAML was written.
+- **CLOSED 2026-05-20 (DNA Omnimon completion):** all 64 DNA Omnimon cards are now production YAML (62 IMPLEMENTED / 2 PARTIAL / 0 BLOCKED). DNA Omnimon has 0 live `raw_rust` escapes — `BT20-102`'s board-wipe/return migrated to pure DSL, `AD1-025`'s body migrated, and the unused `bt20_102_boardwipe_and_return` fn was removed. See `qa/resolved-gaps.md` § "Phase 2 / DNA Omnimon completion closure — 2026-05-20".
+- **Missing capability (historical):** several useful slices existed only as `_examples`, while major top-end DNA Omnimon cards were not production YAML; `BT20-102` previously used raw Rust for board wipe/return — all now retired.
 - **First regression:** Move one core DNA Omnimon card from assessment to production YAML only after its reusable primitive exists, with a behavioral test under `code/digimon-engine/tests/cards_behavioral/`.
 - **Implementation hint:** Author cards in small readiness slices. Do not mark full card readiness when omitted text still contains a player choice, timing hook, or replacement effect.
 

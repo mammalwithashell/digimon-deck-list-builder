@@ -8,6 +8,10 @@ dp: 4000
 traits: [Puppet, CS]
 attribute: Data
 
+# Printed identity line "Also Treated As [Sistermon Noir]" (DCGO
+# ChangeCardNamesClass) — honored by generic name-matching predicates.
+also_treated_as: [Sistermon Noir]
+
 effects:
   - kind: grant_keyword
     keyword: Blocker

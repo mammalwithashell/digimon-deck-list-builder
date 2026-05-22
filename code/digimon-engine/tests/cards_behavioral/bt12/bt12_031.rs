@@ -22,17 +22,22 @@
 //! # Implementation status
 //! - Clause 0a: suspend-all opp Digimon with no digi-cards — IMPLEMENTED
 //! - Clause 0b: return 1 opp suspended Digimon to hand — IMPLEMENTED
-//! - Clause 0c: alt-cost return Dragon Mode → return-all-to-bottom — BLOCKED
-//!   G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME (qa/dsl-vocab-gaps.md)
+//! - Clause 0c: alt-cost return Dragon Mode → return-all-to-bottom — IMPLEMENTED
+//!   (G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME closed 2026-05-21 — the
+//!   `return_selected_sources_to_hand` verb / `EffectContext::return_card_source_to_hand`
+//!   returns a selected own digivolution-stack source to its owner's hand).
 //! - Clause 1a: +1000 DP per color in digi-cards — IMPLEMENTED
-//! - Clause 1b: while 2+ colors → Security A. +1 + Blocker — BLOCKED
-//!   G-DSL-SELF-COLOR-COUNT-GTE (qa/dsl-vocab-gaps.md)
+//! - Clause 1b: while 2+ colors → Security A. +1 + Blocker — IMPLEMENTED via a
+//!   self-aura with `while_condition: { self_color_count_gte: 2 }`. BT12-031's
+//!   top card is permanently blue+green, so the condition holds for every
+//!   reachable state of the card — equivalent to DCGO's full-stack count.
 //!
 //! # Patterns this test covers (RUST_DSL_TEST_API.md §4.3)
 //! - D1/D4: declarative self-aura with dp_modifier_fn (DigivolutionColorCount formula)
 //! - F7-adjacent: for_each suspend over filter (no-digi-card opponents)
 //! - A-adjacent: select_opponent_permanent (suspended filter) + return_to_hand
-//! - E2-adjacent: optional alt-cost upgrade (BLOCKED)
+//! - E2: optional alt-cost upgrade — select_own_sources (name-filtered) +
+//!   return_selected_sources_to_hand, branched by binding_count_eq
 
 #![allow(dead_code, unused_imports)]
 
@@ -81,20 +86,21 @@ fn fire_when_digivolving(runner: &mut DebugRunner, fm: digimon_engine::permanent
 
 // ─── §1 Structural assertions ─────────────────────────────────────────────────
 
-/// BT12-031 must compile to exactly 2 effects:
+/// BT12-031 must compile to exactly 3 effects:
 ///   [0] the WhenDigivolving triggered clause
 ///   [1] the All-Turns self-aura (dp_modifier_fn = DigivolutionColorCount * 1000)
+///   [2] the conditional Security A. +1 / Blocker self-aura (while_condition)
 ///
-/// Clause 0c (alt-cost) and clause 1b (keyword aura) are BLOCKED and omitted.
+/// Clause 0c (alt-cost) is BLOCKED and omitted.
 #[test]
-fn bt12_031_compiles_to_two_clauses() {
+fn bt12_031_compiles_to_three_clauses() {
     let runner = fighter_mode();
     let compiled = runner.compiled_card("BT12-031").expect("BT12-031 compiled");
 
     assert_eq!(
         compiled.effects.len(),
-        2,
-        "BT12-031 must have exactly 2 compiled effects: WhenDigivolving triggered + Aura declarative"
+        3,
+        "BT12-031 must have 3 compiled effects: WhenDigivolving triggered + 2 declarative auras"
     );
 }
 
@@ -134,7 +140,7 @@ fn bt12_031_clause_0_is_when_digivolving() {
 }
 
 #[test]
-fn bt12_031_clause_1a_is_declarative_aura() {
+fn bt12_031_has_two_declarative_auras() {
     let runner = fighter_mode();
     let compiled = runner.compiled_card("BT12-031").expect("BT12-031 compiled");
 
@@ -149,8 +155,8 @@ fn bt12_031_clause_1a_is_declarative_aura() {
 
     assert_eq!(
         declaratives.len(),
-        1,
-        "Exactly one declarative clause (dp_modifier_fn aura)"
+        2,
+        "Two declarative auras: dp_modifier_fn aura + conditional Security A./Blocker aura"
     );
     // We don't assert on the formula internals per RUST_DSL_TEST_API.md §6
     // anti-patterns (do not test CompiledStep contents).
@@ -319,52 +325,193 @@ fn bt12_031_when_digivolving_with_no_opp_digimon_does_not_error() {
     );
 }
 
-// ─── §4 Behavioral — Clause 0c: alt-cost Dragon Mode (BLOCKED) ───────────────
+// ─── §4 Behavioral — Clause 0c: alt-cost Dragon Mode ─────────────────────────
+//
+// G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME (closed 2026-05-21): the
+// `return_selected_sources_to_hand` verb (engine method
+// `EffectContext::return_card_source_to_hand`) returns a selected own
+// digivolution-stack source card to its owner's hand. BT12-031's Step C —
+// "By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's
+// digivolution cards to its owner's hand, return all of your opponent's
+// suspended Digimon at the bottom of their owners' decks instead." — is
+// authored as a `select_own_sources` (min 0, max 1) name-filtered to
+// "Imperialdramon: Dragon Mode", branching on `binding_count_eq`.
 
-/// BLOCKED on G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME.
-///
-/// The "By returning 1 [Imperialdramon: Dragon Mode] from this Digimon's
-/// digivolution cards to its owner's hand, return all of your opponent's
-/// suspended Digimon at the bottom of their owners' decks instead" branch
-/// requires:
-///   (A) `select_own_sources` with a name-based filter
-///       (G-DSL-SELECT-OWN-SOURCES-FILTER, filed under EX4-073).
-///   (B) `binding_present` predicate for conditional branching on the
-///       selection result (G-DSL-BIND-PRESENT, filed under EX9-066).
-///   (C) Return-all-suspended-to-bottom loop after the opt-in cost.
-///
-/// Until G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME closes, there is no
-/// player-visible selection for the Dragon Mode opt-in, and ALL suspended
-/// Digimon only ever go to hand (base clause) rather than to the bottom of
-/// the deck.
-#[test]
-#[ignore = "pending: G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME from qa/dsl-vocab-gaps.md — select_own_sources lacks filter predicate; binding_present predicate missing"]
-fn bt12_031_alt_cost_dragon_mode_offers_selection_and_returns_all_suspended_to_bottom() {
-    // Intended test body:
-    //
-    // 1. Stack a card named "Imperialdramon: Dragon Mode" under BT12-031
-    //    (as a source) via push_source or place_stack.
-    // 2. Place 2+ opponent Digimon with no digi-cards.
-    // 3. fire_when_digivolving → for_each suspends all 2+ opp Digimon.
-    // 4. A selection appears: "Return [Imperialdramon: Dragon Mode] from
-    //    digi-cards to hand?" (optional).
-    // 5. Player accepts: the Dragon Mode source card moves to hand.
-    //    Then ALL suspended opp Digimon go to the BOTTOM of the opponent's deck.
-    //    Assert: opp battle_area is empty; opp deck grew by N; Dragon Mode in hand.
-    todo!("Pending G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME")
+use digimon_engine::action::space::{encode_source_select, PASS};
+
+/// A card named "Imperialdramon: Dragon Mode" — pushed as a digivolution
+/// source under BT12-031 so the `name_contains` filter can pick it.
+fn make_dragon_mode() -> CardData {
+    let mut c = make_test_card("DRAGON-MODE", "Imperialdramon: Dragon Mode");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(5);
+    c.dp = Some(11000);
+    c
 }
 
+/// ACCEPT path: with an "Imperialdramon: Dragon Mode" card in BT12-031's
+/// digivolution stack and 2 suspended opponent Digimon, accepting the optional
+/// `select_own_sources` pick returns the Dragon Mode source to its owner's
+/// hand AND bottom-decks every suspended opponent Digimon (the "instead"
+/// outcome — none of them go to hand).
 #[test]
-#[ignore = "pending: G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME from qa/dsl-vocab-gaps.md — declining alt-cost must fall through to base return-1-to-hand"]
+fn bt12_031_alt_cost_dragon_mode_offers_selection_and_returns_all_suspended_to_bottom() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT12-031")
+        .expect("BT12-031 in embedded DSL pack")
+        .add_card(make_opp_digimon("OPP-A"))
+        .add_card(make_opp_digimon("OPP-B"))
+        .add_card(make_dragon_mode())
+        .memory(13)
+        .start();
+
+    // Two opponent Digimon with no digivolution cards → both get suspended.
+    let opp_a = runner.place_on_field(1, "OPP-A", None);
+    let opp_b = runner.place_on_field(1, "OPP-B", None);
+
+    // BT12-031 with an Imperialdramon: Dragon Mode card in its stack.
+    let fm = runner.place_on_field(0, "BT12-031", None);
+    let dragon_mode = runner.push_source(fm, "DRAGON-MODE");
+
+    let opp_deck_before = runner.deck_size(1);
+    let p0_hand_before = runner.hand_size(0);
+
+    fire_when_digivolving(&mut runner, fm);
+
+    // Both opponents suspended by Step A.
+    assert!(runner.game.players[1].battle_area[opp_a.index as usize].is_suspended);
+    assert!(runner.game.players[1].battle_area[opp_b.index as usize].is_suspended);
+
+    // Step B: the optional Dragon Mode source pick is pending.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::SourceMulti {
+            min: 0,
+            max: 1,
+            picked: 0,
+        }),
+        "the optional Dragon Mode `select_own_sources` pick must be pending"
+    );
+
+    // Accept: pick the Dragon Mode source (source_index 0, below BT12-031).
+    let pick = encode_source_select(fm.index as u16, 0).expect("Dragon Mode source action");
+    runner
+        .execute_action(0, pick)
+        .expect("pick the Dragon Mode source");
+    runner.auto_resolve().ok();
+
+    // The Dragon Mode source returned to its owner's (P0's) hand.
+    assert_eq!(
+        runner.hand_size(0),
+        p0_hand_before + 1,
+        "the Dragon Mode source returns to its owner's hand"
+    );
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.handle() == dragon_mode),
+        "P0's hand holds the returned Dragon Mode card"
+    );
+
+    // ALL suspended opponent Digimon went to the BOTTOM of the deck — the
+    // "instead" outcome. The opponent battle area is now empty.
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "every suspended opponent Digimon is bottom-decked — opp battle area empty"
+    );
+    assert_eq!(
+        runner.deck_size(1),
+        opp_deck_before + 2,
+        "both bottom-decked Digimon land in their owner's deck"
+    );
+}
+
+/// DECLINE path: with an "Imperialdramon: Dragon Mode" card available but the
+/// optional `select_own_sources` pick PASSed, the alt-cost does not fire — the
+/// base outcome runs: exactly 1 opponent suspended Digimon returns to hand,
+/// the Dragon Mode source stays untouched in the stack.
+#[test]
 fn bt12_031_declining_alt_cost_falls_through_to_return_one_to_hand() {
-    // Intended test body:
-    //
-    // 1. Stack "Imperialdramon: Dragon Mode" under BT12-031.
-    // 2. Place 2+ opp Digimon with no digi-cards.
-    // 3. fire_when_digivolving → all 2+ suspended.
-    // 4. Player declines Dragon Mode selection (PASS).
-    // 5. Only 1 opp Digimon returns to hand (base clause); rest stay suspended.
-    todo!("Pending G-DSL-COST-RETURN-SELF-DIGI-CARD-BY-NAME")
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT12-031")
+        .expect("BT12-031 in embedded DSL pack")
+        .add_card(make_opp_digimon("OPP-A"))
+        .add_card(make_opp_digimon("OPP-B"))
+        .add_card(make_dragon_mode())
+        .memory(13)
+        .start();
+
+    let opp_a = runner.place_on_field(1, "OPP-A", None);
+    let opp_b = runner.place_on_field(1, "OPP-B", None);
+
+    let fm = runner.place_on_field(0, "BT12-031", None);
+    let dragon_mode = runner.push_source(fm, "DRAGON-MODE");
+
+    let opp_hand_before = runner.hand_size(1);
+    let opp_deck_before = runner.deck_size(1);
+
+    fire_when_digivolving(&mut runner, fm);
+
+    // Both opponents suspended by Step A.
+    assert!(runner.game.players[1].battle_area[opp_a.index as usize].is_suspended);
+    assert!(runner.game.players[1].battle_area[opp_b.index as usize].is_suspended);
+
+    // Step B pending — decline it via PASS.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::SourceMulti {
+            min: 0,
+            max: 1,
+            picked: 0,
+        })
+    );
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the optional Dragon Mode pick");
+
+    // Step C base outcome: the mandatory "return 1 opp suspended Digimon to
+    // hand" selection is now pending.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::OppField),
+        "declining the alt-cost falls through to the base return-1-to-hand selection"
+    );
+    let view = runner
+        .pending_selection_view()
+        .expect("base return selection pending");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("return 1 suspended opponent Digimon");
+    runner.auto_resolve().ok();
+
+    // Exactly 1 opponent Digimon returned to hand; the other stays suspended
+    // on the field. Nothing was bottom-decked.
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "only 1 opponent Digimon returned to hand — the rest stay on the field"
+    );
+    assert_eq!(
+        runner.hand_size(1),
+        opp_hand_before + 1,
+        "exactly 1 suspended opponent Digimon returns to its owner's hand"
+    );
+    assert_eq!(
+        runner.deck_size(1),
+        opp_deck_before,
+        "the decline path bottom-decks nothing"
+    );
+
+    // The Dragon Mode source is untouched — still in BT12-031's stack.
+    assert!(
+        runner.game.players[0].battle_area[fm.index as usize]
+            .card_sources
+            .iter()
+            .any(|c| c.handle() == dragon_mode),
+        "declining the alt-cost leaves the Dragon Mode source in the stack"
+    );
 }
 
 // ─── §5 Behavioral — Clause 1a: +1000 DP per color in digi-cards ─────────────
@@ -416,50 +563,93 @@ fn bt12_031_dp_bonus_does_not_increase_for_duplicate_color_source() {
     );
 }
 
-// ─── §6 Behavioral — Clause 1b: 2+ colors → Security A. +1 + Blocker (BLOCKED)
+// ─── §6 Behavioral — Clause 1b: 2+ colors → Security A. +1 + Blocker ─────────
+//
+// The "While there are 2 or more colors in its digivolution cards, it gains
+// Security A. +1 and Blocker" clause is authored as a self-aura with
+// `while_condition: { self_color_count_gte: 2 }`. The condition is evaluated
+// against the carrier permanent (PredicateSubject::Permanent), reading the
+// synthesized top-card colors. BT12-031's printed colors are blue+green, so
+// the condition holds for every reachable state of the card.
 
-/// BLOCKED on G-DSL-SELF-COLOR-COUNT-GTE.
-///
-/// The "While there are 2 or more colors in its digivolution cards, it gains
-/// Security A. +1 and Blocker" clause requires a `self_color_count_gte: 2`
-/// BoolPredicate leaf evaluating the distinct color count of the source
-/// permanent's full digivolution stack.
-///
-/// Cross-referenced: G-DSL-SELF-COLOR-COUNT-GTE was filed under P-117 in
-/// qa/dsl-vocab-gaps.md on 2026-05-04 (line 204). BT12-031 clause 1b has the
-/// same structural gap.
-///
-/// Once `self_color_count_gte: 2` lands in the DSL, the two keyword-grant
-/// aura clauses (SecurityAttackPlus and Blocker) can be authored. Until then
-/// they are BLOCKED per the no-approximations policy.
+use digimon_engine::enums::{Keyword, ModifierType};
+use digimon_engine::permanent::PermanentHandle;
+
+/// Fire the field-entry (OnDigivolve) install path for the `while_condition`
+/// aura on permanent `fm`.
+fn fire_aura_install(runner: &mut DebugRunner, fm: PermanentHandle) {
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnDigivolve, TriggerSource::Permanent(fm));
+    runner.game.drain_effect_queue();
+}
+
+/// Overwrite the registered BT12-031 card data colors so a placed permanent
+/// synthesizes a mono-color identity. Used only by the negative gate test.
+fn force_bt12_031_mono_color(runner: &mut DebugRunner) {
+    use digimon_engine::enums::CardColor;
+    let idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "BT12-031")
+        .expect("BT12-031 registered");
+    runner.game.card_data[idx].colors = vec![CardColor::Blue];
+}
+
+/// POSITIVE: BT12-031 (blue+green = 2 colors) gains Security A. +1 from the
+/// `while_condition` aura.
 #[test]
-#[ignore = "pending: G-DSL-SELF-COLOR-COUNT-GTE from qa/dsl-vocab-gaps.md — no DSL predicate evaluates self digivolution color count >= N"]
 fn bt12_031_gains_security_attack_plus_1_when_2_or_more_colors_in_digi_cards() {
-    // Intended test body:
-    //
-    // 1. Place BT12-031 (blue+green = 2 colors).
-    // 2. Assert SecurityAttackPlus modifier (+1) is active on the permanent.
-    //    runner.modifiers().has(fm, ModifierType::SecurityAttack, 1)
-    todo!("Pending G-DSL-SELF-COLOR-COUNT-GTE")
+    let mut runner = fighter_mode();
+    let fm = runner.place_on_field(0, "BT12-031", None);
+    fire_aura_install(&mut runner, fm);
+
+    assert_eq!(
+        runner
+            .game
+            .modifiers
+            .sum(fm, ModifierType::SecurityAttackChange),
+        1,
+        "BT12-031 (2 colors) must gain Security A. +1 from the while_condition aura"
+    );
 }
 
+/// POSITIVE: BT12-031 (blue+green = 2 colors) gains Blocker from the
+/// `while_condition` aura.
 #[test]
-#[ignore = "pending: G-DSL-SELF-COLOR-COUNT-GTE from qa/dsl-vocab-gaps.md — same gap as SecurityAttackPlus conditional"]
 fn bt12_031_gains_blocker_when_2_or_more_colors_in_digi_cards() {
-    // Intended test body:
-    //
-    // 1. Place BT12-031 (blue+green = 2 colors).
-    // 2. Assert Blocker keyword is active on the permanent.
-    todo!("Pending G-DSL-SELF-COLOR-COUNT-GTE")
+    let mut runner = fighter_mode();
+    let fm = runner.place_on_field(0, "BT12-031", None);
+    fire_aura_install(&mut runner, fm);
+
+    assert!(
+        runner.game.has_keyword(fm, Keyword::Blocker),
+        "BT12-031 (2 colors) must gain <Blocker> from the while_condition aura"
+    );
 }
 
+/// NEGATIVE (color gate): with a mono-color BT12-031 identity, the
+/// `while_condition: { self_color_count_gte: 2 }` gate fails, so neither
+/// Security A. +1 nor Blocker is installed.
 #[test]
-#[ignore = "pending: G-DSL-SELF-COLOR-COUNT-GTE from qa/dsl-vocab-gaps.md — negative condition: mono-color → no Security A. +1 or Blocker"]
 fn bt12_031_does_not_gain_keywords_with_fewer_than_2_colors() {
-    // Intended test body:
-    //
-    // With a hypothetical mono-color digivolution stack, neither SecurityAttackPlus
-    // nor Blocker should be granted. Without the predicate we cannot gate the aura,
-    // so this test stays blocked.
-    todo!("Pending G-DSL-SELF-COLOR-COUNT-GTE")
+    let mut runner = fighter_mode();
+    force_bt12_031_mono_color(&mut runner);
+
+    let fm = runner.place_on_field(0, "BT12-031", None);
+    fire_aura_install(&mut runner, fm);
+
+    assert_eq!(
+        runner
+            .game
+            .modifiers
+            .sum(fm, ModifierType::SecurityAttackChange),
+        0,
+        "mono-color BT12-031 must NOT gain Security A. +1 (self_color_count_gte gate fails)"
+    );
+    assert!(
+        !runner.game.has_keyword(fm, Keyword::Blocker),
+        "mono-color BT12-031 must NOT gain <Blocker> (self_color_count_gte gate fails)"
+    );
 }

@@ -59,11 +59,9 @@ effects:
   # ─── Clause 5: [All Turns] [Once Per Turn] When any of your opponent's Digimon
   # are deleted, this Digimon may unsuspend.
   #
-  # BLOCKED (G-EVENT-TARGET-OWNER): on_any_deletion fires for ALL deletions —
-  # own and opponent. The DSL predicate layer has no `event_target_owner` predicate
-  # to filter "deleted permanent belonged to opponent". This is the same gap that
-  # blocked BT21-029 Medusamon's deletion arm. Omitted until G-EVENT-TARGET-OWNER
-  # is closed.
+  # G-EVENT-TARGET-OWNER is wired in the engine since Group 6 (2026-05-02);
+  # `event_target_owner: opponent` matches when the deleted permanent
+  # belonged to the opponent of the source permanent's controller.
   #
   # DCGO reference:
   #   timing: OnDestroyedAnyone
@@ -72,12 +70,14 @@ effects:
   #   CanActivateCondition: IsExistOnBattleAreaDigimon(card)
   #   ActivateCoroutine: IUnsuspendPermanents([card.PermanentOfThisCard()])
   #   SetHashString("Unsuspend_BT21-026")
-  #
-  # Once G-EVENT-TARGET-OWNER is closed, implement as:
-  #   - when: on_any_deletion
-  #     active_when: { all_turns: true }
-  #     once_per_turn: true
-  #     optional: true
-  #     condition: { event_target_owner: opponent }
-  #     process:
-  #       - unsuspend: { target: self }
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns][OPT] When any opp Digimon is deleted, may unsuspend self"
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    process:
+      - unsuspend: { target: source }

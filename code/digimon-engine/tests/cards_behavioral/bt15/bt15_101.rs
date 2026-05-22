@@ -21,24 +21,22 @@
 //! # Implementation notes / DSL gaps
 //!
 //! 1. **Alt-path with activation gate** — The "[Matt Ishida] tamer present AND
-//!    opponent has 10000 DP+ Digimon" gate cannot be expressed today:
-//!    `AltPathSpec` has no `condition:` field (G-ALT-PATH-CONDITION,
-//!    qa/dsl-vocab-gaps.md). Authoring the alt-path WITHOUT the gate would
-//!    let any Gabumon alt-digivolve into BT15-101 for cost 4 unconditionally,
-//!    which violates printed text and the no-approximations policy. The Gabumon
-//!    alt-path is therefore OMITTED from the YAML pending G-ALT-PATH-CONDITION.
-//!    Standard Lv5 Blue cost 4 path is present (printed `evo_costs`).
+//!    opponent has 10000 DP+ Digimon" gate is expressible at the substrate
+//!    level: `AltPathSpec.condition` was added 2026-05-15
+//!    (G-ALT-PATH-CONDITION RESOLVED, qa/resolved-gaps.md). The opp-DP
+//!    side of the gate still requires `G-PRED-DP-LTE` for the inverse
+//!    "opponent has 10000+ DP Digimon" check. Until that lands, authoring
+//!    the alt-path with only the Matt Ishida half would still violate
+//!    printed text. The Gabumon alt-path therefore remains OMITTED from
+//!    the YAML pending G-PRED-DP-LTE; the standard Lv5 Blue cost 4 path
+//!    is present (printed `evo_costs`).
 //!
 //! 2. **Self-target on_suspend gate** — Printed text says "When THIS Digimon
-//!    becomes suspended". The DSL has `event_target_owner` and
-//!    `event_target_kind` predicate leaves but no `event_target_is_source` /
-//!    `event_target_is_self` predicate that compares the suspended-permanent
-//!    handle against the source permanent. The DSL `equals: [...]` predicate
-//!    only compares integers (literals + integer bindings), not permanent
-//!    handles. Without this gate, the clause uses the AD1-014 pattern
-//!    (`event_target_owner: you, event_target_kind: digimon`), which over-fires
-//!    when ANY of the controller's Digimon (including allies) suspend. New
-//!    DSL gap: G-DSL-EVENT-TARGET-IS-SELF.
+//!    becomes suspended". The `event_permanent_is_source: true` BoolPredicate
+//!    leaf compares the suspended-permanent handle against the source
+//!    permanent, so the clause fires only when this card's own permanent is
+//!    suspended — DCGO's `permanent == card.PermanentOfThisCard()`. An ally
+//!    Digimon suspending no longer over-fires the clause.
 //!
 //! 3. **Repeat-N selection over BattleArea** — `select_count_capped_multi`
 //!    only supports Hand and Trash zones (see
@@ -175,11 +173,13 @@ fn bt15_101_has_when_digivolving_lock_clause_and_all_turns_on_suspend_clause() {
 #[test]
 fn bt15_101_omits_gabumon_alt_path_pending_dsl_gap() {
     // The Gabumon alt-path is gated on a printed condition (Matt Ishida tamer
-    // + opp 10000 DP+ Digimon) which AltPathSpec cannot express today
-    // (G-ALT-PATH-CONDITION). The path is intentionally OMITTED from YAML.
-    // We assert that no cost-4 alt-path with `ignore_requirements: true` is
-    // present — the standard cost-4 alt-path (printed evo_costs) does NOT
-    // ignore requirements.
+    // + opp 10000 DP+ Digimon). The `AltPathSpec.condition` side is now
+    // expressible (G-ALT-PATH-CONDITION RESOLVED 2026-05-15), but the
+    // opp-DP half still requires `G-PRED-DP-LTE` for the "opponent has
+    // 10000+ DP Digimon" check. The path is intentionally OMITTED from
+    // YAML until that gap closes. We assert that no cost-4 alt-path with
+    // `ignore_requirements: true` is present — the standard cost-4
+    // alt-path (printed evo_costs) does NOT ignore requirements.
     let card = compiled();
 
     let has_ignore_alt = card
@@ -188,7 +188,7 @@ fn bt15_101_omits_gabumon_alt_path_pending_dsl_gap() {
         .any(|p| p.kind == CompiledAltPathKind::Digivolve && p.ignore_requirements);
     assert!(
         !has_ignore_alt,
-        "Gabumon alt-path must be omitted pending G-ALT-PATH-CONDITION"
+        "Gabumon alt-path must be omitted pending G-PRED-DP-LTE"
     );
 }
 
@@ -358,7 +358,6 @@ fn bt15_101_on_self_suspend_offers_optional_unsuspend_prompt() {
 }
 
 #[test]
-#[ignore = "pending: G-DSL-EVENT-TARGET-IS-SELF — DSL has no predicate to assert the suspended permanent equals the source permanent; the on_suspend clause uses the AD1-014 pattern (event_target_owner: you, event_target_kind: digimon), so it over-fires when an ALLY suspends rather than only when this Digimon suspends. Negative case held until the predicate ships."]
 fn bt15_101_on_ally_suspend_does_not_consume_opt_or_offer_prompt() {
     // Printed text: "When THIS Digimon becomes suspended, you may unsuspend it."
     // The clause must NOT fire on an ally suspending — only on self.

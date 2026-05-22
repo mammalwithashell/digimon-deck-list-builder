@@ -622,7 +622,7 @@ fn player_delete_permanent() {
 fn action_space_constants() {
     use digimon_engine::action::*;
 
-    assert_eq!(ACTION_SPACE_SIZE, 2168);
+    assert_eq!(ACTION_SPACE_SIZE, 2192);
     assert_eq!(PASS, 62);
     assert_eq!(HATCH, 60);
     assert_eq!(MOVE_FROM_BREEDING, 61);
@@ -634,7 +634,10 @@ fn action_space_constants() {
     assert!(ATTACK_END <= DIGIVOLVE_END); // Attack end = Digivolve start = 400
     assert!(DIGIVOLVE_END <= FIELD_EFFECT_END);
     assert!(TRASH_EFFECT_END <= SOURCE_SELECT_START);
-    assert!(SOURCE_SELECT_END as usize <= ACTION_SPACE_SIZE);
+    assert!(SOURCE_SELECT_END <= BREEDING_SOURCE_SELECT_START);
+    // Breeding source-select is appended last and abuts the ceiling.
+    assert!(BREEDING_SOURCE_SELECT_END as usize <= ACTION_SPACE_SIZE);
+    assert_eq!(BREEDING_SOURCE_SELECT_END as usize, ACTION_SPACE_SIZE);
 }
 
 #[test]

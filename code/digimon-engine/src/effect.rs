@@ -46,6 +46,15 @@ pub type ProcessFn = Box<dyn Fn(&mut EffectContext) + Send + Sync + 'static>;
 pub type EffectId = u8;
 pub type CostReductionFn = Box<dyn Fn(&EffectReadContext) -> i32 + Send + Sync + 'static>;
 pub type PayCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'static>;
+/// Activation-cost closure for triggered abilities — runs in
+/// `effect_queue::run_queued_effect_inner` between the condition gate and
+/// the body `process`. Returning `false` collapses the body and consumes
+/// the OPT slot, mirroring the printed semantics of "by suspending this
+/// Tamer" / "by returning this Tamer to the bottom of the deck" gates
+/// where the cost simply being unpayable silently aborts the ability
+/// (no "decline" prompt). Distinct from `PayCostFn`, which is consumed
+/// during `BeforePayCost` cost calculation for plays/digivolves.
+pub type ActivationCostFn = Box<dyn Fn(&mut EffectContext) -> bool + Send + Sync + 'static>;
 pub type DynamicModifierFn =
     Box<dyn Fn(&EffectReadContext, PermanentHandle) -> Option<i32> + Send + Sync + 'static>;
 /// Closure that accepts a read-only context and a candidate host handle,
@@ -197,6 +206,15 @@ pub struct Effect {
     /// 0 = unlimited, 1 = once per turn, etc.
     pub max_per_turn: u8,
 
+    /// Shared once-per-turn group key. When `Some(g)`, this effect's
+    /// once-per-turn counter is keyed by `(source_card, g)` instead of
+    /// `(source_card, effect_slot)`. Several effects lowered from one
+    /// multi-timing DSL clause (`when: [on_play, when_attacking, ...]`)
+    /// all carry the same group so the timings share a single OPT lockout
+    /// per turn — DCGO's `SharedHashString`. `None` keeps the default
+    /// per-slot keying. See `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
+    pub shared_opt_group: Option<u8>,
+
     // Behavior
     pub condition: Option<ConditionFn>,
     /// Context-aware candidate filter for `WhenWouldBe*` replacement timings.
@@ -217,6 +235,13 @@ pub struct Effect {
     /// successfully paid, `false` to abort the action. Takes a mutable context
     /// because paying costs may trash cards, suspend permanents, etc.
     pub pay_cost_fn: Option<PayCostFn>,
+    /// Activation-cost closure for triggered abilities. Runs in
+    /// `effect_queue::run_queued_effect_inner` between the `condition`
+    /// gate and the body `process`. Returning `false` collapses the
+    /// effect (body does not run) AND consumes the OPT slot for the
+    /// same activation key. Distinct from `pay_cost_fn`, which is
+    /// consumed during play/digivolve `BeforePayCost` cost calculation.
+    pub activation_cost_fn: Option<ActivationCostFn>,
 
     // Declarative modifier values (set by builder for static modifiers)
     pub dp_modifier: i32,
@@ -273,6 +298,26 @@ pub struct Effect {
     /// whose effect has this flag) and
     /// `scan_before_pay_cost_reduction_for_hand_card` (which evaluates it).
     pub when_playing_this: bool,
+
+    /// When `true`, a lone triggered firing of this OPTIONAL effect installs
+    /// an explicit outer accept/decline `PendingSelection` before its body
+    /// runs (DCGO "you may" gate). Set by the DSL lowering for an
+    /// `optional: true` clause whose body's first step does NOT itself expose
+    /// a declinable (PASS-able) selection — without the outer prompt such a
+    /// body would force a mandatory action the printed "you may" forbids.
+    /// When the body's first step is already an optional selection, this
+    /// stays `false` (the inner PASS is the decline path; no double prompt).
+    /// `G-OUTER-OPTIONAL-NOT-INSTALLED`.
+    pub needs_outer_optional_prompt: bool,
+
+    /// Optional guard for the `needs_outer_optional_prompt` outer prompt.
+    /// When set, the outer accept/decline prompt is installed ONLY if this
+    /// closure returns `true` — used to suppress a useless prompt when the
+    /// body's first selection step has zero candidates (DCGO does not prompt
+    /// for an optional ability with no legal target). `None` means "always
+    /// prompt" (used when the first step's actionability cannot be
+    /// pre-evaluated). `G-OUTER-OPTIONAL-NOT-INSTALLED`.
+    pub outer_optional_guard: Option<ConditionFn>,
 }
 
 impl std::fmt::Debug for Effect {
@@ -526,6 +571,23 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::BeforePayCost)
     }
 
+    /// Sibling of `before_pay_cost` for observer-style triggered bodies
+    /// at the same dispatch point. Unlike `before_pay_cost`, this builder
+    /// is NOT for cost reduction (do not attach `cost_reduction_fn` or
+    /// `pay_cost_fn`); instead attach a `process` closure (typically the
+    /// lowering chain from a triggered clause's `process:` steps).
+    ///
+    /// Dispatched alongside cost-reduction scan in `play_from_hand` /
+    /// `digivolve_*` cost-calc; the observer's process fires once per
+    /// candidate per dispatch, with the cost target threaded into the
+    /// `EffectReadContext` (so `cost_target: { ... }` predicates and
+    /// `event_digivolve_target_*` checks can fire faithfully).
+    ///
+    /// G-BEFORE-PAY-COST-GAIN-MEMORY (Phase 2 Track H closure).
+    pub fn before_pay_cost_observe(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::BeforePayCostObserve)
+    }
+
     // ── Phase 7 "Would*" replacement-effect constructors ─────────────────
     // Dispatch via Game::try_replace lands in Task 2. These are pure
     // builder entry points for now; attach a `.replacement_process(...)`
@@ -601,11 +663,13 @@ impl EffectBuilder {
                 resource_flow: false,
                 blast_digivolve: false,
                 max_per_turn: 0,
+                shared_opt_group: None,
                 condition: None,
                 replacement_condition: None,
                 process: None,
                 cost_reduction_fn: None,
                 pay_cost_fn: None,
+                activation_cost_fn: None,
                 dp_modifier: 0,
                 dp_modifier_fn: None,
                 security_attack_fn: None,
@@ -623,6 +687,8 @@ impl EffectBuilder {
                 training: false,
                 linked: false,
                 when_playing_this: false,
+                needs_outer_optional_prompt: false,
+                outer_optional_guard: None,
             },
         }
     }
@@ -734,6 +800,35 @@ impl EffectBuilder {
 
     pub fn once_per_turn(mut self) -> Self {
         self.inner.max_per_turn = 1;
+        self
+    }
+
+    /// Bind this effect to a shared once-per-turn group. All effects that
+    /// share the same `group` value (and the same `source_card`) draw on a
+    /// single per-turn activation counter — used so a multi-timing DSL
+    /// clause's separate lowered effects share one OPT lockout.
+    /// See `Effect::shared_opt_group` and `G-OPT-MULTI-TIMING-SHARED-LOCKOUT`.
+    pub fn shared_opt_group(mut self, group: u8) -> Self {
+        self.inner.shared_opt_group = Some(group);
+        self
+    }
+
+    /// Mark this OPTIONAL effect as requiring an explicit outer accept/decline
+    /// prompt when it fires as a lone trigger. See
+    /// `Effect::needs_outer_optional_prompt` and
+    /// `G-OUTER-OPTIONAL-NOT-INSTALLED`.
+    pub fn needs_outer_optional_prompt(mut self) -> Self {
+        self.inner.needs_outer_optional_prompt = true;
+        self
+    }
+
+    /// Attach a guard for the outer optional prompt — the prompt installs
+    /// only when `f` returns `true`. See `Effect::outer_optional_guard`.
+    pub fn outer_optional_guard<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&EffectReadContext) -> bool + Send + Sync + 'static,
+    {
+        self.inner.outer_optional_guard = Some(Box::new(f));
         self
     }
 
@@ -908,6 +1003,43 @@ impl EffectBuilder {
         F: Fn(&mut EffectContext) -> bool + Send + Sync + 'static,
     {
         self.pay_cost_fn(f)
+    }
+
+    /// Install an activation-cost closure that gates a triggered ability.
+    ///
+    /// Fires in `effect_queue::run_queued_effect_inner` AFTER the
+    /// `condition` gate (and after the printed "may you accept" prompt
+    /// installed by `.optional()`) but BEFORE the body `process`.
+    /// Returning `true` continues to the body; returning `false`
+    /// collapses the effect silently — the body does NOT run AND the
+    /// OPT slot is consumed for the same activation key (so a card
+    /// that can't pay its cost this trigger doesn't get to retry next
+    /// trigger event in the same turn).
+    ///
+    /// Distinct from [`Self::pay_cost_fn`]:
+    /// - `pay_cost_fn` is consumed during `BeforePayCost` cost
+    ///   calculation for plays/digivolves; the cost is a memory deduction
+    ///   or selection of cards to trash before the play resolves.
+    /// - `activation_cost` is consumed during triggered-ability
+    ///   resolution; the cost is intrinsic to the trigger ("by
+    ///   suspending this Tamer", "by returning this Tamer to the
+    ///   bottom of the deck") and failure SILENTLY aborts — no decline
+    ///   prompt; the player never sees a choice they could not pay.
+    ///
+    /// Pairs with [`Self::optional`]: the player accepts the trigger,
+    /// THEN the activation cost runs. Cost failure after an `.optional()`
+    /// accept is NOT treated as a decline — it's a silent cost-impossible
+    /// collapse (Working Rule 17).
+    ///
+    /// Use [`EffectContext::suspend_self_as_cost`] or
+    /// [`EffectContext::return_self_to_deck_bottom_as_cost`] for the
+    /// two printed cost shapes that occur on Tamer triggered abilities.
+    pub fn activation_cost<F>(mut self, f: F) -> Self
+    where
+        F: Fn(&mut EffectContext) -> bool + Send + Sync + 'static,
+    {
+        self.inner.activation_cost_fn = Some(Box::new(f));
+        self
     }
 
     /// Attach a replacement-effect process for "Would*" timings.

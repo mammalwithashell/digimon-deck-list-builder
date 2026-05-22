@@ -1,11 +1,22 @@
 //! Lower `CompiledDeclarativeClause::Delay` into an engine `Effect` with
 //! `timing == DelayEffect`.
 //!
-//! Phase 1 scope: map `CompiledTiming::EndOfYourTurn` →
-//! `DelayTrigger::EndOfThisTurn`; `CompiledTiming::StartOfYourTurn` maps to
-//! `DelayTrigger::StartOfYourNextTurn`; event timings map to
-//! `DelayTrigger::OnEvent`. Body `active_when` predicates are evaluated when
-//! the delayed effect fires.
+//! Trigger mapping:
+//! - `CompiledTiming::Delayed` → `DelayTrigger::MainPhaseActivated`. This is
+//!   the standard printed `<Delay>` (RULES_CONTEXT 16-16) — a player-visible
+//!   `[Main]`-phase activation action. The body never auto-fires; the
+//!   controller trashes the Option to activate it on a later main phase.
+//! - `CompiledTiming::EndOfYourTurn` → `DelayTrigger::EndOfThisTurn`.
+//! - `CompiledTiming::StartOfYourTurn` → `DelayTrigger::StartOfYourNextTurn`.
+//! - `CompiledTiming::EndOfYourNextTurn` → `DelayTrigger::EndOfYourNextTurn`
+//!   (engine-scheduled auto-fire; retained for cards not yet migrated to the
+//!   `delayed` Main-phase trigger).
+//! - event timings (`on_suspend` / `on_unsuspend` / `on_ally_played`) →
+//!   `DelayTrigger::OnEvent`. `on_ally_played` event-gated Delay Options
+//!   (P-229) park indefinitely and fire when a matching card is played after
+//!   the placing turn (PUPPETS-G004).
+//!
+//! Body `active_when` predicates are evaluated when the delayed effect fires.
 //! Body steps run through `run_step` (Phase 2a dispatcher).
 
 use std::sync::Arc;
@@ -53,14 +64,21 @@ pub fn lower_with_raw(
     raw: Arc<EngineRawRustRegistry>,
 ) -> Effect {
     let delay_trigger = match trigger {
+        // Standard printed `<Delay>` — player-visible `[Main]`-phase
+        // activation action (PUPPETS-G009, RULES_CONTEXT 16-16).
+        CompiledTiming::Delayed => DelayTrigger::MainPhaseActivated,
         CompiledTiming::EndOfYourTurn => DelayTrigger::EndOfThisTurn,
         CompiledTiming::StartOfYourTurn => DelayTrigger::StartOfYourNextTurn,
         CompiledTiming::EndOfYourNextTurn => DelayTrigger::EndOfYourNextTurn,
-        CompiledTiming::OnSuspend | CompiledTiming::OnUnsuspend => {
-            compiled_timing_to_engine(trigger)
-                .map(DelayTrigger::OnEvent)
-                .unwrap_or(DelayTrigger::EndOfYourNextTurn)
-        }
+        // Event-gated `<Delay>` Options: park indefinitely and fire when the
+        // gating event is observed after the placing turn. `on_ally_played`
+        // closes the engine half of PUPPETS-G004 (see `effect_queue.rs`
+        // `enqueue_triggered` for the `EnteredField` dispatch fan-out).
+        CompiledTiming::OnSuspend
+        | CompiledTiming::OnUnsuspend
+        | CompiledTiming::OnAllyPlayed => compiled_timing_to_engine(trigger)
+            .map(DelayTrigger::OnEvent)
+            .unwrap_or(DelayTrigger::EndOfYourNextTurn),
         _ => DelayTrigger::EndOfYourNextTurn,
     };
     let process_arc: Arc<[CompiledStep]> = Arc::from(process_steps);

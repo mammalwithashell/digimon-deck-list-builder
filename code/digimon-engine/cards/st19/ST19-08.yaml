@@ -22,12 +22,33 @@ effects:
             - trait_has: Puppet
 
   # [Security] You may play 1 [LIBERATOR] card with play cost 4 or less from
-  # hand or trash free.
-  # BLOCKED: faithful hand-or-trash play needs a union-zone selection that
-  # preserves the selected card's origin and enforces filters. Current
-  # select_union_zone lowering binds only a CardHandle and accepts all cards.
+  # hand or trash free. (PUPPETS-G014 substrate landed in Task 7.)
+  - when: on_security
+    optional: true
+    summary: "[Security] You may play 1 [LIBERATOR] card with play cost 4 or less from hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          filter:
+            all_of:
+              - trait_has: LIBERATOR
+              - play_cost_lte: 4
+          bind_as: picked
+          optional: true
+          prompt: "You may play 1 [LIBERATOR] card with play cost 4 or less from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: picked
 
-  # Inherited [Your Turn] all opponent security Digimon get -3000 DP.
-  # BLOCKED: G-OPPONENT-SECURITY-DP-AURA / PUPPETS-G008. The engine has
-  # EffectBuilder::applies_to_opponent_security_dp(), but the DSL cannot
-  # express an inherited opponent-security-Digimon DP aura yet.
+  # Inherited [Your Turn] "All of your opponent's security Digimon get -3000 DP".
+  # PUPPETS-G008 / G-OPPONENT-SECURITY-DP-AURA: RESOLVED Track I 2026-05-17.
+  # Lowers via `applies_to_opponent_security_dp: true` to
+  # `EffectBuilder::applies_to_opponent_security_dp()` so the -3000 DP rides
+  # under the attacker's stack and surfaces during the security battle's
+  # `attacker_security_dp_adjustment` consult.
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    dp_modifier: -3000
+    applies_to_opponent_security_dp: true
+    summary: "[Inherited][Your Turn] All opponent security Digimon get -3000 DP"

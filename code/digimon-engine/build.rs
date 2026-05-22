@@ -12,6 +12,18 @@
 use std::path::PathBuf;
 
 fn main() {
+    // Windows defaults the main thread stack to 1 MiB, which is too small
+    // for the recursive YAML deserializer that walks every card spec.
+    // Hand the real build work to a worker thread with a larger stack.
+    std::thread::Builder::new()
+        .stack_size(16 * 1024 * 1024)
+        .spawn(real_main)
+        .expect("spawn build worker")
+        .join()
+        .expect("build worker panicked");
+}
+
+fn real_main() {
     println!("cargo:rerun-if-changed=cards");
     println!("cargo:rerun-if-changed=build.rs");
 

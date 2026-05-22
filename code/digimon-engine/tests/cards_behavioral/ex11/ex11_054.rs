@@ -270,10 +270,10 @@ fn ex11_054_security_play_puts_tamer_on_field() {
 
 // ─── Section 4: All Turns clause ─────────────────────────────────────────────
 
-#[test]
-fn ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played() {
-    // When P0 plays a Reptile Digimon, Owen (unsuspended) should offer an
-    // optional activation: suspend Owen, draw 1 card.
+/// Build a runner with Owen on P0's field and a Reptile Digimon ready in
+/// P0's hand. Returns the runner, Owen's handle, and the Reptile hand index.
+fn reptile_observer_runner() -> (DebugRunner, digimon_engine::permanent::PermanentHandle, usize) {
+    use digimon_engine::card_source::CardSource;
     use digimon_engine::enums::CardKind;
 
     let mut reptile = make_test_card("REPTILE", "ReptileDigimon");
@@ -294,21 +294,11 @@ fn ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played() {
 
     let owen = runner.place_on_field(0, "EX11-054", None);
     assert!(
-        !runner
-            .game
-            .player(0)
-            .battle_area
-            .get(owen.index as usize)
-            .unwrap()
-            .is_suspended,
+        !runner.game.player(0).battle_area[owen.index as usize].is_suspended,
         "Owen must start unsuspended"
     );
 
-    let hand_before = runner.hand_size(0);
-
-    // Play the Reptile Digimon.
-    {
-        use digimon_engine::card_source::CardSource;
+    let reptile_hand_idx = {
         let data_idx = runner
             .game
             .card_data
@@ -319,38 +309,112 @@ fn ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played() {
         runner.game.players[0]
             .hand
             .push(CardSource::new(data_idx, 0, card_index));
-    }
-    runner.play(0, 0); // play REPTILE from hand
-
-    // After the play resolves, OnEnterFieldAnyone fires. Owen's observer
-    // should install an optional PendingSelection for the player to choose
-    // whether to pay the cost (suspend Owen → draw 1 → select Progress Digimon).
-    assert!(
-        runner.pending_selection().is_some(),
-        "optional activation prompt should install after Reptile ally played"
-    );
-
-    // Accept the activation → suspend Owen.
-    let (_pl, act) = {
-        let s = runner.pending_selection().unwrap();
-        (s.selecting_player, s.valid_action_ids[0])
+        runner.game.players[0].hand.len() - 1
     };
-    runner.execute_action(0, act).ok();
+    (runner, owen, reptile_hand_idx)
+}
 
-    // Owen is now suspended.
-    let owen_perm = runner
-        .game
-        .player(0)
-        .battle_area
-        .get(owen.index as usize)
-        .unwrap();
+#[test]
+fn ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played() {
+    // Printed text: "by suspending this Tamer, <Draw 1>". The suspend is an
+    // optional ACTIVATION COST — the player chooses whether to pay it. The
+    // observer therefore installs a pre-cost TriggerOrder selection (with
+    // PASS) before the suspend fires. This test exercises the ACCEPT path:
+    // the player picks the trigger, Owen suspends, and Draw 1 fires.
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::selection::SelectionKind;
+
+    let (mut runner, owen, reptile_hand_idx) = reptile_observer_runner();
+    let hand_before = runner.hand_size(0);
+
+    runner.play(0, reptile_hand_idx); // play REPTILE from hand
+
+    // The all-turns observer's event-context condition (own Reptile played)
+    // is genuinely TRUE, so the optional + activation_cost trigger installs a
+    // pre-cost decline prompt before the suspend cost runs.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::TriggerOrder),
+        "an optional activation-cost trigger whose event-condition is TRUE \
+         must offer a pre-cost decline prompt"
+    );
     assert!(
-        owen_perm.is_suspended,
-        "Owen must be suspended after activation"
+        runner.pending_is_optional(),
+        "the pre-cost TriggerOrder must expose PASS (suspending Owen is optional)"
+    );
+    // The suspend cost must not have fired yet.
+    assert!(
+        !runner.game.player(0).battle_area[owen.index as usize].is_suspended,
+        "Owen must not suspend before the player accepts the activation cost"
     );
 
-    // Draw: hand grew by 1.
-    assert_eq!(runner.hand_size(0), hand_before + 1, "Draw 1 must fire");
+    // Accept the trigger (pick it, not PASS).
+    let trigger_action = {
+        let sel = runner.pending_selection().unwrap();
+        assert_ne!(
+            sel.valid_action_ids[0], PASS,
+            "the first valid action must be the trigger, not PASS"
+        );
+        sel.valid_action_ids[0]
+    };
+    runner
+        .execute_action(0, trigger_action)
+        .expect("accept the activation cost");
+    let _ = runner.auto_resolve();
+
+    // After accepting: the activation_cost step suspends Owen, the draw step
+    // runs, and the optional select_own_permanent for a Progress Digimon
+    // finds no candidates (none in this fixture) so completes silently.
+    assert!(
+        runner.game.player(0).battle_area[owen.index as usize].is_suspended,
+        "Owen must be suspended after the activation cost is accepted"
+    );
+    // `hand_before` already counts the REPTILE in hand. Playing REPTILE
+    // removes it (-1); the accepted Draw 1 adds DRAW-FILLER (+1). Net: the
+    // hand size is back to `hand_before`.
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "draw 1 must fire (REPTILE leaves hand, DRAW-FILLER replaces it)"
+    );
+}
+
+#[test]
+fn ex11_054_all_turns_can_decline_suspend_cost_when_reptile_ally_played() {
+    // Printed text: "by suspending this Tamer, <Draw 1>" — the suspend cost is
+    // optional. Declining the pre-cost prompt must leave Owen unsuspended and
+    // skip the Draw 1 entirely (no-approximations: the choice must be real).
+    use digimon_engine::action::space::PASS;
+    use digimon_engine::selection::SelectionKind;
+
+    let (mut runner, owen, reptile_hand_idx) = reptile_observer_runner();
+    let hand_before = runner.hand_size(0);
+
+    runner.play(0, reptile_hand_idx); // play REPTILE from hand
+
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::TriggerOrder),
+        "the optional activation-cost trigger must offer a decline prompt"
+    );
+
+    // Decline — choose PASS.
+    runner
+        .execute_action(0, PASS)
+        .expect("PASS is legal on an optional pre-cost TriggerOrder");
+    let _ = runner.auto_resolve();
+
+    assert!(
+        !runner.game.player(0).battle_area[owen.index as usize].is_suspended,
+        "Owen must stay unsuspended when the player declines the suspend cost"
+    );
+    // REPTILE left the hand when played; no Draw 1 fires on decline, so the
+    // hand is one smaller than before the play.
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before - 1,
+        "Draw 1 must not fire when the activation cost is declined"
+    );
 }
 
 #[test]

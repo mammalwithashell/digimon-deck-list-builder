@@ -128,7 +128,7 @@ fn test_offline_human_game_does_not_auto_advance() {
 }
 
 /// Smoke-check that the action mask produced after game start is the correct
-/// engine size (2168). Guards against shape mismatches that would cause the
+/// engine size (2192). Guards against shape mismatches that would cause the
 /// Tauri frontend to misread the mask array.
 #[test]
 fn test_action_mask_has_correct_size_after_game_start() {

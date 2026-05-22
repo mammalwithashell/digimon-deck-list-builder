@@ -43,6 +43,26 @@ effects:
     grant_keyword:
       keyword: Blocker
 
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "When other Digimon are deleted, delete 1 opponent Digimon with the lowest level"
+    condition:
+      all_of:
+        - event_target_kind: digimon
+        - event_permanent_is_source: false
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_matches_aggregate:
+                  selector: lowest_level
+                  of: opponent
+          prompt: "Delete 1 opponent Digimon with the lowest level"
+      - delete_permanent: { target: victim }
+
   - when: end_of_your_turn
     once_per_turn: true
     optional: true

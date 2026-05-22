@@ -87,23 +87,22 @@ fn ex9_032_metadata_and_digivolution_paths_match_printed_text() {
 }
 
 #[test]
-fn ex9_032_active_costed_digivolve_clause_is_omitted_until_stable_self_binding() {
+fn ex9_032_active_costed_digivolve_clause_is_compiled() {
     let runner = karakurumon_runner();
     let compiled = runner.compiled_card("EX9-032").expect("EX9-032 compiles");
 
     assert!(
-        !compiled.effects.iter().any(|clause| matches!(
+        compiled.effects.iter().any(|clause| matches!(
             clause,
             CompiledClause::Triggered(triggered)
                 if triggered.when.contains(&CompiledTiming::OnPlay)
                     && triggered.when.contains(&CompiledTiming::WhenDigivolving)
         )),
-        "do not ship the active costed self-digivolve until self binding remains stable after cost deletion"
+        "active costed self-digivolve [On Play]/[When Digivolving] clause must compile"
     );
 }
 
 #[test]
-#[ignore = "BLOCKED: G-COSTED-SELF-DIGIVOLVE-STABLE-SOURCE — deleting the cost body can shift battle-area indices before target:self resolves"]
 fn ex9_032_on_play_deletes_token_or_other_puppet_then_free_digivolves_into_puppet() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX9-032")
@@ -114,7 +113,8 @@ fn ex9_032_on_play_deletes_token_or_other_puppet_then_free_digivolves_into_puppe
         .add_card(make_puppet_digimon("PUPPET-EVO", 6))
         .add_card(make_plain_digimon("NONPUPPET-EVO", 6))
         .hand(0, &["EX9-032", "NONPUPPET-EVO", "PUPPET-EVO"])
-        .memory(20)
+        // The memory seesaw caps at 10; Karakurumon's 7-cost play leaves 3.
+        .memory(10)
         .start();
 
     let puppet_cost = runner.place_on_field(0, "PUPPET-COST", Some(0));
@@ -181,13 +181,13 @@ fn ex9_032_on_play_deletes_token_or_other_puppet_then_free_digivolves_into_puppe
     );
     assert_eq!(
         runner.memory(),
-        13,
-        "only the play cost was paid; the effect digivolve was free"
+        3,
+        "only the 7-cost Karakurumon play was paid (10 - 7); the effect \
+         digivolve was free"
     );
 }
 
 #[test]
-#[ignore = "BLOCKED: G-COSTED-SELF-DIGIVOLVE-STABLE-SOURCE — omitted with the active costed self-digivolve body"]
 fn ex9_032_declining_on_play_cost_does_not_delete_or_digivolve() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX9-032")
@@ -213,7 +213,6 @@ fn ex9_032_declining_on_play_cost_does_not_delete_or_digivolve() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-COSTED-SELF-DIGIVOLVE-STABLE-SOURCE — same omitted body as On Play"]
 fn ex9_032_when_digivolving_uses_same_cost_and_free_puppet_hand_digivolve_flow() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX9-032")
@@ -259,7 +258,6 @@ fn ex9_032_when_digivolving_uses_same_cost_and_free_puppet_hand_digivolve_flow()
 }
 
 #[test]
-#[ignore = "BLOCKED: G-COSTED-SELF-DIGIVOLVE-PREFLIGHT — cost-body preflight over battle area is not faithful for this clause yet"]
 fn ex9_032_does_not_prompt_without_legal_cost_body() {
     let mut runner = DebugRunner::builder()
         .dsl_card("EX9-032")

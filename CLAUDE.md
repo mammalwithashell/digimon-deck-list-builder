@@ -106,7 +106,7 @@ agent config, runtime data, and project-level configs.
     │   │   ├── combat.rs              # Attack state machine + interrupts (Alliance/Counter/Block)
     │   │   ├── selection.rs           # Pending selection / interrupt state machine
     │   │   ├── tensor.rs              # Observation tensor (1375 floats, parity with Python)
-    │   │   ├── action/                # Action space (2168) + mask + decoder
+    │   │   ├── action/                # Action space (2192) + mask + decoder
     │   │   ├── cards/test_cards.rs    # TEST-001..022 — hand-written worked examples
     │   │   ├── runners/               # HeadlessRunner (RL-shaped API)
     │   │   └── debug_runner.rs        # Deterministic test harness

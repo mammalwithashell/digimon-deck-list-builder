@@ -189,7 +189,6 @@ impl Game {
         #[cfg(feature = "dsl-yaml-loader")]
         {
             let card_id = card.card_id(&self.card_data);
-            let paths = self.alt_path_registry.get(card_id)?;
             let rctx = EffectReadContext::new(self, card.handle(), Some(base_handle), card.owner);
             let base = self
                 .players
@@ -201,7 +200,37 @@ impl Game {
             let base_requires_treated_as = !base_top.is_digimon_card_for_search(&self.card_data)
                 && base_meta.card_kind != CardKind::DigiEgg;
             let mut best: Option<DigivolveRouteMatch> = None;
-            for path in paths {
+
+            // Lookup-side direction: tracks where the path is registered.
+            // From-side paths live on the HAND card; Into-side paths live
+            // on the SOURCE permanent (carrier). Each path's
+            // `path.direction` must agree with the lookup side or it is
+            // not applicable.
+            #[derive(Copy, Clone, PartialEq)]
+            enum LookupDirection {
+                From,
+                Into,
+            }
+
+            // ── Direction::From (default): paths registered on the HAND
+            // card; `from:` filters the SOURCE (base) permanent.
+            let from_paths = self.alt_path_registry.get(card_id);
+            // ── Direction::Into (Phase 2 Track F): paths registered on the
+            // SOURCE (carrier) card; `from:` filters the HAND-card
+            // candidate. We resolve the base's top-card id to look these up.
+            let into_paths = self.alt_path_registry.get(base_top.card_id(&self.card_data));
+
+            for (path, direction) in from_paths
+                .into_iter()
+                .flatten()
+                .map(|p| (p, LookupDirection::From))
+                .chain(
+                    into_paths
+                        .into_iter()
+                        .flatten()
+                        .map(|p| (p, LookupDirection::Into)),
+                )
+            {
                 if !matches!(path.kind, CompiledAltPathKind::Digivolve) {
                     continue;
                 }
@@ -213,11 +242,53 @@ impl Game {
                 {
                     continue;
                 }
+                // Filter each path by its declared direction. Mismatches are
+                // dropped silently — a `From` path looked up from the
+                // base-top side or an `Into` path looked up from the hand
+                // side is not applicable to this digivolve attempt.
+                let path_direction = match path.direction {
+                    digimon_dsl::compiled::CompiledAltPathDirection::From => {
+                        LookupDirection::From
+                    }
+                    digimon_dsl::compiled::CompiledAltPathDirection::Into => {
+                        LookupDirection::Into
+                    }
+                };
+                if path_direction != direction {
+                    continue;
+                }
                 let Some(from) = path.from.as_ref() else {
                     continue;
                 };
-                if !eval_predicate(from, &rctx, PredicateSubject::Permanent(base_handle)) {
+                // For LookupDirection::Into, `from:` filters the destination
+                // hand-card candidate (subject = the source CardHandle that
+                // we're digivolving into). Use PredicateSubject::Card to
+                // point the evaluator at the hand-card data. For the legacy
+                // LookupDirection::From, `from:` filters the source
+                // permanent (the existing semantic).
+                let from_matches = match direction {
+                    LookupDirection::From => {
+                        eval_predicate(from, &rctx, PredicateSubject::Permanent(base_handle))
+                    }
+                    LookupDirection::Into => {
+                        eval_predicate(from, &rctx, PredicateSubject::Card(card.handle()))
+                    }
+                };
+                if !from_matches {
                     continue;
+                }
+                // G-ALT-PATH-CONDITION: alt-paths may carry an extra
+                // activation predicate (e.g. "if you have [Owen
+                // Dreadnought]") evaluated on top of the source-filter
+                // and material/extra-cost gates.
+                if let Some(condition) = path.condition.as_ref() {
+                    if !eval_predicate(
+                        condition,
+                        &rctx,
+                        PredicateSubject::Permanent(base_handle),
+                    ) {
+                        continue;
+                    }
                 }
 
                 let treated_as_cost = if let Some(profile) = path.source_treated_as.as_deref() {

@@ -2,8 +2,92 @@
 
 This file accumulates engine mechanics that are missing or incomplete, discovered during archetype implementation. Each entry includes the card that exposed the gap and what engine change is needed.
 
-Last updated: 2026-05-09
-Last sweep: 2026-05-10 (pre-scaling cleanup batch — see `.claude/plans/pre-scaling-cleanup-batch.md` §2)
+Last updated: 2026-05-17
+Last sweep: 2026-05-17 (Phase 2 rollup — Tracks A–J, PR #480)
+
+## Sweep notes (2026-05-17 — Phase 2 rollup)
+
+10 Phase 2 tracks landed in PR #480 (`claude/musing-ishizaka-c4b355` against
+`main`). The substrate-side closures in this shadow tracker:
+
+- **Track B** — `Effect::activation_cost(...)` builder hook +
+  `ctx.suspend_self_as_cost` / `ctx.return_self_to_deck_bottom_as_cost`
+  helpers landed. Cost failure consumes OPT slot per Working Rule §17.
+- **Track C** — `G-OPT-TRIGGERED` and `G-OPT-RESET-VIA-ATTACK-CYCLE`
+  diagnosed as already-closed (phantom + test-setup misdiagnosis). 23
+  stale `#[ignore]` annotations removed. The G-OPT-RESET entry below is
+  already marked CLOSED at §348.
+- **Track D** — `enqueue_from_permanent` digivolution-stack walk
+  completed (already RESOLVED 2026-05-15 per
+  `docs/RUST_ENGINE_GAPS.md`); Track D added the dedicated regression
+  test and un-ignored 18 dependent behavioral tests. G-WHEN-DIGIVOLVING-DISPATCH
+  absorbed.
+- **Track G** — EX11-054 (entering-permanent observer) migrated to
+  Track B's `activation_cost`. The G-ON-ENTER-FIELD-ANYONE-TRAIT-FILTER
+  entry below at §208 retains an updated footer for that card; the
+  underlying entering-permanent predicate gap remains open for other
+  observer cards.
+- **Track H** — BeforePayCost substrate extensions, plus
+  `G-PLAY-FROM-HAND-FREE-BIND-AS` (already marked CLOSED at §325).
+- **Track I** — PUPPETS-G009 Standard Delay [Main] activation closure
+  (substrate now exposes the `[Main]` activation action through normal
+  action mask). End-of-attack mandatory self-delete chain closed for
+  EX4-074 ShineGreymon: Ruin Mode (no engine changes — existing
+  primitives suffice).
+
+See [qa/resolved-gaps.md](../resolved-gaps.md) for full per-track closure
+details. The Phase 2 rollup also closed many DSL-only gaps tracked in
+[qa/dsl-vocab-gaps.md](../dsl-vocab-gaps.md).
+
+## Sweep notes (2026-05-15)
+
+Post-rebaseline audit cleanup driven by
+[`docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md`](../../docs/superpowers/audits/2026-05-14-rust-engine-gap-rebaseline.md):
+the canonical engine-side tracker
+[`docs/RUST_ENGINE_GAPS.md`](../../docs/RUST_ENGINE_GAPS.md) was shrunk
+from ~50 open entries to ~22, with ~54 entries (the 8 audit-flagged
+CLOSED + ~46 NARROW closed-core halves) relocated to
+[`qa/resolved-gaps.md`](../resolved-gaps.md). The narrowed residual
+sub-shapes (e.g. `play_from_revealed_free`, `play_from_security_at`,
+top-N security trash + face-up flip, bilateral `UntilLeaveField`
+delivery for BT14-009, `pop_top_digivolution_source` for BT24-093)
+live as their own entries.
+
+This shadow tracker remains consistent with the canonical engine-side
+gap document — the per-entry status updates here already cited the
+2026-05-08 and 2026-05-10 closures that the audit confirmed as
+closed-at-substrate. No engine code, tests, or card YAML were
+modified by the sweep.
+
+## Sweep notes (2026-05-14)
+
+Cross-referenced every entry against PRs #459–#473 and the per-archetype
+DSL gap input documents in `qa/archetype-qa/dsl/`. New closures since the
+2026-05-10 sweep:
+
+- **Track H aura system (PR #467):** typed `AuraScope` / `AuraGrant`
+  builder API, security-zone aura tick dispatch, and queue-based granted-
+  triggered-effect dispatch with parked-selection support. Closes the
+  "Granted triggered ability", "Named-target declarative aura", and
+  "Declarative aura sourced from security zone" entries in
+  `docs/RUST_ENGINE_GAPS.md` at the substrate level — entries remain
+  🟡 PARTIAL pending the body-registry cleanup optimization and the
+  query-time aura model follow-up.
+- **Alter-S Ladder DSL (PR #468):** EX9-021 Omnimon Alter-S and DNA
+  Omnimon ladder cards landed on existing zone-movement / replacement /
+  source-selection substrate. No new engine gap surfaced.
+- **Formula thresholds (PR #470):** validates the Track J
+  formula/result substrate slice on real card-shaped fixtures
+  (BT15-096, BT21-102). No new substrate.
+- **Puppet DSL observers (PR #472):** PUPPETS-G011 closed; observer
+  fan-out and `OnAnyDeletion` event-target predicates are exercised by
+  card-shaped fixtures (BT22-002, BT22-088, EX9-033, EX11-023, ST19-14).
+  No new engine timing required.
+
+No new engine gaps surfaced from the per-archetype DSL gap input
+documents in `qa/archetype-qa/dsl/`. The shadow tracker in this file
+remains consistent with the canonical engine-side gap document
+[docs/RUST_ENGINE_GAPS.md](../../docs/RUST_ENGINE_GAPS.md).
 
 ## Sweep notes (2026-05-10)
 
@@ -109,10 +193,10 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Scope:** Rust engine delayed-option state, action mask, and DSL lowering.
 - **Card(s):** BT22-098 Unique Emblem: Fable Waltz, P-229 Unique Emblem: Narrative Ronde.
 - **Effect text:** BT22-098: "[Your Turn] When any of your [Arisa Kinosaki] suspend, <Delay> ... 1 of your [Puppet] trait Digimon may digivolve into a [Puppet] and [LIBERATOR] trait Digimon card in the hand with the digivolution cost reduced by 3." P-229: "[Your Turn] When any of your [Mirai Kinosaki]s are played, <Delay> ... 1 of your Digimon may digivolve into a level 6 or lower [LIBERATOR] trait card in the hand with the digivolution cost reduced by 3."
-- **Status:** Partially resolved 2026-05-02 for the BT22-098/Arisa suspend timing slice. Delayed Option permanents now store `DelayTrigger::OnEvent(EffectTiming::OnSuspend)` plus placement turn, observed suspend events carry event-card context, and Delay activation is gated until after the placement turn before trashing itself through the replacement-aware cost path. DSL `kind: delay` can lower `trigger: on_suspend` plus `active_when: { event_card_name_contains: "Arisa Kinosaki" }`.
-- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- event_gated_delay_only_fires_after_placement_turn_and_matching_event`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay_event_trigger_lowers_to_on_event_delay`.
+- **Status:** **RESOLVED 2026-05-21.** The `on_suspend` slice closed 2026-05-02 (BT22-098); the `on_ally_played` slice closed 2026-05-21 (P-229). Delayed Option permanents store `DelayTrigger::OnEvent(_)` plus placement turn and park indefinitely; Delay activation is gated until after the placement turn before trashing itself through the replacement-aware cost path. DSL `kind: delay` lowers `trigger: on_suspend` / `on_unsuspend` / `on_ally_played` to `DelayTrigger::OnEvent(_)` with body-level `active_when` event predicates.
+- **Closed via:** DSL — `lower_delay.rs` maps `CompiledTiming::OnAllyPlayed` → `DelayTrigger::OnEvent(EffectTiming::OnAllyPlayed)`. Engine — `effect_queue.rs` `enqueue_triggered` fans `TriggerSource::EnteredField` dispatches (the `OnEnterFieldAnyone` / `OnAllyPlayed` play broadcasts) out to `enqueue_event_gated_delayed_options`; previously only `EventObserved` / `AttackTargetChanged` reached it.
+- **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- event_gated_delay_only_fires_after_placement_turn_and_matching_event`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- delay_event_trigger_lowers_to_on_event_delay`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt22_098`; `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- p_229` (13 tests, 0 ignored).
 - **Updated 2026-05-08:** Self-scoped suspend observers can use `event_permanent_is_source: true` to compare the suspended event permanent with the observer source permanent. BT23-077 Sistermon Ciel uses this to avoid over-firing when another own permanent suspends. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- event_permanent_is_source` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt23_077`.
-- **Remaining related work:** `on_ally_played` now lowers to `EffectTiming::OnAllyPlayed` and has battle-area/trash fan-out, proven by BT20-084's trash-resident observer fixture. P-229's Mirai-played Delay body still needs its card-shaped implementation and reduced-cost hand digivolution plumbing.
 
 ### Deletion Observer Optionality Not Exposed to Agent
 - **Discovered in:** Chaos Control (2026-04-10)
@@ -164,6 +248,7 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Related gap:** G-ON-DIGIVOLVE-TRAIT-FILTER (same limitation for `on_digivolve`). Both share the same root cause: the trigger source variant doesn't carry the triggering permanent's handle.
 - **Suggested change:** Add `entering_permanent: Option<PermanentHandle>` to `TriggerContext` (alongside existing `target_permanent`). Populate it in `game_actions.rs::broadcast_on_enter_field_anyone` (and the digivolve broadcast) with the handle of the card that just entered/digivolved. Add a matching `entering_permanent_trait_has` DSL BoolPredicate leaf in `predicate.rs` that reads `ctx.trigger_context.entering_permanent`.
 - **Workaround:** `kind: raw_rust` no-op placeholder (`ex11_054_all_turns_noop`). See `qa/dsl-vocab-gaps.md` entry `G-ENTERING-PERMANENT-TRAIT`.
+- **Updated 2026-05-17 (Phase 2 Track G):** EX11-054 specifically migrated off the `ex11_054_all_turns_noop` workaround. The [All Turns] clause now uses Track B's `activation_cost: { suspend_self: true }` to gate the body via the single-trigger drainer model, and the previously-failing `ex11_054_all_turns_suspends_and_draws_when_reptile_ally_played` test passes. The underlying entering-permanent trait-filter gap remains open for other observer cards that need an entering-permanent predicate beyond what `event_card_trait_has` covers; this card was unblocked through a different shape.
 - **Updated 2026-04-29:** Normal hand-played battle-area permanents now dispatch `OnEnterFieldAnyone` via `TriggerSource::EnteredField { player, permanent, card }`, and `TriggerContext.event_permanent` / `event_card` identify the entering permanent and card. `event_card_trait_has` is proven against the entering card by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl -- on_enter_field_anyone_event_card_trait_predicate_matches_entering_card`. Keep token play, option placement, play-from-trash context, and breeding-area observer fan-out as open follow-ups unless separately tested.
 - **Updated 2026-05-08:** Effect-created battle-area permanents now use `EnteredField` with `TriggerContext.effect_initiated = true`, while normal player-action play sets it false. BT16-028 proves effect-play vs normal-play gating with `event_is_effect_initiated`.
 - **Updated 2026-05-08:** Provenance-token helpers are available for effect-created play/digivolve flows. `play_from_hand_free_with_provenance`, `effect_initiated_digivolve_with_provenance`, and `effect_initiated_dna_digivolve_with_provenance` return a token keyed to the physical card instance, and `resolve_provenance_token` follows it across battle-area index shifts and zone moves. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test effect_context -- provenance_tokens`.
@@ -239,7 +324,8 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **First test:** trigger `BT20-083` On Deletion with a `BT13-007` in breeding and assert a pending selection offers the breeding King Drasil rather than silently doing nothing.
 - **Workaround:** None faithful. Auto-selecting the only breeding permanent hides a gameplay choice and fails when future cards offer multiple legal destinations across battle/breeding zones.
 - **Updated 2026-04-29:** Resolved for pending selection and DSL binding without fake battle-area handles. `EffectContext::select_own_breeding_permanent` installs `SelectionKind::BreedingPermanent`, masks only the phase-scoped breeding selection action (`encode_breeding_select(player)`), and DSL `select_own_breeding_permanent` binds a `BreedingPermanentRef`. Covered by `breeding_permanent_selection_targets_breeding_without_fake_battle_handle`, `breeding_selection_mask_exposes_only_breeding_select_action`, and `dsl_select_breeding_permanent_binds_target`.
-- **Remaining limits:** Group 4 now covers effect-initiated movement to/from the real breeding slot and bottom-source placement under the `BREEDING_TARGET` selected breeding permanent. The 2026-05-08 `PlayerBreedingArea` slices cover `StartOfYourMainPhase` and security-removal fan-out while the source remains in breeding; other event fan-outs from breeding remain under `G-BREEDING-TRIGGER-DISPATCH`.
+- **Updated 2026-05-20 (Task S1.3):** selecting digivolution *sources* from a breeding-area carrier (King Drasil's resident stack) is now resolved. `select_material` / `select_materials` (`CountCappedZone::Material`) against a `BREEDING_TARGET`-sentinel carrier install a real `pending_selection` whose action IDs use the appended `BREEDING_SOURCE_SELECT` sub-range (`2168..2192`, keyed by carrier owner; `ACTION_SPACE_SIZE` raised 2168→2192). `material_zone_geometry` is the single branch point. This unblocks the source-pick side of BT13-112, BT13-110, EX11-053, BT13-019, BT23-072. Covered by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection -- breeding_carrier`, `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- select_materials::select_materials_breeding_carrier`.
+- **Remaining limits:** Group 4 covers effect-initiated movement to/from the real breeding slot and bottom-source placement under the `BREEDING_TARGET` selected breeding permanent; Task S1.3 covers selecting sources *within* a breeding-area carrier. The 2026-05-08 `PlayerBreedingArea` slices cover `StartOfYourMainPhase` and security-removal fan-out while the source remains in breeding; other event fan-outs from breeding remain under `G-BREEDING-TRIGGER-DISPATCH`.
 
 ### Option-Placed Observer Timing Missing  [G-OPTION-PLACED-TIMING]
 - **Discovered in:** Royal Knights archetype assessment (2026-04-28)
@@ -273,12 +359,11 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Workaround:** None needed for current script-facing redirects and current Blocker/Raid retargets.
 
 ### `play_from_hand_free` Missing `bind_as` PermanentHandle Output  [G-PLAY-FROM-HAND-FREE-BIND-AS]
+- **Status: RESOLVED 2026-05-17** (Phase 2 Track H). See `qa/resolved-gaps.md` § "Phase 2 Track H closure — 2026-05-17" for the full closure details.
+- **Surface landed:** `PlayFromHandFreeArgs` (new struct distinct from `PlayFromHandArgs`) carries `bind_as: Option<String>`; `CompiledStep::PlayFromHandFree` carries the same. Execute path in `play_digivolve.rs` inserts the just-played permanent handle into the bindings under the configured name. BT16-085 YAML clause 0 now expresses the full free-play + scheduled delayed-return.
 - **Discovered in:** BT16-085 Davis Motomiya & Ken Ichijoji implementation (2026-05-04)
-- **Card(s):** BT16-085 — "[Start of Your Main Phase] You may play 1 [Veemon] or [Wormmon] from your hand without paying the cost. At the next end of your opponent's turn, return it to the hand."
-- **Effect text:** "return it to the hand" — the "it" refers to the permanent that was just played free.
-- **What's missing:** `CompiledStep::PlayFromHandFree` has no `bind_as` field. When `execute_play_from_hand_free` runs in `play_digivolve.rs`, the returned `Option<PermanentHandle>` is discarded. The `schedule_delayed` step clones bindings at schedule time, so if the just-played permanent's handle were inserted into bindings via `bind_as`, a subsequent `return_to_hand: { target: played }` in the delayed body could reference it. Without `bind_as`, the delayed return step cannot be expressed — `return_to_hand` requires a bound `PermanentHandle`.
-- **Suggested change:** Add `bind_as: Option<String>` to `PlayFromHandFreeArgs` in `digimon-dsl/src/step.rs` and `CompiledStep::PlayFromHandFree` in `compiled.rs`. In `execute_play_from_hand_free` (or its caller in `step.rs`), if the play succeeded and `bind_as` is set, call `bindings.insert_permanent(name, handle)` so the resulting permanent is available for downstream steps (including `schedule_delayed` body steps).
-- **Workaround:** None — the delayed-return sub-clause of BT16-085 Clause 0 is omitted from the YAML. The test `bt16_085_start_of_main_played_digimon_returns_at_opponent_eot` is `#[ignore = "BLOCKED: G-PLAY-FROM-HAND-FREE-BIND-AS"]`.
+- **Card(s) unblocked:** BT16-085 clause 0 (free-play + delayed return at next opponent's EOT).
+- **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt16::bt16_085::bt16_085_start_of_main_played_digimon_returns_at_opponent_eot`.
 
 ### `event_card_color_has` Predicate Missing (Color-Gate on Digivolve/Enter Observer)  [G-EVENT-CARD-COLOR-IS]
 - **Discovered in:** BT16-085 Davis Motomiya & Ken Ichijoji implementation (2026-05-04)
@@ -296,10 +381,21 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Suggested change:** Add `select_opponent_sources: { target: <binding>, count: N, bind_as: <name> }` DSL verb, mirroring `select_own_sources`. `target` resolves to an opponent `PermanentHandle` binding. `count` specifies how many sources to select (up to the permanent's stack depth). Implement in `step.rs`, lower in `compile.rs`, and execute in a new `CompiledStep::SelectOpponentSources` handler analogous to `execute_select_own_sources`.
 - **Workaround:** DNA trash sub-clause of BT16-085 Clause 1 is entirely omitted from the YAML while opponent-source selection is missing. The former `G-DSL-IS-DNA-DIGIVOLVING` blocker is resolved by `dna_origin: true`; the remaining blocker is `G-SELECT-OPPONENT-SOURCES`. Test `bt16_085_dna_digivolve_trashes_3_opp_digi_cards` should narrow its ignore tag when this card is revisited.
 
-### OPT Reset via Attack Cycle  [G-OPT-RESET-VIA-ATTACK-CYCLE]
-- **Discovered in:** BT16-040 Wormmon (2026-05-04 batch-implement-cards-rust-dsl)
-- **Card(s):** BT16-040, plus all inherited [When Attacking] [OPT] cards.
-- **Effect text:** "[When Attacking] [Once Per Turn] Suspend 1 of your opponent's Digimon."
-- **What's missing:** OPT lockout for inherited When Attacking does not reliably reset after a full turn cycle (player end_turn → opponent end_turn → player attacks again). Test `bt16_040_opt_resets_after_turn_cycle` is `#[ignore]`'d.
-- **Suggested change:** Investigate OPT key reset path in turn-state machine for inherited triggered clauses. The OPT key may persist across turn boundaries when the carrier permanent's source identity differs from the trigger source.
-- **Workaround:** OPT-reset behavioral test is `#[ignore]`'d; structural OPT flag and same-turn lockout still verified.
+### OPT Reset via Attack Cycle  [G-OPT-RESET-VIA-ATTACK-CYCLE]  — CLOSED 2026-05-17 (Phase 2 Track C)
+- **Closure:** Substrate already correct; the suspected "key persistence across turn boundaries" was a misdiagnosis. The slot key is `(carrier_permanent's `effect_activations` HashMap) × (source_card_handle, effect_slot)` and the reset clears the entire HashMap via `Permanent::new_turn()` at `begin_turn`, so any divergence between carrier identity and trigger source is irrelevant — both keys live in the same per-carrier map.
+- **Failing test root cause:** `bt16_040_opt_resets_after_turn_cycle` (and the parallel BT17-015 / BT17-018 reset tests) failed because their test setup had no decks and no security for either player. After the first `end_turn()`, `begin_turn()` for the opponent tripped a deck-out and ended the game before rotation could reach the controller again, so `Permanent::new_turn` never ran for the carrier and the OPT slot stayed populated.
+- **Fix landed:** Test-setup adjustments (decks + security for both players, low-DP defenders where needed). No engine-side changes. Migrated to `qa/resolved-gaps.md`.
+
+### Optional `select_hand` / `select_trash` Tail Does Not Run on PASS  [G-DSL-OPTIONAL-SELECT-PASS-TAIL]
+- **Discovered in:** BT21-102 Tai Kamiya main clause (2026-05-11)
+- **Scope:** Rust engine / DSL step executor.
+- **Card(s):** BT21-102 Tai Kamiya, plus any card whose process is an optional `select_hand` / `select_trash` / etc. followed by trailing unconditional steps.
+- **Effect text:** "...You may play 1 [Tai Kamiya] from your hand without paying the cost. Then, return this Tamer to the bottom of the deck." — the trailing "Then, return this Tamer to the bottom of the deck" must fire unconditionally, including when the optional play step is declined.
+- **What's missing:** In `code/digimon-engine/src/dsl_cards/step/selections.rs`, the `install_select_hand` function (and the sibling `select_*` installers) thread the process `tail` into the selection callback only — `on_decline` is set to `None` for all DSL-driven prompts. Two divergent paths result:
+  - **Path A (no eligible cards):** `select_hand` detects an empty `valid_action_ids`, does NOT install a prompt, returns `InstallResult::Continue`. The outer step executor advances and runs the remaining steps — `play_from_hand_free` no-ops (binding absent), then `return_to_deck` fires.
+  - **Path B (eligible cards, player PASSes):** `select_hand` installs the prompt with `on_decline: None`. When PASS is submitted, `resolve_generic_selection` calls `on_decline` (None) → nothing runs → tail is never invoked → `return_to_deck` does NOT fire.
+  Path A and Path B are semantically equivalent (player makes no selection) but produce different observable game state. For BT21-102 the printed "Then, return this Tamer..." is unconditional and both paths should fire it.
+- **Engine location:** `code/digimon-engine/src/dsl_cards/step/selections.rs`, `install_select_hand` (and sibling `select_*` installers); `on_decline: None` is the divergence site.
+- **Suggested change:** When `optional: true`, pass the `tail` as the `on_decline` callback in `install_select_hand` (and the sibling installers) — e.g. `on_decline: Some(Box::new(|game| { run_tail(tail, game); }))` — so PASS triggers the same continuation as the no-eligible-cards path.
+- **Cards affected:** any card whose YAML has trailing unconditional steps after an optional `select_hand` / `select_trash` / etc. step.
+- **Workaround:** None faithful. The BT21-102 test `bt21_102_main_opt_decline_hand_card_tai_stays_on_field` documents the divergence as observed behavior (Tai stays on field after PASS) rather than the printed-text outcome.

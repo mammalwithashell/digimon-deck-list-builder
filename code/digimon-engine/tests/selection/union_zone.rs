@@ -14,7 +14,7 @@ use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{CardColor, CardKind, GamePhase};
-use digimon_engine::selection::{SelectionError, SelectionKind, UnionZoneSet};
+use digimon_engine::selection::{SelectionError, SelectionKind, UnionZoneOrigin, UnionZoneSet};
 
 fn make_card(id: &str) -> CardData {
     CardData {
@@ -38,6 +38,7 @@ fn make_card(id: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -75,7 +76,7 @@ fn install_sets_phase_and_kind() {
             "pick one",
             false,
             |_, _| true,
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -117,7 +118,7 @@ fn valid_action_ids_covers_both_zones() {
             "pick",
             false,
             |_, _| true,
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -172,7 +173,7 @@ fn filter_restricts_valid_action_ids() {
             "trash only",
             false,
             |game, card| game.card_data[card.data_index].card_id.starts_with('T'),
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -209,7 +210,7 @@ fn empty_filter_is_noop() {
             "none eligible",
             true,
             |_, _| false,
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -243,7 +244,7 @@ fn hand_only_zone_excludes_trash() {
             "hand only",
             false,
             |_, _| true,
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -270,7 +271,7 @@ fn trash_only_zone_excludes_hand() {
             "trash only",
             false,
             |_, _| true,
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -294,11 +295,12 @@ fn callback_receives_correct_handle_for_trash_pick() {
     push_to_trash(&mut r, tp, "T1");
     push_to_trash(&mut r, tp, "T2");
 
-    // Record the card_index of the second trash card (index 1 = T2).
-    let expected_handle = r.game.player(tp).trash[1].handle();
-
-    let observed: Arc<Mutex<Option<CardHandle>>> = Arc::new(Mutex::new(None));
+    // The callback receives the picked card's handle plus its origin zone.
+    let observed: Arc<Mutex<Option<(CardHandle, UnionZoneOrigin)>>> = Arc::new(Mutex::new(None));
     let slot = Arc::clone(&observed);
+
+    // Expected handle: the second trash card (T2).
+    let expected_handle = r.game.player(tp).trash[1].handle();
 
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, tp);
@@ -308,8 +310,8 @@ fn callback_receives_correct_handle_for_trash_pick() {
             "pick",
             false,
             |_, _| true,
-            move |_, handle| {
-                *slot.lock().unwrap() = Some(handle);
+            move |_, handle, origin| {
+                *slot.lock().unwrap() = Some((handle, origin));
             },
         );
     }
@@ -320,8 +322,8 @@ fn callback_receives_correct_handle_for_trash_pick() {
 
     assert_eq!(
         *observed.lock().unwrap(),
-        Some(expected_handle),
-        "callback must receive the handle of the second trash card"
+        Some((expected_handle, UnionZoneOrigin::Trash)),
+        "callback must receive the second trash card's handle and a Trash origin"
     );
     assert_ne!(
         r.game.current_phase,
@@ -342,10 +344,11 @@ fn callback_receives_correct_handle_for_hand_pick() {
     let tp = r.game.turn_player();
     push_to_trash(&mut r, tp, "T1");
 
-    let expected_handle = r.game.player(tp).hand[0].handle();
-
-    let observed: Arc<Mutex<Option<CardHandle>>> = Arc::new(Mutex::new(None));
+    let observed: Arc<Mutex<Option<(CardHandle, UnionZoneOrigin)>>> = Arc::new(Mutex::new(None));
     let slot = Arc::clone(&observed);
+
+    // Expected handle: the first hand card (H1).
+    let expected_handle = r.game.player(tp).hand[0].handle();
 
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, tp);
@@ -355,8 +358,8 @@ fn callback_receives_correct_handle_for_hand_pick() {
             "pick",
             false,
             |_, _| true,
-            move |_, handle| {
-                *slot.lock().unwrap() = Some(handle);
+            move |_, handle, origin| {
+                *slot.lock().unwrap() = Some((handle, origin));
             },
         );
     }
@@ -366,8 +369,8 @@ fn callback_receives_correct_handle_for_hand_pick() {
 
     assert_eq!(
         *observed.lock().unwrap(),
-        Some(expected_handle),
-        "callback must receive the handle of the first hand card"
+        Some((expected_handle, UnionZoneOrigin::Hand)),
+        "callback must receive the first hand card's handle and a Hand origin"
     );
     assert!(r.game.pending_selection.is_none());
 }
@@ -390,7 +393,7 @@ fn mandatory_rejects_pass() {
             "must pick",
             false,
             |_, _| true,
-            |_, _| {},
+            |_, _, _| {},
         );
     }
 
@@ -418,7 +421,7 @@ fn optional_accepts_pass() {
             "optional",
             true,
             |_, _| true,
-            |_, _| {
+            |_, _, _| {
                 panic!("callback must NOT fire on decline");
             },
         );

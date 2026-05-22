@@ -36,9 +36,10 @@
 # [G-PLAY-FROM-HAND-FREE-BIND-AS]:
 #
 #   The "return it to the hand" step requires referencing the just-played
-#   permanent inside a `schedule_delayed` body. `play_from_hand_free` discards
-#   the `Option<PermanentHandle>` return value; `CompiledStep::PlayFromHandFree`
-#   has no `bind_as` field, and `schedule_delayed` only captures bindings that
+#   permanent inside a `schedule_delayed` body. `play_from_hand_free` records
+#   the played permanent in the effect result log, but `CompiledStep::
+#   PlayFromHandFree` still has no `bind_as` field (or equivalent played-
+#   permanent binding), and `schedule_delayed` only captures named bindings that
 #   were present in the caller's `Bindings` map at schedule time. After
 #   `play_from_hand_free` runs, no named binding points to the new permanent.
 #   `return_to_hand` requires a `target: <PermanentHandle-binding>`, so the
@@ -69,38 +70,26 @@
 #   - DNA sub-condition body: trash any 3 digi-cards under one of the
 #     opponent's Digimon.
 #
-# DSL gaps:
+# DSL substrate (now available — all of Clause 1 is implemented):
 #
-#   [G-EVENT-CARD-COLOR-IS] — no `event_card_color_is` predicate exists.
-#   `PredicateSpec` has `event_card_trait_has` and `event_card_name_contains`
-#   but no predicate evaluating the color list of the entering/digivolving card.
-#   PUPPETS-G023 tracks `event_card_color_only` and `event_card_color_count`
-#   for exact multi-color checks; a single-color containment check
-#   (`event_card_color_has: blue`) belongs to the same family and is equally
-#   missing. Without it, the "blue or green" gate cannot be expressed and
-#   the observer over-fires on any digivolve, not just into blue/green.
-#   Tests for the color-gate are #[ignore = "pending: G-EVENT-CARD-COLOR-IS"].
+#   `event_card_color_has: [blue, green]` — intersection ("has") predicate over
+#   the triggering digivolve card's color list. Expresses the "into a blue or
+#   green Digimon" gate faithfully (multi-color cards including blue/green
+#   qualify). Formerly G-EVENT-CARD-COLOR-IS.
 #
-#   [G-DSL-IS-DNA-DIGIVOLVING] — already filed. `dna_origin: true` is present
-#   in `PredicateSpec` and `CompiledPredicate` but is NOT evaluated in
-#   `predicate.rs`'s `eval_predicate`. The `if: condition: { dna_origin: true }`
-#   guard inside process: never fires, so the DNA trash sub-clause cannot be
-#   expressed. The behavioral test for the DNA branch is
-#   #[ignore = "pending: G-DSL-IS-DNA-DIGIVOLVING"].
+#   `select_opponent_sources` — opponent-side mirror of `select_own_sources`;
+#   `target:` restricts the picker to one opponent permanent's digivolution
+#   cards. Combined with `trash_selected_sources` it expresses "trash any 3
+#   digivolution cards under your opponent's Digimon". Formerly
+#   G-SELECT-OPPONENT-SOURCES.
 #
-#   [G-SELECT-OPPONENT-SOURCES] — no `select_opponent_sources` verb exists.
-#   DSL has `select_own_sources` and `trash_selected_sources` but no equivalent
-#   that targets a SPECIFIC OPPONENT'S permanent's digivolution cards. The
-#   Rocks gap entry (G-ROCKS-SOURCE-SELECTION-DSL) covers own-side source
-#   selection; opponent-side targeting is a separate, unfiled gap. The "trash
-#   any 3 digivolution cards under your opponent's Digimon" step is therefore
-#   doubly blocked: by the DNA predicate gap AND by missing opponent source
-#   selection. Both are omitted from the YAML.
+#   `dna_origin: true` — evaluated by the engine; gates the DNA sub-clause.
 #
-# Partial implementation authored:
-#   - Observer timing + optional suspend cost + gain 1 memory are expressible.
-#   - Color filter omitted (over-fires without it).
-#   - DNA + trash sub-clause omitted entirely.
+# Implementation:
+#   - Observer timing + optional suspend cost + gain 1 memory.
+#   - Color gate `event_card_color_has: [blue, green]`.
+#   - DNA sub-clause: select 1 opponent Digimon, then any 3 of its digivolution
+#     cards, and trash them.
 #
 # ─── Clause 2 — [Security] Play this card without paying the cost ─────────────
 #
@@ -129,11 +118,14 @@ effects:
   # matching hand cards. If no qualifying card exists the trigger silently
   # declines — consistent with sister tamers BT22-089 and AD1-010.
   #
-  # PARTIAL: free-play is implemented; delayed return is OMITTED pending
-  # G-PLAY-FROM-HAND-FREE-BIND-AS (see header note).
+  # IMPLEMENTED (Phase 2 Track H): free-play AND delayed return.
+  # `bind_as` on `play_from_hand_free` (G-PLAY-FROM-HAND-FREE-BIND-AS)
+  # exposes the just-played permanent handle so a follow-up
+  # `schedule_delayed` body can `return_to_hand` the same card at the
+  # end of the opponent's next turn.
   - when: start_of_your_main_phase
     optional: true
-    summary: "[SoMP][OPT] Free-play 1 Veemon or Wormmon from hand (return at opp EOT OMITTED: G-PLAY-FROM-HAND-FREE-BIND-AS)"
+    summary: "[SoMP][OPT] Free-play 1 Veemon or Wormmon from hand; return at next opp EOT"
     condition:
       count_gte:
         filter:
@@ -154,16 +146,14 @@ effects:
               - name_contains: "Veemon"
               - name_contains: "Wormmon"
           prompt: "Play 1 [Veemon] or [Wormmon] from your hand without paying the cost"
-      # Play the selected card for free.
-      - play_from_hand_free: { of: you, hand_index: pick }
-      # OMITTED: schedule_delayed for return_to_hand at end_of_opponents_next_turn.
-      # Requires G-PLAY-FROM-HAND-FREE-BIND-AS to be closed first.
-      # Intended YAML once fixed:
-      #   - schedule_delayed:
-      #       when: end_of_opponents_next_turn
-      #       body:
-      #         - return_to_hand: { target: played }
-      # where `played` would be bound by play_from_hand_free's bind_as field.
+      # Play the selected card for free and bind its permanent handle so the
+      # scheduled return below can target the exact permanent that was just played.
+      - play_from_hand_free: { of: you, hand_index: pick, bind_as: played }
+      # Return that same permanent to hand at the next end-of-opponent's-turn.
+      - schedule_delayed:
+          when: end_of_opponents_next_turn
+          body:
+            - return_to_hand: { target: { permanent: played } }
 
   # ─── Clause 1 — [Your Turn] digivolve observer; suspend tamer → +1 memory ───
   #
@@ -179,9 +169,11 @@ effects:
   #   - `event_target_owner: you` — the digivolving permanent belongs to the
   #     controller (mirrors DCGO IsOwnerBattleArea gate).
   #   - `event_target_kind: digimon` — must be a Digimon, not a Tamer.
-  #   - OMITTED: `event_card_color_has: blue` or `event_card_color_has: green`
-  #     gate (G-EVENT-CARD-COLOR-IS — not yet expressible). Without it this
-  #     observer fires on ANY own Digimon digivolve, not just into blue/green.
+  #   - `event_card_color_has: [blue, green]` — the new top card (the
+  #     digivolving result) must have blue or green among its colors. The
+  #     predicate uses intersection ("has") semantics, so a multi-color card
+  #     including blue or green qualifies, faithful to "into a blue or green
+  #     Digimon".
   #
   # Cost: suspend this Tamer (`target: source` resolves to the tamer's own
   # source_permanent via CompiledBindingRef::Source). Tamer must be unsuspended
@@ -189,36 +181,41 @@ effects:
   # on the tamer being on-field and not already suspended (engine will decline
   # to suspend an already-suspended permanent).
   #
-  # DNA sub-clause: OMITTED entirely — doubly blocked by
-  # G-DSL-IS-DNA-DIGIVOLVING (dna_origin predicate not evaluated) and
-  # G-SELECT-OPPONENT-SOURCES (no verb to select 3 opponent digi-cards).
+  # DNA sub-clause: "If DNA digivolving, trash any 3 digivolution cards under
+  # your opponent's Digimon." Authored with an `if { dna_origin: true }` branch:
+  # the player picks one opponent Digimon, then picks any 3 of its digivolution
+  # cards via `select_opponent_sources` (target-restricted to that permanent),
+  # which are trashed by the `trash_selected_sources` follow-up.
   - when: on_digivolve
     optional: true
     active_when: { your_turn: true }
-    summary: "[Your Turn][OPT] On own Digimon digivolve (into blue/green — color gate OMITTED G-EVENT-CARD-COLOR-IS), suspend self → +1 memory (DNA trash OMITTED G-DSL-IS-DNA-DIGIVOLVING + G-SELECT-OPPONENT-SOURCES)"
+    summary: "[Your Turn][OPT] On own Digimon digivolve into blue/green, suspend self → +1 memory; if DNA, trash 3 opp digi-cards"
     condition:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
+        - event_card_color_has: [blue, green]
     process:
       # Cost: suspend this Tamer.
       - suspend: { target: source }
       # Immediate effect: gain 1 memory.
       - gain_memory: 1
-      # OMITTED: DNA sub-clause.
-      # Intended YAML once G-DSL-IS-DNA-DIGIVOLVING and G-SELECT-OPPONENT-SOURCES close:
-      #   - if:
-      #       condition: { dna_origin: true }
-      #       then:
-      #         - select_opponent_permanent:
-      #             bind_as: opp_stack
-      #             filter: { kind: digimon }
-      #             prompt: "Choose an opponent Digimon to trash 3 digivolution cards from"
-      #         - select_opponent_sources:
-      #             target: opp_stack
-      #             count: 3
-      #             bind_as: trashed_sources
-      #         - trash_selected_sources: { sources: trashed_sources }
+      # DNA sub-clause: trash any 3 digivolution cards under one opponent Digimon.
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_opponent_permanent:
+                bind_as: opp_stack
+                filter: { kind: digimon }
+                prompt: "Choose an opponent Digimon to trash 3 digivolution cards from"
+            - select_opponent_sources:
+                target: opp_stack
+                min: 3
+                max: 3
+                bind_as: trashed_sources
+                prompt: "Trash any 3 digivolution cards under that Digimon"
+                then:
+                  - trash_selected_sources: { source_refs: trashed_sources }
 
   # ─── Clause 2 — [Security] Play this card without paying the cost ───────────
   #

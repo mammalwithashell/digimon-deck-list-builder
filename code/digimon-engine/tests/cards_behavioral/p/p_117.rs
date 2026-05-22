@@ -17,26 +17,17 @@
 //!
 //! # Patterns this test covers
 //! - D2-adjacent: BeforePayCost cost reduction (clause 0 — BLOCKED)
-//! - B3-adjacent: Tamer-on-field condition (clause 0 — BLOCKED)
-//! - G4-adjacent: inherited When Attacking on base Digimon (clause 1 — PARTIAL)
+//! - B3-adjacent: Tamer-on-field condition (clause 0)
+//! - G4-adjacent: inherited When Attacking on base Digimon (clause 1)
 //!
-//! # Known gaps affecting these tests
+//! Clause 0 (Your Turn cost reduction when digivolving into [Free]) is fully
+//! authored — `kind: cost_reduction` gated on `cost_target: { trait_has: Free }`
+//! + `source_is_cost_target_permanent` + a Tamer existential, closed by
+//! Phase 2 Track H (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET). No tests are ignored.
 //!
-//! **G-BEFORE-PAY-COST-DIGIVOLVE-TARGET [engine+DSL gap]:**
-//!   Clause 0 (Your Turn cost reduction when digivolving into [Free]) is fully
-//!   OMITTED from the YAML. The `CostReductionBody` has no
-//!   `when_this_digivolves_into: { target_trait_has: Free }` trigger form, and
-//!   `scan_before_pay_cost_reduction` does not thread the digivolution-target card
-//!   into the condition closure. Same gap as BT23-005.
-//!   Tests for this clause are `#[ignore = "pending: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET"]`.
-//!
-//! **G-DSL-SELF-COLOR-COUNT-GTE [DSL gap]:**
-//!   Clause 1 condition ("if this Digimon has 2 or more colors") cannot be
-//!   expressed — no `self_color_count_gte: N` predicate exists in the DSL.
-//!   DCGO gates on `card.PermanentOfThisCard().TopCard.CardColors.Count >= 2`.
-//!   Shipped unconditionally (Draw fires even on mono-color carriers).
-//!   The negative-condition test (mono-color carrier, Draw must NOT fire) is
-//!   `#[ignore = "pending: G-DSL-SELF-COLOR-COUNT-GTE"]`.
+//! Clause 1 condition uses `self_color_count_gte: 2`, evaluated against the
+//! source permanent's synthesized top-card colors. DCGO gates on
+//! `card.PermanentOfThisCard().TopCard.CardColors.Count >= 2`.
 
 #![allow(dead_code, unused_imports)]
 
@@ -115,11 +106,11 @@ fn p_117_is_digimon_cost_3() {
     assert_eq!(compiled.cost, Some(3), "P-117 must have play cost 3");
 }
 
-/// P-117 clause 0 is OMITTED (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET).
-/// Therefore P-117 must have exactly 1 compiled clause total (the inherited
-/// When Attacking Draw 1).
+/// P-117 has exactly 2 compiled clauses: clause 0 cost_reduction
+/// (Phase 2 Track H — G-BEFORE-PAY-COST-DIGIVOLVE-TARGET) and clause 1
+/// inherited When Attacking Draw 1.
 #[test]
-fn p_117_has_exactly_one_clause_clause0_omitted() {
+fn p_117_has_two_clauses() {
     let runner = DebugRunner::builder()
         .dsl_card("P-117")
         .expect("parses")
@@ -134,18 +125,16 @@ fn p_117_has_exactly_one_clause_clause0_omitted() {
 
     assert_eq!(
         compiled.effects.len(),
-        1,
-        "P-117 must have exactly 1 compiled clause \
-         (clause 0 omitted pending G-BEFORE-PAY-COST-DIGIVOLVE-TARGET); \
-         got {}",
+        2,
+        "P-117 must have exactly 2 compiled clauses \
+         (clause 0 cost_reduction + clause 1 inherited When Attacking); got {}",
         compiled.effects.len()
     );
 }
 
-/// Clause 0 (index 0): Inherited scope, WhenAttacking timing.
-/// This is the inherited Draw 1 clause (clause 1 in card text; only clause in YAML).
+/// The inherited When Attacking clause is at index 1 (after clause 0 cost_reduction).
 #[test]
-fn p_117_clause0_is_inherited_when_attacking() {
+fn p_117_inherited_when_attacking_clause_present() {
     let runner = DebugRunner::builder()
         .dsl_card("P-117")
         .expect("parses")
@@ -158,26 +147,28 @@ fn p_117_clause0_is_inherited_when_attacking() {
         .compiled_card("P-117")
         .expect("P-117 compiled card present");
 
-    match &compiled.effects[0] {
-        CompiledClause::Triggered(t) => {
-            assert_eq!(
-                t.scope,
-                CompiledScope::Inherited,
-                "clause 0 must have Inherited scope"
-            );
-            assert!(
-                t.when.contains(&CompiledTiming::WhenAttacking),
-                "clause 0 must fire at WhenAttacking; got {:?}",
-                t.when
-            );
-        }
-        other => panic!("clause 0 must be a Triggered clause; got {:?}", other),
-    }
+    let triggered = compiled
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .expect("P-117 must have a triggered (inherited When Attacking) clause");
+    assert_eq!(
+        triggered.scope,
+        CompiledScope::Inherited,
+        "inherited When Attacking clause must have Inherited scope"
+    );
+    assert!(
+        triggered.when.contains(&CompiledTiming::WhenAttacking),
+        "inherited clause must fire at WhenAttacking; got {:?}",
+        triggered.when
+    );
 }
 
-/// Clause 0 is NOT once_per_turn.
-/// DCGO: max-count -1 (unlimited). Printed text has no [Once Per Turn] annotation
-/// on the inherited When Attacking clause.
+/// Inherited When Attacking is NOT once_per_turn.
+/// DCGO: max-count -1 (unlimited).
 #[test]
 fn p_117_inherited_when_attacking_is_not_once_per_turn() {
     let runner = DebugRunner::builder()
@@ -192,16 +183,19 @@ fn p_117_inherited_when_attacking_is_not_once_per_turn() {
         .compiled_card("P-117")
         .expect("P-117 compiled card present");
 
-    match &compiled.effects[0] {
-        CompiledClause::Triggered(t) => {
-            assert!(
-                !t.once_per_turn,
-                "inherited When Attacking must NOT be OPT (DCGO max-count -1); \
-                 printed text has no [Once Per Turn] annotation"
-            );
-        }
-        other => panic!("clause 0 must be Triggered; got {:?}", other),
-    }
+    let triggered = compiled
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .expect("P-117 must have a triggered clause");
+    assert!(
+        !triggered.once_per_turn,
+        "inherited When Attacking must NOT be OPT (DCGO max-count -1); \
+         printed text has no [Once Per Turn] annotation"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -210,10 +204,7 @@ fn p_117_inherited_when_attacking_is_not_once_per_turn() {
 
 /// POSITIVE: Carrier has 2+ colors — inherited When Attacking fires, deck shrinks.
 ///
-/// This is the over-fire scenario: because G-DSL-SELF-COLOR-COUNT-GTE is unresolved,
-/// the draw fires unconditionally. The carrier's color count is irrelevant to
-/// the DSL engine — this test passes even though we cannot enforce the condition.
-/// We use a multi-color carrier to document the intended positive path.
+/// POSITIVE: Carrier has 2+ colors, so the inherited draw fires.
 #[test]
 fn p_117_inherited_when_attacking_multi_color_carrier_draw_fires() {
     let mut runner = DebugRunner::builder()
@@ -247,13 +238,7 @@ fn p_117_inherited_when_attacking_multi_color_carrier_draw_fires() {
 
 /// NEGATIVE: Carrier has only 1 color — Draw must NOT fire.
 ///
-/// BLOCKED by G-DSL-SELF-COLOR-COUNT-GTE: the condition "if 2+ colors" cannot be
-/// expressed in DSL, so the Draw fires unconditionally. This test is ignored until
-/// the gap closes.
 #[test]
-#[ignore = "pending: G-DSL-SELF-COLOR-COUNT-GTE from qa/dsl-vocab-gaps.md — \
-            self_color_count_gte predicate missing; Draw fires unconditionally \
-            (over-fires on mono-color carriers)"]
 fn p_117_inherited_when_attacking_mono_color_carrier_draw_does_not_fire() {
     let mut runner = DebugRunner::builder()
         .dsl_card("P-117")
@@ -324,11 +309,9 @@ fn p_117_inherited_when_attacking_fires_draw_1() {
 }
 
 /// When P-117 is on the field as a standalone permanent (top card) and any ally
-/// attacks, the engine's WhenAttacking observer timing fires for ALL permanents
-/// in the battle area — including standalone P-117. Since G-DSL-SELF-COLOR-COUNT-GTE
-/// is unresolved, the draw fires unconditionally even for a mono-color standalone.
-/// This test documents that behavior (draw fires once per attacking turn for each
-/// P-117 in the battle area, regardless of stack position).
+/// attacks, the engine's WhenAttacking observer timing visits battle-area
+/// permanents. P-117's color-count condition prevents the draw because standalone
+/// P-117 is only blue.
 ///
 /// This is consistent with the engine's PlayerBattleArea observer semantics:
 /// WhenAttacking enqueues from every permanent in the battle area.
@@ -358,9 +341,10 @@ fn p_117_inherited_when_attacking_fires_for_standalone_p117_observer_semantics()
     let _ = runner.auto_resolve();
 
     let deck_after = runner.deck_size(0);
-    // Draw fires once (from standalone P-117 observing ally attack).
-    // No panic = primary assertion.
-    let _ = (deck_before, deck_after); // values documented above; primary = no panic
+    assert_eq!(
+        deck_after, deck_before,
+        "standalone mono-color P-117 must not draw from its own inherited condition"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -422,23 +406,211 @@ fn p_117_inherited_when_attacking_fires_on_each_attack_no_opt() {
 // SECTION 5 (BLOCKED stubs) — Clause 0 cost reduction
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// BLOCKED: Clause 0 cost reduction cannot be expressed in DSL.
+/// CLOSED (Phase 2 Track H): Clause 0 cost reduction is now expressible.
 ///
 /// "[Your Turn][OPT] When this Digimon would digivolve into a card with the
 /// [Free] trait, if you have a Tamer, reduce the digivolution cost by 1."
 ///
-/// Gap: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET — `CostReductionBody` has no
-/// `when_this_digivolves_into: { target_trait_has: Free }` trigger form.
-/// `scan_before_pay_cost_reduction` does not thread the digivolution-target
-/// card into the condition closure. Same gap as BT23-005.
-///
-/// Cross-reference: `qa/dsl-vocab-gaps.md` entry for BT23-005
-/// (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET). P-117 clause 0 is cross-listed there.
+/// Setup: P-117 on field, Lv.4 [Free] Digimon in hand, Tamer on field.
+/// Digivolve cost = 1 base, P-117 reduces to 0.
 #[test]
-#[ignore = "pending: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET from qa/dsl-vocab-gaps.md — \
-            CostReductionBody has no when_this_digivolves_into trigger form; \
-            scan_before_pay_cost_reduction does not thread digivolution-target \
-            into condition closure. Same gap as BT23-005."]
 fn p_117_clause0_cost_reduction_when_digivolving_into_free_with_tamer() {
-    unimplemented!("blocked on G-BEFORE-PAY-COST-DIGIVOLVE-TARGET — see qa/dsl-vocab-gaps.md");
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::enums::CardKind;
+
+    // Lv.4 [Free] Digimon that can digivolve from Lv.3 (cost 1, becomes 0
+    // after P-117 reduction). Cost 5, DP 4000.
+    let mut free_digimon = make_test_card("FREE-LV4", "FreeDragon");
+    free_digimon.card_kind = CardKind::Digimon;
+    free_digimon.level = Some(4);
+    free_digimon.dp = Some(4000);
+    free_digimon.play_cost = 5;
+    free_digimon.traits = vec!["Free".to_string()];
+    free_digimon.colors = vec![CardColor::Blue];
+    free_digimon.evo_costs = vec![digimon_engine::card_data::EvoCost {
+        level: 3,
+        card_color: 1, // Blue (mirrors action::mask::evo_color)
+        memory_cost: 1,
+    }];
+
+    // A Tamer to satisfy the `any_field_permanent { kind: tamer }` condition.
+    let mut tamer = make_test_card("TAMER", "Tester Tamer");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.colors = vec![CardColor::Blue];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-117")
+        .expect("parses")
+        .add_card(free_digimon)
+        .add_card(tamer)
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(5)
+        .start();
+    runner.game.turn_count = 1;
+
+    // Place P-117 on field, Tamer on field, FREE-LV4 in hand.
+    let p117 = runner.place_on_field(0, "P-117", Some(0));
+    let _tamer = runner.place_on_field(0, "TAMER", Some(0));
+    {
+        let data_idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "FREE-LV4")
+            .unwrap();
+        let card_index = runner.game.next_card_index();
+        runner.game.players[0]
+            .hand
+            .push(CardSource::new(data_idx, 0, card_index));
+    }
+    let hand_idx = runner.game.player(0).hand.len() - 1;
+
+    let memory_before = runner.game.memory;
+    let digivolved = runner.game.digivolve_from_hand(
+        0,
+        hand_idx,
+        p117.index as usize,
+        digimon_engine::enums::PlaySource::ByHand,
+    );
+    assert!(
+        digivolved,
+        "P-117 must digivolve into FREE-LV4 (effective cost 1 - 1 = 0)"
+    );
+
+    // Cost was 1 (base evo cost) - 1 (P-117 reduction) = 0. Memory unchanged.
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "memory must be unchanged after free digivolve (1 - 1 P-117 reduction = 0)"
+    );
+}
+
+/// Negative branch: NO Tamer on field — cost reduction must NOT fire.
+#[test]
+fn p_117_clause0_cost_reduction_does_not_fire_without_tamer() {
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::enums::CardKind;
+
+    let mut free_digimon = make_test_card("FREE-LV4", "FreeDragon");
+    free_digimon.card_kind = CardKind::Digimon;
+    free_digimon.level = Some(4);
+    free_digimon.dp = Some(4000);
+    free_digimon.play_cost = 5;
+    free_digimon.traits = vec!["Free".to_string()];
+    free_digimon.colors = vec![CardColor::Blue];
+    free_digimon.evo_costs = vec![digimon_engine::card_data::EvoCost {
+        level: 3,
+        card_color: 1, // Blue (mirrors action::mask::evo_color)
+        memory_cost: 1,
+    }];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-117")
+        .expect("parses")
+        .add_card(free_digimon)
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(5)
+        .start();
+    runner.game.turn_count = 1;
+
+    let p117 = runner.place_on_field(0, "P-117", Some(0));
+    {
+        let data_idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "FREE-LV4")
+            .unwrap();
+        let card_index = runner.game.next_card_index();
+        runner.game.players[0]
+            .hand
+            .push(CardSource::new(data_idx, 0, card_index));
+    }
+    let hand_idx = runner.game.player(0).hand.len() - 1;
+
+    let memory_before = runner.game.memory;
+    let _ = runner.game.digivolve_from_hand(
+        0,
+        hand_idx,
+        p117.index as usize,
+        digimon_engine::enums::PlaySource::ByHand,
+    );
+
+    // Cost reduction must NOT fire (no Tamer). Memory drops by 1.
+    assert_eq!(
+        runner.game.memory,
+        memory_before - 1,
+        "no Tamer on field — reduction must not apply, cost is 1 (not 0)"
+    );
+}
+
+/// Negative branch: target Digimon does NOT have [Free] trait — reduction must NOT fire.
+#[test]
+fn p_117_clause0_cost_reduction_does_not_fire_for_non_free_target() {
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::enums::CardKind;
+
+    // Lv.4 Digimon WITHOUT [Free] trait.
+    let mut non_free = make_test_card("NON-FREE-LV4", "NonFreeDragon");
+    non_free.card_kind = CardKind::Digimon;
+    non_free.level = Some(4);
+    non_free.dp = Some(4000);
+    non_free.play_cost = 5;
+    non_free.traits = vec!["Dragon".to_string()];
+    non_free.colors = vec![CardColor::Blue];
+    non_free.evo_costs = vec![digimon_engine::card_data::EvoCost {
+        level: 3,
+        card_color: 1, // Blue
+        memory_cost: 1,
+    }];
+
+    let mut tamer = make_test_card("TAMER", "Tester Tamer");
+    tamer.card_kind = CardKind::Tamer;
+    tamer.colors = vec![CardColor::Blue];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-117")
+        .expect("parses")
+        .add_card(non_free)
+        .add_card(tamer)
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(5)
+        .start();
+    runner.game.turn_count = 1;
+
+    let p117 = runner.place_on_field(0, "P-117", Some(0));
+    let _tamer = runner.place_on_field(0, "TAMER", Some(0));
+    {
+        let data_idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "NON-FREE-LV4")
+            .unwrap();
+        let card_index = runner.game.next_card_index();
+        runner.game.players[0]
+            .hand
+            .push(CardSource::new(data_idx, 0, card_index));
+    }
+    let hand_idx = runner.game.player(0).hand.len() - 1;
+
+    let memory_before = runner.game.memory;
+    let _ = runner.game.digivolve_from_hand(
+        0,
+        hand_idx,
+        p117.index as usize,
+        digimon_engine::enums::PlaySource::ByHand,
+    );
+
+    // Cost reduction must NOT fire (target lacks [Free]). Memory drops by 1.
+    assert_eq!(
+        runner.game.memory,
+        memory_before - 1,
+        "target has no [Free] trait — reduction must not apply, cost is 1 (not 0)"
+    );
 }

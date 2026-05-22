@@ -336,7 +336,6 @@ fn bt24_001_accepting_deletes_low_dp_digimon() {
 /// by `eval_permanent_fields`, so the high-DP target currently appears in the
 /// valid_action_ids list.
 #[test]
-#[ignore = "BLOCKED: dp_lte predicate not enforced in eval_permanent_fields (G-PRED-DP-LTE)"]
 fn bt24_001_high_dp_digimon_not_eligible_for_delete() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(GIGIMON_YAML)

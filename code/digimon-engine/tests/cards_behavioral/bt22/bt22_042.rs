@@ -1,20 +1,36 @@
-//! BT22-042 Nyabootmon.
-//! Printed text covered here:
-//! - <Overclock ([Puppet] Trait)>.
-//! - [When Digivolving] You may play 1 level 4 or lower [Puppet] trait
-//!   Digimon card from your hand without paying the cost. Then, 1 opponent
-//!   Digimon gets -3000 DP until their turn ends for each of your Digimon.
+//! BT22-042 Nyabootmon — Digimon, Lv.7, Yellow, Puppet / LIBERATOR.
 //!
-//! Gap-routed slices:
-//! - Conditional [Arisa Kinosaki] + [Chaperomon] digivolve for cost 6 needs
-//!   `condition:` on `AltPathSpec` so the route is not always available.
+//! # Card text (cards.json)
+//!
+//! [Digivolve] from a Yellow Lv.6 for 4.
+//! [Digivolve] While you have [Arisa Kinosaki], [Chaperomon]: Cost 6.
+//! <Overclock ([Puppet] Trait)>.
+//! [When Digivolving] You may play 1 level 4 or lower [Puppet] trait
+//!   Digimon card from your hand without paying the cost. Then, to 1 of your
+//!   opponent's Digimon, give -3000 DP until their turn ends for each of
+//!   your Digimon.
+//! [All Turns] [Once Per Turn] When any of your other Digimon are deleted,
+//!   you may activate 1 of this Digimon's [When Digivolving] effects.
+//!
+//! # DCGO C# reference
+//! DCGO/Assets/Scripts/CardEffect/BT22/Yellow/BT22_042.cs
+//!
+//! # Patterns this test covers
+//! - Conditional alt-digivolve route (G-ALT-PATH-CONDITION, RESOLVED
+//!   2026-05-15): the Chaperomon cost-6 route is legal only while an
+//!   [Arisa Kinosaki] is on the controller's field.
+//! - H11 Overclock with a Puppet/Token cost filter.
+//! - E1/E2 [When Digivolving] optional free-play branch resuming into a
+//!   mandatory scaled DP-reduction tail.
+//! - [All Turns] [Once Per Turn] other-deletion refire of the
+//!   [When Digivolving] body (refire_effect).
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
     CompiledDeclarativeClause,
 };
 use digimon_engine::action::build_action_mask;
-use digimon_engine::action::space::{encode_digivolve, PLAY_HAND_START};
+use digimon_engine::action::space::{encode_digivolve, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Keyword};
@@ -292,7 +308,36 @@ fn bt22_042_declining_free_play_still_applies_scaled_dp_reduction() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-ALT-PATH-CONDITION — AltPathSpec has no condition field for 'while you have Arisa Kinosaki'"]
+fn bt22_042_has_conditional_chaperomon_cost_6_alt_path() {
+    let compiled = compiled_bt22_042();
+    let path = compiled
+        .alt_paths
+        .iter()
+        .find(|path| {
+            path.kind == CompiledAltPathKind::Digivolve
+                && matches!(path.cost, Some(CompiledCost::Literal(6)))
+        })
+        .expect("Nyabootmon must declare a cost-6 Chaperomon digivolve route");
+
+    assert!(
+        path.condition.is_some(),
+        "the Chaperomon cost-6 route must carry a condition gate so it is not always legal"
+    );
+    let from = path
+        .from
+        .as_ref()
+        .expect("the Chaperomon route filters its digivolve source");
+    assert!(
+        from.name_contains.as_deref() == Some("Chaperomon")
+            || from
+                .all_of
+                .iter()
+                .any(|pred| pred.name_contains.as_deref() == Some("Chaperomon")),
+        "the cost-6 route digivolves from a Chaperomon"
+    );
+}
+
+#[test]
 fn bt22_042_chaperomon_alt_digivolve_requires_arisa_kinosaki() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
@@ -318,7 +363,6 @@ fn bt22_042_chaperomon_alt_digivolve_requires_arisa_kinosaki() {
 }
 
 #[test]
-#[ignore = "BLOCKED: G-ALT-PATH-CONDITION — conditional Chaperomon route cannot be faithfully gated yet"]
 fn bt22_042_chaperomon_alt_digivolve_costs_6_while_arisa_is_present() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT22-042")
@@ -391,6 +435,107 @@ fn bt22_042_other_own_digimon_deletion_may_refire_when_digivolving_effect() {
         runner.pending_selection_view().map(|view| view.kind),
         Some(SelectionKind::Hand),
         "choosing the play branch exposes the hand-play prompt"
+    );
+}
+
+#[test]
+fn bt22_042_when_digivolving_dp_tail_noops_without_an_opponent_digimon() {
+    // Negative branch for the mandatory DP tail: with no opponent Digimon on
+    // the field the "give -3000 DP ... to 1 of your opponent's Digimon" tail
+    // has no legal target and must resolve to nothing.
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT22-042")
+        .expect("BT22-042 YAML loads")
+        .add_card(make_digimon("BASE", 6, 11000, CardColor::Yellow, &[]))
+        .start();
+    let nyabootmon = runner.place_stack(0, &["BASE", "BT22-042"]);
+
+    trigger_when_digivolving(&mut runner, nyabootmon);
+    // No Puppet in hand → the optional play branch is skipped; the mandatory
+    // DP tail is reached but has no opponent Digimon to target.
+    runner.auto_resolve().expect("finish Nyabootmon effect");
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "the DP tail installs no selection when the opponent has no Digimon"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area.len(),
+        0,
+        "opponent has no Digimon to debuff"
+    );
+}
+
+#[test]
+fn bt22_042_refire_does_not_trigger_for_self_or_opponent_deletion() {
+    // Negative branch: the printed clause says "your OTHER Digimon" — neither
+    // Nyabootmon itself leaving nor an opponent Digimon leaving may offer the
+    // refire.
+    let mut self_case = DebugRunner::builder()
+        .dsl_card("BT22-042")
+        .expect("BT22-042 YAML loads")
+        .add_card(make_digimon("BASE", 6, 11000, CardColor::Yellow, &[]))
+        .start();
+    let nyabootmon = self_case.place_stack(0, &["BASE", "BT22-042"]);
+    self_case.game.delete_permanent_with_cause(
+        nyabootmon,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+    assert!(
+        self_case.pending_selection_view().is_none(),
+        "Nyabootmon's own deletion must not refire its When Digivolving effect"
+    );
+
+    let mut opponent_case = DebugRunner::builder()
+        .dsl_card("BT22-042")
+        .expect("BT22-042 YAML loads")
+        .add_card(make_digimon("BASE", 6, 11000, CardColor::Yellow, &[]))
+        .add_card(make_digimon("OPPONENT", 5, 14000, CardColor::Red, &[]))
+        .start();
+    opponent_case.place_stack(0, &["BASE", "BT22-042"]);
+    let opponent = opponent_case.place_on_field(1, "OPPONENT", Some(0));
+    opponent_case.game.delete_permanent_with_cause(
+        opponent,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+    assert!(
+        opponent_case.pending_selection_view().is_none(),
+        "an opponent Digimon's deletion must not refire your Nyabootmon"
+    );
+}
+
+#[test]
+fn bt22_042_refire_is_once_per_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT22-042")
+        .expect("BT22-042 YAML loads")
+        .add_card(make_digimon("BASE", 6, 11000, CardColor::Yellow, &[]))
+        .add_card(make_digimon("ALLY-1", 3, 3000, CardColor::Yellow, &[]))
+        .add_card(make_digimon("ALLY-2", 3, 3000, CardColor::Yellow, &[]))
+        .start();
+    runner.place_stack(0, &["BASE", "BT22-042"]);
+    let ally1 = runner.place_on_field(0, "ALLY-1", Some(0));
+    let ally2 = runner.place_on_field(0, "ALLY-2", Some(0));
+
+    runner.game.delete_permanent_with_cause(
+        ally1,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+    assert!(
+        runner.pending_selection_view().is_some(),
+        "first other own Digimon deletion should offer the optional refire"
+    );
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the first optional refire");
+
+    runner.game.delete_permanent_with_cause(
+        ally2,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "Once Per Turn must suppress the refire on a second same-turn deletion"
     );
 }
 

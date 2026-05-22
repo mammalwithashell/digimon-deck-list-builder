@@ -1280,7 +1280,10 @@ mod tests {
             digimon_engine::action::space::ACTION_SPACE_SIZE
         );
         assert_eq!(summary.tensor_size, 1375);
-        assert_eq!(summary.mask_size, 2168);
+        assert_eq!(
+            summary.mask_size,
+            digimon_engine::action::space::ACTION_SPACE_SIZE
+        );
         assert_eq!(summary.card_id_slot_count, 520);
         assert_eq!(summary.scalar_slot_count, 855);
         assert!(summary.legal_action_count > 0);
@@ -1312,7 +1315,7 @@ mod tests {
         let json = serde_json::to_string(&trace).unwrap();
         assert!(json.contains("\"actor\":\"human\""));
         assert!(json.contains("\"tensor_size\":1375"));
-        assert!(json.contains("\"mask_size\":2168"));
+        assert!(json.contains("\"mask_size\":2192"));
 
         game.decode_action(digimon_engine::action::space::PASS, pid);
     }

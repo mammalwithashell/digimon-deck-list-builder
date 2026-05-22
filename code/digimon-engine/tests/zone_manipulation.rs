@@ -32,6 +32,7 @@ fn plain_digimon(card_id: &str, name: &str, play_cost: u16) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -786,7 +787,7 @@ fn place_as_bottom_source_from_hand_stacks_under_target() {
 
     let ok = r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::Hand(0, 0), target);
+        .place_as_bottom_source(CardSourceRef::Hand(0, 0), target, false);
     assert!(ok);
     assert_eq!(r.hand_size(0), 0);
 
@@ -828,7 +829,7 @@ fn place_as_bottom_source_from_trash() {
 
     let ok = r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::Trash(0, 0), target);
+        .place_as_bottom_source(CardSourceRef::Trash(0, 0), target, false);
     assert!(ok);
     assert_eq!(r.trash_size(0), 0);
 
@@ -854,7 +855,7 @@ fn place_as_bottom_source_from_deck_top() {
 
     let ok = r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::DeckTop(0), target);
+        .place_as_bottom_source(CardSourceRef::DeckTop(0), target, false);
     assert!(ok);
     assert_eq!(r.deck_size(0), 0);
 
@@ -881,7 +882,7 @@ fn place_as_bottom_source_from_reveal() {
 
     let ok = r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::Reveal(handle), target);
+        .place_as_bottom_source(CardSourceRef::Reveal(handle), target, false);
     assert!(ok);
     assert_eq!(r.game_mut().revealed_cards.len(), 0);
 
@@ -903,13 +904,13 @@ fn place_as_bottom_source_bad_source_index_returns_false() {
 
     assert!(!r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::Hand(0, 99), target));
+        .place_as_bottom_source(CardSourceRef::Hand(0, 99), target, false));
     assert!(!r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::Trash(0, 99), target));
+        .place_as_bottom_source(CardSourceRef::Trash(0, 99), target, false));
     assert!(!r
         .game_mut()
-        .place_as_bottom_source(CardSourceRef::DeckTop(0), target)); // empty deck
+        .place_as_bottom_source(CardSourceRef::DeckTop(0), target, false)); // empty deck
 }
 
 // ─── effect_initiated_digivolve ───────────────────────────────────────────────
@@ -942,6 +943,7 @@ fn digimon_with_evo_costs(
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -1547,6 +1549,7 @@ fn plain_option(card_id: &str, name: &str, play_cost: u16) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 

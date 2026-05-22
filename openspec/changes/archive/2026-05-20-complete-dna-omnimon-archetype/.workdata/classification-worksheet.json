@@ -1,0 +1,962 @@
+[
+ {
+  "key": "G-ADD-OPTION-SELF-TO-HAND",
+  "test_count": 1,
+  "cards": [
+   "P-206"
+  ],
+  "reasons": [
+   "pending: DebugRunner security-effect integration (G-ADD-OPTION-SELF-TO-HAND resolved 2026-05-17)"
+  ],
+  "tests": [
+   {
+    "card": "P-206",
+    "fn": "p_206_inherited_security_adds_self_to_hand_after_play",
+    "file": "code/digimon-engine/tests/cards_behavioral/p/p_206.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-ALT-PATH-DIRECTION-INTO",
+  "test_count": 4,
+  "cards": [
+   "ST20-10"
+  ],
+  "reasons": [
+   "pending: G-ALT-PATH-DIRECTION-INTO",
+   "pending: G-ALT-PATH-DIRECTION-INTO + G-DSL-DISTINCT-TAMER-COLORS"
+  ],
+  "tests": [
+   {
+    "card": "ST20-10",
+    "fn": "st20_10_warp_into_wargreymon_via_tamer_colours_disjunct",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_10.rs"
+   },
+   {
+    "card": "ST20-10",
+    "fn": "st20_10_warp_into_wargreymon_blocked_when_neither_disjunct_satisfied",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_10.rs"
+   },
+   {
+    "card": "ST20-10",
+    "fn": "st20_10_warp_into_wargreymon_blocked_on_opponents_turn",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_10.rs"
+   },
+   {
+    "card": "ST20-10",
+    "fn": "st20_10_warp_into_wargreymon_requires_self_on_field",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_10.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-COLOR-MATCH-AGAINST-BOARD",
+  "test_count": 2,
+  "cards": [
+   "P-206"
+  ],
+  "reasons": [
+   "pending: G-COLOR-MATCH-AGAINST-BOARD \u2014 color-filter against board not enforceable in DSL",
+   "pending: G-COLOR-MATCH-AGAINST-BOARD \u2014 no DSL predicate for 'same color as any of your Digimon on field'"
+  ],
+  "tests": [
+   {
+    "card": "P-206",
+    "fn": "p_206_delay_tamer_filter_matches_digimon_color_on_field",
+    "file": "code/digimon-engine/tests/cards_behavioral/p/p_206.rs"
+   },
+   {
+    "card": "P-206",
+    "fn": "p_206_delay_tamer_wrong_color_not_selectable",
+    "file": "code/digimon-engine/tests/cards_behavioral/p/p_206.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-COUNT-AGGREGATE",
+  "test_count": 1,
+  "cards": [
+   "EX4-061"
+  ],
+  "reasons": [
+   "pending: G-COUNT-AGGREGATE \u2014 count_lte aggregate not evaluated in eval_predicate_with_bindings"
+  ],
+  "tests": [
+   {
+    "card": "EX4-061",
+    "fn": "ex4_061_clause2_blocked_when_more_than_one_digimon",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_061.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-COUNT-LTE-EVAL",
+  "test_count": 1,
+  "cards": [
+   "BT22-084"
+  ],
+  "reasons": [
+   "pending: G-COUNT-LTE-EVAL \u2014 non-security count_lte aggregate predicate not evaluated in eval_predicate_with_bindings; clause 2 over-fires when 2+ Digimon already on field"
+  ],
+  "tests": [
+   {
+    "card": "BT22-084",
+    "fn": "bt22_084_clause2_blocked_when_two_or_more_digimon_present",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_084.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-DECLARATIVE-KEYWORD",
+  "test_count": 2,
+  "cards": [
+   "AD1-001",
+   "BT20-102"
+  ],
+  "reasons": [
+   "pending: G-DECLARATIVE-KEYWORD \u2014 EffectTiming::Declarative never enqueued at runtime; declarative grant_keyword modifier not installed",
+   "pending: G-DECLARATIVE-KEYWORD \u2014 declarative grant_keyword not fired by engine"
+  ],
+  "tests": [
+   {
+    "card": "AD1-001",
+    "fn": "ad1_001_inherited_raid_installs_on_carrier",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_001.rs"
+   },
+   {
+    "card": "BT20-102",
+    "fn": "bt20_102_has_raid_piercing_blocker_as_runtime_keywords",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_102.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-DSL-DISTINCT-TAMER-COLORS-FORMULA",
+  "test_count": 7,
+  "cards": [
+   "AD1-014",
+   "ST20-11"
+  ],
+  "reasons": [
+   "pending: G-DSL-DISTINCT-TAMER-COLORS-FORMULA + companion `per_n` step driver \u2014 immunity clause OMITTED from YAML",
+   "pending: G-DSL-DISTINCT-TAMER-COLORS-FORMULA \u2014 DSL has no formula primitive that counts distinct colors of your Tamers in battle area; lock-count branch unimplementable in pure YAML and not yet bridged via raw_rust in this skill scope",
+   "pending: G-DSL-DISTINCT-TAMER-COLORS-FORMULA \u2014 distinct-color count over own Tamers + companion `per_n` / `repeat_n` step driver missing; immunity clause OMITTED from YAML to avoid silently approximating tamer-color synergy",
+   "pending: G-DSL-DISTINCT-TAMER-COLORS-FORMULA \u2014 see above; needs a distinct-tamer-colors-floor-div-2 formula plus repeat_n / for_each-N driver to install N selections"
+  ],
+  "tests": [
+   {
+    "card": "AD1-014",
+    "fn": "ad1_014_on_play_with_zero_tamers_locks_zero_opp_permanents",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_014.rs"
+   },
+   {
+    "card": "AD1-014",
+    "fn": "ad1_014_on_play_with_three_tamer_colors_locks_one_opp_permanent_for_one_turn",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_014.rs"
+   },
+   {
+    "card": "ST20-11",
+    "fn": "st20_11_has_op_wd_tamer_color_immunity_clause",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_11.rs"
+   },
+   {
+    "card": "ST20-11",
+    "fn": "st20_11_on_play_with_one_tamer_color_grants_no_immunity",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_11.rs"
+   },
+   {
+    "card": "ST20-11",
+    "fn": "st20_11_on_play_with_two_tamer_colors_grants_one_immunity_selection",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_11.rs"
+   },
+   {
+    "card": "ST20-11",
+    "fn": "st20_11_on_play_with_four_tamer_colors_grants_two_immunity_selections",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_11.rs"
+   },
+   {
+    "card": "ST20-11",
+    "fn": "st20_11_when_digivolving_offers_immunity_selection_in_addition_to_delete",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_11.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-DSL-DNA-FROM-HAND-PARTNER",
+  "test_count": 2,
+  "cards": [
+   "BT17-095"
+  ],
+  "reasons": [
+   "pending: G-DSL-DNA-FROM-HAND-PARTNER \u2014 effect_initiated_dna_digivolve cannot accept hand-card target_b",
+   "pending: G-DSL-DNA-FROM-HAND-PARTNER \u2014 leaving subject always proceeds with DNA omitted"
+  ],
+  "tests": [
+   {
+    "card": "BT17-095",
+    "fn": "bt17_095_replacement_dna_digivolves_into_omnimon_when_eligible",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_095.rs"
+   },
+   {
+    "card": "BT17-095",
+    "fn": "bt17_095_replacement_dna_consumes_leaving_subject_into_merged_permanent",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_095.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-DSL-EVENT-TARGET-IS-OTHER",
+  "test_count": 1,
+  "cards": [
+   "EX4-003"
+  ],
+  "reasons": [
+   "BLOCKED: G-DSL-EVENT-TARGET-IS-OTHER \u2014 DSL has no event_target_is_other leaf to filter the digivolving permanent against the source's own host carrier; sibling of G-DSL-EVENT-TARGET-IS-SELF (BT15-101)"
+  ],
+  "tests": [
+   {
+    "card": "EX4-003",
+    "fn": "ex4_003_inherited_does_not_fire_on_own_carrier_digivolve",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_003.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-DSL-EVENT-TARGET-IS-SELF",
+  "test_count": 1,
+  "cards": [
+   "BT15-101"
+  ],
+  "reasons": [
+   "pending: G-DSL-EVENT-TARGET-IS-SELF \u2014 DSL has no predicate to assert the suspended permanent equals the source permanent; the on_suspend clause uses the AD1-014 pattern (event_target_owner: you, event_target_kind: digimon), so it over-fires when an ALLY suspends rather than only when this Digimon suspends. Negative case held until the predicate ships."
+  ],
+  "tests": [
+   {
+    "card": "BT15-101",
+    "fn": "bt15_101_on_ally_suspend_does_not_consume_opt_or_offer_prompt",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_101.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH",
+  "test_count": 3,
+  "cards": [
+   "EX5-015"
+  ],
+  "reasons": [
+   "BLOCKED: G-DSL-INHERITED-SUBSTITUTE-RETURN-TRASH \u2014 clause C OMITTED"
+  ],
+  "tests": [
+   {
+    "card": "EX5-015",
+    "fn": "ex5_015_inherited_substitute_does_not_fire_on_non_garurumon_omnimon_host",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex5/ex5_015.rs"
+   },
+   {
+    "card": "EX5-015",
+    "fn": "ex5_015_inherited_substitute_does_not_fire_outside_battle",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex5/ex5_015.rs"
+   },
+   {
+    "card": "EX5-015",
+    "fn": "ex5_015_inherited_substitute_blocked_when_trash_has_fewer_than_two_non_egg",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex5/ex5_015.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-DSL-PREDICATE-TEXT-CONTAINS",
+  "test_count": 1,
+  "cards": [
+   "BT22-017"
+  ],
+  "reasons": [
+   "BLOCKED: G-DSL-PREDICATE-TEXT-CONTAINS \u2014 DSL lacks `text_contains` predicate; bucket 1 approximated as `name_contains: \\\"Omnimon\\\"` and wrongly excludes cards that mention [Omnimon] only in effect text"
+  ],
+  "tests": [
+   {
+    "card": "BT22-017",
+    "fn": "bt22_017_on_play_bucket1_admits_card_with_omnimon_only_in_text",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_017.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-DSL-SELECT-OWN-SOURCES-FILTER",
+  "test_count": 3,
+  "cards": [
+   "EX4-073"
+  ],
+  "reasons": [
+   "pending: G-DSL-SELECT-OWN-SOURCES-FILTER (parent gap) \u2014 count binding from source-trash step is unavailable while the outer step itself is blocked",
+   "pending: G-DSL-SELECT-OWN-SOURCES-FILTER \u2014 clause body cannot be authored until source-select filter is wired",
+   "pending: G-DSL-SELECT-OWN-SOURCES-FILTER \u2014 select_own_sources lacks a filter field; level_gte: 6 per-source filter is unrepresentable"
+  ],
+  "tests": [
+   {
+    "card": "EX4-073",
+    "fn": "ex4_073_clause_c_trashes_up_to_3_lv6_or_higher_sources",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_073.rs"
+   },
+   {
+    "card": "EX4-073",
+    "fn": "ex4_073_clause_c_trashes_2_opp_security_when_3_sources_trashed",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_073.rs"
+   },
+   {
+    "card": "EX4-073",
+    "fn": "ex4_073_clause_c_player_may_decline_to_trash_any_sources",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_073.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-DSL-SELF-NAME-CONTAINS",
+  "test_count": 2,
+  "cards": [
+   "AD1-014"
+  ],
+  "reasons": [
+   "pending: G-DSL-SELF-NAME-CONTAINS \u2014 DSL lacks a `self_name_contains` predicate that evaluates against the carrier permanent's top-card name; the inherited name gate cannot be expressed in pure YAML today",
+   "pending: G-DSL-SELF-NAME-CONTAINS \u2014 inherited [When Attacking] OPT lock with self-name gate omitted from YAML; structural assertion held until the predicate ships"
+  ],
+  "tests": [
+   {
+    "card": "AD1-014",
+    "fn": "ad1_014_inherited_when_attacking_is_present_and_once_per_turn_and_gated",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_014.rs"
+   },
+   {
+    "card": "AD1-014",
+    "fn": "ad1_014_inherited_when_attacking_fires_when_top_card_contains_garurumon_in_name",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_014.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-DSL-UNION-PLAY-FREE",
+  "test_count": 2,
+  "cards": [
+   "BT17-095"
+  ],
+  "reasons": [
+   "pending: G-DSL-UNION-PLAY-FREE \u2014 select_union_zone binding type",
+   "pending: G-DSL-UNION-PLAY-FREE \u2014 select_union_zone binds Card, not HandIndex/TrashIndex"
+  ],
+  "tests": [
+   {
+    "card": "BT17-095",
+    "fn": "bt17_095_main_auto_collapses_zone_choice_when_only_one_zone_eligible",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_095.rs"
+   },
+   {
+    "card": "BT17-095",
+    "fn": "bt17_095_security_auto_collapses_zone_when_only_trash_eligible",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_095.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-EVENT-CARD-TAMER-PLAY",
+  "test_count": 2,
+  "cards": [
+   "AD1-010",
+   "EX9-012"
+  ],
+  "reasons": [
+   "pending: G-EVENT-CARD-TAMER-PLAY \u2014 event_card population for tamer plays via TriggerSource::EnteredField is unconfirmed in engine-gaps.md"
+  ],
+  "tests": [
+   {
+    "card": "AD1-010",
+    "fn": "ad1_010_all_turns_observer_fires_on_matt_ishida_tamer_play",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_010.rs"
+   },
+   {
+    "card": "EX9-012",
+    "fn": "ex9_012_observer_fires_on_own_tai_kamiya_tamer_play",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_012.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-EVENT-TARGET-NAME-CONTAINS",
+  "test_count": 1,
+  "cards": [
+   "EX4-061"
+  ],
+  "reasons": [
+   "pending: G-EVENT-TARGET-NAME-CONTAINS \u2014 no event-target name predicate yet"
+  ],
+  "tests": [
+   {
+    "card": "EX4-061",
+    "fn": "ex4_061_clause2_filters_by_digivolved_name_independent_of_count",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_061.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-EVENT-TARGET-NOT-SOURCE",
+  "test_count": 1,
+  "cards": [
+   "EX4-039"
+  ],
+  "reasons": [
+   "pending: G-EVENT-TARGET-NOT-SOURCE \u2014 no \\\"event target is not source-permanent\\\" predicate"
+  ],
+  "tests": [
+   {
+    "card": "EX4-039",
+    "fn": "ex4_039_inherited_does_not_fire_when_carrier_itself_digivolves",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_039.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-FOR-EACH-DELETE-INDEX-SHIFT",
+  "test_count": 1,
+  "cards": [
+   "BT8-097"
+  ],
+  "reasons": [
+   "pending: G-FOR-EACH-DELETE-INDEX-SHIFT \u2014 for_each snapshot indices shift when first deletion removes perm at idx 0; second handle becomes stale and no-ops"
+  ],
+  "tests": [
+   {
+    "card": "BT8-097",
+    "fn": "bt8_097_main_deletes_multiple_opp_digimon_with_no_player_choice",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_097.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-FORMULA-SOURCE-DP",
+  "test_count": 1,
+  "cards": [
+   "P-182"
+  ],
+  "reasons": [
+   "BLOCKED: G-FORMULA-SOURCE-DP \u2014 see positive test for full rationale"
+  ],
+  "tests": [
+   {
+    "card": "P-182",
+    "fn": "p_182_when_digivolving_deletes_nothing_when_no_opp_digimon_within_dp",
+    "file": "code/digimon-engine/tests/cards_behavioral/p/p_182.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-IGNORE-COLOR-MASK",
+  "test_count": 1,
+  "cards": [
+   "P-206"
+  ],
+  "reasons": [
+   "pending: G-IGNORE-COLOR-MASK \u2014 IgnoreColorRequirement modifier not enforced in action mask (\u00a74.2b residual)"
+  ],
+  "tests": [
+   {
+    "card": "P-206",
+    "fn": "p_206_can_be_played_without_matching_color_memory",
+    "file": "code/digimon-engine/tests/cards_behavioral/p/p_206.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-MULTI-SELECT-OPP-PLAY-COST-SUM",
+  "test_count": 3,
+  "cards": [
+   "EX4-073"
+  ],
+  "reasons": [
+   "pending: G-MULTI-SELECT-OPP-PLAY-COST-SUM \u2014 no play-cost-budget multi-select API in engine or DSL (only DpBudget exists)",
+   "pending: G-MULTI-SELECT-OPP-PLAY-COST-SUM \u2014 per-card cap requires the play-cost-budget primitive's candidate filter",
+   "pending: G-MULTI-SELECT-OPP-PLAY-COST-SUM \u2014 silent no-op behavior depends on the primitive's existential gate"
+  ],
+  "tests": [
+   {
+    "card": "EX4-073",
+    "fn": "ex4_073_clause_b_arm2_deletes_opp_digimon_within_play_cost_sum_6",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_073.rs"
+   },
+   {
+    "card": "EX4-073",
+    "fn": "ex4_073_clause_b_arm2_excludes_opp_digimon_with_play_cost_above_6",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_073.rs"
+   },
+   {
+    "card": "EX4-073",
+    "fn": "ex4_073_clause_b_arm2_silent_noop_when_no_eligible_targets",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_073.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-OPT-MULTI-TIMING-SHARED-LOCKOUT",
+  "test_count": 1,
+  "cards": [
+   "AD1-014"
+  ],
+  "reasons": [
+   "pending: G-OPT-MULTI-TIMING-SHARED-LOCKOUT \u2014 multi-timing OPT cluster compiles to one Effect per timing, each with its own OPT counter; cross-timing shared lockout (DCGO SharedHashString) not yet wired"
+  ],
+  "tests": [
+   {
+    "card": "AD1-014",
+    "fn": "ad1_014_on_play_then_when_attacking_share_one_opt_lockout_per_turn",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_014.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-OPT-TRIGGERED",
+  "test_count": 4,
+  "cards": [
+   "BT17-081",
+   "BT20-102",
+   "EX4-039",
+   "EX4-061"
+  ],
+  "reasons": [
+   "pending: G-OPT-TRIGGERED \u2014 OPT lockout not enforced on triggered effects",
+   "pending: G-OPT-TRIGGERED \u2014 once_per_turn not enforced for triggered EOT effects"
+  ],
+  "tests": [
+   {
+    "card": "BT17-081",
+    "fn": "bt17_081_clause2_opt_lockout_blocks_second_activation_same_turn",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_081.rs"
+   },
+   {
+    "card": "BT20-102",
+    "fn": "bt20_102_end_of_turn_opt_lockout",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_102.rs"
+   },
+   {
+    "card": "EX4-039",
+    "fn": "ex4_039_inherited_opt_lockout_blocks_second_fire_same_turn",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_039.rs"
+   },
+   {
+    "card": "EX4-061",
+    "fn": "ex4_061_clause2_opt_lockout_blocks_second_activation_same_turn",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_061.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-OUTER-OPTIONAL-NOT-INSTALLED",
+  "test_count": 2,
+  "cards": [
+   "BT22-084",
+   "BT5-092"
+  ],
+  "reasons": [
+   "pending: G-OUTER-OPTIONAL-NOT-INSTALLED \u2014 clause-level `optional: true` does not install an outer accept/decline before inner select_hand prompt; same family as AD1-009 / BT22-084 clause 2",
+   "pending: G-OUTER-OPTIONAL-NOT-INSTALLED \u2014 clause-level `optional: true` does not install an outer accept/decline before inner select_hand prompt; same family as AD1-009 ad1_009_eot_dna_clause_is_optional"
+  ],
+  "tests": [
+   {
+    "card": "BT22-084",
+    "fn": "bt22_084_clause2_pass_leaves_hand_intact",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_084.rs"
+   },
+   {
+    "card": "BT5-092",
+    "fn": "bt5_092_clause1_pass_leaves_hand_intact",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_092.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-PLACE-SELF-AS-OPTION-PERMANENT",
+  "test_count": 3,
+  "cards": [
+   "P-206"
+  ],
+  "reasons": [
+   "pending: G-PLACE-SELF-AS-OPTION-PERMANENT",
+   "pending: G-PLACE-SELF-AS-OPTION-PERMANENT + G-COLOR-MATCH-AGAINST-BOARD",
+   "pending: G-PLACE-SELF-AS-OPTION-PERMANENT \u2014 cannot drive Delay activation without battle-area assertion API"
+  ],
+  "tests": [
+   {
+    "card": "P-206",
+    "fn": "p_206_delay_activation_installs_tamer_selection",
+    "file": "code/digimon-engine/tests/cards_behavioral/p/p_206.rs"
+   },
+   {
+    "card": "P-206",
+    "fn": "p_206_delay_tamer_cost_reduced_by_4",
+    "file": "code/digimon-engine/tests/cards_behavioral/p/p_206.rs"
+   },
+   {
+    "card": "P-206",
+    "fn": "p_206_delay_tamer_play_is_optional",
+    "file": "code/digimon-engine/tests/cards_behavioral/p/p_206.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-PLAY-COST-AGGREGATE",
+  "test_count": 1,
+  "cards": [
+   "EX4-073"
+  ],
+  "reasons": [
+   "pending: G-PLAY-COST-AGGREGATE \u2014 no `lowest_play_cost` predicate (sibling of `lowest_dp`); BT9-112 raw_rust hatch is grandfathered, not extended"
+  ],
+  "tests": [
+   {
+    "card": "EX4-073",
+    "fn": "ex4_073_clause_c_inner_deletes_opp_lowest_play_cost_per_trash",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_073.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-PLAY-COST-GTE",
+  "test_count": 1,
+  "cards": [
+   "BT22-089"
+  ],
+  "reasons": [
+   "pending: G-PLAY-COST-GTE \u2014 `play_cost_gte` predicate not in PredicateSpec; cost-3 CS Tamer over-fires into Clause 1 valid actions"
+  ],
+  "tests": [
+   {
+    "card": "BT22-089",
+    "fn": "bt22_089_clause1_blocks_cs_tamer_below_cost_4",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_089.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-PLAY-COST-LTE",
+  "test_count": 2,
+  "cards": [
+   "EX10-010",
+   "P-206"
+  ],
+  "reasons": [
+   "pending: G-PLAY-COST-LTE \u2014 play_cost_lte predicate missing from PredicateSpec; select_hand/trash accept-all (Phase 2b)",
+   "pending: G-PLAY-COST-LTE \u2014 play_cost_lte predicate not evaluated at selection time"
+  ],
+  "tests": [
+   {
+    "card": "EX10-010",
+    "fn": "ex10_010_on_play_excludes_opponent_permanent_with_cost_above_7",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_010.rs"
+   },
+   {
+    "card": "P-206",
+    "fn": "p_206_inherited_security_cost_filter_excludes_high_cost_digimon",
+    "file": "code/digimon-engine/tests/cards_behavioral/p/p_206.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-PRED-NO-FACE-UP-SECURITY-NAMED",
+  "test_count": 3,
+  "cards": [
+   "ST20-15"
+  ],
+  "reasons": [
+   "G-PRED-NO-FACE-UP-SECURITY-NAMED: no DSL leaf for face-up named-security predicate"
+  ],
+  "tests": [
+   {
+    "card": "ST20-15",
+    "fn": "st20_15_color_bypass_active_when_no_island_in_own_security",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_15.rs"
+   },
+   {
+    "card": "ST20-15",
+    "fn": "st20_15_color_bypass_inactive_when_island_face_up_in_own_security",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_15.rs"
+   },
+   {
+    "card": "ST20-15",
+    "fn": "st20_15_main_followup_closes_color_bypass_gate",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_15.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-SECURITY-ZONE-AURA-SOURCE",
+  "test_count": 3,
+  "cards": [
+   "ST20-15"
+  ],
+  "reasons": [
+   "G-SECURITY-ZONE-AURA-SOURCE: security-zone aura source not iterated by tick_declarative_effects"
+  ],
+  "tests": [
+   {
+    "card": "ST20-15",
+    "fn": "st20_15_security_aura_buffs_own_lv3_plus_digimon_by_2000",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_15.rs"
+   },
+   {
+    "card": "ST20-15",
+    "fn": "st20_15_security_aura_does_not_buff_opponent_digimon",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_15.rs"
+   },
+   {
+    "card": "ST20-15",
+    "fn": "st20_15_security_aura_inactive_when_self_face_down",
+    "file": "code/digimon-engine/tests/cards_behavioral/st20/st20_15.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-SELECT-EMPTY-OUTER-TAIL",
+  "test_count": 1,
+  "cards": [
+   "AD1-009"
+  ],
+  "reasons": [
+   "pending: G-SELECT-EMPTY-OUTER-TAIL family \u2014 empty-hand select_hand inside `- optional: [...]` substep doesn't surface as a clean PASS-able pending selection in the runner-driven enqueue path. Card body is otherwise IMPLEMENTED; positive-path test ad1_009_eot_dna_with_omnimon_alter_s_in_hand_prompts_hand_selection passes."
+  ],
+  "tests": [
+   {
+    "card": "AD1-009",
+    "fn": "ad1_009_eot_dna_clause_is_optional",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_009.rs"
+   }
+  ]
+ },
+ {
+  "key": "G-SELF-DIGIVOLUTION-CONTAINS-NAME",
+  "test_count": 1,
+  "cards": [
+   "BT20-102"
+  ],
+  "reasons": [
+   "pending: G-SELF-DIGIVOLUTION-CONTAINS-NAME \u2014 DSL cannot express self-stack name check; raw_rust fn always finds 'X Antibody' in top card name"
+  ],
+  "tests": [
+   {
+    "card": "BT20-102",
+    "fn": "bt20_102_on_play_no_boardwipe_when_no_omnimon_in_stack",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt20/bt20_102.rs"
+   }
+  ]
+ },
+ {
+  "key": "UNTAGGED::AD1-012",
+  "test_count": 1,
+  "cards": [
+   "AD1-012"
+  ],
+  "reasons": [
+   "pending: defender-side effect-initiated DNA into Omnimon Alter-S during attack interrupt"
+  ],
+  "tests": [
+   {
+    "card": "AD1-012",
+    "fn": "ad1_012_opponents_turn_dna_into_omnimon_alters_then_redirects",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_012.rs"
+   }
+  ]
+ },
+ {
+  "key": "UNTAGGED::AD1-025",
+  "test_count": 6,
+  "cards": [
+   "AD1-025"
+  ],
+  "reasons": [
+   "pending YAML drift fix (DRIFT 2). See top-of-file. OPT half closed in Phase 2 Track C.",
+   "pending YAML drift fix: missing [All Turns][OPT] clause. See DRIFT 2.",
+   "pending raw_rust fn registration: `ad1_025_on_play_process` missing. See DRIFT 1."
+  ],
+  "tests": [
+   {
+    "card": "AD1-025",
+    "fn": "ad1_025_on_play_returns_lower_source_opp_digimon_to_deck_bottom",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_025.rs"
+   },
+   {
+    "card": "AD1-025",
+    "fn": "ad1_025_on_play_then_installs_delete_prompt_for_remaining_opp_digimon",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_025.rs"
+   },
+   {
+    "card": "AD1-025",
+    "fn": "ad1_025_when_digivolving_fires_same_body_as_on_play",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_025.rs"
+   },
+   {
+    "card": "AD1-025",
+    "fn": "ad1_025_all_turns_observer_trashes_opp_option_and_top_security",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_025.rs"
+   },
+   {
+    "card": "AD1-025",
+    "fn": "ad1_025_all_turns_observer_routes_security_to_opp_trash",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_025.rs"
+   },
+   {
+    "card": "AD1-025",
+    "fn": "ad1_025_all_turns_observer_opt_blocks_second_trigger_same_turn",
+    "file": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_025.rs"
+   }
+  ]
+ },
+ {
+  "key": "UNTAGGED::BT16-082",
+  "test_count": 2,
+  "cards": [
+   "BT16-082"
+  ],
+  "reasons": [
+   "pending: triggered OPT lockout coverage for OnMove effects",
+   "pending: triggered OPT reset coverage for OnMove effects"
+  ],
+  "tests": [
+   {
+    "card": "BT16-082",
+    "fn": "bt16_082_opt_blocks_second_trigger_same_turn",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_082.rs"
+   },
+   {
+    "card": "BT16-082",
+    "fn": "bt16_082_opt_resets_after_end_turn",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt16/bt16_082.rs"
+   }
+  ]
+ },
+ {
+  "key": "UNTAGGED::BT22-089",
+  "test_count": 1,
+  "cards": [
+   "BT22-089"
+  ],
+  "reasons": [
+   "pending: dsl-select-hand-filter-phase2c \u2014 generic count_gte aggregate over hand is not evaluated; Clause 2 over-fires draw 2 even when no eligible trash candidate exists. Same precedent as bt24_008_on_play_no_eligible_card_no_prompt."
+  ],
+  "tests": [
+   {
+    "card": "BT22-089",
+    "fn": "bt22_089_clause2_on_play_no_eligible_trait_in_hand_no_prompt",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt22/bt22_089.rs"
+   }
+  ]
+ },
+ {
+  "key": "UNTAGGED::BT5-092",
+  "test_count": 6,
+  "cards": [
+   "BT5-092"
+  ],
+  "reasons": [
+   "pending: DSL vocab gap \u2014 no when_any_ally_digivolves_into + target_name_contains in CostReductionBody, no pay_cost: [suspend self] hook on cost_reduction clauses (see qa/dsl-vocab-gaps.md BT23-005 entry; same root gap)",
+   "pending: DSL vocab gap \u2014 same as bt5_092_clause2_cost_reduction_fires_on_greymon_target",
+   "pending: DSL vocab gap \u2014 same as bt5_092_clause2_cost_reduction_fires_on_greymon_target; payment hook also missing"
+  ],
+  "tests": [
+   {
+    "card": "BT5-092",
+    "fn": "bt5_092_clause2_cost_reduction_fires_on_greymon_target",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_092.rs"
+   },
+   {
+    "card": "BT5-092",
+    "fn": "bt5_092_clause2_cost_reduction_fires_on_garurumon_target",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_092.rs"
+   },
+   {
+    "card": "BT5-092",
+    "fn": "bt5_092_clause2_cost_reduction_fires_on_omnimon_target",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_092.rs"
+   },
+   {
+    "card": "BT5-092",
+    "fn": "bt5_092_clause2_cost_reduction_does_not_fire_on_unrelated_target",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_092.rs"
+   },
+   {
+    "card": "BT5-092",
+    "fn": "bt5_092_clause2_cost_reduction_inactive_on_opponents_turn",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_092.rs"
+   },
+   {
+    "card": "BT5-092",
+    "fn": "bt5_092_clause2_cost_reduction_blocked_when_nokia_already_suspended",
+    "file": "code/digimon-engine/tests/cards_behavioral/bt5/bt5_092.rs"
+   }
+  ]
+ },
+ {
+  "key": "UNTAGGED::EX10-010",
+  "test_count": 2,
+  "cards": [
+   "EX10-010"
+  ],
+  "reasons": [
+   "pending: lower_aura.rs modifier field not wired \u2014 CannotBeAffected never installed; CannotBeAffected not enforced by engine"
+  ],
+  "tests": [
+   {
+    "card": "EX10-010",
+    "fn": "ex10_010_has_cannot_be_affected_modifier_when_opp_has_13000_dp_digimon",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_010.rs"
+   },
+   {
+    "card": "EX10-010",
+    "fn": "ex10_010_no_cannot_be_affected_modifier_when_opp_lacks_13000_dp_digimon",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_010.rs"
+   }
+  ]
+ },
+ {
+  "key": "UNTAGGED::EX4-003",
+  "test_count": 2,
+  "cards": [
+   "EX4-003"
+  ],
+  "reasons": [
+   "pending: test fixture \u2014 make_lv4_digimon has empty evo_costs so digivolve_from_hand rejects with route mismatch; inherited dispatch substrate confirmed by Track D regression",
+   "pending: test fixture \u2014 same LV4 empty-evo_costs blocker as ex4_003_inherited_fires_draws_one_on_other_digimon_digivolve"
+  ],
+  "tests": [
+   {
+    "card": "EX4-003",
+    "fn": "ex4_003_inherited_fires_draws_one_on_other_digimon_digivolve",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_003.rs"
+   },
+   {
+    "card": "EX4-003",
+    "fn": "ex4_003_inherited_opt_blocks_second_trigger_same_turn",
+    "file": "code/digimon-engine/tests/cards_behavioral/ex4/ex4_003.rs"
+   }
+  ]
+ },
+ {
+  "key": "UNTAGGED::P-206",
+  "test_count": 2,
+  "cards": [
+   "P-206"
+  ],
+  "reasons": [
+   "pending Phase 2b: install_select_reveal accept-all filter \u2014 kind:digimon filter not enforced at runtime",
+   "pending Phase 2b: install_select_reveal accept-all filter \u2014 kind:tamer filter not enforced at runtime"
+  ],
+  "tests": [
+   {
+    "card": "P-206",
+    "fn": "p_206_main_digimon_filter_excludes_non_digimon_cards",
+    "file": "code/digimon-engine/tests/cards_behavioral/p/p_206.rs"
+   },
+   {
+    "card": "P-206",
+    "fn": "p_206_main_tamer_filter_excludes_non_tamer_cards",
+    "file": "code/digimon-engine/tests/cards_behavioral/p/p_206.rs"
+   }
+  ]
+ }
+]

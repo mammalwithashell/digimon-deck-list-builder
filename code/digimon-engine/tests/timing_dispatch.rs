@@ -10,6 +10,7 @@ use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect::{CardEffect, Effect, EffectBuilder};
+use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{
     CardColor, CardKind, CardSourceRef, CostDelta, DelayTrigger, EffectTiming, Expiry,
     ModifierType, PlaySource, StackPosition, Zone,
@@ -168,6 +169,7 @@ fn plain_digimon(card_id: &str, name: &str, play_cost: u16) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -213,6 +215,7 @@ fn option_card_with_cost(card_id: &str, name: &str, play_cost: u16, traits: &[&s
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -2201,6 +2204,7 @@ fn lv4_digimon(card_id: &str, name: &str) -> CardData {
         norm_id: 0.0,
         ace_overflow: None,
         digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
     }
 }
 
@@ -2870,6 +2874,456 @@ fn on_digivolution_card_trashed_fires_on_return_to_deck() {
         r.memory() > before,
         "OnDigivolutionCardTrashed should fire when UNDER was trashed from the stack via return_to_deck (before={}, after={})",
         before,
+        r.memory()
+    );
+}
+
+// ─── Task A5.1 — Tamer-host OnDigivolutionCardTrashed dispatch coverage ───────
+//
+// The substrate (A1-A4) trashes a face-down card stashed under a *Tamer* via
+// `EffectContext::trash_bottom_face_down_source`. The Rocks-refresh work closed
+// Digimon-host coverage; these tests confirm the `SourceTrashedFromStack`
+// dispatch fan-out is permanent-kind-agnostic — observers must fire, and the
+// stored host handle must not alias a shifted permanent, when the host is a
+// Tamer rather than a Digimon.
+
+/// A plain Tamer card (no level / DP), used as a face-down-stash host.
+fn plain_tamer(card_id: &str, name: &str, play_cost: u16) -> CardData {
+    CardData {
+        card_id: card_id.to_string(),
+        card_name: name.to_string(),
+        card_kind: CardKind::Tamer,
+        level: None,
+        dp: None,
+        play_cost,
+        colors: vec![CardColor::Red],
+        traits: Vec::new(),
+        evo_costs: Vec::new(),
+        dna_costs: Vec::new(),
+        effect_text: String::new(),
+        inherited_text: String::new(),
+        security_text: String::new(),
+        keywords: Vec::new(),
+        dual: None,
+        effect_class_name: card_id.to_string(),
+        index: 0,
+        norm_id: 0.0,
+        ace_overflow: None,
+        digixros_aliases: Vec::new(),
+        also_treated_as: Vec::new(),
+    }
+}
+
+/// Stash a card as the BOTTOM (face-down) digivolution source of `target`.
+/// Returns the stashed source's handle.
+fn stash_face_down_bottom_source(
+    r: &mut DebugRunner,
+    target: PermanentHandle,
+    card_id: &str,
+) -> CardHandle {
+    let g = r.game_mut();
+    let data_idx = g
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("stash_face_down_bottom_source: unknown card_id {card_id}"));
+    let card_idx = g.next_card_index();
+    let mut src = CardSource::new(data_idx, target.player, card_idx);
+    src.face_down = true;
+    let handle = src.handle();
+    g.players[target.player as usize].battle_area[target.index as usize]
+        .card_sources
+        .insert(0, src);
+    handle
+}
+
+/// Captured `OnDigivolutionCardTrashed` trigger context — recorded by an
+/// observer permanent so the test can assert what the dispatch threaded.
+#[derive(Default)]
+struct CapturedTamerTrashContext {
+    fired: bool,
+    event_card: Option<CardHandle>,
+    event_host_permanent: Option<PermanentHandle>,
+    event_host_card: Option<CardHandle>,
+}
+
+/// An observer `CardEffect` that records the `OnDigivolutionCardTrashed`
+/// trigger context into a shared slot when it fires.
+struct TamerTrashContextObserver {
+    captured: Arc<Mutex<CapturedTamerTrashContext>>,
+}
+impl CardEffect for TamerTrashContextObserver {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let captured = self.captured.clone();
+        vec![Effect::on_digivolution_card_trashed(card)
+            .name("Tamer-host trash context observer")
+            .condition(|ctx| ctx.event_card().is_some())
+            .process(move |ctx| {
+                let mut slot = captured.lock().expect("capture mutex poisoned");
+                slot.fired = true;
+                slot.event_card = ctx.event_card();
+                slot.event_host_permanent = ctx.event_host_permanent();
+                slot.event_host_card = ctx.event_host_card();
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+/// A5.1 #1 — A separate own permanent (the OBSERVER) installed with an
+/// `OnDigivolutionCardTrashed` effect fires when a *Tamer*-host face-down
+/// source is trashed, and the `TriggerContext` it sees carries the Tamer as
+/// `event_host_permanent` and the trashed stash as `event_card`. This proves
+/// the `SourceTrashedFromStack` observer fan-out reaches battle-area observers
+/// regardless of whether the trashed source's host is a Digimon or a Tamer.
+#[test]
+fn tamer_host_source_trashed_dispatches_to_observer_with_correct_context() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_tamer("TAMER-A5", "Tamer A5", 3))
+        .add_card(plain_digimon("STASH-A5", "Stash A5", 3))
+        .add_card(plain_digimon("OBS-A5", "Trash Observer A5", 3))
+        .memory(5)
+        .start();
+
+    let captured = Arc::new(Mutex::new(CapturedTamerTrashContext::default()));
+    r.register_effect(
+        "OBS-A5",
+        Arc::new(TamerTrashContextObserver {
+            captured: captured.clone(),
+        }),
+    );
+
+    // OBSERVER: a separate own permanent (a Digimon) on player 0's field.
+    let _obs = r.place_on_field(0, "OBS-A5", Some(0));
+
+    // HOST: a Tamer on player 0's field, with a face-down card stashed at the
+    // bottom of its stack.
+    let tamer = r.place_on_field(0, "TAMER-A5", Some(0));
+    let stash = stash_face_down_bottom_source(&mut r, tamer, "STASH-A5");
+    let tamer_own_card = r.game.player(0).battle_area[tamer.index as usize]
+        .top_card()
+        .handle();
+
+    let before = r.memory();
+
+    // Trash the Tamer's face-down bottom source via the A4.1 substrate.
+    let result = {
+        let mut ctx = EffectContext::new(&mut r.game, tamer_own_card, Some(tamer), 0);
+        ctx.trash_bottom_face_down_source(tamer)
+    };
+    assert!(
+        result,
+        "trash_bottom_face_down_source should trash the Tamer's face-down stash"
+    );
+
+    let slot = captured.lock().expect("capture mutex poisoned");
+
+    // (a) The observer fired — the dispatch fan-out reached it.
+    assert!(
+        slot.fired,
+        "OnDigivolutionCardTrashed observer must fire when a Tamer-host source is trashed"
+    );
+    assert!(
+        r.memory() > before,
+        "observer's gain_memory side-effect should have run (before={}, after={})",
+        before,
+        r.memory()
+    );
+
+    // (b) The trigger context carries the trashed stash as event_card.
+    assert_eq!(
+        slot.event_card,
+        Some(stash),
+        "event_card should be the trashed face-down stash"
+    );
+
+    // (c) The host permanent is the TAMER — not a Digimon, not the trashed
+    //     source — proving the dispatch threads the Tamer host correctly.
+    assert_eq!(
+        slot.event_host_permanent,
+        Some(tamer),
+        "event_host_permanent should be the Tamer the stash sat under"
+    );
+
+    // (d) The host card is the Tamer's own (top) card.
+    assert_eq!(
+        slot.event_host_card,
+        Some(tamer_own_card),
+        "event_host_card should be the Tamer's own card"
+    );
+    assert_ne!(
+        slot.event_host_card,
+        Some(stash),
+        "event_host_card must NOT be the trashed source handle"
+    );
+}
+
+/// An observer that asserts, when it fires, that the stored
+/// `event_host_permanent` resolves to a *Tamer* (the genuine host) — never to
+/// some other battle-area permanent (e.g. a Digimon left of it). Mirrors
+/// `SourceTrashHostAliasGuard` but for a Tamer host.
+struct TamerSourceTrashAliasGuard {
+    fired: Arc<Mutex<bool>>,
+}
+impl CardEffect for TamerSourceTrashAliasGuard {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let fired = self.fired.clone();
+        vec![Effect::on_digivolution_card_trashed(card)
+            .name("Tamer-host source-trash alias guard")
+            .condition(|ctx| ctx.event_source_card().is_some())
+            .process(move |ctx| {
+                if let Some(host) = ctx.event_host_permanent() {
+                    let perm = &ctx.game.player(host.player).battle_area[host.index as usize];
+                    // The stored host handle must resolve to the genuine
+                    // Tamer host — never alias a shifted neighbour.
+                    assert_eq!(
+                        perm.top_card().card_kind(ctx.card_data()),
+                        CardKind::Tamer,
+                        "stale source-trash host handle must resolve to the Tamer host, \
+                         not a shifted permanent"
+                    );
+                    assert_ne!(
+                        perm.top_card().card_id(ctx.card_data()),
+                        "OTHER-A5",
+                        "host handle must not alias the unrelated 'OTHER' permanent"
+                    );
+                }
+                *fired.lock().unwrap() = true;
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+/// A5.1 #2 — No-alias edge case for a Tamer host. The `SourceTrashedFromStack`
+/// trigger context stores the host `PermanentHandle` by value; when other
+/// permanents sit at lower indices, a wrongly re-resolved handle would alias a
+/// neighbour. Set up `[OTHER, TAMER, OBS]` on the field so the Tamer is NOT at
+/// index 0, trash the Tamer's face-down source, and confirm the observer's
+/// `event_host_permanent` still resolves to the Tamer (never to `OTHER`).
+#[test]
+fn tamer_host_source_trash_context_does_not_alias_shifted_permanent() {
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("OTHER-A5", "Other A5", 3))
+        .add_card(plain_tamer("TAMER-A5B", "Tamer A5B", 3))
+        .add_card(plain_digimon("STASH-A5B", "Stash A5B", 3))
+        .add_card(plain_digimon("OBS-A5B", "Alias Guard A5B", 3))
+        .memory(5)
+        .start();
+
+    let fired = Arc::new(Mutex::new(false));
+    r.register_effect(
+        "OBS-A5B",
+        Arc::new(TamerSourceTrashAliasGuard {
+            fired: fired.clone(),
+        }),
+    );
+
+    // Field layout: index 0 = OTHER (Digimon), index 1 = TAMER, index 2 = OBS.
+    // The Tamer host therefore sits at a non-zero index — a re-resolved or
+    // mis-indexed host handle would alias OTHER at index 0.
+    let _other = r.place_on_field(0, "OTHER-A5", Some(0));
+    let tamer = r.place_on_field(0, "TAMER-A5B", Some(0));
+    let _obs = r.place_on_field(0, "OBS-A5B", Some(0));
+    assert_eq!(tamer.index, 1, "precondition: Tamer host sits at index 1");
+
+    let stash = stash_face_down_bottom_source(&mut r, tamer, "STASH-A5B");
+
+    let before = r.memory();
+    let tamer_card = r.game.player(0).battle_area[tamer.index as usize]
+        .top_card()
+        .handle();
+    let result = {
+        let mut ctx = EffectContext::new(&mut r.game, tamer_card, Some(tamer), 0);
+        ctx.trash_bottom_face_down_source(tamer)
+    };
+    assert!(
+        result,
+        "trash_bottom_face_down_source should trash the Tamer's face-down stash"
+    );
+
+    // The alias guard fired and its in-process assertions (host resolves to a
+    // Tamer, not to OTHER) all held.
+    assert!(
+        *fired.lock().unwrap(),
+        "the alias-guard observer must fire on the Tamer-host source trash"
+    );
+    assert!(
+        r.memory() > before,
+        "observer side-effect should have run (before={}, after={})",
+        before,
+        r.memory()
+    );
+
+    // The stashed source did land in the owner's trash.
+    assert_eq!(
+        r.game.player(0).trash.last().map(|c| c.handle()),
+        Some(stash),
+        "the trashed card is the Tamer's stashed face-down source"
+    );
+}
+
+// ─── Phase 2 Track D regression: inherited dispatch from deep stack ─────────
+
+/// An inherited CardEffect that gains 1 memory on OnOpponentSecurityRemoved.
+/// Records each fire's `ctx.source_card` (the resolving QueuedEffect's
+/// source-card handle) so the test can assert per-source identity.
+struct InheritedOppSecRemovedMemoryGain {
+    fires: Arc<Mutex<Vec<CardHandle>>>,
+}
+impl CardEffect for InheritedOppSecRemovedMemoryGain {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let fires = Arc::clone(&self.fires);
+        vec![Effect::inherited(card)
+            .name("inherited stack OnOpponentSecurityRemoved memory gain")
+            .timing(EffectTiming::OnOpponentSecurityRemoved)
+            .process(move |ctx| {
+                fires.lock().unwrap().push(ctx.source_card);
+                ctx.gain_memory(1);
+            })
+            .build()]
+    }
+}
+
+/// Track D regression: `enqueue_from_permanent` walks every below-top
+/// `card_sources` slot, not just the carrier's top card. Builds a 3-card
+/// stack (BOTTOM-D / MID-D / TOP-D) where BOTTOM-D and MID-D each carry an
+/// inherited OnOpponentSecurityRemoved observer; the TOP-D has no effect.
+/// After P0 attacks P1's security, BOTH inherited observers must fire from
+/// the single carrier permanent — confirming the dispatch walks the full
+/// digivolution stack (skipping only the top, which is scanned separately).
+#[test]
+fn inherited_stack_dispatch_fires_each_below_top_source_once() {
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::permanent::Permanent;
+
+    let filler: Vec<&str> = vec!["FD"; 10];
+    let mut atk_data = plain_digimon("ATK-D", "AttackerD", 5);
+    atk_data.level = Some(5);
+    atk_data.dp = Some(9000);
+
+    let mut r = DebugRunner::builder()
+        .add_card(atk_data)
+        .add_card(plain_digimon("BOTTOM-D", "BottomD", 3))
+        .add_card(plain_digimon("MID-D", "MidD", 4))
+        .add_card(plain_digimon("TOP-D", "TopD", 5))
+        .add_card(plain_digimon("SEC-D", "SecurityCardD", 3))
+        .add_card(plain_digimon("FD", "FD", 1))
+        .security(1, &["SEC-D"])
+        .deck(0, &filler)
+        .deck(1, &filler)
+        .memory(5)
+        .start();
+
+    let bottom_fires = Arc::new(Mutex::new(Vec::new()));
+    let mid_fires = Arc::new(Mutex::new(Vec::new()));
+    r.register_effect(
+        "BOTTOM-D",
+        Arc::new(InheritedOppSecRemovedMemoryGain {
+            fires: Arc::clone(&bottom_fires),
+        }),
+    );
+    r.register_effect(
+        "MID-D",
+        Arc::new(InheritedOppSecRemovedMemoryGain {
+            fires: Arc::clone(&mid_fires),
+        }),
+    );
+
+    // Place the attacker for P0.
+    let atk_h = r.place_on_field(0, "ATK-D", Some(0));
+
+    // Build the 3-card stack as a separate carrier on P0's battle area.
+    // Order: card_sources = [BOTTOM-D, MID-D, TOP-D]; top is TOP-D.
+    let stack_carrier = {
+        let g = r.game_mut();
+        let turn = g.turn_count;
+        let bottom_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BOTTOM-D")
+            .unwrap();
+        let mid_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "MID-D")
+            .unwrap();
+        let top_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TOP-D")
+            .unwrap();
+        let i_bottom = g.next_card_index();
+        let i_mid = g.next_card_index();
+        let i_top = g.next_card_index();
+        let bottom_src = CardSource::new(bottom_idx, 0, i_bottom);
+        let mid_src = CardSource::new(mid_idx, 0, i_mid);
+        let top_src = CardSource::new(top_idx, 0, i_top);
+        let mut perm = Permanent::new(bottom_src, turn);
+        perm.card_sources.push(mid_src);
+        perm.card_sources.push(top_src);
+        g.players[0].battle_area.push(perm);
+        let idx = g.players[0].battle_area.len() - 1;
+        PermanentHandle {
+            player: 0,
+            index: idx as u8,
+        }
+    };
+
+    let before = r.memory();
+    let _ = r.attack_player(atk_h, 1, true);
+    // Two below-top inherited observers — the drainer installs a
+    // TriggerOrder prompt for the controller to pick firing order.
+    // Auto-resolve consumes the prompt and fires both in queue order.
+    let _ = r.auto_resolve();
+
+    // BOTTOM-D and MID-D are both below the top slot; the dispatch must
+    // walk both sources once each. The fires are recorded with the
+    // queued effect's source_card so we can confirm per-source identity.
+    let bottom = bottom_fires.lock().unwrap();
+    let mid = mid_fires.lock().unwrap();
+    assert_eq!(
+        bottom.len(),
+        1,
+        "BOTTOM-D inherited observer must fire exactly once \
+         from the digivolution-stack walk (got {} fires)",
+        bottom.len()
+    );
+    assert_eq!(
+        mid.len(),
+        1,
+        "MID-D inherited observer must fire exactly once \
+         from the digivolution-stack walk (got {} fires)",
+        mid.len()
+    );
+
+    // Confirm the source_card on each queued effect matches the stacked
+    // card identity, not the carrier top card. This is the keying
+    // invariant Track C relies on for OPT-slot stability.
+    let stack = &r.game.players[0].battle_area[stack_carrier.index as usize].card_sources;
+    assert_eq!(stack.len(), 3, "stack must remain 3-deep after attack");
+    assert_eq!(
+        bottom[0],
+        stack[0].handle(),
+        "BOTTOM-D fire must carry source_card = bottom stacked card handle, not carrier top"
+    );
+    assert_eq!(
+        mid[0],
+        stack[1].handle(),
+        "MID-D fire must carry source_card = middle stacked card handle, not carrier top"
+    );
+    assert_ne!(
+        bottom[0],
+        stack[2].handle(),
+        "BOTTOM-D source_card must NOT be the carrier top — Track C OPT keying relies on per-source identity"
+    );
+
+    // Memory should have grown by 2 (one per below-top inherited observer).
+    assert_eq!(
+        r.memory(),
+        before + 2,
+        "memory should grow by 2 (one per below-top inherited observer); \
+         before={before}, after={}",
         r.memory()
     );
 }

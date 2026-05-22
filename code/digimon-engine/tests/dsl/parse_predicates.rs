@@ -27,6 +27,14 @@ fn parse_leaf_predicates() {
 
     let p = parse("owner: you");
     assert_eq!(p.owner, Some(PlayerRef::You));
+
+    // G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2):
+    // name-exclusion leaf used by the Jesmon-family union play filter.
+    let p = parse("name_not_shared_by_field_digimon: { of: you }");
+    assert_eq!(
+        p.name_not_shared_by_field_digimon.map(|s| s.player()),
+        Some(PlayerRef::You)
+    );
 }
 
 #[test]

@@ -412,17 +412,13 @@ fn bt24_008_on_play_accept_emits_trash_event_for_cost_card() {
 // Section 6 — Inherited: gains memory when opponent security removed (your turn)
 // ---------------------------------------------------------------------------
 
-/// Inherited happy path: Elizamon is on P0's battle area (single card, BT24-008
-/// is the top card so its effects including the inherited one are scanned by
-/// enqueue_from_permanent). P0 attacks P1's player → P1's security is removed →
+/// Inherited happy path: BT24-008 is placed as a digivolution SOURCE beneath a
+/// generic top card on P0's battle area. An inherited effect (the lower portion
+/// of a digi card) is active only while that card is a digivolution source
+/// sitting beneath another card (RULES_CONTEXT.md 15-3-1); the engine's
+/// `enqueue_from_permanent` source scan fires it from that position. P0's
+/// carrier attacks P1's player → P1's security is removed → BT24-008's
 /// inherited effect fires → P0 gains +1 memory.
-///
-/// NOTE: The engine's current enqueue_from_permanent only fires effects from
-/// the TOP card of each permanent, not from digivolution sources in the stack.
-/// Therefore inherited-from-stack tests cannot pass yet — those require a
-/// Phase 8 "stack scan" addition. This test uses BT24-008 as the sole card on
-/// the permanent (top card), which fires its effects regardless of the
-/// `inherited` flag.
 ///
 /// Memory starts at 9 (not 10) to leave room for the +1 gain; Rules cap is 10.
 #[test]
@@ -433,6 +429,8 @@ fn bt24_008_inherited_gains_memory_on_opponent_security_removed_your_turn() {
         .dsl_card("BT24-008")
         .expect("BT24-008 must be in embedded pack")
         .add_card(sec_filler)
+        // Generic top card — a plain Digimon with no registered effect.
+        .add_card(make_digimon("CARRIER-TOP", 4, 5000))
         .security(
             1,
             &[
@@ -446,9 +444,10 @@ fn bt24_008_inherited_gains_memory_on_opponent_security_removed_your_turn() {
         .memory(9) // leave room for +1 gain (cap is 10)
         .start();
 
-    // Place BT24-008 as the single top card on the field (turn_played=0 → no sickness).
-    // vortex=true bypasses any remaining summoning sickness checks.
-    let perm_handle = runner.place_on_field(0, "BT24-008", Some(0));
+    // Place BT24-008 as a digivolution source under a generic top card so its
+    // inherited effect is dispatched through the source scan (turn_played=0 → no
+    // sickness). The returned carrier handle is the attacker.
+    let perm_handle = runner.place_stack(0, &["BT24-008", "CARRIER-TOP"]);
 
     let sec_before = runner.security_count(1);
     let mem_before = runner.memory();
@@ -541,8 +540,9 @@ fn bt24_008_inherited_does_not_fire_on_opponents_turn() {
 /// OPT enforcement: two security removals in the same turn — only the first
 /// triggers the inherited effect.
 ///
-/// Uses BT24-008 as the top card (the attacker) so its effects are scanned
-/// by enqueue_from_permanent when OnOpponentSecurityRemoved fires.
+/// Places BT24-008 as a digivolution source beneath a generic top card; the
+/// carrier (the attacker) carries BT24-008's inherited effect, which is
+/// dispatched through the source scan when OnOpponentSecurityRemoved fires.
 ///
 /// Memory starts at 9 (below cap of 10) so the first gain is observable.
 /// After the second attack, memory must NOT increase further (OPT lockout).
@@ -554,6 +554,8 @@ fn bt24_008_inherited_opt_blocks_second_activation_same_turn() {
         .dsl_card("BT24-008")
         .expect("BT24-008 must be in embedded pack")
         .add_card(sec_filler)
+        // Generic top card — a plain Digimon with no registered effect.
+        .add_card(make_digimon("CARRIER-TOP", 4, 5000))
         .security(
             1,
             &[
@@ -567,7 +569,9 @@ fn bt24_008_inherited_opt_blocks_second_activation_same_turn() {
         .memory(9) // leave room for the first +1; cap is 10
         .start();
 
-    let perm_handle = runner.place_on_field(0, "BT24-008", Some(0));
+    // BT24-008 sits as a digivolution source under a generic top card; the
+    // returned carrier handle is the attacker.
+    let perm_handle = runner.place_stack(0, &["BT24-008", "CARRIER-TOP"]);
 
     // First attack → inherited fires → +1 memory (9 → 10).
     runner.attack_player(perm_handle, 1, true);
@@ -614,6 +618,8 @@ fn bt24_008_inherited_opt_resets_after_end_turn() {
         .expect("BT24-008 must be in embedded pack")
         .add_card(sec_filler)
         .add_card(deck_pad)
+        // Generic top card — a plain Digimon with no registered effect.
+        .add_card(make_digimon("CARRIER-TOP", 4, 5000))
         // P0 needs a deck so begin_turn draws don't cause a deckout on turn 3.
         .deck(
             0,
@@ -637,7 +643,9 @@ fn bt24_008_inherited_opt_resets_after_end_turn() {
         .memory(9) // leave room for first +1 gain (cap is 10)
         .start();
 
-    let perm_handle = runner.place_on_field(0, "BT24-008", Some(0));
+    // BT24-008 sits as a digivolution source under a generic top card; the
+    // returned carrier handle is the attacker.
+    let perm_handle = runner.place_stack(0, &["BT24-008", "CARRIER-TOP"]);
 
     // Fire once on turn 1 (P0's turn). Memory: 9 → 10.
     runner.attack_player(perm_handle, 1, true);

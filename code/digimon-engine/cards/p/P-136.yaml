@@ -15,14 +15,15 @@ traits: [LIBERATOR]
 #
 # Supported faithfully here:
 # - Optional [On Play] exact-name [Shoemon] hand play without paying cost.
+# - [Your Turn][OPT] Puppet-digivolve observer with source-bound suspend-cost
+#   via Track B's `activation_cost: { suspend_self: true }`. The trigger is
+#   mandatory once a same-controller Digimon digivolves into a Puppet on your
+#   turn — if Arisa is unsuspended the engine pays the cost and grants +1
+#   memory; if already suspended the cost-failure silently skips the body and
+#   consumes the once_per_turn slot (per Working Rule 17). Since multi-Arisa
+#   sources still resolve as a TriggerOrder bundle, the source-bound preflight
+#   from Track B's substrate naturally surfaces only Arisas that can pay.
 # - [Security] play this Tamer without paying cost.
-#
-# Omitted rather than approximated:
-# - The [Your Turn][Once Per Turn] Puppet-digivolve observer requires a
-#   reusable source-bound suspend-cost preflight: the trigger should only be
-#   offered when this exact Tamer is unsuspended and can be suspended as the
-#   printed cost. Implementing that by auto-suspending or by a broad event
-#   observer would hide a player-visible cost decision.
 
 effects:
   - when: on_play
@@ -39,6 +40,17 @@ effects:
               - name_is: Shoemon
           prompt: "Play 1 [Shoemon] from your hand without paying the cost"
       - play_from_hand_free: { of: you, hand_index: shoemon }
+
+  - when: on_digivolve
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_trait_has: Puppet
+    summary: "[Your Turn][OPT] On your Digimon digivolving into Puppet, suspend this Tamer -> +1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
 
   - when: on_security
     summary: "[Security] Play this card without paying the cost"

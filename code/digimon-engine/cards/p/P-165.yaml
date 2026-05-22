@@ -18,11 +18,15 @@ effects:
       - play_from_security: {}
 
   - when: [on_play, when_digivolving]
-    summary: "Play 1 Familiar Token"
+    summary: "Play 1 Familiar Token; at end of opponent's turn delete that token"
     process:
       - play_token:
           controller: you
           token_name: familiar
+          bind_as: tok
+      - schedule_delete_played_at_turn_end:
+          binding: tok
+          at: opponents_turn
 
   - scope: inherited
     kind: grant_keyword

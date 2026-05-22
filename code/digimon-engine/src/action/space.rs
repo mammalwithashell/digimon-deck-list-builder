@@ -2,7 +2,13 @@
 /// These are for Rules::standard() — EDH/Titan will derive larger spaces from Rules.
 
 /// Total action space size for standard 2-player game.
-pub const ACTION_SPACE_SIZE: usize = 2168;
+///
+/// Bumped 2168 → 2192 in Task S1.3 to append a breeding-carrier
+/// source-selection sub-range (`BREEDING_SOURCE_SELECT_*` below). This is a
+/// deliberate action-space version bump: it changes the policy/value head
+/// width, so existing trained RL models must be retrained — see
+/// `docs/MODEL_CATALOG.md` and `docs/TRAINING_RUNBOOK.md`.
+pub const ACTION_SPACE_SIZE: usize = 2192;
 
 // Action ranges
 pub const PLAY_HAND_START: u16 = 0;
@@ -51,6 +57,20 @@ pub const TRASH_EFFECT_START: u16 = 1150;
 pub const TRASH_EFFECT_END: u16 = 1195;
 pub const SOURCE_SELECT_START: u16 = 2000;
 pub const SOURCE_SELECT_END: u16 = 2168;
+
+/// Number of breeding carriers addressable for source selection: one
+/// digivolving stack per player in standard 2-player.
+pub const BREEDING_SOURCE_CARRIERS: u16 = 2;
+/// Start of the breeding-carrier source-selection sub-range. Appended
+/// immediately after `SOURCE_SELECT_END` so all source-selection action
+/// IDs stay contiguous.
+pub const BREEDING_SOURCE_SELECT_START: u16 = SOURCE_SELECT_END; // 2168
+/// End (exclusive) of the breeding-carrier source-selection sub-range.
+/// 2 carriers x SOURCES_PER_FIELD (12) = 24 slots. Layout:
+/// `2168..2180` = player 0 breeding sources 0..12,
+/// `2180..2192` = player 1 breeding sources 0..12.
+pub const BREEDING_SOURCE_SELECT_END: u16 =
+    BREEDING_SOURCE_SELECT_START + BREEDING_SOURCE_CARRIERS * SOURCES_PER_FIELD; // 2192
 
 // Sub-range constants
 pub const TARGETS_PER_ATTACKER: u16 = 15; // 14 field slots + security
@@ -143,6 +163,26 @@ pub fn encode_source_select(field: u16, source: u16) -> Option<u16> {
     Some(SOURCE_SELECT_START + field * SOURCES_PER_FIELD + source)
 }
 
+/// Encode a breeding-carrier source selection from (carrier_owner, source).
+///
+/// The breeding carrier is addressed by its owning `player` (not a
+/// `PermanentHandle.index`) — consistent with `encode_breeding_select`,
+/// since each player holds exactly one digivolving stack in the breeding
+/// area. Returns `None` for an out-of-range player or source slot.
+pub fn encode_breeding_source_select(player: u8, source: u16) -> Option<u16> {
+    if (player as u16) >= BREEDING_SOURCE_CARRIERS || source >= SOURCES_PER_FIELD {
+        return None;
+    }
+    Some(BREEDING_SOURCE_SELECT_START + player as u16 * SOURCES_PER_FIELD + source)
+}
+
+/// Decode a breeding-carrier source selection into (carrier_owner, source).
+/// Caller must ensure `action` is in `BREEDING_SOURCE_SELECT_START..END`.
+pub fn decode_breeding_source_select(action: u16) -> (u16, u16) {
+    let offset = action - BREEDING_SOURCE_SELECT_START;
+    (offset / SOURCES_PER_FIELD, offset % SOURCES_PER_FIELD)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -190,5 +230,51 @@ mod tests {
         let (field, source) = decode_source_select(2015);
         assert_eq!(field, 1);
         assert_eq!(source, 3);
+    }
+
+    #[test]
+    fn breeding_source_select_roundtrip() {
+        // Player 0, source 3 → 2168 + 0*12 + 3 = 2171.
+        let action = encode_breeding_source_select(0, 3).expect("valid p0 encode");
+        assert_eq!(action, BREEDING_SOURCE_SELECT_START + 3);
+        let (player, source) = decode_breeding_source_select(action);
+        assert_eq!(player, 0);
+        assert_eq!(source, 3);
+
+        // Player 1, source 0 → 2168 + 1*12 + 0 = 2180.
+        let action = encode_breeding_source_select(1, 0).expect("valid p1 encode");
+        assert_eq!(action, BREEDING_SOURCE_SELECT_START + SOURCES_PER_FIELD);
+        let (player, source) = decode_breeding_source_select(action);
+        assert_eq!(player, 1);
+        assert_eq!(source, 0);
+
+        // Player 1, last source slot (11) → 2168 + 12 + 11 = 2191.
+        let action = encode_breeding_source_select(1, SOURCES_PER_FIELD - 1)
+            .expect("valid p1 last-slot encode");
+        assert_eq!(action, BREEDING_SOURCE_SELECT_END - 1);
+        let (player, source) = decode_breeding_source_select(action);
+        assert_eq!(player, 1);
+        assert_eq!(source, SOURCES_PER_FIELD - 1);
+    }
+
+    #[test]
+    fn breeding_source_select_range() {
+        // The sub-range is exactly 24 IDs and abuts the new ceiling.
+        assert_eq!(BREEDING_SOURCE_SELECT_START, SOURCE_SELECT_END);
+        assert_eq!(BREEDING_SOURCE_SELECT_START, 2168);
+        assert_eq!(BREEDING_SOURCE_SELECT_END, 2192);
+        assert_eq!(
+            BREEDING_SOURCE_SELECT_END - BREEDING_SOURCE_SELECT_START,
+            BREEDING_SOURCE_CARRIERS * SOURCES_PER_FIELD
+        );
+        // Source-select range stays contiguous and the new range is LAST.
+        assert_eq!(ACTION_SPACE_SIZE, 2192);
+        assert_eq!(BREEDING_SOURCE_SELECT_END as usize, ACTION_SPACE_SIZE);
+
+        // Out-of-range carriers / source slots are rejected.
+        assert_eq!(encode_breeding_source_select(BREEDING_SOURCE_CARRIERS as u8, 0), None);
+        assert_eq!(encode_breeding_source_select(2, 0), None);
+        assert_eq!(encode_breeding_source_select(0, SOURCES_PER_FIELD), None);
+        assert_eq!(encode_breeding_source_select(0, 99), None);
     }
 }

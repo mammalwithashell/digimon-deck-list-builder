@@ -153,6 +153,28 @@ impl std::fmt::Debug for ModifierEntry {
     }
 }
 
+/// Compute the `pending_skips` value for a modifier being installed *now*.
+///
+/// `*NextTurn` expiries ([`Expiry::EndOfOpponentsNextTurn`] /
+/// [`Expiry::EndOfYourNextTurn`]) must skip the turn-end that would
+/// otherwise expire the entry one turn early. That only happens when the
+/// install lands *during* that very turn:
+/// - `EndOfOpponentsNextTurn` installed during an opponent's turn — the
+///   current opponent turn-end must be skipped (returns 1).
+/// - `EndOfYourNextTurn` installed during the source player's own turn —
+///   the current own turn-end must be skipped (returns 1).
+///
+/// Every other case (all non-`*NextTurn` expiries, and `*NextTurn`
+/// installs on a turn that is not the about-to-expire one) returns 0 —
+/// the first matching turn-end is genuinely the *next* turn.
+pub fn pending_skips_for_install(expiry: Expiry, source_player: u8, turn_player: u8) -> u8 {
+    match expiry {
+        Expiry::EndOfOpponentsNextTurn if turn_player != source_player => 1,
+        Expiry::EndOfYourNextTurn if turn_player == source_player => 1,
+        _ => 0,
+    }
+}
+
 impl ModifierEntry {
     /// Back-compat constructor: no cause filter, no replacement condition.
     pub fn simple(modifier: ModifierType, value: i32, expiry: Expiry, source_player: u8) -> Self {
@@ -863,6 +885,28 @@ impl ModifierRegistry {
             .unwrap_or(false)
     }
 
+    /// Net `<Security A. +N>` / `<Security A. -N>` contributed by *granted*
+    /// keyword entries on `target` (e.g. an aura's
+    /// `grant_keyword: SecurityAttackPlus`). Printed face/inherited keywords
+    /// on the permanent's `card_sources` are summed separately by
+    /// `Game::security_attack_keyword_bonus`; this folds in the registry side
+    /// so aura-granted Security Attack keywords are actually consumed at the
+    /// security loop.
+    pub fn granted_security_attack_keyword_bonus(&self, target: PermanentHandle) -> i32 {
+        self.permanent_keywords
+            .get(&target)
+            .map(|kws| {
+                kws.iter()
+                    .map(|entry| match entry.keyword {
+                        Keyword::SecurityAttackPlus(n) => n as i32,
+                        Keyword::SecurityAttackMinus(n) => -(n as i32),
+                        _ => 0,
+                    })
+                    .sum()
+            })
+            .unwrap_or(0)
+    }
+
     /// Whether dispatch of `timing` should be suppressed for `target`.
     ///
     /// True iff there is at least one `ModifierType::DisableEffect` entry on
@@ -1368,6 +1412,54 @@ mod tests {
         );
         assert_eq!(reg.sum(target, ModifierType::ChangeDp), 1000);
         assert!(reg.has(target, ModifierType::ChangeDp));
+    }
+
+    #[test]
+    fn pending_skips_for_install_next_turn_variants() {
+        // EndOfOpponentsNextTurn: the relevant turn-end is an opponent's
+        // turn-end. Installed on the source player's OWN turn, the next
+        // opponent turn-end IS "the opponent's next turn" — skip 0.
+        assert_eq!(
+            pending_skips_for_install(Expiry::EndOfOpponentsNextTurn, 0, 0),
+            0,
+            "own-turn install of EndOfOpponentsNextTurn needs no skip"
+        );
+        // Installed DURING the opponent's turn, the current opponent
+        // turn-end would expire it one turn early — skip 1.
+        assert_eq!(
+            pending_skips_for_install(Expiry::EndOfOpponentsNextTurn, 0, 1),
+            1,
+            "mid-opponent-turn install of EndOfOpponentsNextTurn must skip the current opp turn-end"
+        );
+        // EndOfYourNextTurn is the mirror: relevant turn-end is the
+        // source player's own turn-end.
+        assert_eq!(
+            pending_skips_for_install(Expiry::EndOfYourNextTurn, 0, 0),
+            1,
+            "own-turn install of EndOfYourNextTurn must skip the current own turn-end"
+        );
+        assert_eq!(
+            pending_skips_for_install(Expiry::EndOfYourNextTurn, 0, 1),
+            0,
+            "opponent-turn install of EndOfYourNextTurn needs no skip"
+        );
+    }
+
+    #[test]
+    fn pending_skips_for_install_zero_for_non_next_turn_expiries() {
+        for expiry in [
+            Expiry::EndOfTurn,
+            Expiry::EndOfOpponentsTurn,
+            Expiry::EndOfYourTurn,
+            Expiry::Permanent,
+        ] {
+            assert_eq!(
+                pending_skips_for_install(expiry, 0, 0),
+                0,
+                "non-*NextTurn expiry {expiry:?} never carries pending_skips"
+            );
+            assert_eq!(pending_skips_for_install(expiry, 0, 1), 0);
+        }
     }
 
     #[test]

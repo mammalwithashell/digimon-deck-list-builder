@@ -71,37 +71,24 @@
 #
 # | Card-text element                                                   | Status |
 # |---------------------------------------------------------------------|--------|
-# | [Main] select own Digimon + digivolve from hand Lv5+ [Free] cost-4 | BLOCKED — G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET |
+# | [Main] select own Digimon + digivolve from hand Lv5+ [Free] cost-4 | IMPLEMENTED via select_own_permanent + select_hand + effect_initiated_digivolve |
 # | [Main] "Then, place this card in the battle area"                   | IMPLEMENTED via place_self_as_delay_option |
 # | [All Turns] subject is own Digimon with [Free] trait                | IMPLEMENTED via trait_has: Free + replacement_subject_is_mine |
 # | [All Turns] "other than by one of your effects"                     | IMPLEMENTED via none_of: [replacement_cause: own_effect] |
 # | [All Turns] <Delay> cost (trash this card)                          | IMPLEMENTED via cost: delay_self: true |
 # | [All Turns] digivolve subject into Imperialdramon-name hand card    | IMPLEMENTED via choose: from: hand + digivolve_without_cost |
 # | [All Turns] prevent the deletion                                    | IMPLEMENTED via outcome: prevent |
-# | [Security] play Davis/Ken Tamer from hand or trash, free            | PARTIAL — hand branch via select_hand/play_from_hand_free; trash branch via select_trash/play_from_trash_free; zone-choice workaround for G-DSL-UNION-PLAY-FREE |
+# | [Security] play Davis/Ken Tamer from hand or trash, free            | IMPLEMENTED via select_union_zone (hand∪trash) + play_union_bound_free |
 # | [Security] "Then, place this card in the battle area"               | IMPLEMENTED via place_self_as_delay_option |
 #
-# ─── DSL gap: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET ────
+# ─── DSL gap: G-DSL-UNION-PLAY-FREE — RESOLVED ───────────────────────────────
 #
-# Clause A's core mechanic (select own Digimon → select hand card Lv5+ [Free]
-# trait cost-4 → digivolve) is the same gap family as BT16-040 Wormmon.
-# The process chain terminates after the Digimon pick; the subsequent hand-card
-# pick and `effect_initiated_digivolve` verb do not resume. Tracked in
-# qa/dsl-vocab-gaps.md §G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET.
-#
-# Consequence: Clause A's process only surfaces the Main timing trigger to
-# install this card as a Delay-Option permanent (via `place_self_as_delay_option`).
-# The digivolve prompt is omitted until the gap closes. Behavioral tests for
-# the digivolve sub-clause are #[ignore]'d.
-#
-# ─── DSL gap: G-DSL-UNION-PLAY-FREE ──────────────────────────────────────────
-#
-# Clause C prints "from your hand or trash". `select_union_zone` binds a
-# Card-typed handle; `play_from_hand_free` / `play_from_trash_free` need a
-# HandIndex / TrashIndex binding. Workaround: explicit `select_effect_choice`
-# (From hand / From trash) with branching per BT17-095 / BT21-015 pattern.
-# The engine does not auto-collapse when only one zone is populated.
-# Tracked in qa/dsl-vocab-gaps.md §G-DSL-UNION-PLAY-FREE.
+# Clause C prints "from your hand or trash". This is now authored natively
+# with `select_union_zone` (zones: [hand, trash]) feeding `play_union_bound_free`
+# — the union binding carries the origin zone, so the free play replays the
+# card from its true zone. The union selection auto-collapses to the single
+# populated zone when only one holds an eligible card. No zone-choice
+# workaround is needed. Same idiom as ST19-08 / EX11-022 / BT17-095.
 #
 # ─── option_flow/replacement_integration.rs compatibility ─────────────────────
 #
@@ -131,13 +118,6 @@ effects:
   # Digimon card with the [Free] trait in your hand with the digivolution cost
   # reduced by 4. Then, place this card in the battle area."
   #
-  # BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET
-  #   (qa/dsl-vocab-gaps.md). The `select_own_permanent → select_hand →
-  #   effect_initiated_digivolve` chain does not resume after the Digimon pick.
-  #   Until the gap closes the digivolve sub-clause is omitted; only
-  #   `place_self_as_delay_option` fires, which correctly installs this card
-  #   as a Delay-Option permanent so Clause B can observe.
-  #
   # `optional: true` — DCGO `canNoSelect: true` on both picks; the player may
   # decline entirely (and even skip the Delay-Option placement, per the printed
   # "may digivolve" grammar — the placement is a tail of the same "may"
@@ -147,39 +127,33 @@ effects:
   # activate as `optional: true` (the player may decline the trigger), but
   # once activated, `place_self_as_delay_option` runs unconditionally.
   #
-  # Since the DSL has no auto-selection suppression for the digivolve sub-
-  # clause, we omit it entirely and list `place_self_as_delay_option` as the
-  # sole process step.
   - when: main_from_hand
     optional: true
-    summary: "[Main] (BLOCKED: digivolve into Lv5+ [Free] hand card cost-4) Then place self in battle area as Delay permanent"
+    summary: "[Main] 1 of your Digimon may digivolve into a Lv5+ [Free] hand card, cost -4; then place self in battle area as Delay permanent"
     process:
-      # BLOCKED step (digivolve) — omitted pending G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET.
-      # When gap closes, add before place_self_as_delay_option:
-      #   - select_own_permanent:
-      #       bind_as: digi_target
-      #       filter:
-      #         all_of:
-      #           - kind: digimon
-      #           - any_hand_card_can_digivolve_onto: true   # (hypothetical; engine needs support)
-      #       optional: true
-      #       prompt: "Select 1 of your Digimon to digivolve"
-      #   - select_hand:
-      #       of: you
-      #       bind_as: digi_card
-      #       optional: true
-      #       filter:
-      #         all_of:
-      #           - kind: digimon
-      #           - level_gte: 5
-      #           - trait_has: "Free"
-      #       prompt: "Select a Lv5+ [Free] trait hand card to digivolve (cost -4)"
-      #   - effect_initiated_digivolve:
-      #       target: digi_target
-      #       from_hand: digi_card
-      #       cost_reduction: 4
-      #
-      # Final step: place this Option in the battle area as a Delay permanent.
+      - select_own_permanent:
+          bind_as: digi_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+          prompt: "Select 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: digi_card
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 5
+              - trait_has: "Free"
+          prompt: "Select a Lv5+ [Free] trait hand card to digivolve (cost -4)"
+      - effect_initiated_digivolve:
+          target: digi_target
+          from_hand: digi_card
+          cost: { reduce: 4 }
+          ignore_requirements: false
+      # Place this Option in the battle area as a Delay permanent.
       # DCGO: `CardEffectCommons.PlaceDelayOptionCards` always fires after the
       # digivolve attempt.
       - place_self_as_delay_option: {}
@@ -261,14 +235,16 @@ effects:
   # with [Davis Motomiya] or [Ken Ichijoji] in its name from your hand or trash
   # without paying the cost. Then, place this card in the battle area."
   #
-  # `optional: true` — DCGO `canNoSelect: true` on both per-zone picks; player
-  # may decline without playing any Tamer.
+  # `optional: true` — DCGO `canNoSelect: true`; player may decline without
+  # playing any Tamer.
   #
-  # Workaround for G-DSL-UNION-PLAY-FREE: hand-or-trash union play requires a
-  # `select_union_zone` step but the resulting Card-typed binding cannot feed
-  # `play_from_hand_free` / `play_from_trash_free`. Per BT17-095 / BT21-015
-  # pattern: explicit `select_effect_choice` (From hand / From trash) with
-  # branching select_hand/select_trash per branch.
+  # G-DSL-UNION-PLAY-FREE resolved: the hand-or-trash union play is authored
+  # natively with `select_union_zone` (zones: [hand, trash]) followed by
+  # `play_union_bound_free`. The union binding carries the origin zone, so
+  # `play_union_bound_free` replays the picked card from its true zone for
+  # free. When only one zone holds an eligible Tamer, the union selection
+  # auto-collapses to that zone — no explicit zone-choice prompt is needed.
+  # Same idiom as ST19-08 / EX11-022 / BT17-095.
   #
   # "Then, place this card in the battle area." — `place_self_as_delay_option: {}`
   # is the correct verb (cf. BT17-095 Clause A). This seats this Option as a
@@ -285,47 +261,22 @@ effects:
     optional: true
     summary: "[Security][Inherited] You may play 1 [Davis Motomiya]/[Ken Ichijoji] Tamer from hand or trash free; then place self in battle area"
     process:
-      # G-DSL-UNION-PLAY-FREE workaround: surface the zone choice explicitly.
-      # DCGO would auto-collapse to the populated zone when only one has
-      # eligible cards; this DSL form always presents both branches.
-      - select_effect_choice:
-          labels: ["From hand", "From trash"]
-          bind_as: zone_choice
-          prompt: "From which area do you play a [Davis Motomiya] or [Ken Ichijoji] Tamer?"
-      - if:
-          condition: { equals: [zone_choice, 0] }
-          then:
-            - select_hand:
-                of: you
-                bind_as: picked_hand
-                optional: true
-                filter:
-                  all_of:
-                    - kind: tamer
-                    - any_of:
-                        - name_contains: "Davis Motomiya"
-                        - name_contains: "Ken Ichijoji"
-                prompt: "Play 1 [Davis Motomiya] or [Ken Ichijoji] Tamer from hand (free)"
-            - play_from_hand_free:
-                of: you
-                hand_index: picked_hand
-      - if:
-          condition: { equals: [zone_choice, 1] }
-          then:
-            - select_trash:
-                of: you
-                bind_as: picked_trash
-                optional: true
-                filter:
-                  all_of:
-                    - kind: tamer
-                    - any_of:
-                        - name_contains: "Davis Motomiya"
-                        - name_contains: "Ken Ichijoji"
-                prompt: "Play 1 [Davis Motomiya] or [Ken Ichijoji] Tamer from trash (free)"
-            - play_from_trash_free:
-                of: you
-                hand_index: picked_trash
+      # Native hand∪trash union selection — auto-collapses to the single
+      # populated zone when only one holds an eligible Tamer.
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: picked_tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - any_of:
+                  - name_contains: "Davis Motomiya"
+                  - name_contains: "Ken Ichijoji"
+          prompt: "You may play 1 [Davis Motomiya] or [Ken Ichijoji] Tamer from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: picked_tamer
       # Final step: place this Option in controller's battle area as a Delay
       # permanent. DCGO: `CardEffectCommons.PlaceDelayOptionCards(card, ...)`.
       - place_self_as_delay_option: {}

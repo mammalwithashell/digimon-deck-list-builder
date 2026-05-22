@@ -128,6 +128,15 @@ pub enum Timing {
     MainFromTrash,
     Counter,
     BeforePayCost,
+    /// Sibling of `before_pay_cost` for observer-style triggered bodies
+    /// (e.g. "[Your Turn] When this Digimon would DNA digivolve into a
+    /// green Digimon card, gain 1 memory."). Fires at the same dispatch
+    /// point as `before_pay_cost` but runs the clause's `process:` body
+    /// instead of accumulating cost reduction. Pair with
+    /// `cost_target: { ... }` predicates inside `active_when:` to gate on
+    /// the digivolve-target card's traits/colors/level/name.
+    /// G-BEFORE-PAY-COST-GAIN-MEMORY (Phase 2 Track H closure).
+    BeforePayCostObserve,
     Delayed,
 }
 
@@ -307,6 +316,19 @@ pub struct AuraBody {
     /// `until_condition` field; tracked separately).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub while_condition: Option<PredicateSpec>,
+
+    /// PUPPETS-G008 / G-OPPONENT-SECURITY-DP-AURA: when `true`, this aura's
+    /// `dp_modifier` is contributed to the attacker's `security_dp_adjustment`
+    /// during a security battle (the printed text "all of your opponent's
+    /// security Digimon get -3000 DP" on cards like ST19-03 / EX7-024).
+    /// Lowers to `EffectBuilder::applies_to_opponent_security_dp()`. The
+    /// aura must be inherited so the flag rides under the attacker's
+    /// digivolution stack and surfaces during the security check. Use with
+    /// `scope: inherited` + `active_when: { your_turn: true }` to match the
+    /// printed turn gate. Distinct from a battle-area DP aura — only the
+    /// security battle context consults this flag (`combat.rs:260`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub applies_to_opponent_security_dp: Option<bool>,
 }
 
 /// Inline keyword grant used inside [`AuraBody`].
@@ -331,6 +353,16 @@ pub struct CostReductionBody {
     pub when_playing_this: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub when_any_ally_played: Option<PredicateSpec>,
+    /// Digivolution-target-keyed cost-reduction trigger. When set, the
+    /// reduction fires only for a DIGIVOLVE cost (not a play) whose target
+    /// card — the card being digivolved INTO — matches this predicate. The
+    /// predicate is evaluated against the digivolve target as a `Card`
+    /// subject, so the full card-shape vocabulary (`name_contains`,
+    /// `trait_has`, `any_of`, ...) applies. Models card text of the form
+    /// "When one of your Digimon would digivolve into a [Name] card, ...".
+    /// Used by BT5-092 (Nokia Shiramine). `G-COST-REDUCTION-DIGIVOLVE-INTO`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub when_any_ally_digivolves_into: Option<PredicateSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub condition: Option<PredicateSpec>,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]

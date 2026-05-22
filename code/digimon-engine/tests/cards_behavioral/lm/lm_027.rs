@@ -546,7 +546,7 @@ fn lm_027_security_no_selection_when_trash_is_empty() {
 /// at selection time, so the large Digimon will appear as a valid target
 /// until the gap is closed. Test is #[ignore]'d until fixed.
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — dp_lte filter not evaluated by select_trash"]
+#[ignore = "PENDING card-local authoring: LM-027.yaml security clause's select_trash filter does not include `dp_lte: 2000` (engine-side eval_card_fields now honors dp_lte for card subjects — G-PRED-DP-LTE substrate is closed; this is a card-local YAML follow-up)"]
 fn lm_027_security_no_selection_when_only_large_red_digimon_in_trash() {
     let large = make_large_red_digimon("LM027-LARGE-RED");
 

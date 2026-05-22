@@ -122,6 +122,99 @@ fn petrification_on_deletion_trashes_top_security() {
     );
 }
 
+/// Atho/René/Por (Royal Knights Jesmon token) materializes through the
+/// standard `play_token` pipeline with printed stats and keywords.
+#[test]
+fn test_030_play_token_spawns_atho_rene_por_with_printed_keywords() {
+    use digimon_engine::enums::{CardColor, Keyword};
+
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("TEST-030", "PlayAthoReneAndPorToken"))
+        .hand(0, &["TEST-030"])
+        .memory(5)
+        .start();
+
+    assert_eq!(r.battle_area_size(0), 0);
+    r.play(0, 0);
+
+    assert_eq!(r.battle_area_size(0), 2, "test card + Atho, René & Por token");
+
+    let token_perm = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token)
+        .expect("token missing from battle_area");
+    let card_data = &r.game.card_data;
+    assert_eq!(
+        token_perm.top_card().card_name(card_data),
+        "Atho, René & Por"
+    );
+    assert_eq!(token_perm.base_dp(card_data), Some(6000));
+
+    // Printed keywords must be visible to the unified `has_keyword` query.
+    let token_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: r
+            .game
+            .player(0)
+            .battle_area
+            .iter()
+            .position(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token)
+            .unwrap() as u8,
+    };
+    assert!(r.game.has_keyword(token_handle, Keyword::Reboot));
+    assert!(r.game.has_keyword(token_handle, Keyword::Blocker));
+    let red_black = (1u8 << CardColor::Red as u8) | (1u8 << CardColor::Black as u8);
+    assert!(r.game.has_keyword(token_handle, Keyword::Decoy(red_black)));
+}
+
+/// Hinukamuy (Royal Knights — BT23-057 Gankoomon token) materializes
+/// through the standard `play_token` pipeline with its printed stats and
+/// keywords: Digimon/White/6000 DP/<Alliance> <Reboot> <Blocker>.
+#[test]
+fn test_031_play_token_spawns_hinukamuy_with_printed_keywords() {
+    use digimon_engine::enums::Keyword;
+
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("TEST-031", "PlayHinukamuyToken"))
+        .hand(0, &["TEST-031"])
+        .memory(5)
+        .start();
+
+    assert_eq!(r.battle_area_size(0), 0);
+    r.play(0, 0);
+
+    assert_eq!(r.battle_area_size(0), 2, "test card + Hinukamuy token");
+
+    let token_perm = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token)
+        .expect("token missing from battle_area");
+    let card_data = &r.game.card_data;
+    assert_eq!(token_perm.top_card().card_name(card_data), "Hinukamuy Token");
+    assert_eq!(token_perm.base_dp(card_data), Some(6000));
+
+    // Printed keywords must be visible to the unified `has_keyword` query.
+    let token_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: r
+            .game
+            .player(0)
+            .battle_area
+            .iter()
+            .position(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Token)
+            .unwrap() as u8,
+    };
+    assert!(r.game.has_keyword(token_handle, Keyword::Alliance));
+    assert!(r.game.has_keyword(token_handle, Keyword::Reboot));
+    assert!(r.game.has_keyword(token_handle, Keyword::Blocker));
+}
+
 #[test]
 fn familiar_on_deletion_prompts_opponent_target_and_applies_minus_3000() {
     use digimon_engine::action::build_action_mask;

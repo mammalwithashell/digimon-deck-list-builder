@@ -1,0 +1,147 @@
+# AD1-019 Matt Ishida & T.K. Takaishi — Tamer, Blue+Yellow, Cost 3.
+#
+# NOTE — this card has NO row in data/cards.json (incomplete ingest; the
+# project plans mislabel AD1-019 as an "empty/placeholder card"). It is in
+# fact a real Tamer. Card details below are sourced per CLAUDE.md "Source
+# priority": the official cardlist (world.digimoncard.com AD-01) and the
+# DCGO behavioral reference DCGO/Assets/Scripts/CardEffect/AD1/Blue/AD1_019.cs.
+#
+# Printed card text:
+#
+#   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
+#   [Your Turn] When any of your Digimon digivolve into an [ADVENTURE] trait
+#   Digimon, by suspending this Tamer, you may play 1 [ADVENTURE] trait card
+#   from your hand. For every 2 of your Tamers' colors, reduce this effect's
+#   play cost by 1.
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/AD1/Blue/AD1_019.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartMainPhase` →
+#   `CardEffectFactory.Gain1MemoryTamerOpponentDigimonEffect(card)`. Gains 1
+#   memory when the opponent has a Digimon. Not optional, no [Once Per Turn].
+#   DSL: `when: start_of_your_main_phase` + `condition: any_permanent
+#   { of: opponent, zone: battle_area, kind: digimon }` + `gain_memory: 1`.
+#   Identical shape to sibling Tamers EX7-063 / BT22-083 clause "[Start of
+#   Your Main Phase] If your opponent has a Digimon, gain 1 memory".
+#
+# Clause 2 — `EffectTiming.OnEnterFieldAnyone`, `CanUseCondition` =
+#   `IsExistOnBattleArea(card) && IsOwnerTurn(card) &&
+#   CanTriggerWhenPermanentDigivolving(..., PermanentCondition)` where
+#   `PermanentCondition` = the digivolving permanent is the controller's
+#   battle-area Digimon whose `TopCard.EqualsTraits("ADVENTURE")`. Body:
+#   `SuspendPeremanentAndProcessAccordingToResult` (the "by suspending this
+#   Tamer" activation cost), then a `SelectHandEffect` (`canNoSelect: true`,
+#   `maxCount: 1`, `mode: PlayForCost`) over ADVENTURE-trait playable cards,
+#   with `SetReducedCostTuple((reduceCost, null))` where
+#   `reduceCost = Combinations.GetDifferenetColorCardCount(tamerCards) / 2`
+#   (floor of distinct colors across the controller's battle-area Tamers,
+#   divided by 2).
+#
+#   Clause 2 — IMPLEMENTED (G-FORMULA-COST-DELTA resolved 2026-05-20).
+#   The "play 1 [ADVENTURE] card from hand with the play cost reduced by
+#   floor(distinct Tamer colors / 2)" body uses `play_from_hand` with a
+#   FORMULA-valued `cost_delta`: `cost_delta: { reduce_fn: <FormulaSpec> }`.
+#   The `CostDelta` enum (code/digimon-dsl/src/step.rs) now admits a
+#   `ReduceFn { reduce_fn: FormulaSpec }` variant — the formula is evaluated
+#   at resolution time and the result is subtracted from the printed play
+#   cost (clamped at 0). The reduction formula is
+#   `floor_div(base_per_delta(distinct_colors_count{of: you, zone:
+#   battle_area, filter: {kind: tamer}}, delta: 1), 2)`. The activation-cost
+#   half (`activation_cost: { suspend_self: true }`), the `on_digivolve`
+#   ADVENTURE-result observer, the `active_when: { your_turn: true }` gate,
+#   and the `select_hand` ADVENTURE filter were already available. Pattern
+#   mirrors EX11-054 clause 2 (on_digivolve + suspend-self) and BT23-018
+#   clause 2 (`select_hand` → `play_from_hand` with `cost_delta`).
+#
+# Clause 3 (Security) — `EffectTiming.SecuritySkill` →
+#   `CardEffectFactory.PlaySelfTamerSecurityEffect(card)`. Standard
+#   play_from_security pattern (sister cards BT22-084, BT22-094, AD1-020,
+#   EX7-063). Mandatory (no [Security] effect is opt-out per the rules
+#   manual §16 / RULES_CONTEXT.md).
+
+card: AD1-019
+name: Matt Ishida & T.K. Takaishi
+kind: tamer
+color: [blue, yellow]
+cost: 3
+
+effects:
+  # ─── Clause 1: [Start of Your Main Phase] gain 1 memory if opp has Digimon
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    process:
+      - gain_memory: 1
+
+  # ─── Clause 2: [Your Turn] suspend-this-Tamer → play 1 [ADVENTURE] card ───
+  #
+  # Printed text:
+  #   "[Your Turn] When any of your Digimon digivolve into an [ADVENTURE]
+  #   trait Digimon, by suspending this Tamer, you may play 1 [ADVENTURE]
+  #   trait card from your hand. For every 2 of your Tamers' colors, reduce
+  #   this effect's play cost by 1."
+  #
+  # - `when: on_digivolve` — the digivolve-result permanent is the
+  #   `event_target` (DCGO `CanTriggerWhenPermanentDigivolving`).
+  # - `active_when: { your_turn: true }` — [Your Turn] (DCGO `IsOwnerTurn`).
+  # - `optional: true` — "you may" play the card.
+  # - condition: the digivolve result is the controller's Digimon with the
+  #   ADVENTURE trait (`event_target_owner: you` + `event_target_trait_has:
+  #   ADVENTURE`). `source_is_unsuspended: true` mirrors EX11-054 — the
+  #   suspend cost can only be paid if this Tamer is currently unsuspended.
+  # - `activation_cost: { suspend_self: true }` — "by suspending this Tamer"
+  #   (DCGO `SuspendPeremanentAndProcessAccordingToResult`). Returns false /
+  #   short-circuits the body if the Tamer is already suspended.
+  # - `select_hand` filtered to ADVENTURE-trait cards, then `play_from_hand`
+  #   with `cost_delta: { reduce_fn: <formula> }` — the play cost is reduced
+  #   by `floor(distinct Tamer colors / 2)` (DCGO
+  #   `reduceCost = GetDifferenetColorCardCount(tamerCards) / 2`).
+  - when: on_digivolve
+    active_when: { your_turn: true }
+    optional: true
+    summary: "[Your Turn] When your Digimon digivolves into an [ADVENTURE], by suspending this Tamer you may play 1 [ADVENTURE] card from hand at reduced cost"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_trait_has: ADVENTURE
+        - source_is_unsuspended: true
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_hand:
+          of: you
+          bind_as: adventure_card
+          optional: true
+          filter:
+            trait_has: ADVENTURE
+          prompt: "Play 1 [ADVENTURE] card from hand at reduced cost"
+      - play_from_hand:
+          of: you
+          hand_index: adventure_card
+          cost_delta:
+            reduce_fn:
+              floor_div:
+                - base: 0
+                  per:
+                    distinct_colors_count:
+                      of: you
+                      zone: battle_area
+                      filter:
+                        kind: tamer
+                  delta: 1
+                - 2
+
+  # ─── Clause 3: [Security] play self without paying the cost ───────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -19,12 +19,11 @@
 //! - Clause (b): Inherited [Your Turn] OPT on_opponent_security_removed → gain 1 memory
 //!   (same shape as BT21-008 / BT24-008)
 //!
-//! # Known gaps
-//! - **G-INHERITED-DISPATCH**: inherited `on_opponent_security_removed` firing
-//!   not wired up for digivolution-stack cards; behavioral tests for clause (b)
-//!   are `#[ignore = "pending: G-INHERITED-DISPATCH"]`.
-//! - **G-OPT-TRIGGERED**: OPT lockout not enforced for triggered effects;
-//!   OPT lockout test is `#[ignore = "pending: G-OPT-TRIGGERED"]`.
+//! # Known gaps (historical)
+//! - **G-INHERITED-DISPATCH**: closed 2026-05-17 (Phase 2 Track D). Clause (b)
+//!   behavioral fire and your-turn-gate tests are live.
+//! - **G-OPT-TRIGGERED**: closed 2026-05-16 (Phase 2 Track C). OPT lockout
+//!   test is live.
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::card_data::CardData;
@@ -469,16 +468,11 @@ fn bt21_017_playing_owen_free_does_not_spend_memory() {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 4 — Inherited clause behavioral
-// (All behavioral dispatch tests are #[ignore] pending G-INHERITED-DISPATCH)
+// (G-INHERITED-DISPATCH closed 2026-05-17 in Phase 2 Track D)
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// The inherited clause gains 1 memory when opponent security is removed on your turn.
-///
-/// BLOCKED: engine lacks digivolution-stack inherited triggered-effect dispatch.
-/// `enqueue_from_permanent` only scans top card's effects (+ linked_cards + Training).
-/// Until that gap closes, Dimetromon's inherited OPT clause never fires from a stack.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH — digivolution-stack inherited triggered-effect dispatch not wired"]
 fn bt21_017_inherited_fires_when_source_under_carrier_your_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(DIMETROMON_YAML)
@@ -522,7 +516,6 @@ fn bt21_017_inherited_fires_when_source_under_carrier_your_turn() {
 /// Negative: inherited clause must NOT fire on opponent's turn
 /// (active_when: your_turn blocks it).
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH — digivolution-stack inherited triggered-effect dispatch not wired"]
 fn bt21_017_inherited_does_not_fire_on_opponents_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(DIMETROMON_YAML)
@@ -571,10 +564,7 @@ fn bt21_017_inherited_does_not_fire_on_opponents_turn() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// OPT: second security removal in the same turn must NOT gain another memory.
-///
-/// BLOCKED: G-INHERITED-DISPATCH + G-OPT-TRIGGERED both apply.
 #[test]
-#[ignore = "pending: G-INHERITED-DISPATCH + G-OPT-TRIGGERED — inherited dispatch and OPT enforcement not wired"]
 fn bt21_017_inherited_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(DIMETROMON_YAML)
@@ -584,8 +574,9 @@ fn bt21_017_inherited_opt_blocks_second_trigger_same_turn() {
         .add_card(make_filler("SEC-2"))
         .add_card(make_filler("FILLER-DECK"))
         .security(1, &["SEC-1", "SEC-2"])
-        .deck(0, &["FILLER-DECK"])
-        .memory(10)
+        .deck(0, &["FILLER-DECK"; 10])
+        .deck(1, &["FILLER-DECK"; 10])
+        .memory(5)
         .start();
 
     let carrier_handle = runner.place_on_field(0, "CARRIER", Some(0));

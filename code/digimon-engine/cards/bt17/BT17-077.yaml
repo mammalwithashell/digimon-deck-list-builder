@@ -45,43 +45,22 @@
 # Clause 1 — [On Play][When Digivolving] mass source trash + trash return + conditional memory
 #
 #   Clause 1a: "Trash all digivolution cards of all of your opponent's Digimon."
-#   BLOCKED: G-ASL-07 (qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md)
-#             for the "all sources" shape. Track E closed the bounded
-#             `trash_top_n_digivolution_cards_of_each` verb, but this card needs
-#             "all" rather than a literal count.
-#   The DSL has no `for_each_opponent_digimon: { trash_all_sources }` verb.
-#   Trashing ALL sources of EACH opponent Digimon (not just one) requires:
-#     (a) iteration over all opponent permanents (for_each could serve), AND
-#     (b) a `trash_all_sources` or `trash_top_n_digivolution_cards: { count: all }` step.
-#   The engine primitive `EffectContext::trash_top_n_digivolution_sources(target, count)`
-#   does not yet exist. No raw_rust escape: a raw_rust fn for the full clause
-#   would entangle all three sub-effects and is not a reusable primitive.
+#   IMPLEMENTED with `for_each` over opponent battle-area Digimon plus
+#   `trash_all_sources` for each matching stack. This is an automatic sweep, not
+#   a player choice.
 #
 #   Clause 1b: "Return all cards from your or your opponent's trash to the bottom
 #   of the deck."
-#   PARTIALLY UNBLOCKED: Track E landed `return_all_trash_to_deck_bottom`.
-#   Still blocked on G-ASL-07's player-choice/result-binding pieces. Requires:
-#     (a) player selects "your trash" vs "opponent's trash" (DCGO: BoolSelection),
-#     (b) move every card in the chosen trash zone to its owner's deck bottom.
-#   Suggested DSL syntax once the choice binding closes:
-#     - select_effect_choice:
-#         bind_as: whose_trash
-#         labels: ["Your Trash", "Opponent's Trash"]
-#         prompt: "Return all cards from your or your opponent's trash to the bottom of the deck"
-#     - if:
-#         condition: { equals: [whose_trash, 0] }
-#         then:
-#           - return_all_trash_to_deck_bottom: { of: you }
-#         else:
-#           - return_all_trash_to_deck_bottom: { of: opponent }
+#   IMPLEMENTED with an explicit `select_effect_choice` prompt. The controller
+#   chooses either their trash or the opponent's trash, then
+#   `return_all_trash_to_deck_bottom` drains only that chosen trash.
 #
 #   Clause 1c: "If this effect returned a white level 7 card, gain 3 memory."
-#   BLOCKED: G-ASL-07. No DSL support for "if a moved card had property X, gain Y".
-#   A `moved_card_predicate` result-binding pattern is needed:
-#     - if:
-#         condition: { any_returned_card: { color_is: white, level_eq: 7 } }   # ← BLOCKED
-#         then:
-#           - gain_memory: 3
+#   IMPLEMENTED with the `returned_card_matching` result predicate: after the
+#   chosen trash is returned, the per-effect result log holds every returned
+#   card handle, and `returned_card_matching: { color_is: white, level_eq: 7 }`
+#   branches directly on whether the effect actually returned a white Lv.7 card.
+#   This is the faithful result-based reading (no pre-check approximation).
 #
 # Clause 2 — [When Attacking] by-return-opp-no-digi unsuspend self
 #   IMPLEMENTABLE. See process body below.
@@ -151,50 +130,51 @@ effects:
 
   # ─── Clause 1 — [On Play][When Digivolving] mass trash + return trash + memory ─
   #
-  # BLOCKED: G-ASL-07 (hybrid engine-gap + dsl-gap, filed 2026-05-03 in
-  #   qa/archetype-qa/dsl/alter-s-ladder-cross-archetype-gaps-2026-05-03.md).
-  #   Track E closed the reusable bounded top-N source trash and bulk
-  #   trash-to-deck-bottom verbs; the remaining blockers are the "all sources"
-  #   variant, player choice over whose trash, and moved-card result predicate.
+  # Printed: "Trash all digivolution cards of all of your opponent's Digimon.
+  # Then, return all cards from your or your opponent's trash to the bottom of
+  # the deck. If this effect returned a white level 7 card, gain 3 memory."
   #
-  # The three sub-clauses (1a: mass trash sources, 1b: return chosen trash to
-  # deck bottom, 1c: conditional memory if white Lv7 returned) all depend on
-  # reusable zone-iteration primitives that don't yet exist in the engine or DSL.
+  # Step 1a is an automatic sweep: every opponent battle-area Digimon is visited
+  # and all of its digivolution cards are trashed. `trash_all_sources` preserves
+  # the top card of each stack.
   #
-  # Stub (uncomment when G-ASL-07 closes):
+  # Step 1b is a player-visible choice. The effect controller chooses whose
+  # trash is returned; only the chosen trash is drained.
   #
-  # - when: [on_play, when_digivolving]
-  #   summary: "[On Play][When Digivolving] Trash all opp digi sources; return all trash to deck bottom; +3 memory if white Lv7 returned"
-  #   process:
-  #     # Step 1a — Trash all digivolution cards of each opponent Digimon.
-  #     # BLOCKED: G-ASL-07 all-sources variant
-  #     # When gap closes, add:
-  #     #   - for_each_opponent_permanent:
-  #     #       filter: { kind: digimon }
-  #     #       bind_as: opp_dig
-  #     #       body:
-  #     #         - trash_all_digivolution_cards: { target: opp_dig }
-  #     #
-  #     # Step 1b — Player chooses whose trash to return; return all cards.
-  #     # PARTIAL: return_all_trash_to_deck_bottom exists; choice binding missing.
-  #     #   - select_effect_choice:
-  #     #       bind_as: whose_trash
-  #     #       labels: ["Your Trash", "Opponent's Trash"]
-  #     #       prompt: "Return all cards from your or your opponent's trash to the bottom of the deck"
-  #     #   - if:
-  #     #       condition: { equals: [whose_trash, 0] }
-  #     #       then:
-  #     #         - return_all_trash_to_deck_bottom: { of: you }
-  #     #       else:
-  #     #         - return_all_trash_to_deck_bottom: { of: opponent }
-  #     #
-  #     # Step 1c — Conditional memory gain.
-  #     # BLOCKED: G-ASL-07 (any_returned_card predicate missing)
-  #     # When gap closes, add:
-  #     #   - if:
-  #     #       condition: { any_returned_card: { color_is: white, level_eq: 7 } }
-  #     #       then:
-  #     #         - gain_memory: 3
+  # Step 1c branches on `returned_card_matching` — a result-log predicate that
+  # inspects the cards this effect actually returned to the deck. After the
+  # chosen trash is bottom-decked, the rider gains 3 memory iff a white Lv.7
+  # card was among the returned cards.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash all opp digi sources; choose a trash to bottom-deck; +3 memory if a returned card is white Lv.7"
+    process:
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+          bind_as: opp_digimon
+          body:
+            - trash_all_sources: { target: opp_digimon }
+
+      - select_effect_choice:
+          bind_as: whose_trash
+          labels: ["Your Trash", "Opponent's Trash"]
+          prompt: "Return all cards from your or your opponent's trash to the bottom of the deck"
+
+      - if:
+          condition: { equals: [whose_trash, 0] }
+          then:
+            - return_all_trash_to_deck_bottom: { of: you }
+          else:
+            - return_all_trash_to_deck_bottom: { of: opponent }
+
+      # Clause 1c — if this effect returned a white Lv.7 card, gain 3 memory.
+      - if:
+          condition: { returned_card_matching: { color_is: white, level_eq: 7 } }
+          then:
+            - gain_memory: 3
 
   # ─── Clause 2 — [When Attacking] return opp Digimon (no digi cards) → unsuspend ─
   #

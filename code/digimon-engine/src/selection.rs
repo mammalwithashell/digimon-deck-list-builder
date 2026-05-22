@@ -60,6 +60,23 @@ impl std::ops::BitOrAssign for UnionZoneSet {
     }
 }
 
+/// The concrete zone a `select_union_zone` pick came from. A union-zone
+/// selection spans hand ∪ trash; the resulting `CardHandle` alone does not
+/// record *which* zone the card was in. `UnionZoneOrigin` is carried in the
+/// selection callback so a downstream consumer (e.g. `play_union_bound_free`)
+/// can play the card back from its true origin zone.
+///
+/// Only `Hand` / `Trash` are modeled — the only two zones the union-zone
+/// selection currently spans (`UnionZoneSet::HAND | UnionZoneSet::TRASH`).
+/// Extend in lockstep with `UnionZoneSet` if future tasks widen the bitfield.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum UnionZoneOrigin {
+    /// The card was picked from the player's hand.
+    Hand,
+    /// The card was picked from the player's trash.
+    Trash,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct SourceSelectionRef {
     pub permanent: PermanentHandle,
@@ -144,6 +161,10 @@ pub enum SelectionKind {
     SourceMulti { min: u8, max: u8, picked: u8 },
     /// Pick opponent permanents whose total DP is capped by a remaining budget.
     DpBudget { remaining_dp: i32, picked: u8 },
+    /// Pick opponent permanents whose total printed play cost is capped by a
+    /// remaining budget. Play-cost analog of `DpBudget`.
+    /// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+    PlayCostBudget { remaining_play_cost: i32, picked: u8 },
     /// Pick the selecting player's breeding-area permanent.
     BreedingPermanent,
 }
@@ -638,6 +659,15 @@ pub struct SecurityResolutionState {
     /// `OnSecurityCheck` observers via `SecurityRevealSnapshot`.
     pub was_face_up: bool,
     pub phase: SecurityPhase,
+    /// Whether the *current* `phase`'s effect-collection step has already
+    /// run. The `*Drain` phases (`SecuritySkillDrain`, `OnSecurityCheckDrain`,
+    /// `OnLoseSecurityDrain`) enqueue their triggered effects exactly once;
+    /// if a drained effect parks on a `pending_selection` the phase stays put
+    /// and is re-entered on resume. Without this guard the re-entry would
+    /// re-enqueue (and re-fire) the same effects — an infinite loop when the
+    /// player declines an optional clause. `set_security_phase` clears it on
+    /// every phase transition so each phase gets a fresh enqueue budget.
+    pub phase_enqueue_done: bool,
     /// Remaining security-check iterations for the owning `Player` attack.
     /// Absorbed from the outer loop counter so a pause inside phase 1
     /// doesn't drop the remaining checks.

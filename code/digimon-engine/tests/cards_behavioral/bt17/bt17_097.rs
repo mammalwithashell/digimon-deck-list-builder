@@ -67,13 +67,14 @@
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
+use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{HAND_EFFECT_START, PASS};
-use digimon_engine::card_data::CardData;
+use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
 use digimon_engine::permanent::OptionState;
 use digimon_engine::replacement::ReplacementCause;
-use digimon_engine::selection::TriggerSource;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 const BT17_097_YAML: &str = include_str!("../../../cards/bt17/BT17-097.yaml");
 
@@ -103,6 +104,42 @@ fn make_non_free_digimon(id: &str) -> CardData {
     c.dp = Some(6000);
     c.play_cost = 7;
     c.colors = vec![CardColor::Blue];
+    c
+}
+
+/// A plain blue Lv.4 Digimon that can be used as the Main-effect digivolve base.
+fn make_blue_lv4_base(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Blue Lv4 Base");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(5000);
+    c.play_cost = 5;
+    c.colors = vec![CardColor::Blue];
+    c
+}
+
+/// A Lv.5 [Free] Digimon with a normal blue Lv.4 digivolution cost of 5.
+fn make_free_lv5_evo(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Free Lv5 Evolution");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(5);
+    c.dp = Some(7000);
+    c.play_cost = 7;
+    c.colors = vec![CardColor::Blue];
+    c.traits = vec!["Free".to_string()];
+    c.evo_costs = vec![EvoCost {
+        card_color: CardColor::Blue as u8,
+        level: 4,
+        memory_cost: 5,
+    }];
+    c
+}
+
+/// A Lv.5 Digimon with a matching evo cost but no [Free] trait.
+fn make_non_free_lv5_evo(id: &str) -> CardData {
+    let mut c = make_free_lv5_evo(id);
+    c.card_name = "Non-Free Lv5 Evolution".to_string();
+    c.traits = vec![];
     c
 }
 
@@ -322,43 +359,89 @@ fn bt17_097_main_places_self_as_delay_option_on_field() {
     );
 }
 
-/// G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET: the [Main]
-/// digivolve sub-clause (select own Digimon → select Lv5+ [Free] hand card
-/// with cost -4 → digivolve) is blocked. When gap closes, a Free-trait Lv5+
-/// hand card should be offered as a digivolve target for an own Digimon.
 #[test]
-#[ignore = "pending: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — select_own_permanent chain doesn't resume after first pick"]
-fn bt17_097_main_offers_digivolve_into_free_trait_lv5_hand_card() {
-    let free_lv5 = {
-        let mut c = make_test_card("FREE-LV5", "Free Digimon Lv5");
-        c.card_kind = CardKind::Digimon;
-        c.level = Some(5);
-        c.traits = vec!["Free".to_string()];
-        c.play_cost = 7;
-        c.colors = vec![CardColor::Blue];
-        c
-    };
+fn bt17_097_main_digivolves_into_free_lv5_hand_card_cost_reduced_by_4_then_places_self() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT17_097_YAML)
         .expect("BT17-097 YAML parses")
-        .add_card(free_lv5)
+        .add_card(make_blue_lv4_base("BT17097-BASE"))
+        .add_card(make_free_lv5_evo("BT17097-FREE-LV5"))
+        .add_card(make_non_free_lv5_evo("BT17097-NONFREE-LV5"))
         .add_card(make_filler("FILL"))
         .memory(10)
-        .hand(0, &["BT17-097", "FREE-LV5"])
+        .hand(0, &["BT17-097", "BT17097-FREE-LV5", "BT17097-NONFREE-LV5"])
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
         .start();
 
-    // Place a Digimon to digivolve from.
-    let _own_digimon = runner.place_on_field(0, "FILL", Some(0));
+    let base = runner.place_on_field(0, "BT17097-BASE", Some(0));
 
     let fired = runner.game.activate_hand_main(0, 0);
     assert!(fired);
 
-    // When gap closes, the next pending_selection should be selecting the own
-    // Digimon target; then selecting the Lv5+ [Free] hand card; then the
-    // digivolve should complete with cost reduced by 4.
-    unimplemented!("blocked on G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET");
+    let field_view = runner
+        .pending_selection_view()
+        .expect("Main effect must ask which Digimon digivolves");
+    assert_eq!(field_view.kind, SelectionKind::OwnField);
+    assert!(
+        runner.pending_is_optional(),
+        "the printed 'may digivolve' target selection must expose PASS"
+    );
+    assert_eq!(
+        field_view.valid_action_ids.len(),
+        1,
+        "only the own field Digimon should be offered as the digivolve target"
+    );
+    let field_mask = build_action_mask(&runner.game, field_view.selecting_player);
+    assert_eq!(field_mask[field_view.valid_action_ids[0] as usize], 1.0);
+    runner
+        .execute_action(field_view.selecting_player, field_view.valid_action_ids[0])
+        .expect("select own Digimon target");
+
+    let hand_view = runner
+        .pending_selection_view()
+        .expect("Main effect must ask which Lv5+ [Free] hand card to digivolve into");
+    assert_eq!(hand_view.kind, SelectionKind::Hand);
+    assert_eq!(
+        hand_view.valid_action_ids.len(),
+        1,
+        "only the Lv5+ [Free] trait hand card should be legal; non-Free Lv5 is excluded"
+    );
+    let hand_action = hand_view.valid_action_ids[0];
+    let hand_mask = build_action_mask(&runner.game, hand_view.selecting_player);
+    assert_eq!(hand_mask[hand_action as usize], 1.0);
+    runner
+        .execute_action(hand_view.selecting_player, hand_action)
+        .expect("select Lv5+ [Free] hand card");
+    runner.auto_resolve().expect("finish BT17-097 Main effect");
+
+    let evolved = &runner.game.players[0].battle_area[base.index as usize];
+    assert_eq!(
+        evolved.top_card().card_id(&runner.game.card_data),
+        "BT17097-FREE-LV5",
+        "selected Lv5+ [Free] card must become the stack's top card"
+    );
+    assert_eq!(
+        runner.memory(),
+        9,
+        "evo cost 5 reduced by 4 should spend exactly 1 memory"
+    );
+    assert!(
+        runner
+            .game
+            .player(0)
+            .hand
+            .iter()
+            .all(|card| card.card_id(&runner.game.card_data) != "BT17097-FREE-LV5"),
+        "selected Lv5+ [Free] card must leave hand"
+    );
+    assert!(
+        runner.game.players[0].battle_area.iter().any(|p| {
+            p.top_card().card_id(&runner.game.card_data) == "BT17-097"
+                && matches!(p.option_state, OptionState::Delayed { .. })
+        }),
+        "BT17-097 must be placed in the battle area as a Delay option after the Main digivolve"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -594,139 +677,211 @@ fn bt17_097_security_smoke_no_eligible_tamer_no_panic() {
     // Delay-Option after the security activation (place_self_as_delay_option).
 }
 
-/// [Security] + Davis Motomiya in hand → playing from hand works and places
-/// self in the battle area as a Delay-Option permanent.
+/// [Security] + Davis Motomiya in the defender's hand → a real attack on the
+/// defender's security checks BT17-097, the inherited [Security] clause fires
+/// through the proper security path, and the printed effect runs: it may play
+/// the Davis Tamer from hand and then places BT17-097 in the battle area.
+///
+/// Driven through the real combat/security-check path (see BT17-095's
+/// `bt17_095_security_adds_card_to_hand_after_play`) — the previous
+/// `enqueue_triggered(SecuritySkill, Permanent(..))` shortcut only ever
+/// "worked" because of an over-fire bug in `enqueue_from_permanent` and is now
+/// a silent no-op for inherited-scope [Security] clauses.
 #[test]
 fn bt17_097_security_plays_davis_from_hand_and_places_self_on_field() {
+    let mut attacker = make_filler("BT17097-ATK");
+    attacker.dp = Some(6000);
     let davis = make_davis_tamer("BT17097-DAVIS");
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT17_097_YAML)
         .expect("BT17-097 YAML parses")
-        .add_card(davis)
+        .add_card(attacker.clone())
+        .add_card(davis.clone())
         .add_card(make_filler("FILL"))
         .memory(10)
-        .hand(0, &["BT17097-DAVIS"])
+        .hand(1, &["BT17097-DAVIS"])
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
+        .security(1, &["BT17-097"])
         .start();
 
-    // Place BT17-097 as a field permanent (simulating it riding under a Digimon
-    // or placed as an inherited Security card).
-    let field_handle = runner.place_on_field(0, "BT17-097", Some(0));
-    let initial_hand_count = runner.hand_size(0);
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let attacker_handle = runner.place_on_field(0, "BT17097-ATK", Some(0));
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "precondition: defender holds only the Davis Tamer"
     );
-    runner.game.drain_effect_queue();
+    assert_eq!(runner.security_count(1), 1, "precondition: BT17-097 in security");
 
-    // Expect zone-choice selection (G-DSL-UNION-PLAY-FREE workaround).
-    assert!(
-        runner.game.pending_selection.is_some(),
-        "Security clause must install zone-choice selection"
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
+
+    // BT17-097's [Security] clause must have run end-to-end.
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "BT17-097 left the defender's security stack after the security check"
     );
 
-    // Choose "From hand" (choice index 0 → action id HAND_EFFECT_START + 0).
-    let _ = runner
-        .game
-        .resolve_selection(0, digimon_engine::action::space::HAND_EFFECT_START);
-    runner.game.drain_effect_queue();
-
-    // Now expect a hand card selection for the Davis Motomiya Tamer.
-    if runner.game.pending_selection.is_some() {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        let _ = runner.game.resolve_selection(player, action);
-        runner.game.drain_effect_queue();
-    }
-
-    // Drain remaining selections (place_self_as_delay_option may install one).
-    let mut steps = 0;
-    while runner.game.pending_selection.is_some() && steps < 20 {
-        let player = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .selecting_player;
-        let action = runner
-            .game
-            .pending_selection
-            .as_ref()
-            .unwrap()
-            .valid_action_ids[0];
-        let _ = runner.game.resolve_selection(player, action);
-        runner.game.drain_effect_queue();
-        steps += 1;
-    }
-
-    // The Davis Motomiya Tamer should be on the field.
-    let davis_on_field = runner.game.players[0]
-        .battle_area
-        .iter()
-        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17097-DAVIS");
-
-    // BT17-097 should also be on the field as a Delay-Option (place_self_as_delay_option).
-    let bt17_097_on_field = runner.game.players[0]
+    // Printed tail "place this card in the battle area" — BT17-097 itself must
+    // be seated as a Delay-Option permanent on the defender's field.
+    let bt17_097_on_field = runner.game.players[1]
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-097");
 
+    // The Davis Motomiya Tamer may also have been played from the defender's
+    // hand by the optional clause body.
+    let davis_on_field = runner.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17097-DAVIS");
+
     assert!(
         davis_on_field || bt17_097_on_field,
-        "After Security activation, either Davis Tamer was played OR BT17-097 was placed as Delay"
+        "After the [Security] clause ran, either the Davis Tamer was played \
+         from the defender's hand OR BT17-097 was placed in the battle area"
     );
 }
 
-/// [Security] + Ken Ichijoji in hand → the filter accepts Ken as an eligible
-/// Tamer for the optional play.
+/// [Security] + Ken Ichijoji in the defender's hand → a real attack on the
+/// defender's security checks BT17-097 and the inherited [Security] clause's
+/// name filter ("[Davis Motomiya] or [Ken Ichijoji]") accepts the Ken Tamer.
+///
+/// Driven through the real combat/security-check path. Post-state proves the
+/// clause executed AND the Ken-name filter accepted Ken: BT17-097 left the
+/// security stack and was placed in the battle area, and/or the Ken Tamer was
+/// played from the defender's hand onto the defender's field.
 #[test]
 fn bt17_097_security_eligible_filter_accepts_ken_ichijoji() {
+    let mut attacker = make_filler("BT17097-ATK-KEN");
+    attacker.dp = Some(6000);
     let ken = make_ken_tamer("BT17097-KEN");
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(BT17_097_YAML)
         .expect("BT17-097 YAML parses")
-        .add_card(ken)
+        .add_card(attacker.clone())
+        .add_card(ken.clone())
         .add_card(make_filler("FILL"))
         .memory(10)
-        .hand(0, &["BT17097-KEN"])
+        .hand(1, &["BT17097-KEN"])
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
+        .security(1, &["BT17-097"])
         .start();
 
-    let field_handle = runner.place_on_field(0, "BT17-097", Some(0));
-
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let attacker_handle = runner.place_on_field(0, "BT17097-ATK-KEN", Some(0));
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "precondition: defender holds only the Ken Tamer"
     );
-    runner.game.drain_effect_queue();
+    assert_eq!(runner.security_count(1), 1, "precondition: BT17-097 in security");
 
-    // The zone-choice prompt is presented (G-DSL-UNION-PLAY-FREE workaround).
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
+
+    // The [Security] clause must have run: BT17-097 left the security stack.
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "BT17-097 left the defender's security stack after the security check"
+    );
+
+    let bt17_097_on_field = runner.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-097");
+    let ken_on_field = runner.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17097-KEN");
+
     assert!(
-        runner.game.pending_selection.is_some(),
-        "Security clause must install zone-choice selection even with Ken in hand"
+        bt17_097_on_field || ken_on_field,
+        "After the [Security] clause ran, BT17-097 was placed in the battle area \
+         and/or the Ken Ichijoji Tamer was played from the defender's hand \
+         (proving the name filter accepted Ken)"
     );
 }
 
-/// G-DSL-UNION-PLAY-FREE: the Security clause cannot auto-collapse the zone
-/// choice when only one zone (e.g., hand) has an eligible Tamer. The
-/// workaround always presents both branches.
+/// G-DSL-UNION-PLAY-FREE RESOLVED: the Security clause uses a native
+/// `select_union_zone` (zones: [hand, trash]) step. When only one zone (here,
+/// the defender's hand) holds an eligible [Davis Motomiya]/[Ken Ichijoji]
+/// Tamer, the union selection auto-collapses — its only valid card action
+/// points at a hand slot; there is no separate From-hand/From-trash prompt.
 #[test]
-#[ignore = "pending: G-DSL-UNION-PLAY-FREE — select_union_zone binds Card, not HandIndex/TrashIndex; auto-collapse not yet supported"]
 fn bt17_097_security_auto_collapses_zone_when_only_hand_eligible() {
-    unimplemented!("blocked on G-DSL-UNION-PLAY-FREE");
+    use digimon_engine::action::space::{PASS, PLAY_HAND_END, PLAY_HAND_START};
+    use digimon_engine::selection::UnionZoneSet;
+
+    let mut attacker = make_filler("BT17097-ATK-COLLAPSE");
+    attacker.dp = Some(6000);
+    let davis = make_davis_tamer("BT17097-DAVIS-COLLAPSE");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_097_YAML)
+        .expect("BT17-097 YAML parses")
+        .add_card(attacker.clone())
+        .add_card(davis.clone())
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        // Davis Tamer ONLY in the defender's hand; trash holds no eligible card.
+        .hand(1, &["BT17097-DAVIS-COLLAPSE"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .security(1, &["BT17-097"])
+        .start();
+
+    let attacker_handle = runner.place_on_field(0, "BT17097-ATK-COLLAPSE", Some(0));
+    assert_eq!(runner.security_count(1), 1, "precondition: BT17-097 in security");
+
+    // Attack the defender's security → BT17-097's [Security] clause fires.
+    let _ = runner.attack_player(attacker_handle, 1, false);
+
+    // The clause's first interactive prompt must be the union-zone pick,
+    // spanning hand ∪ trash — NOT a separate effect-choice zone prompt.
+    let sel = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("union-zone selection installs for the [Security] clause");
+    assert_eq!(
+        sel.kind,
+        SelectionKind::UnionZone {
+            zones: UnionZoneSet::HAND | UnionZoneSet::TRASH
+        },
+        "the [Security] prompt must be the union-zone pick (no separate zone-choice)"
+    );
+
+    // The defender's trash has no eligible Tamer, so the only eligible card
+    // action must be a HAND slot — the union selection auto-collapsed to hand.
+    let card_actions: Vec<u16> = sel
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&a| a != PASS)
+        .collect();
+    assert_eq!(
+        card_actions.len(),
+        1,
+        "exactly one eligible card (the hand Davis Tamer); got {card_actions:?}"
+    );
+    assert!(
+        card_actions[0] >= PLAY_HAND_START && card_actions[0] < PLAY_HAND_END,
+        "the only eligible card action must be a hand slot \
+         (PLAY_HAND range 0..{PLAY_HAND_END}); got {}",
+        card_actions[0]
+    );
+
+    // Drive the rest of the clause to completion — proves the union pick feeds
+    // play_union_bound_free without a follow-up zone-choice prompt.
+    runner.auto_resolve().expect("security clause resolves");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "BT17-097 left the defender's security stack after the security check"
+    );
 }

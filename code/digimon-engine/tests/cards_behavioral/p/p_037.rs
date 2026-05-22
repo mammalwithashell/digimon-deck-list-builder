@@ -18,12 +18,17 @@
 //! # Patterns this test covers
 //! - A1 Reveal top-N + select-by-color/kind + add to hand
 //! - A2 place_remainder_on_deck(bottom) with ordered remainder placement
-//! - Standard Delay (EndOfYourNextTurn): gain_memory on activation
+//! - Standard <Delay> (PUPPETS-G009): gain_memory via player-visible
+//!   [Main]-phase activation action
 //! - Inherited security placement through place_self_as_delay_option
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledPredicate,
     CompiledScope, CompiledStackPosition, CompiledStep, CompiledTiming,
+};
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
 };
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -115,7 +120,7 @@ fn p_037_has_main_delay_and_inherited_security_clauses() {
 
     match &compiled.effects[1] {
         CompiledClause::Declarative(CompiledDeclarativeClause::Delay { trigger, .. }) => {
-            assert_eq!(*trigger, CompiledTiming::EndOfYourNextTurn);
+            assert_eq!(*trigger, CompiledTiming::Delayed);
         }
         other => panic!("clause 1 must be delay; got {other:?}"),
     }
@@ -320,28 +325,32 @@ fn p_037_security_check_places_self_in_battle_area_as_delay_option() {
     assert!(matches!(
         placed.option_state,
         OptionState::Delayed {
-            trigger: DelayTrigger::EndOfYourNextTurn,
+            trigger: DelayTrigger::MainPhaseActivated,
             ..
         }
     ));
 }
 
+/// PUPPETS-G009 — P-037's standard `<Delay>` is a player-visible
+/// `[Main]`-phase activation. Playing it parks it as a `MainPhaseActivated`
+/// delayed Option; on a later main phase the controller takes the
+/// `FIELD_EFFECT` activation, which trashes the Option as the cost and runs
+/// the `<Delay>` body (gain 2 memory).
 #[test]
-fn p_037_delay_activation_gains_2_memory_when_played_as_delay_option() {
+fn p_037_delay_activation_gains_2_memory_via_main_phase_action() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
         .add_card(yellow_digimon("YELLOW-DIGI"))
         .add_card(filler("FILL"))
         .hand(0, &["P-037"])
-        .deck(0, &["FILL", "FILL", "FILL", "YELLOW-DIGI"])
-        .deck(1, &["FILL"; 5])
+        .deck(0, &["FILL", "FILL", "FILL", "YELLOW-DIGI", "FILL", "FILL"])
+        .deck(1, &["FILL"; 6])
         .memory(10)
         .start();
 
     runner.place_on_field(0, "YELLOW-DIGI", Some(0));
     runner.game.enter_main_phase();
-    let start_turn = runner.game.turn_count;
 
     assert_eq!(
         runner.game.play_option_from_hand(0, 0),
@@ -350,41 +359,53 @@ fn p_037_delay_activation_gains_2_memory_when_played_as_delay_option() {
     runner
         .auto_resolve()
         .expect("resolve P-037 reveal selection and delay placement");
-    assert!(
-        runner
-            .game
-            .player(0)
-            .battle_area
-            .iter()
-            .any(|permanent| matches!(
+
+    let delay_idx = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|permanent| {
+            matches!(
                 permanent.option_state,
                 OptionState::Delayed {
-                    trigger: DelayTrigger::EndOfYourNextTurn,
+                    trigger: DelayTrigger::MainPhaseActivated,
                     ..
                 }
-            )),
-        "playing P-037 through the Option pipeline should park it as a delayed option"
+            )
+        })
+        .expect("playing P-037 should park it as a MainPhaseActivated delayed option");
+
+    // Same turn it was placed: the Delay activation is NOT legal (16-16-3).
+    let bit = (FIELD_EFFECT_START
+        + delay_idx as u16 * EFFECTS_PER_PERMANENT
+        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize;
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[bit],
+        0.0,
+        "P-037 <Delay> must not be activatable on the placing turn"
     );
 
+    // Advance to the controller's next main phase.
     runner.end_turn();
     runner.game.enter_main_phase();
     runner.end_turn();
-    assert_eq!(runner.game.turn_count, start_turn + 2);
     assert_eq!(runner.game.turn_player(), 0);
-
     runner.game.enter_main_phase();
     runner.game.set_memory(0);
-    runner.end_turn();
 
-    let expected_memory = if runner.game.turn_player() == 0 {
-        2
-    } else {
-        -2
-    };
+    // The Delay activation is now a legal [Main]-phase action; PASS too.
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(mask[bit], 1.0, "P-037 <Delay> activation is a legal action");
+    assert_eq!(mask[PASS as usize], 1.0, "declining stays legal");
+
+    // Take the activation: trash P-037 as cost, run the body.
+    runner.game.decode_action(bit as u16, 0);
+
     assert_eq!(
         runner.memory(),
-        expected_memory,
-        "P-037 Delay body should give its owner 2 memory at the scheduled delay window"
+        2,
+        "P-037 <Delay> body gains 2 memory when the player activates it"
     );
     assert!(
         !runner
@@ -393,6 +414,6 @@ fn p_037_delay_activation_gains_2_memory_when_played_as_delay_option() {
             .battle_area
             .iter()
             .any(|permanent| matches!(permanent.option_state, OptionState::Delayed { .. })),
-        "delayed P-037 should be trashed after the Delay body resolves"
+        "P-037 is trashed as the <Delay> activation cost"
     );
 }

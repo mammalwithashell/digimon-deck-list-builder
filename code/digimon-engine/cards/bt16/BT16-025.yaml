@@ -23,13 +23,14 @@
 # Partition keyword: printed on both effect and inherited scopes. DCGO confirms
 # two PartitionSelfEffect calls with isInheritedEffect: false and true.
 #
-# Clause 1 — [When Digivolving] suspend by stack comparison:
+# Clause 1 — [When Digivolving] suspend by digivolution-card comparison:
 #   DCGO: opponentSuspendable = opponentDigimon.Where(p =>
 #     p.DigivolutionCards.Count <= card.PermanentOfThisCard().DigivolutionCards.Count)
 #   The filter is dynamic — each opp Digimon is compared against THIS Digimon's
-#   digivolution card count at resolution time. This is NOT expressible in the
-#   current DSL: `for_each.over.stack_size_lte` takes a literal u8 value and
-#   cannot reference the source permanent's stack size at runtime.
+#   digivolution card count at resolution time. IMPLEMENTED via
+#   `materials_count_lte: { formula: { source_material_count: {} } }`:
+#   `source_material_count` resolves the source permanent's digivolution-card
+#   count, `materials_count_lte` filters each candidate by its own count.
 #
 # Clause 1 — DNA sub-condition (CannotUnsuspend):
 #   DCGO: if (CardEffectCommons.IsJogress(hashtable)) {
@@ -47,11 +48,11 @@
 #
 # Clause 2 — [When Attacking][OPT] suspend + unsuspend-self fallback:
 #   DCGO: Suspend 1 opp unsuspended Digimon (optional select, can no-select if
-#   none available). Then checks if ANY suspension happened — if not, unsuspend
-#   self. The "if this effect didn't suspend" branch requires branching on the
-#   RESULT of the prior selection step (empty / no target available). The DSL
-#   has no `if_no_target` predicate or result binding from suspend steps, so
-#   the self-unsuspend fallback is BLOCKED.
+#   none available). Then checks whether this effect actually suspended a
+#   Digimon — if not, unsuspend self. IMPLEMENTED via the
+#   `effect_suspended_any_opponent_digimon: false` result-log predicate, which
+#   branches on whether the suspend mutation actually applied to an opponent
+#   Digimon (not merely whether a target was selected).
 #
 # ─── Implementation status ────────────────────────────────────────────────────
 #
@@ -61,23 +62,12 @@
 # | Partition (inherited scope)                                     | IMPLEMENTED      |
 # | Standard digivolve Lv.4 / Cost 4                               | IMPLEMENTED      |
 # | DNA digivolve Blue Lv.4 + Green Lv.4 / Cost 0                  | IMPLEMENTED      |
-# | [When Digivolving] Suspend all opp Digimon ≤ source stack size  | BLOCKED — G-DSL-STACK-SIZE-LTE-SOURCE |
+# | [When Digivolving] Suspend all opp Digimon ≤ source digi-cards  | IMPLEMENTED (materials_count_lte + source_material_count) |
 # | [When Digivolving] If DNA: CannotUnsuspend all opp Digimon     | IMPLEMENTED (via on_dna_digivolve) |
 # | [When Attacking][OPT] Suspend 1 opp unsuspended Digimon        | IMPLEMENTED      |
-# | [When Attacking] If didn't suspend, unsuspend self             | BLOCKED — G-DSL-IF-NO-TARGET |
+# | [When Attacking] If didn't suspend, unsuspend self             | IMPLEMENTED (effect_suspended_any_opponent_digimon) |
 #
-# Gaps:
-#   G-DSL-STACK-SIZE-LTE-SOURCE: No DSL predicate that compares a candidate
-#     permanent's stack_size against the SOURCE permanent's stack_size at
-#     runtime. `stack_size_lte` takes a literal u8. A new predicate leaf
-#     `stack_size_lte_source: true` would need to evaluate
-#     `candidate.card_sources.len() <= source_permanent.card_sources.len()`.
-#
-#   G-DSL-IF-NO-TARGET: No DSL control-flow form that branches on whether a
-#     prior optional selection produced a target vs. produced nothing (the
-#     player passed / no eligible targets existed). `select_opponent_permanent`
-#     with `optional: true` skips the step when no targets exist but does not
-#     bind a "skipped" flag; subsequent `if` conditions have no binding to test.
+# All clauses IMPLEMENTED — no remaining gaps.
 
 card: BT16-025
 name: Paildramon
@@ -110,24 +100,30 @@ effects:
 
   # ─── Clause 1a: [When Digivolving] suspend all opp Digimon ≤ source stack ────
   #
-  # BLOCKED: G-DSL-STACK-SIZE-LTE-SOURCE.
-  # The primary "suspend all opp Digimon with ≤ digi-cards as this Digimon" step
-  # cannot be expressed because `stack_size_lte` is a literal u8 predicate leaf
-  # that cannot reference the SOURCE permanent's stack size at runtime.
+  # "[When Digivolving] Suspend all of your opponent's Digimon with as many or
+  # fewer digivolution cards as this Digimon." — printed text.
   #
-  # When G-DSL-STACK-SIZE-LTE-SOURCE closes, this clause replaces the stub below:
-  #   - when: when_digivolving
-  #     summary: "[WD] Suspend all opp Digimon ≤ source stack size"
-  #     process:
-  #       - for_each:
-  #           over:
-  #             of: opponent
-  #             zone: [battle_area]
-  #             kind: digimon
-  #             stack_size_lte_source: true     # ← new predicate leaf needed
-  #           bind_as: digi
-  #           body:
-  #             - suspend: { target: digi }
+  # DCGO: opponentSuspendable = opponentDigimon.Where(p =>
+  #   p.DigivolutionCards.Count <= card.PermanentOfThisCard().DigivolutionCards.Count)
+  #
+  # Authored with `materials_count_lte: { formula: { source_material_count: {} } }`:
+  # `source_material_count` resolves the SOURCE permanent's digivolution-card count
+  # at resolution time, and `materials_count_lte` filters each candidate by its own
+  # digivolution-card count. Both counts are `card_sources.len() - 1` (top card
+  # excluded), so the comparison is exactly "as many or fewer digivolution cards".
+  - when: when_digivolving
+    summary: "[WD] Suspend all opp Digimon with ≤ digivolution cards as this Digimon"
+    process:
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+              - materials_count_lte: { formula: { source_material_count: {} } }
+          bind_as: digi
+          body:
+            - suspend: { target: digi }
 
   # ─── Clause 1b: [On DNA Digivolve] CannotUnsuspend all opp Digimon ───────────
   #
@@ -158,16 +154,16 @@ effects:
   # on the selection skips the step when no unsuspended Digimon are present,
   # matching DCGO's `canNoSelect: true` when no eligible targets exist).
   #
-  # "If this effect didn't suspend, unsuspend this Digimon" is BLOCKED
-  # (G-DSL-IF-NO-TARGET). When that gap closes, add:
-  #   - if:
-  #       condition: { binding_is_none: wa_target }   # ← hypothetical predicate
-  #       then:
-  #         - unsuspend: { target: source }
+  # "If this effect didn't suspend, unsuspend this Digimon" — authored with
+  # `effect_suspended_any_opponent_digimon: false`, which branches on the
+  # effect's result log (whether the suspend mutation actually applied to an
+  # opponent Digimon), not merely whether a target was selected. This is the
+  # faithful printed-text reading: the fallback fires whenever no opponent
+  # Digimon was suspended this resolution.
   - when: when_attacking
     once_per_turn: true
     optional: true
-    summary: "[WA][OPT] Suspend 1 opp unsuspended Digimon (unsuspend-self fallback blocked G-DSL-IF-NO-TARGET)"
+    summary: "[WA][OPT] Suspend 1 opp unsuspended Digimon; if it didn't suspend, unsuspend this Digimon"
     process:
       - select_opponent_permanent:
           bind_as: wa_target
@@ -178,9 +174,10 @@ effects:
           optional: true
           prompt: "Suspend 1 of your opponent's unsuspended Digimon"
       - suspend: { target: wa_target }
-      # Self-unsuspend fallback — BLOCKED: G-DSL-IF-NO-TARGET
-      # The DSL cannot branch on whether wa_target was bound (i.e. whether
-      # the player passed the selection or no targets existed).
+      - if:
+          condition: { effect_suspended_any_opponent_digimon: false }
+          then:
+            - unsuspend: { target: source }
 
   # ─── Clause 3: Inherited <Partition (Blue Lv.4 & Green Lv.4)> ────────────────
   # Declarative inherited. DCGO: PartitionSelfEffect(isInheritedEffect: true).

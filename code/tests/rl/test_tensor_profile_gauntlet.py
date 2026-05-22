@@ -6,6 +6,10 @@ from types import SimpleNamespace
 import pytest
 
 
+# Synthetic profile fixture used to exercise gauntlet logic in isolation
+# from the real engine layout. `card_id_slot_count` is held at a fixed
+# value so derived assertions stay self-consistent; it intentionally does
+# not track the real standard_lite_v2 layout.
 def fake_profile(profile_id: str, tensor_size: int):
     return SimpleNamespace(
         id=profile_id,
@@ -16,8 +20,8 @@ def fake_profile(profile_id: str, tensor_size: int):
         layout_hash=f"sha256:{profile_id.replace('_', '0')[:8]:0<64}",
         tensor_size=tensor_size,
         field_slots=15,
-        slot_size=96,
-        max_sources=11,
+        slot_size=99,
+        max_sources=12,
         card_id_slot_count=542,
         scalar_slot_count=tensor_size - 542,
         card_id_positions=tuple(range(542)),
@@ -32,7 +36,7 @@ def test_resolve_profiles_canonicalizes_compact_alias(monkeypatch):
     profiles = {
         "compact_v1": fake_profile("standard_compact_v1", 1375),
         "standard_lite_v2": fake_profile("standard_lite_v2", 8320),
-        "standard_full_v2": fake_profile("standard_full_v2", 43008),
+        "standard_full_v2": fake_profile("standard_full_v2", 43392),
     }
     monkeypatch.setattr(gauntlet, "get_tensor_profile", lambda profile_id: profiles[profile_id])
 
@@ -68,7 +72,9 @@ def test_real_profile_resolution_includes_compact_lite_and_full():
         "standard_lite_v2",
         "standard_full_v2",
     ]
-    assert [item.profile.tensor_size for item in resolved] == [1375, 8320, 43008]
+    # Task S1.4: PERM_MAX_SOURCES 11 -> 12; lite 8320 -> 8410, full
+    # 43392 -> 43482.
+    assert [item.profile.tensor_size for item in resolved] == [1375, 8410, 43482]
 
 
 def test_resolve_profiles_records_skip_when_profile_missing(monkeypatch):
@@ -103,16 +109,16 @@ def test_resolve_profiles_raises_when_required_profile_missing(monkeypatch):
 def test_memory_estimate_uses_tensor_size_and_rollout_shape():
     from digimon_gym.agents.tensor_profile_gauntlet import estimate_memory_footprint
 
-    profile = fake_profile("standard_full_v2", 43008)
+    profile = fake_profile("standard_full_v2", 43392)
 
     memory = estimate_memory_footprint(profile, n_steps=128, n_envs=4)
 
-    assert memory["tensor_bytes"] == 43008 * 4
-    assert memory["tensor_kib"] == pytest.approx((43008 * 4) / 1024)
-    assert memory["rollout_observation_bytes"] == 43008 * 4 * 128 * 4
-    assert memory["rollout_observation_mib"] == pytest.approx((43008 * 4 * 128 * 4) / 1024 / 1024)
+    assert memory["tensor_bytes"] == 43392 * 4
+    assert memory["tensor_kib"] == pytest.approx((43392 * 4) / 1024)
+    assert memory["rollout_observation_bytes"] == 43392 * 4 * 128 * 4
+    assert memory["rollout_observation_mib"] == pytest.approx((43392 * 4 * 128 * 4) / 1024 / 1024)
     assert memory["card_embedding_input_slots"] == 542
-    assert memory["scalar_input_slots"] == 42466
+    assert memory["scalar_input_slots"] == 42850
 
 
 class FakeEnv:
@@ -138,7 +144,7 @@ class FakeEnv:
         return [0.0], 0.0, terminated, False, {}
 
     def action_mask(self):
-        mask = [0] * 2168
+        mask = [0] * 2192
         mask[62] = 1
         return mask
 
@@ -319,10 +325,10 @@ def test_run_profile_games_scores_trigger_accuracy_from_runtime_zero_probe(monke
 
     profile = profile_with_sections(
         "standard_full_v2",
-        43008,
+        43392,
         [
             section("pending_choice_features", 4992, 3072, (32, 96)),
-            section("action_id_features", 8064, 34688, (2168, 16)),
+            section("action_id_features", 8064, 35072, (2192, 16)),
         ],
     )
 
@@ -360,10 +366,10 @@ def test_run_profile_games_accumulates_trigger_accuracy_from_runtime_probes(monk
 
     profile = profile_with_sections(
         "standard_full_v2",
-        43008,
+        43392,
         [
             section("pending_choice_features", 4992, 3072, (32, 96)),
-            section("action_id_features", 8064, 34688, (2168, 16)),
+            section("action_id_features", 8064, 35072, (2192, 16)),
         ],
     )
 
@@ -433,10 +439,10 @@ def test_trigger_order_accuracy_full_profile_scores_pending_and_action_rows():
 
     profile = profile_with_sections(
         "standard_full_v2",
-        43008,
+        43392,
         [
             section("pending_choice_features", 4992, 3072, (32, 96)),
-            section("action_id_features", 8064, 34688, (2168, 16)),
+            section("action_id_features", 8064, 35072, (2192, 16)),
         ],
     )
 
@@ -451,7 +457,7 @@ def test_trigger_order_accuracy_rejects_full_profile_without_action_rows():
 
     profile = profile_with_sections(
         "standard_full_v2",
-        43008,
+        43392,
         [section("pending_choice_features", 4992, 3072, (32, 96))],
     )
 
@@ -482,10 +488,10 @@ def test_trigger_order_accuracy_full_requires_prompt_action_probe():
 
     profile = profile_with_sections(
         "standard_full_v2",
-        43008,
+        43392,
         [
             section("pending_choice_features", 4992, 3072, (32, 96)),
-            section("action_id_features", 8064, 34688, (2168, 16)),
+            section("action_id_features", 8064, 35072, (2192, 16)),
         ],
     )
     tensor = [0.0] * profile.tensor_size

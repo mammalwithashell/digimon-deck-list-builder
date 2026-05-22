@@ -147,10 +147,12 @@ effects:
 
   # ─── Clause 2 — [Inherited][Your Turn][OPT] On other-own digivolve, +1 memory
   #
-  # G-EVENT-TARGET-NOT-SOURCE (this card surfaces it): the printed "OTHER"
-  # filter cannot be expressed in DSL today. The condition below scopes to
-  # own-Digimon digivolutions; the carrier-self-digivolve over-fire is
-  # tracked in qa/dsl-vocab-gaps.md and asserted via #[ignore] tests.
+  # G-EVENT-TARGET-NOT-SOURCE (RESOLVED): the printed "OTHER" filter is
+  # expressed via `event_permanent_is_source: false` — true only when the
+  # digivolving (event) permanent is NOT this inherited clause's
+  # source-permanent (the carrier that hosts EX4-039). The carrier
+  # digivolving further therefore does NOT self-trigger. Same primitive in
+  # production use by EX9-033.yaml.
   - scope: inherited
     when: on_digivolve
     optional: false
@@ -161,5 +163,6 @@ effects:
       all_of:
         - event_target_owner: you
         - event_target_kind: digimon
+        - event_permanent_is_source: false
     process:
       - gain_memory: 1

@@ -31,13 +31,9 @@
 //!   and no event_card_color_is predicate. See qa/dsl-vocab-gaps.md.
 //!   Structurally identical to BT12-022 clause 0 (green→blue swap only).
 //!
-//! Clause 1 (inherited): PARTIAL — shipped as `kind: grant_keyword, scope:
-//!   inherited` with `active_when` encoding the name/trait condition. The
-//!   `active_when` is compiled but silently discarded by lower_grant_keyword::lower
-//!   (mod.rs uses `..` to ignore active_when for GrantKeyword).
-//!   Net: Piercing is granted unconditionally to any carrier, regardless of name
-//!   or trait. Over-fires for non-Imperialdramon/non-Free carriers.
-//!   Gap: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.
+//! Clause 1 (inherited): IMPLEMENTED — represented as an inherited self-aura
+//!   with `target: {}`, gated by `[Your Turn]` plus either carrier name contains
+//!   "Imperialdramon" or carrier top-card trait includes [Free].
 //!   Structurally identical to BT12-022 clause 1 (Jamming→Piercing swap only).
 
 use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
@@ -82,12 +78,10 @@ fn bt12_050_yaml_parses_and_compiles() {
     let _compiled = digimon_dsl::compile::compile(&spec).expect("BT12-050 YAML compiles");
 }
 
-/// BT12-050 has exactly zero triggered clauses (clause 0 is BLOCKED and absent
-/// from the YAML). The effect text triggers at BeforePayCost timing which the
-/// DSL cannot model without G-BEFORE-PAY-COST-DIGIVOLVE-TARGET and
-/// G-BEFORE-PAY-COST-GAIN-MEMORY.
+/// BT12-050 has exactly one triggered clause: clause 0 is now a
+/// `before_pay_cost_observe` observer (Phase 2 Track H closure).
 #[test]
-fn bt12_050_clause_0_is_absent_blocked() {
+fn bt12_050_clause_0_is_present_observer() {
     let runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT12-050 in embedded DSL pack")
@@ -103,16 +97,16 @@ fn bt12_050_clause_0_is_absent_blocked() {
         .count();
 
     assert_eq!(
-        triggered_count, 0,
-        "BT12-050 clause 0 is BLOCKED — no triggered clauses should be present; \
-         gap: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET + G-BEFORE-PAY-COST-GAIN-MEMORY"
+        triggered_count, 1,
+        "BT12-050 clause 0 is IMPLEMENTED (Phase 2 Track H) — one \
+         before_pay_cost_observe triggered clause should be present"
     );
 }
 
-/// BT12-050 has exactly one declarative clause: an inherited GrantKeyword
-/// with keyword Piercing (clause 1, partial implementation).
+/// BT12-050 has exactly one inherited Aura clause for the conditional Piercing
+/// grant (clause 1).
 #[test]
-fn bt12_050_has_one_inherited_grant_keyword_piercing() {
+fn bt12_050_has_one_inherited_piercing_aura() {
     let runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT12-050 in embedded DSL pack")
@@ -121,14 +115,12 @@ fn bt12_050_has_one_inherited_grant_keyword_piercing() {
 
     let compiled = runner.compiled_card(CARD_ID).expect("BT12-050 compiled");
 
-    let inherited_piercing_count = compiled
+    let inherited_aura_count = compiled
         .effects
         .iter()
         .filter(|c| match c {
             CompiledClause::Declarative(d) => match d {
-                CompiledDeclarativeClause::GrantKeyword { keyword, scope, .. } => {
-                    *scope == CompiledScope::Inherited && keyword.eq_ignore_ascii_case("Piercing")
-                }
+                CompiledDeclarativeClause::Aura { scope, .. } => *scope == CompiledScope::Inherited,
                 _ => false,
             },
             _ => false,
@@ -136,8 +128,8 @@ fn bt12_050_has_one_inherited_grant_keyword_piercing() {
         .count();
 
     assert_eq!(
-        inherited_piercing_count, 1,
-        "BT12-050 must have exactly one inherited GrantKeyword(Piercing) declarative clause"
+        inherited_aura_count, 1,
+        "BT12-050 must have exactly one inherited Aura declarative clause for conditional Piercing"
     );
 }
 
@@ -149,39 +141,228 @@ fn bt12_050_has_one_inherited_grant_keyword_piercing() {
 // BLOCKED: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET + G-BEFORE-PAY-COST-GAIN-MEMORY.
 // All behavioral tests for clause 0 are ignored until both gaps close.
 
-/// DNA digivolving into a blue Digimon should gain 1 memory — BLOCKED.
+/// DNA digivolving into a blue Digimon gains 1 memory — IMPLEMENTED.
 #[test]
-#[ignore = "pending: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET + G-BEFORE-PAY-COST-GAIN-MEMORY from qa/dsl-vocab-gaps.md"]
 fn bt12_050_dna_digivolving_into_blue_gains_one_memory() {
-    // When gap closes: set up BT12-050 on field, initiate DNA digivolve into
-    // a blue Digimon card from hand, assert memory increases by 1.
-    //
-    // Suggested setup:
-    //   let mut runner = DebugRunner::builder()
-    //       .dsl_card(CARD_ID)
-    //       .add_card(make_blue_digimon("BLUE-DNA"))
-    //       .hand(0, &["BLUE-DNA"])
-    //       .memory(0)
-    //       .start();
-    //   let carrier = runner.place_on_field(0, CARD_ID, Some(0));
-    //   let mat_b = runner.place_on_field(0, "MAT-B", None);
-    //   // initiate DNA digivolve on carrier + mat_b into BLUE-DNA
-    //   assert_eq!(runner.memory(), 1, "should gain 1 memory for blue DNA target");
+    use digimon_engine::card_data::{DnaCost, DnaRequirement};
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::enums::CardColor;
+
+    // Blue Digimon DNA result. BT12-050 (Green Lv.4) + Blue Lv.4 → cost 0.
+    let mut blue_dna = make_test_card("BLUE-DNA", "BlueDNAResult");
+    blue_dna.card_kind = CardKind::Digimon;
+    blue_dna.level = Some(5);
+    blue_dna.dp = Some(6000);
+    blue_dna.play_cost = 8;
+    blue_dna.colors = vec![CardColor::Blue];
+    blue_dna.dna_costs = vec![DnaCost {
+        memory_cost: 0,
+        requirement1: DnaRequirement {
+            level: 4,
+            card_colors: vec![CardColor::Green],
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+        requirement2: DnaRequirement {
+            level: 4,
+            card_colors: vec![CardColor::Blue],
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+    }];
+
+    let mut blue_mat = make_test_card("BLUE-MAT", "BlueMaterial");
+    blue_mat.card_kind = CardKind::Digimon;
+    blue_mat.level = Some(4);
+    blue_mat.dp = Some(4000);
+    blue_mat.colors = vec![CardColor::Blue];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT12-050 in embedded DSL pack")
+        .add_card(blue_dna)
+        .add_card(blue_mat)
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    let bt12_050_perm = runner.place_on_field(0, CARD_ID, Some(0));
+    let _blue_mat_perm = runner.place_on_field(0, "BLUE-MAT", Some(0));
+    let blue_dna_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "BLUE-DNA")
+        .unwrap();
+    let card_index = runner.game.next_card_index();
+    runner.game.players[0]
+        .hand
+        .push(CardSource::new(blue_dna_idx, 0, card_index));
+    let hand_idx = runner.game.player(0).hand.len() - 1;
+
+    let memory_before = runner.game.memory;
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    runner.game.resolve_dna_digivolve_stage2_with_window(
+        0,
+        bt12_050_perm.index as usize,
+        1,
+        hand_idx,
+        digimon_engine::dna_digivolve::DnaRouteWindow::Main,
+    );
+
+    assert_eq!(
+        runner.game.memory,
+        memory_before + 1,
+        "BT12-050 must gain 1 memory when DNA digivolving into blue Digimon"
+    );
 }
 
-/// DNA digivolving into a NON-blue Digimon should NOT gain memory — BLOCKED.
+/// DNA digivolving into a NON-blue Digimon must NOT gain memory.
 #[test]
-#[ignore = "pending: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET + G-BEFORE-PAY-COST-GAIN-MEMORY from qa/dsl-vocab-gaps.md"]
 fn bt12_050_dna_digivolving_into_non_blue_does_not_gain_memory() {
-    // When gap closes: DNA digivolve into a green/red Digimon → no memory gain.
+    use digimon_engine::card_data::{DnaCost, DnaRequirement};
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::enums::CardColor;
+
+    let mut red_dna = make_test_card("RED-DNA", "RedDNAResult");
+    red_dna.card_kind = CardKind::Digimon;
+    red_dna.level = Some(5);
+    red_dna.dp = Some(6000);
+    red_dna.play_cost = 8;
+    red_dna.colors = vec![CardColor::Red];
+    red_dna.dna_costs = vec![DnaCost {
+        memory_cost: 0,
+        requirement1: DnaRequirement {
+            level: 4,
+            card_colors: vec![CardColor::Green],
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+        requirement2: DnaRequirement {
+            level: 4,
+            card_colors: vec![CardColor::Red],
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+    }];
+
+    let mut red_mat = make_test_card("RED-MAT", "RedMaterial");
+    red_mat.card_kind = CardKind::Digimon;
+    red_mat.level = Some(4);
+    red_mat.dp = Some(4000);
+    red_mat.colors = vec![CardColor::Red];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT12-050 in embedded DSL pack")
+        .add_card(red_dna)
+        .add_card(red_mat)
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    let bt12_050_perm = runner.place_on_field(0, CARD_ID, Some(0));
+    let _red_mat_perm = runner.place_on_field(0, "RED-MAT", Some(0));
+    let red_dna_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "RED-DNA")
+        .unwrap();
+    let card_index = runner.game.next_card_index();
+    runner.game.players[0]
+        .hand
+        .push(CardSource::new(red_dna_idx, 0, card_index));
+    let hand_idx = runner.game.player(0).hand.len() - 1;
+
+    let memory_before = runner.game.memory;
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    runner.game.resolve_dna_digivolve_stage2_with_window(
+        0,
+        bt12_050_perm.index as usize,
+        1,
+        hand_idx,
+        digimon_engine::dna_digivolve::DnaRouteWindow::Main,
+    );
+
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "memory must NOT change when DNA digivolving into a non-blue Digimon"
+    );
 }
 
-/// On opponent's turn, the memory gain should NOT trigger — BLOCKED.
+/// On opponent's turn, the memory gain must NOT trigger (your_turn gate).
 #[test]
-#[ignore = "pending: G-BEFORE-PAY-COST-DIGIVOLVE-TARGET + G-BEFORE-PAY-COST-GAIN-MEMORY from qa/dsl-vocab-gaps.md"]
 fn bt12_050_clause_0_does_not_fire_on_opponents_turn() {
-    // When gap closes: end_turn to opponent; opponent DNA digivolves BT12-050
-    // into blue Digimon → memory gain should NOT fire (your_turn: true gate).
+    use digimon_engine::card_data::{DnaCost, DnaRequirement};
+    use digimon_engine::card_source::CardSource;
+    use digimon_engine::enums::CardColor;
+
+    let mut blue_dna = make_test_card("BLUE-DNA", "BlueDNAResult");
+    blue_dna.card_kind = CardKind::Digimon;
+    blue_dna.level = Some(5);
+    blue_dna.dp = Some(6000);
+    blue_dna.play_cost = 8;
+    blue_dna.colors = vec![CardColor::Blue];
+    blue_dna.dna_costs = vec![DnaCost {
+        memory_cost: 0,
+        requirement1: DnaRequirement {
+            level: 4,
+            card_colors: vec![CardColor::Green],
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+        requirement2: DnaRequirement {
+            level: 4,
+            card_colors: vec![CardColor::Blue],
+            name_contains: String::new(),
+            text_contains: String::new(),
+        },
+    }];
+
+    let mut blue_mat = make_test_card("BLUE-MAT", "BlueMaterial");
+    blue_mat.card_kind = CardKind::Digimon;
+    blue_mat.level = Some(4);
+    blue_mat.dp = Some(4000);
+    blue_mat.colors = vec![CardColor::Blue];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT12-050 in embedded DSL pack")
+        .add_card(blue_dna)
+        .add_card(blue_mat)
+        .memory(0)
+        .start();
+    runner.game.turn_count = 1;
+
+    let bt12_050_perm = runner.place_on_field(1, CARD_ID, Some(0));
+    let _blue_mat_perm = runner.place_on_field(1, "BLUE-MAT", Some(0));
+    let blue_dna_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "BLUE-DNA")
+        .unwrap();
+    let card_index = runner.game.next_card_index();
+    runner.game.players[1]
+        .hand
+        .push(CardSource::new(blue_dna_idx, 1, card_index));
+    let hand_idx = runner.game.player(1).hand.len() - 1;
+
+    let memory_before = runner.game.memory;
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    runner.game.resolve_dna_digivolve_stage2_with_window(
+        1,
+        bt12_050_perm.index as usize,
+        1,
+        hand_idx,
+        digimon_engine::dna_digivolve::DnaRouteWindow::Main,
+    );
+
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "memory must NOT change on opponent's turn (your_turn gate)"
+    );
 }
 
 // ─── Section 3 — Clause 1 behavioral (inherited Piercing) ────────────────────
@@ -189,12 +370,11 @@ fn bt12_050_clause_0_does_not_fire_on_opponents_turn() {
 // Clause 1: "[Your Turn] While this Digimon has [Imperialdramon] in its name
 // or the [Free] trait, it gains <Piercing>"
 //
-// Over-fires: `active_when` is compiled but not consumed by lowering.
-// Positive tests pass; negative tests are #[ignore]'d.
+// Implemented as an inherited self-aura. Positive and negative tests verify
+// the carrier name/trait gate and the `[Your Turn]` gate.
 
 /// When BT12-050 is stacked under a carrier with [Imperialdramon] in its name,
-/// the carrier should have Piercing. (Over-fires: any carrier gets Piercing due
-/// to G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.)
+/// the carrier should have Piercing.
 #[test]
 fn bt12_050_inherited_piercing_granted_when_carrier_has_imperialdramon_name() {
     let mut runner = DebugRunner::builder()
@@ -206,6 +386,7 @@ fn bt12_050_inherited_piercing_granted_when_carrier_has_imperialdramon_name() {
 
     // Stack: [BT12-050 (bottom), IMPERIALDRAMON (top)]
     let carrier = runner.place_stack(0, &[CARD_ID, "IMPERIALDRAMON"]);
+    runner.game.tick_declarative_effects();
 
     let has_piercing = runner.game.has_keyword(carrier, Keyword::Piercing);
     assert!(
@@ -215,9 +396,7 @@ fn bt12_050_inherited_piercing_granted_when_carrier_has_imperialdramon_name() {
 }
 
 /// When BT12-050 is stacked under a carrier with the [Free] trait, the carrier
-/// should have Piercing. (Over-fires regardless of trait due to
-/// G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED; this positive test passes
-/// for the wrong reason — the trait check is silently dropped.)
+/// should have Piercing.
 #[test]
 fn bt12_050_inherited_piercing_granted_when_carrier_has_free_trait() {
     let mut runner = DebugRunner::builder()
@@ -229,6 +408,7 @@ fn bt12_050_inherited_piercing_granted_when_carrier_has_free_trait() {
 
     // Stack: [BT12-050 (bottom), FREE-CARRIER (top)]
     let carrier = runner.place_stack(0, &[CARD_ID, "FREE-CARRIER"]);
+    runner.game.tick_declarative_effects();
 
     let has_piercing = runner.game.has_keyword(carrier, Keyword::Piercing);
     assert!(
@@ -240,11 +420,7 @@ fn bt12_050_inherited_piercing_granted_when_carrier_has_free_trait() {
 /// When BT12-050 is stacked under a carrier WITHOUT [Imperialdramon] in name
 /// or [Free] trait, the carrier should NOT have Piercing.
 ///
-/// FAILS (over-fires): `active_when` condition is not consumed by lowering,
-/// so Piercing is granted unconditionally to any carrier.
-/// Ignored pending G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED.
 #[test]
-#[ignore = "pending: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED from qa/dsl-vocab-gaps.md — active_when is compiled but discarded in lower_grant_keyword::lower; Piercing over-fires for all carriers"]
 fn bt12_050_inherited_piercing_not_granted_when_carrier_has_no_matching_name_or_trait() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -255,6 +431,7 @@ fn bt12_050_inherited_piercing_not_granted_when_carrier_has_no_matching_name_or_
 
     // Stack: [BT12-050 (bottom), TYRANNO (top)]
     let carrier = runner.place_stack(0, &[CARD_ID, "TYRANNO"]);
+    runner.game.tick_declarative_effects();
 
     let has_piercing = runner.game.has_keyword(carrier, Keyword::Piercing);
     assert!(
@@ -289,11 +466,9 @@ fn bt12_050_no_piercing_when_alone_on_field_as_top_card() {
     let _ = handle;
 }
 
-/// Carrier with [Imperialdramon] in name inherits Piercing even on opponent's
-/// turn — FAILS (over-fires: your_turn gate not enforced due to active_when
-/// being dropped).
+/// Carrier with [Imperialdramon] in name should not inherit Piercing on the
+/// opponent's turn because the inherited effect is gated by `[Your Turn]`.
 #[test]
-#[ignore = "pending: G-DSL-GRANT-KEYWORD-ACTIVE-WHEN-NOT-CONSUMED from qa/dsl-vocab-gaps.md — your_turn gate in active_when is silently dropped; Piercing fires on both turns"]
 fn bt12_050_inherited_piercing_not_active_on_opponents_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -304,6 +479,7 @@ fn bt12_050_inherited_piercing_not_active_on_opponents_turn() {
 
     let carrier = runner.place_stack(0, &[CARD_ID, "IMPERIALDRAMON"]);
     runner.end_turn(); // switch to player 1's turn
+    runner.game.tick_declarative_effects();
 
     // Now it is player 1's turn — BT12-050's [Your Turn] gate should block Piercing.
     let has_piercing = runner.game.has_keyword(carrier, Keyword::Piercing);

@@ -15,17 +15,23 @@ alt_paths:
     cost: 0
 
 effects:
-  # BLOCKED: the printed On Deletion slice is omitted rather than approximated.
-  #
-  # Printed text:
-  # [On Deletion] If deleted other than in battle, you may play 1 [Shoemon]
-  # trait from your hand without paying the cost.
-  #
-  # Required reusable capability:
-  # Triggered on_deletion predicates need a DSL leaf that reads
-  # EffectContext::deletion_cause() so YAML can express "other than in battle".
-  # The existing `replacement_cause` predicate is replacement-context only and
-  # does not inspect deletion observer cause.
+  - when: on_deletion
+    optional: true
+    condition:
+      not:
+        event_cause: battle_deletion
+    summary: "[On Deletion] If deleted other than in battle, you may play 1 [Shoemon] trait Digimon from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: shoemon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Shoemon
+          prompt: "Play 1 [Shoemon] trait Digimon from your hand without paying its cost"
+      - play_from_hand_free: { of: you, hand_index: shoemon }
 
   - scope: inherited
     when: on_opponent_attack
@@ -41,5 +47,8 @@ effects:
               - kind: digimon
               - other: true
           prompt: "Delete 1 of your other Digimon to end the attack"
-      - delete_permanent: { target: sacrifice }
-      - end_attack: true
+      - if:
+          condition: { binding_present: sacrifice }
+          then:
+            - delete_permanent: { target: sacrifice }
+            - end_attack: true

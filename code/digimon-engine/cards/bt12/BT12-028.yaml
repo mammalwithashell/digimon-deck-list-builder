@@ -26,21 +26,15 @@ traits: [Dragonkin]
 # ─── Implementation status ───────────────────────────────────────────────────
 #
 # Clause 0a ([When Digivolving] trash top 3 divi-cards from all opp Digimon):
-#   DSL VERB AVAILABLE as of 2026-05-09 via Track E
-#   `trash_top_n_digivolution_cards_of_each`, but this card remains a
-#   structural fixture until its DNA-origin follow-up and inherited predicate
-#   gaps are resolved together.
+#   IMPLEMENTED via Track E `trash_top_n_digivolution_cards_of_each`.
 #
 # Clause 0b ([When Digivolving] DNA sub-condition → CannotAttack):
-#   BLOCKED on G-DSL-IS-DNA-DIGIVOLVING (qa/dsl-vocab-gaps.md).
-#   DSL has no `is_dna_digivolving` predicate; engine TriggerSource::Digivolved
-#   has no `via_dna` flag. Omitted per no-approximations.
+#   IMPLEMENTED via `dna_origin: true`, `select_count_capped_multi`, and
+#   `CannotAttack` expiring at `end_of_opponents_turn`.
 #
 # Clause 1 ([Inherited][End of Attack] conditional gain memory):
-#   BLOCKED on G-DSL-SOURCE-NAME-CONTAINS (qa/dsl-vocab-gaps.md).
-#   `source_name_contains` and `source_permanent_trait_has` parse and compile
-#   but are not evaluated at runtime (always-false / silent no-op). Omitted
-#   per no-approximations.
+#   IMPLEMENTED via `source_name_contains` and `source_permanent_trait_has`,
+#   evaluated against the carrier permanent in inherited context.
 #
 # ─── DNA digivolve definition (EffectTiming.None block) ──────────────────────
 #
@@ -60,60 +54,43 @@ alt_paths:
     cost: 0
 
 effects:
-  # ─── ALL RUNTIME CLAUSES STILL HELD AS CARD-LOCAL FOLLOW-UP WORK ────────
+  # ─── Clause 0 — [When Digivolving] source trash, then DNA-only attack lock ─
   #
-  # Clause 0a can now be expressed by the Track E verb:
+  # DCGO trashes the top 3 digivolution cards from each opponent Digimon, then
+  # if the trigger came from Jogress/DNA, selects up to 2 opponent Digimon with
+  # no digivolution cards and applies CannotAttack until opponent turn end.
+  - when: when_digivolving
+    summary: "[When Digivolving] Trash top 3 opp sources; if DNA, up to 2 no-source opp Digimon can't attack"
+    process:
+      - trash_top_n_digivolution_cards_of_each:
+          of: opponent
+          n: 3
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_count_capped_multi:
+                of: opponent
+                zone: battle_area
+                max: 2
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - stack_size_lte: 1
+                bind_as: no_digi_targets
+                prompt: "Select up to 2 opponent Digimon with no digivolution cards"
+                optional_zero: false
+            - per_selected:
+                selection: no_digi_targets
+                bind_as: tgt
+                body:
+                  - add_modifier:
+                      target: { binding: tgt }
+                      modifier: CannotAttack
+                      value: 1
+                      expiry: end_of_opponents_turn
+
   #
-  #   - when: when_digivolving
-  #     process:
-  #       - trash_top_n_digivolution_cards_of_each:
-  #           of: opponent
-  #           n: 3
-  #
-  # The active card fixture stays load-only until the DNA-origin follow-up
-  # and inherited carrier-name/trait predicate gaps are closed for the card
-  # as a whole.
-  #
-  # ─── Clause 0b — [When Digivolving] DNA sub-condition (BLOCKED) ──────────
-  #
-  # Printed text:
-  #   "Then, if DNA digivolving, 2 of your opponent's Digimon with no
-  #   digivolution cards can't attack until the end of your opponent's turn."
-  #
-  # DCGO: if (CardEffectCommons.IsJogress(_hashtable))
-  #         SelectPermanentEffect (maxCount: min(2, matchCount),
-  #                                canNoSelect: false, canEndNotMax: false)
-  #         per-selected: GainCanNotAttack(... EffectDuration.UntilOpponentTurnEnd ...)
-  #
-  # Intended DSL form (once G-DSL-IS-DNA-DIGIVOLVING closes):
-  #   - if:
-  #       condition: { is_dna_digivolving: true }        # ← predicate does not exist yet
-  #       then:
-  #         - select_count_capped_multi:
-  #             of: opponent
-  #             zone: [battle_area]
-  #             max: 2
-  #             filter:
-  #               all_of:
-  #                 - kind: digimon
-  #                 - stack_size_lte: 1
-  #             bind_as: no_digi_targets
-  #             prompt: "Select up to 2 opponent Digimon with no digivolution cards"
-  #             optional_zero: false
-  #         - per_selected:
-  #             selection: no_digi_targets
-  #             bind_as: tgt
-  #             body:
-  #               - add_modifier:
-  #                   target: { binding: tgt }
-  #                   modifier: CannotAttack
-  #                   value: 1
-  #                   expiry: end_of_opponents_turn
-  #
-  # BLOCKED: G-DSL-IS-DNA-DIGIVOLVING — no `is_dna_digivolving` predicate and
-  # no `via_dna` flag on TriggerSource::Digivolved. Omitted per no-approximations.
-  #
-  # ─── Clause 1 — Inherited [End of Attack] conditional gain memory (BLOCKED) ─
+  # ─── Clause 1 — Inherited [End of Attack] conditional gain memory ─────────
   #
   # Printed text:
   #   "[End of Attack] If this Digimon has [Imperialdramon] in its name or
@@ -129,18 +106,12 @@ effects:
   #     || carrier.TopCard.TypeTexts.Contains(TypeText.Free)
   #   ActivateCoroutine: GainMemory(+1)
   #
-  # Intended DSL form (once G-DSL-SOURCE-NAME-CONTAINS closes):
-  #   - scope: inherited
-  #     when: end_of_attack
-  #     condition:
-  #       any_of:
-  #         - source_name_contains: "Imperialdramon"
-  #         - source_permanent_trait_has: "Free"
-  #     process:
-  #       - gain_memory: 1
-  #     summary: "[Inherited][End of Attack] If carrier has Imperialdramon in name or Free trait, +1 memory"
-  #
-  # BLOCKED: G-DSL-SOURCE-NAME-CONTAINS — both `source_name_contains` and
-  # `source_permanent_trait_has` parse/compile but have no runtime evaluation
-  # branch in predicate.rs. Applying them would produce always-false or silent
-  # no-op behavior. Omitted per no-approximations.
+  - scope: inherited
+    when: end_of_attack
+    condition:
+      any_of:
+        - source_name_contains: "Imperialdramon"
+        - source_permanent_trait_has: "Free"
+    process:
+      - gain_memory: 1
+    summary: "[Inherited][End of Attack] If carrier has Imperialdramon in name or Free trait, +1 memory"

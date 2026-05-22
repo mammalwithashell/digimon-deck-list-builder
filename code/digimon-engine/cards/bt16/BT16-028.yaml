@@ -57,13 +57,10 @@
 #   The unsuspend-own ONLY fires when the opp-suspend was chosen and completed.
 #   The "by" construction is a conditional cost: pay (suspend opp) → reward (unsuspend own).
 #
-#   BLOCKED — G-DSL-IF-NO-TARGET:
-#   The DSL has no binding-result flag for optional selections. After
-#   `select_opponent_permanent` with `optional: true`, the step either binds a target
-#   or silently skips. There is no `if { condition: { binding_present: suspend_target } }`
-#   or equivalent to conditionally execute the own-unsuspend arm only when the suspend
-#   cost was paid. Authoring the unsuspend unconditionally would violate no-approximations
-#   (the player could get a free unsuspend without paying the suspend cost).
+#   IMPLEMENTED:
+#   `select_opponent_permanent` is optional and filtered to unsuspended opponent
+#   Digimon/Tamers. The reward arm is guarded by `binding_present: suspend_cost`,
+#   so declining the cost does not expose a free own-unsuspend selection.
 #
 # ─── Clause 1 — [All Turns] On effect-play/digivolve opp Digimon → conditional free digivolve ─
 #
@@ -97,15 +94,11 @@
 # |-------------------------------------------------------------------|-------------------|
 # | Standard digivolve Lv.5 Blue / Cost 4                             | IMPLEMENTED       |
 # | [When Digivolving] Select 1 opp Digimon/Tamer → CannotUnsuspend   | IMPLEMENTED       |
-# | [When Digivolving] By suspending opp → unsuspend own Digimon      | BLOCKED — G-DSL-IF-NO-TARGET |
+# | [When Digivolving] By suspending opp → unsuspend own Digimon      | IMPLEMENTED       |
 # | [All Turns] Effect-play/digivolve opp Digimon → conditional free  | IMPLEMENTED       |
 # |   digivolve self into Fighter Mode from hand                      |                   |
 #
 # Gaps:
-#   G-DSL-IF-NO-TARGET: No DSL control-flow form that branches on whether a
-#     prior optional selection produced a target vs. produced nothing. Tracked in
-#     qa/archetype-qa/engine-gaps.md.
-#
 #   G-IS-EFFECT-INITIATED: Closed for this card's OnEnterFieldAnyone/OnDigivolve
 #     observer shape by Track A on 2026-05-08.
 
@@ -143,7 +136,7 @@ effects:
   # on on_dna_digivolve bulk). expiry: end_of_opponents_turn maps to
   # EffectDuration.UntilOpponentTurnEnd in DCGO.
   - when: when_digivolving
-    summary: "[When Digivolving] 1 opp Digimon/Tamer can't unsuspend until end of their turn; then by suspending opp, unsuspend own Digimon (suspend→unsuspend arm BLOCKED: G-DSL-IF-NO-TARGET)"
+    summary: "[When Digivolving] 1 opp Digimon/Tamer can't unsuspend until end of their turn; then by suspending 1 unsuspended opp Digimon/Tamer, unsuspend 1 own Digimon"
     process:
       # Part A: CannotUnsuspend target
       - select_opponent_permanent:
@@ -159,35 +152,28 @@ effects:
           value: 1
           expiry: end_of_opponents_turn
       # Part B: "By suspending 1 of their Digimon or Tamers, unsuspend 1 of your Digimon"
-      # BLOCKED: G-DSL-IF-NO-TARGET — see header comment.
-      # The suspend-cost step below can be expressed, but the conditional unsuspend-reward
-      # cannot be made to fire ONLY when the suspend was paid. Authoring both steps
-      # sequentially would unsuspend unconditionally (even when the player declines the
-      # optional suspend), violating the "by" cost semantics.
-      #
-      # When G-DSL-IF-NO-TARGET closes, replace this comment with:
-      #   - select_opponent_permanent:
-      #       bind_as: suspend_cost
-      #       optional: true
-      #       filter:
-      #         all_of:
-      #           - is_unsuspended: true
-      #           - any_of:
-      #               - kind: digimon
-      #               - kind: tamer
-      #       prompt: "By suspending 1 opponent Digimon or Tamer, unsuspend 1 of your Digimon"
-      #   - suspend: { target: suspend_cost }
-      #   - if:
-      #       condition: { binding_present: suspend_cost }   # ← not yet a DSL predicate
-      #       then:
-      #         - select_own_permanent:
-      #             bind_as: unsuspend_target
-      #             filter:
-      #               all_of:
-      #                 - kind: digimon
-      #                 - is_suspended: true
-      #             prompt: "Choose 1 of your suspended Digimon to unsuspend"
-      #         - unsuspend: { target: unsuspend_target }
+      - select_opponent_permanent:
+          bind_as: suspend_cost
+          optional: true
+          filter:
+            all_of:
+              - is_unsuspended: true
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "By suspending 1 opponent Digimon or Tamer, unsuspend 1 of your Digimon"
+      - suspend: { target: suspend_cost }
+      - if:
+          condition: { binding_present: suspend_cost }
+          then:
+            - select_own_permanent:
+                bind_as: unsuspend_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - is_suspended: true
+                prompt: "Choose 1 of your suspended Digimon to unsuspend"
+            - unsuspend: { target: unsuspend_target }
 
   # ─── Clause 1: [All Turns] effect-play/digivolve opp Digimon → conditional free digivolve ─
   - when: [on_enter_field_anyone, on_digivolve]

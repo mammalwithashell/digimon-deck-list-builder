@@ -1,7 +1,9 @@
 //! Phase 2g source-selection DSL verbs parse and lower into compiled steps.
 
 use digimon_dsl::compile::compile;
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledClause, CompiledStep};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledClause, CompiledPredicate, CompiledStep,
+};
 use digimon_dsl::spec::CardSpec;
 
 fn compile_first_step(yaml: &str) -> CompiledStep {
@@ -168,6 +170,128 @@ effects:
 }
 
 #[test]
+fn select_opponent_sources_lowers_with_target_and_nested_trash_step() {
+    // G-SELECT-OPPONENT-SOURCES — BT16-085 DNA branch shape: pick exactly 3
+    // digivolution cards under a chosen opponent Digimon, then trash them.
+    let yaml = r#"
+card: X-OPP-SRC
+name: Opponent Source Picker
+kind: tamer
+color: [blue]
+cost: 4
+effects:
+  - when: on_digivolve
+    process:
+      - select_opponent_sources:
+          target: opp_stack
+          min: 3
+          max: 3
+          bind_as: trashed_sources
+          prompt: "Choose 3 digivolution cards under an opponent Digimon"
+          then:
+            - trash_selected_sources:
+                source_refs: trashed_sources
+"#;
+
+    match compile_first_step(yaml) {
+        CompiledStep::SelectOpponentSources {
+            target,
+            filter,
+            min,
+            max,
+            bind_as,
+            prompt,
+            then,
+        } => {
+            assert_eq!(target, Some(CompiledBindingRef::Named("opp_stack".into())));
+            assert_eq!(filter, CompiledPredicate::default());
+            assert_eq!(min, 3);
+            assert_eq!(max, 3);
+            assert_eq!(bind_as.as_deref(), Some("trashed_sources"));
+            assert_eq!(
+                prompt,
+                "Choose 3 digivolution cards under an opponent Digimon"
+            );
+            assert_eq!(
+                then,
+                vec![CompiledStep::TrashSelectedSources {
+                    source_refs: "trashed_sources".to_string(),
+                }]
+            );
+        }
+        other => panic!("expected SelectOpponentSources, got {other:?}"),
+    }
+}
+
+#[test]
+fn select_opponent_sources_accepts_filter_and_up_to_n() {
+    let yaml = r#"
+card: X-OPP-SRC2
+name: Opponent Source Filter Picker
+kind: digimon
+level: 6
+color: [red]
+cost: 8
+dp: 9000
+effects:
+  - when: when_attacking
+    process:
+      - select_opponent_sources:
+          filter:
+            kind: digimon
+          min: 0
+          max: 2
+          bind_as: picked
+          then:
+            - trash_selected_sources:
+                source_refs: picked
+"#;
+
+    match compile_first_step(yaml) {
+        CompiledStep::SelectOpponentSources {
+            target,
+            min,
+            max,
+            bind_as,
+            prompt,
+            ..
+        } => {
+            assert!(target.is_none());
+            assert_eq!(min, 0);
+            assert_eq!(max, 2);
+            assert_eq!(bind_as.as_deref(), Some("picked"));
+            assert_eq!(prompt, "Choose source cards");
+        }
+        other => panic!("expected SelectOpponentSources, got {other:?}"),
+    }
+}
+
+#[test]
+fn select_opponent_sources_rejects_unknown_field() {
+    let yaml = r#"
+card: X-OPP-BAD
+name: Bad Opponent Source Picker
+kind: digimon
+level: 6
+color: [red]
+cost: 8
+dp: 9000
+effects:
+  - when: when_attacking
+    process:
+      - select_opponent_sources:
+          min: 1
+          max: 1
+          count: 3
+"#;
+    let spec: Result<CardSpec, _> = serde_yml::from_str(yaml);
+    assert!(
+        spec.is_err(),
+        "select_opponent_sources must reject the unknown `count` field"
+    );
+}
+
+#[test]
 fn select_opponent_dp_budget_lowers_with_bound_delete_step() {
     let yaml = r#"
 card: X-DP
@@ -237,10 +361,13 @@ effects:
         CompiledStep::SelectOwnBreedingPermanent {
             bind_as,
             prompt,
+            filter,
             then,
+            ..
         } => {
             assert_eq!(bind_as.as_deref(), Some("breeding_target"));
             assert_eq!(prompt, "Choose breeding");
+            assert_eq!(filter, CompiledPredicate::default());
             assert_eq!(then, vec![CompiledStep::GainMemory(1)]);
         }
         other => panic!("expected SelectOwnBreedingPermanent, got {other:?}"),

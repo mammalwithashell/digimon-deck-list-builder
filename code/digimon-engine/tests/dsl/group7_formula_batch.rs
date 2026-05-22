@@ -135,6 +135,59 @@ effects:
 }
 
 #[test]
+fn distinct_colors_count_formula_counts_both_players_battle_area_union() {
+    // Phase 2 Track F (G-DSL-DISTINCT-COLORS-BOTH-PLAYERS-FORMULA) — P-182
+    // WarGreymon's [All Turns] +1000 DP per distinct color across BOTH
+    // players' Digimon+Tamers. Verifies that `of: Any` collapses to the
+    // union of both players' colors rather than counting per-player and
+    // summing.
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon_card("SRC", 1000))
+        .add_card({
+            let mut c = digimon_card("OWN-RED", 3000);
+            c.colors = vec![CardColor::Red];
+            c
+        })
+        .add_card({
+            let mut c = digimon_card("OPP-RED", 3000);
+            c.colors = vec![CardColor::Red];
+            c
+        })
+        .add_card({
+            let mut c = digimon_card("OPP-BLUE", 3000);
+            c.colors = vec![CardColor::Blue];
+            c
+        })
+        .add_card(colored_tamer_card("OPP-WHITE-TAMER", CardColor::White))
+        .build();
+    let source = runner.place_on_field(0, "SRC", None);
+    runner.place_on_field(0, "OWN-RED", None);
+    runner.place_on_field(1, "OPP-RED", None);
+    runner.place_on_field(1, "OPP-BLUE", None);
+    runner.place_on_field(1, "OPP-WHITE-TAMER", None);
+
+    let src_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let ctx = EffectContext::new(&mut runner.game, src_card, Some(source), 0);
+    let formula = CompiledFormula::BasePerDelta {
+        base: 0,
+        per: CompiledPerSelector::DistinctColorsCountScoped {
+            zone: CompiledZone::BattleArea,
+            of: CompiledPlayerRef::Any,
+            filter: None,
+        },
+        delta: 1000,
+    };
+
+    // Union: SRC=test colorless, OWN-RED=red, OPP-RED=red, OPP-BLUE=blue,
+    // OPP-WHITE-TAMER=white → distinct colors observed across both players'
+    // top cards: {red, blue, white} → 3 (the colorless SRC contributes
+    // no color to the union). Times 1000 DP delta → 3000.
+    assert_eq!(formula_eval::evaluate(&formula, &ctx, source), 3000);
+}
+
+#[test]
 fn distinct_colors_count_formula_counts_filtered_tamer_colors() {
     let mut runner = DebugRunner::builder()
         .add_card(digimon_card("SRC", 1000))

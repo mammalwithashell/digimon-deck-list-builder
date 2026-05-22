@@ -34,7 +34,7 @@ cost: 2
 # needed (see G-PLACE-SELF-AS-OPTION-PERMANENT notes in dsl-vocab-gaps.md and
 # the LM-027 precedent).
 #
-# ─── Clause B: [Start of Your Turn] Delay — BLOCKED (G-DELAY-START-OF-TURN) ──
+# ─── Clause B: [Start of Your Turn] Delay — BLOCKED (body gaps) ──────────────
 #
 # "[Start of Your Turn] If your opponent has a Digimon, ＜Delay＞ (By trashing
 # this card after the placing turn, activate the effect below.)
@@ -56,26 +56,20 @@ cost: 2
 #          && DP ≤ 2000, canNoSelect: true (optional).
 #          PlayFromTrashEffect (free play of selected card).
 #
-# G-DELAY-START-OF-TURN [engine gap]:
-#   The engine's `DelayTrigger` enum only has `EndOfThisTurn` and
-#   `EndOfYourNextTurn`. The DSL `kind: delay` lowerer maps everything except
-#   `EndOfYourTurn` to `EndOfYourNextTurn` — always end-of-turn, never
-#   start-of-turn. There is no `DelayTrigger::StartOfYourNextTurn` variant.
-#   DCGO fires this at `EffectTiming.OnStartTurn` (start of the owner's turn),
-#   which is a fundamentally different timing. The Delay clause is omitted from
-#   this pass until the gap is resolved (following the LM-029 precedent).
+# Timing status:
+#   Start-of-turn Delay timing: `kind: delay` with `trigger: start_of_your_turn`.
+#   The Delay body is now fully expressible (see Clause B below).
 #
-# Inner body gaps (both blocked by the outer timing gap anyway):
+# Body substrate (now available):
 #
-# G-ZONE-TRASH-TO-DECK [DSL gap]:
-#   "Return 1 green Digimon card from your trash to the top of the deck" — no
-#   native DSL verb for trash → deck-top transfer. Tracked in
-#   qa/archetype-qa/engine-gaps.md.
+#   `move_trash_card_to_deck_top: { of, card }` — moves the single selected
+#   trash card to the top of the owner's deck. Faithfully expresses "Return 1
+#   green Digimon card from your trash to the top of the deck" (formerly
+#   G-ZONE-SELECTED-TRASH-TO-DECK-TOP).
 #
-# G-PRED-DP-LTE [engine gap]:
-#   The `dp_lte: 2000` predicate is parsed but not evaluated at selection time
-#   for trash cards (eval_card_fields in predicate.rs does not check dp_lte).
-#   Tracked in qa/archetype-qa/engine-gaps.md.
+#   `dp_lte: 2000` — evaluated for card-zone subjects (trash selections) via
+#   `eval_card_fields`, which checks `data.dp` against the cap. The DP filter
+#   on the optional play step is enforced (formerly G-PRED-DP-LTE).
 #
 # ─── Clause C: [Security] (Inherited) ────────────────────────────────────────
 #
@@ -97,10 +91,11 @@ cost: 2
 #   - play_from_trash_free
 #   - add_this_option_to_hand
 #
-# G-PRED-DP-LTE: dp_lte: 2000 is parsed but not enforced by eval_card_fields for
-# trash card subjects. All green Digimon in trash appear as candidates until the
-# gap closes. The mandatory "Then, add this card to the hand" tail runs regardless
-# (not gated on whether a card was selected and played).
+# dp_lte: 2000 is authored in the filter below and is enforced by
+# eval_card_fields for trash card subjects (it checks data.dp against the cap),
+# so >2000 DP green Digimon do not appear as candidates. The mandatory "Then,
+# add this card to the hand" tail runs regardless of whether a card was
+# selected and played.
 
 effects:
   # ─── Clause A: [Main] ───────────────────────────────────────────────────────
@@ -140,53 +135,67 @@ effects:
           cost: { reduce: 3 }
           ignore_requirements: false
 
-  # ─── Clause B: [Start of Your Turn] Delay — BLOCKED (G-DELAY-START-OF-TURN) ─
-  # Omitted: the engine has no StartOfYourTurn DelayTrigger variant. This clause
-  # will be added when G-DELAY-START-OF-TURN is resolved (see LM-027 raw_rust
-  # placeholder precedent and LM-029 omission precedent — both are valid; this
-  # pass follows the LM-029 omit approach as the simpler structural model).
+  # ─── Clause B: [Start of Your Turn] Delay ──────────────────────────────────
   #
-  # When G-DELAY-START-OF-TURN and inner body gaps are resolved, add:
-  #   - kind: delay
-  #     trigger: start_of_your_next_turn
-  #     condition:
-  #       any_permanent:
-  #         of: opponent
-  #         kind: digimon
-  #     summary: "[Start of Your Turn] If opponent has Digimon, <Delay>: return green Digimon to deck top; optionally play ≤2000 DP green Digimon from trash"
-  #     process:
-  #       - select_trash:
-  #           of: you
-  #           bind_as: to_return
-  #           optional: false
-  #           filter:
-  #             all_of:
-  #               - kind: digimon
-  #               - color_is: green
-  #           prompt: "Return 1 green Digimon card from your trash to the top of the deck"
-  #       - move_trash_to_deck_top:   # G-ZONE-TRASH-TO-DECK
-  #           of: you
-  #           card: to_return
-  #       - if:
-  #           condition:
-  #             not:
-  #               any_permanent:
-  #                 of: you
-  #                 kind: digimon
-  #           then:
-  #             - select_trash:
-  #                 of: you
-  #                 bind_as: to_play
-  #                 optional: true
-  #                 filter:
-  #                   all_of:
-  #                     - kind: digimon
-  #                     - color_is: green
-  #                     - dp_lte: 2000   # G-PRED-DP-LTE
-  #                 prompt: "You may play 1 green Digimon with 2000 DP or less from your trash without paying its cost"
-  #             - play_from_trash_free:
-  #                 of: you
-  #                 hand_index: to_play
+  # Printed: "[Start of Your Turn] If your opponent has a Digimon, <Delay> (By
+  # trashing this card after the placing turn, activate the effect below.)
+  # ・Return 1 green Digimon card from your trash to the top of the deck. Then,
+  # if you don't have a Digimon, you may play 1 green Digimon card with 2000 DP
+  # or less from your trash without paying the cost."
+  #
+  # `kind: delay` + `trigger: start_of_your_turn`. `active_when` gates the Delay
+  # on the opponent having ≥1 Digimon (DCGO CanUseCondition:
+  # opponent HasAtLeastOneDigimon).
+  #
+  # Body:
+  #   1. `select_trash` (mandatory) — pick 1 green Digimon card from your trash,
+  #      `move_trash_card_to_deck_top` returns it to the top of your deck.
+  #   2. `if not-any-own-Digimon` — only when you control no Digimon:
+  #      `select_trash` (optional, dp_lte: 2000) → `play_from_trash_free`.
+  - kind: delay
+    trigger: start_of_your_turn
+    active_when:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[Start of Your Turn] If opponent has Digimon, <Delay>: return a green Digimon from trash to deck top; if you have no Digimon, may play a ≤2000 DP green Digimon from trash free"
+    process:
+      # Step 1: return 1 green Digimon card from trash to the top of the deck.
+      - select_trash:
+          of: you
+          bind_as: to_return
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: green
+          prompt: "Return 1 green Digimon card from your trash to the top of the deck"
+      - move_trash_card_to_deck_top:
+          of: you
+          card: to_return
+      # Step 2: if you have no Digimon, optionally play a small green Digimon.
+      - if:
+          condition:
+            not:
+              any_permanent:
+                of: you
+                zone: [battle_area]
+                kind: digimon
+          then:
+            - select_trash:
+                of: you
+                bind_as: to_play
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - color_is: green
+                    - dp_lte: 2000
+                prompt: "You may play 1 green Digimon with 2000 DP or less from your trash without paying its cost"
+            - play_from_trash_free:
+                of: you
+                hand_index: to_play
 
   # ─── Clause C: [Security] (Inherited) ──────────────────────────────────────
   # "You may play 1 green Digimon card with 2000 DP or less from your trash
@@ -199,10 +208,9 @@ effects:
     optional: true
     summary: "[Security][Inherited] You may play 1 green Digimon (≤2000 DP) from trash free; then add this card to hand"
     process:
-      # Step 1: optional trash selection — green Digimon (≤2000 DP gated by G-PRED-DP-LTE).
+      # Step 1: optional trash selection — green Digimon with DP ≤ 2000.
       # DCGO: canNoSelect: true; filter IsGreen && IsDigimon && DP ≤ 2000.
-      # G-PRED-DP-LTE: dp_lte: 2000 is parsed but not enforced at selection time.
-      # All green Digimon in trash appear as candidates until the gap closes.
+      # dp_lte: 2000 is enforced for trash-card subjects by eval_card_fields.
       - select_trash:
           of: you
           bind_as: picked
@@ -211,6 +219,7 @@ effects:
             all_of:
               - kind: digimon
               - color_is: green
+              - dp_lte: 2000
           prompt: "You may play 1 green Digimon with 2000 DP or less from your trash without paying its cost"
       # Step 2: play the selected card from trash without paying the cost.
       - play_from_trash_free:

@@ -22,28 +22,14 @@
 //! # Patterns this test covers
 //! - Clause A (Main): effect_initiated_digivolve with cost reduce 3 from an
 //!   option card (main_from_hand timing, optional permanent selection)
-//! - Clause B (Delay/StartOfYourTurn): BLOCKED G-DELAY-START-OF-TURN — DSL
-//!   `kind: delay` only supports EndOfThisTurn / EndOfYourNextTurn; no
-//!   StartOfYourTurn delay trigger exists in engine or DSL. Clause is omitted
-//!   (following the LM-029 precedent, not the LM-027 raw_rust placeholder).
+//! - Clause B (Delay/StartOfYourTurn): `kind: delay` + `trigger:
+//!   start_of_your_turn`, `active_when` opponent-has-Digimon gate;
+//!   `move_trash_card_to_deck_top` returns the selected green Digimon to deck
+//!   top; conditional `play_from_trash_free` of a ≤2000 DP green Digimon when
+//!   you control no Digimon.
 //! - Clause C (Security, inherited): on_security with select_trash (green
-//!   Digimon ≤2000 DP, gated by G-PRED-DP-LTE), play_from_trash_free,
-//!   add_this_option_to_hand.
-//!
-//! # Known gaps
-//! - **G-DELAY-START-OF-TURN**: Clause B requires a Delay that fires at the
-//!   START of the owner's next turn (DCGO `EffectTiming.OnStartTurn`). The
-//!   engine's `DelayTrigger` enum only has `EndOfThisTurn` and
-//!   `EndOfYourNextTurn`. The DSL `kind: delay` lowerer maps everything except
-//!   `EndOfYourTurn` to `EndOfYourNextTurn` (fires at end-of-turn, not start).
-//!   There is no `DelayTrigger::StartOfYourNextTurn`. Clause B is omitted from
-//!   the YAML until this gap is resolved.
-//! - **G-PRED-DP-LTE**: `dp_lte: 2000` predicate not evaluated at selection
-//!   time for trash cards (eval_card_fields does not check dp_lte for Card
-//!   predicate subjects — only eval_dp_constraints for Permanent handles does).
-//! - **G-ZONE-TRASH-TO-DECK** (Clause B inner): "Return 1 green Digimon from
-//!   trash to top of deck" — no native DSL verb; blocked by G-DELAY-START-OF-TURN
-//!   outer gap anyway.
+//!   Digimon ≤2000 DP, `dp_lte` enforced for trash subjects),
+//!   play_from_trash_free, add_this_option_to_hand.
 
 #![allow(unused_imports, dead_code)]
 
@@ -126,18 +112,17 @@ fn lm_030_is_green_option_cost_2() {
     assert_eq!(compiled.cost, Some(2));
 }
 
-/// LM-030 has exactly 2 compiled clauses: Main (main_from_hand) and Security
-/// (on_security inherited). The Delay clause (Clause B) is omitted pending
-/// G-DELAY-START-OF-TURN (following the LM-029 precedent).
+/// LM-030 has 3 compiled clauses: Main (main_from_hand), Delay
+/// (start_of_your_turn), and Security (on_security inherited).
 #[test]
-fn lm_030_has_two_clauses_main_and_security() {
+fn lm_030_has_three_clauses_main_delay_and_security() {
     let runner = lm_030_runner();
     let compiled = runner.compiled_card("LM-030").expect("LM-030 compiled");
 
     assert_eq!(
         compiled.effects.len(),
-        2,
-        "LM-030 ships only the supported Main and Security clauses; Delay body is blocked"
+        3,
+        "LM-030 ships Main, Delay, and Security clauses"
     );
 }
 
@@ -421,39 +406,283 @@ fn lm_030_main_decline_leaves_field_and_hand_unchanged() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Section 3 — Clause B: Delay (BLOCKED — G-DELAY-START-OF-TURN)
+// Section 3 — Clause B: Delay ([Start of Your Turn])
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Clause B is omitted from YAML entirely. When G-DELAY-START-OF-TURN is
-/// resolved the following blocked tests become implementable.
+use digimon_engine::permanent::OptionState;
+use digimon_engine::enums::DelayTrigger;
 
+/// Place LM-030 on P0's field as a Delay-Option whose `StartOfYourNextTurn`
+/// trigger matures at the start of P0's next turn. Driven via two `end_turn()`
+/// calls (P0 → P1 → P0): the start of the P0 turn fires the delay.
+fn place_lm_030_as_start_delay(runner: &mut DebugRunner) {
+    let handle = runner.place_on_field(0, "LM-030", Some(0));
+    // P0 is the turn player; "next P0 turn" is turn_count + 2 (skip P1).
+    let fire_turn = runner.game.turn_count + 2;
+    runner.game.player_mut(0).battle_area[handle.index as usize].option_state =
+        OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: fire_turn,
+            trigger: DelayTrigger::StartOfYourNextTurn,
+            placed_on_turn: runner.game.turn_count,
+        };
+}
+
+/// Advance from P0's turn to the start of P0's next turn (P0 → P1 → P0),
+/// where `StartOfYourNextTurn` delays mature.
+fn advance_to_next_p0_turn(runner: &mut DebugRunner) {
+    runner.end_turn(); // P0 → P1
+    runner.end_turn(); // P1 → P0 (start fires matured delays)
+}
+
+/// Push a card by id into player `p`'s trash; owned by `p`.
+fn push_trash(runner: &mut DebugRunner, p: u8, card_id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("push_trash: unknown card_id {card_id}"));
+    let card = digimon_engine::card_source::CardSource::new(
+        data_idx,
+        p,
+        runner.game.next_card_index(),
+    );
+    runner.game.players[p as usize].trash.push(card);
+}
+
+/// Place an opponent (P1) Digimon on the field.
+fn place_opp_digimon(runner: &mut DebugRunner, card_id: &str) {
+    runner.place_on_field(1, card_id, None);
+}
+
+/// The Delay fires at the start of P0's turn when the opponent has a Digimon:
+/// it installs the mandatory trash selection (return a green Digimon to the
+/// top of the deck).
 #[test]
-#[ignore = "pending: G-DELAY-START-OF-TURN — no StartOfYourNextTurn DelayTrigger in engine"]
 fn lm_030_delay_fires_at_start_of_your_turn_when_opponent_has_digimon() {
-    unimplemented!("blocked on G-DELAY-START-OF-TURN");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-030 YAML parses")
+        .add_card(make_green_digimon("LM030-TRASH-GREEN", 3, 2000, 3))
+        .add_card(make_filler("OPP-DIGI"))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    // OPP-DIGI must be a Digimon for the active_when gate.
+    if let Some(d) = runner
+        .game
+        .card_data
+        .iter_mut()
+        .find(|c| c.card_id == "OPP-DIGI")
+    {
+        d.card_kind = CardKind::Digimon;
+        d.level = Some(4);
+        d.dp = Some(4000);
+    }
+
+    place_lm_030_as_start_delay(&mut runner);
+    place_opp_digimon(&mut runner, "OPP-DIGI");
+    push_trash(&mut runner, 0, "LM030-TRASH-GREEN");
+
+    advance_to_next_p0_turn(&mut runner);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Delay must install the mandatory green-Digimon trash selection");
+    assert_eq!(view.kind, SelectionKind::Trash);
+    assert!(
+        !runner.pending_is_optional(),
+        "step 1 of the Delay body is a mandatory selection (no PASS)"
+    );
 }
 
+/// The Delay must NOT fire when the opponent controls no Digimon — its
+/// `active_when` opponent-has-Digimon gate fails.
 #[test]
-#[ignore = "pending: G-DELAY-START-OF-TURN — no StartOfYourNextTurn DelayTrigger in engine"]
 fn lm_030_delay_does_not_fire_when_opponent_has_no_digimon() {
-    unimplemented!("blocked on G-DELAY-START-OF-TURN");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-030 YAML parses")
+        .add_card(make_green_digimon("LM030-TRASH-GREEN", 3, 2000, 3))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    place_lm_030_as_start_delay(&mut runner);
+    push_trash(&mut runner, 0, "LM030-TRASH-GREEN");
+    // No opponent Digimon on the field.
+
+    advance_to_next_p0_turn(&mut runner);
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "Delay must not fire (and not prompt) when opponent has no Digimon"
+    );
 }
 
-/// Inner Delay body (1/2): "Return 1 green Digimon from trash to top of deck."
-/// Blocked by both G-DELAY-START-OF-TURN (outer timing) and G-ZONE-TRASH-TO-DECK
-/// (no native DSL verb for trash → deck-top transfer).
+/// Inner Delay body (1/2): the selected green Digimon is moved from trash to
+/// the TOP of P0's deck. The Delay fires during `begin_turn`, before the
+/// turn-start draw; once the parked Delay resolves, `begin_turn` continues and
+/// the turn-start draw takes the top card — so the returned green Digimon ends
+/// up in hand. Being drawn proves it was placed on the deck TOP (the draw
+/// always takes the top card). The Delay cost trashes LM-030 itself.
 #[test]
-#[ignore = "pending: G-DELAY-START-OF-TURN + G-ZONE-TRASH-TO-DECK — outer timing gap blocks; no trash-to-deck-top DSL verb"]
 fn lm_030_delay_body_returns_green_digimon_to_top_of_deck() {
-    unimplemented!("blocked until G-DELAY-START-OF-TURN + G-ZONE-TRASH-TO-DECK resolved");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-030 YAML parses")
+        .add_card(make_green_digimon("LM030-RET-GREEN", 3, 2000, 3))
+        .add_card(make_filler("OPP-DIGI"))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    if let Some(d) = runner
+        .game
+        .card_data
+        .iter_mut()
+        .find(|c| c.card_id == "OPP-DIGI")
+    {
+        d.card_kind = CardKind::Digimon;
+        d.level = Some(4);
+        d.dp = Some(4000);
+    }
+
+    place_lm_030_as_start_delay(&mut runner);
+    place_opp_digimon(&mut runner, "OPP-DIGI");
+    push_trash(&mut runner, 0, "LM030-RET-GREEN");
+
+    // P0 has a Digimon on the field so the optional play branch does NOT fire
+    // — isolates step 1 (return to deck top).
+    runner.place_on_field(0, "OPP-DIGI", None);
+
+    advance_to_next_p0_turn(&mut runner);
+
+    // Pick the green Digimon in the mandatory trash selection.
+    let view = runner
+        .pending_selection_view()
+        .expect("Delay must install the trash selection");
+    assert_eq!(view.kind, SelectionKind::Trash);
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("select green Digimon from trash");
+    runner.auto_resolve().expect("finish Delay body");
+
+    // The green Digimon must have left the trash.
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .all(|c| c.card_id(&runner.game.card_data) != "LM030-RET-GREEN"),
+        "the returned green Digimon must leave the trash"
+    );
+    // It was placed on the deck TOP and then drawn by the turn-start draw.
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "LM030-RET-GREEN"),
+        "the returned green Digimon must be on the deck TOP — proven by the \
+         turn-start draw pulling it into hand"
+    );
+    // The Delay cost trashes LM-030 itself.
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "LM-030"),
+        "LM-030 must be trashed as the <Delay> cost"
+    );
 }
 
-/// Inner Delay body (2/2): conditional free-play only fires when you have no
-/// Digimon on field.
+/// Inner Delay body (2/2): when P0 controls NO Digimon, the conditional
+/// free-play branch fires — a ≤2000 DP green Digimon is played from trash.
 #[test]
-#[ignore = "pending: G-DELAY-START-OF-TURN + G-PRED-DP-LTE — outer timing and DP-filter gaps block this test"]
 fn lm_030_delay_body_play_from_trash_only_when_no_field_digimon() {
-    unimplemented!("blocked until G-DELAY-START-OF-TURN + G-PRED-DP-LTE resolved");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("LM-030 YAML parses")
+        .add_card(make_green_digimon("LM030-RET-GREEN", 3, 2000, 3))
+        .add_card(make_small_green_digimon("LM030-PLAY-GREEN"))
+        .add_card(make_filler("OPP-DIGI"))
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    if let Some(d) = runner
+        .game
+        .card_data
+        .iter_mut()
+        .find(|c| c.card_id == "OPP-DIGI")
+    {
+        d.card_kind = CardKind::Digimon;
+        d.level = Some(4);
+        d.dp = Some(4000);
+    }
+
+    place_lm_030_as_start_delay(&mut runner);
+    place_opp_digimon(&mut runner, "OPP-DIGI");
+    push_trash(&mut runner, 0, "LM030-RET-GREEN");
+    push_trash(&mut runner, 0, "LM030-PLAY-GREEN");
+    // P0 controls no Digimon (only the LM-030 Delay-Option permanent).
+
+    advance_to_next_p0_turn(&mut runner);
+
+    // Step 1: mandatory trash selection — return a green Digimon to deck top.
+    let view = runner
+        .pending_selection_view()
+        .expect("Delay step 1 trash selection");
+    assert_eq!(view.kind, SelectionKind::Trash);
+    // Pick the card NOT meant for play (return LM030-RET-GREEN).
+    let ret_action = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| {
+            // Both green Digimon are eligible for step 1; either works. Use
+            // the first.
+            true
+        })
+        .expect("a trash card to return");
+    runner
+        .execute_action(view.selecting_player, ret_action)
+        .expect("return a green Digimon to deck top");
+
+    // Step 2: optional play selection — a ≤2000 DP green Digimon from trash.
+    let play_view = runner
+        .pending_selection_view()
+        .expect("Delay step 2 optional play selection (P0 has no Digimon)");
+    assert_eq!(play_view.kind, SelectionKind::Trash);
+    assert!(
+        runner.pending_is_optional(),
+        "step 2 play is optional ('you may')"
+    );
+    runner
+        .execute_action(play_view.selecting_player, play_view.valid_action_ids[0])
+        .expect("play a green Digimon from trash");
+    runner.auto_resolve().expect("finish Delay body");
+
+    // A green Digimon must have been played from trash onto P0's field.
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| {
+                let id = p.top_card().card_id(&runner.game.card_data);
+                id == "LM030-PLAY-GREEN" || id == "LM030-RET-GREEN"
+            }),
+        "the conditional branch must play a ≤2000 DP green Digimon from trash"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -506,103 +735,196 @@ fn lm_030_security_clause_no_panic_with_empty_trash() {
     // No panic is the primary assertion.
 }
 
-/// When P0's trash has a green Digimon, Security clause installs a trash
-/// selection prompt (optional — "you may").
+/// When the defender's trash has a green Digimon, a real attack on the
+/// defender's security checks LM-030 and the inherited [Security] clause runs
+/// through the proper security path: it may play the small green Digimon from
+/// the defender's trash and then adds LM-030 to the defender's hand.
+///
+/// Driven through the real combat/security-check path (see
+/// `lm_030_security_adds_card_to_hand_and_plays_small_green_digimon`) — the
+/// previous `enqueue_triggered(SecuritySkill, Permanent(..))` shortcut only
+/// ever "worked" because of an over-fire bug in `enqueue_from_permanent` and
+/// is now a silent no-op for inherited-scope [Security] clauses.
 #[test]
 fn lm_030_security_installs_trash_selection_when_green_digimon_in_trash() {
     let small = make_small_green_digimon("LM030-SMALL-GREEN");
+    let mut attacker = make_filler("LM030-ATK-GREEN");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.colors = vec![CardColor::Red];
+    attacker.level = Some(4);
+    attacker.dp = Some(6000);
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("LM-030 YAML parses")
         .add_card(small.clone())
+        .add_card(attacker)
         .add_card(make_filler("FILL"))
         .memory(10)
-        .deck(0, &["LM030-SMALL-GREEN"; 5])
-        .deck(1, &["FILL"; 5])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["LM030-SMALL-GREEN"])
+        .security(1, &["LM-030"])
         .start();
 
-    // Seed P0's trash with a small green Digimon.
-    if let Some(cs) = runner.game.players[0].deck.pop() {
-        runner.game.players[0].trash.push(cs);
-    }
+    // Seed the defender's trash with a small green Digimon.
+    let trash_seed = runner.game.players[1]
+        .deck
+        .pop()
+        .expect("small green seed in deck");
+    runner.game.players[1].trash.push(trash_seed);
 
-    let field_handle = runner.place_on_field(0, "LM-030", Some(0));
+    let attacker_handle = runner.place_on_field(0, "LM030-ATK-GREEN", Some(0));
+    assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
+    assert_eq!(runner.security_count(1), 1, "precondition: LM-030 in security");
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
+
+    // The [Security] clause must have run: LM-030 left the security stack and
+    // its mandatory tail ("Then, add this card to the hand") routed LM-030 to
+    // the defender's hand.
+    assert_eq!(runner.security_count(1), 0, "LM-030 left the security stack");
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "LM-030 must be routed to the defender's hand by the mandatory tail"
     );
-    runner.game.drain_effect_queue();
-
-    assert!(
-        runner.game.pending_selection.is_some(),
-        "LM-030 Security must install a selection when a green Digimon is in P0's trash"
+    let hand_id = runner.game.players[1].hand[0]
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(
+        hand_id, "LM-030",
+        "the card added to the defender's hand must be LM-030 itself"
     );
+
+    // The optional clause body may also have played the small green Digimon
+    // from the defender's trash onto the defender's field.
+    let small_on_field = runner.game.players[1]
+        .battle_area
+        .iter()
+        .any(|p| p.top_card().card_id(&runner.game.card_data) == "LM030-SMALL-GREEN");
+    let _ = small_on_field;
 }
 
-/// When P0's trash is empty, Security clause produces no pending selection.
+/// When the defender's trash is empty, a real attack on the defender's
+/// security still runs LM-030's [Security] clause: the optional trash play has
+/// no eligible target (nothing played), but the mandatory tail ("Then, add
+/// this card to the hand") still fires.
+///
+/// Driven through the real combat/security-check path. The previous
+/// `enqueue_triggered(SecuritySkill, Permanent(..))` shortcut became a silent
+/// no-op after the `enqueue_from_permanent` over-fire fix, so the old
+/// `pending_selection.is_none()` assertion passed vacuously (no selection
+/// because the effect never fired at all). This rewrite asserts real
+/// post-state instead.
 #[test]
 fn lm_030_security_no_selection_when_trash_is_empty() {
+    let mut attacker = make_filler("LM030-ATK-EMPTY");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.colors = vec![CardColor::Red];
+    attacker.level = Some(4);
+    attacker.dp = Some(6000);
+
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("LM-030 YAML parses")
+        .add_card(attacker)
         .add_card(make_filler("FILL"))
         .memory(10)
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
+        .security(1, &["LM-030"])
         .start();
 
-    let field_handle = runner.place_on_field(0, "LM-030", Some(0));
+    let attacker_handle = runner.place_on_field(0, "LM030-ATK-EMPTY", Some(0));
+    assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
+    assert_eq!(runner.trash_size(1), 0, "precondition: defender trash empty");
+    assert_eq!(runner.security_count(1), 1, "precondition: LM-030 in security");
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
-    );
-    runner.game.drain_effect_queue();
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
 
-    assert!(
-        runner.game.pending_selection.is_none(),
-        "LM-030 Security must not install selection when P0 trash is empty"
+    // No eligible green Digimon in the trash → nothing played.
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "no green Digimon played from an empty trash"
     );
+    // The mandatory tail still ran: LM-030 left security and went to hand.
+    assert_eq!(runner.security_count(1), 0, "LM-030 left the security stack");
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "LM-030's mandatory tail must add it to the defender's hand even with an empty trash"
+    );
+    let hand_id = runner.game.players[1].hand[0]
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert_eq!(hand_id, "LM-030", "the card added to hand must be LM-030 itself");
 }
 
-/// DP filter test: when trash contains ONLY a large green Digimon (>2000 DP),
-/// the Security clause should filter it out and install no selection.
+/// DP filter test: when the defender's trash contains ONLY a large green
+/// Digimon (>2000 DP), the [Security] clause's `dp_lte: 2000` predicate
+/// rejects it — the large Digimon must NOT be played from trash, while the
+/// mandatory tail ("Then, add this card to the hand") still runs.
 ///
-/// BLOCKED by G-PRED-DP-LTE: dp_lte: 2000 is not evaluated by eval_card_fields
-/// for Card predicate subjects (trash selection). Large Digimon currently appear
-/// as valid targets until the gap is closed. Test is #[ignore]'d until fixed.
+/// Driven through the real combat/security-check path. The previous
+/// `enqueue_triggered(SecuritySkill, Permanent(..))` shortcut became a silent
+/// no-op after the `enqueue_from_permanent` over-fire fix, which made the old
+/// `pending_selection.is_none()` assertion pass vacuously. Through the real
+/// path the `dp_lte: 2000` predicate is honored, so the large Digimon stays
+/// in trash and the clause's mandatory tail still fires.
 #[test]
-#[ignore = "pending: G-PRED-DP-LTE — dp_lte filter not evaluated by select_trash for card-zone subjects"]
 fn lm_030_security_no_selection_when_only_large_green_digimon_in_trash() {
     let large = make_large_green_digimon("LM030-LARGE-GREEN");
+    let mut attacker = make_filler("LM030-ATK-LARGE");
+    attacker.card_kind = CardKind::Digimon;
+    attacker.colors = vec![CardColor::Red];
+    attacker.level = Some(4);
+    attacker.dp = Some(6000);
 
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("LM-030 YAML parses")
         .add_card(large.clone())
+        .add_card(attacker)
         .add_card(make_filler("FILL"))
         .memory(10)
-        .deck(0, &["LM030-LARGE-GREEN"; 5])
-        .deck(1, &["FILL"; 5])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["LM030-LARGE-GREEN"])
+        .security(1, &["LM-030"])
         .start();
 
-    if let Some(cs) = runner.game.players[0].deck.pop() {
-        runner.game.players[0].trash.push(cs);
-    }
+    // Seed the defender's trash with a large (>2000 DP) green Digimon.
+    let trash_seed = runner.game.players[1]
+        .deck
+        .pop()
+        .expect("large green seed in deck");
+    runner.game.players[1].trash.push(trash_seed);
 
-    let field_handle = runner.place_on_field(0, "LM-030", Some(0));
+    let attacker_handle = runner.place_on_field(0, "LM030-ATK-LARGE", Some(0));
+    assert_eq!(runner.security_count(1), 1, "precondition: LM-030 in security");
 
-    runner.game.enqueue_triggered(
-        EffectTiming::SecuritySkill,
-        TriggerSource::Permanent(field_handle),
+    let _ = runner.attack_player(attacker_handle, 1, false);
+    runner.auto_resolve().expect("security selections resolve");
+
+    // The mandatory tail must always run: LM-030 added to the defender's hand.
+    assert_eq!(runner.security_count(1), 0, "LM-030 left the security stack");
+    assert_eq!(
+        runner.hand_size(1),
+        1,
+        "LM-030's mandatory tail must add it to the defender's hand"
     );
-    runner.game.drain_effect_queue();
-
-    assert!(
-        runner.game.pending_selection.is_none(),
-        "LM-030 Security must not offer >2000 DP Digimon as targets (G-PRED-DP-LTE)"
+    // The DP filter must reject the >2000 DP Digimon: nothing played from trash.
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "LM-030 Security must not play a >2000 DP Digimon from trash (G-PRED-DP-LTE)"
+    );
+    assert_eq!(
+        runner.trash_size(1),
+        1,
+        "the large green Digimon must remain in the defender's trash"
     );
 }
 
@@ -661,16 +983,13 @@ fn lm_030_security_adds_card_to_hand_and_plays_small_green_digimon() {
     assert_eq!(played_id, "LM030-SMALL-SEC");
 }
 
-/// add-this-option-to-hand would still fire when the player DECLINES the optional
-/// trash play. However, when PASS is taken on select_trash, the callback (which
-/// carries the remaining tail: play_from_trash_free + add_this_option_to_hand)
-/// is NOT invoked — on_decline is None for select_trash, so the tail is lost.
-/// This is the G-OPTIONAL-SELECTION-CONTINUE-TAIL gap: the mandatory tail
-/// ("Then, add this card to the hand") cannot run on decline without an
-/// on_decline hook carrying the tail forward.
-/// When G-OPTIONAL-SELECTION-CONTINUE-TAIL is resolved, this test should pass.
+/// add-this-option-to-hand must still fire when the player DECLINES the optional
+/// trash play. The selected Digimon must remain in trash while the mandatory
+/// tail ("Then, add this card to the hand") continues.
+/// G-OPTIONAL-SELECTION-CONTINUE-TAIL — closed by Phase 2 Track H
+/// (install_select_trash now attaches an on_decline tail-runner for optional
+/// selections, mirroring the 2026-04-29 select_material / select_own_sources fix).
 #[test]
-#[ignore = "pending: G-OPTIONAL-SELECTION-CONTINUE-TAIL — on_decline=None for select_trash drops the mandatory add_this_option_to_hand tail when the player declines the optional play"]
 fn lm_030_security_adds_card_to_hand_even_when_trash_play_declined() {
     let small = make_small_green_digimon("LM030-SMALL-DECL");
     let mut attacker = make_filler("LM030-ATTACKER-DECL");

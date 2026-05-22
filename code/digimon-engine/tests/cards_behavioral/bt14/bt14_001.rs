@@ -16,12 +16,11 @@
 //! - F9-adjacent: security-conditioned trigger (on_opponent_security_removed)
 //! - Active-when: your_turn gate
 //!
-//! # Known gaps
-//! - G-INHERITED-DISPATCH: inherited triggered effects from digivolution stack
-//!   do not fire until enqueue_from_permanent iterates card_sources[0..n-1].
-//!   Behavioral tests that require the clause to FIRE are #[ignore]'d.
-//! - G-OPT-TRIGGERED: OPT lockout for triggered clauses not enforced in queue.
-//!   OPT lockout test is #[ignore]'d.
+//! # Known gaps (historical)
+//! - G-INHERITED-DISPATCH: closed 2026-05-17 (Phase 2 Track D); the fire-test
+//!   and your-turn-gate tests are live.
+//! - G-OPT-TRIGGERED: closed 2026-05-16 (Phase 2 Track C); OPT lockout test
+//!   is live.
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::card_data::CardData;
@@ -252,7 +251,6 @@ fn bt14_001_inherited_does_not_fire_on_opponents_turn() {
 /// Blocked until engine gains digivolution-stack inherited triggered-effect
 /// dispatch (enqueue_from_permanent iterates card_sources[0..n-1]).
 #[test]
-#[ignore = "BLOCKED: G-INHERITED-DISPATCH — engine lacks digivolution-stack inherited triggered-effect dispatch (enqueue_from_permanent only scans top card + linked_cards + Training)"]
 fn bt14_001_inherited_fires_draws_one_card_on_your_turn() {
     let mut runner = koromon_runner();
     let carrier = place_koromon_as_source(&mut runner);
@@ -289,7 +287,6 @@ fn bt14_001_inherited_fires_draws_one_card_on_your_turn() {
 /// for triggered effects. Also depends on G-INHERITED-DISPATCH (the clause must
 /// fire at all before OPT can be tested).
 #[test]
-#[ignore = "BLOCKED: G-OPT-TRIGGERED (and G-INHERITED-DISPATCH prerequisite) — OPT not enforced for triggered effects in queue drain path"]
 fn bt14_001_inherited_opt_blocks_second_trigger_same_turn() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(KOROMON_YAML)

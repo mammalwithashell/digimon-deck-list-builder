@@ -42,6 +42,13 @@ pub struct CardSpec {
     /// Names this card may satisfy as DigiXros material only.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub digixros_aliases: Vec<String>,
+    /// Static identity aliases — "this card is also treated as [Other
+    /// Name]" (DCGO `ChangeCardNamesClass`). Unlike `digixros_aliases`,
+    /// which are visible only to DigiXros recipe matching, these are
+    /// honored by generic name-matching predicates (`name_is` /
+    /// `name_contains` / `name_in`) in every zone.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub also_treated_as: Vec<String>,
     /// DUAL card face metadata.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dual: Option<DualSpec>,

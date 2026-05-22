@@ -15,11 +15,13 @@ pub fn lower(
     keyword_name: &str,
     value: Option<i32>,
     scope: CompiledScope,
+    active_when: Option<CompiledPredicate>,
     overclock_cost_filter: Option<CompiledPredicate>,
 ) -> Option<Effect> {
     let kw = lookup_keyword(keyword_name, value)?;
     let label = format!("Grant {keyword_name}");
 
+    let active_when = active_when.map(std::sync::Arc::new);
     let mut builder: EffectBuilder = Effect::declarative(card)
         .name(&label)
         .granted_keyword(kw)
@@ -30,6 +32,16 @@ pub fn lower(
             };
             ctx.grant_declarative_keyword(handle, kw, Expiry::Permanent);
         });
+
+    if let Some(predicate) = active_when {
+        builder = builder.condition(move |rctx| {
+            let subject = rctx
+                .source_permanent
+                .map(PredicateSubject::Permanent)
+                .unwrap_or(PredicateSubject::None);
+            eval_predicate(&predicate, rctx, subject)
+        });
+    }
 
     if kw == Keyword::Overclock {
         if let Some(filter) = overclock_cost_filter {

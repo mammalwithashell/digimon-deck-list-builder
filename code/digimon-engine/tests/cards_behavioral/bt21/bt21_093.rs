@@ -41,9 +41,11 @@
 //!   native Delay trigger and remains behaviorally unverified.
 //!
 //! Resolved/stale gap note:
-//! - `count_lte` aggregate predicates can now count `owner: opponent,
-//!   zone: [security]`, so clause 0 no longer needs
-//!   `bt21_093_cost_reduction_amount`.
+//! - Phase 2 Track G (2026-05-17) wired the native
+//!   `opponent_security_count_lte` predicate, so clause 0 now reads
+//!   `condition: { opponent_security_count_lte: 3 }, amount: 4` instead of
+//!   delegating to a `bt21_093_cost_reduction_amount` raw_rust formula.
+//!   The raw_rust shim has been removed.
 //! - `place_self_as_delay_option: {}` now exists for explicit source-option
 //!   placement. BT21-093's main-use placement currently relies on standard
 //!   Delay option disposal from hand, so `G-PLACE-SELF-AS-OPTION-PERMANENT` is
@@ -110,17 +112,15 @@ fn bt21_093_cost_reduction_uses_opponent_security_count_predicate() {
         *when_playing_this,
         "cost reduction must only apply when BT21-093 itself would be used"
     );
+    // After Phase 2 Track G the YAML uses the native
+    // `opponent_security_count_lte: 3` predicate leaf rather than the
+    // `count_lte` aggregate over `{ zone: [security], owner: opponent }`.
+    // Both forms compile to a CompiledPredicate that gates on the same
+    // opponent-security count threshold.
     assert_eq!(
         *condition,
         Some(CompiledPredicate {
-            count_lte: Some(CompiledCountAggregate {
-                filter: Box::new(CompiledPredicate {
-                    zone: vec![CompiledZone::Security],
-                    owner: Some(CompiledPlayerRef::Opponent),
-                    ..CompiledPredicate::default()
-                }),
-                n: CompiledDpConstraint::Literal(3),
-            }),
+            opponent_security_count_lte: Some(CompiledDpConstraint::Literal(3)),
             ..CompiledPredicate::default()
         }),
         "cost reduction must gate on opponent security count <= 3"

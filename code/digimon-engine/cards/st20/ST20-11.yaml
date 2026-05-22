@@ -24,10 +24,12 @@
 # alt-path 2: Alt digivolve (Lv.5 ADVENTURE OR Hero trait / Cost 3) — xros_req.
 # alt-path 3: ＜Blast Digivolve＞ — burst_digivolve marker:true cost 0
 #             (the [Hand][Counter] entry path).
-# Clause 1:  BLOCKED — [On Play][When Digivolving] immunity grant
-#             "for every 2 colors your Tamers have". OMITTED pending
-#             G-DSL-DISTINCT-TAMER-COLORS-FORMULA. See clause comment + ignored
-#             tests in companion st20_11.rs.
+# Clause 1:  [On Play][When Digivolving] immunity grant "for every 2 colors
+#             your Tamers have". Implemented via `select_count_capped_multi`
+#             over own battle area with a formula-valued `max` =
+#             floor_div(distinct_colors_count(your Tamers), 2), then
+#             `per_selected` + `grant_effect_immunity` against opponent
+#             Digimon effects until end of opponent's turn.
 # Clause 2:  [When Digivolving][When Attacking] delete opp lowest-DP Digimon.
 #             dp_lte aggregate filter authored correctly; selection is
 #             over-permissive until G-PRED-DP-LTE closes.
@@ -76,7 +78,7 @@ alt_paths:
     cost: 0
 
 effects:
-  # ─── Clause 1 — BLOCKED [On Play][When Digivolving] tamer-color immunity ────
+  # ─── Clause 1 — [On Play][When Digivolving] tamer-color immunity ───────────
   #
   # Printed text:
   #   "[On Play] [When Digivolving] Until your opponent's turn ends, for every
@@ -87,76 +89,52 @@ effects:
   #   - lines 45-57 TamerTwoColourCount: floor(distinct_colors_across_tamers / 2)
   #   - lines 67-175 [On Play] ActivateClass at OnEnterFieldAnyone with
   #     CanTriggerOnPlay; mandatory N-pick (canNoSelect: false) where N = the
-  #     formula above, capped by available own Digimon count, minimum 1 IF the
-  #     formula is > 0.
+  #     formula above, capped by available own Digimon count.
   #   - lines 181-285 [When Digivolving] ActivateClass — same body, gated by
-  #     CanTriggerWhenDigivolving (DCGO duplicates the body with one tiny
-  #     diff: the [On Play] SkillCondition treats `IsDigimonEffect &&
-  #     IsSecurityEffect` as immune-target-eligible too; see lines 145-160 vs
-  #     260-271 — printed text only specifies "Digimon's effects", so we model
-  #     both timings identically per the printed text).
+  #     CanTriggerWhenDigivolving. Printed text only specifies "Digimon's
+  #     effects", so both timings model the same body.
   #   - The granted modifier installs a CanNotAffectedClass that filters
-  #     opponent CardSource for "is the chosen permanent's top card" and
-  #     opponent ICardEffect for "is opponent effect AND is digimon effect",
-  #     until OpponentTurnEnd.
+  #     opponent Digimon effects, until OpponentTurnEnd.
   #
-  # BLOCKED: G-DSL-DISTINCT-TAMER-COLORS-FORMULA
-  #   No formula primitive in `digimon_dsl::formula::PerSelector` /
-  #   `AggregateSelector` counts distinct colors across own Tamers in battle
-  #   area. Same gap blocking AD1-014 lock branch and BT21-102 main clause.
-  #   The would-be formula:
-  #
-  #     floor_div:
-  #       - distinct_colors_count:
-  #           of: you
-  #           zone: [battle_area]
-  #           filter: { kind: tamer }
-  #       - 2
-  #
-  # COMPANION GAP G-DSL-REPEAT-N (or `per_n`)
-  #   Even with the formula, the engine has no `repeat_n: { count, body }`
-  #   step driver to install N selection prompts in sequence (each picking a
-  #   distinct own Digimon, filtered by `not_in_binding`). `add_modifier` and
-  #   `grant_effect_immunity` operate on a single bound permanent.
-  #
-  # Per skill rule §11 (Engine-gap vs DSL-vocab-gap discipline) and the
-  # no-approximations policy, the entire clause body is OMITTED rather than
-  # implementing a fixed-1 fallback that would silently misrepresent the
-  # tamer-color synergy to RL agents. Including it without the formula would
-  # either (a) over-fire (always grant 1 immunity even with 0 tamer colors,
-  # leaking the "every 2" floor_div) or (b) under-fire (always grant 1 even
-  # when 4+ colors should grant 2). Both directions break the printed text.
-  #
-  # Suggested YAML when both gaps close:
-  #
-  #   - when: [on_play, when_digivolving]
-  #     summary: "[OP][WD] Tamer-color immunity"
-  #     condition:
-  #       all_of:
-  #         - any_permanent: { of: you, zone: [battle_area], kind: digimon }
-  #         - any_permanent: { of: you, zone: [battle_area], kind: tamer }
-  #     process:
-  #       - per_n:
-  #           count:
-  #             floor_div:
-  #               - distinct_colors_count:
-  #                   of: you
-  #                   zone: [battle_area]
-  #                   filter: { kind: tamer }
-  #               - 2
-  #           body:
-  #             - select_own_permanent:
-  #                 bind_as: shielded_n
-  #                 filter:
-  #                   all_of:
-  #                     - kind: digimon
-  #                     - not_in_binding: prior_shields
-  #                 prompt: "Select 1 of your Digimon to shield from opponent Digimon effects"
-  #             - grant_effect_immunity:
-  #                 target: shielded_n
-  #                 source_kind: digimon
-  #                 source_controller: opponent
-  #                 expiry: end_of_opponents_turn
+  # Implementation: `select_count_capped_multi` over the controller's own
+  # battle area installs N distinct picks, where N is a formula-valued `max`
+  # = floor_div(distinct_colors_count(your battle-area Tamers), 2). Each
+  # picked own Digimon receives effect-immunity vs opponent Digimon effects
+  # (`grant_effect_immunity` with `source_kind: digimon`,
+  # `source_controller: opponent`) expiring at end_of_opponents_turn
+  # ("until your opponent's turn ends"). When the formula evaluates to 0
+  # (0–1 tamer colors) the multi-select completes synchronously with no
+  # prompt and grants no immunity — DCGO's `Math.Max(0, count)`.
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] Grant opponent-Digimon-effect immunity to floor(tamer-colors/2) of your Digimon"
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: battle_area
+          max:
+            formula:
+              floor_div:
+                - base: 0
+                  per:
+                    distinct_colors_count:
+                      of: you
+                      zone: battle_area
+                      filter: { kind: tamer }
+                  delta: 1
+                - 2
+          filter: { kind: digimon }
+          bind_as: shielded_perms
+          prompt: "Choose 1 of your Digimon per 2 of your Tamers' colors — opponent Digimon effects don't affect it"
+          optional_zero: false
+      - per_selected:
+          selection: shielded_perms
+          bind_as: shielded
+          body:
+            - grant_effect_immunity:
+                target: shielded
+                source_kind: digimon
+                source_controller: opponent
+                expiry: end_of_opponents_turn
 
   # ─── Clause 2 — [When Digivolving][When Attacking] delete lowest-DP ─────────
   #

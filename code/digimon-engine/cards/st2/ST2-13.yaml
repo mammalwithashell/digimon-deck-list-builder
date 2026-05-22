@@ -1,0 +1,63 @@
+# ST2-13 Hammer Spark — Option, Blue, Cost 0.
+# No traits, no evo_costs.
+#
+# Printed card text (data/cards.json):
+#
+#   [Main] Gain 1 memory.
+#
+# Security Effect:
+#   [Security] Gain 2 memory.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST2/Blue/ST2_13.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OptionSkill` ActivateClass.
+#   `SetUpActivateClass(null, ActivateCoroutine, -1, false, ...)` —
+#   `isOptional: false`. `CanUseCondition` = `CanTriggerOptionMainEffect`
+#   (standard Option [Main] timing gate, not opt-in / not OPT).
+#   `ActivateCoroutine` calls `card.Owner.AddMemory(1, activateClass)`.
+#
+# Clause 2 — `EffectTiming.SecuritySkill` ActivateClass with
+#   `SetIsSecurityEffect(true)`. `SetUpActivateClass(null, ..., -1, false,
+#   ...)` — mandatory ([Security] effects are not opt-out per
+#   RULES_CONTEXT.md §16). `ActivateCoroutine` calls
+#   `card.Owner.AddMemory(2, activateClass)`.
+#
+# ─── Faithfulness verdict — PASS ─────────────────────────────────────────────
+#
+# Printed text is two unconditional memory gains — no "you may", no
+# [Once Per Turn], no condition. Each printed clause maps 1:1 to a single
+# `gain_memory: N` step under the appropriate `when:` timing. This is the
+# canonical minimal-Option YAML shape; the [Main] half mirrors BT8-097
+# Crimson Blaze's `main_from_hand` dispatch path and the [Security] half
+# mirrors EX1-068 Ice Wall's `on_security` `gain_memory: 2` clause.
+#
+# Option [Main] flow status: ST2-13's clauses are pure `gain_memory` steps —
+# no place-in-battle-area disposition, no Delay, no Plug-In. The Option
+# [Main] residual gap (RUST_ENGINE_GAPS.md "Option card play flow residual")
+# scopes only the place-Option-in-battle-area / Plug-In sub-cases; the
+# `main_from_hand` + `on_security` `gain_memory` paths are production-stable
+# (closed in Group 7; see BT8-097). No clause of ST2-13 is blocked.
+#
+# Promoted from cards/_examples/ST2-13.yaml on 2026-05-20 (DNA Omnimon
+# missing-card authoring pass).
+
+card: ST2-13
+name: Hammer Spark
+kind: option
+color: [blue]
+cost: 0
+
+effects:
+  # ─── Clause 1: [Main] Gain 1 memory ──────────────────────────────────────
+  - when: main_from_hand
+    summary: "[Main] Gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  # ─── Clause 2: [Security] Gain 2 memory ──────────────────────────────────
+  - when: on_security
+    summary: "[Security] Gain 2 memory"
+    process:
+      - gain_memory: 2

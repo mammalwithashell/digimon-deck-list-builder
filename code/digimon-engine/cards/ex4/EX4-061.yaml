@@ -92,20 +92,20 @@
 #         or fewer Digimon". On `on_digivolve`, the digivolving permanent IS
 #         a Digimon and counts toward the total, so count==1 means the
 #         digivolved card is the only Digimon.
-#       * `any_permanent` your battle_area Digimon `name_contains` Greymon OR
-#         Garurumon — encodes "that Digimon has [Greymon] OR [Garurumon] in
-#         its name". With count_lte ≤ 1, "that Digimon" IS the only Digimon
-#         on the field, so a board-state any_permanent check is equivalent.
-#         (Engine has no `event_target_name_contains` predicate — DSL gap
-#         documented under qa/dsl-vocab-gaps.md, not blocking here because
-#         the count_lte gate makes the board check semantically equivalent.)
-#   - Body branches by board state (NOT by player choice — the Greymon vs
-#     Garurumon branch is decided by which named Digimon is on field):
-#       * If board has a Greymon-named Digimon → optional play of 1 Gabumon
-#         from hand or trash without paying cost.
-#       * If board has a Garurumon-named Digimon → optional play of 1 Agumon
-#         from hand or trash without paying cost.
-#       * The two `if` branches are independent — if the only Digimon
+#       * `event_target_name_contains` Greymon OR Garurumon — encodes "that
+#         Digimon has [Greymon] OR [Garurumon] in its name". Filters by the
+#         digivolving (event-target) permanent's name directly
+#         (G-EVENT-TARGET-NAME-CONTAINS, RESOLVED 2026-05-19). Correct
+#         regardless of board count — "that Digimon" is the event target,
+#         not "the one Digimon on field".
+#   - Body branches by the digivolving Digimon's name (NOT by player
+#     choice — the Greymon vs Garurumon branch is decided by which name the
+#     just-digivolved Digimon carries):
+#       * If the digivolving Digimon has [Greymon] in its name → optional
+#         play of 1 Gabumon from hand or trash without paying cost.
+#       * If the digivolving Digimon has [Garurumon] in its name → optional
+#         play of 1 Agumon from hand or trash without paying cost.
+#       * The two `if` branches are independent — if the digivolving Digimon
 #         somehow has BOTH Greymon and Garurumon in its name (e.g., a token
 #         named "GreymonGarurumon"), both prompts would queue. DCGO has the
 #         same independent-branch semantics.
@@ -133,14 +133,15 @@
 #   queue-drain path does not yet enforce same-turn lockout. The OPT flag
 #   compiles correctly; behavioral lockout is asserted via #[ignore] tests.
 #
-# G-EVENT-TARGET-NAME-CONTAINS (this card surfaces it):
-#   No `event_target_name_contains` predicate exists for filtering by the
-#   digivolving permanent's name. Workaround: use `count_lte` to constrain
-#   the board to 1 Digimon, then `any_permanent name_contains` over the
-#   board — equivalent in this card's domain because "that Digimon" can
-#   only refer to the one Digimon on the field. Will need an explicit
-#   predicate when a future card needs to filter by event-target name with
-#   >1 Digimon on the board. To file in qa/dsl-vocab-gaps.md.
+# G-EVENT-TARGET-NAME-CONTAINS (RESOLVED 2026-05-19):
+#   The DSL gained an `event_target_name_contains` predicate — a
+#   case-insensitive substring scan against the event-target permanent's
+#   card name (the digivolving / played / deleted permanent on the
+#   triggered-effect read context). Clause 2 now filters by the
+#   digivolving permanent's name directly, correct regardless of how many
+#   Digimon are on the board ("that Digimon" is the event target, not "the
+#   one Digimon on field"). The previous `count_lte` + `any_permanent`
+#   board-equivalence workaround is no longer needed.
 #
 # G-COUNT-AGGREGATE (this card surfaces it):
 #   `count_lte` / `count_gte` aggregate predicate leaves are parsed and
@@ -209,20 +210,14 @@ effects:
             filter: { of: you, zone: [battle_area], kind: digimon }
             n: 1
         - any_of:
-            # "that Digimon has [Greymon] in its name" — with count_lte ≤ 1
-            # working, the only Digimon IS "that Digimon", so a board
-            # check is equivalent (G-EVENT-TARGET-NAME-CONTAINS workaround).
-            - any_permanent:
-                of: you
-                zone: [battle_area]
-                kind: digimon
-                name_contains: "Greymon"
+            # "that Digimon has [Greymon] in its name" — filters by the
+            # digivolving permanent's name directly (G-EVENT-TARGET-NAME-
+            # CONTAINS, RESOLVED 2026-05-19). Correct regardless of how
+            # many Digimon are on the board: "that Digimon" is the
+            # event-target permanent, not "the one Digimon on field".
+            - event_target_name_contains: "Greymon"
             # "or [Garurumon] in its name"
-            - any_permanent:
-                of: you
-                zone: [battle_area]
-                kind: digimon
-                name_contains: "Garurumon"
+            - event_target_name_contains: "Garurumon"
     process:
       # ─── Engine constraint: nested-park ─────────────────────────────────
       # `select_effect_choice` parks; `select_hand`/`select_trash` parks.
@@ -239,18 +234,14 @@ effects:
           labels: ["From hand", "From trash"]
           bind_as: zone
           prompt: "From which area do you play a card?"
-      # Branch 1: zone=hand AND board has a Greymon-named Digimon → may
-      # play 1 [Gabumon] from hand free. Inner select is optional
-      # (DCGO canNoSelect: true).
+      # Branch 1: zone=hand AND the digivolving Digimon has [Greymon] in
+      # its name → may play 1 [Gabumon] from hand free. Inner select is
+      # optional (DCGO canNoSelect: true).
       - if:
           condition:
             all_of:
               - equals: [zone, 0]
-              - any_permanent:
-                  of: you
-                  zone: [battle_area]
-                  kind: digimon
-                  name_contains: "Greymon"
+              - event_target_name_contains: "Greymon"
           then:
             - select_hand:
                 of: you
@@ -262,17 +253,13 @@ effects:
                     - name_contains: "Gabumon"
                 prompt: "Play 1 [Gabumon] from hand free"
             - play_from_hand_free: { of: you, hand_index: gabu_hand }
-      # Branch 2: zone=trash AND board has a Greymon-named Digimon → may
-      # play 1 [Gabumon] from trash free.
+      # Branch 2: zone=trash AND the digivolving Digimon has [Greymon] in
+      # its name → may play 1 [Gabumon] from trash free.
       - if:
           condition:
             all_of:
               - equals: [zone, 1]
-              - any_permanent:
-                  of: you
-                  zone: [battle_area]
-                  kind: digimon
-                  name_contains: "Greymon"
+              - event_target_name_contains: "Greymon"
           then:
             - select_trash:
                 of: you
@@ -284,20 +271,17 @@ effects:
                     - name_contains: "Gabumon"
                 prompt: "Play 1 [Gabumon] from trash free"
             - play_from_trash_free: { of: you, hand_index: gabu_trash }
-      # Branch 3: zone=hand AND board has a Garurumon-named Digimon → may
-      # play 1 [Agumon] from hand free. Independent of the Greymon
-      # branches (matches DCGO's two-condition structure: each name match
-      # is checked separately, but only one Digimon can satisfy both at a
-      # time so in practice only one inner play happens).
+      # Branch 3: zone=hand AND the digivolving Digimon has [Garurumon] in
+      # its name → may play 1 [Agumon] from hand free. Independent of the
+      # Greymon branches (matches DCGO's two-condition structure: each
+      # name match is checked separately, but only one digivolving Digimon
+      # can satisfy both at a time so in practice only one inner play
+      # happens).
       - if:
           condition:
             all_of:
               - equals: [zone, 0]
-              - any_permanent:
-                  of: you
-                  zone: [battle_area]
-                  kind: digimon
-                  name_contains: "Garurumon"
+              - event_target_name_contains: "Garurumon"
           then:
             - select_hand:
                 of: you
@@ -309,17 +293,13 @@ effects:
                     - name_contains: "Agumon"
                 prompt: "Play 1 [Agumon] from hand free"
             - play_from_hand_free: { of: you, hand_index: agu_hand }
-      # Branch 4: zone=trash AND board has a Garurumon-named Digimon → may
-      # play 1 [Agumon] from trash free.
+      # Branch 4: zone=trash AND the digivolving Digimon has [Garurumon]
+      # in its name → may play 1 [Agumon] from trash free.
       - if:
           condition:
             all_of:
               - equals: [zone, 1]
-              - any_permanent:
-                  of: you
-                  zone: [battle_area]
-                  kind: digimon
-                  name_contains: "Garurumon"
+              - event_target_name_contains: "Garurumon"
           then:
             - select_trash:
                 of: you

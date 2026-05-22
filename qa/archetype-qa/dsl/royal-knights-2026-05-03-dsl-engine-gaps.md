@@ -1,5 +1,35 @@
 # Royal Knights Rust DSL/Engine Gap Rollup
 
+> **Phase 2 Track J PR 1 — 2026-05-17:** Substrate enabler PR landed.
+> Closures: **RK-G001** (filter on `select_own_breeding_permanent` +
+> `BreedingPermanentRef` surfaced as a `Permanent(BREEDING_TARGET)`
+> handle, unblocking hand-Main bottom-source placement under King Drasil).
+> **Atho, René & Por** registered in `token_registry` with printed stats
+> (White, 6000 DP, Reboot/Blocker/Decoy(Red/Black)). The token-registration
+> half of `bt20_017_token_and_other_played_attack_observer` and
+> `bt23_013_token_sistermon_union_play_and_attack_observer` is now closed.
+> The two independent substrate halves are now both RESOLVED:
+> `G-ALLY-PLAYED-MAY-ATTACK` (Task S2.1, already-composable) and
+> `G-UNION-HAND-TRASH-NAME-EXCLUSION` (Task S2.2 — `select_union_zone`
+> lowering now applies its `filter`, plus the new
+> `name_not_shared_by_field_digimon` predicate leaf). Step 0 against
+> printed text corrected the substrate plan: only BT23-013 has the
+> hand+trash name-excluded play; BT20-017 has no union play, BT13-019
+> plays from trash-or-breeding-sources (separate
+> `G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY`), BT20-021 *places* a source
+> as a cost (separate `G-UNION-HAND-TRASH-SOURCE-COST`). Both resolved
+> gaps are detailed in [qa/resolved-gaps.md](../../resolved-gaps.md).
+> **RK-G003** audit confirmed
+> closed for current Track B consumers (BT23-054, BT20-091, BT20-100) —
+> the remaining BT23-058 ignored test stays parked on
+> `G-SELF-ON-SUSPEND + G-PLAY-COST-AGGREGATE`, which are out of Track J
+> scope. **BT17-077** already fully implemented (20 passing tests) —
+> bulk trash-to-deck, returned-card binding (via pre-check workaround
+> equivalent to "all-of-chosen-trash"), and by-cost return-opp-Digimon
+> +unsuspend all working through existing primitives. Card authoring
+> for BT13-093, BT13-110, BT20-083, EX11-053, EX11-071, BT20-017,
+> BT23-013, and the Examon trio lands in Track J PR 2 / PR 3.
+
 > **Tracker hygiene sweep — 2026-05-10:** Cross-referenced against PRs
 > #449–#458. Track E DSL verbs landed (PR #454) so `raw_rust` carve-outs
 > for the ten zone-movement verbs in `qa/dsl-vocab-gaps.md` are now
@@ -133,10 +163,10 @@ Implemented / audited in these batches:
 | `BT22-025` UlforceVeedramon | `PARTIAL` | ACE metadata; [When Attacking][OPT] unsuspend self. | Blast Digivolve; modal lowest-level bottom-deck or blue Tamer play. |
 | `BT22-041` Kentaurosmon | `PARTIAL` | Blocker, Barrier, optional yellow hand-to-top-security. | Total-security play-cost reduction; self-suspend security-trash unsuspend cost. |
 | `BT22-052` Leopardmon | `PARTIAL` | ACE metadata; optional 5000 DP-or-lower hand play; own level 3+ Blocker grant; Blast Digivolve marker and other-Digimon would-leave memory observer. | Remaining gaps are outside the Track B replacement/Counter marker slice. |
-| `BT23-013` Jesmon | `PARTIAL` | Rush and Alliance. | Atho/Rene/Por token or Sistermon union play with name exclusion; other-Digimon-played may-attack observer. |
+| `BT23-013` Jesmon | `PARTIAL` | Rush and Alliance. | Card-authoring only (Track J PR 3) — the substrate is RESOLVED: Atho/Rene/Por token (PR 1), the Sistermon hand/trash union play with name exclusion (`G-UNION-HAND-TRASH-NAME-EXCLUSION`, S2.2 — `select_union_zone` filter + `name_not_shared_by_field_digimon`), and the other-Digimon-played may-attack observer (`G-ALLY-PLAYED-MAY-ATTACK`, S2.1). |
 | `BT23-035` Dynasmon | `PARTIAL` | Barrier; top-security cost into -6000 DP board debuff. | Security-removed Security A. +1 / recovery tail. |
 | `BT23-047` Examon | `PARTIAL` | Piercing, Security A. +1, and declared green Lv.5 + blue Lv.5 Partition source requirement. | Five-target suspend; next-unsuspend lock; may attack; security-removed tail. |
-| `BT23-057` Gankoomon | `BLOCKED` | Load-only gap stub. | Multi-card trash-to-deck cost reduction; Hinukamuy token; dynamic play-cost delete. |
+| `BT23-057` Gankoomon | `BLOCKED` | Load-only gap stub. Hinukamuy token registered in `token_registry.rs` (Track J S2.3 — White/6000 DP/`<Alliance> <Reboot> <Blocker>`). | Multi-card trash-to-deck cost reduction; dynamic play-cost delete; production card body unauthored (Track J PR 3). |
 | `BT23-072` King Drasil_7D6 | `BLOCKED` | Load-only gap stub. | Hand-main source placement; played-Digimon keyword grant; breeding source play. |
 | `EX8-073` Gallantmon (X Antibody) | `BLOCKED` | Load-only gap stub. | Source-gated DP swings; delete-or-security fallback; memory aura immunity. |
 | `EX10-068` Digimon Emperor | `PARTIAL` | [On Play] delete play cost 5 or lower; [Security] play self. | Opponent distinct-color count; returned-card color binding into same-color hand/trash play. |
@@ -208,13 +238,16 @@ Regression files were added under:
 ### Stack-Source Multi-Selection and Play From King Drasil
 
 - **Gap:** The archetype needs robust selection and extraction from a breeding permanent's digivolution cards, including "one each with different names", On Play suppression, and Rush grants.
-- **Type:** `engine-gap` / `dsl-gap`
+- **Partial closure 2026-05-19 (Phase 2 Track J Task S1.1):** The **On Play suppression** sub-primitive is resolved — `play_from_materials` (and the other `play_from_*` steps) accept `suppress_on_play: true`, which skips only the just-played permanent's [On Play] enqueue. See [`qa/resolved-gaps.md`](../../resolved-gaps.md#engine--dsl-gap-effect-play-with-played-digimon-on-play-suppression--resolved-2026-05-19-phase-2-track-j-task-s11-puppets-g030) (PUPPETS-G030, proven by BT5-106).
+- **Partial closure 2026-05-19 (Phase 2 Track J Task S1.2):** The **count-capped / name-unique source multi-select + batch play** sub-primitive is resolved for battle-area carriers. A new `select_materials` DSL step picks up to N digivolution sources of a carrier permanent in ONE count-capped multi-pick with `uniqueness: name` ("1 of each different name"); it lowers to `EffectContext::select_count_capped_multi` + `CountCappedZone::Material` + `DistinctByMode`. `play_from_materials` now consumes the bound `CardList` as a batch, each picked source becoming a fresh permanent, composing with `suppress_on_play`. Proven by `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- select_materials`.
+- **Source-select substrate CLOSED 2026-05-20 (Phase 2 Track J Task S1.3):** the breeding-carrier source-select residual is now closed. Task S1.3 appended a 24-slot `BREEDING_SOURCE_SELECT` action sub-range (`2168..2192`, keyed by carrier owner), raising `ACTION_SPACE_SIZE` 2168→2192 — a deliberate action-space version bump (existing trained RL models must be retrained). `select_material` / `select_materials` against a `BREEDING_TARGET`-sentinel carrier now install a real `pending_selection` with breeding-source action IDs; `material_zone_geometry` is the single battle-vs-breeding branch point. Proven by `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- select_materials::select_materials_breeding_carrier` and `cargo test --manifest-path code/digimon-engine/Cargo.toml --test selection -- breeding_carrier`. **Remaining open work for this gap is now purely card-authoring:** the Rush grant on the played Digimon, and authoring the production YAML for each card below.
+- **Type:** `engine-gap` / `dsl-gap` — engine/DSL substrate CLOSED; remaining work is card-authoring.
 - **Tracker:** `docs/RUST_ENGINE_GAPS.md` and `qa/dsl-vocab-gaps.md` under source/material selection and play-from-material helpers
-- **Blocks:** `BT13-112`, `BT13-110`, `BT13-019`, `EX11-053`, `BT20-083`, `BT23-072`.
+- **Blocks:** `BT13-112`, `BT13-110`, `BT13-019`, `EX11-053`, `BT20-083`, `BT23-072` — the breeding-carrier source-select encoding is no longer a blocker; remaining per-card work is the Rush grant and production YAML authoring.
 - **Why it matters:** Auto-playing the first matching source or ignoring name uniqueness hides a major Royal Knights decision. The selected cards must leave the source stack and become fresh permanents with correct On Play suppression when printed.
-- **Evidence:** `BT20-083` example YAML uses `select_material` and `play_from_materials`; the broader tracker still calls out material extraction/play helpers and breeding follow-ups as recurring blockers.
-- **First test:** Give King Drasil multiple Royal Knight sources with duplicate and distinct names, resolve `BT13-112`, and assert the player can choose at most one per name, selected cards enter battle, On Play effects are suppressed, King Drasil is trashed, and all played Digimon gain Rush.
-- **Implementation hint:** Prefer a generic count-capped source selection with uniqueness predicates over card-specific raw Rust. It should work for battle-area and breeding carriers.
+- **Evidence:** `BT20-083` example YAML uses `select_material` and `play_from_materials`. The `suppress_on_play` flag closure is proven by `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- bt5_106`; the count-capped / name-unique multi-pick + batch play (battle and breeding carriers) is proven by `cargo test --manifest-path code/digimon-engine/Cargo.toml --features dsl-yaml-loader --test dsl -- select_materials`.
+- **First test:** Give King Drasil multiple Royal Knight sources with duplicate and distinct names, resolve `BT13-112`, and assert the player can choose at most one per name, selected cards enter battle, On Play effects are suppressed, King Drasil is trashed, and all played Digimon gain Rush. *(S1.2 + S1.3 prove the count-cap + name-uniqueness + batch-play + suppress + breeding-carrier source-select slices in `tests/dsl/select_materials.rs`; the full BT13-112 card remains card-authoring work — the Rush grant plus production YAML.)*
+- **Implementation hint:** A generic count-capped source selection with uniqueness predicates exists (`select_materials`) and works for both battle-area AND breeding-area carriers as of S1.3. Remaining per-card work is the Rush grant and authoring the production YAML.
 
 ### Raid Target-Switch Timing
 

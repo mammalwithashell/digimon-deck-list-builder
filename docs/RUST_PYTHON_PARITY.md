@@ -350,14 +350,25 @@ Planned in [plan-out-the-security-sorted-storm.md](../.claude/plans/plan-out-the
 
 ---
 
-## 4. Action mask (2168 bits)
+## 4. Action mask (2192 bits)
 
 ### 4.1 🟢 Verified equivalent
 
-- All action range constants: PLAY_HAND (0-29), HAND_EFFECT (30-59), HATCH (60), MOVE_FROM_BREEDING (61), PASS (62), DNA_DIGIVOLVE (63-92), ATTACK (100-399), DIGIVOLVE (400-999), FIELD_EFFECT (1000-1149), TRASH_EFFECT (1150-1194), SOURCE_SELECT (2000-2167).
-- `TARGETS_PER_ATTACKER = 15`, `FIELDS_PER_HAND = 15`, `SOURCES_PER_FIELD = 12`, `SECURITY_TARGET = 14`, `BREEDING_TARGET = 14`.
-- Encode/decode formulas for attack, digivolve, field effect, source select.
-- Total `ACTION_SPACE_SIZE = 2168`.
+- All action range constants: PLAY_HAND (0-29), HAND_EFFECT (30-59), HATCH (60), MOVE_FROM_BREEDING (61), PASS (62), DNA_DIGIVOLVE (63-92), ATTACK (100-399), DIGIVOLVE (400-999), FIELD_EFFECT (1000-1149), TRASH_EFFECT (1150-1194), SOURCE_SELECT (2000-2167), BREEDING_SOURCE_SELECT (2168-2191).
+- `TARGETS_PER_ATTACKER = 15`, `FIELDS_PER_HAND = 15`, `SOURCES_PER_FIELD = 12`, `SECURITY_TARGET = 14`, `BREEDING_TARGET = 14`, `BREEDING_SOURCE_CARRIERS = 2`.
+- Encode/decode formulas for attack, digivolve, field effect, source select, breeding-carrier source select.
+- Total `ACTION_SPACE_SIZE = 2192`.
+
+> **Task S1.3 (Rust-led, 2026-05-20):** the Rust engine appended a
+> breeding-carrier source-selection sub-range (`2168..2192`), raising
+> `ACTION_SPACE_SIZE` 2168 → 2192. The breeding-source *behavior* (selecting
+> sources from a King Drasil breeding-area carrier) exists only in the Rust
+> engine — the sunset Python engine has no such effect. The Python
+> `ACTION_SPACE_SIZE` constant (`code/engine_py_legacy/engine/game/constants.py`)
+> was bumped to 2192 purely to keep the mask **shape** in sync, so the
+> transitional cross-engine parity harness (`tests/rl/test_rust_python_parity.py`)
+> still compares same-length masks; the trailing 24 Python mask slots are
+> always zero.
 
 ### 4.2 🟢 Option card color requirement — implemented
 
@@ -516,7 +527,7 @@ Unified by PR3-PR5 into a single generic branch in [action/mask.rs](../code/digi
 - ✅ `SelectTrash` — `effect_context.rs::select_trash`, reuses TRASH_EFFECT 1150-1194. No pilot card yet — infra validated by shared test scaffolding.
 - ✅ `EffectChoice` — `effect_context.rs::select_effect_choice`, reuses HAND_EFFECT 30-59 with effect_choices labels. Pilot: [TEST-012](../code/digimon-engine/src/cards/test_cards.rs) (choose memory / draw).
 - ✅ `TriggerOrder` (drainer-installed, parks under EffectChoice phase) — [effect_queue.rs](../code/digimon-engine/src/effect_queue.rs) `install_trigger_order_selection`; reuses HAND_EFFECT 30-59. Handles player-chosen ordering of simultaneous triggers, plus PASS=decline-all on all-optional bundles.
-- ✅ `SelectMaterial` — `effect_context.rs::select_material`, reuses SOURCE_SELECT 2000-2168. Prompts the controller to pick a source (digivolution-stack card) from a target permanent. Covered by [tests/select_material.rs](../code/digimon-engine/tests/select_material.rs) (7 cases).
+- ✅ `SelectMaterial` — `effect_context.rs::select_material`, uses SOURCE_SELECT (2000-2167) for a battle-area carrier or BREEDING_SOURCE_SELECT (2168-2191) for a breeding-area carrier (Task S1.3). Prompts the controller to pick a source (digivolution-stack card) from a target permanent. Covered by [tests/selection/material.rs](../code/digimon-engine/tests/selection/material.rs).
 - 🟢 `SelectReveal` — `effect_context.rs::select_reveal`, reuses `SEL_REVEAL_START` 30-39. Landed alongside §2.5 (security pilot infrastructure).
 - 🟢 `SelectSecurity` — `effect_context.rs::select_security`, reuses `SEL_MY_SECURITY_START` 40-49 (own) / `SEL_OPP_SECURITY_START` 50-59 (opponent). Landed alongside §2.5.
 - 🔴 `SelectSource` — helper not yet authored. Infrastructure is uniform with the landed kinds; add when a card needs it.
@@ -902,9 +913,10 @@ rule 21 — cards are not dual-implemented).
 3. Multi-replacement `TriggerOrder` prompts not emitted when both
    sides have >1 candidates — runs in collection order, last
    non-None outcome wins.
-4. `ACTION_SPACE_SIZE` unchanged at 2168 — `REPLACEMENT_ACCEPT`
-   reuses the existing `EffectChoice` range; `PASS` (62) is
-   decline. No tensor/mask regression.
+4. Phase 7's `REPLACEMENT_ACCEPT` did not change `ACTION_SPACE_SIZE`
+   — it reuses the existing `EffectChoice` range; `PASS` (62) is
+   decline. (Separately, Task S1.3 later raised `ACTION_SPACE_SIZE`
+   2168 → 2192 by appending `BREEDING_SOURCE_SELECT`; see §4.)
 
 **Coverage:** `code/digimon-engine/tests/replacements/` (55 tests across
 `dispatcher_core`, `dispatcher_guard`, `deletion_replacements`,
