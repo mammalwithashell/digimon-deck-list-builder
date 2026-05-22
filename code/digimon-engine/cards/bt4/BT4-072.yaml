@@ -29,7 +29,7 @@ effects:
             - add_dp_modifier:
                 target: dp_target
                 value: 2000
-                expiry: end_of_opponents_turn
+                expiry: end_of_opponents_next_turn
 
   - scope: inherited
     kind: aura

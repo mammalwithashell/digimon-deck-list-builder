@@ -836,6 +836,36 @@ test was already passing through the `count_lte` aggregate over
 
 ---
 
+## P-130 — effect move-from-breeding DSL verb  [G-MOVE-BREEDING-DSL]
+
+- Effect text: P-130 Lui Ohwada: "[On Play] You may move 1 of your level 3 or higher Digimon from the breeding area to the battle area."
+- Missing DSL verb / step kind / predicate: No `CompiledStep` variant or YAML keyword lowers to `EffectContext::move_from_breeding_by_effect(player)`. The engine method exists at `code/digimon-engine/src/effect_context/mod.rs:2798` and works correctly, but has no DSL surface.
+- Secondary gap: `select_own_breeding_permanent` (`step.rs:1391`, `SelectOwnBreedingPermanentArgs`) has no `filter` field, so the level-3+ constraint ("level 3 or higher Digimon") is inexpressible even if the move verb were added. Tracked as `G-SELECT-BREEDING-FILTER` alongside `RK-G001` and `G-BREEDING-PERMANENT-SELECTION`.
+- No-approximations note: using `select_own_breeding_permanent` without a level filter (and promoting any breeding Digimon) violates the printed clause. The `raw_rust` bridge would also lack the level filter. Neither workaround is acceptable.
+- Lowers to engine API: `EffectContext::move_from_breeding_by_effect(player)` — single call moves the player's breeding-area permanent to the battle area with full OnMove event dispatch.
+- Suggested DSL syntax:
+  ```yaml
+  - select_own_breeding_permanent:
+      bind_as: target
+      filter: { level_gte: 3 }
+      optional: true
+      prompt: "Move 1 Lv.3+ Digimon from breeding to battle area"
+      then:
+        - move_from_breeding: { of: you }
+  ```
+  Or as a single atomic step (no player-visible selection needed since there is at most one breeding permanent):
+  ```yaml
+  - move_from_breeding:
+      of: you
+      optional: true
+      filter: { level_gte: 3 }
+  ```
+- Gap kind: dsl (engine primitive exists; no YAML verb; filter support also missing).
+- Cards blocked: P-130 Lui Ohwada [On Play] clause. Behavioral tests in `p_130.rs` tagged `#[ignore = "pending: G-MOVE-BREEDING-DSL"]`.
+- First reported: 2026-05-11 (P-130 Lui Ohwada TDD implementation pass).
+
+---
+
 ## BT8-097 / Royal Knights — formula filters for counted battle-area cards  [G-FORMULA-KIND-FILTER]
 
 - Status: RESOLVED for reusable formula-zone count filters on 2026-05-02. `card_count_in_zone` payloads now accept `filter: { ... }`; the compiler carries the predicate into filtered count IR, and runtime evaluation counts only representable subjects that satisfy the predicate instead of falling back to an unfiltered count.
@@ -1080,6 +1110,30 @@ test was already passing through the `count_lte` aggregate over
 - Companion engine gap: tracked in `qa/archetype-qa/engine-gaps.md` line 33 as RESOLVED for Python; OPEN for the Rust engine's modifier registry.
 - Gap kind: hybrid (Rust engine modifier registry needs a typed grant slot; DSL needs the verb + lowering).
 - First reported: 2026-05-03 (EX1-068 Ice Wall!, batch-implement-cards-rust-dsl)
+
+## EX10-034 — grant_triggered_effect to a selected binding  [G-DSL-GRANT-TRIGGERED-EFFECT-TO-BINDING]
+- Effect text: EX10-034 Blastmon — "[On Play] [When Digivolving] Until your opponent's turn ends, give 1 of their Digimon '[Start of Your Main Phase] This Digimon attacks.'"
+- Status: OPEN (filed 2026-05-22 during EX10-034 Blastmon authoring).
+- Missing DSL verb / step kind / predicate: `grant_triggered_effect` step (`code/digimon-dsl/src/step.rs` `GrantTriggeredEffectArgs`) has `target: PredicateSpec` — it walks the battle area for all permanents matching the predicate and installs the granted body on EVERY match. The card text requires "1 of their Digimon" — a single player-selected opponent Digimon. There is no DSL surface that combines a `select_opponent_permanent` binding step with a `grant_triggered_effect` step targeting the selected binding: `target` cannot be a `BindingRef`.
+- Lowers to engine API: needs a new `target` variant (or sibling step kind) on `GrantTriggeredEffectArgs` that accepts a `BindingRef` in addition to `PredicateSpec`, lowering via `dsl_cards/step/grant_triggered.rs` to a single-target grant on the resolved permanent handle rather than a broadcast foreach loop. The engine substrate for per-permanent granted-triggered-effect entries (Phase 4i queue-based dispatch) already exists; the gap is purely in the DSL target-resolution path.
+- Suggested DSL syntax (option A — binding ref target):
+  ```yaml
+  - select_opponent_permanent:
+      bind_as: forced_target
+      filter: { kind: digimon }
+      prompt: "Choose 1 of your opponent's Digimon"
+  - grant_triggered_effect:
+      target: forced_target          # NEW: accept BindingRef (resolves to a single handle)
+      timing: start_of_main_phase
+      process:
+        - force_attack: { attacker: self, targets: any }
+      expiry: end_of_opponents_turn
+  ```
+  (Option B — `grant_triggered_effect_to_binding` step variant that takes `target: BindingRef` directly and is identical in lowering to the single-target case.)
+- Approximation that would VIOLATE no-approximations: using `target: { of: opponent, kind: digimon }` would install the forced-attack grant on ALL opponent Digimon (over-fires on every opponent Digimon rather than the selected 1). Per no-approximations, EX10-034's [OP][WD] clause is OMITTED entirely until the gap closes.
+- Also blocks: any "[On Play|When Digivolving|etc.] give 1 [specific target] '<timing> body'" card text where the grant target is a player-selected single permanent. Distinct from the EX1-068 gap (G-DSL-GRANT-TRIGGERED-EFFECT-TO-OPPONENT) which blocks broadcast-to-all — this gap specifically blocks the select-1-then-grant pattern.
+- Gap kind: dsl. Engine substrate (Phase 4i granted-triggered-effect per-permanent slots + queue dispatch) already exists; only the DSL target-resolution path for binding refs is missing.
+- First reported: 2026-05-22 (EX10-034 Blastmon, batch-implement-cards-rust-dsl)
 
 ## EX1-021 — Formula-valued `gain_memory` step  [G-DSL-GAIN-MEMORY-FN] — RESOLVED 2026-05-17 (Phase 2 Track F)
 
@@ -2538,6 +2592,53 @@ state.
 Coverage:
 - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- aura_filter_includes_track_c_change_traits_overlay`
 - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- aura_filter_includes_track_c_change_base_card_name_overlay`
+
+---
+
+## BT8-094 / RB1-035 — event-target level predicates  [G-EVENT-TARGET-LEVEL-LTE]
+
+- **Effect text (BT8-094 Clause A):** "[All Turns] When one of your opponent's
+  level 5 or lower Digimon is deleted, you may suspend this Tamer to ＜Draw 1＞."
+- **Effect text (BT8-094 Clause B):** "[Opponent's Turn] When one of your
+  opponent's level 3 Digimon is moved from their breeding area to their battle
+  area, gain 2 memory."
+- **Effect text (RB1-035 Clause 2):** "[All Turns] When an opponent plays a
+  Digimon, by suspending this Tamer, gain 1 memory if that Digimon is level 4
+  or higher, and Draw 1 if it is level 3."
+- **Missing DSL predicate:** The `PredicateSpec` struct in
+  `code/digimon-dsl/src/predicate.rs` has no `event_target_level_lte`,
+  `event_target_level_eq`, or `event_target_level_gte` leaf. The sibling
+  `event_target_kind` / `event_target_trait_has` / `event_target_owner` /
+  `event_target_color_any_of` leaves all exist but none expose the integer
+  level of the event-target permanent's top card.
+- **Why it can't be approximated:** omitting the level filter would make the
+  deletion observer fire on Lv.6+ Digimon too, and the breeding-move observer
+  fire on Lv.4+ Digimon — both violate the no-approximations policy.
+- **Lowers to engine API:** `EffectReadContext::event_target_card()` already
+  returns a `Card` snapshot; `Card::level` is available on that struct. Adding
+  an `event_target_level_lte: Option<u8>` predicate leaf (and `_gte`, `_eq`
+  siblings) is a small addition alongside the existing `event_target_kind` arm
+  in `predicate.rs::eval_predicate_with_bindings` (`group6_event_target_*`
+  block, ~line 900).
+- **Suggested DSL syntax:**
+  ```yaml
+  condition:
+    all_of:
+      - event_target_owner: opponent
+      - event_target_kind: digimon
+      - event_target_level_lte: 5       # or event_target_level_eq / _gte
+  ```
+- **Gap kind:** DSL-only (engine event context already carries the level; the
+  only missing piece is the predicate leaf in `predicate.rs` + `compiled.rs` +
+  `compile.rs` + the evaluator arm).
+- **Blocked cards / tests:**
+  - `code/digimon-engine/cards/bt8/BT8-094.yaml` — Clauses A and B omitted;
+    YAML comments document the intended shapes.
+  - `code/digimon-engine/tests/cards_behavioral/bt8/bt8_094.rs` — 9 tests
+    `#[ignore = "pending: G-EVENT-TARGET-LEVEL-LTE ..."]`.
+  - `code/digimon-engine/cards/rb1/RB1-035.yaml` — [All Turns] clause noted
+    as needing "event-card level predicates" in comment.
+- **First reported:** 2026-05-22 (BT8-094 Pass 2 audit).
 
 ## ~~DSL Gap: LM-027 — Move a selected trash card to deck TOP~~  [G-ZONE-SELECTED-TRASH-TO-DECK-TOP] — RESOLVED 2026-05-21
 - **Status:** RESOLVED 2026-05-21 (`unblock-medusamon-partial-cards`). `EffectContext::return_trash_cards_to_deck_top` + a `destination: top | bottom` field on the `return_trash_list_to_deck_bottom` step move a selected trash card to the deck top. Full entry archived in `qa/resolved-gaps.md`.

@@ -1,0 +1,118 @@
+card: P-130
+name: Lui Ohwada
+kind: tamer
+color: [black]
+cost: 3
+
+# Printed text (data/cards.json):
+#
+# [On Play] You may move 1 of your level 3 or higher Digimon from the breeding
+# area to the battle area.
+#
+# [Your Turn] When one of your Digimon moves from the breeding area to the
+# battle area, by suspending this Tamer, gain 1 memory.
+#
+# Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: absent (submodule uninitialized).
+#
+# ─── Clause 1: [On Play] — BLOCKED ──────────────────────────────────────────
+#
+# Effect: "You may move 1 of your level 3 or higher Digimon from the breeding
+#          area to the battle area."
+#
+# Two DSL gaps prevent faithful implementation:
+#
+#   G-MOVE-BREEDING-DSL: No DSL step lowers to
+#     `EffectContext::move_from_breeding_by_effect(player)`.
+#     The engine method exists at effect_context/mod.rs:2798 but no
+#     CompiledStep variant or YAML verb surfaces it.
+#     Suggested future syntax:
+#       - move_from_breeding: { of: you }
+#
+#   G-SELECT-BREEDING-FILTER: `select_own_breeding_permanent` (step.rs:1391)
+#     has no `filter` field, so the "level 3 or higher" constraint cannot be
+#     expressed in YAML. Even if `move_from_breeding` were added, we still
+#     cannot restrict the selection to Lv.3+ without this predicate.
+#     Suggested future syntax:
+#       - select_own_breeding_permanent:
+#           bind_as: target
+#           filter: { level_gte: 3 }
+#           prompt: "Move 1 Lv.3+ Digimon to battle area"
+#           then:
+#             - move_from_breeding: { of: you }
+#
+#   No-approximations policy: we may not use raw_rust or select_own_breeding
+#   without the level-3 filter — that would promote any breeding Digimon
+#   regardless of level, violating the printed clause.
+#
+# Clause 1 is therefore emitted as an empty on_play clause (load-only).
+# All behavioral On Play tests are #[ignore]'d in p_130.rs.
+#
+# ─── Clause 2: [Your Turn] on_move — IMPLEMENTED ────────────────────────────
+#
+# Effect: "When one of your Digimon moves from the breeding area to the battle
+#          area, by suspending this Tamer, gain 1 memory."
+#
+# Timing: on_move → CompiledTiming::OnMove (G-ON-MOVE: RESOLVED 2026-04-29).
+#   Fires via TriggerSource::MovedFromBreeding; dispatch scans the moving
+#   player's own battle area (effect_queue.rs ~line 221).
+#
+# active_when: { your_turn: true } → [Your Turn] gate.
+#
+# Condition (two-part):
+#   1. any_permanent of:you, zone:[battle_area], card_number_is:"P-130",
+#      is_unsuspended:true
+#        → P-130 must be on the field AND unsuspended (can pay the suspend cost).
+#   2. event_target_owner:you + event_target_kind:digimon
+#        → The moved permanent belongs to P-130's controller and is a Digimon.
+#
+# Body: suspend self (target: source) then gain 1 memory.
+#   "by suspending this Tamer, gain 1 memory" — the suspend IS the cost.
+#   The body is NOT clause-level optional; once the condition is met the
+#   effect fires unconditionally (analogous to Owen Dreadnought BT18-087
+#   which uses the same suspend-as-cost shape).
+#
+# G-OPT-TRIGGERED: Not applicable — printed text has no [Once Per Turn].
+#   The suspend cost naturally limits activation (Owen is suspended after
+#   firing and cannot pay the cost again until unsuspended). No
+#   once_per_turn flag needed.
+#
+# ─── Clause 3: [Security] — IMPLEMENTED ─────────────────────────────────────
+#
+# Effect: "Play this card without paying the cost."
+# Standard play_from_security shape (same as BT18-087, BT22-084, P-128).
+
+effects:
+  # ─── Clause 1: [On Play] — BLOCKED (G-MOVE-BREEDING-DSL + G-SELECT-BREEDING-FILTER)
+  - when: on_play
+    optional: true
+    summary: "[On Play] BLOCKED: move Lv.3+ breeding Digimon — no DSL verb for move_from_breeding_by_effect; no filter on select_own_breeding_permanent"
+    process: []
+
+  # ─── Clause 2: [Your Turn] on_move — IMPLEMENTED ─────────────────────────
+  - when: on_move
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When own Digimon moves from breeding: suspend self, gain 1 memory"
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "P-130"
+            is_unsuspended: true
+        - event_target_owner: you
+        - event_target_kind: digimon
+    process:
+      # Step 1: Suspend this Tamer (the activation cost).
+      # P-130's printed text: "by suspending this Tamer, gain 1 memory."
+      # Suspension first — same shape as BT18-087 Owen Dreadnought.
+      - suspend: { target: source }
+      # Step 2: Gain 1 memory (mandatory after paying the cost).
+      - gain_memory: 1
+
+  # ─── Clause 3: [Security] — IMPLEMENTED ──────────────────────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

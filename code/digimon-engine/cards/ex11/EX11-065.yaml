@@ -1,0 +1,171 @@
+# EX11-065 Close — Tamer, Purple, Cost 3, Trait: [LIBERATOR]
+#
+# Printed card text (cards.json / authoritative):
+#
+#   [Start of Your Main Phase] By trashing 1 [Mineral] or [Rock] trait card
+#     from your hand or your Digimon's digivolution cards, gain 1 memory.
+#
+#   [All Turns] When your Digimon are played or digivolve, if any of them have
+#     the [Mineral] or [Rock] trait, by suspending this Tamer, you may place 1
+#     [Mineral] or [Rock] trait card from your hand or trash as any of those
+#     Digimon's bottom digivolution card.
+#
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# ─── Clause 0: [Start of Your Main Phase] — OMITTED ─────────────────────────
+#
+# Effect text: "By trashing 1 [Mineral] or [Rock] trait card from your hand
+# or your Digimon's digivolution cards, gain 1 memory."
+#
+# The printed cost is a union of two source zones: (a) own hand (filtered by
+# Mineral/Rock trait), and (b) any of own Digimon's digivolution card stacks
+# (also filtered by Mineral/Rock trait). The DSL step `select_own_sources`
+# resolves the digivolution-stack side but currently carries no `filter:` field
+# (gap: G-DSL-SELECT-OWN-SOURCES-FILTER, qa/dsl-vocab-gaps.md). Without trait
+# filtering, the source-zone side would allow picking non-Mineral/Rock sources,
+# which is unfaithful per the no-approximations policy. The clause is therefore
+# omitted until the gap closes. Tests in ex11_065.rs use
+# #[ignore = "pending: G-DSL-SELECT-OWN-SOURCES-FILTER ..."] for all
+# Start-of-Main-Phase behavioral assertions.
+#
+# ─── Clause 1: [All Turns] on play/digivolve observer ────────────────────────
+#
+# Effect text: "When your Digimon are played or digivolve, if any of them have
+# the [Mineral] or [Rock] trait, by suspending this Tamer, you may place 1
+# [Mineral] or [Rock] trait card from your hand or trash as any of those
+# Digimon's bottom digivolution card."
+#
+# Modeling rationale:
+#   - Timing: `on_enter_field_anyone` covers "played" events; `on_digivolve`
+#     covers "digivolve" events. Both are [All Turns] observers (the event fan-
+#     out fires for both players' permanents, so `event_target_owner: you` scopes
+#     it to own Digimon). Pattern matches EX11-054 Owen Dreadnought (same set).
+#   - active_when: { all_turns: true } — printed [All Turns] gate.
+#   - Trait gate: `event_target_trait_has: Mineral` OR `event_target_trait_has:
+#     Rock` fires on the permanent that entered/digivolved. Resolved gap
+#     G-ON-ENTER-FIELD-ANYONE-TRAIT-FILTER (2026-04-29).
+#   - Cost availability: `any_permanent of: you / zone: battle_area /
+#     card_number_is: EX11-065 / is_unsuspended: true` mirrors the DCGO
+#     CanActivateSuspendCostEffect gate — the clause must not offer the prompt
+#     when Close is already suspended (suspend cost cannot be paid twice).
+#   - optional: true — printed "by suspending this Tamer, you may" is opt-in.
+#   - Cost step: `suspend: { target: source }` suspends Close (the Tamer
+#     permanent that owns this clause). `target: source` resolves to
+#     ctx.source_permanent (the Tamer's battle-area permanent), per the
+#     BT17-093 / EX11-054 / BT24-082 precedent.
+#   - Place body: the player chooses hand vs. trash (select_effect_choice labels:
+#     "From hand" / "From trash"), then selects a Mineral/Rock card from the
+#     chosen zone, then places it as the bottom digivolution card of the Digimon
+#     that triggered the effect (`target: event_target` — the entered/digivolved
+#     permanent). Pattern matches BT21-013 Agunimon.
+#   - "any of those Digimon's bottom digivolution card": card text says "as any
+#     of those Digimon's", implying the triggered Digimon is the destination.
+#     Since `on_enter_field_anyone` / `on_digivolve` carry a single
+#     `event_permanent`, `event_target` resolves to that Digimon's permanent.
+#
+# ─── Clause 2: [Security] ────────────────────────────────────────────────────
+#
+# Standard play_from_security pattern (EX10-063, P-169, EX8-067, ST21-13).
+
+card: EX11-065
+name: Close
+kind: tamer
+color: [purple]
+cost: 3
+traits: [LIBERATOR]
+
+effects:
+  # ─── Clause 1: [All Turns] Mineral/Rock ally observer ────────────────────
+  #
+  # Triggers when an own Mineral/Rock Digimon is played or digivolves.
+  # Cost: suspend this Tamer (optional — player may decline).
+  # Body: choose hand or trash, pick a Mineral/Rock card, place as bottom
+  #       digivolution card of the triggering Digimon.
+  #
+  # Optionality gate: the "you may" is modeled as an explicit
+  # `select_own_permanent: optional: true` step that is the FIRST step in
+  # the process body. This installs an is_optional:true PendingSelection
+  # (OwnField kind) before the suspend cost is paid, letting the player
+  # decline via PASS. When the player accepts (picks Close), the tail
+  # (suspend + zone choice + card pick + place) runs. When the player sends
+  # PASS, the tail is not called and no suspend occurs.
+  #
+  # Why not suspend-first: with a single-trigger optional effect the engine
+  # auto-fires the body (no TriggerOrder selection installs). Any synchronous
+  # step before the first PendingSelection runs unconditionally — including
+  # the suspend cost. Moving the gate-selection before suspend ensures the
+  # player can decline before the cost is paid, matching the printed "you may"
+  # semantics (cf. BT17-093 header notes on the single-trigger optional gap).
+  - when: [on_enter_field_anyone, on_digivolve]
+    active_when: { all_turns: true }
+    optional: true
+    summary: "[All Turns] When own Mineral/Rock Digimon plays/digivolves, suspend self to place a Mineral/Rock from hand or trash as bottom source"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_trait_has: Mineral
+            - event_target_trait_has: Rock
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            card_number_is: "EX11-065"
+            is_unsuspended: true
+    process:
+      # Accept/decline gate: select Close itself (optional) to confirm
+      # activation. Installs is_optional:true OwnField selection. Player can
+      # PASS to decline without paying the suspend cost. The binding is unused
+      # downstream; `target: source` for the subsequent suspend step resolves
+      # to ctx.source_permanent (this Tamer permanent) regardless.
+      - select_own_permanent:
+          filter:
+            all_of:
+              - card_number_is: "EX11-065"
+              - is_unsuspended: true
+          optional: true
+          bind_as: _close_confirm
+          prompt: "Activate: suspend Close to place a [Mineral] or [Rock] card as bottom digivolution card?"
+      # Cost: suspend this Tamer. Only runs if player accepted above.
+      - suspend: { target: source }
+      - select_effect_choice:
+          bind_as: zone_choice
+          labels:
+            - "From hand"
+            - "From trash"
+          prompt: "Choose a [Mineral] or [Rock] card from hand or trash to place as bottom digivolution card"
+      - if:
+          condition: { equals: [zone_choice, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: source_card
+                filter:
+                  any_of:
+                    - trait_has: Mineral
+                    - trait_has: Rock
+                prompt: "Choose a [Mineral] or [Rock] card from hand"
+            - place_as_bottom_source:
+                source: source_card
+                target: event_target
+      - if:
+          condition: { equals: [zone_choice, 1] }
+          then:
+            - select_trash:
+                of: you
+                bind_as: source_card
+                filter:
+                  any_of:
+                    - trait_has: Mineral
+                    - trait_has: Rock
+                prompt: "Choose a [Mineral] or [Rock] card from trash"
+            - place_as_bottom_source:
+                source: source_card
+                target: event_target
+
+  # ─── Clause 2: [Security] Play this card without paying the cost ──────────
+  #
+  # Standard play_from_security pattern (EX10-063, P-169, EX8-067, ST21-13).
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

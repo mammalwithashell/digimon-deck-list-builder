@@ -15,12 +15,27 @@ alt_paths:
 # area to the battle area, reveal the top 3 cards of your deck. Add 1 Digimon
 # card or Tamer card among them to the hand. Return the rest to the bottom of
 # the deck. Then, you may hatch in your breeding area.
+#
+# Condition gates (per DCGO BT16_082.cs CanUseCondition / PermanentCondition):
+#   1. `event_target_owner: you` — "one of your" (moved permanent is owned by
+#      the controller). The OnMove dispatch in effect_queue.rs already restricts
+#      scans to the mover's own battle area; this predicate is a defensive gate
+#      that also makes the intent explicit.
+#   2. `event_target_kind: digimon` — printed text says "your Digimon", not
+#      "your permanent". DCGO's PermanentCondition checks
+#      IsPermanentExistsOnOwnerBattleAreaDigimon. In practice only Digimon can
+#      be in the breeding area (game_actions::move_from_breeding requires
+#      level >= 3 which Tamers/Options never have), so this predicate never
+#      fires differently, but it is the faithful encoding of the printed text.
 effects:
   - when: on_move
     once_per_turn: true
     active_when: { your_turn: true }
-    condition: { event_target_owner: you }
-    summary: "Your Turn/OPT: on move, reveal 3, add Digimon/Tamer, may hatch"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+    summary: "Your Turn/OPT: on move (your Digimon), reveal 3, add Digimon/Tamer, may hatch"
     process:
       - reveal_top_deck: { of: you, count: 3 }
       - select_reveal:
