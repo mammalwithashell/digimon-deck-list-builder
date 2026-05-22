@@ -670,7 +670,7 @@
         "C2",
         "A1"
       ],
-      "notes": "10/12 tests active and passing. 2/12 ignored (G-OPT-TRIGGERED: once_per_turn not enforced for triggered effects). Clause (a) ArmorPurge keyword grant. Clause (b) Raid keyword grant. Clause (c) on_attack_target_change once_per_turn triggers opponent to add top security to hand via raw_rust:p_137_opp_adds_top_security_to_hand. Hybrid gap G-ADD-TOP-SECURITY-TO-HAND: EffectContext lacks add_top_security_to_hand method (only trash_top_security exists); DSL lacks corresponding verb. Alt path: name_contains:Veemon (cost 2). BT21-024.yaml restructured as side-fix: place_on_security moved inside as_selecting_player body so pick binding is visible at inner-tail time; plus G-SELECT-EMPTY-OUTER-TAIL documented for empty-hand outer-tail loss."
+      "notes": "10/12 tests active and passing. 2/12 ignored (G-OPT-TRIGGERED: once_per_turn not enforced for triggered effects). Clause (a) ArmorPurge keyword grant. Clause (b) Raid keyword grant. Clause (c) on_attack_target_change once_per_turn triggers opponent to add top security to hand via native add_top_security_to_hand; former raw_rust shim removed. G-ADD-TOP-SECURITY-TO-HAND is resolved for this card. Alt path: name_contains:Veemon (cost 2). BT21-024.yaml restructured as side-fix: place_on_security moved inside as_selecting_player body so pick binding is visible at inner-tail time; plus G-SELECT-EMPTY-OUTER-TAIL documented for empty-hand outer-tail loss."
     },
     "EX9-013": {
       "card_name": "BlitzGreymon",
@@ -784,25 +784,25 @@
     },
     "BT17-018": {
       "card_name": "Gallantmon: Crimson Mode",
-      "validated_date": "2026-04-27",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-05-22",
+      "report": "native-dp-budget-yaml-migration",
       "status": "IMPLEMENTED",
-      "gap_kind": "engine",
+      "gap_kind": "dsl",
       "archetype": "Medusamon Batch 10",
       "yaml_path": "code/digimon-engine/cards/bt17/BT17-018.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt17/bt17_018.rs",
-      "test_count": 16,
-      "tests_passing": 11,
-      "tests_ignored": 5,
+      "test_count": 17,
+      "tests_passing": 17,
+      "tests_ignored": 0,
       "patterns": [
         "H12-BLAST-DIGIVOLVE",
         "ACE-OVERFLOW",
-        "G-DP-BUDGET-MULTI-SELECT",
+        "select_opponent_dp_budget",
         "E5-TRASH-TOP-SECURITY-LOOP",
         "raw_rust",
         "once_per_turn"
       ],
-      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP ≤ 15000 — raw_rust:bt17_018_delete_opp_digimon_dp_budget single-pick fallback, blocked on G-DP-BUDGET-MULTI-SELECT (now tracked also as G-MULTI-SELECT-OPP-DP-SUM); (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security — raw_rust:bt17_018_trash_security_per_ten_trash (floor division loop), DSL gap G-LOSE-COUNT-BOUND. 11/16 tests pass; 3 ignored for G-DP-BUDGET-MULTI-SELECT multi-pick; 2 ignored for G-OPT-TRIGGERED (triggered OPT lockout not enforced). TDD fix required: summoning sickness blocked attack tests (turn_count=0 → is_fresh=true → can_attack()=false); fix: r.game.turn_count = 1 in runner setup."
+      "notes": "Lv7 Red Holy Warrior Blast Digivolve ACE (Gallantmon: Crimson Mode). ace_overflow: -5. Three alt_paths: standard (Lv6/Red/Cost5), special Gallantmon-name (Lv6/Cost4/ignore_requirements), burst_digivolve (marker:true cost:0). Three effect clauses: (1) BlastDigivolve grant_keyword declarative; (2) [On Play][When Digivolving] delete opp Digimon with total DP ≤ 15000 now uses native select_opponent_dp_budget + delete_bound_permanents and removed raw_rust:bt17_018_delete_opp_digimon_dp_budget; (3) [When Attacking][OPT] for every 10 combined trash cards, trash 1 opp security still uses raw_rust:bt17_018_trash_security_per_ten_trash until DSL gap G-LOSE-COUNT-BOUND lands. 17/17 tests pass, 0 ignored."
     },
     "ST22-08": {
       "card_name": "Offensive Plug-In V",

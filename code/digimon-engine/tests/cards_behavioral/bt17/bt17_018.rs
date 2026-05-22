@@ -16,16 +16,16 @@
 //! Patterns: H12 (Blast Digivolve), H13 (ACE), DP-budget multi-delete, When Attacking OPT.
 //!
 //! Known gaps:
-//! - G-DP-BUDGET-MULTI-SELECT: engine lacks select_opponent_permanent_multi_dp_budget.
-//!   raw_rust bt17_018_delete_opp_digimon_dp_budget is a single-pick approximation.
-//! - G-OPT-TRIGGERED: once_per_turn not enforced for triggered effects.
+//! - G-LOSE-COUNT-BOUND: the [When Attacking] security-trash loop still needs a
+//!   native computed repeat step, so that clause retains a narrow raw Rust helper.
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledFormula, CompiledScope,
+    CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::selection::SelectionKind;
@@ -116,6 +116,23 @@ fn runner_with_opp_7k_and_9k() -> DebugRunner {
         .from_dsl_yaml(YAML)
         .expect("BT17-018 YAML loads")
         .add_card(opp_7k)
+        .add_card(opp_9k)
+        .memory(10)
+        .build()
+}
+
+fn runner_with_opp_7k_and_8k_and_9k() -> DebugRunner {
+    let mut opp_7k = make_test_card("OPP-7K", "OppLow7K");
+    opp_7k.dp = Some(7000);
+    let mut opp_8k = make_test_card("OPP-8K", "OppMid8K");
+    opp_8k.dp = Some(8000);
+    let mut opp_9k = make_test_card("OPP-9K", "OppHigh9K");
+    opp_9k.dp = Some(9000);
+    DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT17-018 YAML loads")
+        .add_card(opp_7k)
+        .add_card(opp_8k)
         .add_card(opp_9k)
         .memory(10)
         .build()
@@ -215,6 +232,69 @@ fn bt17_018_total_effect_clause_count_is_two_triggered() {
     assert_eq!(triggered.len(), 2, "Must have 2 triggered clauses");
 }
 
+#[test]
+fn bt17_018_delete_clause_uses_native_dp_budget_selection() {
+    let compiled = compiled_bt17_018();
+    let clause = compiled
+        .effects
+        .iter()
+        .find_map(|c| {
+            if let CompiledClause::Triggered(t) = c {
+                if t.when.contains(&CompiledTiming::OnPlay)
+                    && t.when.contains(&CompiledTiming::WhenDigivolving)
+                {
+                    Some(t)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+        .expect("delete clause exists");
+
+    assert!(
+        !clause.process.iter().any(|step| {
+            matches!(
+                step,
+                CompiledStep::RawRust { fn_name, .. }
+                    if fn_name == "bt17_018_delete_opp_digimon_dp_budget"
+            )
+        }),
+        "DP-budget delete must not use the obsolete raw Rust approximation"
+    );
+
+    let dp_step = clause
+        .process
+        .iter()
+        .find_map(|step| {
+            if let CompiledStep::SelectOpponentDpBudget {
+                dp_budget,
+                min_picks,
+                bind_as,
+                then,
+                ..
+            } = step
+            {
+                Some((dp_budget, min_picks, bind_as, then))
+            } else {
+                None
+            }
+        })
+        .expect("delete clause must install native select_opponent_dp_budget");
+
+    assert_eq!(dp_step.0, &CompiledFormula::Literal(15000));
+    assert_eq!(*dp_step.1, 1, "delete is mandatory when targets exist");
+    assert_eq!(dp_step.2.as_deref(), Some("targets"));
+    assert!(
+        dp_step
+            .3
+            .iter()
+            .any(|step| matches!(step, CompiledStep::DeleteBoundPermanents { binding } if binding == "targets")),
+        "native DP-budget selection must delete the bound target list"
+    );
+}
+
 // --- Section 2: Condition gating ---
 
 #[test]
@@ -240,38 +320,98 @@ fn bt17_018_on_play_condition_passes_with_opp_digimon() {
     );
 }
 
-// --- Section 3: DP-budget delete behavioral (BLOCKED) ---
+// --- Section 3: DP-budget delete behavioral ---
 
 #[test]
-#[ignore = "BLOCKED: G-DP-BUDGET-MULTI-SELECT -- engine lacks select_opponent_permanent_multi_dp_budget; raw_rust bridge needed"]
 fn bt17_018_on_play_deletes_selected_digimon_within_dp_budget() {
-    let mut r = runner_with_opp_7k();
-    let _opp_perm = r.place_on_field(1, "OPP-7K", None);
+    let mut r = runner_with_opp_7k_and_8k_and_9k();
+    let opp_7k = r.place_on_field(1, "OPP-7K", None);
+    let opp_8k = r.place_on_field(1, "OPP-8K", None);
+    let _opp_9k = r.place_on_field(1, "OPP-9K", None);
     let perm = r.place_on_field(0, "BT17-018", None);
-    let opp_count_before = r.battle_area_size(1);
     r.fire_on_play(0, perm.index as usize);
-    let _ = r.auto_resolve();
+
+    let selection = r
+        .pending_selection()
+        .expect("BT17-018 must install a DP-budget selection");
+    assert!(
+        selection
+            .valid_action_ids
+            .contains(&encode_attack(0, opp_7k.index as u16)),
+        "7000 DP target should be selectable"
+    );
+    assert!(
+        selection
+            .valid_action_ids
+            .contains(&encode_attack(0, opp_8k.index as u16)),
+        "8000 DP target should be selectable"
+    );
+    let selecting_player = selection.selecting_player;
+    r.execute_action(selecting_player, encode_attack(0, opp_7k.index as u16))
+        .expect("pick 7000 DP target");
+
+    let selection = r
+        .pending_selection()
+        .expect("BT17-018 should continue selection after first pick");
+    assert!(
+        selection
+            .valid_action_ids
+            .contains(&encode_attack(0, opp_8k.index as u16)),
+        "8000 DP target should fit the remaining 8000 DP budget"
+    );
+    r.execute_action(selecting_player, encode_attack(0, opp_8k.index as u16))
+        .expect("pick 8000 DP target");
+
     assert_eq!(
         r.battle_area_size(1),
-        opp_count_before - 1,
-        "Selected Digimon must be deleted"
+        1,
+        "two selected opponent Digimon with total DP 15000 should be deleted"
+    );
+    assert!(
+        r.game.players[1]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&r.game.card_data) == "OPP-9K"),
+        "unselected opponent Digimon should remain"
     );
 }
 
 #[test]
-#[ignore = "BLOCKED: G-DP-BUDGET-MULTI-SELECT -- engine lacks select_opponent_permanent_multi_dp_budget; raw_rust bridge needed"]
 fn bt17_018_on_play_cannot_select_digimon_exceeding_dp_budget() {
-    let mut r = runner_with_opp_7k_and_9k();
-    let _opp_7k = r.place_on_field(1, "OPP-7K", None);
-    let _opp_9k = r.place_on_field(1, "OPP-9K", None);
+    let mut r = runner_with_opp_7k_and_8k_and_9k();
+    let opp_7k = r.place_on_field(1, "OPP-7K", None);
+    let opp_8k = r.place_on_field(1, "OPP-8K", None);
+    let opp_9k = r.place_on_field(1, "OPP-9K", None);
     let perm = r.place_on_field(0, "BT17-018", None);
     r.fire_on_play(0, perm.index as usize);
-    let view = r.pending_selection_view();
-    assert!(view.is_some(), "Selection must be pending");
+    let selection = r.pending_selection().expect("Selection must be pending");
+    let selecting_player = selection.selecting_player;
+
+    r.execute_action(selecting_player, encode_attack(0, opp_7k.index as u16))
+        .expect("pick 7000 DP target");
+
+    let selection = r
+        .pending_selection()
+        .expect("selection remains open because player may pass after min picks");
+    assert!(
+        selection
+            .valid_action_ids
+            .contains(&encode_attack(0, opp_8k.index as u16)),
+        "8000 DP target should remain selectable with exactly 8000 DP budget left"
+    );
+    assert!(
+        !selection
+            .valid_action_ids
+            .contains(&encode_attack(0, opp_9k.index as u16)),
+        "9000 DP target must be filtered after only 8000 DP budget remains"
+    );
+    assert!(
+        selection.valid_action_ids.contains(&PASS),
+        "player may stop early after satisfying the mandatory first pick"
+    );
 }
 
 #[test]
-#[ignore = "BLOCKED: G-DP-BUDGET-MULTI-SELECT -- engine lacks select_opponent_permanent_multi_dp_budget"]
 fn bt17_018_on_play_zero_pick_is_invalid_when_targets_exist() {
     let mut r = runner_with_opp_7k();
     let _opp = r.place_on_field(1, "OPP-7K", None);

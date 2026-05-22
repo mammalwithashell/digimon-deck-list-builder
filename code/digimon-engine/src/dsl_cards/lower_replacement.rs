@@ -10,6 +10,7 @@ use std::sync::Arc;
 use crate::action::space::{HAND_EFFECT_START, HAND_MAIN_LIMIT};
 use crate::card_source::{CardHandle, CardSource};
 use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::predicate::{eval_predicate, eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::dsl_cards::step::{resolve_player, run_steps_with_runtime, StepRuntime};
@@ -418,12 +419,16 @@ fn required_selection_step_has_candidate(
                 return count >= *min as usize;
             }
             match zone {
-                CompiledZone::Hand => {
-                    !ctx.game.player(resolve_player_ref(ctx, *of)).hand.is_empty()
-                }
-                CompiledZone::Trash => {
-                    !ctx.game.player(resolve_player_ref(ctx, *of)).trash.is_empty()
-                }
+                CompiledZone::Hand => !ctx
+                    .game
+                    .player(resolve_player_ref(ctx, *of))
+                    .hand
+                    .is_empty(),
+                CompiledZone::Trash => !ctx
+                    .game
+                    .player(resolve_player_ref(ctx, *of))
+                    .trash
+                    .is_empty(),
                 _ => true,
             }
         }
@@ -440,7 +445,18 @@ fn required_selection_step_has_candidate(
             dp_budget,
             min_picks,
             ..
-        } => *min_picks == 0 || has_opponent_dp_budget_candidate(ctx, *dp_budget),
+        } => {
+            let budget = formula_eval::evaluate_read_with_bindings(
+                dp_budget,
+                ctx,
+                ctx.source_permanent.unwrap_or(PermanentHandle {
+                    player: ctx.player,
+                    index: u8::MAX,
+                }),
+                Some(bindings),
+            );
+            *min_picks == 0 || has_opponent_dp_budget_candidate(ctx, budget)
+        }
         CompiledStep::SelectOpponentPlayCostBudget {
             play_cost_budget,
             min_picks,
@@ -933,7 +949,10 @@ impl DelayHandDnaDigivolveFlow {
         if !is_binding_ref_named(from_hand, result_bind) {
             return None;
         }
-        if !matches!(cost, CompiledCostDelta::Free | CompiledCostDelta::Literal(0)) {
+        if !matches!(
+            cost,
+            CompiledCostDelta::Free | CompiledCostDelta::Literal(0)
+        ) {
             return None;
         }
         if !*ignore_requirements || !*result_optional || !*partner_optional {

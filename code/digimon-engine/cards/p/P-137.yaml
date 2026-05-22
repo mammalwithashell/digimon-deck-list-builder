@@ -52,15 +52,6 @@ effects:
   #   - SetUpActivateClass "once per turn" (SetHashString = "AddOpponentSecurityToHand_P_0137").
   #   - No "you may" — effect fires automatically; opponent MUST add the card.
   #
-  # DSL/Engine gap [G-ADD-TOP-SECURITY-TO-HAND] (hybrid):
-  #   - The DSL has no `add_top_security_to_hand` verb.
-  #   - EffectContext has no `add_top_security_to_hand` method.
-  #   - Only `trash_top_security` exists (moves security to trash, fires events).
-  #   - This clause requires moving top security to HAND (not trash) while still
-  #     firing the security-removed event chain (IReduceSecurity).
-  #   - Workaround: `raw_rust: p_137_opp_adds_top_security_to_hand` step.
-  #   - When closed: replace the raw_rust step with the native DSL verb.
-  #
   # Note: active_when:your_turn gates on the controller's turn (IsOwnerTurn in DCGO).
   # The condition below matches DCGO's CanUseCondition: the effect is registered on
   # the permanent's battle-area observer, so it naturally only fires when Flamedramon
@@ -75,4 +66,4 @@ effects:
     once_per_turn: true
     summary: "[Your Turn][OPT] When this Digimon's attack target is switched, opponent adds their top security to hand"
     process:
-      - raw_rust: { fn: p_137_opp_adds_top_security_to_hand }
+      - add_top_security_to_hand: { of: opponent }

@@ -1,6 +1,8 @@
 //! BT13-040 Magnamon
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledStep, CompiledZone,
+};
 use digimon_engine::action::space::{encode_source_select, PASS, PLAY_HAND_START};
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::replacement::ReplacementCause;
@@ -17,6 +19,44 @@ fn bt13_040_has_blocker_keyword() {
         clause,
         CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { .. })
     )));
+}
+
+#[test]
+fn bt13_040_when_leaving_uses_native_union_zone_for_hand_or_sources() {
+    let runner = DebugRunner::builder()
+        .dsl_card("BT13-040")
+        .expect("BT13-040 must load from embedded DSL pack")
+        .start();
+    let card = runner.compiled_card("BT13-040").expect("compiled card");
+
+    let replacement = card.effects.iter().find_map(|clause| match clause {
+        CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { process, .. }) => {
+            Some(process)
+        }
+        _ => None,
+    });
+    let process = replacement.expect("BT13-040 replacement process");
+
+    assert!(
+        !process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::RawRust { .. })),
+        "BT13-040 must use native DSL for the optional Veemon play, not raw_rust"
+    );
+    assert!(
+        process.iter().any(|step| matches!(
+            step,
+            CompiledStep::SelectUnionZone { zones, .. }
+                if zones.contains(&CompiledZone::Hand) && zones.contains(&CompiledZone::Material)
+        )),
+        "BT13-040 must select Veemon from hand or source materials with select_union_zone"
+    );
+    assert!(
+        process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::PlayUnionBoundFree { .. })),
+        "BT13-040 must play the bound hand/material card with play_union_bound_free"
+    );
 }
 
 #[test]

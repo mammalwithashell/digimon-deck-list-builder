@@ -18,7 +18,7 @@ pub enum BindingValue {
     CardList(Vec<CardHandle>),
     SourceRefs(Vec<SourceSelectionRef>),
     BreedingPermanentRef(BreedingPermanentSelectionRef),
-    /// A card picked via `select_union_zone` (hand ∪ trash), tagged with the
+    /// A card picked via `select_union_zone` (hand ∪ trash ∪ material), tagged with the
     /// `origin` zone it was in and the `owner` of that zone. Carrying the
     /// origin lets a downstream consumer (`play_union_bound_free`) replay
     /// the card from its *true* zone — a bare `CardHandle` cannot.
@@ -162,14 +162,25 @@ impl Bindings {
         origin: UnionZoneOrigin,
         owner: PlayerId,
     ) {
-        self.insert(name, BindingValue::UnionCard { card, origin, owner });
+        self.insert(
+            name,
+            BindingValue::UnionCard {
+                card,
+                origin,
+                owner,
+            },
+        );
     }
 
     /// Fetch a union-zone pick `(card, origin, owner)`. Returns `None` if the
     /// binding is absent or holds a different `BindingValue` kind.
     pub fn get_union_card(&self, name: &str) -> Option<(CardHandle, UnionZoneOrigin, PlayerId)> {
         match self.get(name)? {
-            BindingValue::UnionCard { card, origin, owner } => Some((card, origin, owner)),
+            BindingValue::UnionCard {
+                card,
+                origin,
+                owner,
+            } => Some((card, origin, owner)),
             _ => None,
         }
     }

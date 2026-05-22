@@ -2225,7 +2225,12 @@ fn compile_step(
             }
         }
         S::SelectOpponentDpBudget(a) => CompiledStep::SelectOpponentDpBudget {
-            dp_budget: a.dp_budget,
+            dp_budget: compile_formula(
+                &a.dp_budget,
+                &format!("{prefix}.dp_budget"),
+                card_id,
+                errors,
+            ),
             min_picks: a.min_picks,
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
