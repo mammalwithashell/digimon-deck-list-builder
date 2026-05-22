@@ -42,9 +42,9 @@ effects:
           bind_as: r
           filter: {}
           prompt: "Return 1 card from opponent's trash to bottom of deck"
-      - raw_rust:
-          fn: ex11_012_return_trash_to_deck_bottom
-          consumes: [r]
+      - return_trash_list_to_deck_bottom:
+          of: opponent
+          cards: r
       - play_token:
           controller: opponent
           token_name: petrification

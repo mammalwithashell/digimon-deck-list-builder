@@ -161,7 +161,7 @@ pub enum StepSpec {
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
     /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
-    /// true origin zone (hand vs trash), recovered from the binding.
+    /// true origin zone (hand, trash, or material), recovered from the binding.
     PlayUnionBoundFree(PlayUnionBoundFreeArgs),
     PlayFromSecurity(PlayFromSecurityArgs),
     PlayFromMaterials(PlayFromMaterialsArgs),
@@ -1532,7 +1532,7 @@ pub enum CostDeltaKeyword {
 
 /// `play_union_bound_free:` args — play a card previously picked by a
 /// `select_union_zone` step, **without paying its cost**, from its true
-/// origin zone (hand vs trash). `binding` names the `select_union_zone`
+/// origin zone (hand, trash, or material). `binding` names the `select_union_zone`
 /// binding (a `bind_as` from that step). The origin zone is recorded in the
 /// binding itself, so this step needs no zone parameter.
 ///
@@ -1964,7 +1964,9 @@ pub struct DigiBurstArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectOpponentDpBudgetArgs {
-    pub dp_budget: i32,
+    /// Running DP budget. Accepts a literal integer or a formula such as
+    /// `{ source_dp: {} }` for "this Digimon's DP".
+    pub dp_budget: crate::formula::FormulaSpec,
     #[serde(default)]
     pub min_picks: u8,
     #[serde(default, skip_serializing_if = "Option::is_none")]

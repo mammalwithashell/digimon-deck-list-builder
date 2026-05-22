@@ -1123,16 +1123,12 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Related:** Existing "[Option card play flow residual: place-Option-in-battle-area + [Hand][Main] Plug-In flow](#option-card-play-flow-residual-place-option-in-battle-area--handmain-plug-in-flow)" (the broader Option-play architectural gap; once that lands, this DSL verb is a thin compose layer); RUST_ENGINE_API §8 "DUAL cards and Arts Digivolve".
 
 ### Filtered hand-or-trash origin-preserving free-play (PUPPETS-G014/G028 promotion)
-- **Severity:** 🔴 BLOCKING
+- **Severity:** ✅ RESOLVED
 - **Discovered in:** ST-23 BEATBREAK (2026-05-17); ST-24 DATA SQUAD (2026-05-17); previously filed only in archetype QA (`qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md:163,326`)
 - **Card(s):** ST23-15 e-Pulse ("play 1 [BEATBREAK] trait card with a play cost of 4 or less from your hand or trash without paying the cost"); ST24-07 ShineGreymon ("play 1 Tamer card with a play cost of 5 or less from your hand or trash without paying the cost"); ST24-15 DNA Charge (same shape as ST23-15); also Puppets cards ST19-08, BT22-098 already noted in archetype QA.
 - **Effect text:** As above.
-- **What's missing:** `select_union_zone` (`CompiledStep::SelectUnionZone`, `compiled.rs:1038-1046`) accepts `zones: Vec<CompiledZone>` and binds a pick, but no downstream consumer step plays the bound selection back from its **original zone**. Lowering uses an accept-all filter and does not preserve enough origin metadata for a single faithful play-from-original-zone consumer step (per BT22-098 YAML header). Naïve `play_from_hand_free` / `play_from_trash_free` cannot consume the union-zone binding because the binding does not record which zone the card came from.
-- **Suggested API shape:**
-  - Extend `SelectUnionZoneBinding` to carry the resolved origin zone (`CompiledZone::Hand` / `CompiledZone::Trash`).
-  - New DSL consumer step `play_from_union_free: { of, pick }` (or `play_from_origin_free`) that dispatches to `play_from_hand_free` or `play_from_trash_free` based on the binding's origin metadata; fires the appropriate `OnPlay` + zone-leave observers per origin.
-  - Alternative: surface origin as a binding subfield `pick.origin_zone` and let `play_from_hand_free` / `play_from_trash_free` accept a conditional binding wrapped in a one-of dispatcher.
-- **Workaround:** Split the selection into two prompts (one `select_hand`, one `select_trash`) and gate with `if` on emptiness — over-decomposes the player's single decision into two, violating §17.
+- **Resolution:** `select_union_zone` now preserves the pick origin in the binding and `play_union_bound_free` replays the bound card from hand, trash, or material. DSL lowering evaluates the selection filter against candidate cards. The 2026-05-22 Medusamon substrate pass extended the origin set to material/source picks for BT13-040's "from hand or this Digimon's sources" shape.
+- **Workaround:** None needed for hand/trash/material origin-preserving free play. Broader play-or-use Option routing remains separate under the adjacent "Play or use" gap.
 - **Related:** "[Option card play flow residual: place-Option-in-battle-area + [Hand][Main] Plug-In flow](#option-card-play-flow-residual-place-option-in-battle-area--handmain-plug-in-flow)"; PUPPETS-G014/G028 in `qa/archetype-qa/dsl/puppets-2026-05-03-engine-dsl-gaps.md`; unified `play_or_use_from_hand_free` (sibling — RizeGreymon needs both unified play-or-use AND the hand-or-trash origin preservation as a compound shape).
 
 ### Player selection by metric (`most_security_cards`, with active-player tie-break)

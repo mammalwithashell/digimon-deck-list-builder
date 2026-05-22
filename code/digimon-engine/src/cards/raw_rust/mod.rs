@@ -3,28 +3,10 @@
 //! Phase 4 keeps bespoke mechanics behind named functions here instead of
 //! handwritten card modules under `src/cards/<set>/`.
 
-use crate::dsl_cards::bindings::{BindingValue, Bindings};
+use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
 use crate::effect::Effect;
 use crate::effect_context::EffectContext;
-
-/// EX11-012 Medusamon — [When Digivolving][End of Attack] trash-return step.
-///
-/// Reads the `TrashIndex` binding named `"r"` (installed by the preceding
-/// `select_trash` step) and moves that card from the opponent's trash to the
-/// bottom of the opponent's deck.  If the binding is absent or the index is
-/// out-of-range the function is a no-op (defensive).
-fn ex11_012_return_trash_to_deck_bottom(ctx: &mut EffectContext<'_>, bindings: &mut Bindings) {
-    if let Some(BindingValue::TrashIndex(owner, idx)) = bindings.get("r") {
-        let idx = idx as usize;
-        let owner = owner as usize;
-        if idx < ctx.game.players[owner].trash.len() {
-            let card = ctx.game.players[owner].trash.remove(idx);
-            // Bottom of deck = index 0 (deck is stored front=bottom, back=top).
-            ctx.game.players[owner].deck.insert(0, card);
-        }
-    }
-}
 
 /// BT24-012 Dimetromon — [All Turns] "protect other Reptile/Dragonkin ally by bouncing self"
 /// replacement — no-op placeholder.
@@ -70,85 +52,6 @@ fn bt24_012_would_leave_replacement(_handle: crate::card_source::CardHandle) -> 
     // Full implementation blocked by G-EVENT-TARGET-OWNER (removal cause attribution
     // + cross-permanent replacement) and the subject_matches gate in lower_replacement.rs.
     vec![]
-}
-
-/// P-137 Flamedramon — [Your Turn][OPT] opponent adds their top security to hand.
-///
-/// Printed effect: "[Your Turn][Once Per Turn] When this Digimon's attack target
-/// is switched, your opponent adds the top card of their security stack to the hand."
-///
-/// DCGO analysis (P_137.cs EffectTiming.OnAttackTargetChanged):
-///   - `CardObjectController.AddHandCards` — moves the top security card to the
-///     opponent's hand.
-///   - `IReduceSecurity.ReduceSecurity` — fires the security-loss event chain
-///     (OnLoseSecurity for the defender, OnOpponentSecurityRemoved for the attacker).
-///
-/// This function is the `raw_rust:` bridge pending resolution of the hybrid gap
-/// [G-ADD-TOP-SECURITY-TO-HAND]:
-///
-/// **DSL gap**: No `add_top_security_to_hand` verb exists in `digimon-dsl/src/step.rs`.
-///   The security-removal verbs are `trash_top_security` (moves top card to trash) and `trash_bottom_security` (moves bottom card to trash).
-///   `add_top_security_to_hand` would lower to a new `EffectContext` method that
-///   moves the card to the owner's hand instead of trash.
-///
-/// **Engine gap**: `EffectContext` has no `add_top_security_to_hand` method.
-///   The closest is `trash_top_security` which routes through the WhenWouldBeTrashed
-///   replacement chain and fires zone-transfer events to trash. The hand-transfer
-///   variant needs the same `IReduceSecurity`-equivalent event firing but to hand.
-///
-/// Implementation strategy here:
-///   1. Pop the top security card from the opponent's security stack.
-///   2. Push it to the opponent's hand.
-///   3. Fire `OnLoseSecurity` from the defender's security-revealed context so
-///      observer cards (e.g., BT21-001 Gigimon) see the security loss.
-///   4. Fire `OnOpponentSecurityRemoved` from the controller's battle area so
-///      archetype observers (e.g., BT21-008 Elizamon) see the opponent's loss.
-///
-/// When [G-ADD-TOP-SECURITY-TO-HAND] is closed, replace the raw_rust step in
-/// `P-137.yaml` with the native DSL verb and remove this function.
-///
-/// Tracked under [G-ADD-TOP-SECURITY-TO-HAND] in qa/dsl-vocab-gaps.md and
-/// qa/archetype-qa/engine-gaps.md.
-fn p_137_opp_adds_top_security_to_hand(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    use crate::enums::EffectTiming;
-    use crate::selection::TriggerSource;
-
-    let opponent = ctx.opponent_id();
-
-    // No-op if opponent has no security.
-    if ctx.game.player(opponent).security.is_empty() {
-        return;
-    }
-
-    // Pop the top security card (security is stored front=bottom, back=top;
-    // `pop()` removes from the back = the top of the stack).
-    let card = match ctx.game.player_mut(opponent).security.pop() {
-        Some(c) => c,
-        None => return,
-    };
-    let card_handle = card.handle();
-
-    // Move the card to the opponent's hand.
-    ctx.game.player_mut(opponent).hand.push(card);
-
-    // Fire OnLoseSecurity so cards watching the defender's security loss can react.
-    // Use SecurityRevealed trigger source to mirror the normal security-loss path.
-    ctx.game.enqueue_triggered(
-        EffectTiming::OnLoseSecurity,
-        TriggerSource::SecurityRevealed {
-            defender: opponent,
-            card: card_handle,
-        },
-    );
-    ctx.game.drain_effect_queue();
-
-    // Fire OnOpponentSecurityRemoved so the controller's archetype observers react.
-    let controller = ctx.player;
-    ctx.game.enqueue_triggered(
-        EffectTiming::OnOpponentSecurityRemoved,
-        TriggerSource::PlayerBattleArea(controller),
-    );
-    ctx.game.drain_effect_queue();
 }
 
 /// EX8-074 MedievalGallantmon — Dynamic DP cap formula for the [When Digivolving]
@@ -363,64 +266,6 @@ fn bt9_112_delete_lowest_cost_digimon(ctx: &mut EffectContext<'_>, _bindings: &m
     }
 }
 
-/// BT17-018 Gallantmon: Crimson Mode — [On Play][When Digivolving] DP-budget multi-delete.
-///
-/// Printed effect: "Choose any number of your opponent's Digimon whose total DP
-/// adds up to 15000 or less and delete them."
-///
-/// DCGO analysis (BT17_018.cs, `SetUpActivateClass SharedActivateCoroutine`):
-///   - `canTargetConditionByPreSelectedList`: filters candidates based on running
-///     DP sum — after each pick, candidates whose DP would push the total above
-///     15000 are removed from the selectable list.
-///   - `canEndSelectCondition`: final validation that total DP ≤ 15000.
-///   - `canNoSelect: false`: must pick ≥1 when eligible targets exist.
-///   - `canEndNotMax: true`: can stop picking before all valid candidates are selected.
-///
-/// BLOCKED: G-DP-BUDGET-MULTI-SELECT
-///   The engine has no `select_opponent_permanent_multi_dp_budget` primitive.
-///   `select_count_capped_multi` caps pick COUNT, not DP sum. A proper
-///   implementation requires:
-///     1. Initial candidate list: all opponent Digimon.
-///     2. After each pick: subtract that Digimon's DP from remaining budget (15000 -
-///        sum_picked), re-filter candidates to those whose DP ≤ remaining budget.
-///     3. On PASS (or when no candidates remain): delete all picked Digimon.
-///   This multi-round incremental selection is not currently supported by
-///   `PendingSelection` — it would require a new selection kind or a looping
-///   raw_rust harness that re-installs selection each round.
-///
-/// Current approximation (no-approximations policy violation — noted for tracking):
-///   This function installs a SINGLE mandatory selection of ONE opponent Digimon
-///   with DP ≤ 15000 (i.e., effectively treats the 15000 budget as a filter on
-///   the single target). It does NOT support multi-pick. This violates the
-///   no-approximations policy for the multi-select aspect, but is the least bad
-///   option until G-DP-BUDGET-MULTI-SELECT closes.
-///
-/// When G-DP-BUDGET-MULTI-SELECT is closed, replace this function with a proper
-/// multi-round selection harness or a new engine primitive, and update BT17-018.yaml.
-///
-/// Tracked in qa/archetype-qa/engine-gaps.md under G-DP-BUDGET-MULTI-SELECT.
-fn bt17_018_delete_opp_digimon_dp_budget(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    use crate::enums::CardKind;
-
-    // Install a single mandatory selection of ONE opponent Digimon with DP ≤ 15000.
-    // BLOCKED: G-DP-BUDGET-MULTI-SELECT — full multi-pick with running DP-sum cap
-    // is not yet supported by the engine. This is a single-pick approximation only.
-    ctx.select_opponent_permanent(
-        "Select 1 of your opponent's Digimon to delete (DP ≤ 15000 budget; multi-pick pending G-DP-BUDGET-MULTI-SELECT)",
-        false, // mandatory (canNoSelect: false)
-        |game, h| {
-            // Filter: must be Digimon with DP ≤ 15000.
-            let perm = &game.player(h.player).battle_area[h.index as usize];
-            let top = perm.top_card();
-            let data = &game.card_data[top.data_index];
-            data.card_kind == CardKind::Digimon && data.dp.unwrap_or(0) <= 15000
-        },
-        |ctx, selected| {
-            ctx.delete_permanent(selected);
-        },
-    );
-}
-
 /// BT17-018 Gallantmon: Crimson Mode — [When Attacking][Once Per Turn] security trash loop.
 ///
 /// Printed effect: "[When Attacking] [Once Per Turn] For every 10 cards in both players'
@@ -469,61 +314,6 @@ fn bt17_018_trash_security_per_ten_trash(ctx: &mut EffectContext<'_>, _bindings:
         }
         ctx.trash_top_security(opponent);
     }
-}
-
-/// LM-021 Agumon - Bond of Bravery — [On Play][When Digivolving] DP-sum delete.
-///
-/// Printed effect: "Delete any number of your opponent's Digimon whose total DP
-/// adds up to equal or less than this Digimon's DP." (This Digimon has 14000 DP.)
-///
-/// DCGO analysis (LM_021.cs, `SelectPermanentEffect.SetUp`):
-///   - `canTargetConditionByPreSelectedList`: running DP-sum filter — after each
-///     pick, candidates whose DP would push the total above this Digimon's DP (14000)
-///     are removed from the selectable list.
-///   - `canEndSelectCondition`: final validation that total DP ≤ 14000.
-///   - `canNoSelect: false`: must pick ≥1 when eligible targets exist.
-///   - `canEndNotMax: true`: can stop picking before max candidates.
-///
-/// BLOCKED: G-MULTI-SELECT-OPP-DP-SUM (same root as G-DP-BUDGET-MULTI-SELECT)
-///   No DSL verb or engine primitive supports multi-select of opponent battle-area
-///   permanents with a running DP-sum cap. This function is a single-pick fallback
-///   (approximation: player picks one opponent Digimon and it is deleted).
-///
-/// When G-MULTI-SELECT-OPP-DP-SUM is closed, replace this raw_rust step in
-/// LM-021.yaml with a native DSL expression and remove this function.
-///
-/// Tracked in qa/archetype-qa/engine-gaps.md under G-MULTI-SELECT-OPP-DP-SUM.
-fn lm_021_delete_dp_sum(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    use crate::enums::CardKind;
-
-    let opponent = ctx.opponent_id();
-
-    // Check at least one eligible target (Digimon with DP ≤ 14000).
-    let has_target = ctx.game.player(opponent).battle_area.iter().any(|perm| {
-        let top = perm.top_card();
-        let data = &ctx.game.card_data[top.data_index];
-        data.card_kind == CardKind::Digimon && data.dp.unwrap_or(0) <= 14000
-    });
-
-    if !has_target {
-        return;
-    }
-
-    // Single mandatory pick — fallback for G-MULTI-SELECT-OPP-DP-SUM.
-    // Full multi-pick with running DP-sum cap pending engine primitive support.
-    ctx.select_opponent_permanent(
-        "Select 1 of your opponent's Digimon to delete (DP ≤ 14000 budget; multi-pick pending G-MULTI-SELECT-OPP-DP-SUM)",
-        false, // mandatory (canNoSelect: false)
-        |game, h| {
-            let perm = &game.player(h.player).battle_area[h.index as usize];
-            let top = perm.top_card();
-            let data = &game.card_data[top.data_index];
-            data.card_kind == CardKind::Digimon && data.dp.unwrap_or(0) <= 14000
-        },
-        |ctx, selected| {
-            ctx.delete_permanent(selected);
-        },
-    );
 }
 
 // bt20_016_dna_on_deletion was removed 2026-05-21 (main #503) — BT20-016's
@@ -611,133 +401,11 @@ fn bt24_062_attack_target_lock(card: crate::card_source::CardHandle) -> Vec<Effe
     ]
 }
 
-/// BT13-040 Magnamon — would-leave observer tail.
-///
-/// Printed text: "When this Digimon would leave the battle area, <Draw 1>.
-/// Then, you may play 1 [Veemon] from your hand or this Digimon's digivolution
-/// cards without paying the cost."
-///
-/// This is intentionally a non-cancelling replacement-process step: the
-/// surrounding DSL replacement observer performs the draw, then this helper
-/// installs one optional pending selection containing both hand and material
-/// action IDs. No action-space expansion is needed; hand picks reuse
-/// `PLAY_HAND_START + index`, source picks reuse `SOURCE_SELECT_START +
-/// field * SOURCES_PER_FIELD + source_index`.
-fn bt13_040_may_play_veemon_from_hand_or_source(
-    ctx: &mut EffectContext<'_>,
-    _bindings: &mut Bindings,
-) {
-    use crate::action::space::{
-        encode_source_select, PLAY_HAND_END, PLAY_HAND_START, SOURCE_SELECT_END,
-        SOURCE_SELECT_START,
-    };
-    use crate::enums::{CostDelta, GamePhase};
-    use crate::selection::{PendingSelection, SelectionKind, UnionZoneSet};
-
-    let Some(source_permanent) = ctx.source_permanent else {
-        return;
-    };
-
-    let player = ctx.player;
-    let mut valid_action_ids = Vec::new();
-
-    for (idx, card) in ctx.game.player(player).hand.iter().enumerate() {
-        if idx >= crate::action::space::HAND_MAIN_LIMIT {
-            break;
-        }
-        if card
-            .card_names(&ctx.game.card_data)
-            .iter()
-            .any(|name| name.contains("Veemon"))
-        {
-            valid_action_ids.push(PLAY_HAND_START + idx as u16);
-        }
-    }
-
-    if let Some(perm) = ctx
-        .game
-        .player(source_permanent.player)
-        .battle_area
-        .get(source_permanent.index as usize)
-    {
-        let source_count = perm.card_sources.len().saturating_sub(1);
-        for source_index in 0..source_count.min(crate::action::space::SOURCES_PER_FIELD as usize) {
-            let source = &perm.card_sources[source_index];
-            if source
-                .card_names(&ctx.game.card_data)
-                .iter()
-                .any(|name| name.contains("Veemon"))
-            {
-                if let Some(action_id) =
-                    encode_source_select(source_permanent.index as u16, source_index as u16)
-                {
-                    valid_action_ids.push(action_id);
-                }
-            }
-        }
-    }
-
-    if valid_action_ids.is_empty() {
-        return;
-    }
-
-    let previous_phase = ctx.game.current_phase;
-    let selecting_player = ctx.override_selecting_player.unwrap_or(player);
-    let source_card = ctx.source_card;
-    let source_kind = ctx.source_kind;
-    let override_pin = ctx.override_selecting_player;
-    ctx.game.current_phase = GamePhase::SelectUnion;
-    ctx.game.pending_selection = Some(PendingSelection {
-        kind: SelectionKind::UnionZone {
-            zones: UnionZoneSet::HAND | UnionZoneSet::MATERIAL,
-        },
-        selecting_player,
-        previous_phase,
-        valid_action_ids,
-        is_optional: true,
-        prompt: "You may play 1 [Veemon] from hand or this Digimon's sources".to_string(),
-        effect_choices: None,
-        source_card,
-        source_permanent: Some(source_permanent),
-        source_kind,
-        callback: Box::new(move |game, action_id| {
-            let mut cb_ctx = EffectContext::new_with_source_kind_and_override(
-                game,
-                source_card,
-                Some(source_permanent),
-                source_kind,
-                player,
-                override_pin,
-            );
-            if (PLAY_HAND_START..PLAY_HAND_END).contains(&action_id) {
-                let hand_index = (action_id - PLAY_HAND_START) as usize;
-                let _ = cb_ctx.play_from_hand_free(player, hand_index);
-            } else if (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action_id) {
-                let (_, source_index) = crate::action::space::decode_source_select(action_id);
-                let _ = cb_ctx.play_from_materials(
-                    source_permanent,
-                    source_index as usize,
-                    CostDelta::Free,
-                );
-            }
-        }),
-        on_decline: None,
-    });
-}
-
 pub fn build_registry() -> EngineRawRustRegistry {
     let mut r = EngineRawRustRegistry::new();
-    r.register_step(
-        "ex11_012_return_trash_to_deck_bottom",
-        ex11_012_return_trash_to_deck_bottom,
-    );
     r.register_declarative(
         "bt24_012_would_leave_replacement",
         bt24_012_would_leave_replacement,
-    );
-    r.register_step(
-        "p_137_opp_adds_top_security_to_hand",
-        p_137_opp_adds_top_security_to_hand,
     );
     r.register_formula("ex8_074_suspended_dp_cap", ex8_074_suspended_dp_cap);
     r.register_step(
@@ -749,15 +417,14 @@ pub fn build_registry() -> EngineRawRustRegistry {
         "bt9_112_delete_lowest_cost_digimon",
         bt9_112_delete_lowest_cost_digimon,
     );
-    r.register_step(
-        "bt17_018_delete_opp_digimon_dp_budget",
-        bt17_018_delete_opp_digimon_dp_budget,
-    );
+    // bt17_018_delete_opp_digimon_dp_budget was removed 2026-05-22 —
+    // BT17-018's delete clause uses native `select_opponent_dp_budget`.
     r.register_step(
         "bt17_018_trash_security_per_ten_trash",
         bt17_018_trash_security_per_ten_trash,
     );
-    r.register_step("lm_021_delete_dp_sum", lm_021_delete_dp_sum);
+    // lm_021_delete_dp_sum was removed 2026-05-22 — LM-021 uses native
+    // `select_opponent_dp_budget` with a `source_dp` formula budget.
     // bt20_102_boardwipe_and_return was removed 2026-05-20 — BT20-102's
     // [On Play][When Digivolving] board-wipe + return clause is now pure DSL
     // (for_each + binding_absent/not_in_binding exclusion; G-FOR-EACH-EXCLUDE-BINDING).
@@ -775,10 +442,9 @@ pub fn build_registry() -> EngineRawRustRegistry {
         bt21_093_delete_highest_dp_opponent,
     );
     r.register_declarative("bt24_062_attack_target_lock", bt24_062_attack_target_lock);
-    r.register_step(
-        "bt13_040_may_play_veemon_from_hand_or_source",
-        bt13_040_may_play_veemon_from_hand_or_source,
-    );
+    // bt13_040_may_play_veemon_from_hand_or_source was removed 2026-05-22 —
+    // BT13-040 uses native `select_union_zone` over hand/material plus
+    // `play_union_bound_free`.
     r
 }
 

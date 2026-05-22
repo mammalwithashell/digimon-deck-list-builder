@@ -112,7 +112,7 @@ Plus a small assortment of cross-batch fixes (binding-keyword bug `target: sourc
 | G-EFFECT-DIGIVOLVE-FROM-HAND | (Resolved during run via Phase 3a verification — `effect_initiated_digivolve cost: { reduce: N }` already works) | — |
 | G-OPP-SECURITY-COUNT-LTE | No `opponent_security_count_lte` predicate | BT24-018, BT21-093 |
 | G-SELECT-EMPTY-OUTER-TAIL | Outer-tail steps after `as_selecting_player` lost when inner `select_hand` has no candidates | BT24-024 |
-| G-MULTI-SELECT-OPP-DP-SUM | Multi-select with running DP-sum cap | LM-021, BT17-018 |
+| G-MULTI-SELECT-OPP-DP-SUM | Resolved via `select_opponent_dp_budget` running DP-sum selection | LM-021, BT17-018 |
 | G-ALL-TURNS-FILTER | `active_when: { all_turns: true }` opponent-turn firing unverified | BT24-018 |
 | G-LOSE-COUNT-BOUND | Count-driven loop combinator | BT17-018 |
 | G-ADD-TOP-SECURITY-TO-HAND | `EffectContext::add_top_security_to_hand` missing | P-137 |

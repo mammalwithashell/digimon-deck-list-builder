@@ -986,7 +986,7 @@ pub enum CompiledStep {
         suppress_on_play: bool,
     },
     /// PUPPETS-G014 — play a `select_union_zone`-bound card for free from its
-    /// true origin zone (hand vs trash). `binding` names a `select_union_zone`
+    /// true origin zone (hand, trash, or material). `binding` names a `select_union_zone`
     /// `bind_as`; the origin zone is carried in the binding value.
     PlayUnionBoundFree {
         binding: String,
@@ -1259,7 +1259,7 @@ pub enum CompiledStep {
         then: Vec<CompiledStep>,
     },
     SelectOpponentDpBudget {
-        dp_budget: i32,
+        dp_budget: CompiledFormula,
         min_picks: u8,
         bind_as: Option<String>,
         prompt: String,
