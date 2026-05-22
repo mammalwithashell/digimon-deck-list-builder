@@ -213,19 +213,19 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **What's missing:** `active_when: { all_turns: true }` parses but the predicate evaluator may not actually allow firing on the opponent's turn (uncertain — needs verification). Tests for opp-turn triggers are #[ignore]'d pending verification.
 - **Workaround:** Use `active_when: { all_turns: true }` and confirm via behavioral test on opp's turn.
 
-### `trash_security_card` Verb (Non-Top Security) Missing  [G-TRASH-SELECTED-SECURITY]
+### ~~`trash_security_card` Verb (Non-Top Security) Missing~~  [G-TRASH-SELECTED-SECURITY] — RESOLVED 2026-05-21
+- **Status:** RESOLVED 2026-05-21 (`unblock-medusamon-partial-cards`). `EffectContext::trash_security_card(player, handle)` trashes a chosen security card by stable handle; the `trash_selected_security` DSL verb consumes a `select_security` binding. Full entry archived in `qa/resolved-gaps.md`.
 - **Discovered in:** Medusamon archetype, BT24-018 Styracomon (2026-04-27).
 - **Scope:** DSL + engine (hybrid).
 - **Card(s):** BT24-018 — "[When Digivolving] You may trash any 1 of your opponent's security cards."
 - **What's missing:** `select_security` can bind a target index but no DSL verb consumes that binding to actually trash the chosen card. Only `trash_top_security` exists. The engine likely has the primitive (security indexing already supported elsewhere); just no DSL bridge.
 - **Workaround:** `raw_rust:` escape hatch.
 
-### Trash → Deck-Bottom Move (Without Reveal Phase)  [G-ZONE-TRASH-TO-DECK]
+### ~~Trash → Deck-Bottom Move (Without Reveal Phase)~~  [G-ZONE-TRASH-TO-DECK] — RESOLVED 2026-05-21
+- **Status:** RESOLVED. Confirmed during the Medusamon re-attempt run (BT24-017 Batch 2, 2026-05-21). The first-class DSL verb `return_trash_list_to_deck_bottom` exists (`code/digimon-dsl/src/step.rs`, lowered in `code/digimon-engine/src/dsl_cards/step/zone_moves.rs`) and consumes a bound card-list, calling the real engine API `EffectContext::return_trash_cards_to_deck_bottom` (`code/digimon-engine/src/effect_context/mod.rs`), which removes the selected cards from trash and inserts them at deck index 0 (bottom). BT24-017's `[When Digivolving]` "return 2 cards from their trash to the bottom of the deck" sub-clause is now fully implemented in pure DSL with a real `CountCappedMultiSelect` player choice. The stale entry was carried as open in both this file and `qa/resolved-gaps.md`.
 - **Discovered in:** Medusamon archetype, BT24-017 Medusamon (Batch 3, 2026-04-27).
 - **Scope:** DSL + engine (hybrid).
 - **Card(s):** BT24-017 (return 2 trash to bottom of deck), BT21-029-related, EX11-012 (return 1 trash to bottom).
-- **What's missing:** A DSL verb / `EffectContext` API for moving a chosen trash card to the bottom of the owner's main deck. Existing `return_to_deck_from_reveal` works for cards in the reveal zone, not trash.
-- **Workaround:** EX11-012 implementer added a `raw_rust: ex11_012_return_trash_to_deck_bottom` (6-line bridge in `src/cards/raw_rust/mod.rs`). Generalizing it as a first-class DSL verb is the proper fix.
 
 ### `on_digivolve` Trigger Context Missing Newly-Digivolved Permanent Reference  [G-ON-DIGIVOLVE-TRAIT-FILTER]
 - **Discovered in:** Medusamon archetype, BT24-082 Owen Dreadnought DSL implementation (2026-04-27)
@@ -385,3 +385,50 @@ Resolved engine gaps have been moved to [qa/resolved-gaps.md](../resolved-gaps.m
 - **Closure:** Substrate already correct; the suspected "key persistence across turn boundaries" was a misdiagnosis. The slot key is `(carrier_permanent's `effect_activations` HashMap) × (source_card_handle, effect_slot)` and the reset clears the entire HashMap via `Permanent::new_turn()` at `begin_turn`, so any divergence between carrier identity and trigger source is irrelevant — both keys live in the same per-carrier map.
 - **Failing test root cause:** `bt16_040_opt_resets_after_turn_cycle` (and the parallel BT17-015 / BT17-018 reset tests) failed because their test setup had no decks and no security for either player. After the first `end_turn()`, `begin_turn()` for the opponent tripped a deck-out and ended the game before rotation could reach the controller again, so `Permanent::new_turn` never ran for the carrier and the OPT slot stayed populated.
 - **Fix landed:** Test-setup adjustments (decks + security for both players, low-DP defenders where needed). No engine-side changes. Migrated to `qa/resolved-gaps.md`.
+
+### Activated-Digivolve Alt-Path Has No Engine Execution Route  [G-ACTIVATED-DIGIVOLVE-EXECUTION] — BT24-016 UNBLOCKED 2026-05-22 (residual for 3 cards)
+- **Status (2026-05-22, `unblock-medusamon-tier3-cards`, design.md D1-REVISED):** **BT24-016 Lamiamon is unblocked** — clause 1 was re-modelled from a `kind: activated_digivolve` alt-path to a `when: main_from_hand` triggered clause (select Elizamon → select Dimetromon from trash → `place_as_bottom_source` → `effect_initiated_digivolve` cost 3, `ignore_requirements`), using only existing engine machinery and **zero engine code**. The card is `IMPLEMENTED`, 24/24 tests pass. **Residual:** the `CompiledAltPathKind::ActivatedDigivolve` alt-path *kind* still has no engine execution route — only the 3 out-of-scope cards below (BT22-013/026, BT16-027) need one; this entry stays open for them. The task-1.1 investigation also found `extra_cost` is unimplemented engine-wide (3 sites, all exclusions), so a true `activated_digivolve` route would need a from-scratch parking `extra_cost` runner.
+- **Discovered in:** Medusamon archetype re-attempt run, BT24-016 Lamiamon DSL implementation (2026-05-21).
+- **Scope:** Rust engine.
+- **Card(s):** ~~BT24-016 Lamiamon~~ (UNBLOCKED — see Status above). Residual: BT22-013, BT22-026, BT16-027 — other `activated_digivolve` alt-path cards, currently covered structurally only.
+- **Effect text:** "[Hand] [Main] ... it digivolves into this card for a digivolution cost of 3, ignoring digivolution requirements." — an activated, Main-timed digivolve initiated from a card in hand.
+- **What's missing:** The `CompiledAltPathKind::ActivatedDigivolve` alt-path kind has no engine execution route. `dna_digivolve.rs` matches only `Digivolve`, `DnaDigivolve`, `BlastDnaDigivolve` — never `ActivatedDigivolve`. `game.rs` has zero `ActivatedDigivolve` references, and the action layer (`action/space.rs`, `action/mask.rs`) offers no action ID for an activated-digivolve alt-path. The DSL surface is complete — `condition:`, `from:`, `extra_cost`, `cost`, `ignore_requirements` all compile (G-ALT-PATH-CONDITION resolved the `condition:` field) — but the `[Hand][Main]` activated-digivolve action is never offered to the action space, so the clause cannot be played or behaviorally tested.
+- **Suggested change:** Add an execution route for `CompiledAltPathKind::ActivatedDigivolve`: a Main-phase action masked in when a hand card declares an `activated_digivolve` alt-path whose `condition:` passes and whose `from:` source + `extra_cost` are satisfiable, then runs the digivolve at the declared `cost` with `ignore_requirements`.
+- **Workaround:** None faithful. Clause 1 of BT24-016 ships structurally (alt-path compiles, `condition:` populated) but is un-executable; its tests cover it structurally only.
+
+### ~~Declined Optional `[Security]` Effect Infinite-Loops on Resume~~  [G-SECURITY-SKILL-RESUME-REFIRE] — RESOLVED 2026-05-21
+- **Status:** RESOLVED 2026-05-21 (`unblock-medusamon-partial-cards`). `SecurityResolutionState.security_skill_drained` records that `EffectTiming::SecuritySkill` fired; the `SecuritySkillDrain` arm enqueues it exactly once and resume flushes/advances instead of re-enqueuing. Full entry archived in `qa/resolved-gaps.md`.
+- **Discovered in:** Medusamon archetype re-attempt run, P-189 Dimetromon DSL implementation (2026-05-21).
+- **Scope:** Rust engine.
+- **Card(s):** P-189 Dimetromon (and any card with a declinable `[Security]` "you may" triggered effect — P-206, ST19-08, etc.).
+- **Effect text:** "[Security] You may play 1 card ... " — any optional `on_security` triggered effect.
+- **What's missing:** In `combat.rs::drive_security_resolution`, the `SecurityPhase::SecuritySkillDrain` arm enqueues `EffectTiming::SecuritySkill`, drains, and returns early when a selection parks — **without advancing the phase or recording that the drain already fired**. On resume via `advance_security_resolution`, the phase is still `SecuritySkillDrain`, and because the revealed card is still in `Game::pending_security`, the same `[Security]` effect re-installs its selection. When the player **declines** an optional security effect whose candidate persists, this re-parks indefinitely — an infinite loop (verified: 11+ consecutive PASSes never clear `pending_selection`). The play (accept) path is unaffected because resolving the play consumes the candidate.
+- **Suggested change:** `SecuritySkillDrain` must record that the drain has fired for the current `revealed_card` (e.g. a `security_skill_drained: bool` on the resolution state) so the resume path advances past it instead of re-enqueueing `SecuritySkill`.
+- **Workaround:** None faithful. P-189's decline-path test `p_189_security_clause_can_be_declined` is `#[ignore = "BLOCKED: G-SECURITY-SKILL-RESUME-REFIRE"]`; the card YAML itself is complete and faithful.
+
+### ~~Plug-In Option Cannot Be Both a Standard `[Main]` Option and a Link Option~~  [G-LINK-OPTION-DUAL-PLAY-MODE] — RESOLVED 2026-05-22
+- **Status:** RESOLVED 2026-05-22 (`unblock-medusamon-tier3-cards`). `classify_option_modes` returns the **set** of available play modes; `play_option_core` installs an `EffectChoice` mode-select for a dual-mode Plug-In and forks cost (Standard use cost vs flat Link cost) + disposal (Standard trash vs Link attach) on the chosen mode — reusing the existing `EffectChoice` / `PLAY_HAND` action range, so `ACTION_SPACE_SIZE` is unchanged. Full entry archived in `qa/resolved-gaps.md`.
+- **Discovered in:** Medusamon archetype re-attempt run, ST22-08 Offensive Plug-In V DSL implementation (2026-05-21).
+- **Scope:** Rust engine.
+- **Card(s):** ST22-08 Offensive Plug-In V, and any Plug-In Option with both a `[Main]`/`[Security]` effect and standalone Link Requirements.
+- **Effect text:** ST22-08 has a `[Main]` effect (use as an Option, pay use-cost 4) AND inherited "Link Requirements [Link] Lv.3 or higher: Cost 2" (plug it in via the Link mechanic, pay link-cost 2) — two mutually-exclusive play modes.
+- **What was missing:** `classify_option_subtype` (`game_actions.rs`) was first-match-wins: any effect carrying `link_cost.is_some()` reclassified the **entire card** as `OptionSubtype::Link`. The spike (design.md D2) ruled out a new action ID — the mode choice is surfaced as a `pending_selection` instead.
+- **Resolution:** `classify_option_subtype` → `classify_option_modes` (returns `Vec<OptionPlayMode>`); `play_option_core` gained a `chosen_mode` parameter — for a dual-mode card it parks an `EffectChoice` mode-select (`install_option_mode_select`) and the callback re-enters with the chosen mode. `OptionSubtype` moved to `selection.rs` and is stored on `PendingOption.subtype` so `dispose_option` routes on the resolved mode. ST22-08.yaml gained a `kind: link_requirement` clause; `st22_08.rs` has 34 behavioral tests.
+
+### ~~Move a Selected Trash Card to Deck TOP~~  [G-ZONE-SELECTED-TRASH-TO-DECK-TOP] — RESOLVED 2026-05-21
+- **Status:** RESOLVED 2026-05-21 (`unblock-medusamon-partial-cards`). `EffectContext::return_trash_cards_to_deck_top` + the `destination: top | bottom` DSL param move a selected trash card to the deck top. Full entry archived in `qa/resolved-gaps.md`.
+- **Discovered in:** Medusamon archetype re-attempt run, LM-027 Red Scramble DSL implementation (2026-05-21).
+- **Scope:** Rust engine + DSL (hybrid). Full entry + suggested DSL surface in `qa/dsl-vocab-gaps.md` under the same gap ID.
+- **Card(s):** LM-027 Red Scramble `[Start of Your Turn] <Delay>` body; also LM-029 / LM-030 / LM-031.
+- **Effect text:** "Return 1 red Digimon card from your trash to the top of the deck."
+- **What's missing:** All `EffectContext` trash→deck methods (`return_trash_cards_to_deck_bottom`, `return_all_trash_to_deck_bottom`) hard-code `deck.insert(0, card)` (deck bottom). No engine method moves a chosen trash card to the deck **top**. Distinct from the now-RESOLVED deck-bottom gap `G-ZONE-TRASH-TO-DECK`.
+- **Suggested change:** Add `EffectContext::return_trash_cards_to_deck_top` (mirror the bottom variant but `deck.push`), exposed via a `destination: top|bottom` DSL parameter — see `qa/dsl-vocab-gaps.md`.
+- **Workaround:** LM-027 clause B retains a `raw_rust` no-op; 4 tests `#[ignore]`'d with this gap tag.
+
+### Outer-Optional-Prompt Condition Evaluated Without Trigger Context  [G-OUTER-OPTIONAL-COND-NO-TRIGGER-CONTEXT]
+- **Discovered in:** Medusamon archetype re-attempt run, BT20-016 Paildramon DSL implementation (2026-05-21). Latent — not hit by BT20-016 itself.
+- **Scope:** Rust engine.
+- **Card(s):** Any `optional` triggered clause whose body's first step is mandatory (so an outer accept/decline prompt is required) AND whose `condition` reads event-context predicates. BT21-026's deletion arm is a known affected card (its behavioral test is `#[ignore]`'d).
+- **What's missing:** `queued_effect_wants_outer_optional_prompt` (`effect_queue.rs`) builds an `EffectReadContext` and evaluates `effect.condition` WITHOUT installing the queued effect's `trigger_context` — unlike `evaluate_effect_condition` and the pre-cost-prompt branch, which both install it via `TriggerContextGuard`. For an optional triggered clause needing an outer prompt whose `condition` reads event-context predicates (`event_target_owner`, `event_target_kind`, `event_target_name_contains`, deleted-object snapshots), the predicate defaults false → the outer prompt is wrongly suppressed and the clause silently never fires.
+- **Suggested change:** Wrap the condition evaluation in `queued_effect_wants_outer_optional_prompt` with a `TriggerContextGuard::install(qe.trigger_context)` — requires a `&mut self` refactor or a read-only trigger-context override on `EffectReadContext`.
+- **Workaround:** BT20-016 avoids this by making the body's first step a declinable `optional: true` `select_hand` (so `needs_outer_optional_prompt` is false and the inner PASS is the decline path). Not all cards can be restructured this way.

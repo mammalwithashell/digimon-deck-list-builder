@@ -17,22 +17,21 @@
 //! # Patterns this test file covers
 //! - H5: Blocker keyword grant (declarative GrantKeyword)
 //! - F3: [All Turns] WouldLeaveBattleArea replacement — "other" Digimon scope,
-//!       cost = return self to hand (raw_rust: G-EVENT-TARGET-OWNER gap)
+//!       cross-permanent subject, gated on `replacement_cause: opponent_effect`,
+//!       cost = return self to hand. Pure-DSL `kind: replacement`
+//!       (G-EVENT-TARGET-OWNER RESOLVED 2026-05-21).
 //! - Inherited on_opponent_security_removed OPT clause: substrate gates
-//!   closed (G-INHERITED-DISPATCH by Phase 2 Track D 2026-05-17,
-//!   G-OPT-TRIGGERED by Phase 2 Track C). Behavioral tests are `todo!()`
-//!   placeholders awaiting bodies.
+//!   closed (G-INHERITED-DISPATCH Phase 2 Track D 2026-05-17,
+//!   G-OPT-TRIGGERED Phase 2 Track C 2026-05-16). Behavioral tests live.
 //!
-//! # Known gaps
-//! - **G-EVENT-TARGET-OWNER**: no DSL predicate to filter the leaving permanent
-//!   by controller (must be "your" Digimon) — raw_rust workaround owns this check.
-//!   Additionally, no predicate for "by your opponent's effects" (removal cause
-//!   attribution). The raw_rust fn implements both gates.
-//! - **G-INHERITED-DISPATCH**: inherited `on_opponent_security_removed` firing
-//!   is not wired up for digivolution-stack sources; behavioral tests for
-//!   clause (c) are `#[ignore]`.
-//! - **G-OPT-TRIGGERED**: OPT lockout enforcement on triggered effects is not
-//!   wired; inherited clause (c) OPT lockout test is `#[ignore]`.
+//! # Resolved gaps
+//! - **G-EVENT-TARGET-OWNER** (RESOLVED 2026-05-21): the replacement context
+//!   now exposes `replacement_subject_is_mine` (the leaving permanent's
+//!   controller) and `replacement_cause` (Battle / OwnEffect / OpponentEffect).
+//!   Clause (b) is expressed in pure DSL — the raw_rust placeholder
+//!   `bt24_012_would_leave_replacement` is no longer referenced by this card.
+//! - **G-INHERITED-DISPATCH** / **G-OPT-TRIGGERED**: closed — clause (c) ships
+//!   live.
 
 #![allow(dead_code, unused_imports)]
 
@@ -41,8 +40,63 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::replacement::ReplacementCause;
+use digimon_engine::selection::SelectionKind;
 
 use super::super::dsl_card_data::{card_data_from_compiled as card_data, compiled};
+
+// ─── helpers ──────────────────────────────────────────────────────────────────
+
+/// Minimal Digimon `CardData` with explicit DP and trait list.
+fn make_digimon(id: &str, dp: i32, traits: &[&str]) -> digimon_engine::card_data::CardData {
+    let mut card = make_test_card(id, id);
+    card.dp = Some(dp);
+    card.traits = traits.iter().map(|s| s.to_string()).collect();
+    card
+}
+
+/// True if `player` has a battle-area permanent whose top card is `card_id`.
+fn permanent_exists(runner: &DebugRunner, player: usize, card_id: &str) -> bool {
+    runner.game.players[player]
+        .battle_area
+        .iter()
+        .any(|permanent| permanent.top_card().card_id(&runner.game.card_data) == card_id)
+}
+
+/// True if `player` holds a card with `card_id` in hand.
+fn in_hand(runner: &DebugRunner, player: usize, card_id: &str) -> bool {
+    runner.game.players[player]
+        .hand
+        .iter()
+        .any(|card| card.card_id(&runner.game.card_data) == card_id)
+}
+
+/// Accept a pending optional `Replacement` prompt by resolving its first
+/// (ACCEPT) action.
+fn accept_replacement(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("replacement accept prompt");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    assert!(
+        view.is_optional,
+        "clause (b) is `(may)` — accept and decline must both surface"
+    );
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("accept replacement");
+}
+
+/// Build a runner with BT24-012 plus the ally fixtures used by clause-(b) tests.
+fn clause_b_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card("BT24-012")
+        .expect("BT24-012 YAML loads")
+        .add_card(make_digimon("ALLY-REPTILE", 6000, &["Reptile"]))
+        .add_card(make_digimon("ALLY-DRAGONKIN", 6000, &["Dragonkin"]))
+        .add_card(make_digimon("ALLY-PLAIN", 6000, &["Aquan"]))
+        .start()
+}
 
 // ─── §1  Structural assertions ────────────────────────────────────────────────
 
@@ -70,10 +124,33 @@ fn bt24_012_has_blocker_grant_keyword() {
     );
 }
 
-/// Dimetromon has one RawRust declarative clause for the [All Turns]
-/// would-leave-battle-area replacement (clause b).
+/// Dimetromon has one Replacement declarative clause for the [All Turns]
+/// would-leave-battle-area protection (clause b), expressed in pure DSL.
 #[test]
-fn bt24_012_has_raw_rust_replacement_clause() {
+fn bt24_012_has_would_leave_replacement_clause() {
+    let card = compiled("BT24-012");
+
+    let has_replacement = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
+                trigger, ..
+            }) if trigger == "when_would_leave_battle_area"
+        )
+    });
+
+    assert!(
+        has_replacement,
+        "BT24-012 must have a Replacement clause with trigger \
+         when_would_leave_battle_area for clause (b)"
+    );
+}
+
+/// Clause (b) is no longer expressed via the raw_rust placeholder — the
+/// `bt24_012_would_leave_replacement` escape hatch is fully retired now that
+/// G-EVENT-TARGET-OWNER is resolved.
+#[test]
+fn bt24_012_clause_b_uses_no_raw_rust() {
     let card = compiled("BT24-012");
 
     let raw_rust_clauses: Vec<String> = card
@@ -88,12 +165,34 @@ fn bt24_012_has_raw_rust_replacement_clause() {
         .collect();
 
     assert!(
+        raw_rust_clauses.is_empty(),
+        "BT24-012 clause (b) must be pure DSL — no raw_rust clause expected; got: {:?}",
         raw_rust_clauses
-            .iter()
-            .any(|n| n == "bt24_012_would_leave_replacement"),
-        "BT24-012 must have a RawRust declarative clause named \
-         'bt24_012_would_leave_replacement' for clause (b); got: {:?}",
-        raw_rust_clauses
+    );
+}
+
+/// Clause (b) is an optional replacement (the "by returning this Digimon" cost
+/// makes accepting a choice — card text shape mirrors a `(may)` keyword).
+#[test]
+fn bt24_012_clause_b_is_optional() {
+    let card = compiled("BT24-012");
+
+    let clause = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
+                trigger,
+                optional,
+                ..
+            }) if trigger == "when_would_leave_battle_area" => Some(*optional),
+            _ => None,
+        })
+        .expect("clause (b) Replacement clause must exist");
+
+    assert!(
+        clause,
+        "clause (b) must be optional — the player may accept (pay the bounce cost) or decline"
     );
 }
 
@@ -126,7 +225,7 @@ fn bt24_012_has_inherited_on_opponent_security_removed_clause() {
 }
 
 /// Dimetromon has exactly two face-up effects: one GrantKeyword (Blocker)
-/// and one RawRust (clause b). It has one inherited effect: clause (c).
+/// and one Replacement (clause b). It has one inherited effect: clause (c).
 #[test]
 fn bt24_012_total_clause_count() {
     let card = compiled("BT24-012");
@@ -149,7 +248,7 @@ fn bt24_012_total_clause_count() {
 
     assert_eq!(
         face_up_count, 2,
-        "expected 2 face-up clauses (GrantKeyword Blocker + RawRust replacement); got {}",
+        "expected 2 face-up clauses (GrantKeyword Blocker + Replacement); got {}",
         face_up_count
     );
     assert_eq!(
@@ -159,7 +258,7 @@ fn bt24_012_total_clause_count() {
     );
 }
 
-// ─── §2  Condition gating ─────────────────────────────────────────────────────
+// ─── §2  Condition gating — Blocker ───────────────────────────────────────────
 
 /// Blocker positive: when BT24-012 is on field, it has the Blocker keyword active.
 #[test]
@@ -210,87 +309,261 @@ fn bt24_012_blocker_does_not_leak_to_other_digimon() {
 
 // ─── §3  Behavioral: clause (b) replacement — would-leave guard ───────────────
 //
-// All clause-(b) tests are #[ignore]'d pending:
-//   - G-EVENT-TARGET-OWNER: no cause filter for "by opponent's effects"
-//   - The raw_rust fn (bt24_012_would_leave_replacement) must be registered
-//     and fully implement: self-exclusion, Reptile/Dragonkin trait check,
-//     optional bounce prompt, and cancel_replacement on accept.
+// Clause (b): "[All Turns] When any of your other Digimon with the [Reptile]
+// or [Dragonkin] trait would leave the battle area by your opponent's effects,
+// by returning this Digimon to the hand, they don't leave."
+//
+// G-EVENT-TARGET-OWNER is RESOLVED — these tests drive the pure-DSL
+// `kind: replacement` clause end-to-end.
 
-/// Clause (b) positive: when an allied Reptile Digimon would leave by opponent
-/// effect, the replacement fires an optional prompt.
+/// Clause (b) positive: when an allied Reptile Digimon would leave by an
+/// opponent effect, the optional replacement prompt installs.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-OWNER — removal cause filter (opponent effect vs. own effect) + raw_rust fn bt24_012_would_leave_replacement"]
 fn bt24_012_allied_reptile_would_leave_by_opp_effect_triggers_prompt() {
-    // Setup:
-    // 1. P0: BT24-012 (Dimetromon) on field.
-    // 2. P0: A Reptile ally Digimon on field.
-    // 3. P1 effect deletes the ally.
-    // 4. Assert: optional replacement prompt installs.
-    // 5. Accept: Dimetromon returns to P0's hand; ally stays on field.
-    todo!("pending G-EVENT-TARGET-OWNER + raw_rust fn")
+    let mut runner = clause_b_runner();
+    runner.place_on_field(0, "BT24-012", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-REPTILE", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("clause (b) replacement prompt must install");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    assert!(
+        view.is_optional,
+        "the bounce-self cost makes accepting a choice — prompt must be optional"
+    );
+    // The ally is still on the field while the replacement is pending.
+    assert!(permanent_exists(&runner, 0, "ALLY-REPTILE"));
 }
 
-/// Clause (b) positive: accepting the replacement pays the cost — Dimetromon
-/// moves to hand, ally stays on field.
+/// Clause (b) positive (integrated, accept branch): accepting pays the cost —
+/// Dimetromon returns to its controller's hand; the Reptile ally stays on field.
+/// The "by returning this Digimon to the hand" cost is verified by observing
+/// Dimetromon move off-field and into hand (the engine emits no return-to-hand
+/// GameEvent variant, so state is the load-bearing assertion).
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-OWNER + raw_rust fn bt24_012_would_leave_replacement"]
 fn bt24_012_accept_replacement_bounces_self_and_ally_stays() {
-    todo!("pending G-EVENT-TARGET-OWNER: accept branch — self bounce + ally stays")
+    let mut runner = clause_b_runner();
+    runner.place_on_field(0, "BT24-012", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-REPTILE", Some(0));
+
+    assert!(!in_hand(&runner, 0, "BT24-012"));
+    let hand_before = runner.hand_size(0);
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    accept_replacement(&mut runner);
+    runner.auto_resolve().expect("finish replacement");
+
+    // Cost paid: Dimetromon left the field and is in P0's hand.
+    assert!(
+        !permanent_exists(&runner, 0, "BT24-012"),
+        "accepting clause (b) returns Dimetromon to hand — it must leave the field"
+    );
+    assert!(
+        in_hand(&runner, 0, "BT24-012"),
+        "Dimetromon must be in P0's hand after paying the return-to-hand cost"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before + 1,
+        "P0's hand grows by exactly 1 (Dimetromon returned)"
+    );
+    // Protection applied: the ally stayed.
+    assert!(
+        permanent_exists(&runner, 0, "ALLY-REPTILE"),
+        "the protected Reptile ally must stay on the field"
+    );
 }
 
-/// Clause (b) positive (Dragonkin variant): same logic for a Dragonkin ally.
+/// Clause (b) positive (Dragonkin variant): same protection for a Dragonkin
+/// ally — accept → Dimetromon bounced, ally stays.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-OWNER + raw_rust fn bt24_012_would_leave_replacement"]
 fn bt24_012_dragonkin_ally_would_leave_triggers_prompt() {
-    todo!("pending G-EVENT-TARGET-OWNER: Dragonkin trait coverage")
+    let mut runner = clause_b_runner();
+    runner.place_on_field(0, "BT24-012", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-DRAGONKIN", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    accept_replacement(&mut runner);
+    runner.auto_resolve().expect("finish replacement");
+
+    assert!(in_hand(&runner, 0, "BT24-012"));
+    assert!(
+        permanent_exists(&runner, 0, "ALLY-DRAGONKIN"),
+        "clause (b) protects Dragonkin-trait allies too"
+    );
 }
 
-/// Clause (b) negative: a Digimon WITHOUT Reptile or Dragonkin trait would
-/// leave — replacement must NOT fire.
+/// Clause (b) negative (decline branch): declining the optional prompt — the
+/// ally leaves normally and Dimetromon stays on the field (no cost paid).
 #[test]
-#[ignore = "pending: raw_rust fn bt24_012_would_leave_replacement (trait filter)"]
-fn bt24_012_non_trait_ally_leaving_no_replacement() {
-    // An Aquan or plain Digimon being deleted by opponent effect should
-    // not trigger the replacement prompt.
-    todo!("pending raw_rust trait filter")
-}
-
-/// Clause (b) negative: Dimetromon ITSELF would leave — must NOT fire
-/// (card text says "other Digimon").
-#[test]
-#[ignore = "pending: raw_rust fn bt24_012_would_leave_replacement (self-exclusion)"]
-fn bt24_012_self_leaving_does_not_trigger_replacement() {
-    // Even though Dimetromon has Reptile trait, "other Digimon" excludes self.
-    todo!("pending raw_rust self-exclusion")
-}
-
-/// Clause (b) negative: declining the optional replacement — ally still leaves,
-/// Dimetromon stays on field.
-#[test]
-#[ignore = "pending: G-EVENT-TARGET-OWNER + raw_rust fn bt24_012_would_leave_replacement"]
 fn bt24_012_decline_replacement_ally_leaves_self_stays() {
-    // PASS the optional prompt → ally leaves, Dimetromon hand size unchanged.
-    todo!("pending G-EVENT-TARGET-OWNER: decline branch")
+    let mut runner = clause_b_runner();
+    runner.place_on_field(0, "BT24-012", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-REPTILE", Some(0));
+
+    let hand_before = runner.hand_size(0);
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("clause (b) replacement prompt");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the replacement");
+    runner.auto_resolve().expect("finish decline");
+
+    assert!(
+        !permanent_exists(&runner, 0, "ALLY-REPTILE"),
+        "declining clause (b) — the ally leaves as normal"
+    );
+    assert!(
+        permanent_exists(&runner, 0, "BT24-012"),
+        "declining clause (b) — Dimetromon stays on the field (cost not paid)"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "declining pays no cost — P0's hand is unchanged"
+    );
 }
 
-/// Clause (b) negative: ally would leave by OWN effect (e.g. player's own
-/// deletion effect) — the replacement must NOT fire.
-/// ("by your opponent's effects" gate — G-EVENT-TARGET-OWNER gap blocks
-/// implementing this cleanly without cause attribution).
+/// Clause (b) negative (trait filter): an ally WITHOUT the Reptile or Dragonkin
+/// trait would leave by an opponent effect — the replacement must NOT fire.
 #[test]
-#[ignore = "pending: G-EVENT-TARGET-OWNER — cause attribution required to gate out own-effect removals"]
+fn bt24_012_non_trait_ally_leaving_no_replacement() {
+    let mut runner = clause_b_runner();
+    runner.place_on_field(0, "BT24-012", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-PLAIN", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "clause (b) only protects Reptile/Dragonkin allies — no prompt for a plain Digimon"
+    );
+    assert!(
+        !permanent_exists(&runner, 0, "ALLY-PLAIN"),
+        "the non-trait ally leaves as normal"
+    );
+}
+
+/// Clause (b) negative (self-exclusion): Dimetromon ITSELF would leave by an
+/// opponent effect — the replacement must NOT fire (card text says "other
+/// Digimon"). Even though Dimetromon has the Reptile trait, `other: true`
+/// excludes a self-leave.
+#[test]
+fn bt24_012_self_leaving_does_not_trigger_replacement() {
+    let mut runner = clause_b_runner();
+    let dimetromon = runner.place_on_field(0, "BT24-012", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(dimetromon, ReplacementCause::OpponentEffect);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "clause (b) excludes Dimetromon itself — no self-protection prompt"
+    );
+    assert!(
+        !permanent_exists(&runner, 0, "BT24-012"),
+        "Dimetromon itself leaves normally (clause b does not protect self)"
+    );
+}
+
+/// Clause (b) negative (own-effect exclusion): an allied Reptile would leave by
+/// the CONTROLLER's OWN effect — the replacement must NOT fire. Card text gates
+/// strictly on "by your opponent's effects" (`replacement_cause: opponent_effect`).
+#[test]
 fn bt24_012_own_effect_removal_does_not_trigger_replacement() {
-    todo!("pending G-EVENT-TARGET-OWNER: own-effect exclusion")
+    let mut runner = clause_b_runner();
+    runner.place_on_field(0, "BT24-012", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-REPTILE", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::OwnEffect);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "clause (b) fires only on opponent-effect removals — own-effect removal is excluded"
+    );
+    assert!(
+        !permanent_exists(&runner, 0, "ALLY-REPTILE"),
+        "an own-effect removal of the ally is not prevented"
+    );
+    assert!(
+        permanent_exists(&runner, 0, "BT24-012"),
+        "Dimetromon is not bounced when the cause is the controller's own effect"
+    );
+}
+
+/// Clause (b) negative (battle-deletion exclusion): an allied Reptile leaving
+/// by BATTLE is not "by your opponent's effects" — the replacement must NOT
+/// fire. Verifies the cause gate excludes combat deletion as well.
+#[test]
+fn bt24_012_battle_deletion_does_not_trigger_replacement() {
+    let mut runner = clause_b_runner();
+    runner.place_on_field(0, "BT24-012", Some(0));
+    let ally = runner.place_on_field(0, "ALLY-REPTILE", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(ally, ReplacementCause::Battle);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "clause (b) fires only on opponent-effect removals — battle deletion is excluded"
+    );
+    assert!(
+        !permanent_exists(&runner, 0, "ALLY-REPTILE"),
+        "a battle-deleted ally is not protected by clause (b)"
+    );
+}
+
+/// Clause (b) negative (opponent's Digimon): clause (b) protects only the
+/// controller's Reptile/Dragonkin Digimon. An OPPONENT's Reptile leaving must
+/// NOT trigger Dimetromon's replacement (`replacement_subject_is_mine`).
+#[test]
+fn bt24_012_does_not_fire_for_opponent_reptile_leaving() {
+    let mut runner = clause_b_runner();
+    runner.place_on_field(0, "BT24-012", Some(0));
+    let opp_ally = runner.place_on_field(1, "ALLY-REPTILE", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(opp_ally, ReplacementCause::OpponentEffect);
+
+    assert!(
+        runner.pending_selection_view().is_none(),
+        "clause (b) protects only the controller's own Reptile/Dragonkin Digimon"
+    );
+    assert!(
+        !permanent_exists(&runner, 1, "ALLY-REPTILE"),
+        "the opponent's Reptile leaves normally"
+    );
 }
 
 // ─── §4  Behavioral: clause (c) inherited on_opponent_security_removed ────────
 //
-// All clause-(c) behavioral tests are `todo!()` placeholders. Their
-// substrate gates are both closed:
-//   - G-INHERITED-DISPATCH: closed 2026-05-17 (Phase 2 Track D)
-//   - G-OPT-TRIGGERED: closed 2026-05-16 (Phase 2 Track C)
-// Author the bodies (mirroring BT14-001 / BT22-005 / P-189 style) when time
-// permits — they should pass as-written once written.
+// Substrate gates closed: G-INHERITED-DISPATCH (Phase 2 Track D 2026-05-17),
+// G-OPT-TRIGGERED (Phase 2 Track C 2026-05-16). Clause (c) ships live.
 
 /// Clause (c) positive: when this card is under a Digimon and opponent's
 /// security is removed on P0's turn, P0 gains 1 memory.

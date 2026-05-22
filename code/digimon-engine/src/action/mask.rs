@@ -78,40 +78,34 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 let card = &me.hand[i];
                 let is_option_use = card.card_kind(&game.card_data) == CardKind::Option
                     || card.card_kind(&game.card_data) == CardKind::Dual;
-                let mut cost = if is_option_use {
-                    card.option_use_cost(&game.card_data)
-                        .unwrap_or_else(|| card.play_cost(&game.card_data))
-                } else {
-                    card.play_cost(&game.card_data)
-                } as i16;
                 if is_option_use {
-                    let link_cost = game
-                        .effects_for_card(&card.card_id(&game.card_data), card.handle())
-                        .unwrap_or_default()
-                        .iter()
-                        .find_map(|effect| effect.link_cost)
-                        .unwrap_or(0);
-                    let modified_link_cost = (link_cost as i32
-                        + game.modifiers.link_cost_delta_for_player(player_id))
-                    .max(0) as i16;
-                    cost += modified_link_cost;
-                }
-                // Memory check: card is affordable if memory - cost >= memory_min
-                if (game.memory - cost) < game.rules.memory_range.0 {
-                    continue;
-                }
-                // §4.2 Option color requirement: an Option is playable when
-                // the player has a matching-color Digimon/Tamer, or when a
-                // printed Use Req. predicate satisfies that requirement.
-                if is_option_use {
+                    // §4.2 Option color requirement: an Option is playable
+                    // when the player has a matching-color Digimon/Tamer,
+                    // or when a printed Use Req. predicate satisfies it.
                     if !option_has_active_main_effect(card, game, player_id) {
                         continue;
                     }
                     if !option_use_requirement_or_color_available(card, game, player_id) {
                         continue;
                     }
-                } else if me.battle_area.len() >= game.rules.field_slots as usize {
-                    continue;
+                    // Affordability is folded into the legal-mode set: a
+                    // dual-mode Plug-In Option is playable when EITHER its
+                    // Standard `[Main]` mode or its Link mode fits the
+                    // memory budget. An empty set means no mode is
+                    // affordable right now.
+                    if game.option_legal_play_modes(card, player_id).is_empty() {
+                        continue;
+                    }
+                } else {
+                    // Memory check: a non-Option card is affordable if
+                    // memory - cost >= memory_min.
+                    let cost = card.play_cost(&game.card_data) as i16;
+                    if (game.memory - cost) < game.rules.memory_range.0 {
+                        continue;
+                    }
+                    if me.battle_area.len() >= game.rules.field_slots as usize {
+                        continue;
+                    }
                 }
                 mask[i] = 1.0;
             }

@@ -2456,6 +2456,7 @@ impl Game {
             card_kind: kind,
             was_face_up,
             phase: SecurityPhase::SecuritySkillDrain,
+            security_skill_drained: false,
             checks_remaining,
             outcome_so_far: AttackResult::SecurityCheckSurvived,
         });
@@ -2497,6 +2498,7 @@ impl Game {
                 SecurityPhase::SecuritySkillDrain => {
                     let defender = state.defender;
                     let card_handle = state.revealed_card;
+                    let already_drained = state.security_skill_drained;
                     // NOTE: Progress / ImmunityToOpponentEffects is NOT
                     // gated here. Per the printed rules (and DCGO's
                     // `ProgressProcess`), Progress makes the attacking
@@ -2510,13 +2512,28 @@ impl Game {
                     // delete_permanent with opponent-source attribution,
                     // negative DP modifiers) — tracked in
                     // docs/DCGO_KEYWORD_PARITY.md under "Progress".
-                    self.enqueue_triggered(
-                        EffectTiming::SecuritySkill,
-                        TriggerSource::SecurityRevealed {
-                            defender,
-                            card: card_handle,
-                        },
-                    );
+                    //
+                    // Re-entry guard (G-SECURITY-SKILL-RESUME-REFIRE): an
+                    // optional `[Security]` effect may park on a selection
+                    // mid-process. On resume the state machine re-enters this
+                    // arm; `revealed_card` is still in `pending_security`, so
+                    // re-enqueuing `SecuritySkill` re-collects the very same
+                    // effect — an infinite loop when the player declines.
+                    // Enqueue exactly once, tracked by `security_skill_drained`;
+                    // on resume just flush any continuation and advance. This
+                    // mirrors the `Dispose` → `DisposeFinalize` guard below.
+                    if !already_drained {
+                        self.enqueue_triggered(
+                            EffectTiming::SecuritySkill,
+                            TriggerSource::SecurityRevealed {
+                                defender,
+                                card: card_handle,
+                            },
+                        );
+                        if let Some(st) = self.security_resolution.as_mut() {
+                            st.security_skill_drained = true;
+                        }
+                    }
                     self.drain_effect_queue();
                     if self.pending_selection.is_some() {
                         return None;

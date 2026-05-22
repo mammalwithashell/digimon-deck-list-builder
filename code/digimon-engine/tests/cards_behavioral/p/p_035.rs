@@ -15,40 +15,47 @@
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/P/Red/P_035.cs
 //!
+//! # Clause decomposition
+//! - Clause 0 ([Main] main_from_hand): reveal top 4 → select 1 red Digimon →
+//!   add to hand → place remainder at deck bottom → place self in battle area.
+//! - Clause 1 ([Main]<Delay> end_of_your_next_turn): gain 2 memory.
+//! - Clause 2 ([Security], inherited): place self in battle area.
+//!
 //! # Patterns this test covers
-//! - A1  Reveal top-N + select-by-color/kind + add to hand
+//! - A1  Reveal top-N + select-by-color/kind + add to hand (filter ENFORCED)
 //! - A2  place_remainder_on_deck(bottom) with auto ordered permutation
-//! - Option-as-permanent Delay (implicit via classify_option_subtype + kind:delay clause)
-//! - Standard Delay (EndOfYourNextTurn): gain_memory on activation
-//! - Inherited security placement (raw_rust stub for G-PLACE-SELF-AS-OPTION-PERMANENT)
+//! - `place_self_as_delay_option` — option-as-Delay-permanent placement, both
+//!   from the [Main] main-from-hand context and the inherited [Security] context
+//! - Standard Delay (EndOfYourNextTurn): gain_memory(2) on activation
 //!
-//! # Known gaps affecting these tests
+//! # Gap status
 //!
-//! **G-PLACE-SELF-AS-OPTION-PERMANENT** (DSL gap):
-//!   No `place_option_in_battle_area: {}` step verb. The "Then, place this card
-//!   in your battle area" part of the Main clause is implicit — the engine's
-//!   `classify_option_subtype` detects the `kind: delay` clause and places the
-//!   card in battle area as `OptionState::Delayed` automatically after the Main
-//!   clause resolves through `dispose_option`. The placement is engine-level
-//!   automatic and requires no explicit DSL step.
-//!   Tests that assert the battle-area count after Main are
-//!   `#[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT"]`.
+//! **G-PLACE-SELF-AS-OPTION-PERMANENT** — RESOLVED 2026-05-02. The DSL verb
+//!   `place_self_as_delay_option: {}` places the currently-resolving Option card
+//!   into the owner's battle area as an `OptionState::Delayed` permanent. It is
+//!   used for BOTH the [Main] "Then, place this card in your battle area." tail
+//!   and the inherited [Security] "Place this card in the battle area." clause.
 //!
-//! **G-PLACE-SELF-AS-OPTION-PERMANENT (inherited security variant)**:
-//!   The inherited "[Security] Place this card in the battle area" is implemented
-//!   as a `raw_rust` stub (`p_035_security_place_in_battle_area`). The engine
-//!   has no `EffectContext` method to place a digivolution-source Option card
-//!   from the inherited-security context into the battle area as a Delay permanent.
-//!   Tests for this clause are `#[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT"]`.
+//! **select_reveal filter** — `install_select_reveal` enforces the compiled
+//!   `filter: { all_of: [kind:digimon, color_is:red] }` when building
+//!   `valid_action_ids`: only red Digimon among the 4 revealed are selectable,
+//!   and with zero eligible the optional select short-circuits (no card added).
 
 #![allow(dead_code, unused_imports)]
 
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
+};
 use digimon_engine::card_data::CardData;
+use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
+use digimon_engine::permanent::OptionState;
+use digimon_engine::selection::{OptionPlayResult, TriggerSource};
 
 const YAML: &str = include_str!("../../../cards/p/P-035.yaml");
 
@@ -78,7 +85,18 @@ fn make_red_option(id: &str) -> CardData {
     c
 }
 
-/// Generic filler card (default: red Digimon per make_test_card defaults).
+/// A red Tamer card — NOT eligible (wrong kind — must be Digimon).
+fn make_red_tamer(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Tamer;
+    c.colors = vec![CardColor::Red];
+    c
+}
+
+/// Generic filler card. `make_test_card` defaults to a red Digimon, which would
+/// pass the Main-clause filter — so for "no eligible card" scenarios use the
+/// explicit non-eligible builders above. This filler is for decks/security
+/// padding where eligibility is irrelevant.
 fn filler(id: &str) -> CardData {
     make_test_card(id, id)
 }
@@ -123,7 +141,7 @@ fn p_035_is_option_cost_3() {
 /// P-035 must have exactly 3 compiled clauses:
 ///   [0] main_from_hand (triggered)
 ///   [1] delay (declarative, trigger: end_of_your_next_turn)
-///   [2] inherited on_security (triggered or raw_rust stub, scope: Inherited)
+///   [2] inherited on_security (triggered, scope: Inherited)
 #[test]
 fn p_035_has_three_clauses() {
     let runner = DebugRunner::builder()
@@ -177,9 +195,39 @@ fn p_035_clause_0_is_main_from_hand_face_up() {
     }
 }
 
-/// Clause 1: Delay declarative with trigger end_of_your_next_turn.
+/// Clause 0's process must end with PlaceSelfAsDelayOption — the printed text's
+/// "Then, place this card in your battle area." tail.
 #[test]
-fn p_035_clause_1_is_delay_end_of_your_next_turn() {
+fn p_035_clause_0_process_places_self_as_delay_option() {
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(filler("FILL"))
+        .hand(0, &["P-035"])
+        .deck(0, &["FILL"])
+        .memory(0)
+        .start();
+
+    let compiled = runner.compiled_card("P-035").expect("P-035 compiled");
+    match &compiled.effects[0] {
+        CompiledClause::Triggered(t) => {
+            assert!(
+                t.process
+                    .iter()
+                    .any(|s| matches!(s, CompiledStep::PlaceSelfAsDelayOption)),
+                "clause 0 process must include PlaceSelfAsDelayOption; got {:?}",
+                t.process
+            );
+        }
+        other => panic!("clause 0 must be Triggered; got {:?}", other),
+    }
+}
+
+/// Clause 1: Delay declarative with the standard printed `<Delay>` trigger
+/// (`delayed` → CompiledTiming::Delayed → DelayTrigger::MainPhaseActivated).
+/// This is the player-initiated [Main]-phase activation per RULES_CONTEXT 16-16.
+#[test]
+fn p_035_clause_1_is_delay_main_phase_activated() {
     let runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
@@ -194,8 +242,8 @@ fn p_035_clause_1_is_delay_end_of_your_next_turn() {
         CompiledClause::Declarative(CompiledDeclarativeClause::Delay { trigger, .. }) => {
             assert_eq!(
                 *trigger,
-                CompiledTiming::EndOfYourNextTurn,
-                "Delay trigger must be EndOfYourNextTurn; got {:?}",
+                CompiledTiming::Delayed,
+                "Delay trigger must be Delayed (standard player-initiated <Delay>); got {:?}",
                 trigger
             );
         }
@@ -232,7 +280,7 @@ fn p_035_delay_clause_process_has_gain_memory_2() {
     }
 }
 
-/// Clause 2: inherited scope, SecuritySkill timing.
+/// Clause 2: inherited scope, SecuritySkill timing, process places self.
 #[test]
 fn p_035_clause_2_is_inherited_security_skill() {
     let runner = DebugRunner::builder()
@@ -245,20 +293,28 @@ fn p_035_clause_2_is_inherited_security_skill() {
         .start();
 
     let compiled = runner.compiled_card("P-035").expect("P-035 compiled");
-    let is_inherited_security = match &compiled.effects[2] {
+    match &compiled.effects[2] {
         CompiledClause::Triggered(t) => {
-            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity)
+            assert_eq!(
+                t.scope,
+                CompiledScope::Inherited,
+                "clause 2 must have Inherited scope"
+            );
+            assert!(
+                t.when.contains(&CompiledTiming::OnSecurity),
+                "clause 2 must fire at OnSecurity; got {:?}",
+                t.when
+            );
+            assert!(
+                t.process
+                    .iter()
+                    .any(|s| matches!(s, CompiledStep::PlaceSelfAsDelayOption)),
+                "clause 2 process must include PlaceSelfAsDelayOption; got {:?}",
+                t.process
+            );
         }
-        CompiledClause::Declarative(CompiledDeclarativeClause::RawRust {
-            scope, triggers, ..
-        }) => *scope == CompiledScope::Inherited && triggers.contains(&CompiledTiming::OnSecurity),
-        _ => false,
-    };
-    assert!(
-        is_inherited_security,
-        "clause 2 must be Inherited scope + SecuritySkill timing; got {:?}",
-        compiled.effects[2]
-    );
+        other => panic!("clause 2 must be Triggered; got {:?}", other),
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -276,13 +332,12 @@ fn p_035_main_installs_select_reveal_with_red_digimon_in_top_4() {
         .expect("parses")
         .add_card(make_red_digimon("RED-D1"))
         .add_card(make_blue_digimon("BLUE-D1"))
-        .add_card(filler("FILL-A"))
-        .add_card(filler("FILL-B"))
-        // Deck top-to-bottom: FILL-B (top drawn first) … last pushed = top
+        .add_card(make_blue_digimon("BLUE-D2"))
+        .add_card(make_blue_digimon("BLUE-D3"))
         // Builder: last element in slice = top of deck.
         .hand(0, &["P-035"])
-        .deck(0, &["FILL-A", "FILL-B", "BLUE-D1", "RED-D1"])
-        .deck(1, &["FILL-A"])
+        .deck(0, &["BLUE-D1", "BLUE-D2", "BLUE-D3", "RED-D1"])
+        .deck(1, &["BLUE-D1"])
         .memory(10)
         .start();
 
@@ -290,55 +345,95 @@ fn p_035_main_installs_select_reveal_with_red_digimon_in_top_4() {
     let fired = runner.game.activate_hand_main(0, 0);
     assert!(fired, "activate_hand_main must return true for P-035");
 
-    // A SelectReveal (or OrderedPermutation) prompt must be pending after reveal.
+    // A SelectReveal prompt must be pending after revealing 4 cards that
+    // include exactly one eligible red Digimon.
     assert!(
         runner.game.pending_selection.is_some(),
         "A selection prompt must be pending after revealing 4 cards that include a red Digimon"
     );
 }
 
-/// When the player selects from the reveal, a card goes to hand.
+/// When the player selects a red Digimon from the reveal, it goes to hand and
+/// P-035 is placed in the battle area as a Delay permanent.
 ///
-/// Note: `activate_hand_main` fires the `MainFromHand` effect process without
-/// physically consuming the option card (no `dispose_option` call — that is
-/// triggered by the effect queue's `MainEffectDrain` phase in normal play flow).
-/// The hand therefore nets +1: P-035 stays + one card from reveal is added.
-///
-/// Phase 2b note: `install_select_reveal` uses an accept-all filter at the
-/// engine level — the YAML `filter: { all_of: [kind:digimon, color_is:red] }`
-/// is compiled but not yet enforced on valid_action_ids. auto_resolve picks
-/// the first revealed card (RED-D1, which is the top card) regardless.
-/// Filter-specific tests are #[ignore]'d pending Phase 2b closure.
+/// Net hand accounting: P-035 starts in hand (1) → one red Digimon added (+1)
+/// → P-035 placed in battle area via place_self_as_delay_option (-1) → net 1.
 #[test]
 fn p_035_main_selected_red_digimon_added_to_hand() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
         .add_card(make_red_digimon("RED-D1"))
-        .add_card(filler("FILL-A"))
-        .add_card(filler("FILL-B"))
-        .add_card(filler("FILL-C"))
-        // Deck: last in slice = top; RED-D1 is top
+        .add_card(make_blue_digimon("BLUE-D1"))
+        .add_card(make_blue_digimon("BLUE-D2"))
+        .add_card(make_blue_digimon("BLUE-D3"))
+        // Deck: last in slice = top; RED-D1 is the only eligible card.
         .hand(0, &["P-035"])
-        .deck(0, &["FILL-A", "FILL-B", "FILL-C", "RED-D1"])
-        .deck(1, &["FILL-A"])
+        .deck(0, &["BLUE-D1", "BLUE-D2", "BLUE-D3", "RED-D1"])
+        .deck(1, &["BLUE-D1"])
         .memory(10)
         .start();
 
-    let hand_before = runner.game.players[0].hand.len(); // 1 (P-035)
     runner.game.activate_hand_main(0, 0);
-
-    // Auto-resolve all pending selections (picks first available action each time).
+    // Auto-resolve all pending selections (reveal pick + remainder ordering).
     let _ = runner.auto_resolve();
 
-    // P-035 is NOT consumed by activate_hand_main (stays in hand).
-    // One card added from reveal → hand grows by net +1.
-    let hand_after = runner.game.players[0].hand.len();
+    // RED-D1 must be in hand; P-035 must NOT (it was placed in battle area).
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(
+        hand_ids.contains(&"RED-D1".to_string()),
+        "the selected red Digimon must be added to hand; hand={hand_ids:?}"
+    );
+    assert!(
+        !hand_ids.contains(&"P-035".to_string()),
+        "P-035 must leave the hand (placed in battle area); hand={hand_ids:?}"
+    );
     assert_eq!(
-        hand_after,
-        hand_before + 1,
-        "Hand must grow by 1 (one card from reveal added; P-035 stays via activate_hand_main); \
-         before={hand_before}, after={hand_after}"
+        runner.game.players[0].hand.len(),
+        1,
+        "hand must hold exactly the 1 added red Digimon; hand={hand_ids:?}"
+    );
+}
+
+/// After Main resolves, P-035 lands in the battle area as an OptionState::Delayed
+/// permanent (the "Then, place this card in your battle area." tail).
+#[test]
+fn p_035_main_places_self_in_battle_area_as_delay_permanent() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_red_digimon("RED-D1"))
+        .add_card(make_blue_digimon("BLUE-D1"))
+        .add_card(make_blue_digimon("BLUE-D2"))
+        .add_card(make_blue_digimon("BLUE-D3"))
+        .hand(0, &["P-035"])
+        .deck(0, &["BLUE-D1", "BLUE-D2", "BLUE-D3", "RED-D1"])
+        .deck(1, &["BLUE-D1"])
+        .memory(10)
+        .start();
+
+    let battle_before = runner.game.players[0].battle_area.len();
+    runner.game.activate_hand_main(0, 0);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.game.players[0].battle_area.len(),
+        battle_before + 1,
+        "P-035 must be placed into the battle area as a new permanent"
+    );
+    let placed = runner.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "P-035")
+        .expect("P-035 must be a battle-area permanent after Main resolves");
+    assert!(
+        matches!(placed.option_state, OptionState::Delayed { owner: 0, .. }),
+        "placed P-035 must be an OptionState::Delayed permanent owned by player 0; got {:?}",
+        placed.option_state
     );
 }
 
@@ -346,25 +441,22 @@ fn p_035_main_selected_red_digimon_added_to_hand() {
 // SECTION 2b — Behavioral: Main clause — negative condition (no eligible card)
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Negative: when no red Digimon is among the top 4, no select_reveal for
-/// a Digimon appears; the remainder is placed bottom and hand stays empty.
-///
-/// **Phase 2b gap**: `install_select_reveal` uses an accept-all filter — the
-/// YAML `filter: { all_of: [kind:digimon, color_is:red] }` is not enforced at
-/// runtime. auto_resolve picks the first revealed card (a blue Digimon) and
-/// adds it to hand even though it fails the filter. This test is #[ignore]'d
-/// pending Phase 2b filter enforcement closure.
+/// Negative: when no red Digimon is among the top 4, the select_reveal filter
+/// finds zero eligible cards. The optional select short-circuits, no card is
+/// added to hand, the 4 revealed cards return to deck bottom, and P-035 is
+/// still placed in the battle area.
 #[test]
-#[ignore = "pending Phase 2b: install_select_reveal accept-all filter — color/kind filter not enforced at runtime"]
 fn p_035_main_no_red_digimon_does_not_add_to_hand() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
         .add_card(make_blue_digimon("BLUE-D1"))
+        .add_card(make_blue_digimon("BLUE-D2"))
+        .add_card(make_blue_digimon("BLUE-D3"))
         .add_card(make_red_option("RED-OPT"))
-        // Only blue Digimon and red Option in top 4 — no red Digimon.
+        // Top 4: 3 blue Digimon + 1 red Option — no red Digimon.
         .hand(0, &["P-035"])
-        .deck(0, &["BLUE-D1", "BLUE-D1", "RED-OPT", "BLUE-D1"])
+        .deck(0, &["BLUE-D1", "BLUE-D2", "BLUE-D3", "RED-OPT"])
         .deck(1, &["BLUE-D1"])
         .memory(10)
         .start();
@@ -372,28 +464,23 @@ fn p_035_main_no_red_digimon_does_not_add_to_hand() {
     runner.game.activate_hand_main(0, 0);
     let _ = runner.auto_resolve();
 
-    let hand_after = runner.game.players[0].hand.len();
-    // Expected: hand = 1 (P-035 stays, no card added from reveal since no eligible).
-    // Actual: hand = 2 (first revealed card added despite failing filter).
-    assert_eq!(
-        hand_after,
-        1,
-        "No red Digimon in top 4: hand must remain at 1 (P-035 only) after P-035 Main resolves; got {}",
-        hand_after
+    // Hand must be empty: P-035 left the hand (placed in battle area) and no
+    // card was added from the reveal (no eligible red Digimon).
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(
+        hand_ids.is_empty(),
+        "no red Digimon in top 4: no card added, P-035 placed → hand empty; got {hand_ids:?}"
     );
 }
 
-/// Negative: blue Digimon must not be selectable (wrong color).
-///
-/// All four top-of-deck cards are blue Digimon — none are red, so no card
-/// is eligible for selection per the YAML filter.
-///
-/// **Phase 2b gap**: `install_select_reveal` uses an accept-all filter — blue
-/// Digimon cards are presented as valid options despite failing `color_is: red`.
-/// auto_resolve picks the first card and adds it to hand. Ignored pending
-/// Phase 2b filter enforcement.
+/// Negative: a blue Digimon must not be selectable (wrong color). With all four
+/// top-of-deck cards blue Digimon, no card passes the `color_is: red` filter,
+/// so the reveal pick installs no selectable action and nothing is added.
 #[test]
-#[ignore = "pending Phase 2b: install_select_reveal accept-all filter — color filter not enforced at runtime"]
 fn p_035_main_blue_digimon_is_not_eligible_for_selection() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -410,54 +497,42 @@ fn p_035_main_blue_digimon_is_not_eligible_for_selection() {
         .start();
 
     runner.game.activate_hand_main(0, 0);
+
+    // The reveal-pick selection (if installed) must not offer any blue Digimon.
+    // `select_reveal` short-circuits when no candidate matches the filter, so
+    // the only pending selection that can appear is the remainder ordering.
+    if let Some(sel) = runner.game.pending_selection.as_ref() {
+        assert!(
+            !matches!(sel.kind, digimon_engine::selection::SelectionKind::Reveal),
+            "no Reveal-pick selection may be installed when no red Digimon is eligible"
+        );
+    }
+
     let _ = runner.auto_resolve();
 
-    let hand_after = runner.game.players[0].hand.len();
-    // Expected once filter enforcement lands: hand = 1 (P-035 stays, no card added).
-    assert_eq!(
-        hand_after, 1,
-        "Blue Digimon must not be eligible for selection; hand must be 1 (P-035 only)"
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(
+        hand_ids.is_empty(),
+        "blue Digimon must not be eligible; no card added → hand empty; got {hand_ids:?}"
     );
 }
 
-/// Negative: red Option card is not eligible (wrong kind — must be Digimon).
-///
-/// Top 4 cards are: 1 red Option + 3 red Tamers. None are Digimon, so the
-/// `kind: digimon` filter in select_reveal excludes all of them.
-///
-/// **Phase 2b gap**: `install_select_reveal` uses an accept-all filter — red
-/// Option and Tamers are presented as valid options despite failing `kind: digimon`.
-/// auto_resolve picks the first card and adds it to hand. Ignored pending
-/// Phase 2b filter enforcement.
+/// Negative: red Option / red Tamer cards are not eligible (wrong kind — must be
+/// a Digimon). Top 4 are 1 red Option + 3 red Tamers — all red, none Digimon —
+/// so the `kind: digimon` filter excludes them all.
 #[test]
-#[ignore = "pending Phase 2b: install_select_reveal accept-all filter — kind filter not enforced at runtime"]
-fn p_035_main_red_option_is_not_eligible_for_selection() {
-    let tamer1 = {
-        let mut t = make_test_card("TAMER-1", "Tamer1");
-        t.card_kind = CardKind::Tamer;
-        t.colors = vec![CardColor::Red];
-        t
-    };
-    let tamer2 = {
-        let mut t = make_test_card("TAMER-2", "Tamer2");
-        t.card_kind = CardKind::Tamer;
-        t.colors = vec![CardColor::Red];
-        t
-    };
-    let tamer3 = {
-        let mut t = make_test_card("TAMER-3", "Tamer3");
-        t.card_kind = CardKind::Tamer;
-        t.colors = vec![CardColor::Red];
-        t
-    };
-
+fn p_035_main_red_non_digimon_is_not_eligible_for_selection() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
         .add_card(make_red_option("RED-OPT"))
-        .add_card(tamer1)
-        .add_card(tamer2)
-        .add_card(tamer3)
+        .add_card(make_red_tamer("TAMER-1"))
+        .add_card(make_red_tamer("TAMER-2"))
+        .add_card(make_red_tamer("TAMER-3"))
         .hand(0, &["P-035"])
         // Top 4: red Option + 3 red Tamers — none are Digimon → not eligible.
         .deck(0, &["TAMER-1", "TAMER-2", "TAMER-3", "RED-OPT"])
@@ -466,54 +541,131 @@ fn p_035_main_red_option_is_not_eligible_for_selection() {
         .start();
 
     runner.game.activate_hand_main(0, 0);
+
+    if let Some(sel) = runner.game.pending_selection.as_ref() {
+        assert!(
+            !matches!(sel.kind, digimon_engine::selection::SelectionKind::Reveal),
+            "no Reveal-pick selection may be installed when only red non-Digimon are revealed"
+        );
+    }
+
     let _ = runner.auto_resolve();
 
-    let hand_after = runner.game.players[0].hand.len();
-    assert_eq!(
-        hand_after, 0,
-        "Red Option is not a Digimon card; hand must be empty"
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert!(
+        hand_ids.is_empty(),
+        "red Option / red Tamer are not Digimon cards; no card added → hand empty; got {hand_ids:?}"
     );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION 3 — Behavioral: Delay fires gain_memory on next turn
+// SECTION 3 — Behavioral: standard <Delay> — player-initiated Main-phase action
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// After Main resolves and the card is in the battle area as a Delay permanent,
-/// activating the Delay (at end of NEXT turn) fires gain_memory: 2.
+/// Playing P-035 from hand parks it as a `MainPhaseActivated` delayed Option.
+/// On a LATER main phase the controller may take the `FIELD_EFFECT` activation
+/// action, which trashes the Option as the activation cost and runs the
+/// `<Delay>` body (gain 2 memory).
 ///
-/// Ignored pending G-PLACE-SELF-AS-OPTION-PERMANENT: the engine places the card
-/// in battle area automatically but we cannot drive the Delay activation from
-/// the test API without asserting battle-area presence first.
+/// Drives the real option-play path (`play_option_from_hand`) and the real
+/// `[Main]`-phase activation (`decode_action` on the `FIELD_EFFECT` bit).
 #[test]
-#[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT — cannot drive Delay activation without battle-area assertion API"]
-fn p_035_delay_activation_gains_2_memory() {
+fn p_035_delay_activation_gains_2_memory_via_main_phase_action() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
-        .add_card(filler("FILL-A"))
+        .add_card(make_red_digimon("RED-D1"))
+        .add_card(make_red_digimon("RED-FIELD"))
+        .add_card(make_blue_digimon("BLUE-D1"))
+        .add_card(make_blue_digimon("BLUE-D2"))
+        .add_card(make_blue_digimon("BLUE-D3"))
+        .add_card(filler("FILL"))
+        // Reveal top 4: 3 blue Digimon + RED-D1 (top, eligible).
         .hand(0, &["P-035"])
-        .deck(0, &["FILL-A", "FILL-A", "FILL-A", "FILL-A"])
-        .deck(1, &["FILL-A"])
+        .deck(0, &["FILL", "FILL", "BLUE-D1", "BLUE-D2", "BLUE-D3", "RED-D1"])
+        .deck(1, &["FILL"; 6])
         .memory(10)
         .start();
 
-    runner.game.activate_hand_main(0, 0);
-    let _ = runner.auto_resolve();
+    // A red card on the field satisfies the red Option's play color requirement.
+    runner.place_on_field(0, "RED-FIELD", Some(0));
+    runner.game.enter_main_phase();
 
-    // Advance past placing turn to enable the Delay.
-    runner.end_turn(); // player 1 turn
-    runner.end_turn(); // player 0 turn again
+    // Play P-035 as an Option from hand. Reveal/select + delay placement
+    // installs a pending selection → OptionPlayResult::Pending.
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending,
+        "P-035 install + reveal selection must park as Pending"
+    );
+    runner
+        .auto_resolve()
+        .expect("resolve P-035 reveal selection and delay placement");
 
-    let memory_before = runner.memory();
-    // Trigger the Delay (end of next turn fires resolve_delayed_options).
-    runner.end_turn(); // player 1 turn
-    runner.end_turn(); // player 0 turn — Delay should fire here
+    // P-035 parks as a MainPhaseActivated delayed Option permanent.
+    let delay_idx = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|p| {
+            matches!(
+                p.option_state,
+                OptionState::Delayed {
+                    trigger: DelayTrigger::MainPhaseActivated,
+                    ..
+                }
+            )
+        })
+        .expect("playing P-035 must park it as a MainPhaseActivated delayed option");
+
+    // OPT/lockout-style check: same turn as placement → activation is NOT legal
+    // (RULES_CONTEXT 16-16-3: cannot activate on the placing turn).
+    let bit = (FIELD_EFFECT_START
+        + delay_idx as u16 * EFFECTS_PER_PERMANENT
+        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize;
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[bit],
+        0.0,
+        "P-035 <Delay> must not be activatable on the placing turn"
+    );
+
+    // Advance to the controller's next main phase.
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.game.enter_main_phase();
+    runner.game.set_memory(0);
+
+    // The Delay activation is now a legal [Main]-phase action; PASS too.
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[bit], 1.0,
+        "P-035 <Delay> activation must be a legal action after the placing turn"
+    );
+    assert_eq!(mask[PASS as usize], 1.0, "declining the <Delay> stays legal");
+
+    // Take the activation: trash P-035 as cost, run the body (gain 2 memory).
+    runner.game.decode_action(bit as u16, 0);
 
     assert_eq!(
         runner.memory(),
-        memory_before + 2,
-        "Delay must gain 2 memory when activated"
+        2,
+        "P-035 <Delay> body must gain 2 memory when the player activates it"
+    );
+    assert!(
+        !runner
+            .game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| matches!(p.option_state, OptionState::Delayed { .. })),
+        "P-035 must be trashed as the <Delay> activation cost"
     );
 }
 
@@ -521,27 +673,28 @@ fn p_035_delay_activation_gains_2_memory() {
 // SECTION 4 — Deck accounting after Main
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// After Main resolves (1 red Digimon added to hand), deck size must shrink by 1
-/// net (4 revealed - 3 returned bottom = 1 removed to hand).
+/// After Main resolves with 1 red Digimon added to hand, deck size shrinks by 1
+/// net (4 revealed - 3 returned bottom = 1 removed to hand). P-035's placement
+/// does not touch the deck.
 #[test]
 fn p_035_main_deck_size_shrinks_by_one_when_card_added() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("parses")
         .add_card(make_red_digimon("RED-D1"))
-        .add_card(filler("FILL-A"))
-        .add_card(filler("FILL-B"))
-        .add_card(filler("FILL-C"))
-        .add_card(filler("FILL-D"))
+        .add_card(make_blue_digimon("BLUE-D1"))
+        .add_card(make_blue_digimon("BLUE-D2"))
+        .add_card(make_blue_digimon("BLUE-D3"))
+        .add_card(filler("FILL"))
         .hand(0, &["P-035"])
-        // 8 cards in deck: last = top; RED-D1 is at top (revealed first)
+        // 8 cards in deck: last = top; RED-D1 is the only eligible card.
         .deck(
             0,
             &[
-                "FILL-A", "FILL-B", "FILL-C", "FILL-D", "FILL-A", "FILL-B", "FILL-C", "RED-D1",
+                "FILL", "FILL", "FILL", "FILL", "BLUE-D1", "BLUE-D2", "BLUE-D3", "RED-D1",
             ],
         )
-        .deck(1, &["FILL-A"])
+        .deck(1, &["FILL"])
         .memory(10)
         .start();
 
@@ -558,14 +711,9 @@ fn p_035_main_deck_size_shrinks_by_one_when_card_added() {
     );
 }
 
-/// After Main with no eligible card, all 4 revealed cards return to deck bottom,
-/// so deck size is unchanged.
-///
-/// **Phase 2b gap**: `install_select_reveal` accept-all filter means even a
-/// blue Digimon is added to hand (1 card removed from deck net). This test
-/// is #[ignore]'d pending Phase 2b filter enforcement.
+/// After Main with no eligible red Digimon, all 4 revealed cards return to deck
+/// bottom, so deck size is unchanged.
 #[test]
-#[ignore = "pending Phase 2b: install_select_reveal accept-all filter — deck accounting incorrect when filter not enforced"]
 fn p_035_main_deck_size_unchanged_when_no_card_added() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -577,7 +725,7 @@ fn p_035_main_deck_size_unchanged_when_no_card_added() {
         .add_card(make_blue_digimon("BLUE-D5"))
         .add_card(make_blue_digimon("BLUE-D6"))
         .hand(0, &["P-035"])
-        // 6 blue Digimon in deck — none eligible; all 4 revealed must return to bottom.
+        // 6 blue Digimon in deck — none eligible; all 4 revealed return to bottom.
         .deck(
             0,
             &[
@@ -601,11 +749,10 @@ fn p_035_main_deck_size_unchanged_when_no_card_added() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION 5 — Inherited security clause (structural only)
+// SECTION 5 — Inherited security clause
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// The inherited security clause (clause 2) has Inherited scope.
-/// Structural test — behavioral placement is blocked by G-PLACE-SELF-AS-OPTION-PERMANENT.
 #[test]
 fn p_035_inherited_security_has_inherited_scope() {
     let runner = DebugRunner::builder()
@@ -632,13 +779,90 @@ fn p_035_inherited_security_has_inherited_scope() {
     );
 }
 
-/// The inherited security effect (place this in battle area) is blocked for full
-/// behavioral testing pending G-PLACE-SELF-AS-OPTION-PERMANENT.
+/// Inherited [Security]: when P-035 is revealed from a player's security stack
+/// during a security check, its inherited security clause fires and places
+/// P-035 into that player's battle area as a Delay permanent (instead of
+/// disposing it to trash). Driven through the real `attack_player` combat path.
 #[test]
-#[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT — inherited security placement of digivolution-source Option not expressible in DSL"]
 fn p_035_inherited_security_places_self_in_battle_area() {
-    // When P-035 is under another permanent as a digivolution source and that
-    // permanent's security card is checked, P-035's inherited security effect fires
-    // and places P-035 itself in the battle area as a Delay permanent.
-    todo!("implement once G-PLACE-SELF-AS-OPTION-PERMANENT is resolved");
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_red_digimon("ATTACKER"))
+        .add_card(filler("FILL"))
+        // Player 1's lone security card is P-035.
+        .security(1, &["P-035"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .hand(0, &["FILL"])
+        .hand(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    // Player 0's attacker hits player 1's security.
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    let result = runner.attack_player(attacker, 1, false);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        result,
+        AttackResult::SecurityCheckSurvived,
+        "the single security check must resolve (attacker survives)"
+    );
+    // P-035 must NOT fall through to security trash — it was placed instead.
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "revealed P-035 must not be disposed to trash; it is placed in the battle area"
+    );
+    let placed = runner.game.players[1]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "P-035")
+        .expect("P-035 must become a battle-area permanent after the security check");
+    assert!(
+        matches!(placed.option_state, OptionState::Delayed { owner: 1, .. }),
+        "placed P-035 must be an OptionState::Delayed permanent owned by player 1; got {:?}",
+        placed.option_state
+    );
+}
+
+/// Inherited [Security] placement preserves P-035's own Delay trigger
+/// (the standard player-initiated `MainPhaseActivated` `<Delay>`) on the
+/// placed permanent — the placed Option remains a standard parked `<Delay>`.
+#[test]
+fn p_035_inherited_security_placement_preserves_main_phase_activated_trigger() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("parses")
+        .add_card(make_red_digimon("ATTACKER"))
+        .add_card(filler("FILL"))
+        .security(1, &["P-035"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL"])
+        .hand(0, &["FILL"])
+        .hand(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    runner.attack_player(attacker, 1, false);
+    let _ = runner.auto_resolve();
+
+    let placed = runner.game.players[1]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "P-035")
+        .expect("P-035 must be placed after the security check");
+    assert!(
+        matches!(
+            placed.option_state,
+            OptionState::Delayed {
+                trigger: DelayTrigger::MainPhaseActivated,
+                ..
+            }
+        ),
+        "placed P-035 must carry its MainPhaseActivated <Delay> trigger; got {:?}",
+        placed.option_state
+    );
 }

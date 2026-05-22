@@ -234,6 +234,7 @@ pub fn lower_for_kind_with_clause_index(
                 CompiledActivationCostKind::ReturnSelfToDeckBottom => {
                     ctx.return_self_to_deck_bottom_as_cost()
                 }
+                CompiledActivationCostKind::TrashSelf => ctx.trash_self_as_cost(),
             });
         }
 

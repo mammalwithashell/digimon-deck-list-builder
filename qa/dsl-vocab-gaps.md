@@ -2426,3 +2426,33 @@ state.
 Coverage:
 - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- aura_filter_includes_track_c_change_traits_overlay`
 - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test dsl group6_auras -- aura_filter_includes_track_c_change_base_card_name_overlay`
+
+## ~~DSL Gap: LM-027 — Move a selected trash card to deck TOP~~  [G-ZONE-SELECTED-TRASH-TO-DECK-TOP] — RESOLVED 2026-05-21
+- **Status:** RESOLVED 2026-05-21 (`unblock-medusamon-partial-cards`). `EffectContext::return_trash_cards_to_deck_top` + a `destination: top | bottom` field on the `return_trash_list_to_deck_bottom` step move a selected trash card to the deck top. Full entry archived in `qa/resolved-gaps.md`.
+- **Discovered in:** Medusamon archetype re-attempt run, LM-027 Red Scramble DSL implementation (2026-05-21). Also pre-noted as MED-GAP-01 in `qa/archetype-qa/dsl/2026-05-03-medusamon-cross-archetype-gaps.md` and `qa/archetype-qa/dsl/bg_imperial.md`.
+- **Scope:** DSL + engine (hybrid). Cross-referenced in `qa/archetype-qa/engine-gaps.md` under the same gap ID.
+- **Card(s):** LM-027 Red Scramble — `[Start of Your Turn] <Delay>` clause "Return 1 red Digimon card from your trash to the **top** of the deck." Also LM-029, LM-030, LM-031 (sibling Scramble cards with the same Delay body).
+- **Effect text:** "Return 1 red Digimon card from your trash to the top of the deck."
+- **What's missing:** No DSL verb / `EffectContext` method moves a *selected* trash card to the **top** of the owner's deck. Verified: `EffectContext::return_all_trash_to_deck_bottom` and `return_trash_cards_to_deck_bottom` (`effect_context/mod.rs`) both hard-code `deck.insert(0, card)` (deck bottom). DSL `step/zone_moves.rs` exposes only `ReturnAllTrashToDeckBottom` / `ReturnTrashListToDeckBottom` — bottom-only. `ReturnToDeckFromReveal` accepts a `position` but operates on the reveal pool, not the trash. Routing to deck bottom would be an unfaithful approximation (top vs bottom changes what is drawn) — forbidden by the no-approximations policy. The deck-**bottom** sibling gap `G-ZONE-TRASH-TO-DECK` and the timing gap `G-DELAY-START-OF-TURN` are both RESOLVED; this deck-TOP variant is genuinely new and distinct.
+- **Suggested change:** Add a `destination: top | bottom` parameter to a generalized `return_bound_cards_to_deck` DSL step (or a dedicated `return_selected_trash_to_deck_top` verb) plus a matching `EffectContext::return_trash_cards_to_deck_top` engine method (mirror `return_trash_cards_to_deck_bottom` but `deck.push`).
+- **Workaround:** LM-027 clause B retains a `raw_rust` no-op placeholder; 4 tests `#[ignore = "...G-ZONE-SELECTED-TRASH-TO-DECK-TOP"]`. Clauses A and C ship faithfully in pure DSL.
+
+## ~~DSL Gap: BT21-072 — `save_in_text` predicate for alt-path `from:` filters~~  [G-ALT-PATH-SAVE-IN-TEXT] — RESOLVED 2026-05-21
+- **Status:** RESOLVED 2026-05-21 (`unblock-medusamon-partial-cards`). **No new predicate needed** — the existing `effect_text_contains` predicate already scans a candidate's printed text and `eval_predicate` already evaluates it against an alt-path `from:` candidate. BT21-072's cost-3 path uses `from: { any_of: [{level_eq:4, effect_text_contains:"＜Save＞"}, {level_eq:4, trait_has:Hero}] }`. Full entry archived in `qa/resolved-gaps.md`.
+- **Discovered in:** Medusamon archetype re-attempt run, BT21-072 Arresterdramon: Superior Mode (2026-05-21).
+- **Scope:** DSL.
+- **Card(s):** BT21-072 — `xros_req: "[Digivolve] Lv.4 w/＜Save＞ in text or w/[Hero] trait: Cost 3"`. Any card whose alt-digivolution requirement gates on the source permanent having ＜Save＞ printed in its effect text.
+- **Effect text:** "[Digivolve] Lv.4 w/＜Save＞ in text or w/[Hero] trait: Cost 3"
+- **What's missing:** Alt-path `from:` filters support `level_eq`, `trait_has`, `name_contains`, etc., but there is no `save_in_text: true` predicate to match a source permanent whose top card has the ＜Save＞ keyword in its printed effect text. The "w/[Hero] trait" half is expressible (`trait_has: Hero`); the "w/＜Save＞ in text" half is not — so the cost-3 alt-path cannot be faithfully expressed as a whole (it is a single OR-condition path).
+- **Suggested change:** Add a `save_in_text: bool` (or a generalized `keyword_in_text: <keyword>`) predicate leaf usable in alt-path `from:` filters, evaluated against the source card's printed effect text / parsed keyword set.
+- **Workaround:** None faithful. BT21-072's `alt_paths` ships the standard cost-4 path only; the cost-3 ＜Save＞/Hero path is omitted. BT21-072 is PARTIAL.
+
+## ~~DSL Gap: BT21-093 — declinable `activation_cost: { trash_self: true }`~~  [G-ACTIVATION-COST-TRASH-SELF] — RESOLVED 2026-05-21
+- **Status:** RESOLVED 2026-05-21 (`unblock-medusamon-partial-cards`). `activation_cost: { trash_self: true }` added (`CompiledActivationCostKind::TrashSelf` → `EffectContext::trash_self_as_cost`); declinable per Comprehensive Rules 16-16-2. Full entry archived in `qa/resolved-gaps.md`.
+- **Discovered in:** Medusamon archetype re-attempt run, BT21-093 Raging Serpentine (2026-05-21).
+- **Scope:** DSL.
+- **Card(s):** BT21-093 Raging Serpentine — `[All Turns] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)`. Any ＜Delay＞ card whose activation cost is "by trashing this card".
+- **Effect text:** "＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)"
+- **What's missing:** `activation_cost:` accepts only `suspend_self` and `return_self_to_deck_bottom` (per `compile.rs`). There is no `trash_self: true` variant. Per Comprehensive Rules 16-16-2, ＜Delay＞ processing is OPTIONAL — the controller may decline to trash the card and activate the effect. Without a declinable `trash_self` activation cost, the trash-self must be modeled as the first mandatory body step, which forces the activation once the trigger fires and a valid target exists — suppressing a rules-mandated player choice (a no-approximations violation).
+- **Suggested change:** Add `activation_cost: { trash_self: true }` — a declinable activation cost that trashes the source card and gates the body; declining skips the whole Delay.
+- **Workaround:** BT21-093 models the trash as a mandatory first body step. PARTIAL.

@@ -541,6 +541,18 @@ pub struct PendingEffectSecurityRemoval {
     pub discard_security_fired: bool,
 }
 
+/// The resolved play mode of an in-flight Option card. Drives how
+/// `dispose_option` finishes the play and is fixed at the moment the
+/// Option leaves its source zone (so a dual-mode Plug-In does not get
+/// re-classified mid-resolution).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OptionSubtype {
+    Standard,
+    Delay(crate::enums::DelayTrigger),
+    Link,
+    Training,
+}
+
 /// Transient state for an Option card mid-resolution. Mirrors
 /// PendingSecurity / PendingAttack. Carries the card between pay-cost
 /// and dispose so effect scripts can reference it via ctx.source_card.
@@ -550,6 +562,11 @@ pub struct PendingOption {
     pub card: CardSource,
     pub source_kind: OptionUseSource,
     pub resolution_phase: OptionResolutionPhase,
+    /// The resolved play mode chosen at play time. `dispose_option`
+    /// branches on this rather than re-classifying the card's effects —
+    /// a dual-mode Plug-In Option (Standard `[Main]` + Link) would
+    /// otherwise be ambiguous.
+    pub subtype: OptionSubtype,
 }
 
 /// Source zone for an in-flight Option use.
@@ -659,6 +676,15 @@ pub struct SecurityResolutionState {
     /// `OnSecurityCheck` observers via `SecurityRevealSnapshot`.
     pub was_face_up: bool,
     pub phase: SecurityPhase,
+    /// True once the `SecuritySkill` timing has been enqueued for
+    /// `revealed_card`. The `SecuritySkillDrain` arm checks this on every
+    /// entry: on a resume after an optional `[Security]` effect parked on a
+    /// selection, it MUST NOT re-enqueue `SecuritySkill` — the revealed card
+    /// is still in `Game::pending_security`, so a re-enqueue re-collects the
+    /// same effect, an infinite loop when the player declines. Mirrors the
+    /// `Dispose` → `DisposeFinalize` no-re-enqueue guard.
+    /// See G-SECURITY-SKILL-RESUME-REFIRE.
+    pub security_skill_drained: bool,
     /// Remaining security-check iterations for the owning `Player` attack.
     /// Absorbed from the outer loop counter so a pause inside phase 1
     /// doesn't drop the remaining checks.

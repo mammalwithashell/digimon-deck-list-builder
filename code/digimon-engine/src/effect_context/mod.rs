@@ -2073,6 +2073,74 @@ impl<'a> EffectContext<'a> {
         true
     }
 
+    /// Trash a specific card — identified by the stable `handle` — from
+    /// `player`'s security stack. Used by effects that let a player trash
+    /// "any 1" of a security stack: the card is chosen via a `select_security`
+    /// binding, which yields a `CardHandle`. Addressing the card by handle
+    /// (rather than a positional index) means an intervening security-stack
+    /// mutation cannot cause the wrong card to be trashed.
+    ///
+    /// No-op (returns false) if `handle` is not currently in `player`'s
+    /// security stack. Mirrors `trash_top_security` / `trash_bottom_security`:
+    /// same `WhenWouldBeTrashed` replacement window and security-removed
+    /// observer fan-out, but addresses an arbitrary chosen card.
+    /// G-TRASH-SELECTED-SECURITY.
+    pub fn trash_security_card(&mut self, player: PlayerId, handle: CardHandle) -> bool {
+        use crate::enums::{EffectTiming, Zone};
+        use crate::replacement::{ReplacementOutcome, ReplacementSubject};
+
+        // The handle must currently be in `player`'s security stack.
+        if !self
+            .game
+            .player(player)
+            .security
+            .iter()
+            .any(|c| c.handle() == handle)
+        {
+            return false;
+        }
+        let cause = self.game.infer_effect_cause(player);
+        let subject = ReplacementSubject::Card(handle, Zone::Security);
+        let outcome = self.game.try_replace(
+            EffectTiming::WhenWouldBeTrashed,
+            subject,
+            cause,
+            Some(Zone::Trash),
+        );
+        if self.game.pending_selection.is_some() {
+            return false;
+        }
+        match outcome {
+            ReplacementOutcome::None => {}
+            ReplacementOutcome::Cancelled | ReplacementOutcome::CustomHandled => {
+                return false;
+            }
+            ReplacementOutcome::Redirected(_) => {
+                debug_assert!(false, "Redirected not supported for WhenWouldBeTrashed v1");
+            }
+            ReplacementOutcome::Substituted(_) => {
+                debug_assert!(false, "Substituted not supported for WhenWouldBeTrashed v1");
+            }
+        }
+
+        // Re-find the card by handle — the replacement window may have mutated
+        // the security stack.
+        let p = self.game.player_mut(player);
+        let Some(pos) = p.security.iter().position(|c| c.handle() == handle) else {
+            return false;
+        };
+        let card = p.security.remove(pos);
+        p.face_up_security.remove(&card.card_index);
+        self.fire_security_removed_observers(
+            player,
+            card,
+            crate::selection::SecurityRemovalDestination::Trash,
+        );
+        self.game.mark_until_condition_dirty();
+        self.game.reevaluate_until_condition_modifiers_if_dirty();
+        true
+    }
+
     fn fire_security_removed_observers(
         &mut self,
         defender: PlayerId,
@@ -2386,6 +2454,31 @@ impl<'a> EffectContext<'a> {
         // DSL step shape applied to `source`.
         self.game
             .return_to_deck(handle, crate::enums::StackPosition::Bottom)
+    }
+
+    /// Pay the source permanent's trash-self activation cost.
+    ///
+    /// Used as the closure body for [`crate::effect::EffectBuilder::activation_cost`]
+    /// on `<Delay>` abilities whose printed cost is "by trashing this card"
+    /// (BT21-093 Raging Serpentine family). Deletes the source permanent —
+    /// for a `<Delay>` Option this moves the card to its owner's trash —
+    /// routing through `delete_permanent` so `OnDeletion` observers and
+    /// `WhenWouldBeDeleted` replacements fire identically to the
+    /// `delete_permanent` step. Returns `false` if the source permanent has
+    /// already left the field.
+    ///
+    /// No-approximations note: per Comprehensive Rules 16-16-2 the processing
+    /// of a `<Delay>` is optional; the player's accept/decline prompt belongs
+    /// to [`crate::effect::EffectBuilder::optional`] and runs BEFORE this cost.
+    pub fn trash_self_as_cost(&mut self) -> bool {
+        let Some(handle) = self.source_permanent else {
+            return false;
+        };
+        if self.source_permanent().is_none() {
+            return false;
+        }
+        self.delete_permanent(handle);
+        true
     }
 
     /// Unsuspend a permanent and fire `OnUnsuspend` observers.
@@ -4646,6 +4739,42 @@ impl<'a> EffectContext<'a> {
             self.game.player_mut(owner).deck.insert(0, card);
             moved.push(handle);
         }
+        moved
+    }
+
+    /// Move a SELECTED LIST of cards out of `player`'s trash to the **top** of
+    /// the deck — the position `draw` pops first. The deck-bottom sibling is
+    /// `return_trash_cards_to_deck_bottom`; by deck convention bottom is index
+    /// 0 and top is the `Vec` end. The first handle in `cards` ends up on top
+    /// (drawn first), the rest sit just beneath it, so selection order becomes
+    /// draw order. Returns the handles actually moved, in selection order (a
+    /// handle not found in the trash is silently skipped).
+    /// G-ZONE-SELECTED-TRASH-TO-DECK-TOP.
+    pub fn return_trash_cards_to_deck_top(
+        &mut self,
+        player: PlayerId,
+        cards: &[CardHandle],
+    ) -> Vec<CardHandle> {
+        let mut moved = Vec::with_capacity(cards.len());
+        // Iterate in reverse and `push`: the first handle in `cards` is pushed
+        // last, landing at the `Vec` end (= deck top, drawn first).
+        for &handle in cards.iter().rev() {
+            let Some(pos) = self
+                .game
+                .player(player)
+                .trash
+                .iter()
+                .position(|c| c.handle() == handle)
+            else {
+                continue;
+            };
+            let card = self.game.player_mut(player).trash.remove(pos);
+            let owner = card.owner;
+            self.game.player_mut(owner).deck.push(card);
+            moved.push(handle);
+        }
+        // `moved` was built in reverse; restore selection order for callers.
+        moved.reverse();
         moved
     }
 

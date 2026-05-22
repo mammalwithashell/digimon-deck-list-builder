@@ -282,21 +282,37 @@ fn st19_08_security_g014_filters_and_plays_liberator_cost4_from_union_zone() {
         .expect("security pipeline must complete after selection");
 
     // ── Post-resolution assertions ──────────────────────────────────────────
-    // Exactly one card must have entered the battle area (played for free).
-    let played_lib = in_battle_area(&runner, 1, "LIB_TRASH")
-        || in_battle_area(&runner, 1, "LIB_HAND");
-    assert!(
-        played_lib,
-        "a [LIBERATOR] card must have been played to the battle area for free"
+    // Exactly ONE [LIBERATOR] card must have entered the battle area for free —
+    // "you may play 1 card", never two, even though both zones held a legal
+    // candidate. Regression guard for G-SECURITY-SKILL-RESUME-REFIRE: the old
+    // `SecuritySkillDrain` re-enqueue re-fired the `[Security]` effect on
+    // resume, and with a candidate still left in the other zone it double-played
+    // a second card. The fix records `security_skill_drained` so the effect
+    // fires exactly once.
+    let played_count = [
+        in_battle_area(&runner, 1, "LIB_HAND"),
+        in_battle_area(&runner, 1, "LIB_TRASH"),
+    ]
+    .iter()
+    .filter(|&&played| played)
+    .count();
+    assert_eq!(
+        played_count, 1,
+        "exactly one [LIBERATOR] card is played free — 'you may play 1 card', never two"
     );
 
-    // Total cards in hand ∪ trash must shrink by exactly 1 (origin-preserving).
+    // Exactly 1 card left hand ∪ trash to be played. The revealed security card
+    // ST19-08 is itself disposed into player 1's trash after the check, so the
+    // raw (hand+trash) total nets flat (−1 played card, +1 disposed ST19-08);
+    // the `+1` below corrects for that disposal. Mirrors the identity-based
+    // accounting in the sibling trash-origin test and p_189's free-from-trash
+    // test.
     let trash_after = runner.game.players[1].trash.len();
     let hand_after = runner.game.players[1].hand.len();
     assert_eq!(
-        (trash_before + hand_before) - (trash_after + hand_after),
+        (trash_before + hand_before + 1) - (trash_after + hand_after),
         1,
-        "exactly 1 card must leave hand ∪ trash; the other zone must be untouched"
+        "exactly 1 card leaves hand ∪ trash (the +1 accounts for ST19-08 disposing into trash)"
     );
 
     // Memory must not have changed — play_union_bound_free charges nothing.

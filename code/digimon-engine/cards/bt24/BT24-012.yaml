@@ -17,58 +17,52 @@ effects:
   - kind: grant_keyword
     keyword: Blocker
 
-  # Clause (b) — [All Turns] When any of your OTHER Digimon with [Reptile] or [Dragonkin]
-  # trait would leave the battle area by your opponent's effects, by returning THIS Digimon
-  # to the hand, they don't leave.
+  # Clause (b) — [All Turns] When any of your OTHER Digimon with [Reptile] or
+  # [Dragonkin] trait would leave the battle area by your opponent's effects,
+  # by returning THIS Digimon to the hand, they don't leave.
   #
-  # Design: This is a "protect other permanents" replacement effect — fundamentally different
-  # from the self-replacement model in lower_replacement.rs (which only fires when the CARRIER
-  # permanent is the leaving subject). The raw_rust declarative clause builds a
-  # WhenWouldLeaveBattleArea replacement registered per-permanent that intercepts ANY leaving
-  # permanent in the game and applies the following logic:
+  # DCGO: ActivateClass on EffectTiming.WhenRemoveField, isOptional=true,
+  #   OtherDigimon() = on owner's battle area, != PermanentOfThisCard(),
+  #   has Reptile or Dragonkin trait;
+  #   CanUseCondition gated on IsOpponentEffect(cardEffect, card);
+  #   ActivateCoroutine = BouncePeremanentAndProcessAccordingToResult of
+  #   { PermanentOfThisCard() }, then SuccessProcess sets willBeRemoveField=false.
   #
-  #   1. Check subject is NOT the carrier itself ("other Digimon" gate).
-  #   2. Check subject's controller == carrier's controller (G-EVENT-TARGET-OWNER gap:
-  #      the DSL has no predicate for this — raw_rust owns the check).
-  #   3. Check subject has Reptile or Dragonkin trait.
-  #   4. Check carrier is on the battle area (can be bounced to hand as cost).
-  #   5. Optionally: present the player with an "Accept/Decline" replacement prompt.
-  #   6. On accept: return the carrier to the controller's hand via ctx.return_to_hand(carrier).
-  #   7. Set outcome to Cancelled (the leaving permanent stays).
-  #
-  # KNOWN GAPS:
-  #   G-EVENT-TARGET-OWNER — no DSL predicate gates by whether the leaving permanent
-  #     belongs to the controller or opponent. The raw_rust fn handles this check directly.
-  #   "By your opponent's effects" (removal cause attribution) — there is no
-  #     removal_cause_is_opponent_effect predicate in the replacement context. The raw_rust
-  #     fn approximates this by checking that the removal did NOT originate from the
-  #     controller's own effects (using ReplacementContext.caused_by_opponent when available).
-  #     Until removal cause attribution is wired in the Rust engine, the replacement fires
-  #     for any leaving cause (over-fires vs. "opponent effects only" printed text).
-  #   G-OPT-TRIGGERED — OPT lockout on replacement clauses is not enforced for the
-  #     raw_rust path. The card text does NOT say [Once Per Turn] for clause (b) — it is
-  #     always available as long as Dimetromon is on field and the cost can be paid.
-  #
-  # The bt24_012_would_leave_replacement fn is responsible for all logic above.
-  # It is registered in code/digimon-engine/src/cards/raw_rust/mod.rs.
-  - kind: raw_rust
-    fn: bt24_012_would_leave_replacement
+  # Pure-DSL `kind: replacement` (G-EVENT-TARGET-OWNER RESOLVED 2026-05-21):
+  #   - `replacement_subject_is_mine: true` — the leaving permanent must belong
+  #     to Dimetromon's controller ("your other Digimon").
+  #   - `replacement_cause: opponent_effect` — "by your opponent's effects".
+  #   - `other: true` — excludes Dimetromon itself ("your OTHER Digimon"); since
+  #     the leaving subject is matched against the source permanent, `other`
+  #     drops a self-leave even though Dimetromon also has the Reptile trait.
+  #   - `kind: digimon` + Reptile/Dragonkin trait — the protected subject set.
+  # Cost: `return_to_hand: { target: source }` bounces THIS Digimon to hand;
+  # `cancel_replacement` then keeps the leaving ally on the field. Optional —
+  # the player may accept (pay the bounce cost) or decline (ally leaves).
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    summary: "[All Turns] When your other Reptile/Dragonkin Digimon would leave by opponent's effects, return this Digimon to hand so they don't leave"
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - replacement_cause: opponent_effect
+        - kind: digimon
+        - other: true
+        - any_of:
+            - trait_has: Reptile
+            - trait_has: Dragonkin
+    process:
+      - return_to_hand: { target: source }
+      - cancel_replacement: {}
 
   # Clause (c) — [Inherited] [Your Turn] [Once Per Turn]
   # When your opponent's security stack is removed from, gain 1 memory.
   #
   # DCGO: ActivateClass with SetHashString("GainMemory_BT24-012"),
-  #        CanTriggerWhenLoseSecurity checks player == card.Owner.Enemy (opponent's security),
-  #        IsOwnerTurn, SetIsInheritedEffect(true), SetUpActivateClass(max=1 OPT).
-  #
-  # KNOWN GAPS:
-  #   G-INHERITED-DISPATCH — inherited triggered effects are not dispatched from
-  #     the digivolution stack in the Rust engine. This clause compiles correctly
-  #     but the behavioral path that fires inherited triggers when a card is under
-  #     another permanent is missing. Tests are #[ignore]'d with G-INHERITED-DISPATCH.
-  #   G-OPT-TRIGGERED — OPT lockout enforcement is not wired for triggered effects
-  #     in the queue-drain path. Clause fires correctly once; second activation in
-  #     the same turn would also fire (over-fires) until the gap is closed.
+  #        CanTriggerWhenLoseSecurity checks player == card.Owner.Enemy
+  #        (opponent's security), IsOwnerTurn, SetIsInheritedEffect(true),
+  #        SetUpActivateClass(max=1 OPT).
   - scope: inherited
     when: on_opponent_security_removed
     once_per_turn: true
